@@ -962,10 +962,11 @@
         notes,
         discount_amount,
         coupon_id,
+        brand_id: bodyBrandId,
       } = req.body;
 
       const adminId = req.user.id;
-      const brandId = req.brand?.id || 1;
+      const brandId = bodyBrandId ? parseInt(bodyBrandId) : (req.brand?.id || 1);
 
       // ── Validation ──────────────────────────────────────────────────────
       if (!customer_phone || !shipping_address || !items?.length || !payment_type) {
@@ -1429,6 +1430,7 @@
         status,
         payment_status,
         payment_type,
+        brand_id,
         start_date,
         end_date,
         page = 1,
@@ -1445,6 +1447,7 @@
         status,
         payment_status,
         payment_type,
+        brand_id,
         start_date,
         end_date,
         page,
@@ -1456,6 +1459,11 @@
 
       // Build filter based on query parameters
       const filter = {};
+
+      // Brand filter
+      if (brand_id && brand_id !== 'all') {
+        filter.brand_id = parseInt(brand_id);
+      }
 
       // Status filter
       if (status && status !== 'all') {
@@ -1745,12 +1753,36 @@
 
       const totalPages = Math.ceil(orders.count / limit);
       const { getRtoRiskLevel } = require('../services/orderService.js');
+      const imagekitService = require('../services/imagekitService');
+
+      const transformImageUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+        try { return imagekitService.getOptimizedUrl(url, 'medium'); } catch { return url; }
+      };
 
       res.json({
-        orders: orders.rows.map(o => ({
-          ...o.toJSON(),
-          rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0),
-        })),
+        orders: orders.rows.map(o => {
+          const order = o.toJSON();
+          order.OrderItems = (order.OrderItems || []).map(item => ({
+            ...item,
+            Product: item.Product ? {
+              ...item.Product,
+              ProductImages: (item.Product.ProductImages || []).map(img => ({
+                ...img,
+                image_url: transformImageUrl(img.image_url),
+              })),
+            } : null,
+            ProductVariation: item.ProductVariation ? {
+              ...item.ProductVariation,
+              VariationImages: (item.ProductVariation.VariationImages || []).map(img => ({
+                ...img,
+                image_url: transformImageUrl(img.image_url),
+              })),
+            } : null,
+          }));
+          return { ...order, rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0) };
+        }),
         pagination: {
           total: orders.count,
           page: parseInt(page),

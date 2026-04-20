@@ -118,10 +118,9 @@ function mapProduct(p) {
     colorImages: Object.keys(colorImages).length > 0 ? colorImages : undefined,
     variants: variations.map((v) => ({
       id: String(v.id),
-      size: '',
-      color: '',
+      color: varIdToColor[v.id] || '',
       stock: Number(v.stock || 0),
-      sku: v.sku || ''
+      sku: v.sku || '',
     })),
     colors: colors.length > 0 ? colors : [{ name: '', hex: '#d1d5db', imageIndex: 0 }],
     genders: Array.from(genders),

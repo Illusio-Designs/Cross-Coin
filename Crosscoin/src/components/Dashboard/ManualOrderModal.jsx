@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Input, Select } from '../ui';
-import { productService, orderService } from '../../services';
+import { productService, orderService, brandService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { debounce } from 'lodash';
 
@@ -34,7 +34,18 @@ export default function ManualOrderModal({ isOpen, onClose, onOrderCreated }) {
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState('');
 
+  // Brand
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandId, setSelectedBrandId] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
+
+  // Load brands once
+  useEffect(() => {
+    brandService.getAllBrands(true)
+      .then(r => { if (r.success) setBrands(r.data || []); })
+      .catch(() => {});
+  }, []);
 
   // Reset on close
   useEffect(() => {
@@ -43,6 +54,7 @@ export default function ManualOrderModal({ isOpen, onClose, onOrderCreated }) {
       setAddress({ full_name: '', address: '', city: '', state: '', pincode: '', phone: '' });
       setProductSearch(''); setSearchResults([]); setCartItems([]);
       setPaymentType('cod'); setPaymentStatus('pending'); setDiscount(0); setNotes('');
+      setSelectedBrandId('');
     }
   }, [isOpen]);
 
@@ -105,6 +117,9 @@ export default function ManualOrderModal({ isOpen, onClose, onOrderCreated }) {
     if (!cartItems.length) {
       showError(null, 'Add at least one product'); return;
     }
+    if (!selectedBrandId) {
+      showError(null, 'Please select a brand for this order'); return;
+    }
 
     setSubmitting(true);
     try {
@@ -129,6 +144,7 @@ export default function ManualOrderModal({ isOpen, onClose, onOrderCreated }) {
         payment_status: paymentStatus,
         discount_amount: Number(discount) || 0,
         notes: notes || undefined,
+        brand_id: selectedBrandId,
       });
 
       showSuccess(null, `Order ${result.order?.order_number || ''} created!`);
@@ -144,6 +160,23 @@ export default function ManualOrderModal({ isOpen, onClose, onOrderCreated }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Manual Order">
       <div className="mo-body">
+        {/* ── Brand Selection ── */}
+        <div className="mo-section">
+          <h3 className="mo-section-title">Brand *</h3>
+          <div className="input-container">
+            <label className="input-label">Select Brand</label>
+            <Select
+              value={selectedBrandId}
+              onChange={setSelectedBrandId}
+              options={[
+                { value: '', label: '— Select Brand —' },
+                ...brands.map(b => ({ value: String(b.id), label: b.display_name || b.name }))
+              ]}
+              placeholder="Select Brand"
+            />
+          </div>
+        </div>
+
         {/* ── Customer Info ── */}
         <div className="mo-section">
           <h3 className="mo-section-title">Customer</h3>

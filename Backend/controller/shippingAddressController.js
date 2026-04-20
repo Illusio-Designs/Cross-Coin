@@ -10,6 +10,7 @@ module.exports.createShippingAddress = async (req, res) => {
 
   try {
     const {
+      full_name,
       address,
       city,
       state,
@@ -81,9 +82,7 @@ module.exports.createShippingAddress = async (req, res) => {
     const shippingAddress = await ShippingAddress.create(
       {
         user_id: userId,
-        full_name: `${req.user.firstName || ""} ${
-          req.user.lastName || ""
-        }`.trim(),
+        full_name: full_name || `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() || req.user.username || "",
         address,
         city,
         state,

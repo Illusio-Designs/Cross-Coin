@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { orderService, dashboardService } from '../../../services';
+import { orderService, dashboardService, brandService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
@@ -55,6 +55,8 @@ const Orders = () => {
     const [statsEndDate, setStatsEndDate] = useState('');
     const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
+    const [brandFilter, setBrandFilter] = useState('all');
+    const [brands, setBrands] = useState([]);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -76,6 +78,7 @@ const Orders = () => {
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
+                brand_id: brandFilter !== 'all' ? brandFilter : undefined,
                 search: debouncedSearch || undefined,
                 start_date: statsStartDate || undefined,
                 end_date: statsEndDate || undefined,
@@ -95,7 +98,7 @@ const Orders = () => {
         } finally {
             if (reqId === requestIdRef.current) setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
+    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
@@ -296,7 +299,11 @@ const Orders = () => {
     };
 
     // ── One-shot init: stats panel + label stats (orders fetched by effects below) ──
-    useEffect(() => { fetchAllOrdersForStats(); fetchLabelStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        fetchAllOrdersForStats();
+        fetchLabelStats();
+        brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data || []); }).catch(() => {});
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Stats panel re-fetches when its date range changes
     useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -305,7 +312,7 @@ const Orders = () => {
     // so users don't get stuck on an out-of-range page after narrowing results.
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
+    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
 
     // Single source of truth for fetching the orders list.
     // fetchOrders depends on every filter, so this effect re-runs whenever any of them change.
@@ -659,6 +666,17 @@ const Orders = () => {
                                     { value: 'cancelled', label: 'Cancelled' },
                                 ]}
                                 placeholder="All Payment Status"
+                            />
+                        </div>
+                        <div className="orders-filter-wrap">
+                            <Select
+                                value={brandFilter}
+                                onChange={(v) => setBrandFilter(v || 'all')}
+                                options={[
+                                    { value: 'all', label: 'All Brands' },
+                                    ...brands.map(b => ({ value: String(b.id), label: b.display_name || b.name }))
+                                ]}
+                                placeholder="All Brands"
                             />
                         </div>
                         <div className="orders-filter-divider" />

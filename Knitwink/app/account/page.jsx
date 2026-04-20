@@ -7,10 +7,26 @@ import { useAuth } from '@/context/AuthContext'
 import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
 import { updateProfile, changePassword } from '@/lib/api/auth'
+import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
 const TABS = ['My Orders', 'Addresses', 'Account Details', 'Reset Password']
 
 const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu and Kashmir','Ladakh','Puducherry','Chandigarh']
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'
+
+function toAbsoluteUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_BASE}/uploads${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+function getOrderImage(item) {
+  const images = item.Product?.ProductImages || []
+  const match = images.find(img => img.product_variation_id === item.variation_id)
+  const url = match?.image_url || images[0]?.image_url || item.image_url || item.image || ''
+  return toAbsoluteUrl(url)
+}
 
 function getInitials(name) {
   if (!name) return 'K'
@@ -29,6 +45,13 @@ function getStatusStyle(status) {
   if (['shipped', 'processing', 'booked', 'confirmed'].includes(s)) return { background: '#e8f4ff', color: '#1a5cb5' }
   if (s === 'cancelled') return { background: '#fce4ec', color: '#c62828' }
   return { background: '#f3f4f6', color: '#555' }
+}
+
+function getBrandStyle(brandName) {
+  const b = (brandName || '').toLowerCase()
+  if (b === 'knitwink') return { background: '#0a0a0a', color: '#fff' }
+  if (b === 'crosscoin' || b === 'cross coin') return { background: '#CE1E36', color: '#fff' }
+  return { background: '#e5e7eb', color: '#374151' }
 }
 
 export default function AccountPage() {
@@ -216,14 +239,19 @@ export default function AccountPage() {
                         <div className="pf-order-meta">
                           <span className="pf-order-num">#{order.order_number}</span>
                           <span className="pf-order-date">{formatDate(order.createdAt)}</span>
+                          {(order.brand_name || order.Brand?.name) && (
+                            <span style={{ ...getBrandStyle(order.brand_name || order.Brand?.name), fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', textTransform: 'capitalize', letterSpacing: '0.03em' }}>
+                              {order.brand_name || order.Brand?.name}
+                            </span>
+                          )}
                         </div>
                         <span className="pf-order-status" style={sc}>{order.status?.replace(/_/g, ' ')}</span>
                       </div>
                       {order.OrderItems?.map(item => (
                         <div className="pf-order-item" key={item.id}>
                           <div className="pf-order-img">
-                            {(item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product?.ProductImages?.[0]?.image_url) && (
-                              <img src={item.ProductVariation?.VariationImages?.[0]?.image_url || item.Product?.ProductImages?.[0]?.image_url} alt={item.Product?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {getOrderImage(item) && (
+                              <img src={getOrderImage(item)} alt={item.Product?.name || item.product_name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             )}
                           </div>
                           <div className="pf-order-item-info">

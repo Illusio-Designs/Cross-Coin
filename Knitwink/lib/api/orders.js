@@ -143,7 +143,8 @@ export async function getUserAddresses() {
   const token = getToken()
   const res = await fetch(`${API_URL}/api/shipping-addresses`, { headers: headers(token) })
   if (!res.ok) return []
-  return res.json()
+  const data = await res.json()
+  return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
 }
 
 export async function createAddress(data) {
@@ -155,6 +156,87 @@ export async function createAddress(data) {
   })
   return res.json()
 }
+
+function normaliseAddr(data) {
+  return {
+    full_name: data.full_name || data.fullName || '',
+    address: data.address || '',
+    city: data.city || '',
+    state: data.state || '',
+    postal_code: data.postal_code || data.postalCode || data.pincode || '',
+    country: data.country || 'India',
+    phone_number: data.phone_number || data.phoneNumber || data.phone || '',
+    is_default: data.is_default ?? data.isDefault ?? false,
+  }
+}
+
+// Create shipping address (camelCase format used by CartDrawer)
+export async function createShippingAddress(data) {
+  const token = getToken()
+  const res = await fetch(`${API_URL}/api/shipping-addresses`, {
+    method: 'POST',
+    headers: headers(token),
+    body: JSON.stringify(normaliseAddr(data)),
+  })
+  const result = await res.json()
+  if (!res.ok) throw new Error(result.message || 'Failed to create address')
+  return result
+}
+
+// Update shipping address (camelCase format used by CartDrawer)
+export async function updateShippingAddress(id, data) {
+  const token = getToken()
+  const res = await fetch(`${API_URL}/api/shipping-addresses/${id}`, {
+    method: 'PUT',
+    headers: headers(token),
+    body: JSON.stringify(normaliseAddr(data)),
+  })
+  const result = await res.json()
+  if (!res.ok) throw new Error(result.message || 'Failed to update address')
+  return result
+}
+
+// Retry checkout — extends stock reservation & gets new Razorpay order
+export async function retryCheckout(reservationId) {
+  const token = getToken()
+  const res = await fetch(`${API_URL}/api/checkout/retry`, {
+    method: 'POST',
+    headers: headers(token),
+    body: JSON.stringify({ reservation_id: reservationId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.message || 'Retry failed')
+  return data
+}
+
+// Check if a pincode is serviceable
+export async function checkPincodeServiceability(pincode) {
+  const res = await fetch(`${API_URL}/api/serviceability/${pincode}`, {
+    headers: { 'X-Brand-Name': BRAND },
+  })
+  if (!res.ok) return { serviceable: true, cod_allowed: true }
+  const data = await res.json()
+  return {
+    serviceable: data.serviceable !== false,
+    cod_allowed: data.cod_allowed !== false || data.cod_available !== false,
+    estimated_delivery_days: data.estimated_delivery_days || 5,
+  }
+}
+
+// Validate a coupon code
+export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }) {
+  const res = await fetch(`${API_URL}/api/coupons/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+    body: JSON.stringify({ code, cartTotal, paymentMode, cartItems }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.message || 'Invalid coupon')
+  return data
+}
+
+// Alias for CartDrawer compatibility
+export { verifyPayment as updateOrderPayment }
 
 // Aliases for backward compatibility
 export const getOrders = getUserOrders

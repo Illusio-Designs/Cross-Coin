@@ -1,6 +1,8 @@
 
 import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
 import '@/styles/globals.css';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -9,6 +11,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
+import { CartProvider } from '@/context/CartContext';
 import { SITE_NAME } from '@/lib/constants';
 
 const inter = Inter({
@@ -77,6 +80,7 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         <AuthProvider>
+        <CartProvider>
         <AnnouncementBar />
         <Navbar />
         <Breadcrumb />
@@ -87,6 +91,8 @@ export default function RootLayout({ children }) {
         </main>
         <Footer />
         <BackToTop />
+        <ToastContainer />
+        </CartProvider>
         </AuthProvider>
       </body>
     </html>);

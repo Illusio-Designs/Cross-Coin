@@ -1,13 +1,60 @@
-import { apiClient } from './client';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink';
 
+function getToken() {
+  return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+}
 
-export const getCart = () => apiClient.get('/api/cart');
+function authHeaders() {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    'X-Brand-Name': BRAND,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
-export const addItem = (variantId, quantity = 1) =>
-apiClient.post('/api/cart/items', { variantId, quantity });
+export async function getCart() {
+  const res = await fetch(`${API_URL}/api/cart`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch cart');
+  const data = await res.json();
+  return data.cart || data.items || data || [];
+}
 
-export const updateItem = (itemId, quantity) =>
-apiClient.patch(`/api/cart/items/${itemId}`, { quantity });
+export async function addToCart({ productId, variationId, quantity = 1, size = null }) {
+  const res = await fetch(`${API_URL}/api/cart/items`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ productId, variationId, quantity, size }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to add to cart');
+  return data;
+}
 
-export const removeItem = (itemId) =>
-apiClient.delete(`/api/cart/items/${itemId}`);
+export async function updateCartItem(productId, quantity, variationId = null) {
+  const res = await fetch(`${API_URL}/api/cart/items/${productId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ quantity, variationId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update cart');
+  return data;
+}
+
+export async function removeFromCart(productId, variationId = null) {
+  let url = `${API_URL}/api/cart/items/${productId}`;
+  if (variationId != null) url += `/${variationId}`;
+  const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to remove from cart');
+  return data;
+}
+
+export async function clearCart() {
+  const res = await fetch(`${API_URL}/api/cart`, { method: 'DELETE', headers: authHeaders() });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to clear cart');
+  return data;
+}

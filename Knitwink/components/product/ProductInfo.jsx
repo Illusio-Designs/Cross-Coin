@@ -32,7 +32,9 @@ export function ProductInfo({ product, onColorChange }) {
   }
 
   const handleAddToCart = () => {
-    const variant = product.variants[0]
+    const variant = product.variants.find(v => v.color === activeColor.name) || product.variants[0]
+    const varImages = product.colorImages?.[activeColor.name] || []
+    const imageUrl = varImages[0]?.url || product.images[0]?.url || ''
     addItem({
       id: variant?.id ?? product.id,
       productId: product.id,
@@ -42,7 +44,7 @@ export function ProductInfo({ product, onColorChange }) {
       size: 'Free Size',
       price: product.price,
       quantity: qty,
-      imageUrl: product.images[0]?.url ?? '',
+      imageUrl,
       handle: product.handle,
     })
     setAddedFeedback(true)
