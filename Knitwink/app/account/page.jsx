@@ -195,11 +195,13 @@ export default function AccountPage() {
       </section>
 
       {/* Stats */}
-      <div className="pf-stats">
-        <div className="pf-stat"><div className="pf-stat-val">{orders.length}</div><div className="pf-stat-label">Orders</div></div>
-        <div className="pf-stat"><div className="pf-stat-val">{addresses.length}</div><div className="pf-stat-label">Addresses</div></div>
-        <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => o.status === 'delivered').length}</div><div className="pf-stat-label">Delivered</div></div>
-        <div className="pf-stat"><div className="pf-stat-val">{user.loyalty_points || 0}</div><div className="pf-stat-label">Points</div></div>
+      <div className="pf-stats-wrap">
+        <div className="pf-stats">
+          <div className="pf-stat"><div className="pf-stat-val">{orders.length}</div><div className="pf-stat-label">Orders</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{addresses.length}</div><div className="pf-stat-label">Addresses</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => o.status === 'delivered').length}</div><div className="pf-stat-label">Delivered</div></div>
+          <div className="pf-stat"><div className="pf-stat-val">{user.loyalty_points || 0}</div><div className="pf-stat-label">Points</div></div>
+        </div>
       </div>
 
       {/* Body */}
