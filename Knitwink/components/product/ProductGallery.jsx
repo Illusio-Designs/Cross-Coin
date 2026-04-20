@@ -144,8 +144,7 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
         <img
           src={main?.url}
           alt={main?.alt || productName}
-          className="w-full object-contain"
-          style={{ minHeight: 420 }}
+          className="w-full object-contain min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
         />
       </div>
 

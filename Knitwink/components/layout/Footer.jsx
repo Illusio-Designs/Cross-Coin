@@ -41,10 +41,10 @@ export function Footer() {
 
       {/* 5-column grid: Brand | Shop | Company | Help | Contact */}
       <div className="px-6 py-16 md:px-10 lg:px-16">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
 
-          {/* Col 1 — Brand (left-aligned) */}
-          <div className="col-span-2 flex flex-col items-start gap-5 md:col-span-1">
+          {/* Col 1 — Brand */}
+          <div className="flex flex-col items-start gap-5 sm:col-span-2 md:col-span-1">
             <img src="/knitwinklogo.webp" alt="Knitwink" className="h-16 w-auto object-contain brightness-0 invert" />
             <p className="text-sm leading-relaxed text-white/55 max-w-[220px]">
               Premium knitwear crafted with care. Comfort meets style in every stitch.

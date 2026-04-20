@@ -67,12 +67,12 @@ export function ReviewModal({ isOpen, onClose, productId = null, productName = n
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
+      <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
         <button onClick={handleClose} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">
           <X size={15} />
         </button>
