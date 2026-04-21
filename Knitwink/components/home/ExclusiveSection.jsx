@@ -14,7 +14,50 @@ export function ExclusiveSection({ products = [] }) {
   const [activeColor, setActiveColor] = useState(0)
   const { addItem } = useCart()
 
-  if (!products.length) return null
+  if (!products.length) {
+    return (
+      <section className="bg-white px-3 py-6">
+        <p className="mb-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-brand-black">
+          Hand-Picked for You
+        </p>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto_1fr]">
+          {/* Image skeleton */}
+          <div className="flex gap-3">
+            <div className="hidden sm:flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-12 w-12 animate-pulse rounded-xl bg-gray-200 sm:h-14 sm:w-14 md:h-16 md:w-16" />
+              ))}
+            </div>
+            <div className="flex-1 animate-pulse rounded-2xl bg-gray-200 min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
+          </div>
+          {/* Spacer for lg 3-col layout */}
+          <div className="hidden lg:block" />
+          {/* Info skeleton */}
+          <div className="flex flex-col gap-4">
+            <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
+            <div className="h-6 w-3/4 animate-pulse rounded bg-gray-200" />
+            <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+            <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+            <div className="flex gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-7 w-7 animate-pulse rounded-full bg-gray-200" />
+              ))}
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
+              <div className="h-3 w-5/6 animate-pulse rounded bg-gray-200" />
+              <div className="h-3 w-2/3 animate-pulse rounded bg-gray-200" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-10 w-16 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   const product = products[active]
   const colorName = product.colors?.[activeColor]?.name

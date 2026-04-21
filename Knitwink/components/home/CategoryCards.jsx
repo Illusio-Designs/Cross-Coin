@@ -11,7 +11,18 @@ function cleanImg(url) {
 }
 
 export function CategoryCards({ categories = [] }) {
-  if (!categories.length) return null
+  if (!categories.length) {
+    return (
+      <div className="grid grid-cols-2 gap-3 px-3 py-3 md:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-[3/4] animate-pulse rounded-2xl bg-gray-200 md:aspect-auto md:min-h-[320px] lg:min-h-[400px]"
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-2 gap-3 px-3 py-3 md:grid-cols-4">
