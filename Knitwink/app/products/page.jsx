@@ -148,7 +148,7 @@ export default function ProductsPage() {
       <section className="relative overflow-hidden bg-brand-black min-h-[240px] sm:min-h-[300px] md:min-h-[380px]">
         <img src="/product hero.jpg" alt="Products" className="absolute inset-0 h-full w-full object-cover opacity-60" />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 to-transparent" />
-        <div className="relative flex h-full min-h-[240px] sm:min-h-[300px] md:min-h-[380px] flex-col items-start justify-end px-4 pb-8 sm:px-6 sm:pb-10 md:px-10">
+        <div className="relative flex h-full min-h-[240px] sm:min-h-[300px] md:min-h-[380px] flex-col items-start justify-end px-4 pt-32 pb-8 sm:px-6 sm:pt-36 sm:pb-10 md:px-10 md:pt-40">
           <h1 className="text-3xl font-bold text-white lg:text-4xl">{
             selectedCategoryIds.length > 0
               ? categories.filter(c => selectedCategoryIds.includes(String(c.id))).map(c => c.name).join(', ')

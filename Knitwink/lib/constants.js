@@ -10,7 +10,6 @@ export const ROUTES = {
   products: '/products',
   product: (handle) => `/products/${handle}`,
   cart: '/cart',
-  checkout: '/checkout',
   account: '/account',
   orders: '/account/orders',
   order: (id) => `/account/orders/${id}`,

@@ -7,7 +7,7 @@ import { CartItem } from '@/components/cart/CartItem';
 import { FreeShippingBar } from '@/components/cart/FreeShippingBar';
 import { CartUpsell } from '@/components/cart/CartUpsell';
 import { formatPrice } from '@/lib/utils';
-import { ROUTES, SHIPPING_THRESHOLD } from '@/lib/constants';
+import { SHIPPING_THRESHOLD } from '@/lib/constants';
 
 
 
@@ -15,7 +15,7 @@ import { ROUTES, SHIPPING_THRESHOLD } from '@/lib/constants';
 
 
 export function CartPageClient({ upsellProducts }) {
-  const { items, subtotal } = useCart();
+  const { items, subtotal, openDrawer } = useCart();
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : 499;
   const total = subtotal + shipping;
 
@@ -79,12 +79,11 @@ export function CartPageClient({ upsellProducts }) {
                 <span>{formatPrice(total)}</span>
               </div>
 
-              <Link
-                href={ROUTES.checkout}
+              <button
+                onClick={openDrawer}
                 className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-sage px-8 py-3.5 text-sm font-medium uppercase tracking-wider text-white transition-colors duration-150 hover:bg-sage-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage">
-                
                 Checkout
-              </Link>
+              </button>
 
               <Link
                 href="/collections/all"

@@ -127,7 +127,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-brand-black px-6 py-16 text-center md:px-10 md:py-20">
+      <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
         <div className="relative">
           <h1 className="text-3xl font-bold text-white lg:text-4xl">Welcome Back</h1>
           <p className="mt-3 text-sm text-white/45">Sign in with your phone number</p>

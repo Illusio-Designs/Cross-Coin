@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }) {
     <div className="min-h-screen bg-[#f5f5f5]">
 
       {/* Hero — same as contact/other pages */}
-      <section className="relative overflow-hidden bg-brand-black px-6 py-16 text-center md:px-10 md:py-20">
+      <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
         <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
         <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05]" />

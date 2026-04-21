@@ -43,7 +43,7 @@ export function Navbar() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
   }, [])
 
-  const iconBtn = 'flex h-10 w-10 items-center justify-center rounded-full text-gray-700 transition-colors duration-150 hover:bg-black/5 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-1'
+  const iconBtn = 'flex h-8 w-8 lg:h-10 lg:w-10 items-center justify-center rounded-full text-gray-700 transition-colors duration-150 hover:bg-black/5 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-1'
 
   return (
     <div
@@ -66,7 +66,7 @@ export function Navbar() {
         {/* Left: hamburger (mobile) / logo (desktop) */}
         <div className="flex items-center">
           <button onClick={openMobileMenu} className={cn(iconBtn, 'lg:hidden')} aria-label="Open menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="lg:w-5 lg:h-5">
               <line x1="3" y1="7" x2="21" y2="7" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="17" x2="21" y2="17" />
@@ -105,13 +105,13 @@ export function Navbar() {
             Journal
           </Link>
           <Link href={ROUTES.search} className={iconBtn} aria-label="Search">
-            <Search size={18} strokeWidth={1.5} />
+            <Search size={15} strokeWidth={1.5} className="lg:w-[18px] lg:h-[18px]" />
           </Link>
-          <Link href={isAuthenticated ? ROUTES.account : ROUTES.login} className={cn(iconBtn, 'hidden lg:flex')} aria-label="Account">
-            <User size={17} strokeWidth={1.6} />
+          <Link href={isAuthenticated ? ROUTES.account : ROUTES.login} className={iconBtn} aria-label="Account">
+            <User size={15} strokeWidth={1.6} className="lg:w-[17px] lg:h-[17px]" />
           </Link>
           <button onClick={openDrawer} className={cn(iconBtn, 'relative')} aria-label={`Cart, ${itemCount} items`}>
-            <ShoppingBag size={18} strokeWidth={1.5} />
+            <ShoppingBag size={15} strokeWidth={1.5} className="lg:w-[18px] lg:h-[18px]" />
             {itemCount > 0 && (
               <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-black text-[8px] font-semibold text-white">
                 {itemCount}

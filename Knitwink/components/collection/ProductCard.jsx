@@ -95,39 +95,33 @@ export function ProductCard({ product }) {
           {product.name}
         </p>
 
-        {/* Dots + price row */}
+        {/* Price row */}
+        <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.preventDefault()}>
+          {product.compareAtPrice &&
+            <p className="text-xs text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</p>
+          }
+          <p className="text-sm font-medium text-brand-black">{formatPrice(product.price)}</p>
+        </div>
+
+        {/* Colors row — always full width below price so wrapping is clean */}
         <div
-          className="mt-2 flex items-start justify-between gap-2"
+          className="mt-2 flex flex-wrap items-center gap-1.5"
           onClick={(e) => e.preventDefault()}>
-          
-          {/* Dots — wrap inline, +N continues in same flow */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {visibleColors.map((color) =>
+          {visibleColors.map((color) =>
             <span
               key={color.name}
               title={color.name}
               className="h-4 w-4 shrink-0 rounded-full border border-gray-300"
               style={{ backgroundColor: color.hex }} />
-
-            )}
-            {!expanded && overflow > 0 &&
+          )}
+          {!expanded && overflow > 0 &&
             <button
               aria-label={`Show ${overflow} more colors`}
-              onClick={(e) => {e.preventDefault();setExpanded(true);}}
+              onClick={(e) => { e.preventDefault(); setExpanded(true); }}
               className="text-[11px] font-medium text-gray-500 hover:text-brand-black transition-colors leading-none">
-              
-                +{overflow}
-              </button>
-            }
-          </div>
-
-          {/* Price — anchored to the right, never wraps */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            {product.compareAtPrice &&
-            <p className="text-xs text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</p>
-            }
-            <p className="text-sm font-medium text-brand-black">{formatPrice(product.price)}</p>
-          </div>
+              +{overflow}
+            </button>
+          }
         </div>
 
         {/* Add to Bag */}

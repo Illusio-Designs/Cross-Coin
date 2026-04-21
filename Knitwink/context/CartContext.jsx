@@ -141,7 +141,13 @@ export function CartProvider({ children }) {
         } else {
           try {
             const raw = localStorage.getItem(GUEST_CART_KEY);
-            setCartItems(raw ? JSON.parse(raw) : []);
+            const parsed = raw ? JSON.parse(raw) : [];
+            // Filter out legacy items that don't have a valid productId (from old schema)
+            const cleaned = parsed.filter(i => i.productId != null && !isNaN(Number(i.productId)));
+            if (cleaned.length !== parsed.length) {
+              localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cleaned));
+            }
+            setCartItems(cleaned);
           } catch { setCartItems([]); }
         }
       } catch { setCartItems([]); }
@@ -190,7 +196,6 @@ export function CartProvider({ children }) {
     setCartItems(prev => {
       const existing = prev.find(i => String(i.productId) === String(product.id) && String(i.variationId) === String(vid));
       if (existing) {
-        toastAddedToCart(product.name);
         return prev.map(i =>
           String(i.productId) === String(product.id) && String(i.variationId) === String(vid)
             ? { ...i, quantity: i.quantity + quantity }
@@ -212,9 +217,9 @@ export function CartProvider({ children }) {
         color: selectedColor || '',
         quantity,
       };
-      toastAddedToCart(product.name);
       return [...prev, newItem];
     });
+    toastAddedToCart(product.name);
   }
 
   const removeFromCart = async (itemId) => {

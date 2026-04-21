@@ -111,7 +111,7 @@ export default function AccountPage() {
   }
   const openEditAddr = (a) => {
     setEditingAddr(a)
-    setAddrForm({ full_name: a.full_name || '', phone: a.phone || '', address: a.address || '', city: a.city || '', state: a.state || '', pincode: a.pincode || a.postal_code || '', country: a.country || 'India', is_default: a.is_default || false })
+    setAddrForm({ full_name: a.full_name || '', phone: a.phone_number || a.phone || '', address: a.address || '', city: a.city || '', state: a.state || '', pincode: a.postal_code || a.pincode || '', country: a.country || 'India', is_default: a.is_default || false })
     setShowAddrModal(true)
   }
   const handleAddrSubmit = async (e) => {
@@ -176,7 +176,7 @@ export default function AccountPage() {
   return (
     <div className="pf-page">
       {/* Hero — matches site style */}
-      <section className="relative overflow-hidden bg-brand-black px-6 py-16 text-center md:px-10 md:py-20">
+      <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
         <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
         <div className="relative">

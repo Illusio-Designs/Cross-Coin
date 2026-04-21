@@ -71,7 +71,7 @@ export default function AboutPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative min-h-screen flex items-end bg-brand-black overflow-hidden">
+      <section className="relative min-h-[75vh] md:min-h-screen flex items-end bg-brand-black overflow-hidden">
         <img
           src="https://ik.imagekit.io/wp2oatzmf/products/variation_0_image-1774363348670-268740372.jpg?tr=w-1600,h-1200,q-85,f-auto"
           alt="Knitwink foot alignment socks"
@@ -79,31 +79,31 @@ export default function AboutPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/30 to-transparent" />
 
-        <div className="relative z-10 w-full px-6 pb-20 md:px-10 lg:px-16 lg:pb-10">
+        <div className="relative z-10 w-full px-4 pt-32 pb-12 sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20 lg:px-16 lg:pb-10">
           <div className="max-w-2xl">
             <span className="inline-block rounded-full border border-white/20 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/50">
               About Knitwink
             </span>
-            <h1 className="mt-5 font-display text-5xl font-normal leading-tight text-white md:text-6xl lg:text-7xl">
+            <h1 className="mt-5 font-display text-3xl font-normal leading-tight text-white sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
               Socks That Actually<br /><strong>Care for Your Feet</strong>
             </h1>
-            <p className="mt-6 text-base leading-relaxed text-white/60 max-w-lg">
+            <p className="mt-6 text-sm leading-relaxed text-white/60 max-w-lg text-justify sm:text-base">
               We are a small team obsessed with one thing — making socks that genuinely improve how your feet feel. Not just look good, not just last long — but actually help.
             </p>
             <Link
               href="/collections"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-brand-black transition-colors hover:bg-gray-100"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-brand-black transition-colors hover:bg-gray-100 sm:px-8 sm:py-3.5"
             >
               Explore Our Socks
             </Link>
           </div>
 
           {/* Stats row */}
-          <div className="mt-16 grid grid-cols-2 gap-4 border-t border-white/10 pt-8 md:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 md:mt-16 md:grid-cols-4 md:pt-8">
             {STATS.map((s) => (
               <div key={s.label}>
-                <p className="font-display text-3xl font-semibold text-white">{s.value}</p>
-                <p className="mt-0.5 text-xs font-medium uppercase tracking-widest text-white/40">{s.label}</p>
+                <p className="font-display text-2xl font-semibold text-white sm:text-3xl">{s.value}</p>
+                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-white/40 sm:text-xs">{s.label}</p>
               </div>
             ))}
           </div>
@@ -111,17 +111,17 @@ export default function AboutPage() {
       </section>
 
       {/* Mission */}
-      <section className="bg-white px-6 py-16 md:px-10 lg:px-16 lg:py-24">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+      <section className="bg-white px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16 lg:py-24">
+        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-12">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gray-400">Our Belief</p>
-            <h2 className="mt-3 font-display text-3xl font-normal text-brand-black lg:text-4xl">
+            <h2 className="mt-3 font-display text-2xl font-normal text-brand-black sm:text-3xl lg:text-4xl">
               The smallest things<br /><strong>make the biggest difference</strong>
             </h2>
-            <div className="mt-6 flex flex-col gap-4 text-base leading-relaxed text-gray-500">
-              <p>At Knitwink, we started with a frustration most people share but rarely talk about — socks that lose shape after two washes, seams that dig in, and fabrics that trap heat. We decided to fix that.</p>
-              <p>Our mission is to engineer everyday essentials that perform as hard as you do. Whether you are recovering from foot pain, going through a long day at work, or simply relaxing at home — your socks should never be the problem.</p>
-              <p>We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Knitwink promise.</p>
+            <div className="mt-6 flex flex-col gap-4 text-sm leading-relaxed text-gray-500 sm:text-base">
+              <p className="text-justify">At Knitwink, we started with a frustration most people share but rarely talk about — socks that lose shape after two washes, seams that dig in, and fabrics that trap heat. We decided to fix that.</p>
+              <p className="text-justify">Our mission is to engineer everyday essentials that perform as hard as you do. Whether you are recovering from foot pain, going through a long day at work, or simply relaxing at home — your socks should never be the problem.</p>
+              <p className="text-justify">We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Knitwink promise.</p>
             </div>
           </div>
           <div className="overflow-hidden rounded-2xl bg-gray-100">
@@ -135,44 +135,44 @@ export default function AboutPage() {
       </section>
 
       {/* Three Pillars */}
-      <section className="bg-gray-50 px-6 py-16 md:px-10 lg:px-16 lg:py-20">
+      <section className="bg-gray-50 px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16 lg:py-20">
         <SectionHeader eyebrow="How We Think" title="Three Things We <strong>Never Compromise On</strong>" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {PILLARS.map((p) => (
-            <div key={p.number} className="rounded-2xl border border-gray-100 bg-white p-8">
-              <span className="font-display text-4xl font-normal">{p.number}</span>
+            <div key={p.number} className="rounded-2xl border border-gray-100 bg-white p-6 sm:p-8">
+              <span className="font-display text-3xl font-normal sm:text-4xl">{p.number}</span>
               <h3 className="mt-3 text-base font-semibold text-brand-black">{p.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-gray-500">{p.body}</p>
+              <p className="mt-3 text-sm leading-relaxed text-gray-500 text-justify">{p.body}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Product Features */}
-      <section className="bg-white px-6 py-16 md:px-10 lg:px-16 lg:py-20">
+      <section className="bg-white px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16 lg:py-20">
         <SectionHeader eyebrow="What Makes Us Different" title="Engineered for <strong>Real Feet</strong>" center />
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {FEATURES.map((f) => (
-            <div key={f.title} className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-6">
+            <div key={f.title} className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-5 sm:gap-4 sm:p-6">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm text-brand-black">
                 {f.icon}
               </div>
               <p className="text-sm font-semibold text-brand-black">{f.title}</p>
-              <p className="text-sm leading-relaxed text-gray-500">{f.body}</p>
+              <p className="text-sm leading-relaxed text-gray-500 text-justify">{f.body}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Quote */}
-      <section className="relative overflow-hidden bg-brand-black px-6 py-20 md:px-10 lg:px-16 lg:py-28">
+      <section className="relative overflow-hidden bg-brand-black px-4 py-16 sm:px-6 sm:py-20 md:px-10 lg:px-16 lg:py-28">
         <img
           src="https://ik.imagekit.io/wp2oatzmf/products/variation_2_image-1774363348683-14851714.jpg?tr=w-1600,h-800,q-80,f-auto"
           alt="Knitwink"
           className="absolute inset-0 h-full w-full object-cover opacity-20"
         />
         <div className="relative z-10 mx-auto max-w-2xl text-center">
-          <p className="font-display text-3xl font-normal leading-snug text-white lg:text-4xl">
+          <p className="font-display text-2xl font-normal leading-snug text-white sm:text-3xl lg:text-4xl">
             &ldquo;We believe every step you take should feel supported, comfortable, and pain-free. That is not a luxury — that is what socks should do.&rdquo;
           </p>
           <p className="mt-6 text-sm text-white/40">— The Knitwink Team</p>

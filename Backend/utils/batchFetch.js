@@ -14,8 +14,9 @@ const batchFetchProducts = async (productIds) => {
     return new Map();
   }
 
-  // Remove duplicates
-  const uniqueIds = [...new Set(productIds)];
+  // Normalize to numbers and remove duplicates/invalid
+  const uniqueIds = [...new Set(productIds.map(Number).filter(id => !isNaN(id)))];
+  if (uniqueIds.length === 0) return new Map();
 
   try {
     const products = await Product.findAll({
@@ -26,10 +27,11 @@ const batchFetchProducts = async (productIds) => {
       },
     });
 
-    // Create a map for O(1) lookup
+    // Create a map for O(1) lookup — store under both number and string key so lookups work either way
     const productMap = new Map();
     products.forEach((product) => {
       productMap.set(product.id, product);
+      productMap.set(String(product.id), product);
     });
 
     return productMap;
@@ -51,8 +53,8 @@ const batchFetchVariations = async (variationIds) => {
     return new Map();
   }
 
-  // Remove duplicates and null values
-  const uniqueIds = [...new Set(variationIds)].filter((id) => id !== null);
+  // Normalize to numbers, remove duplicates/null/invalid
+  const uniqueIds = [...new Set(variationIds.map(Number).filter(id => !isNaN(id)))];
 
   if (uniqueIds.length === 0) {
     return new Map();
@@ -67,10 +69,11 @@ const batchFetchVariations = async (variationIds) => {
       },
     });
 
-    // Create a map for O(1) lookup
+    // Create a map for O(1) lookup — store under both number and string key
     const variationMap = new Map();
     variations.forEach((variation) => {
       variationMap.set(variation.id, variation);
+      variationMap.set(String(variation.id), variation);
     });
 
     return variationMap;

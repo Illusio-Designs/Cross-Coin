@@ -183,7 +183,7 @@ export function CartDrawer() {
   }, [drawerOpen]);
 
   // Guest contact
-  const [guestInfo, setGuestInfo] = useState({ email: '', firstName: '', lastName: '', phone: '' });
+  const [guestInfo, setGuestInfo] = useState({ email: '', fullName: '', phone: '' });
   const [guestPhoneError, setGuestPhoneError] = useState('');
 
   // Address
@@ -316,7 +316,7 @@ export function CartDrawer() {
     const t = setTimeout(() => {
       const formToValidate = isAuthenticated
         ? { full_name: addressForm.fullName, address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: addressForm.phoneNumber }
-        : { full_name: `${guestInfo.firstName} ${guestInfo.lastName}`.trim(), address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: guestInfo.phone };
+        : { full_name: guestInfo.fullName.trim(), address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: guestInfo.phone };
       const result = validateShippingAddress(formToValidate);
       const errs = {};
       for (const err of result.errors) {
@@ -425,7 +425,7 @@ export function CartDrawer() {
     e.preventDefault();
     const formData = isAuthenticated
       ? addressForm
-      : { ...addressForm, fullName: `${guestInfo.firstName} ${guestInfo.lastName}`.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
+      : { ...addressForm, fullName: guestInfo.fullName.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
 
     const addrToValidate = {
       full_name: formData.fullName,
@@ -513,11 +513,13 @@ export function CartDrawer() {
   });
 
   // ── Build payloads ──────────────────────────────────────────────────────
-  const buildItemsPayload = () => items.map(item => ({
-    product_id: item.productId || item.id,
-    variation_id: item.variationId || item.variation?.id || null,
-    quantity: item.quantity,
-  }));
+  const buildItemsPayload = () => items
+    .filter(item => item.productId != null && !isNaN(Number(item.productId)))
+    .map(item => ({
+      product_id: Number(item.productId),
+      variation_id: item.variationId ? Number(item.variationId) : (item.variation?.id ? Number(item.variation.id) : null),
+      quantity: Number(item.quantity) || 1,
+    }));
 
   const buildCodOrderData = (idempotencyKey) => {
     const base = {
@@ -529,15 +531,19 @@ export function CartDrawer() {
       idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
+    const nameParts = (guestInfo.fullName || '').trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
     return {
-      guest_info: guestInfo,
+      guest_info: { email: guestInfo.email, firstName, lastName, phone: guestInfo.phone },
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address: selectedAddress.address,
         city: selectedAddress.city,
         state: selectedAddress.state,
         pincode: selectedAddress.postal_code || selectedAddress.postalCode,
-        phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+        phone: selectedAddress.phone_number || selectedAddress.phoneNumber || guestInfo.phone,
+        country: selectedAddress.country || 'India',
       },
       ...base,
       session_id: getOrCreateGuestSessionId(),
@@ -554,20 +560,23 @@ export function CartDrawer() {
       idempotency_key: idempotencyKey,
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
+    const nameParts = (guestInfo.fullName || '').trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
     return {
       ...base,
-      shipping_address_id: undefined,
-      phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+      phone: guestInfo.phone || selectedAddress.phone_number || selectedAddress.phoneNumber,
       email: guestInfo.email,
-      firstName: guestInfo.firstName,
-      lastName: guestInfo.lastName,
+      firstName,
+      lastName,
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address: selectedAddress.address,
         city: selectedAddress.city,
         state: selectedAddress.state,
         pincode: selectedAddress.postal_code || selectedAddress.postalCode,
-        phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+        phone: selectedAddress.phone_number || selectedAddress.phoneNumber || guestInfo.phone,
+        country: selectedAddress.country || 'India',
       },
       session_id: getOrCreateGuestSessionId(),
     };
@@ -600,7 +609,7 @@ export function CartDrawer() {
       description: 'Payment for Knitwink Order',
       order_id: rzpOrder.id,
       prefill: {
-        name: isAuthenticated ? (user?.username || user?.name || '') : `${guestInfo.firstName} ${guestInfo.lastName}`,
+        name: isAuthenticated ? (user?.username || user?.name || '') : guestInfo.fullName,
         email: isAuthenticated ? (user?.email || '') : guestInfo.email,
         contact: selectedAddress?.phone_number || selectedAddress?.phoneNumber || '',
       },
@@ -659,8 +668,8 @@ export function CartDrawer() {
       return;
     }
     if (!isAuthenticated) {
-      if (!String(guestInfo.firstName || '').trim()) {
-        showError('Please enter your first name.');
+      if (!String(guestInfo.fullName || '').trim()) {
+        showError('Please enter your full name.');
         scrollDrawerTo('cd-section-address');
         return;
       }
@@ -951,7 +960,7 @@ export function CartDrawer() {
                           <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
                           <p className="cd-address-line">{selectedAddress.phone_number}</p>
                         </div>
-                        <button className="cd-address-edit" onClick={() => { setAddressForm({ fullName: selectedAddress.full_name, phoneNumber: selectedAddress.phone_number, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, postalCode: selectedAddress.postal_code, country: selectedAddress.country || 'India', isDefault: false }); setShowAddressForm(true); }}><IconEdit /></button>
+                        <button className="cd-address-edit" onClick={() => handleEditAddress(selectedAddress)}><IconEdit /></button>
                       </div>
                     ) : null}
 
@@ -966,14 +975,10 @@ export function CartDrawer() {
                         <div className="cd-form-grid">
                           {!isAuthenticated && (
                             <>
-                              <div className="cd-form-group">
-                                <label className="cd-label">First Name *</label>
-                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" autoComplete="given-name" />
+                              <div className="cd-form-group cd-form-full">
+                                <label className="cd-label">Full Name *</label>
+                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} type="text" value={guestInfo.fullName} onChange={e => setGuestInfo(p => ({ ...p, fullName: e.target.value }))} placeholder="Full name" autoComplete="name" />
                                 {fieldErrors.name && <p className="cd-field-error">{fieldErrors.name}</p>}
-                              </div>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Last Name</label>
-                                <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" autoComplete="family-name" />
                               </div>
                               <div className="cd-form-group">
                                 <label className="cd-label">Email *</label>
