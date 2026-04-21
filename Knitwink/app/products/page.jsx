@@ -168,8 +168,8 @@ export default function ProductsPage() {
             {activeFilterCount > 0 && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-black text-[9px] text-white">{activeFilterCount}</span>}
           </button>
 
-          {/* Gender tabs — always visible */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          {/* Gender tabs — hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto">
             {['All', 'Men', 'Women', 'Unisex'].map(g => (
               <button key={g} onClick={() => {
                 if (g === 'All') setSelectedGenders([])
