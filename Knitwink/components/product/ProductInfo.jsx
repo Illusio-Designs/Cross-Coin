@@ -19,7 +19,7 @@ export function ProductInfo({ product, onColorChange }) {
   )
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
-  const { addItem } = useCart()
+  const { addItem, openDrawer } = useCart()
   const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 })
 
   const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id])
@@ -53,7 +53,7 @@ export function ProductInfo({ product, onColorChange }) {
 
   const handleBuyNow = () => {
     handleAddToCart()
-    setTimeout(() => { window.location.href = '/checkout' }, 300)
+    openDrawer()
   }
 
   const discount = product.compareAtPrice
@@ -63,7 +63,7 @@ export function ProductInfo({ product, onColorChange }) {
   return (
     <>
       {/* White card wrapper */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:p-7">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
 
         {/* Collection badge */}
         {product.collectionName && (
@@ -183,9 +183,9 @@ export function ProductInfo({ product, onColorChange }) {
         {/* Divider */}
         <hr className="my-5 border-gray-100" />
 
-        {/* Qty + Add to Bag + Buy Now — single row */}
-        <div className="flex items-center gap-2.5" ref={atcRef}>
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-gray-200 px-2.5 py-2.5">
+        {/* Qty + Add to Bag + Buy Now */}
+        <div ref={atcRef} className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 items-center gap-1 self-start rounded-full border border-gray-200 px-2.5 py-2.5 sm:self-auto">
             <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-gray-100">
               <Minus size={12} />
             </button>
@@ -195,24 +195,26 @@ export function ProductInfo({ product, onColorChange }) {
             </button>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-xs font-semibold uppercase tracking-wider transition-colors',
-              addedFeedback ? 'bg-green-600 text-white' : 'bg-brand-black text-white hover:bg-gray-800'
-            )}
-          >
-            <ShoppingBag size={14} />
-            {addedFeedback ? 'Added!' : 'Add to Bag'}
-          </button>
+          <div className="flex flex-1 items-center gap-2.5">
+            <button
+              onClick={handleAddToCart}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-xs font-semibold uppercase tracking-wider transition-colors',
+                addedFeedback ? 'bg-green-600 text-white' : 'bg-brand-black text-white hover:bg-gray-800'
+              )}
+            >
+              <ShoppingBag size={14} />
+              {addedFeedback ? 'Added!' : 'Add to Bag'}
+            </button>
 
-          <button
-            onClick={handleBuyNow}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-brand-black py-[10px] text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:bg-brand-black hover:text-white"
-          >
-            <Zap size={14} />
-            Buy Now
-          </button>
+            <button
+              onClick={handleBuyNow}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-brand-black py-[10px] text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:bg-brand-black hover:text-white"
+            >
+              <Zap size={14} />
+              Buy Now
+            </button>
+          </div>
         </div>
       </div>
 

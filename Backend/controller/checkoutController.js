@@ -164,17 +164,20 @@ async function calcShippingFee(paymentType, brandId = 1) {
 }
 
 async function batchFetchProducts(productIds) {
-  const products = await Product.findAll({ where: { id: productIds } });
+  const ids = [...new Set((productIds || []).map(Number).filter(id => !isNaN(id)))];
+  if (!ids.length) return new Map();
+  const products = await Product.findAll({ where: { id: ids } });
   const map = new Map();
-  products.forEach(p => map.set(p.id, p));
+  products.forEach(p => { map.set(p.id, p); map.set(String(p.id), p); });
   return map;
 }
 
 async function batchFetchVariations(variationIds) {
-  if (!variationIds.length) return new Map();
-  const variations = await ProductVariation.findAll({ where: { id: variationIds } });
+  const ids = [...new Set((variationIds || []).map(Number).filter(id => !isNaN(id)))];
+  if (!ids.length) return new Map();
+  const variations = await ProductVariation.findAll({ where: { id: ids } });
   const map = new Map();
-  variations.forEach(v => map.set(v.id, v));
+  variations.forEach(v => { map.set(v.id, v); map.set(String(v.id), v); });
   return map;
 }
 
@@ -466,12 +469,20 @@ exports.initiateGuestCheckout = async (req, res) => {
     }
 
     const normalizedPhone = String(phone).replace(/\D/g, '').slice(-10);
+    const { Op } = require('sequelize');
 
-    let user = await User.findOne({ where: { phone: { [require('sequelize').Op.like]: `%${normalizedPhone}` } } });
+    let user = await User.findOne({
+      where: { [Op.or]: [{ phone: { [Op.like]: `%${normalizedPhone}` } }, { email }] },
+    });
     if (!user) {
+      const baseName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
+      const uniqueUsername = `${baseName} (${normalizedPhone})`;
       user = await User.create({
-        username: `${firstName} ${lastName || ''}`.trim(), email, phone: normalizedPhone,
-        role: 'user', password: require('crypto').randomBytes(16).toString('hex'),
+        username: uniqueUsername,
+        email,
+        phone: normalizedPhone,
+        role: 'consumer',
+        password: require('crypto').randomBytes(16).toString('hex'),
       });
       logger.info(`Guest checkout: created user ${user.id} for phone ${normalizedPhone}`);
     }

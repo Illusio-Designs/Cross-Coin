@@ -7,7 +7,6 @@ const SEGMENT_LABELS = {
   collections: 'Collections',
   products: 'Products',
   cart: 'Cart',
-  checkout: 'Checkout',
   account: 'Account',
   orders: 'Orders',
   settings: 'Settings',
@@ -44,9 +43,12 @@ export function Breadcrumb() {
     href: '/' + segments.slice(0, i + 1).join('/'),
   }))
 
-  // Dark pages + /products exact (listing page has dark hero), but NOT /products/handle (detail page)
-  const isDark = DARK_PAGES.some(p => pathname === p || pathname.startsWith(p + '/'))
+  // Dark pages + /products exact (listing page has dark hero), but NOT /products/handle or /journal/slug (detail pages)
+  const isBlogDetail = pathname.startsWith('/journal/') && pathname !== '/journal'
+  const isDark = !isBlogDetail && (
+    DARK_PAGES.some(p => pathname === p || pathname.startsWith(p + '/'))
     || pathname === '/products'
+  )
 
   const textCls = isDark ? 'text-white/50' : 'text-gray-500'
   const activeCls = isDark ? 'text-white/80 font-medium' : 'text-brand-black font-medium'

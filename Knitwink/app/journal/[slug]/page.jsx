@@ -77,8 +77,8 @@ export default function BlogPostPage() {
       )}
 
       {/* Main content — article left, sidebar right (sticky) */}
-      <div className="px-5 py-10 md:px-8 lg:px-10">
-        <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]">
+      <div className="px-4 py-8 sm:px-5 sm:py-10 md:px-8 lg:px-10">
+        <div className="mx-auto max-w-site grid grid-cols-1 gap-8 lg:grid-cols-[1fr_300px] lg:gap-10">
 
           {/* LEFT — article */}
           <div>
@@ -88,7 +88,7 @@ export default function BlogPostPage() {
             </Link>
 
             {/* Title */}
-            <h1 className="text-xl font-bold leading-snug text-brand-black md:text-2xl">
+            <h1 className="text-xl font-bold leading-snug text-brand-black sm:text-2xl md:text-3xl">
               {post.title}
             </h1>
 
@@ -101,7 +101,7 @@ export default function BlogPostPage() {
 
             {/* Excerpt as lead */}
             {post.excerpt && (
-              <p className="mt-6 border-l-3 border-brand-black pl-5 text-lg leading-relaxed text-gray-500 italic">
+              <p className="mt-6 border-l-3 border-brand-black pl-4 text-base leading-relaxed text-gray-500 italic text-justify sm:pl-5 sm:text-lg">
                 {post.excerpt}
               </p>
             )}
@@ -181,11 +181,11 @@ export default function BlogPostPage() {
 
       {/* Related posts — 4 columns using BlogCard */}
       {related.length > 0 && (
-        <div className="bg-off-white px-5 py-10 md:px-8">
+        <div className="bg-off-white px-4 py-10 sm:px-5 md:px-8">
           <p className="mb-6 text-center text-sm font-bold uppercase tracking-[0.25em] text-brand-black">
             More from the Journal
           </p>
-          <div className="mx-auto max-w-site grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="mx-auto max-w-site grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {related.map((p) => <BlogCard key={p.id} post={p} />)}
           </div>
         </div>

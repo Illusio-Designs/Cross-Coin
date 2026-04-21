@@ -853,9 +853,9 @@
       }
       if (!user) {
         const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
-        const fullName = `${firstName} ${lastName || ''}`.trim();
+        const fullName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
         user = await User.create({
-          username: fullName,
+          username: `${fullName} (${digits})`,
           email: email.toLowerCase(),
           phone: digits,
           password: tempPassword,
