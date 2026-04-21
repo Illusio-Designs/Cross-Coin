@@ -50,21 +50,34 @@
 
   /* Custom Knitwink scrollbar — WebKit (Chrome, Safari, Edge) */
   *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  *:hover::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   *::-webkit-scrollbar-track {
-    background: #f0f0f0;
+    background: #fafafa;
   }
   *::-webkit-scrollbar-thumb {
-    background: #0a0a0a;
-    transition: background 0.2s;
+    background: linear-gradient(180deg, #0a0a0a 0%, #3a3a3a 50%, #0a0a0a 100%);
+    background-size: 100% 300%;
+    animation: scrollbar-flow 4s linear infinite;
+    transition: background 0.3s ease;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: #262626;
+    animation-duration: 1.5s;
+    background: linear-gradient(180deg, #3a3a3a 0%, #0a0a0a 50%, #3a3a3a 100%);
+    background-size: 100% 300%;
   }
   *::-webkit-scrollbar-corner {
-    background: #f0f0f0;
+    background: #fafafa;
+  }
+  @keyframes scrollbar-flow {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 0% 300%; }
   }
 
   a {
