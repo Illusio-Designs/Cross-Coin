@@ -1123,7 +1123,7 @@ export const reviewService = {
   },
 };
 
-// SEO Services
+// SEO Services — global/shared across all brands (backend falls back to brand_id=null rows)
 export const seoService = {
   getAllSEOData: async () => {
     try {
@@ -1145,16 +1145,12 @@ export const seoService = {
 
   createSEOData: async (formData) => {
     try {
-      // Create a new FormData instance to ensure proper data handling
       const data = new FormData();
-
-      // Add all form fields
       data.append("page_name", formData.get("page_name"));
       data.append("meta_title", formData.get("meta_title"));
       data.append("meta_description", formData.get("meta_description"));
       data.append("meta_keywords", formData.get("meta_keywords"));
 
-      // Handle image if it exists
       const image = formData.get("meta_image");
       if (image && image instanceof File) {
         data.append("meta_image", image);
@@ -1163,9 +1159,7 @@ export const seoService = {
       }
 
       const response = await adminApi.post("/api/seo/create", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
     } catch (error) {
@@ -1175,11 +1169,8 @@ export const seoService = {
 
   updateSEOData: async (formData) => {
     try {
-
       const response = await adminApi.put("/api/seo/update", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
     } catch (error) {
