@@ -9,6 +9,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MobileMenu } from '@/components/layout/MobileMenu';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
+import { WhatsAppChat } from '@/components/ui/WhatsAppChat';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -91,6 +92,7 @@ export default function RootLayout({ children }) {
         </main>
         <Footer />
         <BackToTop />
+        <WhatsAppChat />
         <ToastContainer />
         </CartProvider>
         </AuthProvider>
