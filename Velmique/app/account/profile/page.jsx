@@ -10,7 +10,7 @@ export default function ProfilePage() {
   const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   return (
-    <div className="pt-24 min-h-screen">
+    <div className="pt-8 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
         <div className="flex items-center gap-2 text-xs text-[#f3ede0]/30 font-body mb-8">
           <Link href="/account" className="hover:text-[#d4927f] transition-colors">Account</Link>

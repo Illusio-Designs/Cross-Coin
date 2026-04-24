@@ -16,7 +16,7 @@ export default function SingleCollectionPage() {
     : products.slice(0, 4);
 
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="pt-8 min-h-screen">
       {/* Hero */}
       <div className="relative h-72 overflow-hidden">
         <img src={collection?.image || 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=1600'} alt="" className="w-full h-full object-cover" />

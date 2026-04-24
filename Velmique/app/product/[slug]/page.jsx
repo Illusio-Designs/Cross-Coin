@@ -36,7 +36,7 @@ export default function ProductPage() {
   };
 
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="pt-8 min-h-screen">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-4 flex items-center gap-2 text-xs text-[#f3ede0]/30 font-body">
         <Link href="/" className="hover:text-[#d4927f] transition-colors">Home</Link>

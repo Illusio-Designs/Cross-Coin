@@ -17,7 +17,7 @@ const team = [
 
 export default function AboutPage() {
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="pt-8 min-h-screen">
       {/* Hero */}
       <div className="relative h-[70vh] overflow-hidden">
         <img src="https://images.unsplash.com/photo-1594035910387-fea47794261f?w=1600&q=80" alt="About Velmique" className="w-full h-full object-cover" />
