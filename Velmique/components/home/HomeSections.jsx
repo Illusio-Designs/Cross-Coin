@@ -500,50 +500,84 @@ export function WorldOfFragrances() {
 }
 
 /* ─────────────────────────────────────
-   TESTIMONIALS
+   TESTIMONIALS — minimal 3-column
+   ───────────────────────────────────── */
+/* ─────────────────────────────────────
+   TESTIMONIALS — infinite smooth marquee
    ───────────────────────────────────── */
 export function Testimonials() {
-  const [active, setActive] = useState(0);
-  const t = testimonials[active];
+  // Duplicate the list so the marquee loops seamlessly
+  const loop = [...testimonials, ...testimonials, ...testimonials];
 
   return (
-    <section className="py-24 bg-[#14110e] border-t border-[#2e2821]">
-      <div className="max-w-3xl mx-auto px-6 md:px-10 text-center">
-        <div className="flex items-center justify-center gap-3 mb-10">
-          <span className="h-px w-10 bg-[#b8624f]" />
-          <span className="text-[#d4927f] text-[10px] tracking-[0.45em] uppercase">Testimonials</span>
-          <span className="h-px w-10 bg-[#b8624f]" />
-        </div>
-        <motion.div
-          key={active}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative min-h-[220px]"
-        >
-          <span className="absolute -top-8 left-1/2 -translate-x-1/2 font-serif text-8xl italic text-[#d4927f]/15 leading-none select-none pointer-events-none">"</span>
-          <div className="flex justify-center mb-6">
-            {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-[#b8624f] text-[#d4927f] mx-0.5" />)}
+    <section className="py-24 bg-[#14110e] border-t border-[#2e2821] overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
+        <Header eyebrow="Reviews" title="What they" accent="say." align="center" />
+      </div>
+
+      {/* Full-bleed marquee container with side fades */}
+      <div className="relative mt-4">
+        {/* Left/right gradient fades */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-40 bg-gradient-to-r from-[#14110e] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-40 bg-gradient-to-l from-[#14110e] to-transparent z-10" />
+
+        <div className="group flex overflow-hidden py-6">
+          <div className="flex animate-testi-scroll gap-6 shrink-0">
+            {loop.map((t, i) => (
+              <div
+                key={`${t.id}-${i}`}
+                className="shrink-0 w-[340px] md:w-[400px] bg-[#1d1915] border border-[#2e2821] p-8 hover:border-[#b8624f]/50 transition-colors"
+              >
+                <div className="flex gap-1 mb-5">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={12} className={s <= t.rating ? 'fill-[#d4927f] text-[#d4927f]' : 'text-[#2e2821]'} />
+                  ))}
+                </div>
+                <blockquote className="font-serif italic text-[#f3ede0] text-lg leading-[1.55] mb-6 line-clamp-5">
+                  "{t.text}"
+                </blockquote>
+                <div className="pt-5 border-t border-[#2e2821]">
+                  <p className="font-serif italic text-[#f3ede0] text-base">{t.name}</p>
+                  <p className="text-[#7a7368] text-[10px] tracking-[0.3em] uppercase mt-1">
+                    {t.location} · {t.product}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-          <blockquote className="font-serif italic text-2xl md:text-3xl text-[#f3ede0] leading-relaxed mb-8">
-            "{t.text}"
-          </blockquote>
-          <p className="text-[#f3ede0] text-xs tracking-[0.35em] uppercase font-body font-medium">{t.name}</p>
-          <p className="text-[#7a7368] text-[10px] tracking-[0.25em] uppercase font-body mt-1.5">{t.location} · {t.product}</p>
-        </motion.div>
-        <div className="flex justify-center gap-2 mt-12">
-          {testimonials.map((_, i) => (
-            <button key={i} onClick={() => setActive(i)}
-              className={`h-1 transition-all duration-400 ${i === active ? 'w-8 bg-[#b8624f]' : 'w-3 bg-[#dcd4bf] hover:bg-[#b8624f]/50'}`}
-              aria-label={`Testimonial ${i + 1}`}
-            />
-          ))}
         </div>
       </div>
+
+      {/* Summary */}
+      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 mt-10 text-center">
+        <div className="inline-flex items-center gap-4">
+          <div className="flex gap-0.5">
+            {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-[#d4927f] text-[#d4927f]" />)}
+          </div>
+          <span className="text-[#b8b0a2] text-sm font-body">
+            <span className="font-serif italic text-[#f3ede0] text-lg">4.9</span>
+            <span className="mx-2 text-[#7a7368]">·</span>
+            2,400+ verified reviews
+          </span>
+        </div>
+      </div>
+
+      <style jsx global>{`
+        @keyframes testi-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(calc(-100% / 3)); }
+        }
+        .animate-testi-scroll {
+          animation: testi-scroll 40s linear infinite;
+          will-change: transform;
+        }
+        .group:hover .animate-testi-scroll {
+          animation-play-state: paused;
+        }
+      `}</style>
     </section>
   );
 }
-
 /* ─────────────────────────────────────
    KEEP legacy export for compatibility
    ───────────────────────────────────── */
