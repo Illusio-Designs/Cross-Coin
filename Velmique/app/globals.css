@@ -5,15 +5,33 @@
 @tailwind utilities;
 
 :root {
-  --gold: #C9A84C;
-  --gold-light: #FFD700;
-  --gold-dark: #8B6914;
-  --gold-pale: #F5E6C8;
-  --dark: #111111;
-  --dark-card: #1a1a1a;
-  --dark-border: #2a2a2a;
-  --cream: #F5F0E8;
-  --text-muted: #888888;
+  /* Warm dark palette — espresso night + terracotta */
+  --bg: #14110e;              /* main bg — deep warm espresso */
+  --surface: #1d1915;         /* cards / elevated surfaces */
+  --surface-2: #26211b;       /* contrast panels */
+  --ink: #f3ede0;             /* main text — warm cream */
+  --ink-soft: #b8b0a2;        /* secondary text */
+  --ink-muted: #7a7368;       /* tertiary / captions */
+  --terracotta: #d4927f;      /* accent — lightened for dark bg */
+  --terracotta-strong: #b8624f;
+  --champagne: #c5a880;
+  --border: #2e2821;          /* subtle dividers */
+
+  /* Legacy aliases */
+  --bone: var(--bg);
+  --paper: var(--surface);
+  --sand: var(--surface-2);
+  --cream: var(--bg);
+  --cream-light: var(--surface);
+  --cream-dark: var(--surface-2);
+  --gold: var(--terracotta);
+  --gold-dark: var(--terracotta-strong);
+  --gold-light: var(--terracotta);
+  --accent: var(--terracotta);
+  --dark: var(--ink);
+  --dark-card: var(--surface);
+  --dark-border: var(--border);
+  --text-muted: var(--ink-muted);
 }
 
 * {
@@ -27,23 +45,27 @@ html {
 }
 
 body {
-  background-color: #ffffff;
-  color: #111111;
+  background-color: var(--bg);
+  color: var(--ink);
   font-family: 'Jost', sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Gold gradient text */
+/* Lock body while splash intro runs */
+body.splash-locked { overflow: hidden; }
+
+/* Gradient accent text — terracotta tones */
 .gold-text {
-  background: linear-gradient(135deg, #C9A84C 0%, #FFD700 40%, #C9A84C 60%, #8B6914 100%);
+  background: linear-gradient(135deg, #b8624f 0%, #d4927f 40%, #b8624f 60%, #8a3d2a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Shimmer gold animation */
 .gold-shimmer {
-  background: linear-gradient(90deg, #8B6914 0%, #C9A84C 25%, #FFD700 50%, #C9A84C 75%, #8B6914 100%);
+  background: linear-gradient(90deg, #8a3d2a 0%, #b8624f 25%, #d4927f 50%, #b8624f 75%, #8a3d2a 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -62,10 +84,10 @@ body {
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #fff; }
-::-webkit-scrollbar-thumb { background: #C9A84C; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #8B6914; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--terracotta-strong); }
+::-webkit-scrollbar-thumb:hover { background: var(--terracotta); }
 
 /* Marquee */
 .marquee-container {
@@ -80,6 +102,10 @@ body {
   will-change: transform;
 }
 
+.animate-marquee {
+  animation: marquee 35s linear infinite;
+}
+
 @keyframes marquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -88,25 +114,25 @@ body {
 /* Divider */
 .gold-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+  background: linear-gradient(90deg, transparent, #b8624f, transparent);
 }
 
 /* Buttons */
 .btn-gold {
-  background: #C9A84C;
-  color: #111;
+  background: #1f1b16;
+  color: #f7f2e8;
   font-weight: 600;
   letter-spacing: 0.1em;
   transition: all 0.25s ease;
 }
 .btn-gold:hover {
-  background: #111;
-  color: #C9A84C;
+  background: #b8624f;
+  color: #f7f2e8;
 }
 
 .btn-outline-gold {
-  border: 1px solid #C9A84C;
-  color: #C9A84C;
+  border: 1px solid #b8624f;
+  color: #b8624f;
   background: transparent;
   letter-spacing: 0.1em;
   transition: all 0.25s ease;
