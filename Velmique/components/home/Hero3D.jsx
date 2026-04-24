@@ -348,15 +348,6 @@ export default function Hero3D() {
 
   return (
     <section className="relative bg-[#14110e] overflow-hidden">
-      {/* Top meta row */}
-      <div className="border-t border-b border-[#2e2821] py-2.5 bg-[#14110e]">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 flex items-center justify-between text-[9px] tracking-[0.4em] uppercase text-[#7a7368]">
-          <span>Maison de Parfum · Paris</span>
-          <span className="hidden md:inline">Extrait de Parfum</span>
-          <span>Est. MCMXCVIII</span>
-        </div>
-      </div>
-
       <div className="relative min-h-[calc(100vh-130px)] flex items-center">
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-10 lg:gap-16 w-full py-16 lg:py-20">
           {/* LEFT */}

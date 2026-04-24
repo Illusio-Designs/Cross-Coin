@@ -49,14 +49,14 @@ export default function Navbar() {
     <>
       {/* Sticky navbar — sits at top of viewport when scrolled past announcement bar */}
       <nav
-        className={`sticky top-0 z-50 bg-[#14110e] transition-all duration-500 ${
+        className={`sticky top-0 z-50 bg-[#14110e] ${
           scrolled
-            ? 'shadow-[0_1px_0_0_rgba(184,153,104,0.2),0_10px_40px_-20px_rgba(31,27,22,0.12)]'
+            ? 'shadow-[0_1px_0_0_#2e2821,0_10px_40px_-20px_rgba(31,27,22,0.4)]'
             : ''
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-          <div className={`flex items-center justify-between transition-all duration-500 ${scrolled ? 'h-14 md:h-16' : 'h-16 md:h-20'}`}>
+          <div className={`flex items-center justify-between transition-[height] duration-500 ${scrolled ? 'h-14 md:h-16' : 'h-16 md:h-20 border-b border-[#2e2821]'}`}>
 
             {/* Left nav */}
             <div className="hidden md:flex items-center gap-9 flex-1">
