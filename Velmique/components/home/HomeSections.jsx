@@ -118,14 +118,15 @@ export function StoryBand() {
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="aspect-[4/5] overflow-hidden bg-[#1f1b16]">
+          {/* Decorative offset frame — rendered first, sits behind the image via DOM order */}
+          <div className="absolute -top-5 -left-5 w-full h-full border border-[#b8624f] pointer-events-none" />
+          <div className="relative aspect-[4/5] overflow-hidden bg-[#1f1b16]">
             <img
               src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=800&q=85"
               alt="Perfume craft"
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="absolute -top-4 -left-4 right-4 bottom-4 border border-[#b8624f] -z-10" />
         </motion.div>
 
         {/* Text */}
@@ -429,7 +430,7 @@ export function DiscoveryKits() {
                     <p className="text-[#7a7368] text-[9px] tracking-[0.35em] uppercase mb-1.5">{kit.includes}</p>
                     <h3 className="font-serif text-[#f3ede0] text-xl italic mb-4 leading-tight">{kit.name}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="font-serif text-[#d4927f] text-2xl italic">${kit.price}</span>
+                      <span className="font-serif text-[#d4927f] text-2xl italic">₹{kit.price}</span>
                       <span className="text-[#f3ede0] group-hover:text-[#d4927f] text-[10px] tracking-[0.35em] uppercase flex items-center gap-1.5 transition-colors">
                         Explore <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
                       </span>

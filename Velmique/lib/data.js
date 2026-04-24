@@ -4,8 +4,8 @@ export const products = [
   {
     id: '1',
     name: 'Noir Absolu',
-    price: 289,
-    originalPrice: 380,
+    price: 24600,
+    originalPrice: 32300,
     category: 'Eau de Parfum',
     collection: 'Noir',
     gender: 'Unisex',
@@ -25,7 +25,7 @@ export const products = [
   {
     id: '2',
     name: 'Velvet Oud',
-    price: 245,
+    price: 20800,
     category: 'Eau de Parfum',
     collection: 'Signature',
     gender: 'Men',
@@ -45,7 +45,7 @@ export const products = [
   {
     id: '3',
     name: 'Lumière Dorée',
-    price: 195,
+    price: 16600,
     category: 'Eau de Parfum',
     collection: 'Luminara',
     gender: 'Women',
@@ -65,7 +65,7 @@ export const products = [
   {
     id: '4',
     name: 'Obsidian Rose',
-    price: 215,
+    price: 18300,
     category: 'Eau de Parfum',
     collection: 'Signature',
     gender: 'Women',
@@ -85,7 +85,7 @@ export const products = [
   {
     id: '5',
     name: 'Phantom Encens',
-    price: 395,
+    price: 33600,
     category: 'Extrait de Parfum',
     collection: 'Noir',
     gender: 'Men',
@@ -105,8 +105,8 @@ export const products = [
   {
     id: '6',
     name: 'Lumière Blanche',
-    price: 165,
-    originalPrice: 210,
+    price: 14000,
+    originalPrice: 17900,
     category: 'Eau de Toilette',
     collection: 'Luminara',
     gender: 'Women',
@@ -126,7 +126,7 @@ export const products = [
   {
     id: '7',
     name: 'Céleste Ambre',
-    price: 235,
+    price: 20000,
     category: 'Eau de Parfum',
     collection: 'Luminara',
     gender: 'Unisex',
@@ -146,7 +146,7 @@ export const products = [
   {
     id: '8',
     name: 'Sovereign Iris',
-    price: 445,
+    price: 37800,
     category: 'Extrait de Parfum',
     collection: 'Signature',
     gender: 'Unisex',
@@ -217,7 +217,7 @@ export const discoveryKits = [
   {
     id: 'dk1',
     name: 'Noir Discovery Kit',
-    price: 89,
+    price: 7600,
     image: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&q=80&auto=format&fit=crop',
     slug: 'noir-discovery-kit',
     includes: '5 × 2ml samples',
@@ -225,7 +225,7 @@ export const discoveryKits = [
   {
     id: 'dk2',
     name: 'Luminara Discovery Kit',
-    price: 89,
+    price: 7600,
     image: 'https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=600&q=80&auto=format&fit=crop',
     slug: 'luminara-discovery-kit',
     includes: '5 × 2ml samples',

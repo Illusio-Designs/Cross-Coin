@@ -108,9 +108,9 @@ export default function ProductCard({ product, onQuickView, index = 0 }) {
           </div>
         </div>
         <div className="text-right shrink-0">
-          <span className="font-serif text-[#f3ede0] text-xl italic">${product.price}</span>
+          <span className="font-serif text-[#f3ede0] text-xl italic">₹{product.price}</span>
           {product.originalPrice && (
-            <div className="text-[#7a7368] text-xs line-through mt-0.5">${product.originalPrice}</div>
+            <div className="text-[#7a7368] text-xs line-through mt-0.5">₹{product.originalPrice}</div>
           )}
         </div>
       </div>

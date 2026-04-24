@@ -84,7 +84,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-[#f3ede0]/60">
                   <span>Shipping</span>
-                  <span className={shipping === 0 ? 'text-[#d4927f]' : ''}>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  <span className={shipping === 0 ? 'text-[#d4927f]' : ''}>{shipping === 0 ? 'Free' : `₹${shipping.toFixed(2)}`}</span>
                 </div>
                 {shipping > 0 && (
                   <p className="text-[#d4927f]/60 text-xs">Add ${(150 - cartTotal).toFixed(2)} more for free shipping</p>

@@ -131,7 +131,7 @@ export default function CheckoutPage() {
                   <span>Subtotal</span><span>${cartTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-[#f3ede0]/50">
-                  <span>Shipping</span><span className={shipping === 0 ? 'text-[#d4927f]' : ''}>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
+                  <span>Shipping</span><span className={shipping === 0 ? 'text-[#d4927f]' : ''}>{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
                 </div>
                 <div className="gold-divider" />
                 <div className="flex justify-between font-serif text-base">

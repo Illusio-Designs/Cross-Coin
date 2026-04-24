@@ -40,8 +40,8 @@ export default function QuickViewModal({ product, onClose }) {
               <p className="text-[#d4927f]/60 text-xs tracking-[0.2em] uppercase font-body">{product.collection}</p>
               <h2 className="font-serif text-2xl text-[#f3ede0] mt-1">{product.name}</h2>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-[#d4927f] text-xl font-body">${product.price}</span>
-                {product.originalPrice && <span className="text-[#f3ede0]/30 text-sm line-through font-body">${product.originalPrice}</span>}
+                <span className="text-[#d4927f] text-xl font-body">₹{product.price}</span>
+                {product.originalPrice && <span className="text-[#f3ede0]/30 text-sm line-through font-body">₹{product.originalPrice}</span>}
               </div>
             </div>
 

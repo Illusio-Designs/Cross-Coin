@@ -57,7 +57,7 @@ export default function SearchOverlay() {
                 <img src={p.images[0]} alt={p.name} className="w-12 h-12 object-cover rounded-sm" />
                 <div className="flex-1">
                   <p className="text-[#f3ede0] text-sm font-body">{p.name}</p>
-                  <p className="text-[#f3ede0]/40 text-xs">{p.category} · ${p.price}</p>
+                  <p className="text-[#f3ede0]/40 text-xs">{p.category} · ₹{p.price}</p>
                 </div>
                 <ArrowRight size={14} className="text-[#d4927f]/40 group-hover:text-[#d4927f] transition-colors" />
               </Link>
