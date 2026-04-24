@@ -38,7 +38,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`text-xs font-body px-3 py-1 rounded-full ${statusColors[order.status]}`}>{order.status}</span>
-                  <span className="text-[#f3ede0] font-serif text-lg">${order.total}</span>
+                  <span className="text-[#f3ede0] font-serif text-lg">₹{order.total}</span>
                   <Link href={`/account/orders`} className="text-[#d4927f]/60 hover:text-[#d4927f] transition-colors">
                     <ArrowRight size={16} />
                   </Link>

@@ -90,13 +90,13 @@ export default function ProductPage() {
 
               {/* Price */}
               <div className="flex items-baseline gap-3 mt-4">
-                <span className="text-[#d4927f] text-2xl font-body">${product.price}</span>
+                <span className="text-[#d4927f] text-2xl font-body">₹{product.price}</span>
                 {product.originalPrice && (
-                  <span className="text-[#f3ede0]/30 text-base line-through font-body">${product.originalPrice}</span>
+                  <span className="text-[#f3ede0]/30 text-base line-through font-body">₹{product.originalPrice}</span>
                 )}
                 {product.originalPrice && (
                   <span className="text-red-400 text-xs font-body">
-                    Save ${product.originalPrice - product.price}
+                    Save ₹{product.originalPrice - product.price}
                   </span>
                 )}
               </div>

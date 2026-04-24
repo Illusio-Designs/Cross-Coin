@@ -46,7 +46,7 @@ export default function WishlistPage() {
                   <Link href={`/product/${item.slug}`}>
                     <h3 className="font-serif text-sm text-[#f3ede0] hover:text-[#d4927f] transition-colors">{item.name}</h3>
                   </Link>
-                  <p className="text-[#d4927f] text-sm font-body mt-1">${item.price}</p>
+                  <p className="text-[#d4927f] text-sm font-body mt-1">₹{item.price}</p>
                 </div>
               </div>
             ))}
