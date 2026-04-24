@@ -12,7 +12,7 @@ const lookbookItems = [
 
 export default function LookbookPage() {
   return (
-    <div className="pt-20 min-h-screen">
+    <div className="pt-8 min-h-screen">
       {/* Hero */}
       <div className="relative h-80 overflow-hidden">
         <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=1600&q=80" alt="Lookbook" className="w-full h-full object-cover object-top" />

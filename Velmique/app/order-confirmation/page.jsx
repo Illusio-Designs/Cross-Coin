@@ -3,7 +3,7 @@ import { CheckCircle, ArrowRight } from 'lucide-react';
 
 export default function OrderConfirmation() {
   return (
-    <div className="pt-32 min-h-screen flex items-center justify-center px-6">
+    <div className="pt-8 min-h-screen flex items-center justify-center px-6">
       <div className="text-center max-w-lg">
         <div className="w-20 h-20 rounded-full bg-[#b8624f]/10 border border-[#b8624f]/30 flex items-center justify-center mx-auto mb-8">
           <CheckCircle size={36} className="text-[#d4927f]" />

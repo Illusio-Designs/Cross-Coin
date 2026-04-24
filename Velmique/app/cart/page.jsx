@@ -7,7 +7,7 @@ export default function CartPage() {
   const { cart, cartTotal, removeFromCart, updateQuantity } = useStore();
 
   if (cart.length === 0) return (
-    <div className="pt-32 min-h-screen flex flex-col items-center justify-center gap-6 px-4">
+    <div className="pt-8 min-h-screen flex flex-col items-center justify-center gap-6 px-4">
       <ShoppingBag size={64} className="text-[#f3ede0]/10" />
       <h1 className="font-serif text-3xl text-[#f3ede0]/50">Your bag is empty</h1>
       <p className="text-[#f3ede0]/30 text-sm font-body text-center">Discover pieces that will make you extraordinary.</p>
@@ -21,7 +21,7 @@ export default function CartPage() {
   const total = cartTotal + shipping;
 
   return (
-    <div className="pt-24 min-h-screen">
+    <div className="pt-8 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
         <div className="mb-10">
           <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-2">Review</p>

@@ -32,7 +32,7 @@ export default function ShopPage() {
   }, [activeCategory, sortBy, priceRange]);
 
   return (
-    <div className="pt-24 min-h-screen">
+    <div className="pt-8 min-h-screen">
       {/* Header */}
       <div className="border-b border-[#b8624f]/10 bg-[#26211b]">
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">

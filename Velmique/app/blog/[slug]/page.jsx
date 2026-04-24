@@ -30,7 +30,7 @@ export default function BlogPostPage() {
   `;
 
   return (
-    <div className="pt-24 min-h-screen">
+    <div className="pt-8 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
         {/* Back */}
         <Link href="/blog" className="flex items-center gap-2 text-[#f3ede0]/40 hover:text-[#d4927f] transition-colors text-xs tracking-wider uppercase font-body mb-10">

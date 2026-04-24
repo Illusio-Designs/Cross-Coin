@@ -13,7 +13,7 @@ export default function AccountPage() {
   const { cart, wishlist } = useStore();
 
   return (
-    <div className="pt-24 min-h-screen">
+    <div className="pt-8 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
         <div className="mb-10">
           <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-2">Welcome Back</p>
