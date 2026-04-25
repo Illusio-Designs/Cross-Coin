@@ -273,52 +273,52 @@ export function NotesBand() {
         <Header eyebrow="The Composition" title="Fragrance" accent="pyramid" align="center" />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mt-8">
-          {/* LEFT — interactive triangle pyramid */}
+          {/* LEFT — HTML/CSS triangle pyramid (reliable text rendering) */}
           <motion.div
-            className="relative h-[420px] flex items-center justify-center"
+            className="relative flex flex-col items-center justify-center mx-auto w-full max-w-[440px]"
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* SVG triangle */}
-            <svg viewBox="0 0 400 360" className="w-full max-w-[420px]">
-              {/* Base layer */}
-              <motion.polygon
-                points="30,330 370,330 340,230 60,230"
-                fill={active === 2 ? '#b8624f' : '#ebe3d1'}
-                stroke="#b8624f"
-                strokeWidth="1"
-                onClick={() => setActive(2)}
-                className="cursor-pointer transition-colors duration-500"
-                whileHover={{ scale: 1.02 }}
-              />
-              {/* Heart layer */}
-              <motion.polygon
-                points="60,230 340,230 310,130 90,130"
-                fill={active === 1 ? '#b8624f' : '#ebe3d1'}
-                stroke="#b8624f"
-                strokeWidth="1"
-                onClick={() => setActive(1)}
-                className="cursor-pointer transition-colors duration-500"
-              />
-              {/* Top layer */}
-              <motion.polygon
-                points="90,130 310,130 200,30"
-                fill={active === 0 ? '#b8624f' : '#ebe3d1'}
-                stroke="#b8624f"
-                strokeWidth="1"
-                onClick={() => setActive(0)}
-                className="cursor-pointer transition-colors duration-500"
-              />
-              {/* Labels */}
-              <text x="200" y="90" textAnchor="middle" className="fill-current" fill={active === 0 ? '#f7f2e8' : '#1f1b16'} style={{ font: 'italic 18px Playfair Display, serif', pointerEvents: 'none' }}>Top</text>
-              <text x="200" y="190" textAnchor="middle" className="fill-current" fill={active === 1 ? '#f7f2e8' : '#1f1b16'} style={{ font: 'italic 20px Playfair Display, serif', pointerEvents: 'none' }}>Heart</text>
-              <text x="200" y="290" textAnchor="middle" className="fill-current" fill={active === 2 ? '#f7f2e8' : '#1f1b16'} style={{ font: 'italic 20px Playfair Display, serif', pointerEvents: 'none' }}>Base</text>
-            </svg>
+            {/* Top layer — narrow triangle */}
+            <button
+              onClick={() => setActive(0)}
+              className={`relative w-[55%] h-[110px] flex items-end justify-center pb-3 transition-colors duration-500 ${active === 0 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
+              style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }}
+              aria-label="Top notes"
+            >
+              <span className={`font-serif italic text-2xl transition-colors ${active === 0 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
+                Top
+              </span>
+            </button>
 
-            {/* Small caption */}
-            <p className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[#7a7368] text-[9px] tracking-[0.4em] uppercase">Click a layer</p>
+            {/* Heart layer — middle trapezoid */}
+            <button
+              onClick={() => setActive(1)}
+              className={`relative w-[78%] h-[100px] flex items-center justify-center transition-colors duration-500 ${active === 1 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
+              style={{ clipPath: 'polygon(15% 0, 85% 0, 100% 100%, 0 100%)' }}
+              aria-label="Heart notes"
+            >
+              <span className={`font-serif italic text-3xl transition-colors ${active === 1 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
+                Heart
+              </span>
+            </button>
+
+            {/* Base layer — wide trapezoid */}
+            <button
+              onClick={() => setActive(2)}
+              className={`relative w-full h-[110px] flex items-center justify-center transition-colors duration-500 ${active === 2 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
+              style={{ clipPath: 'polygon(12% 0, 88% 0, 100% 100%, 0 100%)' }}
+              aria-label="Base notes"
+            >
+              <span className={`font-serif italic text-3xl transition-colors ${active === 2 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
+                Base
+              </span>
+            </button>
+
+            {/* Caption */}
+            <p className="mt-6 text-[#7a7368] text-[9px] tracking-[0.4em] uppercase">Click a layer</p>
           </motion.div>
 
           {/* RIGHT — note details */}
