@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, ArrowUpRight } from 'lucide-react';
+import PageHeader from '@/components/layout/PageHeader';
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -12,100 +13,94 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="pt-8 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">Get in Touch</p>
-          <h1 className="font-serif text-5xl text-[#f3ede0]">Contact Us</h1>
-          <div className="gold-divider w-24 mx-auto mt-4" />
-          <p className="text-[#f3ede0]/40 text-sm font-body mt-4 max-w-md mx-auto">
-            We'd love to hear from you. Our team typically responds within 24 hours.
-          </p>
-        </div>
+    <div className="bg-[var(--bg)] min-h-screen">
+      <PageHeader
+        eyebrow="Get in Touch"
+        title="A WORD WITH"
+        accent="VELMIQUE"
+        intro="Stocking our extraits at your boutique, planning a wedding gifting commission, or simply curious about a note — our Mumbai concierge replies within 24 hours, Monday to Saturday."
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
           {/* Info */}
-          <div>
-            <h2 className="font-serif text-2xl text-[#f3ede0] mb-8">Reach Us</h2>
+          <div className="md:col-span-5">
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-4">Reach Us</p>
             <div className="space-y-6">
               {[
-                { icon: Mail, label: 'Email', value: 'hello@velmique.com', href: 'mailto:hello@velmique.com' },
-                { icon: Phone, label: 'Phone', value: '+91 98765 43210', href: 'tel:+919876543210' },
-                { icon: MapPin, label: 'Studio', value: '12 Rue du Faubourg, Paris, France', href: '#' },
+                { icon: Mail, label: 'Email', value: 'hello@velmique.in', href: 'mailto:hello@velmique.in' },
+                { icon: Phone, label: 'Phone / WhatsApp', value: '+91 98201 43210', href: 'tel:+919820143210' },
+                { icon: MapPin, label: 'Atelier', value: '14 Pali Hill, Bandra West, Mumbai 400050', href: 'https://maps.google.com/?q=Pali+Hill+Bandra+West+Mumbai' },
               ].map(item => (
                 <div key={item.label} className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-sm bg-[#b8624f]/10 border border-[#b8624f]/20 flex items-center justify-center flex-shrink-0">
-                    <item.icon size={16} className="text-[#d4927f]" />
+                  <div className="w-11 h-11 rounded-full bg-[var(--surface-2)] flex items-center justify-center flex-shrink-0">
+                    <item.icon size={16} className="text-[var(--gold-deep)]" />
                   </div>
                   <div>
-                    <p className="text-xs tracking-[0.15em] uppercase text-[#f3ede0]/40 font-body mb-0.5">{item.label}</p>
-                    <a href={item.href} className="text-[#f3ede0]/80 font-body text-sm hover:text-[#d4927f] transition-colors">{item.value}</a>
+                    <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1">{item.label}</p>
+                    <a href={item.href} className="text-[var(--ink)] font-body text-base hover:text-[var(--gold-deep)] transition-colors">
+                      {item.value}
+                    </a>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-12">
-              <h3 className="font-serif text-xl text-[#f3ede0] mb-4">Hours</h3>
-              <div className="space-y-2 text-sm font-body text-[#f3ede0]/50">
-                <div className="flex justify-between">
-                  <span>Monday – Friday</span>
-                  <span>9:00 AM – 6:00 PM IST</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Saturday</span>
-                  <span>10:00 AM – 4:00 PM IST</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Sunday</span>
-                  <span className="text-[#f3ede0]/30">Closed</span>
-                </div>
+            <div className="mt-12 bg-[var(--surface-2)] rounded-2xl p-7">
+              <h3 className="font-display text-[var(--ink)] text-xl uppercase mb-4">Hours</h3>
+              <div className="space-y-2 text-sm font-body text-[var(--ink-soft)]">
+                <div className="flex justify-between"><span>Monday – Friday</span><span>9:00 AM – 6:00 PM IST</span></div>
+                <div className="flex justify-between"><span>Saturday</span><span>10:00 AM – 4:00 PM IST</span></div>
+                <div className="flex justify-between"><span>Sunday</span><span className="text-[var(--ink-muted)]">Closed</span></div>
               </div>
             </div>
           </div>
 
           {/* Form */}
-          <div>
-            {sent ? (
-              <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-16">
-                <CheckCircle size={48} className="text-[#d4927f]" />
-                <h2 className="font-serif text-2xl text-[#f3ede0]">Message Sent</h2>
-                <p className="text-[#f3ede0]/50 text-sm font-body max-w-xs">Thank you for reaching out. We'll get back to you within 24 hours.</p>
-                <button onClick={() => setSent(false)} className="btn-outline-gold px-6 py-3 text-xs tracking-wider uppercase font-body mt-2 rounded-sm">
-                  Send Another
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs tracking-[0.15em] uppercase text-[#f3ede0]/50 font-body mb-1.5">Name</label>
-                    <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-sm" />
+          <div className="md:col-span-7">
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-7 md:p-10">
+              {sent ? (
+                <div className="flex flex-col items-center justify-center text-center gap-4 py-16">
+                  <CheckCircle size={48} className="text-[var(--gold-deep)]" />
+                  <h2 className="font-display text-[var(--ink)] text-3xl uppercase">Message Sent</h2>
+                  <p className="text-[var(--ink-soft)] text-sm font-body max-w-xs">
+                    Thank you for reaching out. We'll get back to you within 24 hours.
+                  </p>
+                  <button onClick={() => setSent(false)} className="pill-cta pill-cta-light mt-2">
+                    Send Another <ArrowUpRight size={14} strokeWidth={1.6} />
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-2">Send a Message</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Name</label>
+                      <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required
+                        className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Email</label>
+                      <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required
+                        className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-xs tracking-[0.15em] uppercase text-[#f3ede0]/50 font-body mb-1.5">Email</label>
-                    <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-sm" />
+                    <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Subject</label>
+                    <input value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
+                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs tracking-[0.15em] uppercase text-[#f3ede0]/50 font-body mb-1.5">Subject</label>
-                  <input value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-                    className="w-full input-gold px-4 py-3 text-sm font-body rounded-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs tracking-[0.15em] uppercase text-[#f3ede0]/50 font-body mb-1.5">Message</label>
-                  <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} required rows={6}
-                    className="w-full input-gold px-4 py-3 text-sm font-body rounded-sm resize-none" />
-                </div>
-                <button type="submit"
-                  className="btn-gold w-full py-4 text-xs tracking-[0.2em] uppercase font-body flex items-center justify-center gap-2 rounded-sm">
-                  <Send size={13} /> Send Message
-                </button>
-              </form>
-            )}
+                  <div>
+                    <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Message</label>
+                    <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} required rows={6}
+                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md resize-none" />
+                  </div>
+                  <button type="submit" className="pill-cta w-full justify-center !py-4">
+                    Send Message <Send size={13} />
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>

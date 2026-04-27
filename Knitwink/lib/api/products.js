@@ -88,11 +88,12 @@ function mapProduct(p) {
     }
   });
 
-  // Badge from product badge field
+  // Badge from product badge field — labels mirror backend BADGE_DISPLAY config
   const badgeMap = {
-    new_arrival: 'New',
-    hot_selling: 'Bestseller',
-    low_stock: 'Sale'
+    new_arrival:  'New Arrival',
+    hot_selling:  'Hot Selling',
+    low_stock:    'Low Stock',
+    out_of_stock: 'Out of Stock',
   };
 
   // Extract gender and materials from variation attributes

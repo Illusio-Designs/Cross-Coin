@@ -1,399 +1,294 @@
 'use client';
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, Star } from 'lucide-react';
-import { collections, products, testimonials, discoveryKits, shopTheLooks } from '@/lib/data';
-import ProductCard from '@/components/shop/ProductCard';
-import QuickViewModal from '@/components/shop/QuickViewModal';
-import { useState } from 'react';
+import { ArrowUpRight, Star } from 'lucide-react';
+import { products, testimonials } from '@/lib/data';
 import { motion } from 'framer-motion';
+import ProductCard from '@/components/shop/ProductCard';
 
 /* ─────────────────────────────────────
-   MARQUEE — infinite luxury strip
+   1. BRANDS STRIP — "100+ MAISONS RELY ON US"
    ───────────────────────────────────── */
-const marqueeItems = ['MAISON DE PARFUM', '—', 'EST. 1998', '—', 'HAND-CRAFTED IN PARIS', '—', 'GRASSE ESSENCES', '—', 'EXTRAIT DE PARFUM'];
+const brandLogos = [
+  'Le Mill', 'Ogaan', 'Nicobar', 'Good Earth', 'Forest Essentials', 'Ensemble', 'Bombay Perfumery',
+];
 
 export function Marquee() {
   return (
-    <div className="bg-[#1f1b16] py-5 overflow-hidden border-t border-b border-[#1f1b16]">
-      <div className="flex animate-marquee whitespace-nowrap">
-        {[...Array(4)].map((_, n) => (
-          <div key={n} className="flex items-center gap-8 mx-8">
-            {marqueeItems.map((item, i) => (
-              <span key={`${n}-${i}`} className={`font-serif text-[#f7f2e8] text-xl md:text-3xl ${item === '—' ? 'text-[#d4927f]' : 'tracking-[0.2em]'}`}>
-                {item}
-              </span>
-            ))}
+    <section className="relative bg-[var(--bg)] py-12 md:py-16 border-b border-[var(--border)]">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+        <div className="flex items-center gap-10">
+          <p className="text-[var(--ink-muted)] text-[10px] md:text-xs tracking-[0.35em] uppercase font-body shrink-0 max-w-[200px] leading-relaxed">
+            Stocked at 100+<br />partner boutiques<br />nationwide
+          </p>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex animate-marquee gap-16 items-center whitespace-nowrap">
+              {[...Array(3)].map((_, n) =>
+                brandLogos.map((logo, i) => (
+                  <span
+                    key={`${n}-${i}`}
+                    className="font-serif italic text-[var(--ink-muted)] text-2xl md:text-3xl tracking-wide opacity-60"
+                  >
+                    {logo}
+                  </span>
+                ))
+              )}
+            </div>
           </div>
-        ))}
+        </div>
       </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────
-   SECTION HEADER (reusable)
-   ───────────────────────────────────── */
-function Header({ eyebrow, title, accent, href, align = 'left' }) {
-  const flex = align === 'center' ? 'flex-col items-center text-center' : 'items-end justify-between';
-  return (
-    <motion.div
-      className={`flex ${flex} mb-12 gap-6`}
-      initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}
-      variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-    >
-      <div className={align === 'center' ? 'text-center' : ''}>
-        <motion.div
-          className={`flex items-center gap-3 mb-4 ${align === 'center' ? 'justify-center' : ''}`}
-          variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
-        >
-          <span className="h-px w-10 bg-[#b8624f]" />
-          <span className="text-[#d4927f] text-[10px] tracking-[0.45em] uppercase font-body">{eyebrow}</span>
-          {align === 'center' && <span className="h-px w-10 bg-[#b8624f]" />}
-        </motion.div>
-        <motion.h2
-          className="font-serif text-[#f3ede0] text-4xl md:text-5xl lg:text-6xl leading-[1.05]"
-          variants={{ hidden: { opacity: 0, y: 25 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } } }}
-        >
-          {title} {accent && <em className="text-[#d4927f] not-italic">{accent}</em>}
-        </motion.h2>
-      </div>
-      {href && align !== 'center' && (
-        <motion.div
-          variants={{ hidden: { opacity: 0, x: 15 }, visible: { opacity: 1, x: 0, transition: { duration: 0.6, delay: 0.2 } } }}
-        >
-          <Link href={href}
-            className="group inline-flex items-center gap-3 text-[#f3ede0] text-[11px] tracking-[0.4em] uppercase font-body border-b border-[#1f1b16] pb-1 hover:border-[#b8624f] hover:text-[#d4927f] transition-colors">
-            View All
-            <ArrowUpRight size={13} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </Link>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-}
-
-/* ─────────────────────────────────────
-   PRODUCT GRID (stagger reveal)
-   ───────────────────────────────────── */
-function Grid({ items, onQuickView }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
-      {items.map((p, i) => (
-        <ProductCard key={p.id} product={p} onQuickView={onQuickView} index={i} />
-      ))}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────
-   BEST SELLERS
-   ───────────────────────────────────── */
-export function BestSellers() {
-  const [quickView, setQuickView] = useState(null);
-  const best = products.filter(p => p.badge === 'Bestseller' || p.rating >= 4.8).slice(0, 4);
-
-  return (
-    <section className="py-24 bg-[#14110e]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <Header eyebrow="Must Have" title="Signature" accent="Bestsellers" href="/shop" />
-        <Grid items={best} onQuickView={setQuickView} />
-      </div>
-      {quickView && <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />}
     </section>
   );
 }
 
 /* ─────────────────────────────────────
-   STORY BAND — Our craft
+   2. ABOUT BAND — paragraph + photo + Shop pill
    ───────────────────────────────────── */
 export function StoryBand() {
   return (
-    <section className="relative bg-[#26211b]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-24 grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
-        {/* Image */}
-        <motion.div
-          className="md:col-span-5 relative"
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* Decorative offset frame — rendered first, sits behind the image via DOM order */}
-          <div className="absolute -top-5 -left-5 w-full h-full border border-[#b8624f] pointer-events-none" />
-          <div className="relative aspect-[4/5] overflow-hidden bg-[#1f1b16]">
-            <img
-              src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=800&q=85"
-              alt="Perfume craft"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </motion.div>
+    <section className="bg-[var(--bg)] py-20 md:py-28">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-center">
 
-        {/* Text */}
-        <motion.div
-          className="md:col-span-7 md:pl-10"
-          initial={{ opacity: 0, x: 30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <span className="h-px w-10 bg-[#b8624f]" />
-            <span className="text-[#d4927f] text-[10px] tracking-[0.45em] uppercase">Our Craft</span>
-          </div>
-          <h2 className="font-serif text-[#f3ede0] text-4xl md:text-5xl lg:text-6xl leading-[1.05] mb-7">
-            Patience,<br /><em className="text-[#d4927f] not-italic">distilled.</em>
-          </h2>
-          <p className="text-[#b8b0a2] text-base md:text-lg leading-relaxed mb-5 font-body max-w-lg">
-            Each formula begins with a walk through the fields of Grasse. Petals are harvested at dawn, absolutes pressed by hand, and the final extrait rests for three months before bottling.
-          </p>
-          <p className="text-[#b8b0a2] text-base md:text-lg leading-relaxed mb-10 font-body max-w-lg">
-            Nothing is rushed. Nothing is wasted. Nothing is left to chance.
-          </p>
-          <Link href="/about"
-            className="group inline-flex items-center gap-3 text-[#f3ede0] text-[11px] tracking-[0.4em] uppercase font-body border-b border-[#1f1b16] pb-1.5 hover:border-[#b8624f] hover:text-[#d4927f] transition-colors">
-            Read Our Story
-            <ArrowUpRight size={13} className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </Link>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 mt-14 pt-10 border-t border-[#2e2821] max-w-lg">
-            {[
-              { n: '25+', l: 'Years' },
-              { n: '48', l: 'Fragrances' },
-              { n: '1998', l: 'Est. Paris' },
-            ].map(s => (
-              <div key={s.l}>
-                <div className="font-serif italic text-3xl md:text-4xl text-[#d4927f]">{s.n}</div>
-                <div className="text-[#7a7368] text-[10px] tracking-[0.35em] uppercase mt-1">{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────
-   COLLECTION BANNER — Noir full-bleed
-   ───────────────────────────────────── */
-export function CollectionBanner() {
-  return (
-    <section className="relative h-[70vh] min-h-[500px] overflow-hidden group bg-[#1f1b16]">
-      <motion.img
-        src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1600&q=85"
-        alt="Noir Collection"
-        className="absolute inset-0 w-full h-full object-cover"
-        initial={{ scale: 1.12 }}
-        whileInView={{ scale: 1.02 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1] }}
-        style={{ filter: 'brightness(0.55)' }}
-      />
-
-      <motion.div
-        className="absolute inset-0 flex items-end"
-        initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }}
-        variants={{ visible: { transition: { staggerChildren: 0.12, delayChildren: 0.25 } } }}
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 w-full pb-16">
-          <motion.div className="flex items-center gap-3 mb-6"
-            variants={{ hidden: { opacity: 0, x: -15 }, visible: { opacity: 1, x: 0, transition: { duration: 0.6 } } }}
+          {/* Left — text */}
+          <motion.div
+            className="md:col-span-6"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8 }}
           >
-            <span className="h-px w-10 bg-[#d4927f]" />
-            <span className="text-[#d4927f] text-[10px] tracking-[0.45em] uppercase">Featured Collection</span>
-          </motion.div>
-
-          <motion.h2
-            className="font-serif text-[#f7f2e8] text-5xl md:text-7xl lg:text-8xl leading-[0.95] mb-6 max-w-2xl"
-            variants={{ hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}
-          >
-            Darkness,<br /><em className="text-[#d4927f] not-italic">distilled.</em>
-          </motion.h2>
-
-          <motion.p
-            className="text-[#f7f2e8]/60 text-base md:text-lg max-w-md mb-10 font-body"
-            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.7 } } }}
-          >
-            Oud, smoked woods, and the quiet weight of frankincense — for those who prefer to arrive unnoticed and linger afterward.
-          </motion.p>
-
-          <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}>
-            <Link href="/collections/noir"
-              className="group/cta inline-flex items-center gap-3 bg-[#14110e] text-[#f3ede0] px-10 py-4 text-[11px] tracking-[0.4em] uppercase font-body relative overflow-hidden">
-              <span className="relative z-10">Enter Noir</span>
-              <ArrowRight size={13} className="relative z-10 transition-transform group-hover/cta:translate-x-1" />
-              <span className="absolute inset-0 bg-[#b8624f] translate-y-full group-hover/cta:translate-y-0 transition-transform duration-500" />
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-6">
+              About Us
+            </p>
+            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-8">
+              At <span className="font-serif italic">Velmique</span>, we hand-blend timeless extraits and eaux de parfum at our Bandra atelier — built on rare absolutes, aged oud, Kannauj rose and Mysore sandalwood. Stocked at <span className="font-serif italic">100+ partner boutiques</span>, every bottle is composed for sillage that lingers and a story unmistakably yours.
+            </p>
+            <Link href="/shop" className="pill-cta">
+              Shop Now
+              <ArrowUpRight size={14} strokeWidth={1.6} />
             </Link>
           </motion.div>
-        </div>
-      </motion.div>
-    </section>
-  );
-}
 
-/* ─────────────────────────────────────
-   GENDER SECTION
-   ───────────────────────────────────── */
-export function GenderSection({ gender }) {
-  const [quickView, setQuickView] = useState(null);
-  const items = products.filter(p => p.gender === gender || p.gender === 'Unisex').slice(0, 4);
-
-  return (
-    <section className="py-24 bg-[#14110e]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <Header eyebrow="Curated" title={`For ${gender}`} href={`/shop?gender=${gender}`} />
-        <Grid items={items} onQuickView={setQuickView} />
-      </div>
-      {quickView && <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />}
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────
-   FRAGRANCE PYRAMID — unique interactive
-   ───────────────────────────────────── */
-const pyramid = [
-  { cat: 'Top', label: 'Opening', notes: ['Bergamot', 'Pink Pepper', 'Neroli', 'Saffron'], desc: 'The first impression — volatile citrus and spice that fade within minutes.' },
-  { cat: 'Heart', label: 'Soul', notes: ['Bulgarian Rose', 'Jasmine Sambac', 'Iris', 'Tuberose'], desc: 'The character — florals and spices that define the scent for hours.' },
-  { cat: 'Base', label: 'Signature', notes: ['Oud', 'Sandalwood', 'Amber', 'White Musk'], desc: 'The memory — woods and resins that linger on skin overnight.' },
-];
-
-export function NotesBand() {
-  const [active, setActive] = useState(1); // start on Heart
-
-  return (
-    <section className="py-24 bg-[#1d1915] relative overflow-hidden">
-      {/* faint circular watermarks */}
-      <div className="absolute -top-20 -right-20 w-[400px] h-[400px] rounded-full border border-[#b8624f]/10" />
-      <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full border border-[#b8624f]/10" />
-
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 relative">
-        <Header eyebrow="The Composition" title="Fragrance" accent="pyramid" align="center" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mt-8">
-          {/* LEFT — HTML/CSS triangle pyramid (reliable text rendering) */}
+          {/* Right — photo */}
           <motion.div
-            className="relative flex flex-col items-center justify-center mx-auto w-full max-w-[440px]"
+            className="md:col-span-6 relative"
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Top layer — narrow triangle */}
-            <button
-              onClick={() => setActive(0)}
-              className={`relative w-[55%] h-[110px] flex items-end justify-center pb-3 transition-colors duration-500 ${active === 0 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
-              style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }}
-              aria-label="Top notes"
-            >
-              <span className={`font-serif italic text-2xl transition-colors ${active === 0 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
-                Top
-              </span>
-            </button>
+            <div className="relative aspect-[5/4] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
+              <img
+                src="https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?w=1200&q=85&auto=format&fit=crop"
+                alt="Velmique perfume bottles on display"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="absolute -top-3 left-4 text-[var(--ink-muted)] text-[10px] tracking-[0.4em] uppercase font-body">
+              ✦ Maison de Parfum
+            </p>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-            {/* Heart layer — middle trapezoid */}
-            <button
-              onClick={() => setActive(1)}
-              className={`relative w-[78%] h-[100px] flex items-center justify-center transition-colors duration-500 ${active === 1 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
-              style={{ clipPath: 'polygon(15% 0, 85% 0, 100% 100%, 0 100%)' }}
-              aria-label="Heart notes"
-            >
-              <span className={`font-serif italic text-3xl transition-colors ${active === 1 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
-                Heart
-              </span>
-            </button>
+/* ─────────────────────────────────────
+   3. BIG TYPOGRAPHY BAND — headline + photo collage
+   ───────────────────────────────────── */
+const collagePhotos = [
+  // perfume bottle / raw fragrance ingredients collage
+  { src: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=400&q=80', rotate: -6, top: '8%', left: '4%', size: 110 },
+  { src: 'https://images.unsplash.com/photo-1615634260167-c8cdede054de?w=400&q=80', rotate: 8, top: '18%', left: '78%', size: 130 },
+  { src: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=400&q=80', rotate: -10, top: '60%', left: '70%', size: 100 },
+  { src: 'https://images.unsplash.com/photo-1547887538-e3a2f32cb1cc?w=400&q=80', rotate: 12, top: '70%', left: '8%', size: 120 },
+  { src: 'https://images.unsplash.com/photo-1610461888750-10bfc601b874?w=400&q=80', rotate: -4, top: '38%', left: '85%', size: 80 },
+];
 
-            {/* Base layer — wide trapezoid */}
-            <button
-              onClick={() => setActive(2)}
-              className={`relative w-full h-[110px] flex items-center justify-center transition-colors duration-500 ${active === 2 ? 'bg-[#b8624f]' : 'bg-[#ebe3d1] hover:bg-[#d4ccb5]'}`}
-              style={{ clipPath: 'polygon(12% 0, 88% 0, 100% 100%, 0 100%)' }}
-              aria-label="Base notes"
-            >
-              <span className={`font-serif italic text-3xl transition-colors ${active === 2 ? 'text-[#f7f2e8]' : 'text-[#1f1b16]'}`}>
-                Base
-              </span>
-            </button>
+export function CollectionBanner() {
+  return (
+    <section className="bg-[var(--surface)] py-24 md:py-32 relative overflow-hidden">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 relative">
 
-            {/* Caption */}
-            <p className="mt-6 text-[#7a7368] text-[9px] tracking-[0.4em] uppercase">Click a layer</p>
+        {/* Floating photos */}
+        {collagePhotos.map((p, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-md overflow-hidden shadow-xl border-4 border-white hidden md:block"
+            style={{
+              top: p.top,
+              left: p.left,
+              width: p.size,
+              height: p.size,
+              transform: `rotate(${p.rotate}deg)`,
+            }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7, delay: i * 0.12 }}
+          >
+            <img src={p.src} alt="" className="w-full h-full object-cover" />
+          </motion.div>
+        ))}
+
+        {/* Headline */}
+        <motion.h2
+          className="font-display text-[var(--ink)] text-center leading-[0.92] tracking-[-0.02em] relative z-10 max-w-5xl mx-auto"
+          style={{ fontSize: 'clamp(2.4rem, 7vw, 6rem)' }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.9 }}
+        >
+          RARE ABSOLUTES,<br />
+          UNFORGETTABLE <em className="not-italic gold-text">SILLAGE</em><br />
+          BOTTLED BY HAND
+        </motion.h2>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────
+   4. CUSTOMER FAVORITES — uses shared ProductCard (same as shop page)
+   ───────────────────────────────────── */
+const favoriteSlugs = ['noir-absolu', 'velvet-oud', 'lumiere-doree', 'obsidian-rose'];
+
+export function BestSellers() {
+  const items = favoriteSlugs.map(slug => products.find(p => p.slug === slug)).filter(Boolean);
+
+  return (
+    <section className="bg-[var(--bg)] py-20 md:py-28">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+        <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">
+              Curated
+            </p>
+            <h2 className="font-display text-[var(--ink)] leading-[0.95] tracking-[-0.01em]"
+              style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+              EXPLORE OUR <em className="not-italic gold-text">CUSTOMER</em> FAVORITES
+            </h2>
+          </div>
+          <Link href="/shop" className="pill-cta pill-cta-light">
+            View All
+            <ArrowUpRight size={14} strokeWidth={1.6} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+          {items.map((p, i) => (
+            <ProductCard key={p.id} product={p} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────
+   5. FRAGRANCE FORMULA — numbered ingredients
+   ───────────────────────────────────── */
+const formula = [
+  {
+    n: '01',
+    title: 'BERGAMOT & SAFFRON — TOP NOTES',
+    desc: 'Calabrian bergamot opens with a bright citrus shimmer, paired with rare red saffron threads from Kashmir for a warm spiced top. The first impression — volatile, luminous, fading within minutes to reveal the heart.',
+    img: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=900&q=85',
+    tag: 'Function · Top Notes',
+  },
+  {
+    n: '02',
+    title: 'BULGARIAN ROSE ABSOLUTE',
+    desc: 'Three thousand petals distilled into a single drop — the soul of every Velmique extrait, picked at dawn in the Rose Valley.',
+  },
+  {
+    n: '03',
+    title: 'AGED OUD & MYSORE SANDALWOOD',
+    desc: 'Royal Cambodian oud and sandalwood aged for seven years form the warm, resinous heart of the composition.',
+  },
+  {
+    n: '04',
+    title: 'AMBER & WHITE MUSK — BASE',
+    desc: 'The signature trail — a powdery amber and clean musk drydown that lingers on skin for twelve hours and beyond.',
+  },
+];
+
+export function NotesBand() {
+  return (
+    <section className="bg-[var(--bg)] py-20 md:py-28 border-t border-[var(--border)]">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+
+        {/* Header row */}
+        <div className="grid grid-cols-12 gap-6 mb-12 items-end">
+          <div className="col-span-12 md:col-span-5">
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">
+              The Composition
+            </p>
+            <h2 className="font-display text-[var(--ink)] leading-[0.92] tracking-[-0.01em]"
+              style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}>
+              FRAGRANCE<br />FORMULA
+            </h2>
+          </div>
+          <div className="col-span-12 md:col-span-7">
+            <p className="text-[var(--ink-soft)] text-base leading-relaxed font-body max-w-md md:ml-auto">
+              Each Velmique extrait is a four-layer composition. From the volatile top notes to the long-lasting base, every accord is chosen for character, longevity, and the way it unfolds on warm skin throughout the day.
+            </p>
+          </div>
+        </div>
+
+        {/* Featured ingredient — large */}
+        <div className="grid grid-cols-12 gap-6 md:gap-10 mb-10">
+          <motion.div
+            className="col-span-12 md:col-span-6"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-[var(--surface)]">
+              <img src={formula[0].img} alt={formula[0].title}
+                className="w-full h-full object-cover" />
+            </div>
           </motion.div>
 
-          {/* RIGHT — note details */}
           <motion.div
+            className="col-span-12 md:col-span-6 flex flex-col justify-center"
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 1, delay: 0.2 }}
+            transition={{ duration: 0.8, delay: 0.15 }}
           >
-            <motion.div
-              key={active}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <p className="font-serif italic text-[#d4927f] text-2xl mb-2">{pyramid[active].label}</p>
-              <h3 className="font-serif text-[#f3ede0] text-4xl md:text-5xl mb-4">{pyramid[active].cat} Notes</h3>
-              <p className="text-[#b8b0a2] text-base md:text-lg leading-relaxed mb-8 max-w-md font-body">
-                {pyramid[active].desc}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {pyramid[active].notes.map(n => (
-                  <span key={n} className="inline-block px-4 py-2 border border-[#2e2821] text-[#f3ede0] text-[11px] tracking-[0.3em] uppercase font-body hover:bg-[#1f1b16] hover:text-[#f7f2e8] transition-colors cursor-default">
-                    {n}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
+            <div className="font-display text-[var(--gold)] text-7xl md:text-8xl mb-2 leading-none">
+              {formula[0].n}
+            </div>
+            <h3 className="font-serif italic text-[var(--ink)] text-2xl md:text-3xl mb-4 max-w-md">
+              {formula[0].title}
+            </h3>
+            <p className="text-[var(--ink-soft)] text-base leading-relaxed font-body max-w-md mb-6">
+              {formula[0].desc}
+            </p>
+            <span className="inline-block bg-[var(--surface-2)] text-[var(--ink)] px-4 py-1.5 rounded-full text-[10px] tracking-[0.3em] uppercase font-body w-fit">
+              {formula[0].tag}
+            </span>
           </motion.div>
         </div>
-      </div>
-    </section>
-  );
-}
 
-/* ─────────────────────────────────────
-   SHOP THE LOOK
-   ───────────────────────────────────── */
-export function ShopTheLook() {
-  return (
-    <section className="py-24 bg-[#14110e]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <Header eyebrow="Our Looks" title="Shop the" accent="scent" href="/lookbook" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {shopTheLooks.slice(0, 2).map((look, idx) => (
+        {/* Other ingredients — row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-[var(--border)]">
+          {formula.slice(1).map((f, i) => (
             <motion.div
-              key={look.id}
-              className="group relative overflow-hidden"
-              initial={{ opacity: 0, y: 30 }}
+              key={f.n}
+              className="border-l-2 border-[var(--gold)] pl-5"
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.8, delay: idx * 0.15 }}
+              transition={{ duration: 0.6, delay: i * 0.1 }}
             >
-              <div className="aspect-[4/5] overflow-hidden bg-[#26211b]">
-                <img src={look.image} alt="Shop the look"
-                  className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1f1b16] via-[#1f1b16]/20 to-transparent" />
-              <div className="absolute top-5 right-5 font-serif italic text-[#f7f2e8]/70 text-3xl">0{idx + 1}</div>
-              <div className="absolute bottom-0 left-0 right-0 p-7">
-                <p className="text-[#d4927f] text-[10px] tracking-[0.4em] uppercase mb-2">Featured Pairing</p>
-                <div className="flex flex-wrap gap-x-2 gap-y-1 mb-5">
-                  {look.products.map((name, i) => (
-                    <Link key={i} href={`/product/${look.slugs[i]}`}
-                      className="font-serif text-[#f7f2e8] text-xl italic hover:text-[#d4927f] transition-colors">
-                      {name}{i < look.products.length - 1 ? <span className="text-[#d4927f] mx-1">·</span> : ''}
-                    </Link>
-                  ))}
-                </div>
-                <Link href={`/product/${look.slugs[0]}`}
-                  className="group/btn inline-flex items-center gap-2 text-[#f7f2e8] text-[11px] tracking-[0.4em] uppercase">
-                  <span className="w-6 h-px bg-[#14110e] transition-all group-hover/btn:w-10 group-hover/btn:bg-[#d4927f]" />
-                  Shop the Look
-                </Link>
-              </div>
+              <div className="font-display text-[var(--gold)] text-5xl mb-3 leading-none">{f.n}</div>
+              <h4 className="font-serif italic text-[var(--ink)] text-lg mb-2">{f.title}</h4>
+              <p className="text-[var(--ink-soft)] text-sm leading-relaxed font-body">{f.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -403,182 +298,112 @@ export function ShopTheLook() {
 }
 
 /* ─────────────────────────────────────
-   DISCOVERY KITS
+   6. REAL STORIES — testimonials grid + product photo
    ───────────────────────────────────── */
-export function DiscoveryKits() {
-  return (
-    <section className="py-24 bg-[#26211b]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <Header eyebrow="Try Before You Commit" title="Discovery" accent="kits" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-          {discoveryKits.map((kit, i) => (
-            <motion.div
-              key={kit.id}
-              initial={{ opacity: 0, y: 25 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.7, delay: i * 0.1 }}
-            >
-              <Link href={`/product/${kit.slug}`}
-                className="group relative block bg-[#1d1915] border border-[#2e2821] hover:border-[#b8624f] transition-colors overflow-hidden">
-                <div className="grid grid-cols-5 items-stretch">
-                  <div className="col-span-2 aspect-square overflow-hidden bg-[#26211b]">
-                    <img src={kit.image} alt={kit.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  </div>
-                  <div className="col-span-3 p-6 flex flex-col justify-center">
-                    <p className="text-[#7a7368] text-[9px] tracking-[0.35em] uppercase mb-1.5">{kit.includes}</p>
-                    <h3 className="font-serif text-[#f3ede0] text-xl italic mb-4 leading-tight">{kit.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="font-serif text-[#d4927f] text-2xl italic">₹{kit.price}</span>
-                      <span className="text-[#f3ede0] group-hover:text-[#d4927f] text-[10px] tracking-[0.35em] uppercase flex items-center gap-1.5 transition-colors">
-                        Explore <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+const realCustomers = [
+  { name: 'Aanya Sharma',  city: 'Mumbai',     text: 'Noir Absolu wears 12 hours easily — refined, smoky, never overpowering.' },
+  { name: 'Vikram Iyer',   city: 'Bengaluru',  text: 'Lumière Dorée gets compliments at every meeting and weekend brunch.' },
+  { name: 'Priya Mehra',   city: 'New Delhi',  text: 'Gentle on skin, powerful sillage — the room remembers Velmique long after I leave.' },
+  { name: 'Rohan Kapoor',  city: 'Pune',       text: 'Velvet Oud is my wedding-season signature. The sandalwood base is unmistakable.' },
+  { name: 'Ishaan Verma',  city: 'Hyderabad',  text: 'Rich, complex, beautifully composed. Worth every rupee — this is now my daily wear.' },
+  { name: 'Kavya Reddy',   city: 'Chennai',    text: 'Finally a maison that takes perfumery seriously. The Kannauj rose is divine.' },
+];
 
-/* ─────────────────────────────────────
-   WORLD OF FRAGRANCES — collections grid
-   ───────────────────────────────────── */
-export function WorldOfFragrances() {
-  return (
-    <section className="py-24 bg-[#1f1b16]">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <motion.div
-          className="flex flex-col items-center text-center mb-14"
-          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-        >
-          <div className="flex items-center gap-3 mb-5">
-            <span className="h-px w-10 bg-[#d4927f]" />
-            <span className="text-[#d4927f] text-[10px] tracking-[0.45em] uppercase">Explore</span>
-            <span className="h-px w-10 bg-[#d4927f]" />
-          </div>
-          <h2 className="font-serif text-[#f7f2e8] text-4xl md:text-5xl lg:text-6xl leading-[1.05]">
-            Worlds to <em className="text-[#d4927f] not-italic">discover.</em>
-          </h2>
-        </motion.div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {collections.map((col, i) => (
-            <motion.div
-              key={col.id}
-              initial={{ opacity: 0, y: 25 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: i * 0.08 }}
-            >
-              <Link href={`/collections/${col.slug}`} className="group relative block overflow-hidden">
-                <div className="aspect-[3/4] overflow-hidden">
-                  <img src={col.image} alt={col.name}
-                    className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110 brightness-[0.7] group-hover:brightness-90" />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1f1b16] via-[#1f1b16]/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-5 text-center">
-                  <h3 className="font-serif italic text-[#f7f2e8] text-xl md:text-2xl">{col.name}</h3>
-                  <p className="text-[#d4927f] text-[9px] tracking-[0.35em] uppercase mt-1.5">{col.tagline}</p>
-                  <span className="inline-flex items-center gap-1.5 text-[#f7f2e8]/60 text-[9px] tracking-[0.35em] uppercase mt-3 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
-                    Enter <ArrowRight size={9} />
-                  </span>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────
-   TESTIMONIALS — minimal 3-column
-   ───────────────────────────────────── */
-/* ─────────────────────────────────────
-   TESTIMONIALS — infinite smooth marquee
-   ───────────────────────────────────── */
 export function Testimonials() {
-  // Duplicate the list so the marquee loops seamlessly
-  const loop = [...testimonials, ...testimonials, ...testimonials];
-
   return (
-    <section className="py-24 bg-[#14110e] border-t border-[#2e2821] overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-        <Header eyebrow="Reviews" title="What they" accent="say." align="center" />
-      </div>
+    <section className="bg-[var(--bg)] py-20 md:py-28">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
 
-      {/* Full-bleed marquee container with side fades */}
-      <div className="relative mt-4">
-        {/* Left/right gradient fades */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-40 bg-gradient-to-r from-[#14110e] to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-40 bg-gradient-to-l from-[#14110e] to-transparent z-10" />
+        {/* Header */}
+        <div className="mb-12">
+          <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">
+            Reviews
+          </p>
+          <h2 className="font-display text-[var(--ink)] leading-[0.92] tracking-[-0.01em] max-w-3xl"
+            style={{ fontSize: 'clamp(2rem, 5.5vw, 4.6rem)' }}>
+            REAL STORIES FROM <em className="not-italic gold-text">REAL</em> CUSTOMERS
+          </h2>
+        </div>
 
-        <div className="group flex overflow-hidden py-6">
-          <div className="flex animate-testi-scroll gap-6 shrink-0">
-            {loop.map((t, i) => (
-              <div
-                key={`${t.id}-${i}`}
-                className="shrink-0 w-[340px] md:w-[400px] bg-[#1d1915] border border-[#2e2821] p-8 hover:border-[#b8624f]/50 transition-colors"
+        <div className="grid grid-cols-12 gap-6">
+          {/* Featured product photo */}
+          <motion.div
+            className="col-span-12 md:col-span-5 relative"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.9 }}
+          >
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
+              <img
+                src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=900&q=85&auto=format&fit=crop"
+                alt="Glow Serum"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-4 right-4 vertical-rl font-display text-white text-3xl md:text-4xl tracking-tight">
+                NOIR ABSOLU
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Testimonial cards grid */}
+          <div className="col-span-12 md:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+            {realCustomers.map((t, i) => (
+              <motion.div
+                key={t.name}
+                className="bg-white rounded-xl p-5 md:p-6 border border-[var(--border)] flex flex-col"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: i * 0.07 }}
               >
-                <div className="flex gap-1 mb-5">
+                <div className="flex gap-0.5 mb-3">
                   {[1,2,3,4,5].map(s => (
-                    <Star key={s} size={12} className={s <= t.rating ? 'fill-[#d4927f] text-[#d4927f]' : 'text-[#2e2821]'} />
+                    <Star key={s} size={11} className="fill-[var(--gold)] text-[var(--gold)]" />
                   ))}
                 </div>
-                <blockquote className="font-serif italic text-[#f3ede0] text-lg leading-[1.55] mb-6 line-clamp-5">
-                  "{t.text}"
-                </blockquote>
-                <div className="pt-5 border-t border-[#2e2821]">
-                  <p className="font-serif italic text-[#f3ede0] text-base">{t.name}</p>
-                  <p className="text-[#7a7368] text-[10px] tracking-[0.3em] uppercase mt-1">
-                    {t.location} · {t.product}
-                  </p>
+                <p className="text-[var(--ink-soft)] text-xs md:text-sm leading-relaxed font-body mb-4 flex-1">
+                  {t.text}
+                </p>
+                <div className="mt-auto">
+                  <p className="font-serif italic text-[var(--ink)] text-sm md:text-base">{t.name}</p>
+                  {t.city && (
+                    <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.2em] uppercase font-body mt-0.5">{t.city}</p>
+                  )}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Summary */}
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 mt-10 text-center">
-        <div className="inline-flex items-center gap-4">
+        {/* Summary row */}
+        <div className="mt-12 flex items-center justify-center gap-4 flex-wrap">
           <div className="flex gap-0.5">
-            {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-[#d4927f] text-[#d4927f]" />)}
+            {[1,2,3,4,5].map(s => (
+              <Star key={s} size={14} className="fill-[var(--gold)] text-[var(--gold)]" />
+            ))}
           </div>
-          <span className="text-[#b8b0a2] text-sm font-body">
-            <span className="font-serif italic text-[#f3ede0] text-lg">4.9</span>
-            <span className="mx-2 text-[#7a7368]">·</span>
+          <span className="text-[var(--ink-soft)] text-sm font-body">
+            <span className="font-serif italic text-[var(--ink)] text-lg">4.9</span>
+            <span className="mx-2 text-[var(--ink-muted)]">·</span>
             2,400+ verified reviews
           </span>
+          <Link href="/shop" className="pill-cta ml-2">
+            See More
+            <ArrowUpRight size={14} strokeWidth={1.6} />
+          </Link>
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes testi-scroll {
-          from { transform: translateX(0); }
-          to   { transform: translateX(calc(-100% / 3)); }
-        }
-        .animate-testi-scroll {
-          animation: testi-scroll 40s linear infinite;
-          will-change: transform;
-        }
-        .group:hover .animate-testi-scroll {
-          animation-play-state: paused;
-        }
-      `}</style>
     </section>
   );
 }
+
 /* ─────────────────────────────────────
-   KEEP legacy export for compatibility
+   Legacy stubs — keep page imports working but render nothing
+   (sections we replaced with the editorial layout)
    ───────────────────────────────────── */
+export function GenderSection() { return null; }
+export function ShopTheLook() { return null; }
+export function DiscoveryKits() { return null; }
+export function WorldOfFragrances() { return null; }
 export const ServicesBar = Marquee;

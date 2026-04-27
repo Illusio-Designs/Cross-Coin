@@ -9,22 +9,35 @@ module.exports = {
       colors: {
         gold: {
           DEFAULT: '#C9A84C',
-          light: '#FFD700',
+          light: '#E5CD8A',
           dark: '#8B6914',
           pale: '#F5E6C8',
         },
-        dark: {
-          DEFAULT: '#111111',
-          card: '#1a1a1a',
-          border: '#2a2a2a',
-          muted: '#333333',
+        champagne: '#BFAB5E',
+        olive: '#A89548',
+        cream: {
+          DEFAULT: '#FBF7EC',
+          light: '#FFFFFF',
+          dark: '#F5EFE0',
+          panel: '#EAE0C7',
         },
-        cream: '#F5F0E8',
+        ink: {
+          DEFAULT: '#1A1612',
+          soft: '#4A3F33',
+          muted: '#8A7E6C',
+        },
+        dark: {
+          DEFAULT: '#14110E',
+          card: '#1F1B16',
+          border: '#2A241D',
+          muted: '#3A3128',
+        },
       },
       fontFamily: {
         serif: ['Playfair Display', 'Georgia', 'serif'],
         sans: ['Cormorant Garamond', 'serif'],
         body: ['Jost', 'sans-serif'],
+        display: ['Anton', 'Playfair Display', 'sans-serif'],
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',

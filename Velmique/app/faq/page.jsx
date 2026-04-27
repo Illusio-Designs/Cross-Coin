@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
+import PageHeader from '@/components/layout/PageHeader';
 
 const faqs = [
   {
@@ -22,15 +23,15 @@ const faqs = [
   {
     category: 'Products & Care',
     items: [
-      { q: 'Are your products ethically made?', a: 'Yes. Every Velmique piece is crafted in partner ateliers that meet our strict standards for fair wages, safe working conditions, and sustainable practices.' },
-      { q: 'How should I care for my Velmique pieces?', a: 'Care instructions are printed on the inner label of every garment. Silk and velvet pieces should be dry-cleaned or hand-washed in cold water. Never tumble dry luxury fabrics.' },
-      { q: 'Are the colors accurate in photos?', a: 'We make every effort to represent colors accurately. However, screen calibration may cause slight variations. If you have concerns, contact us before purchasing.' },
+      { q: 'Are your products ethically made?', a: 'Yes. Every Velmique fragrance is composed in partner ateliers that meet our strict standards for fair wages, sustainable sourcing, and ethical practices.' },
+      { q: 'How should I store my fragrance?', a: 'Store your bottle upright in a cool, dark place away from direct sunlight and heat. Avoid bathrooms — humidity degrades the composition. Properly stored, an extrait will perform for 5+ years.' },
+      { q: 'How long does a bottle last?', a: 'A 50ml extrait typically lasts 6–12 months with daily use. Sillage and longevity vary with skin chemistry — most patrons report 8–12 hours of wear.' },
     ],
   },
   {
     category: 'Account & Payments',
     items: [
-      { q: 'What payment methods do you accept?', a: 'We accept all major credit and debit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, Google Pay, and UPI for Indian customers.' },
+      { q: 'What payment methods do you accept?', a: 'We accept UPI, GPay, PhonePe, Paytm, Razorpay, all major credit/debit cards (Visa, Mastercard, RuPay, Amex) and NetBanking. International orders also support PayPal.' },
       { q: 'Is my payment information secure?', a: 'Yes. All transactions are processed through SSL-encrypted, PCI-DSS compliant payment gateways. We never store your card details.' },
       { q: 'How do I reset my password?', a: 'Click "Forgot Password" on the login page and enter your email. You will receive a reset link within a few minutes. Check your spam folder if it doesn\'t arrive.' },
     ],
@@ -41,42 +42,39 @@ export default function FAQPage() {
   const [openItem, setOpenItem] = useState(null);
 
   return (
-    <div className="pt-8 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
-        <div className="text-center mb-14">
-          <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">Help Center</p>
-          <h1 className="font-serif text-5xl text-[#f3ede0]">FAQ</h1>
-          <div className="gold-divider w-24 mx-auto mt-4" />
-          <p className="text-[#f3ede0]/40 text-sm font-body mt-4">
-            Can't find your answer? <a href="/contact" className="text-[#d4927f] hover:underline">Contact us</a>
-          </p>
-        </div>
+    <div className="bg-[var(--bg)] min-h-screen">
+      <PageHeader
+        eyebrow="Help Center"
+        title="FREQUENTLY"
+        accent="ASKED"
+        intro="Quick answers to the questions our patrons ask the most. Can't find yours? Reach our concierge team."
+      />
 
-        <div className="space-y-10">
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
+        <div className="space-y-14">
           {faqs.map(section => (
             <div key={section.category}>
-              <h2 className="font-serif text-xl text-[#f3ede0] mb-4 pb-3 border-b border-[#b8624f]/15">
+              <h2 className="font-display text-[var(--ink)] text-3xl md:text-4xl uppercase tracking-tight mb-6 pb-4 border-b border-[var(--border)]">
                 {section.category}
               </h2>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {section.items.map(item => {
                   const key = `${section.category}-${item.q}`;
                   const isOpen = openItem === key;
                   return (
-                    <div key={item.q} className="border border-[#b8624f]/10 rounded-sm overflow-hidden">
+                    <div key={item.q} className="border border-[var(--border)] rounded-md overflow-hidden bg-white">
                       <button
                         onClick={() => setOpenItem(isOpen ? null : key)}
-                        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#b8624f]/5 transition-colors"
+                        className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-[var(--surface)] transition-colors"
                       >
-                        <span className="text-[#f3ede0]/80 font-body text-sm pr-4">{item.q}</span>
+                        <span className="text-[var(--ink)] font-body text-base pr-4">{item.q}</span>
                         {isOpen
-                          ? <Minus size={14} className="text-[#d4927f] flex-shrink-0" />
-                          : <Plus size={14} className="text-[#f3ede0]/40 flex-shrink-0" />
-                        }
+                          ? <Minus size={16} className="text-[var(--gold-deep)] flex-shrink-0" />
+                          : <Plus size={16} className="text-[var(--ink-muted)] flex-shrink-0" />}
                       </button>
                       {isOpen && (
-                        <div className="px-5 pb-4 bg-[#1d1915]/50">
-                          <p className="text-[#f3ede0]/50 font-body text-sm leading-relaxed">{item.a}</p>
+                        <div className="px-6 pb-5 bg-[var(--surface)]/50">
+                          <p className="text-[var(--ink-soft)] font-body text-sm leading-relaxed">{item.a}</p>
                         </div>
                       )}
                     </div>
@@ -85,6 +83,14 @@ export default function FAQPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-16 bg-[var(--surface-2)] rounded-2xl px-8 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-2">Still curious?</p>
+            <h3 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase">Talk to our concierge.</h3>
+          </div>
+          <a href="/contact" className="pill-cta shrink-0">Contact Us</a>
         </div>
       </div>
     </div>

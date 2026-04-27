@@ -1,82 +1,81 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
+import PageHeader from '@/components/layout/PageHeader';
 
 const milestones = [
-  { year: '2018', event: 'Velmique founded in Grasse, France — the perfume capital of the world.' },
-  { year: '2020', event: 'Launched the iconic Signature collection — 12 fragrances, sold out in 48 hours.' },
-  { year: '2022', event: 'Expanded globally, opening fragrance ateliers in London and Dubai.' },
-  { year: '2024', event: 'Introduced the Luminara collection — our most celebrated work to date.' },
-  { year: '2026', event: 'Celebrating 8 years of crafting extraordinary fragrances for extraordinary people.' },
+  { year: '2018', event: 'Velmique founded in Bandra West by Aarav Khanna, after his apprenticeship at Grasse and a year studying attars in Kannauj.' },
+  { year: '2020', event: 'Launched the Signature collection — twelve fragrances composed in-house. Sold out in 72 hours.' },
+  { year: '2022', event: 'Opened our flagship boutique at DLF Emporio, New Delhi. Stocked at Le Mill and Good Earth.' },
+  { year: '2024', event: 'Launched the Luminara collection — picked up by Vogue, Harper\'s Bazaar and ELLE.' },
+  { year: '2026', event: 'Crossed 100+ partner boutiques and 25,000 patrons. Latest drop sold out in 48 hours.' },
 ];
 
 const team = [
-  { name: 'Isabelle Moreau', role: 'Master Perfumer', img: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=400&q=80' },
-  { name: 'Sophie Laurent', role: 'Head of Olfaction', img: 'https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&q=80' },
-  { name: 'Camille Dubois', role: 'Brand Director', img: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&q=80' },
+  { name: 'Aarav Khanna', role: 'Founder & Master Perfumer', img: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=600&q=80', bio: 'Trained at ISIPCA, Grasse · Kannauj attar apprentice' },
+  { name: 'Meera Iyer', role: 'Head of Olfaction', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80', bio: 'Third-generation perfumer · Kannauj heritage' },
+  { name: 'Vikram Bhatia', role: 'Brand Director', img: 'https://images.unsplash.com/photo-1614283233556-f35b0c801ef1?w=600&q=80', bio: 'Ex-Tata CLiQ Luxe · 14 years in luxury retail' },
 ];
 
 export default function AboutPage() {
   return (
-    <div className="pt-8 min-h-screen">
-      {/* Hero */}
-      <div className="relative h-[70vh] overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1594035910387-fea47794261f?w=1600&q=80" alt="About Velmique" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
-        <div className="absolute inset-0 flex items-end pb-20">
-          <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 w-full">
-            <p className="text-[#d4927f] text-xs tracking-[0.4em] uppercase font-body mb-3">Our Story</p>
-            <h1 className="font-serif text-6xl md:text-7xl text-[#f7f2e8] leading-none max-w-2xl">
-              Scented in<br /><span className="text-[#d4927f] italic">Purpose</span>
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div className="bg-[var(--bg)] min-h-screen">
+      <PageHeader
+        eyebrow="Our Story"
+        title="SCENTED IN"
+        accent="PURPOSE"
+        intro="A homegrown maison de parfum — French training meets Kannauj attar heritage. Hand-blended at our Bandra atelier from rare absolutes, aged oud and sandalwood."
+      />
 
       {/* Mission */}
-      <section className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-20 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        <div>
-          <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-4">Who We Are</p>
-          <h2 className="font-serif text-4xl text-[#f3ede0] mb-6 leading-snug">
-            Luxury perfumery redefined for those who know their worth
+      <section className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-20 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 items-center">
+        <div className="md:col-span-6">
+          <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-4">Who We Are</p>
+          <h2 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight mb-6"
+            style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>
+            Luxury Perfumery, <em className="not-italic gold-text">Reimagined</em>
           </h2>
-          <div className="gold-divider w-16 mb-6" />
-          <p className="text-[#f3ede0]/60 font-body text-sm leading-loose mb-4">
-            Velmique was born from a simple belief: extraordinary people deserve extraordinary fragrances. Not just beautiful scents, but compositions crafted with intention, built from the world's rarest ingredients, and designed to become part of who you are.
+          <p className="text-[var(--ink-soft)] font-body text-base leading-loose mb-4">
+            Not just beautiful scents — compositions crafted with intention, built from the world&apos;s rarest absolutes, designed to become part of who you are.
           </p>
-          <p className="text-[#f3ede0]/60 font-body text-sm leading-loose mb-6">
-            We work with master perfumers trained in Grasse — sourcing oud from Assam, rose absolute from Bulgaria, iris from Florence — insisting on standards that most fragrance houses have long abandoned. Every drop tells a story of obsession.
+          <p className="text-[var(--ink-soft)] font-body text-base leading-loose mb-8">
+            Our perfumers train in Grasse and source from Hojai, Mysore, Coimbatore and Kashmir — pairing French technique with the finest raws. Every drop is bottled by hand at our Bandra atelier.
           </p>
-          <Link href="/shop" className="text-[#d4927f] text-xs tracking-[0.2em] uppercase font-body flex items-center gap-2 hover:gap-3 transition-all">
-            Explore the Fragrances <ArrowRight size={12} />
+          <Link href="/shop" className="pill-cta">
+            Explore the Fragrances <ArrowUpRight size={14} strokeWidth={1.6} />
           </Link>
         </div>
-        <div className="relative">
-          <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=800&q=80" alt="Perfume craftsmanship"
-            className="w-full aspect-[3/4] object-cover rounded-sm" />
-          <div className="absolute -bottom-4 -left-4 bg-[#1f1b16] border border-[#b8624f]/40 p-5 max-w-[200px]">
-            <p className="font-serif text-3xl text-[#d4927f] italic">8+</p>
-            <p className="text-[#f7f2e8]/60 text-xs font-body mt-1">Years of crafting luxury</p>
+        <div className="md:col-span-6 relative">
+          <div className="aspect-[4/5] overflow-hidden rounded-2xl">
+            <img src="https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=900&q=85" alt="Velmique atelier"
+              className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute -bottom-6 -left-6 bg-white border border-[var(--border)] rounded-2xl px-7 py-5 max-w-[240px] shadow-xl">
+            <p className="font-display text-[var(--gold)] text-5xl leading-none">8+</p>
+            <p className="text-[var(--ink-soft)] text-sm font-body mt-1">Years of crafting luxury</p>
           </div>
         </div>
       </section>
 
       {/* Values */}
-      <section className="bg-[#26211b] border-y border-[#b8624f]/10 py-20">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-          <div className="text-center mb-14">
-            <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">What We Stand For</p>
-            <h2 className="font-serif text-4xl text-[#f3ede0]">Our Values</h2>
+      <section className="bg-[var(--surface-2)] py-20 md:py-24">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+          <div className="mb-12 max-w-3xl">
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">What We Stand For</p>
+            <h2 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight"
+              style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+              OUR <em className="not-italic gold-text">VALUES</em>
+            </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { title: 'Rare Ingredients', icon: '◆', desc: 'We source only the finest raw materials — aged orris from Florence, wild oud from Assam, Bulgarian rose absolute — because the quality of a fragrance begins long before it reaches the bottle.' },
-              { title: 'Sustainable Sourcing', icon: '❋', desc: 'We partner with ethical suppliers who share our commitment to the environment. Natural ingredients are harvested responsibly, and we actively invest in reforestation of oud-producing regions.' },
-              { title: 'Transparency', icon: '◉', desc: 'We publish full ingredient lists and sourcing information for every fragrance. You deserve to know exactly what you are wearing — and where it came from.' },
+              { n: '01', title: 'Heritage Botanicals', desc: 'Aged oud, Kannauj rose, Mysore sandalwood, Kashmir saffron, Coimbatore tuberose. We build every formula on the finest raws — not as an afterthought, as the foundation.' },
+              { n: '02', title: 'Sustainable Sourcing', desc: 'We work directly with farmer cooperatives in Hojai and Kannauj. Every kilogram of agarwood is traceable. We invest 2% of revenue back into reforestation of native oud trees.' },
+              { n: '03', title: 'Made by Hand', desc: 'Composed and hand-bottled at our Bandra atelier under direct supervision of Master Perfumer Aarav Khanna. No outsourcing, no white-labelling.' },
             ].map(v => (
-              <div key={v.title} className="text-center">
-                <span className="text-[#d4927f] text-2xl block mb-4">{v.icon}</span>
-                <h3 className="font-serif text-2xl text-[#f3ede0] mb-3">{v.title}</h3>
-                <p className="text-[#f3ede0]/50 font-body text-sm leading-relaxed">{v.desc}</p>
+              <div key={v.title} className="bg-white border border-[var(--border)] rounded-2xl p-7">
+                <p className="font-display text-[var(--gold)] text-5xl leading-none mb-3">{v.n}</p>
+                <h3 className="font-serif italic text-[var(--ink)] text-2xl mb-3">{v.title}</h3>
+                <p className="text-[var(--ink-soft)] font-body text-sm leading-relaxed">{v.desc}</p>
               </div>
             ))}
           </div>
@@ -84,22 +83,25 @@ export default function AboutPage() {
       </section>
 
       {/* Timeline */}
-      <section className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-20">
-        <div className="text-center mb-12">
-          <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">Our Journey</p>
-          <h2 className="font-serif text-4xl text-[#f3ede0]">Milestones</h2>
+      <section className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 py-20 md:py-24">
+        <div className="mb-12 max-w-3xl">
+          <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Our Journey</p>
+          <h2 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight"
+            style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+            MILE<em className="not-italic gold-text">STONES</em>
+          </h2>
         </div>
         <div className="relative">
-          <div className="absolute left-1/2 -translate-x-px top-0 bottom-0 w-px bg-gradient-to-b from-[#b8624f]/40 via-[#b8624f]/20 to-transparent" />
+          <div className="absolute left-4 md:left-1/2 md:-translate-x-px top-0 bottom-0 w-px bg-[var(--border)]" />
           <div className="space-y-10">
             {milestones.map((m, i) => (
-              <div key={m.year} className={`flex items-start gap-8 ${i % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
-                <div className={`flex-1 ${i % 2 === 0 ? 'text-right' : 'text-left'}`}>
-                  <p className="gold-text font-serif text-2xl">{m.year}</p>
-                  <p className="text-[#f3ede0]/60 font-body text-sm mt-1 leading-relaxed">{m.event}</p>
+              <div key={m.year} className={`relative md:flex md:items-start md:gap-10 pl-12 md:pl-0 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+                <div className={`md:flex-1 ${i % 2 === 0 ? 'md:text-right md:pr-10' : 'md:text-left md:pl-10'}`}>
+                  <p className="font-display text-[var(--gold)] text-3xl md:text-4xl leading-none">{m.year}</p>
+                  <p className="text-[var(--ink-soft)] font-body text-base mt-2 leading-relaxed">{m.event}</p>
                 </div>
-                <div className="flex-shrink-0 w-3 h-3 rounded-full bg-[#b8624f] mt-1.5 border-2 border-[#111] ring-2 ring-[#b8624f]/30 relative z-10" />
-                <div className="flex-1" />
+                <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-2 w-3 h-3 rounded-full bg-[var(--gold)] ring-4 ring-[var(--bg)] z-10" />
+                <div className="hidden md:block md:flex-1" />
               </div>
             ))}
           </div>
@@ -107,20 +109,26 @@ export default function AboutPage() {
       </section>
 
       {/* Team */}
-      <section className="bg-[#26211b] py-20">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14">
-          <div className="text-center mb-12">
-            <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-3">The Noses Behind Velmique</p>
-            <h2 className="font-serif text-4xl text-[#f3ede0]">Our Team</h2>
+      <section className="bg-[var(--surface)] py-20 md:py-24">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+          <div className="mb-12 max-w-3xl">
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Noses Behind Velmique</p>
+            <h2 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight"
+              style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>
+              OUR <em className="not-italic gold-text">TEAM</em>
+            </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {team.map(t => (
-              <div key={t.name} className="text-center group">
-                <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border-2 border-[#b8624f]/20 group-hover:border-[#b8624f]/60 transition-all">
-                  <img src={t.img} alt={t.name} className="w-full h-full object-cover" />
+              <div key={t.name} className="bg-white rounded-2xl overflow-hidden border border-[var(--border)] group">
+                <div className="aspect-[4/5] overflow-hidden">
+                  <img src={t.img} alt={t.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 </div>
-                <h3 className="font-serif text-lg text-[#f3ede0]">{t.name}</h3>
-                <p className="text-[#d4927f]/60 text-xs tracking-wider uppercase font-body mt-1">{t.role}</p>
+                <div className="p-6">
+                  <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.3em] uppercase font-body mb-1">{t.role}</p>
+                  <h3 className="font-serif italic text-[var(--ink)] text-2xl">{t.name}</h3>
+                  <p className="text-[var(--ink-muted)] text-xs font-body mt-2">{t.bio}</p>
+                </div>
               </div>
             ))}
           </div>

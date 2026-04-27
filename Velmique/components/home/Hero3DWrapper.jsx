@@ -1,5 +1,5 @@
 'use client';
-import Hero3D from './Hero3D';
+import HeroBanner from './HeroBanner';
 export default function Hero3DWrapper() {
-  return <Hero3D />;
+  return <HeroBanner />;
 }
