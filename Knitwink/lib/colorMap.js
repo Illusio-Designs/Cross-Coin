@@ -17,6 +17,7 @@ const colorMap = {
   'neon blue': '#1B03A3', 'neon yellow': '#FFFF33', 'neon orange': '#FF6700',
   'neon purple': '#B026FF', 'baby pink': '#FFC1CC', 'navy blue': '#000080',
   'sky blue': '#87CEEB', 'royal blue': '#4169E1', 'medium blue': '#0000CD',
+  'light blue': '#ADD8E6',
   'mint green': '#98FF98', 'lime green': '#CCEE00', 'mustard yellow': '#FFCE1B',
   'forest green': '#228B22', 'charcoal grey': '#36454F', 'off white': '#FAF9F6',
   'rose gold': '#B76E79', 'champagne': '#F7E7CE', 'teal blue': '#008080',

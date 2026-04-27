@@ -15,8 +15,8 @@ const slides = [
     tagline: "Oud · Frankincense · Amber",
     href: "/product/phantom-encens",
     bottle: "#e5c9a2",
-    liquid: "#b8624f",
-    capColor: "#1f1b16",
+    liquid: "C9A84C",
+    capColor: "F5EFE0",
     shape: "flacon", // classic rectangular shoulder bottle
   },
   {
@@ -27,7 +27,7 @@ const slides = [
     href: "/product/lumiere-doree",
     bottle: "#e9d8b4",
     liquid: "#c5a880",
-    capColor: "#b8624f",
+    capColor: "C9A84C",
     shape: "obelisk", // tall slim with pyramid cap
   },
   {
@@ -75,12 +75,12 @@ function Label({ z = 0.381, width = 1.05, height = 1.1 }) {
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial color="#fdfaf3" roughness={0.6} />
       </mesh>
-      <Text position={[0, 0.32, z + 0.001]} fontSize={0.14} color="#1f1b16" anchorX="center" anchorY="middle" letterSpacing={0.22}>
+      <Text position={[0, 0.32, z + 0.001]} fontSize={0.14} color="F5EFE0" anchorX="center" anchorY="middle" letterSpacing={0.22}>
         VELMIQUE
       </Text>
       <mesh position={[0, 0.2, z + 0.002]}>
         <planeGeometry args={[0.32, 0.005]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.8} roughness={0.3} />
+        <meshStandardMaterial color="C9A84C" metalness={0.8} roughness={0.3} />
       </mesh>
       <Text position={[0, 0.1, z + 0.002]} fontSize={0.05} color="#4d4840" anchorX="center" anchorY="middle" letterSpacing={0.3}>
         EAU DE PARFUM
@@ -88,7 +88,7 @@ function Label({ z = 0.381, width = 1.05, height = 1.1 }) {
       <Text position={[0, 0.01, z + 0.002]} fontSize={0.045} color="#8a8378" anchorX="center" anchorY="middle" letterSpacing={0.25}>
         PARIS
       </Text>
-      <Text position={[0, -0.1, z + 0.002]} fontSize={0.04} color="#b8624f" anchorX="center" anchorY="middle" letterSpacing={0.4}>
+      <Text position={[0, -0.1, z + 0.002]} fontSize={0.04} color="C9A84C" anchorX="center" anchorY="middle" letterSpacing={0.4}>
         50 ML
       </Text>
     </>
@@ -128,7 +128,7 @@ function FlaconBottle({ bottle, liquid, capColor }) {
       {/* Cap top ring detail */}
       <mesh position={[0, 2.02, 0]} castShadow>
         <boxGeometry args={[0.94, 0.04, 0.94]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="C9A84C" metalness={0.9} roughness={0.2} />
       </mesh>
     </group>
   );
@@ -158,12 +158,12 @@ function ObeliskBottle({ bottle, liquid, capColor }) {
         <planeGeometry args={[0.9, 1.4]} />
         <meshStandardMaterial color="#fdfaf3" roughness={0.6} />
       </mesh>
-      <Text position={[0, 0.52, 0.461]} fontSize={0.11} color="#1f1b16" anchorX="center" anchorY="middle" letterSpacing={0.22}>
+      <Text position={[0, 0.52, 0.461]} fontSize={0.11} color="F5EFE0" anchorX="center" anchorY="middle" letterSpacing={0.22}>
         VELMIQUE
       </Text>
       <mesh position={[0, 0.42, 0.462]}>
         <planeGeometry args={[0.26, 0.005]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.8} roughness={0.3} />
+        <meshStandardMaterial color="C9A84C" metalness={0.8} roughness={0.3} />
       </mesh>
       <Text position={[0, 0.32, 0.462]} fontSize={0.045} color="#4d4840" anchorX="center" anchorY="middle" letterSpacing={0.3}>
         LUMIÈRE
@@ -174,7 +174,7 @@ function ObeliskBottle({ bottle, liquid, capColor }) {
       <Text position={[0, 0.08, 0.462]} fontSize={0.036} color="#8a8378" anchorX="center" anchorY="middle" letterSpacing={0.25}>
         EAU DE PARFUM
       </Text>
-      <Text position={[0, -0.3, 0.462]} fontSize={0.04} color="#b8624f" anchorX="center" anchorY="middle" letterSpacing={0.4}>
+      <Text position={[0, -0.3, 0.462]} fontSize={0.04} color="C9A84C" anchorX="center" anchorY="middle" letterSpacing={0.4}>
         PARIS · 50 ML
       </Text>
       {/* Short rectangular neck */}
@@ -195,7 +195,7 @@ function ObeliskBottle({ bottle, liquid, capColor }) {
       {/* Accent line at top of cap */}
       <mesh position={[0, 1.99, 0]} castShadow>
         <boxGeometry args={[0.72, 0.025, 0.72]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="C9A84C" metalness={0.9} roughness={0.2} />
       </mesh>
     </group>
   );
@@ -235,12 +235,12 @@ function SteppedBottle({ bottle, liquid, capColor }) {
         <planeGeometry args={[1.15, 0.62]} />
         <meshStandardMaterial color="#fdfaf3" roughness={0.6} />
       </mesh>
-      <Text position={[0, 1.18, 0.431]} fontSize={0.13} color="#1f1b16" anchorX="center" anchorY="middle" letterSpacing={0.24}>
+      <Text position={[0, 1.18, 0.431]} fontSize={0.13} color="F5EFE0" anchorX="center" anchorY="middle" letterSpacing={0.24}>
         VELMIQUE
       </Text>
       <mesh position={[0, 1.08, 0.432]}>
         <planeGeometry args={[0.3, 0.005]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.8} roughness={0.3} />
+        <meshStandardMaterial color="C9A84C" metalness={0.8} roughness={0.3} />
       </mesh>
       <Text position={[0, 0.99, 0.432]} fontSize={0.04} color="#4d4840" anchorX="center" anchorY="middle" letterSpacing={0.3}>
         VELVET OUD
@@ -248,17 +248,17 @@ function SteppedBottle({ bottle, liquid, capColor }) {
       <Text position={[0, 0.89, 0.432]} fontSize={0.034} color="#8a8378" anchorX="center" anchorY="middle" letterSpacing={0.3}>
         EXTRAIT DE PARFUM
       </Text>
-      <Text position={[0, 0.77, 0.432]} fontSize={0.034} color="#b8624f" anchorX="center" anchorY="middle" letterSpacing={0.4}>
+      <Text position={[0, 0.77, 0.432]} fontSize={0.034} color="C9A84C" anchorX="center" anchorY="middle" letterSpacing={0.4}>
         50 ML
       </Text>
       {/* Terracotta accent lines on each step edge */}
       <mesh position={[0, 0.22, 0]}>
         <boxGeometry args={[1.91, 0.015, 1.01]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color="C9A84C" metalness={0.7} roughness={0.35} />
       </mesh>
       <mesh position={[0, 0.62, 0]}>
         <boxGeometry args={[1.66, 0.015, 0.93]} />
-        <meshStandardMaterial color="#b8624f" metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color="C9A84C" metalness={0.7} roughness={0.35} />
       </mesh>
       {/* Short rectangular neck */}
       <mesh position={[0, 1.88, 0]}>
@@ -325,7 +325,7 @@ function Scene({ slide }) {
         scale={6}
         blur={2.5}
         far={3}
-        color="#1f1b16"
+        color="F5EFE0"
       />
     </>
   );
@@ -347,7 +347,7 @@ export default function Hero3D() {
   const slide = slides[active];
 
   return (
-    <section className="relative bg-[#14110e] overflow-hidden">
+    <section className="relative bg-[#FBF7EC] overflow-hidden">
       <div className="relative min-h-[calc(100vh-130px)] flex items-center">
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] items-center gap-10 lg:gap-16 w-full py-16 lg:py-20">
           {/* LEFT */}
@@ -374,14 +374,14 @@ export default function Hero3D() {
                     exit: { opacity: 0 },
                   }}
                 >
-                  <span className="h-px w-12 bg-[#b8624f]" />
-                  <span className="text-[#d4927f] text-[10px] tracking-[0.5em] uppercase">
+                  <span className="h-px w-12 bg-[#C9A84C]" />
+                  <span className="text-[#8B6914] text-[10px] tracking-[0.5em] uppercase">
                     {slide.eyebrow}
                   </span>
                 </motion.div>
 
                 <motion.h1
-                  className="font-serif text-[#f3ede0] text-5xl md:text-7xl lg:text-[7.5rem] xl:text-[9rem] leading-[0.92] tracking-tight mb-4"
+                  className="font-serif text-[#1A1612] text-5xl md:text-7xl lg:text-[7.5rem] xl:text-[9rem] leading-[0.92] tracking-tight mb-4"
                   variants={{
                     visible: { transition: { staggerChildren: 0.08 } },
                     exit: { opacity: 0, transition: { duration: 0.3 } },
@@ -402,7 +402,7 @@ export default function Hero3D() {
                     {slide.title}
                   </motion.span>
                   <motion.span
-                    className="block italic text-[#d4927f] font-normal"
+                    className="block italic text-[#8B6914] font-normal"
                     variants={{
                       hidden: { opacity: 0, y: 40, filter: "blur(8px)" },
                       visible: {
@@ -418,7 +418,7 @@ export default function Hero3D() {
                 </motion.h1>
 
                 <motion.p
-                  className="text-[#7a7368] text-[11px] tracking-[0.4em] uppercase mb-12 font-body"
+                  className="text-[#8A7E6C] text-[11px] tracking-[0.4em] uppercase mb-12 font-body"
                   variants={{
                     hidden: { opacity: 0, y: 15 },
                     visible: {
@@ -446,19 +446,19 @@ export default function Hero3D() {
                 >
                   <Link
                     href={slide.href}
-                    className="group relative inline-flex items-center gap-3 bg-[#1f1b16] text-[#f7f2e8] px-9 py-4 text-[11px] tracking-[0.4em] uppercase overflow-hidden"
+                    className="group relative inline-flex items-center gap-3 bg-[#F5EFE0] text-[#1A1612] px-9 py-4 text-[11px] tracking-[0.4em] uppercase overflow-hidden"
                   >
                     <span className="relative z-10">Discover</span>
                     <ArrowRight
                       size={13}
                       className="relative z-10 transition-transform group-hover:translate-x-1"
                     />
-                    <span className="absolute inset-0 bg-[#b8624f] translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                    <span className="absolute inset-0 bg-[#C9A84C] translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                   </Link>
 
                   <Link
                     href="/shop"
-                    className="group text-[#f3ede0] text-[11px] tracking-[0.4em] uppercase border-b border-[#1f1b16] pb-1 hover:text-[#d4927f] hover:border-[#b8624f] transition-colors"
+                    className="group text-[#1A1612] text-[11px] tracking-[0.4em] uppercase border-b border-[#F5EFE0] pb-1 hover:text-[#8B6914] hover:border-[#C9A84C] transition-colors"
                   >
                     All Fragrances
                   </Link>
@@ -473,7 +473,7 @@ export default function Hero3D() {
                   key={i}
                   onClick={() => setActive(i)}
                   aria-label={`Slide ${i + 1}`}
-                  className={`h-px transition-all duration-500 ${i === active ? "w-16 bg-[#b8624f]" : "w-6 bg-[#2e2821] hover:bg-[#b8624f]/50"}`}
+                  className={`h-px transition-all duration-500 ${i === active ? "w-16 bg-[#C9A84C]" : "w-6 bg-[#E0D4B8] hover:bg-[#C9A84C]/50"}`}
                 />
               ))}
             </div>
@@ -483,7 +483,7 @@ export default function Hero3D() {
           <div className="relative h-[480px] md:h-[580px] lg:h-[500px] order-1 lg:order-2 flex items-center justify-center">
             {/* Soft terracotta halo behind bottle */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-[420px] h-[420px] rounded-full bg-[#b8624f]/15 blur-[90px]" />
+              <div className="w-[420px] h-[420px] rounded-full bg-[#C9A84C]/15 blur-[90px]" />
             </div>
 
             {mounted && (
@@ -500,7 +500,7 @@ export default function Hero3D() {
             )}
 
             {/* Vertical meta label */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[#7a7368] text-[9px] tracking-[0.5em] uppercase [writing-mode:vertical-rl] hidden md:block">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[#8A7E6C] text-[9px] tracking-[0.5em] uppercase [writing-mode:vertical-rl] hidden md:block">
               Extrait de Parfum · 50ml
             </div>
           </div>

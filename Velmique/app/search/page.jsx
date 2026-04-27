@@ -21,24 +21,28 @@ function SearchResults() {
     : [];
 
   return (
-    <div className="pt-8 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-14 py-10">
-        <div className="mb-10">
-          <p className="text-[#d4927f]/60 text-xs tracking-[0.3em] uppercase font-body mb-2">Results for</p>
-          <h1 className="font-serif text-4xl text-[#f3ede0]">"{query}"</h1>
-          <div className="gold-divider w-16 mt-4" />
-          <p className="text-[#f3ede0]/40 text-sm font-body mt-3">{results.length} product{results.length !== 1 ? 's' : ''} found</p>
-        </div>
+    <div className="bg-[var(--bg)] min-h-screen">
+      <header className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pt-14 md:pt-20 pb-10">
+        <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-4">Results for</p>
+        <h1 className="font-display text-[var(--ink)] uppercase leading-[0.92] tracking-tight"
+          style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}>
+          &ldquo;{query}&rdquo;
+        </h1>
+        <p className="text-[var(--ink-soft)] text-base font-body mt-4">
+          {results.length} fragrance{results.length !== 1 ? 's' : ''} found
+        </p>
+      </header>
 
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
         {results.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {results.map(p => <ProductCard key={p.id} product={p} onQuickView={setQuickView} />)}
           </div>
         ) : (
-          <div className="text-center py-24">
-            <Search size={48} className="text-[#f3ede0]/10 mx-auto mb-4" />
-            <p className="font-serif text-2xl text-[#f3ede0]/40 mb-2">No results found</p>
-            <p className="text-[#f3ede0]/30 text-sm font-body">Try a different search term or browse our collections.</p>
+          <div className="text-center py-24 bg-white border border-[var(--border)] rounded-2xl">
+            <Search size={42} className="text-[var(--ink-muted)] mx-auto mb-5" />
+            <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight mb-3">No results found</p>
+            <p className="text-[var(--ink-soft)] text-sm font-body">Try a different search term or browse our collections.</p>
           </div>
         )}
       </div>

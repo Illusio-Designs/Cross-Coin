@@ -1,35 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600;700&family=Anton&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Warm dark palette — espresso night + terracotta */
-  --bg: #14110e;              /* main bg — deep warm espresso */
-  --surface: #1d1915;         /* cards / elevated surfaces */
-  --surface-2: #26211b;       /* contrast panels */
-  --ink: #f3ede0;             /* main text — warm cream */
-  --ink-soft: #b8b0a2;        /* secondary text */
-  --ink-muted: #7a7368;       /* tertiary / captions */
-  --terracotta: #d4927f;      /* accent — lightened for dark bg */
-  --terracotta-strong: #b8624f;
-  --champagne: #c5a880;
-  --border: #2e2821;          /* subtle dividers */
+  /* Cream + Gold palette — Velmique editorial */
+  --bg: #FBF7EC;              /* main bg — warm cream */
+  --surface: #F5EFE0;         /* secondary cream */
+  --surface-2: #EAE0C7;       /* panel cream */
+  --paper: #FFFFFF;           /* pure white panels */
+  --ink: #1A1612;             /* deep espresso brown */
+  --ink-soft: #4A3F33;        /* secondary text */
+  --ink-muted: #8A7E6C;       /* tertiary / captions */
+  --gold: #C9A84C;            /* signature golden */
+  --gold-deep: #8B6914;       /* deep gold */
+  --gold-light: #E5CD8A;      /* pale gold */
+  --champagne: #BFAB5E;       /* hero panel champagne */
+  --olive: #A89548;           /* olive-gold pill */
+  --border: #E0D4B8;          /* subtle dividers */
+  --dark: #14110E;            /* dark contrast (footer) */
+  --dark-soft: #1F1B16;
 
-  /* Legacy aliases */
+  /* Legacy aliases for any older components */
   --bone: var(--bg);
-  --paper: var(--surface);
-  --sand: var(--surface-2);
+  --sand: var(--surface);
   --cream: var(--bg);
-  --cream-light: var(--surface);
-  --cream-dark: var(--surface-2);
-  --gold: var(--terracotta);
-  --gold-dark: var(--terracotta-strong);
-  --gold-light: var(--terracotta);
-  --accent: var(--terracotta);
-  --dark: var(--ink);
-  --dark-card: var(--surface);
+  --cream-light: var(--paper);
+  --cream-dark: var(--surface);
+  --terracotta: var(--gold);
+  --terracotta-strong: var(--gold-deep);
+  --gold-dark: var(--gold-deep);
+  --accent: var(--gold);
+  --dark-card: var(--dark-soft);
   --dark-border: var(--border);
   --text-muted: var(--ink-muted);
 }
@@ -53,19 +56,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Lock body while splash intro runs */
 body.splash-locked { overflow: hidden; }
 
-/* Gradient accent text — terracotta tones */
+/* Editorial display class — Anton + tight tracking */
+.font-display {
+  font-family: 'Anton', 'Playfair Display', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Vertical text helpers */
+.vertical-rl {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.vertical-lr {
+  writing-mode: vertical-rl;
+}
+
+/* Gold gradient text */
 .gold-text {
-  background: linear-gradient(135deg, #b8624f 0%, #d4927f 40%, #b8624f 60%, #8a3d2a 100%);
+  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 40%, #E5CD8A 60%, #8B6914 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gold-shimmer {
-  background: linear-gradient(90deg, #8a3d2a 0%, #b8624f 25%, #d4927f 50%, #b8624f 75%, #8a3d2a 100%);
+  background: linear-gradient(90deg, #8B6914 0%, #C9A84C 25%, #E5CD8A 50%, #C9A84C 75%, #8B6914 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -78,30 +95,18 @@ body.splash-locked { overflow: hidden; }
   100% { background-position: 200% center; }
 }
 
-/* Card hover */
-.product-card:hover .product-overlay {
-  opacity: 1;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--terracotta-strong); }
-::-webkit-scrollbar-thumb:hover { background: var(--terracotta); }
+/* Hide browser scrollbar — top ScrollProgress bar serves as the only scroll indicator */
+html { scrollbar-width: none; -ms-overflow-style: none; }
+::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* Marquee */
-.marquee-container {
-  overflow: hidden;
-  white-space: nowrap;
-  width: 100%;
-}
+.marquee-container { overflow: hidden; white-space: nowrap; width: 100%; }
 .marquee-content {
   display: inline-block;
   white-space: nowrap;
   animation: marquee 30s linear infinite;
   will-change: transform;
 }
-
 .animate-marquee {
   animation: marquee 35s linear infinite;
 }
@@ -114,53 +119,92 @@ body.splash-locked { overflow: hidden; }
 /* Divider */
 .gold-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #b8624f, transparent);
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
-/* Buttons */
+/* Pill button — Ethixia-style olive/gold pill */
+.pill-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--olive);
+  color: var(--paper);
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+.pill-cta:hover {
+  background: var(--ink);
+  color: var(--gold-light);
+  transform: translateY(-1px);
+}
+.pill-cta-light {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+.pill-cta-light:hover {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.pill-cta-dark {
+  background: var(--ink);
+  color: var(--gold-light);
+}
+.pill-cta-dark:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* Buttons (legacy) */
 .btn-gold {
-  background: #1f1b16;
-  color: #f7f2e8;
+  background: var(--gold);
+  color: var(--ink);
   font-weight: 600;
   letter-spacing: 0.1em;
   transition: all 0.25s ease;
 }
 .btn-gold:hover {
-  background: #b8624f;
-  color: #f7f2e8;
+  background: var(--gold-deep);
+  color: var(--paper);
 }
 
 .btn-outline-gold {
-  border: 1px solid #b8624f;
-  color: #b8624f;
+  border: 1px solid var(--gold);
+  color: var(--gold-deep);
   background: transparent;
   letter-spacing: 0.1em;
   transition: all 0.25s ease;
 }
 .btn-outline-gold:hover {
-  background: #C9A84C;
-  color: #111;
+  background: var(--gold);
+  color: var(--ink);
 }
 
-/* Input styles */
+/* Inputs */
 .input-gold {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.15);
-  color: #111;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  color: var(--ink);
   transition: all 0.3s;
 }
 .input-gold:focus {
   outline: none;
-  border-color: #C9A84C;
-  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.1);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.15);
 }
-.input-gold::placeholder {
-  color: #aaa;
-}
+.input-gold::placeholder { color: var(--ink-muted); }
 
 /* Star rating */
-.star-filled { color: #C9A84C; }
-.star-empty { color: #ddd; }
+.star-filled { color: var(--gold); }
+.star-empty { color: var(--border); }
 
 /* Section reveal */
 .reveal {
@@ -171,4 +215,17 @@ body.splash-locked { overflow: hidden; }
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Product card hover */
+.product-card:hover .product-overlay { opacity: 1; }
+
+/* Editorial outline text */
+.text-outline {
+  -webkit-text-stroke: 1px var(--ink);
+  color: transparent;
+}
+.text-outline-gold {
+  -webkit-text-stroke: 1px var(--gold);
+  color: transparent;
 }

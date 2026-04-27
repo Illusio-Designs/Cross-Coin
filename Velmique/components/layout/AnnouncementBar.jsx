@@ -8,13 +8,12 @@ const messages = [
 ];
 
 export default function AnnouncementBar() {
-  // NOT sticky — scrolls away with the page
   return (
-    <div className="relative bg-[#1c1a16] py-2.5 px-4 overflow-hidden">
+    <div className="relative bg-[var(--ink)] py-2.5 px-4 overflow-hidden">
       <div className="marquee-container">
         <div className="marquee-content">
           {[...messages, ...messages, ...messages].map((msg, i) => (
-            <span key={i} className="inline-block mx-10 text-[10px] tracking-[0.3em] text-[#d8bf92] font-body uppercase">
+            <span key={i} className="inline-block mx-10 text-[10px] tracking-[0.3em] text-[var(--gold-light)] font-body uppercase">
               {msg}
             </span>
           ))}

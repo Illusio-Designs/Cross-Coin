@@ -1,14 +1,10 @@
 import Hero3DWrapper from '@/components/home/Hero3DWrapper';
 import {
   Marquee,
-  BestSellers,
   StoryBand,
   CollectionBanner,
-  GenderSection,
+  BestSellers,
   NotesBand,
-  ShopTheLook,
-  DiscoveryKits,
-  WorldOfFragrances,
   Testimonials,
 } from '@/components/home/HomeSections';
 
@@ -17,15 +13,10 @@ export default function HomePage() {
     <>
       <Hero3DWrapper />
       <Marquee />
-      <BestSellers />
       <StoryBand />
       <CollectionBanner />
-      <GenderSection gender="Women" />
+      <BestSellers />
       <NotesBand />
-      <ShopTheLook />
-      <GenderSection gender="Men" />
-      <DiscoveryKits />
-      <WorldOfFragrances />
       <Testimonials />
     </>
   );

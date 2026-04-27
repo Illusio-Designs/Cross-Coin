@@ -1,9 +1,8 @@
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
-import Navbar from '@/components/layout/Navbar';
+import HeaderShell from '@/components/layout/HeaderShell';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
-import AnnouncementBar from '@/components/layout/AnnouncementBar';
 import SearchOverlay from '@/components/layout/SearchOverlay';
 import CookieBanner from '@/components/ui/CookieBanner';
 import ScrollToTop from '@/components/ui/ScrollToTop';
@@ -27,8 +26,7 @@ export default function RootLayout({ children }) {
       <body>
         <StoreProvider>
           <ScrollProgress />
-          <AnnouncementBar />
-          <Navbar />
+          <HeaderShell />
           <main>{children}</main>
           <Footer />
           <CartDrawer />
