@@ -3,16 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { products } from '@/lib/data';
+import { searchProducts } from '@/lib/api/products';
 
 export default function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useStore();
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
   const inputRef = useRef(null);
 
-  const results = query.length > 1
-    ? products.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase())).slice(0, 5)
-    : [];
+  // Debounced live search via API
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); return; }
+    const t = setTimeout(() => {
+      searchProducts(query, 5).then(setResults);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query]);
 
   useEffect(() => {
     if (searchOpen) { setTimeout(() => inputRef.current?.focus(), 100); }
@@ -57,7 +63,7 @@ export default function SearchOverlay() {
                 <img src={p.images[0]} alt={p.name} className="w-12 h-12 object-cover rounded-sm" />
                 <div className="flex-1">
                   <p className="text-[#1A1612] text-sm font-body">{p.name}</p>
-                  <p className="text-[#1A1612]/40 text-xs">{p.category} · ₹{p.price}</p>
+                  <p className="text-[#1A1612]/40 text-xs">{p.category} · ₹{Number(p.price).toLocaleString('en-IN')}</p>
                 </div>
                 <ArrowRight size={14} className="text-[#8B6914]/40 group-hover:text-[#8B6914] transition-colors" />
               </Link>

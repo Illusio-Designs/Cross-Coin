@@ -204,12 +204,17 @@ const updateSlider = async (req, res) => {
             return res.status(404).json({ message: 'Slider not found' });
         }
 
-        // Handle category ID
-        let categoryIdToUse = Number(categoryId);
-        if (categoryIdToUse === "" || isNaN(categoryIdToUse)) {
-            categoryIdToUse = null;
+        // Normalize categoryId — treat null/undefined/''/'0'/0 as "no category".
+        // Number(null) and Number('') both return 0 (not NaN), so the previous
+        // check let 0 through and triggered an FK constraint violation.
+        let categoryIdToUse = null;
+        if (categoryId !== undefined && categoryId !== null && categoryId !== '' && categoryId !== 'null') {
+            const num = Number(categoryId);
+            if (!isNaN(num) && num > 0) {
+                categoryIdToUse = num;
+            }
         }
-        
+
         if (categoryIdToUse) {
             const category = await Category.findByPk(categoryIdToUse);
             if (!category) {
@@ -248,20 +253,15 @@ const updateSlider = async (req, res) => {
             }
         }
 
-        // Prepare update data
-        const updateData = {
-            title,
-            description,
-            buttonText,
-            categoryId: categoryIdToUse,
-            status,
-            image // This will only change if a new file was uploaded
-        };
-
-        // Add brand_id if provided
-        if (brand_id) {
-            updateData.brand_id = brand_id;
-        }
+        // Only include fields that were actually sent — avoids accidentally
+        // wiping fields that weren't in the form payload.
+        const updateData = { image };
+        if (title !== undefined) updateData.title = title;
+        if (description !== undefined) updateData.description = description;
+        if (buttonText !== undefined) updateData.buttonText = buttonText;
+        if (status !== undefined) updateData.status = status;
+        if (categoryId !== undefined) updateData.categoryId = categoryIdToUse;
+        if (brand_id) updateData.brand_id = brand_id;
 
         // Update slider
         await slider.update(updateData);

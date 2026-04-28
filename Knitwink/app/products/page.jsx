@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { SlidersHorizontal, X, ChevronDown } from 'lucide-react'
-import { getPublicProducts } from '@/lib/api/products'
-import { getPublicCategories } from '@/lib/api/categories'
+import { getPublicProducts, mapProduct } from '@/lib/api/products'
+import { getPublicCategories, getCategoryByName } from '@/lib/api/categories'
 import { ProductCard } from '@/components/collection/ProductCard'
 
 const SORT_OPTIONS = [
@@ -31,16 +31,12 @@ export default function ProductsPage() {
   const [selectedGenders, setSelectedGenders] = useState([])
   const [sort, setSort] = useState('featured')
 
-  // Fetch categories + all products once
+  // Fetch categories once on mount + match URL ?category=name.
   useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      getPublicProducts({ limit: 200 }),
-      getPublicCategories(),
-    ]).then(([result, cats]) => {
-      setAllProducts(result.products || [])
+    let alive = true
+    getPublicCategories().then(cats => {
+      if (!alive) return
       setCategories(cats || [])
-      // Match URL category param
       if (categoryParam && cats?.length) {
         const match = cats.find(c => c.name.trim().toLowerCase() === categoryParam.toLowerCase())
         if (match) {
@@ -48,8 +44,36 @@ export default function ProductsPage() {
           setSelectedCategoryName(match.name)
         }
       }
-    }).catch(() => {}).finally(() => setLoading(false))
+    }).catch(() => {})
+    return () => { alive = false }
   }, [categoryParam])
+
+  // Fetch products — picks the right endpoint:
+  //   • no category selected (or multi-select)  → /api/products/catalog
+  //   • exactly one category selected           → /api/categories/by-name/:name
+  // Each category change fires a real API call, visible in the network tab.
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+
+    const exactlyOne = selectedCategoryIds.length === 1
+      ? categories.find(c => String(c.id) === selectedCategoryIds[0])
+      : null
+
+    const fetchPromise = exactlyOne
+      ? getCategoryByName(exactlyOne.name).then(cat => {
+          const rows = cat?.products || []
+          return rows.map(mapProduct).filter(Boolean)
+        })
+      : getPublicProducts({ limit: 200 }).then(r => r.products || [])
+
+    fetchPromise
+      .then(prods => { if (alive) setAllProducts(prods) })
+      .catch(() => { if (alive) setAllProducts([]) })
+      .finally(() => { if (alive) setLoading(false) })
+
+    return () => { alive = false }
+  }, [selectedCategoryIds, categories])
 
   // Extract real filter options from product data
   const filterOptions = useMemo(() => {
@@ -90,12 +114,14 @@ export default function ProductsPage() {
     }
   }, [allProducts])
 
-  // Apply filters + sort client-side
+  // Apply filters + sort client-side.
+  // Note: single-category case is already filtered server-side via /api/categories/by-name,
+  // so this category filter only does work when multiple categories are checked.
   const filtered = useMemo(() => {
     let result = [...allProducts]
 
-    // Category — multi-select
-    if (selectedCategoryIds.length > 0) {
+    // Category — only filter client-side for multi-select (single-select handled by API)
+    if (selectedCategoryIds.length > 1) {
       const catNames = categories.filter(c => selectedCategoryIds.includes(String(c.id))).map(c => c.name.toLowerCase())
       result = result.filter(p => catNames.includes(p.collectionName?.toLowerCase()))
     }

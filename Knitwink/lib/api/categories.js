@@ -36,3 +36,21 @@ export async function getPublicCategories() {
     return []
   }
 }
+
+/* Fetch a single category WITH its products embedded.
+   Endpoint: GET /api/categories/by-name/:name (URL-encoded)
+   Returns:  { id, name, slug, image, products: [...] }
+   Same endpoint CrossCoin/Velmique use for collection-detail pages. */
+export async function getCategoryByName(name) {
+  if (!name) return null
+  try {
+    const res = await fetch(
+      `${API_URL}/api/categories/by-name/${encodeURIComponent(name)}`,
+      { headers: { 'X-Brand-Name': BRAND_NAME } }
+    )
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
