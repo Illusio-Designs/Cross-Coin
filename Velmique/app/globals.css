@@ -231,3 +231,98 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   -webkit-text-stroke: 1px var(--gold);
   color: transparent;
 }
+
+/* Blog body — prose styles for HTML rendered via dangerouslySetInnerHTML */
+.prose-velmique h1,
+.prose-velmique h2,
+.prose-velmique h3,
+.prose-velmique h4 {
+  font-family: var(--font-anton), 'Anton', sans-serif;
+  color: var(--ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+.prose-velmique h1 { font-size: clamp(1.9rem, 3.5vw, 2.6rem); }
+.prose-velmique h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+.prose-velmique h3 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); }
+.prose-velmique h4 { font-size: 1.15rem; letter-spacing: 0.02em; }
+
+.prose-velmique h2::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 2px;
+  background: var(--gold);
+  margin-top: 0.65rem;
+}
+
+.prose-velmique p {
+  margin-bottom: 1.25rem;
+}
+
+.prose-velmique strong,
+.prose-velmique b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.prose-velmique em,
+.prose-velmique i {
+  font-style: italic;
+  color: var(--ink);
+}
+
+.prose-velmique a {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.prose-velmique a:hover { color: var(--ink); }
+
+.prose-velmique ul,
+.prose-velmique ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+.prose-velmique ul { list-style: disc; }
+.prose-velmique ol { list-style: decimal; }
+.prose-velmique li { margin-bottom: 0.4rem; }
+.prose-velmique li::marker { color: var(--gold-deep); }
+
+.prose-velmique blockquote {
+  border-left: 3px solid var(--gold);
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  margin: 1.75rem 0;
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.35rem;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.prose-velmique img {
+  border-radius: 1rem;
+  margin: 1.75rem 0;
+  width: 100%;
+  height: auto;
+}
+
+.prose-velmique hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2.5rem 0;
+}
+
+.prose-velmique code {
+  background: var(--surface-2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.95em;
+  color: var(--ink);
+}
