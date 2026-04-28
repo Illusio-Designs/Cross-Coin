@@ -1,36 +1,93 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, ChevronDown } from 'lucide-react';
-import { products, categories } from '@/lib/data';
 import ProductCard from '@/components/shop/ProductCard';
-import QuickViewModal from '@/components/shop/QuickViewModal';
 import PageHeader from '@/components/layout/PageHeader';
+import { getPublicProducts, mapProduct } from '@/lib/api/products';
+import { getPublicCategories, getCategoryByName } from '@/lib/api/categories';
 
 const sortOptions = [
-  { label: 'Featured', value: 'featured' },
-  { label: 'Newest', value: 'newest' },
-  { label: 'Price: Low to High', value: 'price-asc' },
+  { label: 'Featured',           value: 'featured'   },
+  { label: 'Newest',             value: 'newest'     },
+  { label: 'Price: Low to High', value: 'price-asc'  },
   { label: 'Price: High to Low', value: 'price-desc' },
-  { label: 'Best Rated', value: 'rating' },
+  { label: 'Best Rated',         value: 'rating'     },
 ];
 
-export default function ShopPage() {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('featured');
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [quickView, setQuickView] = useState(null);
-  const [priceRange, setPriceRange] = useState([0, 50000]);
+function ShopPageInner() {
+  const searchParams = useSearchParams();
+  const collectionParam = searchParams?.get('collection') || '';
 
+  const [products, setProducts]       = useState([]);
+  const [rawCategories, setRawCategories] = useState([]);
+  const [categories, setCategories]   = useState(['All']);
+  const [loading, setLoading]         = useState(true);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sortBy, setSortBy]           = useState('featured');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [priceRange, setPriceRange]   = useState([0, 50000]);
+
+  // Fetch categories once on mount (small payload, used by URL slug matching + filter pills).
+  useEffect(() => {
+    let alive = true;
+    getPublicCategories().then(cats => {
+      if (!alive) return;
+      if (Array.isArray(cats) && cats.length) {
+        setRawCategories(cats);
+        setCategories(['All', ...cats.map(c => c.name)]);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // Honour ?collection=slug — match against category slug or name once cats arrive.
+  useEffect(() => {
+    if (!collectionParam || !rawCategories.length) return;
+    const slug = collectionParam.toLowerCase();
+    const match = rawCategories.find(
+      c => (c.slug || '').toLowerCase() === slug
+        || c.name.toLowerCase() === slug
+        || c.name.toLowerCase().replace(/\s+/g, '-') === slug
+    );
+    if (match) setActiveCategory(match.name);
+  }, [collectionParam, rawCategories]);
+
+  // Fetch products — picks the right endpoint:
+  //   • activeCategory === 'All'  → /api/products/catalog        (all products)
+  //   • specific category         → /api/categories/by-name/:name (products embedded)
+  // Each category change fires a real API call, visible in the network tab.
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+
+    const fetchPromise =
+      activeCategory === 'All'
+        ? getPublicProducts({ limit: 200 }).then(r => r.products || [])
+        : getCategoryByName(activeCategory).then(cat => {
+            const rows = cat?.products || [];
+            return rows.map(mapProduct).filter(Boolean);
+          });
+
+    fetchPromise
+      .then(prods => { if (alive) setProducts(prods); })
+      .catch(() => { if (alive) setProducts([]); })
+      .finally(() => { if (alive) setLoading(false); });
+
+    return () => { alive = false; };
+  }, [activeCategory]);
+
+  // API already filtered by category — just apply price + sort client-side.
   const filtered = useMemo(() => {
-    let list = activeCategory === 'All' ? products : products.filter(p => p.category === activeCategory);
-    list = list.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+    const list = products.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
     switch (sortBy) {
-      case 'price-asc': return [...list].sort((a, b) => a.price - b.price);
+      case 'price-asc':  return [...list].sort((a, b) => a.price - b.price);
       case 'price-desc': return [...list].sort((a, b) => b.price - a.price);
-      case 'rating': return [...list].sort((a, b) => b.rating - a.rating);
-      default: return list;
+      case 'rating':     return [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'newest':     return [...list].reverse();
+      default:           return list;
     }
-  }, [activeCategory, sortBy, priceRange]);
+  }, [sortBy, priceRange, products]);
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
@@ -58,7 +115,9 @@ export default function ShopPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[var(--ink-muted)] text-xs font-body">{filtered.length} pieces</span>
+            <span className="text-[var(--ink-muted)] text-xs font-body">
+              {loading ? 'Loading…' : `${filtered.length} pieces`}
+            </span>
             <div className="relative">
               <select value={sortBy} onChange={e => setSortBy(e.target.value)}
                 className="bg-white border border-[var(--border)] pl-4 pr-9 py-2 text-xs font-body appearance-none rounded-full cursor-pointer text-[var(--ink)] hover:border-[var(--gold)] transition-colors">
@@ -85,9 +144,9 @@ export default function ShopPage() {
                 <div>
                   <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Price Range</p>
                   <div className="flex items-center gap-2 text-[var(--ink-soft)] text-xs font-body mb-2">
-                    <span>${Math.round(priceRange[0] / 100)}</span>
+                    <span>₹{priceRange[0].toLocaleString('en-IN')}</span>
                     <span className="flex-1 text-center">–</span>
-                    <span>${Math.round(priceRange[1] / 100)}</span>
+                    <span>₹{priceRange[1].toLocaleString('en-IN')}</span>
                   </div>
                   <input type="range" min={0} max={50000} step={500} value={priceRange[1]}
                     onChange={e => setPriceRange([priceRange[0], parseInt(e.target.value)])}
@@ -96,11 +155,15 @@ export default function ShopPage() {
 
                 <div>
                   <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Maison</p>
-                  {['Noir', 'Signature', 'Luminara', 'Extrait'].map(c => (
-                    <label key={c} className="flex items-center gap-2 py-1.5 cursor-pointer group">
-                      <input type="checkbox" className="accent-[var(--gold)]" />
-                      <span className="text-[var(--ink-soft)] text-sm font-body group-hover:text-[var(--ink)] transition-colors">{c}</span>
-                    </label>
+                  {categories.filter(c => c !== 'All').slice(0, 8).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setActiveCategory(c)}
+                      className={`block text-left w-full py-1.5 text-sm font-body transition-colors ${
+                        activeCategory === c ? 'text-[var(--ink)]' : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'
+                      }`}>
+                      {c}
+                    </button>
                   ))}
                 </div>
 
@@ -113,16 +176,23 @@ export default function ShopPage() {
           )}
 
           <div className="flex-1">
-            {filtered.length > 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="aspect-[3/4] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+                ))}
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filtered.map(p => (
-                  <ProductCard key={p.id} product={p} onQuickView={setQuickView} />
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
             ) : (
               <div className="text-center py-20">
                 <p className="font-display text-3xl text-[var(--ink-muted)] uppercase tracking-tight">No products found</p>
-                <button onClick={() => setActiveCategory('All')} className="text-[var(--gold-deep)] text-[10px] tracking-[0.3em] uppercase font-body mt-4 hover:underline">
+                <button onClick={() => { setActiveCategory('All'); setPriceRange([0, 50000]); }}
+                  className="text-[var(--gold-deep)] text-[10px] tracking-[0.3em] uppercase font-body mt-4 hover:underline">
                   Clear Filters
                 </button>
               </div>
@@ -130,7 +200,14 @@ export default function ShopPage() {
           </div>
         </div>
       </div>
-      {quickView && <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />}
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
+      <ShopPageInner />
+    </Suspense>
   );
 }

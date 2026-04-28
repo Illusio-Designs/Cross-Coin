@@ -21,7 +21,7 @@ async function brandFetch(path) {
 }
 
 // Map backend product to Knitwink Product type
-function mapProduct(p) {
+export function mapProduct(p) {
   const variations = p.ProductVariations || p.variations || [];
   const images = p.ProductImages || p.images || [];
 

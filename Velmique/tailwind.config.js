@@ -34,10 +34,10 @@ module.exports = {
         },
       },
       fontFamily: {
-        serif: ['Playfair Display', 'Georgia', 'serif'],
-        sans: ['Cormorant Garamond', 'serif'],
-        body: ['Jost', 'sans-serif'],
-        display: ['Anton', 'Playfair Display', 'sans-serif'],
+        serif:   ['var(--font-playfair)',  'Playfair Display', 'Georgia', 'serif'],
+        sans:    ['var(--font-cormorant)', 'Cormorant Garamond', 'serif'],
+        body:    ['var(--font-jost)',      'Jost', 'system-ui', 'sans-serif'],
+        display: ['var(--font-anton)',     'Anton', 'Playfair Display', 'Impact', 'sans-serif'],
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',

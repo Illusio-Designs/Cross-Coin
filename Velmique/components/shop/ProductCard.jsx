@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { Heart, Eye, ArrowUpRight } from 'lucide-react';
+import { Heart, ArrowUpRight } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
-export default function ProductCard({ product, onQuickView, index = 0 }) {
+export default function ProductCard({ product, index = 0 }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   const wishlisted = isWishlisted(product.id);
 
@@ -62,19 +62,6 @@ export default function ProductCard({ product, onQuickView, index = 0 }) {
               clipPath: 'polygon(0 40%, 4% 85%, 9% 50%, 15% 90%, 22% 55%, 30% 92%, 38% 48%, 46% 88%, 54% 55%, 62% 92%, 70% 48%, 78% 88%, 86% 55%, 93% 92%, 100% 55%, 100% 100%, 0 100%)',
             }}
           />
-
-          {/* Quick view — slides in from right on hover */}
-          {onQuickView && (
-            <div className="absolute top-1/2 right-3 -translate-y-1/2 z-20 opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-              <button
-                onClick={(e) => { e.preventDefault(); onQuickView(product); }}
-                className="w-8 h-8 flex items-center justify-center bg-[#FBF7EC] border border-[#F5EFE0] text-[#1A1612] hover:bg-[#F5EFE0] transition-colors"
-                aria-label="Quick view"
-              >
-                <Eye size={12} />
-              </button>
-            </div>
-          )}
 
           {/* Add to Bag button slides up on hover */}
           {product.inStock && (

@@ -1,24 +1,27 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
-import { products } from '@/lib/data';
+import { Suspense, useEffect, useState } from 'react';
 import ProductCard from '@/components/shop/ProductCard';
-import QuickViewModal from '@/components/shop/QuickViewModal';
 import { Search } from 'lucide-react';
+import { searchProducts } from '@/lib/api/products';
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [quickView, setQuickView] = useState(null);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const results = query
-    ? products.filter(p =>
-        p.name.toLowerCase().includes(query.toLowerCase()) ||
-        p.category.toLowerCase().includes(query.toLowerCase()) ||
-        p.collection.toLowerCase().includes(query.toLowerCase()) ||
-        p.description.toLowerCase().includes(query.toLowerCase())
-      )
-    : [];
+  useEffect(() => {
+    let alive = true;
+    if (!query) { setResults([]); return; }
+    setLoading(true);
+    searchProducts(query, 60).then(list => {
+      if (!alive) return;
+      setResults(Array.isArray(list) ? list : []);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [query]);
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
@@ -29,14 +32,20 @@ function SearchResults() {
           &ldquo;{query}&rdquo;
         </h1>
         <p className="text-[var(--ink-soft)] text-base font-body mt-4">
-          {results.length} fragrance{results.length !== 1 ? 's' : ''} found
+          {loading ? 'Searching…' : `${results.length} fragrance${results.length !== 1 ? 's' : ''} found`}
         </p>
       </header>
 
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
-        {results.length > 0 ? (
+        {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {results.map(p => <ProductCard key={p.id} product={p} onQuickView={setQuickView} />)}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-[3/4] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+            ))}
+          </div>
+        ) : results.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {results.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         ) : (
           <div className="text-center py-24 bg-white border border-[var(--border)] rounded-2xl">
@@ -46,7 +55,6 @@ function SearchResults() {
           </div>
         )}
       </div>
-      {quickView && <QuickViewModal product={quickView} onClose={() => setQuickView(null)} />}
     </div>
   );
 }
