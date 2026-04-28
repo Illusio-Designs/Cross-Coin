@@ -1,108 +1,254 @@
 'use client';
-import { blogPosts } from '@/lib/data';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Clock, User, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, Clock, User, Calendar, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { getPost, getPosts } from '@/lib/api/blog';
+
+function formatDate(str) {
+  try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  catch { return ''; }
+}
 
 export default function BlogPostPage() {
-  const params = useParams();
-  const post = blogPosts.find(p => p.slug === params.slug) || blogPosts[0];
-  const related = blogPosts.filter(p => p.id !== post.id).slice(0, 3);
+  const { slug } = useParams();
+  const [post, setPost] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const articleContent = `
-    <p>In the world of fine perfumery, a fragrance is never merely a scent — it is a language, a declaration, a carefully composed expression of who you are and who you wish to become. Velmique was founded on this principle, and it remains the guiding philosophy behind every extrait we create.</p>
+  useEffect(() => {
+    if (!slug) return;
+    setLoading(true);
+    window.scrollTo(0, 0);
+    Promise.all([
+      getPost(slug).catch(() => null),
+      getPosts().catch(() => []),
+    ]).then(([p, all]) => {
+      setPost(p);
+      setRelated(all.filter(r => r.slug !== slug).slice(0, 4));
+    }).finally(() => setLoading(false));
+  }, [slug]);
 
-    <p>The scents we choose carry weight beyond aroma. From the ceremonial incense of ancient temples to the signature perfumes of modern style icons, what we wear on our skin communicates before we speak a single word.</p>
+  if (loading) {
+    return (
+      <div className="bg-[var(--bg)] min-h-screen">
+        <div className="relative h-[70vh] min-h-[480px] bg-[var(--surface-2)] animate-pulse" />
+        <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 py-16 grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-8 space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={`h-3 rounded bg-[var(--surface-2)] animate-pulse ${i % 4 === 3 ? 'w-2/3' : 'w-full'}`} />
+            ))}
+          </div>
+          <div className="lg:col-span-4 space-y-4">
+            <div className="h-32 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+            <div className="h-24 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-    <h2>The Architecture of Sillage</h2>
-
-    <p>Think of wearing a fragrance not as a finishing touch, but as an architectural one. You are constructing a presence, an atmosphere, a memory others carry long after you leave the room. The Velmique patron understands that note structure matters as much as concentration, that base accords speak as eloquently as opening citrus, and that skin chemistry is the foundation upon which every formula rests.</p>
-
-    <p>Our Noir collection was designed with this philosophy at its core. Each extrait was conceived to do more than scent — to elevate. Noir Absolu, for instance, was sketched with one question in mind: what does a person feel when they walk into a room and know they own it?</p>
-
-    <h2>Investment Scents vs. Trend Scents</h2>
-
-    <p>A question we hear often: how does one build a fragrance wardrobe that is both current and enduring? The answer lies in understanding the difference between investment scents and trend scents — and knowing which is which.</p>
-
-    <p>Investment scents are the backbone: a perfectly composed extrait, an oud of impeccable quality, a signature that will outlast a decade of changing seasons. These are bottles you save for, consider carefully, and wear with the confidence of permanence.</p>
-
-    <p>At Velmique, we compose almost exclusively in the investment space. We believe in creating fragrances that grow more meaningful with wear, that develop patina and story, that become more yours over time.</p>
-  `;
+  if (!post) {
+    return (
+      <div className="bg-[var(--bg)] min-h-screen pt-32 pb-20 text-center">
+        <p className="font-display text-3xl text-[var(--ink-muted)] uppercase tracking-tight">Post not found</p>
+        <Link href="/blog" className="pill-cta mt-8 inline-flex"><ArrowLeft size={12} /> Back to Journal</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
-      <div className="max-w-[1100px] mx-auto px-6 md:px-12 lg:px-20 pt-10 pb-24">
+
+      {/* ═══════════════ FULL-WIDTH HERO ═══════════════ */}
+      <section className="relative w-full">
+        <div className="relative w-full h-[75vh] min-h-[520px] max-h-[820px] overflow-hidden bg-[var(--ink)]">
+          {post.coverImage ? (
+            <img
+              src={post.coverImage}
+              alt={post.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--ink)] to-[var(--surface-2)]" />
+          )}
+          {/* Tonal scrim — top fade for breadcrumb, deeper bottom for headline */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--ink)]/60 via-[var(--ink)]/15 to-[var(--ink)]/85" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink)]/70 via-transparent to-transparent" />
+
+          {/* Top — breadcrumb */}
+          <div className="absolute top-0 left-0 right-0">
+            <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pt-8 flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase font-body text-white/70">
+              <Link href="/" className="hover:text-[var(--gold)] transition-colors">Home</Link>
+              <ChevronRight size={10} />
+              <Link href="/blog" className="hover:text-[var(--gold)] transition-colors">Journal</Link>
+              <ChevronRight size={10} />
+              <span className="text-white truncate max-w-[40ch] normal-case tracking-normal text-xs">{post.title}</span>
+            </div>
+          </div>
+
+          {/* Bottom — title block */}
+          <div className="absolute bottom-0 left-0 right-0 pb-12 md:pb-20">
+            <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+              <div className="max-w-4xl">
+                {post.category && (
+                  <span className="inline-block bg-[var(--gold)] text-[var(--ink)] text-[10px] tracking-[0.4em] uppercase px-4 py-2 font-body rounded-full mb-6">
+                    {post.category}
+                  </span>
+                )}
+                <h1 className="font-display text-white uppercase leading-[0.95] tracking-tight mb-6"
+                  style={{ fontSize: 'clamp(2.5rem, 6.5vw, 5.5rem)' }}>
+                  {post.title}
+                </h1>
+                <div className="flex items-center gap-5 text-white/75 text-xs font-body flex-wrap">
+                  {post.author?.name && (
+                    <span className="flex items-center gap-1.5"><User size={12} className="text-[var(--gold)]" /> {post.author.name}</span>
+                  )}
+                  <span className="w-px h-3 bg-white/30 hidden sm:block" />
+                  <span className="flex items-center gap-1.5"><Calendar size={12} /> {formatDate(post.publishedAt)}</span>
+                  <span className="w-px h-3 bg-white/30 hidden sm:block" />
+                  <span className="flex items-center gap-1.5"><Clock size={12} /> {post.readTime} min read</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ ARTICLE BODY ═══════════════ */}
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24">
+
+        {/* Back link */}
         <Link href="/blog"
-          className="inline-flex items-center gap-2 text-[var(--ink-muted)] hover:text-[var(--gold-deep)] transition-colors text-[10px] tracking-[0.3em] uppercase font-body mb-10">
+          className="inline-flex items-center gap-2 text-[var(--ink-muted)] hover:text-[var(--gold-deep)] transition-colors text-[10px] tracking-[0.3em] uppercase font-body mb-12">
           <ArrowLeft size={12} /> Back to Journal
         </Link>
 
-        <article>
-          <span className="inline-block bg-[var(--surface-2)] text-[var(--ink)] text-[10px] tracking-[0.3em] uppercase px-3 py-1.5 font-body rounded-full mb-6">
-            {post.category}
-          </span>
-          <h1 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight mb-6"
-            style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}>
-            {post.title}
-          </h1>
-          <div className="flex items-center gap-5 text-[var(--ink-muted)] text-xs font-body mb-10">
-            <span className="flex items-center gap-1.5"><User size={11} className="text-[var(--gold-deep)]" /> {post.author}</span>
-            <span>{post.date}</span>
-            <span className="flex items-center gap-1.5"><Clock size={11} /> {post.readTime} min read</span>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
 
-          <div className="aspect-[16/9] overflow-hidden rounded-2xl mb-12 bg-[var(--surface-2)]">
-            <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-          </div>
+          {/* LEFT — article */}
+          <article className="lg:col-span-8">
 
-          <div
-            className="prose-velmique text-[var(--ink-soft)] font-body text-lg leading-loose space-y-6"
-            style={{
-              ['--prose-h2-color']: 'var(--ink)',
-            }}
-            dangerouslySetInnerHTML={{ __html: articleContent }}
-          />
+            {/* Lead / excerpt */}
+            {post.excerpt && (
+              <p className="border-l-2 border-[var(--gold)] pl-6 md:pl-8 text-[var(--ink)] font-serif italic text-xl md:text-2xl leading-[1.55] mb-12">
+                {post.excerpt}
+              </p>
+            )}
 
-          <div className="h-px bg-[var(--border)] my-14" />
+            {/* Body */}
+            <div
+              className="prose-velmique text-[var(--ink-soft)] font-body text-lg leading-[1.9] space-y-6"
+              style={{ ['--prose-h2-color']: 'var(--ink)' }}
+              dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt || ''}</p>` }}
+            />
 
-          <div className="flex items-center gap-5 bg-white border border-[var(--border)] rounded-2xl p-6">
-            <div className="w-14 h-14 rounded-full bg-[var(--surface-2)] flex items-center justify-center font-serif italic text-[var(--gold-deep)] text-2xl">
-              {post.author.charAt(0)}
+          </article>
+
+          {/* RIGHT — sticky sidebar */}
+          <aside className="lg:col-span-4">
+            <div className="lg:sticky lg:top-28 flex flex-col gap-5">
+
+              {/* Author card */}
+              {post.author?.name && (
+                <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+                  <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">The Author</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-[var(--surface-2)] flex items-center justify-center font-serif italic text-[var(--gold-deep)] text-xl shrink-0">
+                      {post.author.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-serif italic text-[var(--ink)] text-lg leading-tight truncate">{post.author.name}</p>
+                      <p className="text-[var(--ink-muted)] text-[10px] font-body tracking-[0.15em] uppercase mt-0.5">Velmique Editorial</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Meta card */}
+              <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">Article Notes</p>
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-3 text-[var(--ink-soft)] text-sm font-body">
+                    <Calendar size={14} className="text-[var(--gold-deep)] shrink-0" />
+                    <span>{formatDate(post.publishedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[var(--ink-soft)] text-sm font-body">
+                    <Clock size={14} className="text-[var(--gold-deep)] shrink-0" />
+                    <span>{post.readTime} min read</span>
+                  </div>
+                  {post.category && (
+                    <div className="flex items-center gap-3 text-[var(--ink-soft)] text-sm font-body">
+                      <span className="w-3.5 h-3.5 rounded-full bg-[var(--gold)] shrink-0" />
+                      <span>{post.category}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags (sidebar) */}
+              {post.tags?.length > 0 && (
+                <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+                  <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">Tags</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {post.tags.map(tag => (
+                      <span key={tag} className="px-3 py-1.5 rounded-full bg-[var(--surface-2)] text-[var(--ink-soft)] text-[10px] tracking-[0.2em] uppercase font-body">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="font-serif italic text-[var(--ink)] text-lg">{post.author}</p>
-              <p className="text-[var(--ink-muted)] text-xs font-body mt-0.5 tracking-[0.15em] uppercase">Velmique Editorial</p>
-            </div>
-          </div>
-        </article>
+          </aside>
+        </div>
+      </div>
 
-        {related.length > 0 && (
-          <div className="mt-20 pt-14 border-t border-[var(--border)]">
-            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Continue Reading</p>
-            <h2 className="font-display text-[var(--ink)] uppercase leading-tight tracking-tight mb-8"
-              style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>
-              MORE FROM THE <em className="not-italic gold-text">JOURNAL</em>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* ═══════════════ RELATED POSTS — full width ═══════════════ */}
+      {related.length > 0 && (
+        <section className="bg-[var(--surface)] border-t border-[var(--border)] py-20 md:py-28">
+          <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
+            <div className="flex items-end justify-between mb-12 gap-6 flex-wrap">
+              <div>
+                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Continue Reading</p>
+                <h2 className="font-display text-[var(--ink)] uppercase leading-tight tracking-tight"
+                  style={{ fontSize: 'clamp(2rem, 4.5vw, 3.4rem)' }}>
+                  MORE FROM THE <em className="not-italic gold-text">JOURNAL</em>
+                </h2>
+              </div>
+              <Link href="/blog" className="pill-cta pill-cta-light">
+                View All <ArrowUpRight size={14} strokeWidth={1.6} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map(r => (
                 <Link key={r.id} href={`/blog/${r.slug}`}
-                  className="group bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:border-[var(--gold)] transition-colors">
-                  <div className="aspect-[3/2] overflow-hidden bg-[var(--surface-2)]">
-                    <img src={r.image} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  className="group bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:border-[var(--gold)] transition-colors flex flex-col">
+                  <div className="aspect-[4/5] overflow-hidden bg-[var(--surface-2)] relative">
+                    {r.coverImage && (
+                      <img src={r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    )}
+                    {r.category && (
+                      <span className="absolute top-4 left-4 inline-block bg-white text-[var(--ink)] text-[9px] tracking-[0.3em] uppercase px-3 py-1 font-body rounded-full">
+                        {r.category}
+                      </span>
+                    )}
                   </div>
-                  <div className="p-5">
-                    <h3 className="font-serif italic text-[var(--ink)] text-lg group-hover:text-[var(--gold-deep)] transition-colors leading-snug">{r.title}</h3>
-                    <div className="flex items-center justify-between mt-3">
-                      <p className="text-[var(--ink-muted)] text-xs font-body">{r.date}</p>
-                      <ArrowUpRight size={14} className="text-[var(--ink-muted)] group-hover:text-[var(--gold-deep)] transition-colors" />
+                  <div className="p-5 flex-1 flex flex-col">
+                    <h3 className="font-serif italic text-[var(--ink)] text-xl group-hover:text-[var(--gold-deep)] transition-colors leading-snug line-clamp-2">{r.title}</h3>
+                    <p className="text-[var(--ink-soft)] text-xs font-body mt-2 line-clamp-2 leading-relaxed flex-1">{r.excerpt}</p>
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border)]">
+                      <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.2em] uppercase font-body">{formatDate(r.publishedAt)}</p>
+                      <ArrowUpRight size={14} className="text-[var(--ink-muted)] group-hover:text-[var(--gold-deep)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }

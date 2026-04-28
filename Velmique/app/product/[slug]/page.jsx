@@ -83,6 +83,15 @@ export default function ProductPage() {
     return product.images || [];
   }, [product, activeVariation]);
 
+  // Auto-rotate through gallery images every 3 seconds.
+  useEffect(() => {
+    if (gallery.length <= 1) return;
+    const id = setInterval(() => {
+      setActiveImg(prev => (prev + 1) % gallery.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [gallery.length]);
+
   const displayPrice    = activeVariation?.price ?? product?.price ?? 0;
   const displayCompare  = activeVariation?.comparePrice ?? product?.originalPrice;
   const displayInStock  = activeVariation ? activeVariation.inStock : !!product?.inStock;
@@ -168,15 +177,15 @@ export default function ProductPage() {
                   ))}
                 </div>
               )}
-              <div className="flex-1 aspect-[4/5] overflow-hidden rounded-2xl bg-[var(--surface-2)] relative">
+              <div className="flex-1 overflow-hidden rounded-2xl bg-[var(--surface-2)] relative">
                 <img
                   key={gallery[activeImg]}
                   src={gallery[activeImg]}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-opacity duration-300"
+                  className="w-full h-auto object-contain transition-opacity duration-500"
                 />
                 {product.badge && (
-                  <span className="absolute top-5 left-5 text-[10px] tracking-[0.3em] uppercase px-4 py-1.5 font-body rounded-full bg-white text-[var(--ink)]">
+                  <span className="absolute top-5 left-5 text-[10px] tracking-[0.3em] uppercase px-4 py-1.5 font-body rounded-full bg-white text-[var(--ink)] z-10">
                     {product.badge}
                   </span>
                 )}
