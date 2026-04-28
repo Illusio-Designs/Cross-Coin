@@ -3,13 +3,16 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { heroSlides } from '@/lib/data';
+import { heroSlides as fallbackSlides } from '@/lib/data';
 
 /* Velmique editorial Hero — driven by backend Slider model:
-   { title, description, buttonText, image, ctaHref }. */
-export default function HeroBanner() {
+   { title, description, buttonText, image, ctaHref }.
+   Slides come from a parent that fetched the public API; if the
+   request fails or returns empty, we render the local data array
+   so the homepage never goes blank. */
+export default function HeroBanner({ slides: slidesProp = [] }) {
   const [current, setCurrent] = useState(0);
-  const slides = heroSlides && heroSlides.length ? heroSlides : [];
+  const slides = slidesProp && slidesProp.length ? slidesProp : fallbackSlides;
 
   useEffect(() => {
     if (slides.length < 2) return;

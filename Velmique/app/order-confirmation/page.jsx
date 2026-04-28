@@ -14,12 +14,12 @@ export default function OrderConfirmation() {
           THANK <em className="not-italic gold-text">YOU</em>
         </h1>
         <p className="text-[var(--ink-soft)] font-body text-base leading-relaxed mb-2 max-w-md mx-auto">
-          Your order <span className="font-serif italic text-[var(--ink)]">#VLQ-{Math.floor(Math.random() * 90000) + 10000}</span> has been placed and is being prepared with care in our Grasse atelier.
+          Your order <span className="font-serif italic text-[var(--ink)]">#VLQ-{Math.floor(Math.random() * 90000) + 10000}</span> has been placed and is being prepared with care at our Bandra atelier.
         </p>
-        <p className="text-[var(--ink-muted)] font-body text-sm mb-12">A confirmation email is on its way.</p>
+        <p className="text-[var(--ink-muted)] font-body text-sm mb-12">A confirmation email and SMS are on their way.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/account/orders" className="pill-cta">
-            Track Order <ArrowUpRight size={14} strokeWidth={1.6} />
+          <Link href="/account" className="pill-cta">
+            View My Account <ArrowUpRight size={14} strokeWidth={1.6} />
           </Link>
           <Link href="/shop" className="pill-cta pill-cta-light">
             Continue Shopping

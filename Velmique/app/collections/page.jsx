@@ -16,7 +16,7 @@ export default function CollectionsPage() {
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {collections.map((col, i) => (
-            <Link key={col.id} href={`/collections/${col.slug}`}
+            <Link key={col.id} href={`/shop?collection=${col.slug}`}
               className={`relative group overflow-hidden rounded-2xl bg-[var(--surface-2)] ${i === 0 ? 'md:col-span-2' : ''}`}>
               <div className={`${i === 0 ? 'aspect-[16/7]' : 'aspect-[4/3]'} overflow-hidden`}>
                 <img src={col.image} alt={col.name}

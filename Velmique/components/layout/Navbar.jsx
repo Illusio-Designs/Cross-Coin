@@ -1,43 +1,21 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Heart, Search, User, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Heart, Search, User, Menu, X } from 'lucide-react';
 import { useStore } from '@/lib/store';
 
 const navLinks = [
-  {
-    label: 'Collections', href: '/collections',
-    sub: [
-      { label: 'Noir', href: '/collections/noir' },
-      { label: 'Signature', href: '/collections/signature' },
-      { label: 'Luminara', href: '/collections/luminara' },
-      { label: 'Extrait', href: '/collections/extrait' },
-      { label: 'Tribute', href: '/collections/tribute' },
-    ],
-  },
-  {
-    label: 'Shop', href: '/shop',
-    sub: [
-      { label: 'All Fragrances', href: '/shop' },
-      { label: 'For Men', href: '/shop?gender=Men' },
-      { label: 'For Women', href: '/shop?gender=Women' },
-      { label: 'Eau de Parfum', href: '/shop?category=Eau+de+Parfum' },
-      { label: 'Extrait de Parfum', href: '/shop?category=Extrait+de+Parfum' },
-      { label: 'Gift Sets', href: '/shop?category=Gift+Sets' },
-      { label: 'Discovery Kits', href: '/shop?category=Discovery+Sets' },
-    ],
-  },
-  { label: 'Lookbook', href: '/lookbook' },
-  { label: 'About', href: '/about' },
-  { label: 'Blog', href: '/blog' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'Shop',        href: '/shop' },
+  { label: 'Lookbook',    href: '/lookbook' },
+  { label: 'About',       href: '/about' },
+  { label: 'Blog',        href: '/blog' },
 ];
 
 export default function Navbar() {
   const { cartCount, wishlist, setCartOpen, setSearchOpen } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [mobileExpanded, setMobileExpanded] = useState(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -45,6 +23,9 @@ export default function Navbar() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const linkClass = 'group text-[11px] tracking-[0.25em] uppercase font-body text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors relative';
+  const underline = <span className="absolute -bottom-1 left-0 h-px bg-[var(--gold)] w-0 group-hover:w-full transition-all duration-400" />;
 
   return (
     <>
@@ -61,30 +42,9 @@ export default function Navbar() {
             {/* Left nav */}
             <div className="hidden md:flex items-center gap-9 flex-1">
               {navLinks.slice(0, 3).map(link => (
-                <div key={link.label} className="relative"
-                  onMouseEnter={() => setActiveDropdown(link.label)}
-                  onMouseLeave={() => setActiveDropdown(null)}>
-                  <Link href={link.href}
-                    className="group flex items-center gap-1 text-[11px] tracking-[0.25em] uppercase font-body text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors relative">
-                    <span className="relative">
-                      {link.label}
-                      <span className={`absolute -bottom-1 left-0 h-px bg-[var(--gold)] transition-all duration-400 ${activeDropdown === link.label ? 'w-full' : 'w-0 group-hover:w-full'}`} />
-                    </span>
-                    {link.sub && <ChevronDown size={10} className={`transition-transform ${activeDropdown === link.label ? 'rotate-180' : ''}`} />}
-                  </Link>
-                  {link.sub && activeDropdown === link.label && (
-                    <div className="absolute top-full left-0 pt-3 z-50">
-                      <div className="w-52 bg-white border border-[var(--border)] shadow-[0_20px_60px_-20px_rgba(26,22,18,0.15)] rounded-md py-2">
-                        {link.sub.map(s => (
-                          <Link key={s.label} href={s.href}
-                            className="block px-5 py-2.5 text-[11px] tracking-[0.15em] text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition-all uppercase font-body">
-                            {s.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <Link key={link.label} href={link.href} className={linkClass}>
+                  <span className="relative">{link.label}{underline}</span>
+                </Link>
               ))}
             </div>
 
@@ -99,12 +59,8 @@ export default function Navbar() {
             {/* Right nav */}
             <div className="hidden md:flex items-center gap-9 flex-1 justify-end">
               {navLinks.slice(3).map(link => (
-                <Link key={link.label} href={link.href}
-                  className="group text-[11px] tracking-[0.25em] uppercase font-body text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors relative">
-                  <span className="relative">
-                    {link.label}
-                    <span className="absolute -bottom-1 left-0 h-px bg-[var(--gold)] w-0 group-hover:w-full transition-all duration-400" />
-                  </span>
+                <Link key={link.label} href={link.href} className={linkClass}>
+                  <span className="relative">{link.label}{underline}</span>
                 </Link>
               ))}
 
@@ -165,30 +121,10 @@ export default function Navbar() {
           </div>
           <div className="py-4 overflow-y-auto h-full pb-24">
             {navLinks.map(link => (
-              <div key={link.label}>
-                <div className="flex items-center justify-between px-6 py-3.5">
-                  <Link href={link.href}
-                    onClick={() => !link.sub && setMobileOpen(false)}
-                    className="text-[11px] tracking-[0.25em] uppercase text-[var(--ink)] hover:text-[var(--gold-deep)] transition-colors font-body">
-                    {link.label}
-                  </Link>
-                  {link.sub && (
-                    <button onClick={() => setMobileExpanded(mobileExpanded === link.label ? null : link.label)}>
-                      <ChevronDown size={14} className={`text-[var(--ink-muted)] transition-transform ${mobileExpanded === link.label ? 'rotate-180' : ''}`} />
-                    </button>
-                  )}
-                </div>
-                {link.sub && mobileExpanded === link.label && (
-                  <div className="bg-[var(--surface)] px-6 py-2">
-                    {link.sub.map(s => (
-                      <Link key={s.label} href={s.href} onClick={() => setMobileOpen(false)}
-                        className="block py-2.5 text-[11px] tracking-[0.2em] uppercase text-[var(--ink-soft)] hover:text-[var(--gold-deep)] transition-colors font-body">
-                        {s.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Link key={link.label} href={link.href} onClick={() => setMobileOpen(false)}
+                className="block px-6 py-3.5 text-[11px] tracking-[0.25em] uppercase text-[var(--ink)] hover:text-[var(--gold-deep)] transition-colors font-body">
+                {link.label}
+              </Link>
             ))}
             <div className="h-px bg-[var(--border)] my-4 mx-6" />
             <Link href="/account" onClick={() => setMobileOpen(false)}

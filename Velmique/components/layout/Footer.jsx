@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Instagram, Facebook, Mail, ArrowUpRight } from 'lucide-react';
+import { Instagram, Facebook, Mail, Phone, ArrowUpRight } from 'lucide-react';
 
 // WhatsApp SVG icon (lucide doesn't include one)
 function WhatsAppIcon({ size = 14 }) {
@@ -32,18 +32,20 @@ export default function Footer() {
 
       <div className="relative grid grid-cols-12 gap-6 px-6 md:px-12 lg:px-20 py-12 md:py-20 max-w-[1600px] mx-auto">
 
-          {/* TOP ROW — contact pill (left) + nav (right) */}
+          {/* TOP ROW — contact pill (left) + customer-care links (right).
+              Header already covers Shop / Collections / Lookbook / About / Blog
+              — footer only carries the things that DON'T live in the header. */}
           <div className="col-span-12 flex items-start justify-between flex-wrap gap-6 mb-6">
             <Link href="/contact" className="bg-white/95 text-[var(--ink)] rounded-full px-5 py-2 text-[10px] tracking-[0.25em] uppercase font-body font-medium hover:bg-[var(--gold)] hover:text-[var(--ink)] transition-colors">
               Contact
             </Link>
 
             <nav className="flex flex-col gap-2 items-end">
+              <p className="text-white/40 text-[10px] tracking-[0.35em] uppercase font-body mb-1">Customer Care</p>
               {[
-                ['About Us', '/about'],
-                ['Shop', '/shop'],
-                ['Maisons', '/collections'],
-                ['Reviews', '/#reviews'],
+                ['Track Your Order',       '/account'],
+                ['Shipping Policy',        '/shipping-returns'],
+                ['Cancellation & Refund',  '/cancellation-refund'],
               ].map(([label, href]) => (
                 <Link key={label} href={href}
                   className="text-white/80 hover:text-[var(--gold-light)] text-sm font-body transition-colors">
@@ -118,7 +120,7 @@ export default function Footer() {
               </h2>
             </div>
 
-            <div className="flex items-end justify-between mt-8 gap-4">
+            <div className="flex items-end justify-between mt-8 gap-4 flex-wrap">
               <div className="flex gap-3">
                 {SOCIAL_LINKS.map(({ Icon, href, label }) => (
                   <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
@@ -127,9 +129,13 @@ export default function Footer() {
                   </a>
                 ))}
               </div>
-              <div className="flex items-center gap-2 text-white/40 text-xs font-body">
-                <Mail size={12} />
-                <a href="mailto:hello@velmique.in" className="hover:text-[var(--gold-light)] transition-colors">hello@velmique.in</a>
+              <div className="flex flex-col items-end gap-1.5 text-white/40 text-xs font-body">
+                <a href="mailto:hello@velmique.in" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
+                  <Mail size={12} /> hello@velmique.in
+                </a>
+                <a href="tel:+919820143210" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
+                  <Phone size={12} /> +91 98201 43210
+                </a>
               </div>
             </div>
           </div>
