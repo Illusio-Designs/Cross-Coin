@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import PageHeader from '@/components/layout/PageHeader';
 
 export default function CartPage() {
-  const { cart, cartTotal, removeFromCart, updateQuantity } = useStore();
+  const { cart, cartTotal, removeFromCart, updateQuantity, setCartOpen } = useStore();
 
   if (cart.length === 0) return (
     <div className="bg-[var(--bg)] min-h-screen flex flex-col items-center justify-center gap-6 px-4 py-24">
@@ -105,9 +105,9 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <Link href="/checkout" className="pill-cta w-full justify-center !py-4 mt-6">
+              <button onClick={() => setCartOpen(true)} className="pill-cta w-full justify-center !py-4 mt-6">
                 Checkout <ArrowUpRight size={14} strokeWidth={1.6} />
-              </Link>
+              </button>
               <Link href="/shop" className="block text-center text-[var(--ink-muted)] text-[10px] tracking-[0.3em] uppercase font-body mt-4 hover:text-[var(--gold-deep)] transition-colors">
                 Continue Shopping
               </Link>

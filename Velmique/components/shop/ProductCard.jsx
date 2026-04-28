@@ -27,7 +27,20 @@ export default function ProductCard({ product, index = 0 }) {
 
       {/* Wishlist — top-right corner, always visible */}
       <button
-        onClick={(e) => { e.preventDefault(); toggleWishlist({ id: product.id, name: product.name, price: product.price, image: product.images[0], slug: product.slug }); }}
+        onClick={(e) => {
+          e.preventDefault();
+          const defVar = product.variations?.find(v => v.id === product.defaultVariationId) || product.variations?.[0];
+          toggleWishlist({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.images[0],
+            slug: product.slug,
+            variationId: defVar?.id || product.defaultVariationId || null,
+            size: defVar?.size || '',
+            color: defVar?.colors?.[0] || '',
+          });
+        }}
         className={`absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center border transition-colors ${wishlisted ? 'bg-[#C9A84C] border-[#C9A84C] text-[#1A1612]' : 'bg-[#FBF7EC] border-[#F5EFE0] text-[#1A1612] hover:bg-[#F5EFE0]'}`}
         aria-label="Wishlist"
       >
@@ -67,7 +80,21 @@ export default function ProductCard({ product, index = 0 }) {
           {product.inStock && (
             <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out z-10">
               <button
-                onClick={(e) => { e.preventDefault(); addToCart({ id: product.id, name: product.name, price: product.price, image: product.images[0], slug: product.slug }); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const defVar = product.variations?.find(v => v.id === product.defaultVariationId) || product.variations?.[0];
+                  addToCart({
+                    id: `${product.id}:${defVar?.id || 'default'}`,
+                    productId:   product.id,
+                    variationId: defVar?.id || product.defaultVariationId || null,
+                    name:  product.name,
+                    price: product.price,
+                    image: product.images[0],
+                    slug:  product.slug,
+                    size:  defVar?.size || '',
+                    color: defVar?.colors?.[0] || '',
+                  });
+                }}
                 className="w-full flex items-center justify-between bg-[#F5EFE0] text-[#1A1612] px-4 py-3 text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[#C9A84C] transition-colors"
               >
                 Add to Bag

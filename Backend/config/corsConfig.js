@@ -141,6 +141,7 @@ const corsOptions = {
         'Origin',
         'X-API-Key',
         'X-Brand-Name',
+        'X-Guest-Token',
         'Cache-Control',
         'Pragma'
     ],
