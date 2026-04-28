@@ -18,7 +18,7 @@ export const heroSlides = [
     description: 'Rose absolute, oud and Mysore sandalwood — composed by hand, aged for months.',
     buttonText: 'Discover Noir',
     image: '/perfumehero2.png',
-    ctaHref: '/collections/noir',
+    ctaHref: '/shop?collection=noir',
   },
   {
     id: 'slide-3',
@@ -26,7 +26,7 @@ export const heroSlides = [
     description: 'Tuberose, neroli and warm musk — radiance from desk to dinner.',
     buttonText: 'Explore Luminara',
     image: '/perfumehero3.png',
-    ctaHref: '/collections/luminara',
+    ctaHref: '/shop?collection=luminara',
   },
 ];
 
