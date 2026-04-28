@@ -9,11 +9,15 @@ const Wishlist = sequelize.define('Wishlist', {
     },
     userId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: 'users',
             key: 'id'
         }
+    },
+    guestToken: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
     },
     productId: {
         type: DataTypes.INTEGER,
@@ -30,15 +34,16 @@ const Wishlist = sequelize.define('Wishlist', {
     }
 }, {
     tableName: 'wishlists',
-    timestamps: false, // using createdAt instead
+    timestamps: false,
     charset: 'utf8mb4',
     collate: 'utf8mb4_general_ci',
-    indexes: [
-        {
-            unique: true,
-            fields: ['userId', 'productId']
+    validate: {
+        ownerPresent() {
+            if (!this.userId && !this.guestToken) {
+                throw new Error('Wishlist row must have either userId or guestToken');
+            }
         }
-    ]
+    }
 });
 
 module.exports = { Wishlist };

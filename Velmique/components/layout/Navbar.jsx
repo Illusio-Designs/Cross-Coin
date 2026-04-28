@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Heart, Search, User, Menu, X } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useAuth } from '@/context/AuthContext';
 
 const navLinks = [
   { label: 'Collections', href: '/collections' },
@@ -14,6 +15,8 @@ const navLinks = [
 
 export default function Navbar() {
   const { cartCount, wishlist, setCartOpen, setSearchOpen } = useStore();
+  const { isAuthenticated } = useAuth();
+  const accountHref = isAuthenticated ? '/account' : '/login';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -76,7 +79,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
-                <Link href="/account" className="hover:text-[var(--gold-deep)] transition-colors" aria-label="Account">
+                <Link href={accountHref} className="hover:text-[var(--gold-deep)] transition-colors" aria-label="Account">
                   <User size={17} strokeWidth={1.3} />
                 </Link>
                 <button onClick={() => setCartOpen(true)} className="relative hover:text-[var(--gold-deep)] transition-colors" aria-label="Cart">
@@ -127,7 +130,7 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="h-px bg-[var(--border)] my-4 mx-6" />
-            <Link href="/account" onClick={() => setMobileOpen(false)}
+            <Link href={accountHref} onClick={() => setMobileOpen(false)}
               className="flex items-center gap-3 px-6 py-3.5 text-[11px] tracking-[0.25em] uppercase text-[var(--ink)] hover:text-[var(--gold-deep)] transition-colors font-body">
               <User size={16} strokeWidth={1.3} /> My Account
             </Link>

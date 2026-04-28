@@ -17,7 +17,7 @@ export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug;
-  const { addToCart, toggleWishlist, isWishlisted } = useStore();
+  const { addToCart, toggleWishlist, isWishlisted, setCartOpen } = useStore();
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
@@ -118,6 +118,7 @@ export default function ProductPage() {
     size:  selectedSize,
     color: selectedColor,
     slug:  product.slug,
+    quantity: qty,
   });
 
   const handleAddToCart = () => {
@@ -130,7 +131,7 @@ export default function ProductPage() {
   const handleBuyNow = () => {
     if (!displayInStock) return;
     addToCart(buildLineItem());
-    router.push('/checkout');
+    setCartOpen(true);
   };
 
   // Variation-aware spec rows for the Details section
@@ -228,7 +229,16 @@ export default function ProductPage() {
                   {product.name}
                 </h1>
                 <button
-                  onClick={() => toggleWishlist({ id: product.id, name: product.name, price: displayPrice, image: gallery[0] || product.images[0], slug: product.slug })}
+                  onClick={() => toggleWishlist({
+                    id: product.id,
+                    name: product.name,
+                    price: displayPrice,
+                    image: gallery[0] || product.images[0],
+                    slug: product.slug,
+                    variationId: activeVariation?.id || null,
+                    size: selectedSize || '',
+                    color: selectedColor || '',
+                  })}
                   aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                   className={`shrink-0 w-12 h-12 flex items-center justify-center border rounded-full transition-all ${
                     wishlisted

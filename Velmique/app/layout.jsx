@@ -1,6 +1,7 @@
 import { Playfair_Display, Cormorant_Garamond, Jost, Anton } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
+import { AuthProvider } from '@/context/AuthContext';
 import HeaderShell from '@/components/layout/HeaderShell';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
@@ -66,18 +67,45 @@ export default function RootLayout({ children }) {
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
         <link rel="dns-prefetch" href="https://api.crosscoin.in" />
+        {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp for phone-OTP login */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var configuration = {
+                  widgetId: "366342706343383735393039",
+                  tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
+                  exposeMethods: true,
+                  identifier: "",
+                  captchaType: "invisible",
+                  success: function(data) { window.__msg91OtpSuccess = data; },
+                  failure: function(error) { window.__msg91OtpFailure = error; }
+                };
+                var s = document.createElement('script');
+                s.type = 'text/javascript';
+                s.src = 'https://verify.msg91.com/otp-provider.js';
+                s.onload = function() {
+                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
+                };
+                document.head.appendChild(s);
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={jost.className}>
-        <StoreProvider>
-          <ScrollProgress />
-          <HeaderShell />
-          <main>{children}</main>
-          <Footer />
-          <CartDrawer />
-          <SearchOverlay />
-          <CookieBanner />
-          <ScrollToTop />
-        </StoreProvider>
+        <AuthProvider>
+          <StoreProvider>
+            <ScrollProgress />
+            <HeaderShell />
+            <main>{children}</main>
+            <Footer />
+            <CartDrawer />
+            <SearchOverlay />
+            <CookieBanner />
+            <ScrollToTop />
+          </StoreProvider>
+        </AuthProvider>
       </body>
     </html>
   );

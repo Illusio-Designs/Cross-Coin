@@ -70,6 +70,29 @@ module.exports.authenticate = async (req, res, next) => {
 // For backward compatibility
 module.exports.isAuthenticated = module.exports.authenticate;
 
+// Optional auth — if a valid token is present sets req.user, otherwise
+// proceeds without setting it. Used for routes that should work for both
+// signed-in users and guests (cart, wishlist, etc.).
+module.exports.optionalAuth = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (!token) return next();
+
+        if (await isTokenBlacklisted(token)) return next();
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findByPk(decoded.id);
+        if (user && !user.deleted_at) {
+            req.user = user;
+            req._token = token;
+        }
+        next();
+    } catch {
+        // Bad/expired token → treat as guest
+        next();
+    }
+};
+
 // Authorization middleware — pass an array of allowed roles
 module.exports.authorize = (roles) => {
     return (req, res, next) => {

@@ -241,6 +241,67 @@ const setupDatabase = async () => {
       );
     }
 
+    // Pre-sync fix: ensure wishlists.guestToken exists and userId is nullable
+    // before Sequelize tries to add the (guestToken, productId) index during
+    // model sync.
+    console.log("Ensuring wishlists.guestToken before sync...");
+    try {
+      const [wishlistsTable] = await sequelize.query(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'wishlists'
+      `);
+
+      if (wishlistsTable.length) {
+        const [guestTokenColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'wishlists'
+            AND COLUMN_NAME = 'guestToken'
+        `);
+
+        if (!guestTokenColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE wishlists
+            ADD COLUMN guestToken VARCHAR(64) NULL
+          `);
+        }
+
+        try {
+          await sequelize.query(`
+            ALTER TABLE wishlists
+            MODIFY COLUMN userId INT NULL
+          `);
+        } catch (e) {
+          console.log("⚠️ wishlists.userId alter skipped:", e.message);
+        }
+
+        const [guestTokenIndex] = await sequelize.query(`
+          SELECT INDEX_NAME
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'wishlists'
+            AND INDEX_NAME = 'wishlists_guest_product'
+        `);
+
+        if (!guestTokenIndex.length) {
+          await sequelize.query(`
+            ALTER TABLE wishlists
+            ADD INDEX wishlists_guest_product (guestToken, productId)
+          `);
+        }
+      }
+
+      console.log("✓ wishlists.guestToken ensured pre-sync");
+    } catch (wishlistPreSyncError) {
+      console.log(
+        "⚠️ Pre-sync wishlists column fix skipped:",
+        wishlistPreSyncError.message
+      );
+    }
+
     // Sync all tables at once (this creates all tables and relationships)
     // Use force: false and alter: false to prevent constraint issues
     console.log("Syncing all tables...");

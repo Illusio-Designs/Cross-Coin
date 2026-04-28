@@ -1,13 +1,18 @@
 const express = require('express');
-const { isAuthenticated } = require('../middleware/authMiddleware.js');
+const { optionalAuth } = require('../middleware/authMiddleware.js');
 const { getWishlist, addToWishlist, removeFromWishlist, clearWishlist, moveToCart } = require('../controller/wishlistController.js');
 
 const router = express.Router();
 
-router.get('/',                     isAuthenticated, getWishlist);
-router.post('/:productId',         isAuthenticated, addToWishlist);
-router.delete('/:productId',      isAuthenticated, removeFromWishlist);
-router.delete('/',                  isAuthenticated, clearWishlist);
-router.post('/:productId/move-to-cart', isAuthenticated, moveToCart);
+// Wishlist works for both signed-in users and guests. Authed users are
+// identified by JWT (req.user); guests by an X-Guest-Token header that the
+// frontend generates and persists in localStorage.
+router.use(optionalAuth);
+
+router.get('/',                          getWishlist);
+router.post('/:productId',               addToWishlist);
+router.delete('/:productId',             removeFromWishlist);
+router.delete('/',                       clearWishlist);
+router.post('/:productId/move-to-cart',  moveToCart);
 
 module.exports = router;
