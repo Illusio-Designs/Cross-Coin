@@ -4,21 +4,31 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Search, Calendar, ShoppingBag, IndianRupee, Truck, Phone, MapPin,
+  Search, Calendar, ShoppingBag, Truck, Phone, MapPin,
   CheckCircle2, Clock, ArrowRight, RotateCcw, Package,
 } from 'lucide-react';
 import { trackOrder } from '@/lib/api/orders';
 import PageHeader from '@/components/layout/PageHeader';
 
 const STEPS = [
-  { key: 'placed',           label: 'Order Placed' },
-  { key: 'confirmed',        label: 'Confirmed' },
-  { key: 'dispatched',       label: 'Packed & Dispatched' },
-  { key: 'out_for_delivery', label: 'Out for Delivery' },
-  { key: 'delivered',        label: 'Delivered' },
+  { key: 'placed',           label: 'Order Placed',         shortLabel: 'Placed' },
+  { key: 'confirmed',        label: 'Confirmed',            shortLabel: 'Confirmed' },
+  { key: 'dispatched',       label: 'Packed & Dispatched',  shortLabel: 'Packed' },
+  { key: 'out_for_delivery', label: 'Out for Delivery',     shortLabel: 'On Way' },
+  { key: 'delivered',        label: 'Delivered',            shortLabel: 'Delivered' },
 ];
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+
+function getStepIndex(orderData) {
+  const status = String(orderData?.order?.status || '').toLowerCase();
+  if (status === 'delivered') return 4;
+  if (status === 'out_for_delivery' || status === 'out for delivery') return 3;
+  if (['shipped', 'in_transit', 'in transit', 'processing', 'booked', 'pickup_initiated', 'manifested', 'dispatched'].includes(status)) return 2;
+  if (status === 'confirmed') return 1;
+  if (status === 'cancelled' || status === 'order cancelled') return -1;
+  return 0;
+}
 
 function fmtDate(v) {
   if (!v) return '—';
@@ -29,15 +39,6 @@ function fmtDateTime(v) {
   if (!v) return '';
   try { return new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }); }
   catch { return ''; }
-}
-
-function getStepIndex(orderData) {
-  const status = String(orderData?.order?.status || '').toLowerCase();
-  if (status === 'delivered') return 4;
-  if (status === 'out_for_delivery' || status === 'out for delivery') return 3;
-  if (['shipped', 'in_transit', 'in transit', 'processing', 'booked', 'pickup_initiated', 'manifested', 'dispatched'].includes(status)) return 2;
-  if (status === 'confirmed') return 1;
-  return 0;
 }
 
 function statusBadge(status) {
@@ -158,6 +159,7 @@ function TrackOrderInner() {
   const activeStep = data ? getStepIndex(data) : -1;
   const timeline   = data ? getTimeline(data) : [];
   const status     = statusBadge(data?.order?.status);
+  const progressPct = activeStep > 0 ? (activeStep / (STEPS.length - 1)) * 100 : 0;
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
@@ -210,9 +212,9 @@ function TrackOrderInner() {
                   <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1.5">Order</p>
                   <h2 className="font-serif italic text-[var(--ink)] text-2xl md:text-3xl">#{data.order.order_number}</h2>
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 text-[var(--ink-soft)] text-xs font-body">
-                    <span className="flex items-center gap-1.5"><Calendar size={12} className="text-[var(--gold-deep)]" /> {fmtDate(data.order.created_at || data.order.createdAt)}</span>
+                    <span className="flex items-center gap-1.5"><Calendar size={12} className="text-[var(--gold-deep)]" /> {fmtDate(data.order.created_at || data.order.createdAt || data.order.placed_at || data.order.order_date)}</span>
                     <span className="flex items-center gap-1.5"><ShoppingBag size={12} className="text-[var(--gold-deep)]" /> {data.items?.length || 0} item{(data.items?.length || 0) !== 1 ? 's' : ''}</span>
-                    <span className="flex items-center gap-1.5"><IndianRupee size={12} className="text-[var(--gold-deep)]" /> {fmt(data.order.final_amount)}</span>
+                    <span className="flex items-center gap-1.5">{fmt(data.order.final_amount)}</span>
                   </div>
                 </div>
                 <span className="inline-flex items-center text-[10px] tracking-[0.3em] uppercase font-body rounded-full px-3.5 py-1.5 shrink-0"
@@ -223,32 +225,45 @@ function TrackOrderInner() {
             </section>
 
             {/* Stepper */}
-            <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-8">
+            <section className="bg-white border border-[var(--border)] rounded-2xl p-5 md:p-8">
               <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Shipment</p>
               <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-7">Progress</h3>
 
               <div className="relative">
-                {/* Bar */}
-                <div className="absolute top-4 left-4 right-4 h-[2px] bg-[var(--border)]" />
+                {/* Base track + filled gold portion based on active step */}
+                <div className="absolute top-4 left-[10%] right-[10%] h-[2px] bg-[var(--border)]" />
                 <div
-                  className="absolute top-4 left-4 h-[2px] bg-[var(--gold)] transition-all duration-500"
-                  style={{ width: activeStep >= 0 ? `calc(${(activeStep / (STEPS.length - 1)) * 100}% - ${activeStep === STEPS.length - 1 ? '0px' : '0px'})` : '0%' }}
+                  className="absolute top-4 left-[10%] h-[2px] bg-[var(--gold)] transition-all duration-500"
+                  style={{ width: `calc((100% - 20%) * ${progressPct / 100})` }}
                 />
-                <div className="relative grid grid-cols-5 gap-2">
+
+                <div className="relative grid grid-cols-5 gap-1 sm:gap-2">
                   {STEPS.map((step, i) => {
-                    const done    = i < activeStep;
-                    const active  = i === activeStep;
+                    const done   = i < activeStep;
+                    const active = i === activeStep;
+                    const pending = i > activeStep;
+
                     return (
-                      <div key={step.key} className="flex flex-col items-center text-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 border-2 transition-all ${
-                          done   ? 'bg-[var(--gold)] border-[var(--gold)] text-[var(--ink)]' :
-                          active ? 'bg-white border-[var(--gold)] text-[var(--gold-deep)] ring-4 ring-[var(--gold)]/20' :
-                                   'bg-white border-[var(--border)] text-[var(--ink-muted)]'
-                        }`}>
-                          {done ? <CheckCircle2 size={14} strokeWidth={2.5} /> : <span className="text-[11px] font-body font-medium">{i + 1}</span>}
+                      <div key={step.key} className="flex flex-col items-center text-center min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 border-2 transition-all bg-white ${
+                            done
+                              ? 'border-[var(--gold)] text-[var(--gold-deep)]'
+                              : active
+                                ? 'border-[var(--gold)] text-[var(--gold-deep)] ring-4 ring-[var(--gold)]/25'
+                                : 'border-[var(--border)] text-[var(--ink-muted)]'
+                          }`}
+                        >
+                          {(done || active)
+                            ? <CheckCircle2 size={14} strokeWidth={2.5} />
+                            : <span className="text-[11px] font-body font-medium">{i + 1}</span>
+                          }
                         </div>
-                        <p className={`text-[10px] tracking-[0.2em] uppercase font-body leading-tight ${done || active ? 'text-[var(--ink)]' : 'text-[var(--ink-muted)]'}`}>
-                          {step.label}
+                        <p className={`text-[8px] sm:text-[10px] tracking-[0.05em] sm:tracking-[0.2em] uppercase font-body leading-[1.25] px-0.5 break-words ${
+                          done || active ? 'text-[var(--ink)] font-semibold' : 'text-[var(--ink-muted)]'
+                        }`}>
+                          <span className="hidden sm:inline">{step.label}</span>
+                          <span className="sm:hidden">{step.shortLabel || step.label}</span>
                         </p>
                       </div>
                     );
@@ -310,7 +325,9 @@ function TrackOrderInner() {
                           </p>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {it.variation?.sku && (
-                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">SKU · {it.variation.sku}</span>
+                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">
+                                SKU · {String(it.variation.sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')}
+                              </span>
                             )}
                             {attrs && (
                               <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">{attrs}</span>

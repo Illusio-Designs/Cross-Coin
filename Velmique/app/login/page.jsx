@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { toastLoginSuccess, toastLoginError, toastOtpSent, toastOtpError } from '@/lib/toast'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
@@ -48,18 +49,40 @@ export default function LoginPage() {
     setLoading(false)
 
     // Phone is registered — proceed to OTP step.
-    if (isLocal) { setStep('otp'); return }
+    if (isLocal) {
+      setStep('otp')
+      toastOtpSent()
+      return
+    }
 
     const identifier = '91' + digits
     let attempts = 0
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
-        window.sendOtp(identifier, () => setStep('otp'), () => setError('Failed to send OTP.'))
+        window.sendOtp(
+          identifier,
+          () => { setStep('otp'); toastOtpSent() },
+          () => { setError('Failed to send OTP.'); toastOtpError('Failed to send OTP.') }
+        )
+        // Belt-and-braces: MSG91's success callback is occasionally
+        // not invoked even when the SMS is actually dispatched, so we
+        // also flip the step + toast here. The verify call will fail
+        // cleanly if the OTP wasn't really sent.
+        setTimeout(() => {
+          setStep(prev => {
+            if (prev === 'phone') {
+              toastOtpSent()
+              return 'otp'
+            }
+            return prev
+          })
+        }, 1500)
       } else if (attempts < 15) {
         attempts++
         setTimeout(trySend, 400)
       } else {
         setError('OTP service not ready. Refresh the page.')
+        toastOtpError('OTP service not ready. Refresh the page.')
       }
     }
     trySend()
@@ -113,9 +136,12 @@ export default function LoginPage() {
 
       localStorage.setItem('token', data.token)
       await fetchUser()
+      toastLoginSuccess()
       window.location.replace('/account')
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.')
+      const msg = err.message || 'Login failed. Please try again.'
+      setError(msg)
+      toastLoginError(msg)
       setLoading(false)
     }
   }

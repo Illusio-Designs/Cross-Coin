@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { toastRegisterSuccess, toastRegisterError, toastOtpSent, toastOtpError } from '@/lib/toast'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
@@ -28,17 +29,37 @@ export default function RegisterPage() {
     if (!form.username.trim()) { setError('Please enter your name'); return }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
 
-    if (isLocal) { setStep('otp'); return }
+    if (isLocal) {
+      setStep('otp')
+      toastOtpSent()
+      return
+    }
 
     let attempts = 0
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
-        window.sendOtp(identifier, () => setStep('otp'), () => setError('Failed to send OTP. Try again.'))
+        window.sendOtp(
+          identifier,
+          () => { setStep('otp'); toastOtpSent() },
+          () => { setError('Failed to send OTP. Try again.'); toastOtpError('Failed to send OTP. Try again.') }
+        )
+        // Belt-and-braces: MSG91's success callback occasionally
+        // doesn't run even when the SMS is actually dispatched.
+        setTimeout(() => {
+          setStep(prev => {
+            if (prev === 'details') {
+              toastOtpSent()
+              return 'otp'
+            }
+            return prev
+          })
+        }, 1500)
       } else if (attempts < 15) {
         attempts++
         setTimeout(trySend, 400)
       } else {
         setError('OTP service not ready. Refresh the page.')
+        toastOtpError('OTP service not ready. Refresh the page.')
       }
     }
     trySend()
@@ -107,9 +128,12 @@ export default function RegisterPage() {
       }).catch(() => {})
 
       await fetchUser()
+      toastRegisterSuccess()
       window.location.replace('/account')
     } catch (err) {
-      setError(err.message || 'Registration failed')
+      const msg = err.message || 'Registration failed'
+      setError(msg)
+      toastRegisterError(msg)
       setLoading(false)
     }
   }

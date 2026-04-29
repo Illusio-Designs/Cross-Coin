@@ -186,18 +186,48 @@ export async function getPublicProducts(params = {}) {
   }
 }
 
-/* ── Best sellers (curated row on the homepage) ─────────────────── */
+/* ── Best sellers (curated row on the homepage) ─────────────────────
+   The /best-sellers endpoint returns bare Product rows without the
+   ProductImages / ProductVariations associations the catalog endpoint
+   includes — that's why product cards rendered straight from it would
+   show the placeholder image. To keep the homepage cards visually
+   identical to the shop-page cards, we use /best-sellers ONLY as a
+   ranking signal: pull the IDs and order from there, then hydrate
+   the product data from /catalog (same endpoint the shop uses). */
 export async function getBestsellers(limit = 6) {
   try {
-    const data = await brandFetch(`/api/products/best-sellers?limit=${limit}`);
-    const products = data?.data?.products || data?.data || data?.products || [];
-    if (Array.isArray(products) && products.length) {
-      return products.map(mapProduct).filter(Boolean);
+    // 1. Get the bestseller order (IDs only) from the curated endpoint.
+    let bestsellerIds = [];
+    try {
+      const data = await brandFetch(`/api/products/best-sellers?limit=${limit * 2}`);
+      const rows = data?.data?.products || data?.data || data?.products || [];
+      if (Array.isArray(rows) && rows.length) {
+        bestsellerIds = rows.map(p => String(p.id));
+      }
+    } catch { /* ignore — falls through to plain catalog below */ }
+
+    // 2. Pull catalog using the SAME limit the shop page uses (200) so
+    //    we hit the same backend cache key. Different limits create
+    //    separate cache entries, which is why the homepage was lagging
+    //    behind the shop page after a product was updated.
+    const catalog = await getPublicProducts({ limit: 200 });
+    const all = catalog.products || [];
+    if (!all.length) return [];
+
+    // 3. Reorder catalog by the bestseller list. Top up with non-
+    //    bestsellers if the curated list is short, so the row stays full.
+    if (bestsellerIds.length) {
+      const byId = new Map(all.map(p => [String(p.id), p]));
+      const ordered = bestsellerIds.map(id => byId.get(id)).filter(Boolean);
+      const seen = new Set(ordered.map(p => String(p.id)));
+      const fillers = all.filter(p => !seen.has(String(p.id)));
+      return [...ordered, ...fillers].slice(0, limit);
     }
-  } catch { /* ignore */ }
-  // Fallback: just the first N from catalog so the row is never empty.
-  const r = await getPublicProducts({ limit });
-  return r.products;
+
+    return all.slice(0, limit);
+  } catch {
+    return [];
+  }
 }
 
 /* ── Products by category (dedicated endpoint) ──────────────────── */
@@ -231,13 +261,71 @@ export async function getProductBySlug(slug) {
 }
 
 /* ── Search (live overlay + /search page) ───────────────────────── */
+/* Search runs three lookups in parallel and merges them, deduped by id:
+     1. Catalog text search (matches product name / description)
+     2. Category-name match — if the query equals a category name, we
+        fetch that category's products (the catalog text search only
+        matches product fields, so typing "Velmique Signature Scents"
+        would otherwise return nothing).
+     3. Dedicated /search endpoint as a final fallback.
+   Results from the catalog endpoint take priority because their data
+   shape (images, variations, prices) matches the shop page exactly. */
 export async function searchProducts(query, limit = 20) {
   if (!query) return [];
+  const q = String(query).trim();
+  if (!q) return [];
+
+  const out = [];
+  const seen = new Set();
+  const push = (arr) => {
+    if (!Array.isArray(arr)) return;
+    for (const p of arr) {
+      if (!p || !p.id) continue;
+      const id = String(p.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+      if (out.length >= limit) break;
+    }
+  };
+
+  // 1) Text search via catalog
   try {
-    const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-    const products = data?.data?.products || data?.products || [];
-    return Array.isArray(products) ? products.map(mapProduct).filter(Boolean) : [];
-  } catch {
-    return [];
+    const r = await getPublicProducts({ search: q, limit });
+    push(r.products);
+  } catch { /* ignore */ }
+
+  // 2) Category-name match → fetch by-name (this is how Velmique browses
+  //    a collection; same endpoint /shop uses for a category filter).
+  if (out.length < limit) {
+    try {
+      const { getPublicCategories, getCategoryByName } = await import('./categories');
+      const cats = await getPublicCategories();
+      const lc = q.toLowerCase();
+      const matchedCat = (cats || []).find(c =>
+        c.name && (
+          c.name.toLowerCase() === lc ||
+          c.name.toLowerCase().includes(lc) ||
+          lc.includes(c.name.toLowerCase())
+        )
+      );
+      if (matchedCat) {
+        const cat = await getCategoryByName(matchedCat.name);
+        const rows = cat?.products || cat?.data?.products || [];
+        push(rows.map(mapProduct).filter(Boolean));
+      }
+    } catch { /* ignore */ }
   }
+
+  // 3) Final fallback — dedicated /search endpoint (sparse data, but
+  //    better than nothing if the catalog endpoint is unreachable).
+  if (out.length === 0) {
+    try {
+      const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+      const products = data?.data?.products || data?.products || [];
+      push(Array.isArray(products) ? products.map(mapProduct).filter(Boolean) : []);
+    } catch { /* ignore */ }
+  }
+
+  return out;
 }

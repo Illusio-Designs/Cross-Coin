@@ -2247,6 +2247,10 @@
       const isGuestOrder = !!order.guest_user_id;
       const customerInfo = isGuestOrder ? order.GuestUser : order.User;
 
+      const orderJson = order.toJSON ? order.toJSON() : order;
+      const orderCreatedAt = orderJson.created_at || orderJson.createdAt || null;
+      const orderUpdatedAt = orderJson.updated_at || orderJson.updatedAt || null;
+
       res.json({
         success: true,
         data: {
@@ -2264,8 +2268,10 @@
             courier_name: order.courier_name,
             tracking_url: order.tracking_url,
             fship_waybill: order.fship_waybill,
-            created_at: order.created_at,
-            updated_at: order.updated_at,
+            created_at: orderCreatedAt,
+            createdAt: orderCreatedAt,
+            updated_at: orderUpdatedAt,
+            updatedAt: orderUpdatedAt,
           },
           customer: {
             type: isGuestOrder ? "guest" : "registered",

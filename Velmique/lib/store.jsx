@@ -6,6 +6,10 @@ import {
   removeFromWishlist as apiRemoveFromWishlist,
   clearWishlist as apiClearWishlist,
 } from '@/lib/api/wishlist';
+import {
+  toastAddedToCart, toastRemovedFromCart, toastCartCleared,
+  toastAddedToWishlist, toastRemovedFromWishlist,
+} from '@/lib/toast';
 
 const StoreContext = createContext(undefined);
 
@@ -39,10 +43,15 @@ export function StoreProvider({ children }) {
       return [...prev, { ...item, quantity: addQty }];
     });
     setCartOpen(true);
+    toastAddedToCart(item.name);
   }, []);
 
   const removeFromCart = useCallback((id, size) => {
-    setCart(prev => prev.filter(c => !(c.id === id && c.size === size)));
+    setCart(prev => {
+      const removed = prev.find(c => c.id === id && c.size === size);
+      if (removed) toastRemovedFromCart(removed.name);
+      return prev.filter(c => !(c.id === id && c.size === size));
+    });
   }, []);
 
   const updateQuantity = useCallback((id, qty, size) => {
@@ -64,8 +73,13 @@ export function StoreProvider({ children }) {
 
     setWishlistSyncing(true);
     try {
-      if (exists) await apiRemoveFromWishlist(id);
-      else        await apiAddToWishlist(id);
+      if (exists) {
+        await apiRemoveFromWishlist(id);
+        toastRemovedFromWishlist(item.name);
+      } else {
+        await apiAddToWishlist(id);
+        toastAddedToWishlist(item.name);
+      }
     } catch (err) {
       setWishlist(previous);
       console.warn('[wishlist] sync failed:', err.message);
@@ -109,7 +123,10 @@ export function StoreProvider({ children }) {
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const clearCart = () => setCart([]);
+  const clearCart = (silent = false) => {
+    setCart([]);
+    if (!silent) toastCartCleared();
+  };
 
   return (
     <StoreContext.Provider value={{

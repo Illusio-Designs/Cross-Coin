@@ -326,3 +326,97 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   font-size: 0.95em;
   color: var(--ink);
 }
+
+/* ───────────────────────────────────────────────────────────
+   Velmique toast skin — overrides react-toastify defaults so
+   the toasts wear the cream + ink + gold palette instead of the
+   library's default green/red/blue blocks.
+   ─────────────────────────────────────────────────────────── */
+.Toastify__toast-container {
+  width: auto;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 0;
+}
+
+/* Mobile: stretch the toast container edge-to-edge with a small inset
+   so the message reads as a banner, not a tiny corner pill. */
+@media (max-width: 640px) {
+  .Toastify__toast-container {
+    width: calc(100vw - 16px);
+    max-width: none;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    padding: 0;
+  }
+  .Toastify__toast-container--top-right,
+  .Toastify__toast-container--top-left,
+  .Toastify__toast-container--top-center {
+    top: 8px;
+  }
+  .Toastify__toast {
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+}
+.Toastify__toast {
+  font-family: var(--font-jost), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px -12px rgba(26, 22, 18, 0.18);
+  padding: 14px 16px;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+.Toastify__toast-body {
+  padding: 0;
+  margin: 0;
+  align-items: center;
+}
+.Toastify__toast-body > div:last-child {
+  font-family: var(--font-jost), system-ui, sans-serif;
+  color: var(--ink);
+}
+.Toastify__close-button {
+  color: var(--ink-muted);
+  opacity: 0.6;
+  align-self: center;
+  padding-left: 8px;
+}
+.Toastify__close-button:hover { color: var(--ink); opacity: 1; }
+
+/* Type-specific accents — coloured left bar instead of full bg flood */
+.Toastify__toast--success {
+  border-left: 3px solid var(--gold);
+}
+.Toastify__toast--success .Toastify__toast-icon svg {
+  fill: var(--gold-deep);
+}
+.Toastify__toast--info {
+  border-left: 3px solid var(--ink);
+}
+.Toastify__toast--info .Toastify__toast-icon svg {
+  fill: var(--ink-soft);
+}
+.Toastify__toast--warning {
+  border-left: 3px solid #C9821C;
+}
+.Toastify__toast--warning .Toastify__toast-icon svg {
+  fill: #C9821C;
+}
+.Toastify__toast--error {
+  border-left: 3px solid #B0413E;
+}
+.Toastify__toast--error .Toastify__toast-icon svg {
+  fill: #B0413E;
+}
+
+/* Slim progress strip (when shown) tinted gold */
+.Toastify__progress-bar {
+  background: linear-gradient(90deg, var(--gold), var(--gold-deep));
+  height: 2px;
+}

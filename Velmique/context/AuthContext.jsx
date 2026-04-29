@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { toastLogoutSuccess } from '@/lib/toast'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
@@ -69,6 +70,7 @@ export function AuthProvider({ children }) {
     }
     localStorage.removeItem('token')
     setUser(null)
+    toastLogoutSuccess()
   }, [])
 
   return (

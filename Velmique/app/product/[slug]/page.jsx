@@ -349,7 +349,7 @@ export default function ProductPage() {
             <div>
               <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Description</p>
               <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-4">About this fragrance</h2>
-              <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line">
+              <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
                 {product.description || 'No description available for this product.'}
               </p>
             </div>
