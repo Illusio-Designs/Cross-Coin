@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Heart, ArrowUpRight } from 'lucide-react';
+import { Heart, ArrowUpRight, Star } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
@@ -117,10 +117,18 @@ export default function ProductCard({ product, index = 0 }) {
             </h3>
           </Link>
           <div className="flex items-center gap-0.5 mt-2">
-            {[1,2,3,4,5].map(s => (
-              <span key={s} className={`text-[10px] ${s <= Math.round(product.rating) ? 'text-[#8B6914]' : 'text-[#dcd4bf]'}`}>●</span>
-            ))}
-            <span className="text-[#8A7E6C] text-[10px] ml-1.5 font-body">({product.reviews})</span>
+            {[1,2,3,4,5].map(s => {
+              const filled = s <= Math.round(product.rating || 0);
+              return (
+                <Star
+                  key={s}
+                  size={11}
+                  strokeWidth={1.5}
+                  className={filled ? 'fill-[#C9A84C] text-[#C9A84C]' : 'fill-transparent text-[#dcd4bf]'}
+                />
+              );
+            })}
+            <span className="text-[#8A7E6C] text-[10px] ml-1.5 font-body">({product.reviews || 0})</span>
           </div>
         </div>
         <div className="text-right shrink-0">

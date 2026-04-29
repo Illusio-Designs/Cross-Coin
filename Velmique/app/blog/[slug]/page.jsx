@@ -138,7 +138,7 @@ export default function BlogPostPage() {
 
             {/* Body */}
             <div
-              className="prose-velmique text-[var(--ink-soft)] font-body text-lg leading-[1.9] space-y-6"
+              className="prose-velmique text-[var(--ink-soft)] font-body text-lg leading-[1.9] space-y-6 text-justify hyphens-auto"
               style={{ ['--prose-h2-color']: 'var(--ink)' }}
               dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt || ''}</p>` }}
             />

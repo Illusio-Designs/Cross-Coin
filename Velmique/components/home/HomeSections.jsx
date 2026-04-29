@@ -81,13 +81,13 @@ export function StoryBand() {
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-6">
               About Us
             </p>
-            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-5">
+            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-5 text-justify hyphens-auto">
               At <span className="font-serif italic">Velmique</span>, every fragrance begins as an idea — a feeling, a memory, a quiet morning in Kannauj or a long evening in Mysore. We hand-blend timeless extraits and eaux de parfum at our Bandra atelier, working in small batches with rare absolutes, aged oud, Kannauj rose, and Mysore sandalwood sourced from growers we have known for years.
             </p>
-            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-5">
+            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-5 text-justify hyphens-auto">
               Each bottle is built note by note, cured for weeks, and decanted by hand. We do not chase trends or mass-market scents — we compose perfumes for people who want to wear something considered, layered, and unmistakably theirs. From the volatile top notes that introduce you to a room, to the warm resinous base that lingers on cashmere hours after you have left, every accord is chosen for character, longevity, and sillage that quietly announces presence.
             </p>
-            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-8">
+            <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl mb-8 text-justify hyphens-auto">
               Today our extraits are stocked at <span className="font-serif italic">100+ partner boutiques</span> across India and shipped to private collectors worldwide. Every flacon carries a number, the perfumer's signature, and a story we hope becomes part of yours.
             </p>
             <Link href="/shop" className="pill-cta">
@@ -469,7 +469,7 @@ export function NotesBand() {
                   </div>
 
                   {/* Description */}
-                  <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl">
+                  <p className="text-[var(--ink)] text-base md:text-lg leading-[1.65] font-body max-w-xl text-justify hyphens-auto">
                     {f.desc}
                   </p>
                 </motion.div>
@@ -489,19 +489,19 @@ export function NotesBand() {
    ───────────────────────────────────── */
 function ReviewCard({ t }) {
   return (
-    <div className="shrink-0 aspect-square w-[240px] md:w-[260px] bg-white rounded-2xl p-5 md:p-6 border border-[var(--border)] flex flex-col mx-2.5 shadow-sm">
-      <div className="flex gap-0.5 mb-3">
+    <div className="shrink-0 aspect-square w-[180px] md:w-[260px] bg-white rounded-2xl p-3.5 md:p-6 border border-[var(--border)] flex flex-col mx-2 md:mx-2.5 shadow-sm">
+      <div className="flex gap-0.5 mb-2 md:mb-3">
         {[1,2,3,4,5].map(s => (
-          <Star key={s} size={11} className={s <= (t.rating || 0) ? 'fill-[var(--gold)] text-[var(--gold)]' : 'text-[var(--border)]'} />
+          <Star key={s} size={10} className={s <= (t.rating || 0) ? 'fill-[var(--gold)] text-[var(--gold)]' : 'text-[var(--border)]'} />
         ))}
       </div>
-      <p className="text-[var(--ink-soft)] text-xs md:text-sm leading-[1.55] font-body flex-1 overflow-hidden">
+      <p className="text-[var(--ink-soft)] text-[11px] md:text-sm leading-[1.5] md:leading-[1.55] font-body flex-1 overflow-hidden">
         {t.text}
       </p>
-      <div className="mt-3">
-        <p className="font-serif italic text-[var(--ink)] text-sm md:text-base leading-tight">{t.name}</p>
+      <div className="mt-2 md:mt-3">
+        <p className="font-serif italic text-[var(--ink)] text-xs md:text-base leading-tight truncate">{t.name}</p>
         {t.product && (
-          <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.2em] uppercase font-body mt-1 line-clamp-1">{t.product}</p>
+          <p className="text-[var(--ink-muted)] text-[9px] md:text-[10px] tracking-[0.2em] uppercase font-body mt-0.5 md:mt-1 line-clamp-1">{t.product}</p>
         )}
       </div>
     </div>
@@ -585,15 +585,15 @@ export function Testimonials() {
         </div>
 
         <div className="grid grid-cols-12 gap-6 items-stretch">
-          {/* Featured product photo */}
+          {/* Featured product photo — hidden on mobile, shown from md+ */}
           <motion.div
-            className="col-span-12 md:col-span-5 relative"
+            className="hidden md:block md:col-span-5 relative"
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.9 }}
           >
-            <div className="relative h-full min-h-[520px] md:min-h-[600px] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
+            <div className="relative h-full min-h-[600px] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
               <img
                 src="/review.png"
                 alt="Velmique customer reviews"
@@ -605,7 +605,7 @@ export function Testimonials() {
           {/* Two infinite-scrolling rows: top → left, bottom → right.
               Container fills column height; each row gets equal share. */}
           <motion.div
-            className="col-span-12 md:col-span-7 flex flex-col justify-center gap-5 md:gap-6 overflow-hidden min-h-[520px] md:min-h-[600px]"
+            className="col-span-12 md:col-span-7 flex flex-col justify-center gap-4 md:gap-6 overflow-hidden min-h-[380px] md:min-h-[600px]"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true, amount: 0.2 }}

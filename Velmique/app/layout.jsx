@@ -1,5 +1,7 @@
 import { Playfair_Display, Cormorant_Garamond, Jost, Anton } from 'next/font/google';
 import './globals.css';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 import { StoreProvider } from '@/lib/store';
 import { AuthProvider } from '@/context/AuthContext';
 import HeaderShell from '@/components/layout/HeaderShell';
@@ -57,6 +59,15 @@ export const metadata = {
   keywords: 'luxury perfume, niche fragrance, velmique, eau de parfum, extrait de parfum, oud, luxury scent',
 };
 
+// Disable user zoom (pinch + ctrl-scroll). Locks viewport at 1.0 scale.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  minimumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html
@@ -104,6 +115,19 @@ export default function RootLayout({ children }) {
             <SearchOverlay />
             <CookieBanner />
             <ScrollToTop />
+            <ToastContainer
+              position="top-right"
+              autoClose={2500}
+              hideProgressBar
+              newestOnTop
+              closeOnClick
+              pauseOnFocusLoss={false}
+              pauseOnHover={false}
+              draggable={false}
+              theme="light"
+              limit={3}
+              toastClassName="velmique-toast"
+            />
           </StoreProvider>
         </AuthProvider>
       </body>

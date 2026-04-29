@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Star, Send, CheckCircle2, X, PenLine } from 'lucide-react';
 import { getProductReviews, submitReview } from '@/lib/api/reviews';
+import { toastReviewSubmitted, toastReviewError } from '@/lib/toast';
 
 /* Live reviews list for a single product. The "Write a Review" form lives
    in a modal triggered by an Add Review button at the top of the section. */
@@ -230,8 +231,11 @@ function ReviewModal({ productId, productName, onClose }) {
     try {
       await submitReview({ productId, rating, comment: comment.trim(), name: name.trim(), email: email.trim() });
       setSubmitted(true);
+      toastReviewSubmitted();
     } catch (err) {
-      setSubmitMsg({ type: 'error', text: err.message || 'Could not submit your review. Please try again.' });
+      const msg = err.message || 'Could not submit your review. Please try again.';
+      setSubmitMsg({ type: 'error', text: msg });
+      toastReviewError(msg);
     } finally {
       setSubmitting(false);
     }

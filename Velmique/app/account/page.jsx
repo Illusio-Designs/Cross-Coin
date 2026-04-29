@@ -14,6 +14,12 @@ import {
   getAddresses, createAddress, updateAddress,
   deleteAddress, setDefaultAddress,
 } from '@/lib/api/addresses';
+import {
+  toastProfileUpdated, toastProfileError,
+  toastAddressAdded, toastAddressUpdated, toastAddressDeleted,
+  toastAddressDefault, toastAddressError,
+  toastOrderCancelled, toastOrderError,
+} from '@/lib/toast';
 
 const TABS = [
   { key: 'orders',    label: 'My Orders',     icon: Package },
@@ -33,6 +39,23 @@ function fmtDate(d) {
   const date = new Date(d);
   if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtVariantAttrs(attrs) {
+  if (!attrs) return '';
+  let a = attrs;
+  if (typeof attrs === 'string') {
+    try { a = JSON.parse(attrs); } catch { return ''; }
+  }
+  if (!a || typeof a !== 'object') return '';
+  const parts = [];
+  Object.entries(a).forEach(([k, v]) => {
+    const val = Array.isArray(v) ? v.join(', ') : v;
+    if (val !== undefined && val !== null && String(val).trim() !== '') {
+      parts.push(String(val));
+    }
+  });
+  return parts.join(' · ');
 }
 
 function statusBadge(status) {
@@ -88,20 +111,22 @@ export default function AccountPage() {
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
 
         {/* Profile header card */}
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7 mb-6 flex items-center gap-5 flex-wrap">
-          <div className="w-16 h-16 rounded-full bg-[var(--surface-2)] flex items-center justify-center shrink-0">
-            <User size={26} className="text-[var(--gold-deep)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="font-serif italic text-[var(--ink)] text-2xl truncate">{user.username || 'Velmique Member'}</h2>
-            <p className="text-[var(--ink-soft)] text-sm font-body truncate">{user.email || user.phone}</p>
-            <p className="text-[var(--gold-deep)] text-[10px] font-body mt-1 tracking-[0.3em] uppercase">
-              Velmique Inner Circle
-            </p>
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7 mb-6 flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="flex items-center gap-5 flex-1 min-w-0">
+            <div className="w-16 h-16 rounded-full bg-[var(--surface-2)] flex items-center justify-center shrink-0">
+              <User size={26} className="text-[var(--gold-deep)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-serif italic text-[var(--ink)] text-2xl truncate">{user.username || 'Velmique Member'}</h2>
+              <p className="text-[var(--ink-soft)] text-sm font-body truncate">{user.email || user.phone}</p>
+              <p className="text-[var(--gold-deep)] text-[10px] font-body mt-1 tracking-[0.3em] uppercase">
+                Velmique Inner Circle
+              </p>
+            </div>
           </div>
           <button
             onClick={async () => { await logout(); router.replace('/login'); }}
-            className="inline-flex items-center gap-2 text-[var(--ink-muted)] hover:text-red-600 transition-colors text-[10px] tracking-[0.3em] uppercase font-body shrink-0"
+            className="inline-flex items-center justify-center gap-2 text-[var(--ink-muted)] hover:text-red-600 transition-colors text-[10px] tracking-[0.3em] uppercase font-body shrink-0 w-full sm:w-auto py-3 sm:py-0 border sm:border-0 border-[var(--border)] rounded-full"
           >
             <LogOut size={14} /> Sign Out
           </button>
@@ -168,10 +193,10 @@ function OrdersTab({ showToast }) {
     setCancellingId(id);
     try {
       await cancelOrder(id, reason);
-      showToast('Order cancelled');
+      toastOrderCancelled();
       load();
     } catch (err) {
-      showToast(err.message || 'Failed to cancel order', 'error');
+      toastOrderError(err.message || 'Failed to cancel order');
     } finally {
       setCancellingId(null);
     }
@@ -241,13 +266,25 @@ function OrdersTab({ showToast }) {
                 <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.25em] uppercase font-body mb-1.5">
                   {items.length} item{items.length !== 1 ? 's' : ''}
                 </p>
-                <ul className="space-y-1">
-                  {items.slice(0, 2).map((it, idx) => (
-                    <li key={it.id || idx} className="text-[var(--ink)] text-xs font-body truncate">
-                      {(it.Product?.name || it.name || 'Item')}
-                      {it.quantity ? <span className="text-[var(--ink-muted)]"> × {it.quantity}</span> : null}
-                    </li>
-                  ))}
+                <ul className="space-y-1.5">
+                  {items.slice(0, 2).map((it, idx) => {
+                    const variantText = fmtVariantAttrs(
+                      it.ProductVariation?.attributes || it.variation?.attributes
+                    );
+                    return (
+                      <li key={it.id || idx} className="text-[var(--ink)] text-xs font-body">
+                        <span className="truncate block">
+                          {(it.Product?.name || it.name || 'Item')}
+                          {it.quantity ? <span className="text-[var(--ink-muted)]"> × {it.quantity}</span> : null}
+                        </span>
+                        {variantText && (
+                          <span className="text-[var(--ink-muted)] text-[10px] tracking-[0.15em] uppercase font-body block mt-0.5">
+                            {variantText}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                   {items.length > 2 && (
                     <li className="text-[var(--ink-muted)] text-[11px] font-body italic">+ {items.length - 2} more</li>
                   )}
@@ -357,11 +394,11 @@ function AddressesTab({ showToast }) {
     // Light validation
     if (!form.full_name.trim() || !form.phone.replace(/\D/g, '').length || !form.address.trim() ||
         !form.city.trim() || !form.state.trim() || !form.pincode.trim()) {
-      showToast('Please fill all required fields', 'error');
+      toastAddressError('Please fill all required fields');
       return;
     }
     if (!/^\d{6}$/.test(form.pincode)) {
-      showToast('PIN must be 6 digits', 'error');
+      toastAddressError('PIN must be 6 digits');
       return;
     }
 
@@ -369,15 +406,15 @@ function AddressesTab({ showToast }) {
     try {
       if (editing === 'new') {
         await createAddress(form);
-        showToast('Address added');
+        toastAddressAdded();
       } else {
         await updateAddress(editing, form);
-        showToast('Address updated');
+        toastAddressUpdated();
       }
       cancel();
       load();
     } catch (err) {
-      showToast(err.message || 'Save failed', 'error');
+      toastAddressError(err.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -388,10 +425,10 @@ function AddressesTab({ showToast }) {
     setBusyId(id);
     try {
       await deleteAddress(id);
-      showToast('Address removed');
+      toastAddressDeleted();
       load();
     } catch (err) {
-      showToast(err.message || 'Delete failed', 'error');
+      toastAddressError(err.message || 'Delete failed');
     } finally {
       setBusyId(null);
     }
@@ -401,10 +438,10 @@ function AddressesTab({ showToast }) {
     setBusyId(id);
     try {
       await setDefaultAddress(id);
-      showToast('Default address updated');
+      toastAddressDefault();
       load();
     } catch (err) {
-      showToast(err.message || 'Failed to set default', 'error');
+      toastAddressError(err.message || 'Failed to set default');
     } finally {
       setBusyId(null);
     }
@@ -561,10 +598,10 @@ function DetailsTab({ user, fetchUser, showToast }) {
     try {
       await updateProfile({ username: form.username, email: form.email });
       await fetchUser();
-      showToast('Profile updated');
+      toastProfileUpdated();
       setEditing(false);
     } catch (err) {
-      showToast(err.message || 'Update failed', 'error');
+      toastProfileError(err.message || 'Update failed');
     } finally {
       setSaving(false);
     }

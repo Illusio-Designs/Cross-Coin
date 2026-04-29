@@ -18,6 +18,12 @@ import {
   initiateCheckout, initiateGuestCheckout,
   verifyPayment,
 } from '@/lib/api/orders';
+import {
+  toastOrderPlaced, toastOrderError,
+  toastPaymentSuccess, toastPaymentError,
+  toastCouponApplied, toastCouponError,
+  toastAddressAdded, toastAddressUpdated, toastAddressError,
+} from '@/lib/toast';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -256,8 +262,13 @@ export default function CartDrawer() {
           address: addrForm.address, city: addrForm.city, state: addrForm.state,
           postalCode: addrForm.postalCode, country: addrForm.country, isDefault: addrForm.isDefault,
         };
-        if (editingAddrId) await updateAddress(editingAddrId, payload);
-        else                await createAddress(payload);
+        if (editingAddrId) {
+          await updateAddress(editingAddrId, payload);
+          toastAddressUpdated();
+        } else {
+          await createAddress(payload);
+          toastAddressAdded();
+        }
         const fresh = await getAddresses();
         setAddresses(fresh || []);
         const justSaved = (fresh || []).find(a => a.id === editingAddrId)
@@ -283,7 +294,9 @@ export default function CartDrawer() {
       setEditingAddrId(null);
       setAddrForm(EMPTY_ADDR);
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to save address.');
+      const msg = err.message || 'Failed to save address.';
+      setErrorMsg(msg);
+      toastAddressError(msg);
     } finally {
       setAddrSaving(false);
     }
@@ -306,11 +319,16 @@ export default function CartDrawer() {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount });
         setCouponMsg({ type: 'ok', text: `${data.coupon.code} applied — ${fmt(parseFloat(data.discountAmount))} off` });
         setCouponCode('');
+        toastCouponApplied(data.coupon.code);
       } else {
-        setCouponMsg({ type: 'err', text: data.message || 'Invalid coupon' });
+        const msg = data.message || 'Invalid coupon';
+        setCouponMsg({ type: 'err', text: msg });
+        toastCouponError(msg);
       }
     } catch (err) {
-      setCouponMsg({ type: 'err', text: err.message || 'Could not apply coupon' });
+      const msg = err.message || 'Could not apply coupon';
+      setCouponMsg({ type: 'err', text: msg });
+      toastCouponError(msg);
     } finally {
       setCouponLoading(false);
     }
@@ -410,10 +428,13 @@ export default function CartDrawer() {
       const data = buildCodOrder(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
       if (!result?.order) throw new Error('Order creation failed.');
-      clearCart();
+      clearCart(true);
+      toastOrderPlaced(result.order.order_number);
       setOrderSuccess({ orderNumber: result.order.order_number, paymentType: 'cod' });
     } catch (err) {
-      setErrorMsg(err.message || 'Order placement failed.');
+      const msg = err.message || 'Order placement failed.';
+      setErrorMsg(msg);
+      toastOrderError(msg);
     } finally {
       setIsProcessing(false);
     }
@@ -441,10 +462,14 @@ export default function CartDrawer() {
             razorpaySignature: resp.razorpay_signature,
             reservation_id:    reservationId,
           });
-          clearCart();
+          clearCart(true);
+          toastPaymentSuccess();
+          toastOrderPlaced(result.order?.order_number);
           setOrderSuccess({ orderNumber: result.order?.order_number, paymentType: 'prepaid' });
         } catch (err) {
-          setErrorMsg(err.message || 'Payment verification failed.');
+          const msg = err.message || 'Payment verification failed.';
+          setErrorMsg(msg);
+          toastPaymentError(msg);
         } finally {
           setIsProcessing(false);
         }
@@ -452,13 +477,16 @@ export default function CartDrawer() {
       modal: {
         ondismiss: () => {
           setErrorMsg('Payment was cancelled.');
+          toastPaymentError('Payment was cancelled.');
           setIsProcessing(false);
         },
       },
     };
     const rzp = new window.Razorpay(opts);
     rzp.on('payment.failed', (r) => {
-      setErrorMsg(r.error?.description || 'Payment failed. Please try again.');
+      const msg = r.error?.description || 'Payment failed. Please try again.';
+      setErrorMsg(msg);
+      toastPaymentError(msg);
       setIsProcessing(false);
     });
     rzp.open();
@@ -481,7 +509,9 @@ export default function CartDrawer() {
       }
       openRazorpay(result.razorpay_order, result.reservation_id);
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to start checkout.');
+      const msg = err.message || 'Failed to start checkout.';
+      setErrorMsg(msg);
+      toastOrderError(msg);
       setIsProcessing(false);
     }
   };

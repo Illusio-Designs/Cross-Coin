@@ -43,7 +43,7 @@ export default function Footer() {
             <nav className="flex flex-col gap-2 items-end">
               <p className="text-white/40 text-[10px] tracking-[0.35em] uppercase font-body mb-1">Customer Care</p>
               {[
-                ['Track Your Order',       '/account'],
+                ['Track Your Order',       '/track-order'],
                 ['Shipping Policy',        '/shipping-returns'],
                 ['Cancellation & Refund',  '/cancellation-refund'],
               ].map(([label, href]) => (
@@ -105,7 +105,7 @@ export default function Footer() {
             <div className="flex-1 flex items-center justify-end">
               <h2
                 className="font-display text-right leading-[0.82] tracking-[-0.02em]"
-                style={{ fontSize: 'clamp(3rem, 9vw, 8.5rem)' }}
+                style={{ fontSize: 'clamp(6rem, 9vw, 8.5rem)' }}
               >
                 <span className="block text-white/90">ETERNAL</span>
                 <span

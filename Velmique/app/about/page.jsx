@@ -71,7 +71,7 @@ export default function AboutPage() {
             </p>
 
             {/* Body paragraph */}
-            <p className="text-white/75 font-body text-base md:text-lg leading-[1.7] max-w-2xl mb-10">
+            <p className="text-white/75 font-body text-base md:text-lg leading-[1.7] text-justify hyphens-auto max-w-2xl mb-10">
               We are a homegrown maison de parfum, building extraits and eaux de parfum the slow way. Every accord is composed by hand at our atelier, cured for weeks in dark glass, and decanted into numbered flacons. No outsourcing. No white-labelling. Just perfume, made with intention.
             </p>
 
@@ -101,13 +101,13 @@ export default function AboutPage() {
             </h2>
 
             <div className="max-w-2xl space-y-5">
-              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7]">
+              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7] text-justify hyphens-auto">
                 Velmique began as a quiet idea — that India, with its centuries-old attar tradition and access to the world&apos;s most beautiful raw materials, deserved a perfume house of its own. Not an importer. Not a licensee. A maison built here, composed here, decanted here, for a generation that knows the difference.
               </p>
-              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7]">
+              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7] text-justify hyphens-auto">
                 Our perfumers train in Grasse and apprentice in Kannauj. We source rose absolute from a family of distillers we have known for years, oud aged seven years from Cambodia, and sandalwood under multi-year contracts from Mysore. Every accord is composed by hand at our Bandra atelier, cured for weeks, and decanted into numbered flacons by our team — never by a contractor.
               </p>
-              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7]">
+              <p className="text-[var(--ink)] font-body text-base md:text-lg leading-[1.7] text-justify hyphens-auto">
                 We build perfumes the slow way because we believe the wearer can tell. And, increasingly, the people in the room with the wearer can tell, too.
               </p>
             </div>
@@ -152,7 +152,7 @@ export default function AboutPage() {
               <div key={v.title} className="bg-white border border-[var(--border)] rounded-2xl p-8 flex flex-col">
                 <p className="font-display text-[var(--gold)] text-5xl md:text-6xl leading-none mb-5">{v.n}</p>
                 <h3 className="font-serif italic text-[var(--ink)] text-xl md:text-2xl mb-4 leading-tight">{v.title}</h3>
-                <p className="text-[var(--ink-soft)] font-body text-sm md:text-base leading-[1.7]">{v.desc}</p>
+                <p className="text-[var(--ink-soft)] font-body text-sm md:text-base leading-[1.7] text-justify hyphens-auto">{v.desc}</p>
               </div>
             ))}
           </div>
