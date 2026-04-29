@@ -6,6 +6,8 @@ import ProductCard from '@/components/shop/ProductCard';
 import PageHeader from '@/components/layout/PageHeader';
 import { getPublicProducts, mapProduct } from '@/lib/api/products';
 import { getPublicCategories, getCategoryByName } from '@/lib/api/categories';
+// getCategoryByName is kept as a fallback for the rare case the catalog
+// endpoint can't be filtered by id.
 
 const sortOptions = [
   { label: 'Featured',           value: 'featured'   },
@@ -65,21 +67,34 @@ function ShopPageInner() {
     if (match) setActiveCategory(match.name);
   }, [collectionParam, rawCategories]);
 
-  // Fetch products — picks the right endpoint:
-  //   • activeCategory === 'All'  → /api/products/catalog        (all products)
-  //   • specific category         → /api/categories/by-name/:name (products embedded)
-  // Each category change fires a real API call, visible in the network tab.
+  // Fetch products — always uses the catalog endpoint so cards have
+  // full data (images, variations, ratings, prices) regardless of
+  // whether the user is browsing All or a specific collection. The
+  // by-name endpoint returns sparse rows, which is why filtered cards
+  // were missing reviews / images / etc — we route around it.
   useEffect(() => {
     let alive = true;
     setLoading(true);
 
-    const fetchPromise =
-      activeCategory === 'All'
-        ? getPublicProducts({ limit: 200 }).then(r => r.products || [])
-        : getCategoryByName(activeCategory).then(cat => {
-            const rows = cat?.products || [];
-            return rows.map(mapProduct).filter(Boolean);
-          });
+    let fetchPromise;
+    if (activeCategory === 'All') {
+      fetchPromise = getPublicProducts({ limit: 200 }).then(r => r.products || []);
+    } else {
+      // Resolve the category name → id from the cached list, then hit
+      // catalog with that id. Same data shape as "All".
+      const matched = rawCategories.find(c => c.name === activeCategory);
+      if (matched?.id) {
+        fetchPromise = getPublicProducts({ category: matched.id, limit: 200 }).then(r => r.products || []);
+      } else {
+        // Defensive fallback — categories haven't loaded yet OR the
+        // backend doesn't have an id we recognise. Use the by-name
+        // endpoint so the page isn't empty.
+        fetchPromise = getCategoryByName(activeCategory).then(cat => {
+          const rows = cat?.products || [];
+          return rows.map(mapProduct).filter(Boolean);
+        });
+      }
+    }
 
     fetchPromise
       .then(prods => { if (alive) setProducts(prods); })
@@ -87,7 +102,7 @@ function ShopPageInner() {
       .finally(() => { if (alive) setLoading(false); });
 
     return () => { alive = false; };
-  }, [activeCategory]);
+  }, [activeCategory, rawCategories]);
 
   // API already filtered by category — just apply price + sort client-side.
   const filtered = useMemo(() => {
