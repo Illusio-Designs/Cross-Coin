@@ -48,12 +48,16 @@ export default function ProductCard({ product, index = 0 }) {
       </button>
 
       <Link href={`/product/${product.slug}`} className="block relative">
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#EAE0C7]">
+        <div className="relative overflow-hidden bg-[#EAE0C7]">
+          {/* Primary image — natural height drives the card. */}
           <img
             src={product.images[0]}
             alt={product.name}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.08]"
+            className="block w-full h-auto"
           />
+          {/* Secondary image — absolutely positioned to overlay the first
+              one on hover, sized to fill whatever height the first image
+              produced. */}
           {product.images[1] && (
             <img
               src={product.images[1]}
