@@ -3,9 +3,10 @@
 import { useState, useMemo } from 'react'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import { useCart } from '@/hooks/useCart'
+import { useWishlistStore } from '@/store/wishlistStore'
 import { StickyATCBar } from './StickyATCBar'
 import { formatPrice, cn } from '@/lib/utils'
-import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp, Star } from 'lucide-react'
+import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp, Star, Heart } from 'lucide-react'
 
 function seedNum(id, min, max) {
   let h = 0
@@ -20,6 +21,55 @@ export function ProductInfo({ product, onColorChange }) {
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
   const { addItem, openDrawer } = useCart()
+  const wishlisted = useWishlistStore((s) => s.hasItem(product.id))
+  const toggleWishlist = useWishlistStore((s) => s.toggle)
+  const updateWishlistItem = useWishlistStore((s) => s.updateItem)
+
+  /* Build a wishlist payload that captures the variation the customer is
+     looking at right now (active color + matching variant), so the
+     /wishlist page can render exactly that combo and "Add to Cart" picks
+     the right SKU. We re-resolve on every click in case the user changes
+     the colour while the item is already saved (we patch the stored row). */
+  const buildWishlistEntry = () => {
+    const variant = product.variants?.find((v) => v.color === activeColor.name) || product.variants?.[0]
+    const colorImages = product.colorImages?.[activeColor.name] || []
+    const imageUrl = colorImages[0]?.url || product.images?.[0]?.url || ''
+    return {
+      ...product,
+      // Persist what was picked at save time
+      selectedColor: activeColor.name,
+      selectedColorHex: activeColor.hex,
+      selectedVariantId: variant?.id ?? null,
+      selectedImageUrl: imageUrl,
+      price: product.price,
+    }
+  }
+
+  const handleWishlist = () => {
+    if (wishlisted) {
+      // Clicking heart again on a saved product → also patch the stored
+      // colour to the current selection before letting toggle remove it.
+      // (No-op on remove path — toggle handles the rest.)
+      toggleWishlist(buildWishlistEntry())
+    } else {
+      toggleWishlist(buildWishlistEntry())
+    }
+  }
+
+  /* If the product is already saved and the user changes colour, update
+     the stored row so the wishlist reflects the latest pick. */
+  const onActiveColorChanged = (color) => {
+    if (wishlisted && updateWishlistItem) {
+      const variant = product.variants?.find((v) => v.color === color.name) || product.variants?.[0]
+      const colorImages = product.colorImages?.[color.name] || []
+      updateWishlistItem(product.id, {
+        selectedColor: color.name,
+        selectedColorHex: color.hex,
+        selectedVariantId: variant?.id ?? null,
+        selectedImageUrl: colorImages[0]?.url || product.images?.[0]?.url || '',
+      })
+    }
+  }
   const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 })
 
   const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id])
@@ -29,6 +79,7 @@ export function ProductInfo({ product, onColorChange }) {
   const handleColorSelect = (color) => {
     setActiveColor(color)
     onColorChange?.(color)
+    onActiveColorChanged(color)
   }
 
   const handleAddToCart = () => {
@@ -63,7 +114,21 @@ export function ProductInfo({ product, onColorChange }) {
   return (
     <>
       {/* White card wrapper */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
+      <div className="relative rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
+
+        {/* Wishlist heart — top-right of the info card */}
+        <button
+          onClick={handleWishlist}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className={cn(
+            'absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+            wishlisted
+              ? 'border-brand-black bg-brand-black text-white hover:bg-gray-800'
+              : 'border-gray-200 bg-white text-brand-black hover:border-brand-black hover:bg-gray-50'
+          )}
+        >
+          <Heart size={17} fill={wishlisted ? 'currentColor' : 'none'} strokeWidth={1.8} />
+        </button>
 
         {/* Collection badge */}
         {product.collectionName && (
@@ -72,8 +137,8 @@ export function ProductInfo({ product, onColorChange }) {
           </span>
         )}
 
-        {/* Title */}
-        <h1 className="mt-3 text-xl font-bold leading-snug text-brand-black lg:text-2xl">{product.name}</h1>
+        {/* Title — leave room on the right so it doesn't run into the heart */}
+        <h1 className="mt-3 pr-12 text-xl font-bold leading-snug text-brand-black lg:text-2xl">{product.name}</h1>
 
         {/* Rating + SKU row */}
         <div className="mt-2 flex items-center gap-3">
