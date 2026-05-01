@@ -10,6 +10,7 @@ import { MobileMenu } from '@/components/layout/MobileMenu';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
 import { WhatsAppChat } from '@/components/ui/WhatsAppChat';
+import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -82,6 +83,7 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         <AuthProvider>
         <CartProvider>
+        <WishlistHydrator />
         <AnnouncementBar />
         <Navbar />
         <Breadcrumb />

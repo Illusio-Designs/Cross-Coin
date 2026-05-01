@@ -29,6 +29,8 @@ export const toastRegisterError   = (e) => showError(e || 'Registration failed.'
 export const toastLogoutSuccess   = () => showInfo('You have been signed out.', 'logout')
 export const toastAddedToCart     = (name) => showSuccess(`${name} added to bag!`, 'cart-add')
 export const toastRemovedFromCart = (name) => showInfo(`${name} removed from bag.`, 'cart-remove')
+export const toastAddedToWishlist     = (name) => showSuccess(`${name || 'Item'} added to wishlist.`, 'wish-add')
+export const toastRemovedFromWishlist = (name) => showInfo(`${name || 'Item'} removed from wishlist.`, 'wish-remove')
 export const toastProfileUpdated  = () => showSuccess('Profile updated successfully!', 'profile')
 export const toastProfileError    = (e) => showError(e || 'Failed to update profile.', 'profile-err')
 export const toastPasswordUpdated = () => showSuccess('Password updated successfully!', 'password')

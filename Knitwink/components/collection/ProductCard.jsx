@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/hooks/useCart';
+import { useWishlistStore } from '@/store/wishlistStore';
 import { toastAddedToCart } from '@/lib/toast';
 
 
@@ -21,6 +22,14 @@ export function ProductCard({ product }) {
   const [expanded, setExpanded] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
   const { addItem } = useCart();
+  const wishlisted = useWishlistStore((s) => s.hasItem(product.id));
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+
+  const handleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+  };
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -81,12 +90,24 @@ export function ProductCard({ product }) {
         </AnimatePresence>
 
         {product.badge &&
-        <div className="absolute left-3 top-3">
-            <span className="rounded-full bg-brand-black px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-white">
+        <div className="absolute left-2 top-2 max-w-[60%]">
+            <span className="block truncate rounded-full bg-brand-black px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white sm:px-2.5 sm:py-1 sm:text-[10px]">
               {product.badge}
             </span>
           </div>
         }
+
+        {/* Wishlist heart — top-right of the image */}
+        <button
+          type="button"
+          onClick={handleWishlist}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className={`absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 shadow-sm transition-colors sm:h-8 sm:w-8 ${
+            wishlisted ? 'text-brand-black hover:bg-white' : 'text-brand-black hover:bg-white'
+          }`}>
+          <Heart size={13} className="sm:hidden" fill={wishlisted ? 'currentColor' : 'none'} strokeWidth={1.8} />
+          <Heart size={15} className="hidden sm:block" fill={wishlisted ? 'currentColor' : 'none'} strokeWidth={1.8} />
+        </button>
       </div>
 
       {/* Info */}

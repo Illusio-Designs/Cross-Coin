@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, User, ShoppingBag } from 'lucide-react'
+import { Search, User, ShoppingBag, Heart } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
+import { useWishlistStore } from '@/store/wishlistStore'
 import { useUiStore } from '@/store/uiStore'
 import { MegaMenu } from './MegaMenu'
 import { ROUTES } from '@/lib/constants'
@@ -22,6 +23,7 @@ export function Navbar() {
   const { isAuthenticated } = useAuth()
   const closeTimer = useRef(null)
   const { itemCount, openDrawer } = useCart()
+  const wishlistCount = useWishlistStore((s) => s.items.length)
   const openMobileMenu = useUiStore((s) => s.openMobileMenu)
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export function Navbar() {
     if (closeTimer.current) clearTimeout(closeTimer.current)
   }, [])
 
-  const iconBtn = 'flex h-8 w-8 lg:h-10 lg:w-10 items-center justify-center rounded-full text-gray-700 transition-colors duration-150 hover:bg-black/5 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-1'
+  const iconBtn = 'flex h-7 w-7 lg:h-10 lg:w-10 items-center justify-center rounded-full text-gray-700 transition-colors duration-150 hover:bg-black/5 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-1'
 
   return (
     <div
@@ -97,7 +99,7 @@ export function Navbar() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0 lg:gap-0.5">
           <Link href={ROUTES.about} className="hidden h-10 items-center rounded-full px-3 text-[13px] font-normal text-gray-700 transition-colors hover:bg-black/5 hover:text-brand-black lg:flex">
             About
           </Link>
@@ -110,10 +112,27 @@ export function Navbar() {
           <Link href={isAuthenticated ? ROUTES.account : ROUTES.login} className={iconBtn} aria-label="Account">
             <User size={15} strokeWidth={1.6} className="lg:w-[17px] lg:h-[17px]" />
           </Link>
+          <Link
+            href={ROUTES.wishlist}
+            className={cn(iconBtn, 'relative')}
+            aria-label={`Wishlist, ${wishlistCount} item${wishlistCount === 1 ? '' : 's'}`}
+          >
+            <Heart
+              size={14}
+              strokeWidth={1.6}
+              fill={wishlistCount > 0 ? 'currentColor' : 'none'}
+              className={cn('lg:w-[17px] lg:h-[17px]', wishlistCount > 0 && 'text-brand-black')}
+            />
+            {wishlistCount > 0 && (
+              <span className="absolute right-0 top-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-brand-black text-[7px] font-semibold leading-none text-white lg:right-1 lg:top-1 lg:h-3.5 lg:w-3.5 lg:text-[8px]">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
           <button onClick={openDrawer} className={cn(iconBtn, 'relative')} aria-label={`Cart, ${itemCount} items`}>
-            <ShoppingBag size={15} strokeWidth={1.5} className="lg:w-[18px] lg:h-[18px]" />
+            <ShoppingBag size={14} strokeWidth={1.5} className="lg:w-[18px] lg:h-[18px]" />
             {itemCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-black text-[8px] font-semibold text-white">
+              <span className="absolute right-0 top-0 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-brand-black text-[7px] font-semibold leading-none text-white lg:right-1 lg:top-1 lg:h-3.5 lg:w-3.5 lg:text-[8px]">
                 {itemCount}
               </span>
             )}
