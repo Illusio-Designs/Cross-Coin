@@ -33,7 +33,7 @@ export default function Footer() {
       <div className="relative grid grid-cols-12 gap-6 px-6 md:px-12 lg:px-20 py-12 md:py-20 max-w-[1600px] mx-auto">
 
           {/* TOP ROW — contact pill (left) + customer-care links (right).
-              Header already covers Shop / Collections / Lookbook / About / Blog
+              Header already covers Shop / Collections / About / Blog
               — footer only carries the things that DON'T live in the header. */}
           <div className="col-span-12 flex items-start justify-between flex-wrap gap-6 mb-6">
             <Link href="/contact" className="bg-white/95 text-[var(--ink)] rounded-full px-5 py-2 text-[10px] tracking-[0.25em] uppercase font-body font-medium hover:bg-[var(--gold)] hover:text-[var(--ink)] transition-colors">
