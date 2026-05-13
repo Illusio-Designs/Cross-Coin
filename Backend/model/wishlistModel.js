@@ -25,7 +25,9 @@ const Wishlist = sequelize.define('Wishlist', {
         references: {
             model: 'products',
             key: 'id'
-        }
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
     },
     createdAt: {
         type: DataTypes.DATE,
