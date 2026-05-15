@@ -1,138 +1,97 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { useAuth } from '../context/AuthContext';
 
-export default function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { register } = useAuth();
+export default function RegisterPage() {
+  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const [step, setStep] = useState('details');
+  const [otp, setOtp]   = useState(['', '', '', '']);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    if (!name || !email || !password) {
-      setError('Please fill in all fields');
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    const result = await register(name, email, password);
-    
-    if (result.success) {
-      router.push('/account');
-    } else {
-      setError(result.error || 'Registration failed');
-    }
-    
-    setLoading(false);
-  };
+  const onSubmit = (e) => { e.preventDefault(); if (form.name.trim() && form.phone.length >= 10) setStep('otp'); };
+  const onVerify = (e) => { e.preventDefault(); };
 
   return (
     <>
-      <Head>
-        <title>Create Account - Gripzus</title>
-        <meta name="description" content="Create your Gripzus account" />
-      </Head>
+      <Head><title>Create Account — Gripzus</title></Head>
+      <main className="bg-paper">
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-100px)]">
 
-      <Header />
+          <aside className="relative hidden lg:block bg-ink overflow-hidden">
+            <img
+              src="https://images.unsplash.com/photo-1577538928305-3807c3993047?w=1200&q=85&auto=format&fit=crop"
+              alt="Gripzus pair"
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" />
+            <div className="relative h-full flex flex-col justify-end p-14">
+              <p className="mono-label text-saffron-light mb-4">Join the circle</p>
+              <h2 className="font-display uppercase text-paper leading-[0.9] tracking-[-0.035em]" style={{ fontSize: 'clamp(2.5rem, 4vw, 4rem)', fontWeight: 700 }}>
+                10% off<br /><em className="not-italic font-serif italic font-normal text-saffron-light">your first pair.</em>
+              </h2>
+              <p className="text-paper/70 text-sm max-w-sm mt-4">
+                Plus early access to every drop and the occasional notes from the knit room.
+              </p>
+            </div>
+          </aside>
 
-      <main className="auth-page">
-        <div className="container">
-          <div className="auth-container">
-            <div className="auth-box">
-              <h1>Create Account</h1>
-              <p className="auth-subtitle">Join us today</p>
+          <div className="flex items-center justify-center px-6 md:px-12 py-16">
+            <div className="w-full max-w-md">
+              <p className="eyebrow mb-4">Account · Register</p>
+              <h1 className="h-display text-5xl md:text-6xl uppercase mb-3">
+                Start the <em className="h-italic">circle.</em>
+              </h1>
+              <p className="prose-body text-sm md:text-base mb-9">
+                Two minutes, no password. We verify your phone with a one-time code.
+              </p>
 
-              {error && <div className="auth-error">{error}</div>}
+              {step === 'details' && (
+                <form onSubmit={onSubmit} className="space-y-5">
+                  <Field label="Full name *"      value={form.name}  onChange={(v) => setForm({ ...form, name: v })} placeholder="Anika Sharma" />
+                  <Field label="Mobile number *"  value={form.phone} onChange={(v) => setForm({ ...form, phone: v.replace(/\D/g, '').slice(0, 10) })} placeholder="98201 43210" />
+                  <Field label="Email (optional)" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" type="email" />
+                  <button type="submit" className="cta w-full justify-center !py-4">Send OTP</button>
+                  <p className="text-center mono-label">
+                    Have an account?{' '}
+                    <Link href="/login" className="text-saffron-deep hover:text-ink underline underline-offset-4">Sign in</Link>
+                  </p>
+                </form>
+              )}
 
-              <form onSubmit={handleSubmit} className="auth-form">
-                <div className="form-group">
-                  <label htmlFor="name">Full Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="password">Password</label>
-                  <div className="password-input">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
+              {step === 'otp' && (
+                <form onSubmit={onVerify}>
+                  <p className="mono-label mb-4">Code sent to +91 {form.phone}</p>
+                  <div className="flex gap-3 mb-6">
+                    {otp.map((d, i) => (
+                      <input
+                        key={i}
+                        type="text" maxLength={1} inputMode="numeric" value={d}
+                        onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(-1); const n = [...otp]; n[i] = v; setOtp(n); }}
+                        className="flex-1 text-center bg-paper-deep border border-rule focus:border-ink outline-none py-4 font-display font-bold text-2xl text-ink transition-colors"
+                      />
+                    ))}
                   </div>
-                </div>
-
-                <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </button>
-              </form>
-
-              <div className="auth-footer">
-                <p>Already have an account? <Link href="/login">Login</Link></p>
-              </div>
+                  <button type="submit" className="cta w-full justify-center !py-4">Verify & Create Account</button>
+                  <button type="button" onClick={() => setStep('details')} className="block w-full text-center mono-label mt-4 hover:text-ink">
+                    ← Edit details
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
       </main>
-
-      <Footer />
     </>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, type = 'text' }) {
+  return (
+    <div>
+      <label className="mono-label block mb-2">{label}</label>
+      <input
+        type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full bg-paper-deep border border-rule focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
+      />
+    </div>
   );
 }

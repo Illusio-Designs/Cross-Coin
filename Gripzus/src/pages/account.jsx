@@ -1,233 +1,133 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useState } from 'react';
 import Head from 'next/head';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { useAuth } from '../context/AuthContext';
+import Link from 'next/link';
+import PageHero from '../components/common/PageHero';
 
-export default function Account() {
-  const router = useRouter();
-  const { user, loading, logout, isAuthenticated, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: '',
-    email: '',
-    currentPassword: '',
-    newPassword: ''
-  });
-  const [editError, setEditError] = useState('');
+const TABS = [
+  { key: 'orders',    label: 'Orders' },
+  { key: 'addresses', label: 'Addresses' },
+  { key: 'details',   label: 'Details' },
+];
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [loading, isAuthenticated, router]);
+const ORDERS = [
+  { id: 'GZ-2026-01284', date: '12 Oct 2026', status: 'Delivered', total: 1098, items: 2 },
+  { id: 'GZ-2026-01199', date: '02 Oct 2026', status: 'Shipped',   total: 599,  items: 1 },
+  { id: 'GZ-2026-01015', date: '14 Sep 2026', status: 'Cancelled', total: 449,  items: 1 },
+];
 
-  useEffect(() => {
-    if (user) {
-      setEditForm({
-        name: user.name,
-        email: user.email,
-        currentPassword: '',
-        newPassword: ''
-      });
-    }
-  }, [user]);
+const ADDRESSES = [
+  { id: 1, name: 'Anika Sharma', line: 'B-202, Pali Hill', city: 'Bandra West, Mumbai 400050', phone: '+91 98201 43210', isDefault: true },
+];
 
-  const handleEditClick = () => {
-    setShowEditModal(true);
-    setEditError('');
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    setEditError('');
-
-    if (!editForm.name || !editForm.email) {
-      setEditError('Name and email are required');
-      return;
-    }
-
-    const result = await updateProfile(editForm);
-    if (result.success) {
-      setShowEditModal(false);
-      setEditForm({ ...editForm, currentPassword: '', newPassword: '' });
-    } else {
-      setEditError(result.error || 'Failed to update profile');
-    }
-  };
-
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <div className="loading-container">
-          <p>Loading...</p>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+export default function AccountPage() {
+  const [tab, setTab] = useState('orders');
 
   return (
     <>
-      <Head>
-        <title>My Account - Gripzus</title>
-        <meta name="description" content="Manage your Gripzus account" />
-      </Head>
+      <Head><title>My Account — Gripzus</title></Head>
+      <main className="bg-paper">
+        <PageHero
+          chapter="08"
+          eyebrow="Welcome back, Anika"
+          title="Your"
+          accent="account."
+          intro="Orders, addresses and details — all in one place."
+        />
 
-      <Header />
+        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
 
-      <main className="account-page">
-        <div className="container">
-          <div className="account-header">
-            <h1>My Account</h1>
-            <button onClick={logout} className="logout-btn">Logout</button>
-          </div>
-
-          <div className="account-layout">
-            <aside className="sidebar">
-              <button 
-                className={activeTab === 'profile' ? 'tab-btn active' : 'tab-btn'}
-                onClick={() => setActiveTab('profile')}
-              >
-                Profile
-              </button>
-              <button 
-                className={activeTab === 'orders' ? 'tab-btn active' : 'tab-btn'}
-                onClick={() => setActiveTab('orders')}
-              >
-                Orders
-              </button>
-              <button 
-                className={activeTab === 'addresses' ? 'tab-btn active' : 'tab-btn'}
-                onClick={() => setActiveTab('addresses')}
-              >
-                Addresses
-              </button>
-            </aside>
-
-            <div className="content">
-              {activeTab === 'profile' && (
-                <div className="tab-content">
-                  <div className="content-header">
-                    <h2>Profile Information</h2>
-                    <button onClick={handleEditClick} className="edit-btn">Edit</button>
-                  </div>
-                  <div className="info-grid">
-                    <div className="info-item">
-                      <label>Name</label>
-                      <p>{user.name}</p>
-                    </div>
-                    <div className="info-item">
-                      <label>Email</label>
-                      <p>{user.email}</p>
-                    </div>
-                    <div className="info-item">
-                      <label>Member Since</label>
-                      <p>{new Date(user.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'orders' && (
-                <div className="tab-content">
-                  <h2>My Orders</h2>
-                  <div className="empty-state">
-                    <p>No orders yet</p>
-                    <a href="/products/all">Start Shopping</a>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'addresses' && (
-                <div className="tab-content">
-                  <h2>My Addresses</h2>
-                  <div className="empty-state">
-                    <p>No addresses saved</p>
-                  </div>
-                </div>
-              )}
+          {/* Profile bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-ink p-6 md:p-7 mb-8">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-ink text-paper flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
+              </div>
+              <div>
+                <h2 className="font-display uppercase text-ink text-xl md:text-2xl tracking-[-0.02em] leading-none" style={{ fontWeight: 700 }}>Anika Sharma</h2>
+                <p className="mono-label mt-1.5">anika@example.com · +91 98201 43210</p>
+              </div>
             </div>
+            <button className="mono-label border border-rule hover:border-ink py-3 px-5 transition-colors text-center">Sign Out</button>
           </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 mb-8 border-b border-rule">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors border-b-2 -mb-px ${
+                  tab === t.key ? 'border-saffron text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'orders' && (
+            <div className="border-t border-rule">
+              {ORDERS.map((o) => (
+                <div key={o.id} className="grid grid-cols-12 gap-4 md:gap-8 py-6 border-b border-rule items-center">
+                  <div className="col-span-12 md:col-span-4">
+                    <p className="mono-label mb-1">{o.date}</p>
+                    <p className="font-display uppercase text-ink text-lg md:text-xl tracking-[-0.02em]" style={{ fontWeight: 700 }}>#{o.id}</p>
+                  </div>
+                  <p className="col-span-6 md:col-span-3 mono-label">{o.items} item{o.items === 1 ? '' : 's'}</p>
+                  <p className="col-span-6 md:col-span-2 font-display font-bold text-ink text-lg">₹{o.total.toLocaleString('en-IN')}</p>
+                  <div className="col-span-12 md:col-span-3 flex items-center justify-between md:justify-end gap-4">
+                    <span className={`font-mono text-[10px] tracking-[0.2em] uppercase px-2.5 py-1 ${
+                      o.status === 'Delivered' ? 'bg-ink text-paper' :
+                      o.status === 'Cancelled' ? 'border border-rule text-ink-muted' :
+                      'bg-saffron text-paper'
+                    }`}>{o.status}</span>
+                    <Link href="/track-order" className="mono-label text-saffron-deep hover:text-ink">Track →</Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === 'addresses' && (
+            <div className="space-y-4">
+              <button className="w-full border border-dashed border-rule hover:border-ink py-5 mono-label hover:text-ink transition-colors">
+                + Add new address
+              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ADDRESSES.map((a) => (
+                  <div key={a.id} className="border border-rule p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 700 }}>{a.name}</p>
+                      {a.isDefault && <span className="font-mono text-[9px] tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
+                    </div>
+                    <p className="prose-body text-sm">{a.line}<br />{a.city}</p>
+                    <p className="mono-label mt-2">{a.phone}</p>
+                    <div className="flex gap-4 mt-4 pt-4 border-t border-rule">
+                      <button className="mono-label hover:text-ink">Edit</button>
+                      <button className="mono-label hover:text-saffron-deep">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === 'details' && (
+            <div className="border border-rule p-7 md:p-8 max-w-2xl">
+              <p className="eyebrow mb-6">Personal details</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[['Name', 'Anika Sharma'], ['Email', 'anika@example.com'], ['Phone', '+91 98201 43210']].map(([k, v]) => (
+                  <div key={k}>
+                    <p className="mono-label mb-1.5">{k}</p>
+                    <p className="text-ink text-sm">{v}</p>
+                  </div>
+                ))}
+              </div>
+              <button className="cta mt-8">Edit profile</button>
+            </div>
+          )}
         </div>
       </main>
-
-      {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Edit Profile</h2>
-              <button onClick={() => setShowEditModal(false)} className="close-btn">×</button>
-            </div>
-            <form onSubmit={handleEditSubmit}>
-              {editError && <div className="error-msg">{editError}</div>}
-              <div className="form-group">
-                <label>Name</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New Password (Optional)</label>
-                <div className="password-input">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={editForm.newPassword}
-                    onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                    placeholder="Leave blank to keep current"
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowEditModal(false)} className="cancel-btn">
-                  Cancel
-                </button>
-                <button type="submit" className="save-btn">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <Footer />
     </>
   );
 }

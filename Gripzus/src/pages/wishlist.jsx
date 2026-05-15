@@ -1,38 +1,42 @@
 import Head from 'next/head';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import Link from 'next/link';
+import PageHero from '../components/common/PageHero';
+import ProductCard from '../components/products/ProductCard';
 
-export default function Wishlist() {
+const ITEMS = [
+  { id: '1', name: 'Performance Trail', slug: 'performance-trail', collection: 'Athletic', price: 599, salePrice: 449, badge: 'Bestseller', images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=900&q=80&auto=format&fit=crop','https://images.unsplash.com/photo-1604644401890-0bd678c83788?w=900&q=80&auto=format&fit=crop'] },
+  { id: '4', name: 'Merino Forest',     slug: 'merino-forest',     collection: 'Wool',     price: 899, salePrice: 649, badge: 'Limited', images: ['https://images.unsplash.com/photo-1577538928305-3807c3993047?w=900&q=80&auto=format&fit=crop','https://images.unsplash.com/photo-1583500178690-f0d24cb16eaf?w=900&q=80&auto=format&fit=crop'] },
+  { id: '7', name: 'Mountain Wool',     slug: 'mountain-wool',     collection: 'Wool',     price: 999, images: ['https://images.unsplash.com/photo-1583500178690-f0d24cb16eaf?w=900&q=80&auto=format&fit=crop'] },
+];
+
+export default function WishlistPage() {
+  const empty = ITEMS.length === 0;
   return (
     <>
-      <Head>
-        <title>My Wishlist - Gripzus</title>
-        <meta name="description" content="View your saved items" />
-      </Head>
+      <Head><title>Your Wishlist — Gripzus</title></Head>
+      <main className="bg-paper">
+        <PageHero
+          chapter="06"
+          eyebrow="Saved for later"
+          title="Your"
+          accent="wishlist."
+          intro={empty ? 'Tap the heart on any pair to keep it here for later.' : `${ITEMS.length} pair${ITEMS.length === 1 ? '' : 's'} kept aside.`}
+        />
 
-      <Header />
-
-      <main className="main">
-        <section className="section">
-          <div className="container">
-            <div className="sectionHeader">
-              <div>
-                <h1 className="sectionTitle">My Wishlist</h1>
-              </div>
+        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
+          {empty ? (
+            <div className="text-center py-24 border border-rule max-w-xl mx-auto">
+              <p className="h-display text-3xl uppercase mb-3">Nothing saved yet</p>
+              <p className="prose-body text-sm mb-7">Start with a pair from the catalogue.</p>
+              <Link href="/products" className="cta inline-flex">Open the catalogue</Link>
             </div>
-            <div style={{ textAlign: 'center', padding: 'var(--spacing-4xl) 0' }}>
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto var(--spacing-lg)' }}>
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="var(--color-primary)" strokeWidth="2" fill="none"/>
-              </svg>
-              <p style={{ fontSize: 'var(--font-size-lg)', color: 'var(--text-secondary)' }}>
-                Your wishlist is empty
-              </p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+              {ITEMS.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
             </div>
-          </div>
-        </section>
+          )}
+        </div>
       </main>
-
-      <Footer />
     </>
   );
 }
