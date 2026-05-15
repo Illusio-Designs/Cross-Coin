@@ -1,146 +1,197 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import ProductCard from '../components/ProductCard';
+import PageHero from '../components/common/PageHero';
+import ProductCard from '../components/products/ProductCard';
+import FilterDrawer from '../components/products/FilterDrawer';
 
-export default function Collections() {
-  const router = useRouter();
-  const { filter } = router.query;
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('featured');
+/* Custom sort dropdown — site-coloured, replaces the native <select>. */
+function SortDropdown({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
   useEffect(() => {
-    if (filter) {
-      setActiveFilter(filter);
-    }
-  }, [filter]);
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
 
-  // All products data
-  const allProducts = [
-    // Men's Socks
-    { id: 1, name: 'Classic Dress Socks', price: 24.99, images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800', 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800'], category: 'men', badge: 'Bestseller', slug: 'classic-dress-socks' },
-    { id: 2, name: 'Athletic Performance', price: 29.99, images: ['https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800', 'https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800'], category: 'men', slug: 'athletic-performance' },
-    { id: 3, name: 'Casual Crew Socks', price: 19.99, images: ['https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800', 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'], category: 'men', slug: 'casual-crew-socks' },
-    { id: 4, name: 'Winter Wool Blend', price: 34.99, images: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800', 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800'], category: 'men', badge: 'New', slug: 'winter-wool-blend' },
-    
-    // Women's Socks
-    { id: 5, name: 'Ankle Socks Set', price: 22.99, images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800', 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800'], category: 'women', badge: 'New', slug: 'ankle-socks-set' },
-    { id: 6, name: 'Knee High Socks', price: 27.99, images: ['https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800', 'https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800'], category: 'women', slug: 'knee-high-socks' },
-    { id: 7, name: 'Compression Socks', price: 42.99, salePrice: 32.99, images: ['https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800', 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'], category: 'women', badge: 'Sale', slug: 'compression-socks' },
-    { id: 8, name: 'Cozy Knit Socks', price: 29.99, images: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800', 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800'], category: 'women', slug: 'cozy-knit-socks' },
-    
-    // Accessories (Kids)
-    { id: 9, name: 'Fun Pattern Kids', price: 18.99, images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800', 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800'], category: 'accessories', badge: 'Bestseller', slug: 'fun-pattern-kids' },
-    { id: 10, name: 'School Socks Pack', price: 24.99, images: ['https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800', 'https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800'], category: 'accessories', slug: 'school-socks-pack' },
-    { id: 11, name: 'Sports Socks Kids', price: 28.99, salePrice: 21.99, images: ['https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800', 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'], category: 'accessories', badge: 'Sale', slug: 'sports-socks-kids' },
-    { id: 12, name: 'Character Socks', price: 26.99, images: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800', 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800'], category: 'accessories', slug: 'character-socks' },
-    
-    // New Arrivals
-    { id: 13, name: 'Premium Merino Wool', price: 39.99, images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800', 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800'], category: 'new-arrivals', badge: 'New', slug: 'premium-merino-wool' },
-    { id: 14, name: 'Bamboo Fiber Socks', price: 32.99, images: ['https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800', 'https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800'], category: 'new-arrivals', badge: 'New', slug: 'bamboo-fiber-socks' },
-    
-    // Sale
-    { id: 15, name: 'Cotton Blend Pack', price: 49.99, salePrice: 29.99, images: ['https://images.unsplash.com/photo-1581101767113-1677fc2beaa8?w=800', 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800'], category: 'sale', badge: 'Sale', slug: 'cotton-blend-pack' },
-    { id: 16, name: 'Athletic Bundle', price: 59.99, salePrice: 39.99, images: ['https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800', 'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=800'], category: 'sale', badge: 'Sale', slug: 'athletic-bundle' },
-  ];
+  const current = options.find((o) => o.value === value) || options[0];
 
-  // Filter products
-  const filteredProducts = activeFilter === 'all' 
-    ? allProducts 
-    : allProducts.filter(product => product.category === activeFilter);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2.5 border border-line hover:border-ink rounded-full pl-4 pr-3 py-2 text-[12px] bg-paper transition-colors"
+      >
+        <span className="text-ink-muted">Sort</span>
+        <span className="text-ink">{current.label}</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          className={`text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-48 bg-paper border border-line rounded-lg shadow-card py-1.5 z-30">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false); }}
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-[13px] text-left transition-colors ${
+                o.value === value ? 'text-ink bg-paper-warm' : 'text-ink-soft hover:bg-paper-warm hover:text-ink'
+              }`}
+            >
+              {o.label}
+              {o.value === value && (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-clay"><polyline points="20 6 9 17 4 12" /></svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch(sortBy) {
-      case 'price-low':
-        return a.price - b.price;
-      case 'price-high':
-        return b.price - a.price;
-      case 'name':
-        return a.name.localeCompare(b.name);
-      default:
-        return 0;
-    }
-  });
+const CATEGORIES = [
+  { value: 'athletic', label: 'Athletic' },
+  { value: 'dress',    label: 'Dress' },
+  { value: 'casual',   label: 'Casual' },
+  { value: 'wool',     label: 'Wool' },
+];
 
-  const filters = [
-    { id: 'all', label: 'All Products', count: allProducts.length },
-    { id: 'men', label: "Men's Socks", count: allProducts.filter(p => p.category === 'men').length },
-    { id: 'women', label: "Women's Socks", count: allProducts.filter(p => p.category === 'women').length },
-    { id: 'accessories', label: 'Kids Socks', count: allProducts.filter(p => p.category === 'accessories').length },
-    { id: 'new-arrivals', label: 'New Arrivals', count: allProducts.filter(p => p.category === 'new-arrivals').length },
-    { id: 'sale', label: 'Sale', count: allProducts.filter(p => p.category === 'sale').length },
-  ];
+const SORTS = [
+  { value: 'featured',   label: 'Featured' },
+  { value: 'newest',     label: 'Newest' },
+  { value: 'price-asc',  label: 'Price ↑' },
+  { value: 'price-desc', label: 'Price ↓' },
+];
+
+const EMPTY_DRAFT = { categories: [], priceMin: '', priceMax: '', sizes: [] };
+
+export default function ProductsPage() {
+  const [chip, setChip]   = useState('all');
+  const [sort, setSort]   = useState('featured');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [filters, setFilters] = useState(EMPTY_DRAFT);
+
+  const filtered = useMemo(() => {
+    let list = [...ALL_PRODUCTS];
+    if (chip !== 'all') list = list.filter((p) => p.category === chip);
+    if (filters.categories.length) list = list.filter((p) => filters.categories.includes(p.category));
+    const min = Number(filters.priceMin) || 0;
+    const max = Number(filters.priceMax) || Infinity;
+    list = list.filter((p) => { const pr = p.salePrice ?? p.price; return pr >= min && pr <= max; });
+    if (sort === 'price-asc')  list.sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price));
+    if (sort === 'price-desc') list.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? a.price));
+    if (sort === 'newest')     list.reverse();
+    return list;
+  }, [chip, sort, filters]);
+
+  const draftCount = useMemo(() => {
+    let list = [...ALL_PRODUCTS];
+    if (chip !== 'all') list = list.filter((p) => p.category === chip);
+    if (draft.categories.length) list = list.filter((p) => draft.categories.includes(p.category));
+    const min = Number(draft.priceMin) || 0;
+    const max = Number(draft.priceMax) || Infinity;
+    list = list.filter((p) => { const pr = p.salePrice ?? p.price; return pr >= min && pr <= max; });
+    return list.length;
+  }, [chip, draft]);
+
+  const activeFilterCount =
+    filters.categories.length + filters.sizes.length +
+    (filters.priceMin ? 1 : 0) + (filters.priceMax ? 1 : 0);
+
+  const openDrawer  = () => { setDraft(filters); setDrawerOpen(true); };
+  const applyDrawer = () => { setFilters(draft); setDrawerOpen(false); };
+  const clearDrawer = () => { setDraft(EMPTY_DRAFT); setFilters(EMPTY_DRAFT); };
 
   return (
     <>
-      <Head>
-        <title>Products - Gripzus</title>
-        <meta name="description" content="Browse our complete collection of premium socks" />
-      </Head>
+      <Head><title>All Pairs — Gripzus</title></Head>
 
-      <Header />
+      <PageHero
+        eyebrow="The Catalogue"
+        title="Every"
+        accent="pair."
+        intro="The full Gripzus archive — knit small-batch from combed cotton, merino and recycled nylon."
+      />
 
-      <main className="collectionsPage">
-        {/* Hero Section */}
-        <section className="collectionsHero">
-          <div className="container">
-            <h1>Our Products</h1>
-            <p>Premium comfort for every step</p>
-          </div>
-        </section>
+      {/* Feature strip */}
+      <div className="bg-ink text-paper">
+        <div className="wrap py-2.5 flex items-center justify-center gap-6 text-[11px] tracking-[0.12em] uppercase">
+          <span>Free shipping over ₹999</span>
+          <span className="text-clay">·</span>
+          <span className="hidden sm:inline">New drops every month</span>
+          <span className="hidden sm:inline text-clay">·</span>
+          <span>Knit small-batch in India</span>
+        </div>
+      </div>
 
-        {/* Filters & Products */}
-        <section className="collectionsContent">
-          <div className="container">
-            {/* Filter Bar */}
-            <div className="filterBar">
-              <div className="filterTabs">
-                {filters.map(filter => (
-                  <button
-                    key={filter.id}
-                    className={`filterTab ${activeFilter === filter.id ? 'active' : ''}`}
-                    onClick={() => setActiveFilter(filter.id)}
-                  >
-                    {filter.label}
-                    <span className="filterCount">({filter.count})</span>
-                  </button>
-                ))}
-              </div>
+      <section className="section-y">
+        <div className="wrap">
 
-              <div className="sortDropdown">
-                <label htmlFor="sort">Sort by:</label>
-                <select 
-                  id="sort" 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-5 border-b border-line">
+            <div className="flex flex-wrap items-center gap-2">
+              {[{ value: 'all', label: 'All' }, ...CATEGORIES].map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setChip(c.value)}
+                  className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
+                    chip === c.value
+                      ? 'bg-ink text-paper border-ink'
+                      : 'border-line text-ink-soft hover:border-ink hover:text-ink'
+                  }`}
                 >
-                  <option value="featured">Featured</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="name">Name: A to Z</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Products Grid */}
-            <div className="productsGrid">
-              {sortedProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
+                  {c.label}
+                </button>
               ))}
             </div>
 
-            {/* Results Info */}
-            <div className="resultsInfo">
-              Showing {sortedProducts.length} of {allProducts.length} products
+            <div className="flex items-center gap-3">
+              <SortDropdown value={sort} onChange={setSort} options={SORTS} />
+
+              <button
+                onClick={openDrawer}
+                className="flex items-center gap-2 px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border border-ink hover:bg-ink hover:text-paper transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" /></svg>
+                Refine
+                {activeFilterCount > 0 && (
+                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-paper text-[10px] font-semibold flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
-        </section>
-      </main>
 
-      <Footer />
+          {/* Grid */}
+          {filtered.length === 0 ? (
+            <div className="text-center py-24 border border-line rounded-lg">
+              <p className="h-display text-3xl mb-3">No pairs match your filters</p>
+              <button onClick={() => { setChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
+              {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <FilterDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        categories={CATEGORIES}
+        draft={draft}
+        setDraft={setDraft}
+        onApply={applyDrawer}
+        onClear={clearDrawer}
+        resultCount={draftCount}
+      />
     </>
   );
 }
