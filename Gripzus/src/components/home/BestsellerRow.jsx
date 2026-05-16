@@ -36,7 +36,7 @@ export default function BestsellerRow({
                   <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
                 </div>
               ))
-            : products.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)}
+            : products.slice(0, 4).map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
 
         <div className="mt-10 sm:hidden">

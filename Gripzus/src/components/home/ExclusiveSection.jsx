@@ -14,11 +14,12 @@ const FALLBACK = [
 ];
 
 export default function ExclusiveSection({ products = FALLBACK }) {
-  const list = products.length ? products : FALLBACK;
+  const productsList = (products.length ? products : FALLBACK).slice(0, 4);
   const [active, setActive] = useState(0);
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
-  const p = list[active];
+  const activeIndex = Math.min(active, productsList.length - 1);
+  const p = productsList[activeIndex];
 
   const handleAdd = () => {
     addItem({
@@ -29,88 +30,89 @@ export default function ExclusiveSection({ products = FALLBACK }) {
     setTimeout(() => setAdded(false), 1800);
   };
 
+  const selectItem = (index) => {
+    setActive(index);
+    setAdded(false);
+  };
+
   return (
     <section className="section-y bg-ink text-paper">
       <div className="wrap">
 
-        {/* Heading */}
-        <div className="flex items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-3">
-              <span className="w-8 h-px bg-clay" />
+              <span className="w-10 h-px bg-clay" />
               <p className="eyebrow text-clay">The Reserve</p>
             </div>
-            <h2 className="h-display text-paper text-3xl md:text-5xl">
-              Pieces kept <span className="h-italic" style={{ color: 'var(--clay)' }}>aside.</span>
+            <h2 className="h-display text-paper text-3xl md:text-5xl tracking-[-0.03em]">
+              A curated edit of rare pairs.
             </h2>
+            <p className="mt-5 max-w-2xl text-paper/65 text-sm md:text-base leading-relaxed">
+              Limited-run styles selected for seasonless wear. Each pair is shown in its best light with a quiet, premium finish.
+            </p>
           </div>
+
           <Link href="/products?sort=bestsellers" className="hidden sm:inline-flex btn-light">View all</Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-stretch">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.7fr_1fr] items-start">
 
-          {/* Active product image */}
-          <div className="relative">
-            <span className="absolute top-4 left-4 z-10 bg-clay text-paper text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 rounded-sm">
-              Limited run
-            </span>
-            <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full min-h-[320px] overflow-hidden rounded-xl bg-paper/5">
-              {list.map((item, i) => (
-                <img
-                  key={item.id}
-                  src={item.image}
-                  alt={item.name}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-                    i === active ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-              ))}
+          <div className="relative overflow-hidden rounded-[2rem] border border-paper/10 bg-paper/5 min-h-[520px]">
+            <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />
+            <div className="absolute left-6 bottom-6 right-6 text-paper">
+              <p className="eyebrow text-paper/70 uppercase tracking-[0.24em] mb-3">Selected drop</p>
+              <h3 className="text-5xl md:text-6xl leading-tight">{p.name}</h3>
             </div>
           </div>
 
-          {/* Picker + active detail */}
-          <div className="flex flex-col">
-            {/* Selectable list */}
-            <ol className="border-t border-paper/15">
-              {list.map((item, i) => (
-                <li key={item.id}>
-                  <button
-                    onClick={() => setActive(i)}
-                    className={`flex w-full items-center gap-4 py-4 border-b border-paper/15 text-left transition-opacity ${
-                      i === active ? 'opacity-100' : 'opacity-50 hover:opacity-90'
-                    }`}
-                  >
-                    <span className="font-display text-paper/50 text-sm w-7 shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="h-display text-paper text-xl md:text-2xl block leading-tight">{item.name}</span>
-                      <span className="eyebrow text-paper/40">{item.collection}</span>
-                    </span>
-                    <span className={`h-display text-lg ${i === active ? 'text-clay' : 'text-paper/60'}`}>
-                      ₹{Number(item.price).toLocaleString('en-IN')}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
+          <div className="flex flex-col gap-8">
+            <div className="rounded-[1.75rem] border border-paper/10 bg-paper/5 p-8">
+              <p className="eyebrow text-clay mb-3 uppercase tracking-[0.24em]">{p.collection}</p>
+              <h3 className="text-4xl md:text-5xl font-display text-paper leading-tight mb-5">{p.name}</h3>
+              <p className="text-paper/65 leading-relaxed mb-8">{p.note}</p>
 
-            {/* Active detail */}
-            <div className="mt-7">
-              <p className="text-paper/65 text-sm md:text-base leading-relaxed mb-6 max-w-md">{p.note}</p>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-5">
+                <span className="text-3xl font-semibold text-paper">₹{Number(p.price).toLocaleString('en-IN')}</span>
+                <span className="eyebrow text-paper/50 uppercase tracking-[0.25em]">Limited quantity</span>
+              </div>
+
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   onClick={handleAdd}
-                  className={`btn-light ${added ? '!bg-clay !border-clay !text-paper' : ''}`}
+                  className={`btn-light w-full sm:w-auto ${added ? '!bg-clay !border-clay !text-paper' : ''}`}
                 >
-                  {added ? 'Added to bag ✓' : `Add to bag · ₹${Number(p.price).toLocaleString('en-IN')}`}
+                  {added ? 'Added to bag ✓' : 'Add to bag'}
                 </button>
                 <Link
                   href={`/products/${p.slug}`}
-                  className="btn-outline"
-                  style={{ color: 'var(--paper)', borderColor: 'rgba(255,255,255,0.4)' }}
+                  className="btn-outline w-full sm:w-auto text-center"
+                  style={{ color: 'var(--paper)', borderColor: 'rgba(255,255,255,0.35)' }}
                 >
                   View details
                 </Link>
               </div>
+            </div>
+
+            <div className="grid gap-4">
+              {productsList.map((item, index) => (
+                <button
+                  key={item.id}
+                  onClick={() => selectItem(index)}
+                  className={`flex items-center gap-4 rounded-3xl border px-5 py-4 text-left transition-all ${
+                    index === activeIndex ? 'border-clay bg-paper/5' : 'border-paper/10 hover:border-paper/40'
+                  }`}
+                >
+                  <div className="h-16 w-16 overflow-hidden rounded-3xl border border-paper/10">
+                    <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display text-sm text-paper leading-tight">{item.name}</p>
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-paper/50 mt-1">{item.collection}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </div>
