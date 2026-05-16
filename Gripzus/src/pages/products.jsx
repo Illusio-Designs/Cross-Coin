@@ -3,6 +3,7 @@ import Head from 'next/head';
 import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import FilterDrawer from '../components/products/FilterDrawer';
+import { PRODUCTS } from '../data/products';
 
 /* Custom sort dropdown — site-coloured, replaces the native <select>. */
 function SortDropdown({ value, onChange, options }) {
@@ -77,7 +78,7 @@ export default function ProductsPage() {
   const [filters, setFilters] = useState(EMPTY_DRAFT);
 
   const filtered = useMemo(() => {
-    let list = [...ALL_PRODUCTS];
+    let list = [...PRODUCTS];
     if (chip !== 'all') list = list.filter((p) => p.category === chip);
     if (filters.categories.length) list = list.filter((p) => filters.categories.includes(p.category));
     const min = Number(filters.priceMin) || 0;
@@ -90,7 +91,7 @@ export default function ProductsPage() {
   }, [chip, sort, filters]);
 
   const draftCount = useMemo(() => {
-    let list = [...ALL_PRODUCTS];
+    let list = [...PRODUCTS];
     if (chip !== 'all') list = list.filter((p) => p.category === chip);
     if (draft.categories.length) list = list.filter((p) => draft.categories.includes(p.category));
     const min = Number(draft.priceMin) || 0;
