@@ -21,7 +21,6 @@ export default function AboutPage() {
       <Head><title>About — Gripzus</title></Head>
       <main className="bg-paper">
 
-        {/* Hero — dark, cinematic */}
         <section className="relative overflow-hidden bg-ink text-paper">
           <div className="paper-grain" />
           <div className="relative max-w-site mx-auto px-6 md:px-12 lg:px-20 pt-20 md:pt-28 pb-16 md:pb-24">
@@ -46,7 +45,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Atelier image strip */}
         <section className="relative aspect-[21/9] md:aspect-[21/7] overflow-hidden bg-paper-deep">
           <img
             src="https://images.unsplash.com/photo-1604644401890-0bd678c83788?w=1800&q=85&auto=format&fit=crop"
@@ -55,7 +53,6 @@ export default function AboutPage() {
           />
         </section>
 
-        {/* Who we are */}
         <section className="py-20 md:py-28">
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 grid grid-cols-12 gap-10 md:gap-16">
             <div className="col-span-12 md:col-span-5">
@@ -79,7 +76,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Values */}
         <section className="bg-ink text-paper py-20 md:py-28">
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20">
             <div className="mb-14">
@@ -100,7 +96,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Timeline */}
         <section className="py-20 md:py-28">
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20">
             <div className="mb-14">
@@ -119,12 +114,9 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* CTA band */}
-        <section className="bg-paper-deep border-t border-rule py-16 md:py-20">
+        <section className="bg-paper-warm border-t border-line py-16 md:py-20">
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 flex flex-col md:flex-row items-center justify-between gap-7">
-            <h3 className="h-display text-3xl md:text-5xl text-center md:text-left">
-              Wear the difference <em className="h-italic">for yourself.</em>
-            </h3>
+            <h3 className="h-display text-3xl md:text-5xl text-center md:text-left">Wear the difference <em className="h-italic">for yourself.</em></h3>
             <Link href="/products" className="cta shrink-0">Open the catalogue</Link>
           </div>
         </section>

@@ -26,7 +26,7 @@ export default function JournalPost({ post, related }) {
         <header className="bg-paper-warm border-b border-line">
           <div className="wrap py-14 md:py-20 text-center">
             <p className="eyebrow mb-5">{post.category}</p>
-            <h1 className="h-display text-3xl md:text-5xl lg:text-6xl max-w-4xl mx-auto leading-[1.05]">
+            <h1 className="h-display text-3xl md:text-5xl lg:text-6xl leading-[1.05]">
               {post.title}
             </h1>
             {/* Byline */}
@@ -49,12 +49,12 @@ export default function JournalPost({ post, related }) {
 
         {/* Body — readable measure, centered inside the full-width wrap */}
         <div className="wrap py-12 md:py-16">
-          <div className="max-w-[680px] mx-auto">
+          <div className="max-w-none mx-auto">
             <p className="h-display text-xl md:text-2xl text-ink leading-snug mb-8">{post.excerpt}</p>
             {post.body.map((para, i) => (
               <p key={i} className="prose-body text-base md:text-lg mb-5">{para}</p>
             ))}
-            <div className="mt-10 pt-8 border-t border-line flex items-center justify-between gap-4">
+            <div className="mt-10 pt-8 border-t border-line flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <Link href="/journal" className="btn-outline inline-flex">← All stories</Link>
               <p className="text-sm text-ink-muted">Written by <span className="text-ink">{post.author}</span></p>
             </div>

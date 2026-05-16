@@ -74,23 +74,25 @@ export default function PolicyPage() {
       <main className="bg-paper">
         <PageHero eyebrow={policy.eyebrow} title={policy.title} accent={policy.accent} intro={policy.intro} />
 
-        <article className="max-w-3xl mx-auto px-6 md:px-12 py-16 md:py-24">
-          {policy.sections.map((s, i) => (
-            <section key={i} className={`grid grid-cols-12 gap-4 md:gap-8 ${i > 0 ? 'mt-12 pt-12 border-t border-rule' : ''}`}>
-              <div className="col-span-12 md:col-span-3">
-                <span className="mono-label text-saffron">{String(i + 1).padStart(2, '0')}</span>
-              </div>
-              <div className="col-span-12 md:col-span-9">
-                <h2 className="font-display uppercase text-ink text-xl md:text-2xl tracking-[-0.02em] mb-3" style={{ fontWeight: 700 }}>{s.h}</h2>
-                <p className="prose-body text-base">{s.p}</p>
-              </div>
-            </section>
-          ))}
+        <div className="wrap">
+          <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-24">
+            {policy.sections.map((s, i) => (
+              <section key={i} className={`grid grid-cols-12 gap-4 md:gap-8 ${i > 0 ? 'mt-12 pt-12 border-t border-rule' : ''}`}>
+                <div className="col-span-12 md:col-span-3">
+                  <span className="mono-label text-saffron">{String(i + 1).padStart(2, '0')}</span>
+                </div>
+                <div className="col-span-12 md:col-span-9">
+                  <h2 className="font-display uppercase text-ink text-xl md:text-2xl tracking-[-0.02em] mb-3" style={{ fontWeight: 700 }}>{s.h}</h2>
+                  <p className="prose-body text-base text-justify">{s.p}</p>
+                </div>
+              </section>
+            ))}
 
-          <p className="mono-label mt-16 pt-8 border-t border-rule">
-            Updated · May 2026 — questions? <a href="mailto:support@gripzus.com" className="text-saffron-deep underline underline-offset-4 hover:text-ink">support@gripzus.com</a>
-          </p>
-        </article>
+            <p className="mono-label mt-16 pt-8 border-t border-rule text-justify">
+              Updated · May 2026 — questions? <a href="mailto:support@gripzus.com" className="text-saffron-deep underline underline-offset-4 hover:text-ink">support@gripzus.com</a>
+            </p>
+          </div>
+        </div>
       </main>
     </>
   );

@@ -45,7 +45,8 @@ export default function TrackOrderPage() {
           intro="Enter your order number to see exactly where your pair is in transit."
         />
 
-        <div className="max-w-3xl mx-auto px-6 md:px-12 py-12 md:py-16">
+        <div className="wrap">
+          <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
 
           {/* Search form */}
           <form onSubmit={handleTrack} className="bg-paper-deep border border-rule p-6 md:p-7 mb-8">
@@ -72,7 +73,7 @@ export default function TrackOrderPage() {
                   <div>
                     <p className="eyebrow mb-1">Order</p>
                     <h2 className="font-display text-ink text-2xl md:text-3xl uppercase">#{data.orderNumber}</h2>
-                    <p className="text-ink-muted text-xs mt-2 tracking-wider">
+                    <p className="text-ink-muted text-xs mt-2 tracking-wider text-justify">
                       {data.placedAt} · {data.items} item{data.items === 1 ? '' : 's'} · ₹{data.total.toLocaleString('en-IN')}
                     </p>
                   </div>
@@ -125,11 +126,12 @@ export default function TrackOrderPage() {
               <section className="bg-paper-deep border border-rule p-6 md:p-7">
                 <p className="eyebrow mb-1">Deliver to</p>
                 <h3 className="font-display text-ink text-2xl uppercase mb-3">Address</h3>
-                <p className="text-ink-soft text-sm">{data.address}</p>
+                <p className="text-ink-soft text-sm text-justify">{data.address}</p>
               </section>
             </div>
           )}
         </div>
+      </div>
       </main>
     </>
   );
