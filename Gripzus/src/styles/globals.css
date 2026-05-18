@@ -10,17 +10,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --ink:        #141414;
-  --ink-soft:   #444444;
-  --ink-muted:  #8A8A8A;
+  /* Strict black & white / greyscale */
+  --ink:        #111111;
+  --ink-soft:   #555555;
+  --ink-muted:  #999999;
 
   --paper:      #FFFFFF;
-  --paper-warm: #F7F5F1;
-  --paper-deep: #EFEBE4;
-  --line:       #E5E2DC;
+  --paper-warm: #F4F4F4;
+  --paper-deep: #EAEAEA;
+  --line:       #E2E2E2;
 
-  --clay:       #A8442A;
-  --clay-deep:  #7E3019;
+  /* Accent token kept for legacy classes — collapses to black */
+  --clay:       #111111;
+  --clay-deep:  #000000;
 
   --font-display: 'Newsreader', Georgia, serif;
   --font-body:    'Inter', system-ui, sans-serif;
@@ -102,7 +104,7 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   border-radius: 2px;
   transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
-.btn:hover { background: var(--clay); border-color: var(--clay); color: var(--paper); }
+.btn:hover { background: var(--ink-soft); border-color: var(--ink-soft); color: var(--paper); }
 
 /* Outline — hairline on paper */
 .btn-outline {
@@ -142,7 +144,7 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   border-radius: 2px;
   transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
-.btn-light:hover { background: var(--clay); color: var(--paper); border-color: var(--clay); }
+.btn-light:hover { background: var(--paper-deep); color: var(--ink); border-color: var(--paper-deep); }
 
 /* Legacy aliases so older markup keeps working during the rebuild */
 .cta        { @apply btn; }

@@ -22,10 +22,10 @@ const SAMPLE = {
   ],
   sizes: ['S', 'M', 'L', 'XL'],
   colors: [
-    { name: 'Ink',      hex: '#0A0A0A' },
-    { name: 'Oat',      hex: '#D9CDB1' },
-    { name: 'Saffron',  hex: '#C97532' },
-    { name: 'Charcoal', hex: '#3A3A3A' },
+    { name: 'Ink',       hex: '#141414' },
+    { name: 'Charcoal',  hex: '#3A3A3A' },
+    { name: 'Slate',     hex: '#6B6B6B' },
+    { name: 'Chalk',     hex: '#ECECEC' },
   ],
   images: [
     'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=1400&q=85&auto=format&fit=crop',
@@ -60,11 +60,11 @@ export default function ProductDetail() {
 
         {/* Breadcrumb */}
         <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 pt-8">
-          <p className="mono-label">
+          <p className="eyebrow">
             <Link href="/" className="hover:text-ink">Home</Link>
-            <span className="mx-2 text-rule">/</span>
+            <span className="mx-2 text-line">/</span>
             <Link href="/products" className="hover:text-ink">Catalogue</Link>
-            <span className="mx-2 text-rule">/</span>
+            <span className="mx-2 text-line">/</span>
             <span className="text-ink">{product.name}</span>
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function ProductDetail() {
             <div className="md:col-span-7">
               <div className="relative aspect-square bg-paper-deep overflow-hidden">
                 <img src={product.images[activeImg]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
-                <span className="absolute top-5 left-5 mono-label">{product.serial}</span>
+                <span className="absolute top-5 left-5 eyebrow">{product.serial}</span>
               </div>
               <div className="mt-3 grid grid-cols-4 gap-3">
                 {product.images.map((img, i) => (
@@ -97,9 +97,9 @@ export default function ProductDetail() {
             {/* Info */}
             <div className="md:col-span-5">
               <div className="flex items-center justify-between mb-5">
-                <span className="mono-label">{product.collection} · {product.serial}</span>
+                <span className="eyebrow">{product.collection} · {product.serial}</span>
                 {product.salePrice && (
-                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase bg-saffron text-paper px-2 py-0.5">
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase bg-clay text-paper px-2 py-0.5">
                     {discount}% Off
                   </span>
                 )}
@@ -110,15 +110,15 @@ export default function ProductDetail() {
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center gap-0.5">
                   {[1,2,3,4,5].map((s) => (
-                    <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" className={s <= Math.round(product.rating) ? 'text-saffron' : 'text-rule'}>
+                    <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" className={s <= Math.round(product.rating) ? 'text-clay' : 'text-line'}>
                       <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                     </svg>
                   ))}
                 </div>
-                <span className="mono-label">{product.rating} · {product.reviews} reviews</span>
+                <span className="eyebrow">{product.rating} · {product.reviews} reviews</span>
               </div>
 
-              <div className="flex items-baseline gap-3 mb-8 pb-8 border-b border-rule">
+              <div className="flex items-baseline gap-3 mb-8 pb-8 border-b border-line">
                 <span className="font-display font-bold text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
                 {product.salePrice && (
                   <span className="font-mono text-ink-muted text-base line-through">₹{product.price.toLocaleString('en-IN')}</span>
@@ -127,7 +127,7 @@ export default function ProductDetail() {
 
               {/* Colour */}
               <div className="mb-7">
-                <p className="mono-label mb-3">Colour — <span className="text-ink">{color}</span></p>
+                <p className="eyebrow mb-3">Colour — <span className="text-ink">{color}</span></p>
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map((c) => (
                     <button
@@ -135,7 +135,7 @@ export default function ProductDetail() {
                       onClick={() => setColor(c.name)}
                       title={c.name}
                       className={`w-10 h-10 rounded-full border transition-all ${
-                        color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-rule hover:border-ink'
+                        color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
                       }`}
                       style={{ backgroundColor: c.hex }}
                       aria-label={c.name}
@@ -146,14 +146,14 @@ export default function ProductDetail() {
 
               {/* Size */}
               <div className="mb-8">
-                <p className="mono-label mb-3">Size — <span className="text-ink">{size}</span></p>
+                <p className="eyebrow mb-3">Size — <span className="text-ink">{size}</span></p>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((s) => (
                     <button
                       key={s}
                       onClick={() => setSize(s)}
                       className={`min-w-[3.5rem] px-4 py-3 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors ${
-                        size === s ? 'bg-ink text-paper' : 'border border-rule text-ink hover:border-ink'
+                        size === s ? 'bg-ink text-paper' : 'border border-line text-ink hover:border-ink'
                       }`}
                     >
                       {s}
@@ -164,7 +164,7 @@ export default function ProductDetail() {
 
               {/* Qty + actions */}
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex items-center border border-rule">
+                <div className="flex items-center border border-line">
                   <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-deep">−</button>
                   <span className="w-12 text-center font-mono text-sm">{qty}</span>
                   <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-deep">+</button>
@@ -174,7 +174,7 @@ export default function ProductDetail() {
                   onClick={() => setWishlisted((w) => !w)}
                   aria-label="Wishlist"
                   className={`w-12 h-12 border flex items-center justify-center transition-colors ${
-                    wishlisted ? 'bg-ink text-paper border-ink' : 'border-rule text-ink hover:border-ink'
+                    wishlisted ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
                   }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill={wishlisted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
@@ -191,12 +191,12 @@ export default function ProductDetail() {
               </div>
 
               {/* Spec sheet */}
-              <div className="border-t border-rule pt-7">
+              <div className="border-t border-line pt-7">
                 <p className="eyebrow mb-4">Spec sheet</p>
-                <ul className="divide-y divide-rule">
+                <ul className="divide-y divide-line">
                   {product.details.map((d, i) => (
                     <li key={i} className="flex gap-4 py-2.5">
-                      <span className="mono-label text-saffron shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="eyebrow text-clay shrink-0">{String(i + 1).padStart(2, '0')}</span>
                       <span className="text-ink-soft text-sm">{d}</span>
                     </li>
                   ))}
@@ -207,7 +207,7 @@ export default function ProductDetail() {
         </section>
 
         {/* Related */}
-        <section className="bg-paper-deep border-t border-rule py-20 md:py-24">
+        <section className="bg-paper-deep border-t border-line py-20 md:py-24">
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20">
             <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
               <div>

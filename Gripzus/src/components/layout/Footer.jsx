@@ -39,7 +39,7 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div className="col-span-12 md:col-span-6">
-            <p className="eyebrow text-clay mb-5" style={{ color: '#C9856B' }}>The Inner Sole</p>
+            <p className="eyebrow text-paper/50 mb-5">The Inner Sole</p>
             <h3 className="h-display text-paper leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
               Stay <span className="h-italic">in step.</span>
             </h3>

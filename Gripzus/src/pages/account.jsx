@@ -44,20 +44,20 @@ export default function AccountPage() {
               </div>
               <div>
                 <h2 className="font-display uppercase text-ink text-xl md:text-2xl tracking-[-0.02em] leading-none" style={{ fontWeight: 700 }}>Anika Sharma</h2>
-                <p className="mono-label mt-1.5">anika@example.com · +91 98201 43210</p>
+                <p className="eyebrow mt-1.5">anika@example.com · +91 98201 43210</p>
               </div>
             </div>
-            <button className="mono-label border border-rule hover:border-ink py-3 px-5 transition-colors text-center">Sign Out</button>
+            <button className="eyebrow border border-line hover:border-ink py-3 px-5 transition-colors text-center">Sign Out</button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-8 border-b border-rule">
+          <div className="flex gap-1 mb-8 border-b border-line">
             {TABS.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={`px-5 py-3 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors border-b-2 -mb-px ${
-                  tab === t.key ? 'border-saffron text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+                  tab === t.key ? 'border-clay text-ink' : 'border-transparent text-ink-muted hover:text-ink'
                 }`}
               >
                 {t.label}
@@ -66,22 +66,22 @@ export default function AccountPage() {
           </div>
 
           {tab === 'orders' && (
-            <div className="border-t border-rule">
+            <div className="border-t border-line">
               {ORDERS.map((o) => (
-                <div key={o.id} className="grid grid-cols-12 gap-4 md:gap-8 py-6 border-b border-rule items-center">
+                <div key={o.id} className="grid grid-cols-12 gap-4 md:gap-8 py-6 border-b border-line items-center">
                   <div className="col-span-12 md:col-span-4">
-                    <p className="mono-label mb-1">{o.date}</p>
+                    <p className="eyebrow mb-1">{o.date}</p>
                     <p className="font-display uppercase text-ink text-lg md:text-xl tracking-[-0.02em]" style={{ fontWeight: 700 }}>#{o.id}</p>
                   </div>
-                  <p className="col-span-6 md:col-span-3 mono-label">{o.items} item{o.items === 1 ? '' : 's'}</p>
+                  <p className="col-span-6 md:col-span-3 eyebrow">{o.items} item{o.items === 1 ? '' : 's'}</p>
                   <p className="col-span-6 md:col-span-2 font-display font-bold text-ink text-lg">₹{o.total.toLocaleString('en-IN')}</p>
                   <div className="col-span-12 md:col-span-3 flex items-center justify-between md:justify-end gap-4">
                     <span className={`font-mono text-[10px] tracking-[0.2em] uppercase px-2.5 py-1 ${
                       o.status === 'Delivered' ? 'bg-ink text-paper' :
-                      o.status === 'Cancelled' ? 'border border-rule text-ink-muted' :
-                      'bg-saffron text-paper'
+                      o.status === 'Cancelled' ? 'border border-line text-ink-muted' :
+                      'bg-clay text-paper'
                     }`}>{o.status}</span>
-                    <Link href="/track-order" className="mono-label text-saffron-deep hover:text-ink">Track →</Link>
+                    <Link href="/track-order" className="eyebrow text-clay-deep hover:text-ink">Track →</Link>
                   </div>
                 </div>
               ))}
@@ -90,21 +90,21 @@ export default function AccountPage() {
 
           {tab === 'addresses' && (
             <div className="space-y-4">
-              <button className="w-full border border-dashed border-rule hover:border-ink py-5 mono-label hover:text-ink transition-colors">
+              <button className="w-full border border-dashed border-line hover:border-ink py-5 eyebrow hover:text-ink transition-colors">
                 + Add new address
               </button>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {ADDRESSES.map((a) => (
-                  <div key={a.id} className="border border-rule p-6">
+                  <div key={a.id} className="border border-line p-6">
                     <div className="flex items-start justify-between mb-3">
                       <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 700 }}>{a.name}</p>
                       {a.isDefault && <span className="font-mono text-[9px] tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
                     </div>
                     <p className="prose-body text-sm">{a.line}<br />{a.city}</p>
-                    <p className="mono-label mt-2">{a.phone}</p>
-                    <div className="flex gap-4 mt-4 pt-4 border-t border-rule">
-                      <button className="mono-label hover:text-ink">Edit</button>
-                      <button className="mono-label hover:text-saffron-deep">Delete</button>
+                    <p className="eyebrow mt-2">{a.phone}</p>
+                    <div className="flex gap-4 mt-4 pt-4 border-t border-line">
+                      <button className="eyebrow hover:text-ink">Edit</button>
+                      <button className="eyebrow hover:text-clay-deep">Delete</button>
                     </div>
                   </div>
                 ))}
@@ -113,12 +113,12 @@ export default function AccountPage() {
           )}
 
           {tab === 'details' && (
-            <div className="border border-rule p-7 md:p-8 max-w-2xl">
+            <div className="border border-line p-7 md:p-8 max-w-2xl">
               <p className="eyebrow mb-6">Personal details</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[['Name', 'Anika Sharma'], ['Email', 'anika@example.com'], ['Phone', '+91 98201 43210']].map(([k, v]) => (
                   <div key={k}>
-                    <p className="mono-label mb-1.5">{k}</p>
+                    <p className="eyebrow mb-1.5">{k}</p>
                     <p className="text-ink text-sm">{v}</p>
                   </div>
                 ))}

@@ -25,7 +25,7 @@ export default function WishlistPage() {
 
         <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
           {empty ? (
-            <div className="text-center py-24 border border-rule max-w-xl mx-auto">
+            <div className="text-center py-24 border border-line max-w-xl mx-auto">
               <p className="h-display text-3xl uppercase mb-3">Nothing saved yet</p>
               <p className="prose-body text-sm mb-7">Start with a pair from the catalogue.</p>
               <Link href="/products" className="cta inline-flex">Open the catalogue</Link>

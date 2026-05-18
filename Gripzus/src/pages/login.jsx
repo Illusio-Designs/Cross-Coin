@@ -25,9 +25,9 @@ export default function LoginPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" />
             <div className="relative h-full flex flex-col justify-end p-14">
-              <p className="mono-label text-saffron-light mb-4">Members get</p>
+              <p className="eyebrow text-clay mb-4">Members get</p>
               <h2 className="font-display uppercase text-paper leading-[0.9] tracking-[-0.035em]" style={{ fontSize: 'clamp(2.5rem, 4vw, 4rem)', fontWeight: 700 }}>
-                Early access<br /><em className="not-italic font-serif italic font-normal text-saffron-light">to every drop.</em>
+                Early access<br /><em className="not-italic font-serif italic font-normal text-clay">to every drop.</em>
               </h2>
               <p className="text-paper/70 text-sm max-w-sm mt-4">
                 Inner Sole members see new pairs 48 hours before the public, and get the welcome 10%.
@@ -50,28 +50,28 @@ export default function LoginPage() {
                 <form onSubmit={onSendOtp} className="space-y-5">
                   <Field label="Mobile number" value={phone} onChange={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))} placeholder="98201 43210" />
                   <button type="submit" className="cta w-full justify-center !py-4">Send OTP</button>
-                  <p className="text-center mono-label">
+                  <p className="text-center eyebrow">
                     New here?{' '}
-                    <Link href="/register" className="text-saffron-deep hover:text-ink underline underline-offset-4">Create an account</Link>
+                    <Link href="/register" className="text-clay-deep hover:text-ink underline underline-offset-4">Create an account</Link>
                   </p>
                 </form>
               )}
 
               {step === 'otp' && (
                 <form onSubmit={onVerify}>
-                  <p className="mono-label mb-4">Enter the 4-digit code</p>
+                  <p className="eyebrow mb-4">Enter the 4-digit code</p>
                   <div className="flex gap-3 mb-6">
                     {otp.map((d, i) => (
                       <input
                         key={i}
                         type="text" maxLength={1} inputMode="numeric" value={d}
                         onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(-1); const n = [...otp]; n[i] = v; setOtp(n); }}
-                        className="flex-1 text-center bg-paper-deep border border-rule focus:border-ink outline-none py-4 font-display font-bold text-2xl text-ink transition-colors"
+                        className="flex-1 text-center bg-paper-deep border border-line focus:border-ink outline-none py-4 font-display font-bold text-2xl text-ink transition-colors"
                       />
                     ))}
                   </div>
                   <button type="submit" className="cta w-full justify-center !py-4">Verify & Sign In</button>
-                  <button type="button" onClick={() => setStep('phone')} className="block w-full text-center mono-label mt-4 hover:text-ink">
+                  <button type="button" onClick={() => setStep('phone')} className="block w-full text-center eyebrow mt-4 hover:text-ink">
                     ← Use a different number
                   </button>
                 </form>
@@ -87,10 +87,10 @@ export default function LoginPage() {
 function Field({ label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div>
-      <label className="mono-label block mb-2">{label}</label>
+      <label className="eyebrow block mb-2">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full bg-paper-deep border border-rule focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
+        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );

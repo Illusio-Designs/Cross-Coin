@@ -49,7 +49,7 @@ export default function TrackOrderPage() {
           <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
 
           {/* Search form */}
-          <form onSubmit={handleTrack} className="bg-paper-deep border border-rule p-6 md:p-7 mb-8">
+          <form onSubmit={handleTrack} className="bg-paper-deep border border-line p-6 md:p-7 mb-8">
             <label className="text-[10px] tracking-[0.3em] uppercase text-ink-muted block mb-3">Order number</label>
             <div className="flex flex-col sm:flex-row gap-3">
               <input
@@ -57,18 +57,18 @@ export default function TrackOrderPage() {
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 placeholder="e.g. GZ-2026-01284"
-                className="flex-1 bg-paper border border-rule focus:border-ink outline-none px-5 py-3 text-base text-ink placeholder:text-ink-muted transition-colors"
+                className="flex-1 bg-paper border border-line focus:border-ink outline-none px-5 py-3 text-base text-ink placeholder:text-ink-muted transition-colors"
               />
               <button type="submit" className="pill-cta justify-center">Track</button>
             </div>
-            {error && <p className="text-red-700 text-sm mt-4">{error}</p>}
+            {error && <p className="text-clay-deep text-sm mt-4">{error}</p>}
           </form>
 
           {data && (
             <div className="space-y-6">
 
               {/* Header card */}
-              <section className="bg-paper-deep border border-rule p-6 md:p-7">
+              <section className="bg-paper-deep border border-line p-6 md:p-7">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                   <div>
                     <p className="eyebrow mb-1">Order</p>
@@ -84,7 +84,7 @@ export default function TrackOrderPage() {
               </section>
 
               {/* Stepper */}
-              <section className="bg-paper-deep border border-rule p-5 md:p-8">
+              <section className="bg-paper-deep border border-line p-5 md:p-8">
                 <p className="eyebrow mb-1">Shipment</p>
                 <h3 className="font-display text-ink uppercase tracking-tight text-2xl mb-7">Progress</h3>
 
@@ -104,7 +104,7 @@ export default function TrackOrderPage() {
                             className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 border-2 bg-paper transition-all ${
                               done   ? 'border-ink text-ink' :
                               active ? 'border-ink text-ink ring-4 ring-ink/15' :
-                                       'border-rule text-ink-muted'
+                                       'border-line text-ink-muted'
                             }`}
                           >
                             {(done || active)
@@ -123,7 +123,7 @@ export default function TrackOrderPage() {
               </section>
 
               {/* Address */}
-              <section className="bg-paper-deep border border-rule p-6 md:p-7">
+              <section className="bg-paper-deep border border-line p-6 md:p-7">
                 <p className="eyebrow mb-1">Deliver to</p>
                 <h3 className="font-display text-ink text-2xl uppercase mb-3">Address</h3>
                 <p className="text-ink-soft text-sm text-justify">{data.address}</p>
