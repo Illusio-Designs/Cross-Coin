@@ -3,9 +3,12 @@ import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
 import BlogCard from '../components/common/BlogCard';
 import { JOURNAL_POSTS } from '../data/journal';
+import { getPosts } from '../services/blog';
 
-export default function JournalPage() {
-  const [feature, ...rest] = JOURNAL_POSTS;
+export default function JournalPage({ posts }) {
+  // Use live API posts; fall back to local seed data if the API has none.
+  const list = posts && posts.length ? posts : JOURNAL_POSTS;
+  const [feature, ...rest] = list;
   const featureInitials = (feature.author || 'G').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
@@ -50,4 +53,9 @@ export default function JournalPage() {
       </section>
     </>
   );
+}
+
+export async function getServerSideProps() {
+  const posts = await getPosts();
+  return { props: { posts } };
 }

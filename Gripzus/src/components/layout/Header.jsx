@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useAuth } from '../../context/AuthContext';
 
 /* Gripzus header — compact editorial bar.
    Logo left · hairline divider · nav · actions far right.
@@ -21,6 +22,10 @@ export default function Header() {
   const router = useRouter();
   const { count, openCart } = useCart();
   const { count: wishCount } = useWishlist();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // Logged in (or still checking) → account; otherwise → sign in.
+  const accountHref = isAuthenticated || authLoading ? '/account' : '/login';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -103,7 +108,7 @@ export default function Header() {
               <IconBtn ariaLabel="Search" onClick={() => setSearchOpen((s) => !s)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
               </IconBtn>
-              <IconBtn as={Link} href="/account" ariaLabel="Account">
+              <IconBtn as={Link} href={accountHref} ariaLabel={isAuthenticated ? 'Account' : 'Sign in'}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
               </IconBtn>
               <IconBtn as={Link} href="/wishlist" ariaLabel="Wishlist" badge={wishCount}>
@@ -151,7 +156,7 @@ export default function Header() {
                 </Link>
               ))}
               <div className="mt-5 grid grid-cols-2 gap-3">
-                <Link href="/account" onClick={() => setMobileOpen(false)} className="eyebrow text-center py-3 border border-line hover:border-ink transition-colors">Account</Link>
+                <Link href={accountHref} onClick={() => setMobileOpen(false)} className="eyebrow text-center py-3 border border-line hover:border-ink transition-colors">{isAuthenticated ? 'Account' : 'Sign In'}</Link>
                 <Link href="/track-order" onClick={() => setMobileOpen(false)} className="eyebrow text-center py-3 border border-line hover:border-ink transition-colors">Track Order</Link>
               </div>
             </nav>

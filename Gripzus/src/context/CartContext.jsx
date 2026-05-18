@@ -1,33 +1,129 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import {
+  getCart as apiGetCart,
+  addToCart as apiAddToCart,
+  updateCartItem as apiUpdateCartItem,
+  removeFromCart as apiRemoveFromCart,
+  clearCart as apiClearCart,
+} from '../services/cart';
+import { toastAddedToCart, toastRemovedFromCart, toastCartCleared } from '../utils/toast';
 
-/* Gripzus cart — client-side state + slide-in drawer control.
-   Mirrors the cart UX of Knitwink / Velmique / Crosscoin: items live
-   in a drawer, never on a dedicated page. Persists to localStorage. */
+/* Gripzus cart — backend-synced (same model as Knitwink).
+
+   - Signed-in shoppers: every cart action hits the backend cart API.
+   - Guests: the cart lives in localStorage.
+   - On first login the guest cart is merged into the backend cart.
+
+   The public interface is unchanged, so the slide-in drawer and every
+   add-to-bag button keep working as-is. */
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'gripzus:cart';
 
-export function CartProvider({ children }) {
-  const [items, setItems]   = useState([]);
-  const [open, setOpen]     = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+function isAuthed() {
+  if (typeof window === 'undefined') return false;
+  try { return !!localStorage.getItem('token'); } catch { return false; }
+}
 
-  // Hydrate from localStorage once
-  useEffect(() => {
+/* A cart line is uniquely keyed by product id + size + colour. */
+const lineKey = (it) => `${it.id}::${it.size || ''}::${it.color || ''}`;
+
+/* Backend cart row → Gripzus cart-line shape. */
+function normalizeApiItem(row) {
+  const p = row.Product || row.product || {};
+  const productId = String(row.productId ?? row.product_id ?? p.id ?? row.id ?? '');
+  const image =
+    row.image ||
+    row.images?.[0]?.image_url ||
+    row.images?.[0]?.url ||
+    p.ProductImages?.[0]?.image_url ||
+    p.ProductImages?.[0]?.large ||
+    '';
+  return {
+    id:          productId,
+    variationId: row.variationId ?? row.variation_id ?? null,
+    name:        row.name || p.name || '',
+    slug:        row.slug || p.slug || p.handle || productId,
+    image,
+    price:       Number(row.price ?? p.price ?? 0),
+    salePrice:   undefined,
+    collection:  p.category?.name || p.Category?.name || row.collection || '',
+    size:        Array.isArray(row.size) ? row.size[0] : (row.size || ''),
+    color:       Array.isArray(row.color) ? row.color.join(', ') : (row.color || ''),
+    qty:         Number(row.quantity ?? row.qty ?? 1),
+  };
+}
+
+export function CartProvider({ children }) {
+  const [items, setItems]     = useState([]);
+  const [open, setOpen]       = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const pendingRef  = useRef(false);  // guards against overlapping loads
+  const wasAuthedRef = useRef(false); // tracks the guest → signed-in transition
+
+  /* Load the cart: backend if signed in, localStorage if guest.
+     On the first transition to signed-in, merge the guest cart up. */
+  const loadCart = useCallback(async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setLoading(true);
+    const authed = isAuthed();
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-    setHydrated(true);
+      if (authed) {
+        if (!wasAuthedRef.current) {
+          let guest = [];
+          try { guest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch {}
+          for (const g of guest) {
+            try {
+              await apiAddToCart({
+                productId: Number(g.id),
+                variationId: g.variationId || null,
+                quantity: g.qty || 1,
+                size: g.size || null,
+              });
+            } catch { /* non-fatal */ }
+          }
+          if (guest.length) { try { localStorage.removeItem(STORAGE_KEY); } catch {} }
+        }
+        const data = await apiGetCart();
+        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+      } else {
+        let guest = [];
+        try { guest = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch {}
+        setItems(Array.isArray(guest) ? guest : []);
+      }
+    } catch {
+      // Backend unreachable — fall back to whatever is in localStorage.
+      try { setItems(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+      catch { setItems([]); }
+    } finally {
+      wasAuthedRef.current = authed;
+      setLoading(false);
+      setHydrated(true);
+      pendingRef.current = false;
+    }
   }, []);
 
-  // Persist on change
-  useEffect(() => {
-    if (!hydrated) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
-  }, [items, hydrated]);
+  useEffect(() => { loadCart(); }, [loadCart]);
 
-  // Lock body scroll while the drawer is open
+  // Re-sync when auth changes in another tab (login / logout).
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e || e.key === 'token' || e.key === null) loadCart();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [loadCart]);
+
+  // Persist the guest cart to localStorage (signed-in carts live on the server).
+  useEffect(() => {
+    if (!hydrated || loading || isAuthed()) return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  }, [items, hydrated, loading]);
+
+  // Lock body scroll while the drawer is open.
   useEffect(() => {
     if (typeof document === 'undefined') return;
     if (open) {
@@ -37,11 +133,28 @@ export function CartProvider({ children }) {
     }
   }, [open]);
 
-  /* A cart line is uniquely keyed by product id + size + colour, so the
-     same sock in two sizes shows as two lines. */
-  const lineKey = (it) => `${it.id}::${it.size || ''}::${it.color || ''}`;
+  const addItem = useCallback(async (item, { openDrawer = true } = {}) => {
+    if (!item?.id) return;
 
-  const addItem = useCallback((item, { openDrawer = true } = {}) => {
+    if (isAuthed()) {
+      try {
+        await apiAddToCart({
+          productId: Number(item.id),
+          variationId: item.variationId || null,
+          quantity: item.qty || 1,
+          size: item.size || null,
+        });
+        const data = await apiGetCart();
+        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+        toastAddedToCart(item.name);
+        if (openDrawer) setOpen(true);
+        return;
+      } catch {
+        // fall through to a local add so the shopper isn't blocked
+      }
+    }
+
+    // Guest add (or backend failed) — merge into the localStorage cart.
     setItems((prev) => {
       const key = lineKey(item);
       const found = prev.find((p) => lineKey(p) === key);
@@ -52,28 +165,58 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...item, qty: item.qty || 1 }];
     });
+    toastAddedToCart(item.name);
     if (openDrawer) setOpen(true);
   }, []);
 
-  const removeItem = useCallback((key) => {
+  const removeItem = useCallback(async (key) => {
+    const it = items.find((p) => lineKey(p) === key);
+    if (!it) return;
+
+    if (isAuthed()) {
+      try {
+        await apiRemoveFromCart(it.id, it.variationId ?? null);
+        const data = await apiGetCart();
+        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+        toastRemovedFromCart(it.name);
+        return;
+      } catch { /* fall through to local remove */ }
+    }
+
     setItems((prev) => prev.filter((p) => lineKey(p) !== key));
-  }, []);
+    toastRemovedFromCart(it.name);
+  }, [items]);
 
-  const updateQty = useCallback((key, qty) => {
-    setItems((prev) =>
-      qty <= 0
-        ? prev.filter((p) => lineKey(p) !== key)
-        : prev.map((p) => (lineKey(p) === key ? { ...p, qty } : p))
-    );
-  }, []);
+  const updateQty = useCallback(async (key, qty) => {
+    const it = items.find((p) => lineKey(p) === key);
+    if (!it) return;
+    if (qty <= 0) { removeItem(key); return; }
 
-  const clearCart = useCallback(() => setItems([]), []);
+    if (isAuthed()) {
+      try {
+        await apiUpdateCartItem(it.id, qty, it.variationId ?? null);
+        const data = await apiGetCart();
+        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+        return;
+      } catch { /* fall through to local update */ }
+    }
+
+    setItems((prev) => prev.map((p) => (lineKey(p) === key ? { ...p, qty } : p)));
+  }, [items, removeItem]);
+
+  const clearCart = useCallback(async () => {
+    if (isAuthed()) {
+      try { await apiClearCart(); } catch { /* non-fatal */ }
+    }
+    setItems([]);
+    toastCartCleared();
+  }, []);
 
   const count    = items.reduce((s, it) => s + it.qty, 0);
   const subtotal = items.reduce((s, it) => s + (it.salePrice ?? it.price) * it.qty, 0);
 
   const value = {
-    items, count, subtotal, lineKey,
+    items, count, subtotal, lineKey, loading,
     open, openCart: () => setOpen(true), closeCart: () => setOpen(false),
     addItem, removeItem, updateQty, clearCart,
   };

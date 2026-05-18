@@ -70,6 +70,7 @@ const colorMap = {
   "mint green": "#98FF98",
   "lime green": "#CCEE00",
   "mustard yellow": "#FFCE1B",
+  "pale yellow": "#FFFF99",
   "forest green": "#228B22",
   "charcoal": "#36454F",
   "charcoal grey": "#36454F",

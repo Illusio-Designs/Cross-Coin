@@ -7,14 +7,15 @@ import { useCart } from '@/hooks/useCart'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useUiStore } from '@/store/uiStore'
 import { MegaMenu } from './MegaMenu'
-import { ROUTES } from '@/lib/constants'
+import { ROUTES, NAV_LINKS } from '@/lib/constants'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { label: 'Men', key: 'men' },
-  { label: 'Women', key: 'women' },
-  { label: 'Sale', key: 'sale' },
+  // Temporarily hidden — restore when these sections are ready
+  // { label: 'Men', key: 'men' },
+  // { label: 'Women', key: 'women' },
+  // { label: 'Sale', key: 'sale' },
 ]
 
 export function Navbar() {
@@ -84,28 +85,19 @@ export function Navbar() {
           <Link href={ROUTES.home} className="lg:hidden focus-visible:outline-none" aria-label="Knitwink home">
             <img src="/logo.png" alt="Knitwink" className="h-9 w-auto object-contain" />
           </Link>
-          {NAV_ITEMS.map(({ label, key }) => (
-            <button
-              key={key}
-              onMouseEnter={() => handleMouseEnter(key)}
-              className={cn(
-                'hidden lg:flex h-10 items-center rounded-full px-4 text-[13px] font-medium tracking-wide transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage',
-                activeMenu === key ? 'bg-black/5 text-brand-black' : 'text-gray-700 hover:bg-black/5 hover:text-brand-black'
-              )}
+          {NAV_LINKS.map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className="hidden lg:flex h-10 items-center rounded-full px-4 text-[13px] font-medium tracking-wide text-gray-700 transition-colors duration-150 hover:bg-black/5 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
             >
               {label}
-            </button>
+            </Link>
           ))}
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-0 lg:gap-0.5">
-          <Link href={ROUTES.about} className="hidden h-10 items-center rounded-full px-3 text-[13px] font-normal text-gray-700 transition-colors hover:bg-black/5 hover:text-brand-black lg:flex">
-            About
-          </Link>
-          <Link href="/journal" className="hidden h-10 items-center rounded-full px-3 text-[13px] font-normal text-gray-700 transition-colors hover:bg-black/5 hover:text-brand-black lg:flex">
-            Journal
-          </Link>
           <Link href={ROUTES.search} className={iconBtn} aria-label="Search">
             <Search size={15} strokeWidth={1.5} className="lg:w-[18px] lg:h-[18px]" />
           </Link>

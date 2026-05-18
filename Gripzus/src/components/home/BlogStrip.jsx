@@ -1,10 +1,27 @@
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { JOURNAL_POSTS } from '../../data/journal';
+import { getPosts } from '../../services/blog';
 import BlogCard from '../common/BlogCard';
 
-/* Journal teaser strip — latest three posts. */
+/* Journal teaser strip — latest three posts.
+   Pulls from the blog API on mount; falls back to the local seed data
+   (also used when posts are passed in explicitly by a parent). */
 
-export default function BlogStrip({ posts = JOURNAL_POSTS }) {
+export default function BlogStrip({ posts: postsProp }) {
+  const [posts, setPosts] = useState(postsProp || JOURNAL_POSTS);
+
+  useEffect(() => {
+    if (postsProp) return; // parent supplied posts — don't override
+    let active = true;
+    getPosts()
+      .then((data) => {
+        if (active && data && data.length) setPosts(data);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [postsProp]);
+
   const list = posts.slice(0, 3);
 
   return (

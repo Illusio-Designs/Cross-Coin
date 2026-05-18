@@ -58,8 +58,15 @@ export function ProductCard({ product }) {
   const primaryImage = product.images[0];
   const hoverImage = product.images[1] ?? primaryImage;
 
-  const overflow = product.colors.length - MAX_DOTS;
-  const visibleColors = expanded ? product.colors : product.colors.slice(0, MAX_DOTS);
+  // Flatten multi-color packs into individual swatches so a "Pack of 5"
+  // shows all 5 colours instead of just the pack's representative dot.
+  const swatches = product.colors.flatMap((c) =>
+    c.packColors?.length
+      ? c.packColors.map((pc) => ({ name: pc.name, hex: pc.hex }))
+      : [{ name: c.name, hex: c.hex }]
+  );
+  const overflow = swatches.length - MAX_DOTS;
+  const visibleColors = expanded ? swatches : swatches.slice(0, MAX_DOTS);
 
   return (
     <Link
@@ -128,9 +135,9 @@ export function ProductCard({ product }) {
         <div
           className="mt-2 flex flex-wrap items-center gap-1.5"
           onClick={(e) => e.preventDefault()}>
-          {visibleColors.map((color) =>
+          {visibleColors.map((color, i) =>
             <span
-              key={color.name}
+              key={`${color.name}-${i}`}
               title={color.name}
               className="h-4 w-4 shrink-0 rounded-full border border-gray-300"
               style={{ backgroundColor: color.hex }} />

@@ -24,9 +24,12 @@ export const ROUTES = {
 };
 
 export const NAV_LINKS = [
-  { label: 'Men', href: '/products?category=Men' },
-  { label: 'Women', href: '/products?category=Women' },
-  { label: 'Sale', href: '/products?category=Sale' },
+  // Temporarily hidden — restore when these sections are ready
+  // { label: 'Men', href: '/products?category=Men' },
+  // { label: 'Women', href: '/products?category=Women' },
+  // { label: 'Sale', href: '/products?category=Sale' },
+  { label: 'Collection', href: '/collections' },
+  { label: 'Product', href: '/products' },
   { label: 'About', href: '/about' },
   { label: 'Journal', href: '/journal' },
 ];

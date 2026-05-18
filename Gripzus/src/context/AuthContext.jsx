@@ -1,138 +1,87 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/router';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { toastLogoutSuccess } from '../utils/toast';
 
-const AuthContext = createContext();
+/* Auth state — backed by the live API (same flow as Knitwink).
+   The OTP login/register pages set localStorage 'token'; this context
+   resolves it to the current user via /api/users/me. */
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus';
+
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const checkedRef = useRef(false);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('tokenExpiry');
-    setUser(null);
-    router.push('/');
-  }, [router]);
-
-  const checkAuth = useCallback(() => {
+  const fetchUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const userData = localStorage.getItem('userData');
-      
-      if (token && userData) {
-        const parsedUser = JSON.parse(userData);
-        const tokenExpiry = localStorage.getItem('tokenExpiry');
-        
-        // Check if token is expired
-        if (tokenExpiry && new Date().getTime() < parseInt(tokenExpiry)) {
-          setUser(parsedUser);
-        } else {
-          // Token expired, clear storage
-          logout();
-        }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) { setUser(null); setLoading(false); return; }
+
+      const res = await fetch(`${API_URL}/api/users/me`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Brand-Name': BRAND,
+        },
+      });
+
+      if (res.ok) {
+        setUser(await res.json());
+      } else {
+        // Token expired or invalid
+        localStorage.removeItem('token');
+        setUser(null);
       }
-    } catch (error) {
-      console.error('Auth check error:', error);
+    } catch (err) {
+      // Network/CORS error — keep the token, it might be temporary
+      console.error('[Auth] fetchUser error:', err);
+      setUser(null);
     } finally {
       setLoading(false);
     }
-  }, [logout]);
+  }, []);
 
   useEffect(() => {
-    // Check if user is logged in on mount
-    checkAuth();
-  }, [checkAuth]);
-
-  const login = async (email, password) => {
-    try {
-      // Simulate API call - replace with actual API
-      // For demo, accept any email/password
-      const mockUser = {
-        id: Date.now(),
-        email: email,
-        name: email.split('@')[0],
-        createdAt: new Date().toISOString()
-      };
-
-      // Generate mock token
-      const token = btoa(email + Date.now());
-      
-      // Set token expiry to 30 days
-      const expiryTime = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
-      
-      // Store in localStorage
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(mockUser));
-      localStorage.setItem('tokenExpiry', expiryTime.toString());
-      
-      setUser(mockUser);
-      return { success: true };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'Login failed' };
+    if (!checkedRef.current) {
+      checkedRef.current = true;
+      fetchUser();
     }
-  };
+  }, [fetchUser]);
 
-  const register = async (name, email, password) => {
-    try {
-      // Simulate API call - replace with actual API
-      const mockUser = {
-        id: Date.now(),
-        email: email,
-        name: name,
-        createdAt: new Date().toISOString()
-      };
+  // Keep tabs in sync — react to token changes from login/register/logout.
+  useEffect(() => {
+    const onStorage = () => {
+      const token = localStorage.getItem('token');
+      if (token && !user) { checkedRef.current = false; fetchUser(); }
+      if (!token && user) { setUser(null); setLoading(false); }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [user, fetchUser]);
 
-      // Generate mock token
-      const token = btoa(email + Date.now());
-      
-      // Set token expiry to 30 days
-      const expiryTime = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
-      
-      // Store in localStorage
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(mockUser));
-      localStorage.setItem('tokenExpiry', expiryTime.toString());
-      
-      setUser(mockUser);
-      return { success: true };
-    } catch (error) {
-      console.error('Register error:', error);
-      return { success: false, error: 'Registration failed' };
+  const logout = useCallback(async (silent = false) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token) {
+      fetch(`${API_URL}/api/users/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'X-Brand-Name': BRAND },
+      }).catch(() => {});
     }
-  };
-
-
-  const updateProfile = async (data) => {
-    try {
-      // Simulate API call - replace with actual API
-      const updatedUser = {
-        ...user,
-        name: data.name,
-        email: data.email
-      };
-
-      // Update localStorage
-      localStorage.setItem('userData', JSON.stringify(updatedUser));
-      
-      setUser(updatedUser);
-      return { success: true };
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return { success: false, error: 'Failed to update profile' };
-    }
-  };
+    localStorage.removeItem('token');
+    setUser(null);
+    if (!silent) toastLogoutSuccess();
+  }, []);
 
   const value = {
     user,
     loading,
-    login,
-    register,
+    isAuthenticated: !!user,
+    fetchUser,
     logout,
-    updateProfile,
-    isAuthenticated: !!user
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

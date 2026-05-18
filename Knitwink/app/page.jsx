@@ -27,7 +27,7 @@ export default function HomePage() {
     <>
       <HeroBanner slides={slides} />
       <CategoryCards categories={categories} />
-      <ExclusiveSection products={bestsellers} />
+      <ExclusiveSection products={bestsellers.slice(0, 3)} />
       <BestsellerRow products={bestsellers} />
       <ReviewBand />
       <BlogStrip />

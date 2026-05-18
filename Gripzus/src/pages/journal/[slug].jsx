@@ -1,9 +1,11 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import BlogCard from '../../components/common/BlogCard';
-import { JOURNAL_POSTS, getPost } from '../../data/journal';
+import { JOURNAL_POSTS, getPost as getLocalPost } from '../../data/journal';
+import { getPosts, getPostBySlug } from '../../services/blog';
 
-/* Journal detail — routed by slug (/journal/<slug>). Full-width layout. */
+/* Journal detail — routed by slug (/journal/<slug>). Full-width layout.
+   Content comes from the blog API; falls back to the local seed data. */
 
 export default function JournalPost({ post, related }) {
   if (!post) {
@@ -40,10 +42,10 @@ export default function JournalPost({ post, related }) {
           </div>
         </header>
 
-        {/* Cover — full wrap width */}
+        {/* Cover — full wrap width, natural height so the whole image shows */}
         <div className="wrap pt-10 md:pt-14">
-          <div className="relative aspect-[16/8] md:aspect-[16/6] overflow-hidden rounded-xl bg-gray-100">
-            <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="overflow-hidden rounded-xl bg-gray-100">
+            <img src={post.image} alt={post.title} className="w-full h-auto" />
           </div>
         </div>
 
@@ -51,9 +53,23 @@ export default function JournalPost({ post, related }) {
         <div className="wrap py-12 md:py-16">
           <div className="max-w-none mx-auto">
             <p className="h-display text-xl md:text-2xl text-ink leading-snug mb-8">{post.excerpt}</p>
-            {post.body.map((para, i) => (
-              <p key={i} className="prose-body text-base md:text-lg mb-5">{para}</p>
-            ))}
+            {post.body.map((block, i) => {
+              // Body items are typed blocks ({ type, text }) from the API,
+              // or plain strings from the local seed data — handle both.
+              const isHeading = typeof block === 'object' && block?.type === 'heading';
+              const text = typeof block === 'string' ? block : block?.text || '';
+              if (!text) return null;
+              return isHeading ? (
+                <h2
+                  key={i}
+                  className="h-display font-semibold text-ink text-2xl md:text-3xl leading-snug mt-12 mb-4 first:mt-0"
+                >
+                  {text}
+                </h2>
+              ) : (
+                <p key={i} className="prose-body text-base md:text-lg mb-5">{text}</p>
+              );
+            })}
             <div className="mt-10 pt-8 border-t border-line flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <Link href="/journal" className="btn-outline inline-flex">← All stories</Link>
               <p className="text-sm text-ink-muted">Written by <span className="text-ink">{post.author}</span></p>
@@ -78,15 +94,17 @@ export default function JournalPost({ post, related }) {
   );
 }
 
-export function getStaticPaths() {
-  return {
-    paths: JOURNAL_POSTS.map((p) => ({ params: { slug: p.slug } })),
-    fallback: false,
-  };
-}
+export async function getServerSideProps({ params }) {
+  const { slug } = params;
 
-export function getStaticProps({ params }) {
-  const post = getPost(params.slug);
-  const related = JOURNAL_POSTS.filter((p) => p.slug !== params.slug).slice(0, 3);
-  return { props: { post, related } };
+  // Live API first; fall back to the local seed data if the API has nothing.
+  let post = await getPostBySlug(slug);
+  if (!post) post = getLocalPost(slug);
+
+  let all = await getPosts();
+  if (!all || !all.length) all = JOURNAL_POSTS;
+
+  const related = all.filter((p) => p.slug !== slug).slice(0, 3);
+
+  return { props: { post: post || null, related } };
 }
