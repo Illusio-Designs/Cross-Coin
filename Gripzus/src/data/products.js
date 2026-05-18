@@ -1,13 +1,14 @@
 /* Shared product catalogue — used by the home, products listing, search
    and wishlist. Swap for an API later (structure-first). */
 
+/* Greyscale-only swatches — the brand runs strictly black & white. */
 const C = {
-  ink:    { name: 'Ink',    hex: '#141414' },
-  oat:    { name: 'Oat',    hex: '#D9CDB1' },
-  clay:   { name: 'Clay',   hex: '#A8442A' },
-  sage:   { name: 'Sage',   hex: '#6E7A5E' },
-  slate:  { name: 'Slate',  hex: '#5A6470' },
-  cream:  { name: 'Cream',  hex: '#EDE7D9' },
+  ink:    { name: 'Ink',       hex: '#141414' },
+  oat:    { name: 'Chalk',     hex: '#ECECEC' },
+  clay:   { name: 'Charcoal',  hex: '#3A3A3A' },
+  sage:   { name: 'Slate',     hex: '#6B6B6B' },
+  slate:  { name: 'Graphite',  hex: '#4A4A4A' },
+  cream:  { name: 'Mist',      hex: '#C8C8C8' },
 };
 
 export const PRODUCTS = [

@@ -24,9 +24,9 @@ export default function RegisterPage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" />
             <div className="relative h-full flex flex-col justify-end p-14">
-              <p className="mono-label text-saffron-light mb-4">Join the circle</p>
+              <p className="eyebrow text-clay mb-4">Join the circle</p>
               <h2 className="font-display uppercase text-paper leading-[0.9] tracking-[-0.035em]" style={{ fontSize: 'clamp(2.5rem, 4vw, 4rem)', fontWeight: 700 }}>
-                10% off<br /><em className="not-italic font-serif italic font-normal text-saffron-light">your first pair.</em>
+                10% off<br /><em className="not-italic font-serif italic font-normal text-clay">your first pair.</em>
               </h2>
               <p className="text-paper/70 text-sm max-w-sm mt-4">
                 Plus early access to every drop and the occasional notes from the knit room.
@@ -50,28 +50,28 @@ export default function RegisterPage() {
                   <Field label="Mobile number *"  value={form.phone} onChange={(v) => setForm({ ...form, phone: v.replace(/\D/g, '').slice(0, 10) })} placeholder="98201 43210" />
                   <Field label="Email (optional)" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" type="email" />
                   <button type="submit" className="cta w-full justify-center !py-4">Send OTP</button>
-                  <p className="text-center mono-label">
+                  <p className="text-center eyebrow">
                     Have an account?{' '}
-                    <Link href="/login" className="text-saffron-deep hover:text-ink underline underline-offset-4">Sign in</Link>
+                    <Link href="/login" className="text-clay-deep hover:text-ink underline underline-offset-4">Sign in</Link>
                   </p>
                 </form>
               )}
 
               {step === 'otp' && (
                 <form onSubmit={onVerify}>
-                  <p className="mono-label mb-4">Code sent to +91 {form.phone}</p>
+                  <p className="eyebrow mb-4">Code sent to +91 {form.phone}</p>
                   <div className="flex gap-3 mb-6">
                     {otp.map((d, i) => (
                       <input
                         key={i}
                         type="text" maxLength={1} inputMode="numeric" value={d}
                         onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(-1); const n = [...otp]; n[i] = v; setOtp(n); }}
-                        className="flex-1 text-center bg-paper-deep border border-rule focus:border-ink outline-none py-4 font-display font-bold text-2xl text-ink transition-colors"
+                        className="flex-1 text-center bg-paper-deep border border-line focus:border-ink outline-none py-4 font-display font-bold text-2xl text-ink transition-colors"
                       />
                     ))}
                   </div>
                   <button type="submit" className="cta w-full justify-center !py-4">Verify & Create Account</button>
-                  <button type="button" onClick={() => setStep('details')} className="block w-full text-center mono-label mt-4 hover:text-ink">
+                  <button type="button" onClick={() => setStep('details')} className="block w-full text-center eyebrow mt-4 hover:text-ink">
                     ← Edit details
                   </button>
                 </form>
@@ -87,10 +87,10 @@ export default function RegisterPage() {
 function Field({ label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div>
-      <label className="mono-label block mb-2">{label}</label>
+      <label className="eyebrow block mb-2">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full bg-paper-deep border border-rule focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
+        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );

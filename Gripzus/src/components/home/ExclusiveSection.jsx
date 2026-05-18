@@ -42,8 +42,8 @@ export default function ExclusiveSection({ products = FALLBACK }) {
         <div className="flex flex-col gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex items-center gap-3 mb-3">
-              <span className="w-10 h-px bg-clay" />
-              <p className="eyebrow text-clay">The Reserve</p>
+              <span className="w-10 h-px bg-paper" />
+              <p className="eyebrow text-paper">The Reserve</p>
             </div>
             <h2 className="h-display text-paper text-3xl md:text-5xl tracking-[-0.03em]">
               A curated edit of rare pairs.
@@ -69,7 +69,7 @@ export default function ExclusiveSection({ products = FALLBACK }) {
 
           <div className="flex flex-col gap-8">
             <div className="rounded-[1.75rem] border border-paper/10 bg-paper/5 p-8">
-              <p className="eyebrow text-clay mb-3 uppercase tracking-[0.24em]">{p.collection}</p>
+              <p className="eyebrow text-paper/60 mb-3 uppercase tracking-[0.24em]">{p.collection}</p>
               <h3 className="text-4xl md:text-5xl font-display text-paper leading-tight mb-5">{p.name}</h3>
               <p className="text-paper/65 leading-relaxed mb-8">{p.note}</p>
 
@@ -81,7 +81,7 @@ export default function ExclusiveSection({ products = FALLBACK }) {
               <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   onClick={handleAdd}
-                  className={`btn-light w-full sm:w-auto ${added ? '!bg-clay !border-clay !text-paper' : ''}`}
+                  className={`btn-light w-full sm:w-auto ${added ? '!bg-paper-deep !border-paper-deep' : ''}`}
                 >
                   {added ? 'Added to bag ✓' : 'Add to bag'}
                 </button>
@@ -101,7 +101,7 @@ export default function ExclusiveSection({ products = FALLBACK }) {
                   key={item.id}
                   onClick={() => selectItem(index)}
                   className={`flex items-center gap-4 rounded-3xl border px-5 py-4 text-left transition-all ${
-                    index === activeIndex ? 'border-clay bg-paper/5' : 'border-paper/10 hover:border-paper/40'
+                    index === activeIndex ? 'border-paper bg-paper/5' : 'border-paper/10 hover:border-paper/40'
                   }`}
                 >
                   <div className="h-16 w-16 overflow-hidden rounded-3xl border border-paper/10">

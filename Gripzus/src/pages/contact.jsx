@@ -24,18 +24,18 @@ export default function ContactPage() {
 
           {/* Channels */}
           <aside className="lg:col-span-5">
-            <div className="border-t border-rule">
+            <div className="border-t border-line">
               {[
                 { n: '01', eyebrow: 'Email',    title: 'support@gripzus.com', note: 'Orders, returns, partnerships.', href: 'mailto:support@gripzus.com' },
                 { n: '02', eyebrow: 'Phone',    title: '+91 99999 99999',      note: 'Mon–Sat, 10am–7pm IST.',        href: 'tel:+919999999999' },
                 { n: '03', eyebrow: 'WhatsApp', title: 'Chat with us',          note: 'Fastest for size + order help.', href: 'https://wa.me/919999999999' },
                 { n: '04', eyebrow: 'Atelier',  title: 'Ahmedabad, Gujarat',    note: 'Visits by appointment only.',    href: 'https://maps.google.com' },
               ].map((c) => (
-                <a key={c.n} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="group flex gap-5 py-6 border-b border-rule">
-                  <span className="mono-label text-saffron shrink-0">{c.n}</span>
+                <a key={c.n} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="group flex gap-5 py-6 border-b border-line">
+                  <span className="eyebrow text-clay shrink-0">{c.n}</span>
                   <div>
                     <p className="eyebrow mb-1.5">{c.eyebrow}</p>
-                    <p className="font-display uppercase text-ink text-xl md:text-2xl leading-none tracking-[-0.02em] mb-1.5 group-hover:text-saffron-deep transition-colors" style={{ fontWeight: 700 }}>
+                    <p className="font-display uppercase text-ink text-xl md:text-2xl leading-none tracking-[-0.02em] mb-1.5 group-hover:text-clay-deep transition-colors" style={{ fontWeight: 700 }}>
                       {c.title}
                     </p>
                     <p className="prose-body text-sm">{c.note}</p>
@@ -79,13 +79,13 @@ export default function ContactPage() {
 function Field({ label, value, onChange, type = 'text', textarea = false, className = '' }) {
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <label className="mono-label">{label}</label>
+      <label className="eyebrow">{label}</label>
       {textarea ? (
         <textarea rows={5} value={value} onChange={(e) => onChange(e.target.value)}
-          className="bg-paper border border-rule focus:border-ink outline-none px-4 py-3 text-sm text-ink resize-none transition-colors" />
+          className="bg-paper border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink resize-none transition-colors" />
       ) : (
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-          className="bg-paper border border-rule focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors" />
+          className="bg-paper border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors" />
       )}
     </div>
   );

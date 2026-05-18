@@ -54,7 +54,7 @@ export default function SearchPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="What are you looking for?"
-              className="w-full bg-transparent border-b-2 border-ink focus:border-saffron outline-none pb-4 pr-10 font-serif italic text-3xl md:text-5xl text-ink placeholder:text-ink-muted transition-colors"
+              className="w-full bg-transparent border-b-2 border-ink focus:border-clay outline-none pb-4 pr-10 font-serif italic text-3xl md:text-5xl text-ink placeholder:text-ink-muted transition-colors"
             />
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="absolute right-0 bottom-5 text-ink">
               <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
@@ -68,7 +68,7 @@ export default function SearchPage() {
           )}
 
           {q.length >= 2 && results.length === 0 && (
-            <div className="text-center py-16 border border-rule max-w-xl mx-auto">
+            <div className="text-center py-16 border border-line max-w-xl mx-auto">
               <p className="h-display text-3xl uppercase mb-3">No matches</p>
               <p className="prose-body text-sm mb-7">Try a different word, or open the full catalogue.</p>
               <Link href="/products" className="cta inline-flex">Browse all pairs</Link>
@@ -83,7 +83,7 @@ export default function SearchPage() {
                   <button
                     key={t}
                     onClick={() => setQ(t)}
-                    className="px-4 py-2 border border-rule hover:border-ink font-mono text-[11px] tracking-[0.12em] uppercase text-ink-soft hover:text-ink transition-colors"
+                    className="px-4 py-2 border border-line hover:border-ink font-mono text-[11px] tracking-[0.12em] uppercase text-ink-soft hover:text-ink transition-colors"
                   >
                     {t}
                   </button>
