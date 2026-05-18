@@ -1,4 +1,5 @@
 import '../styles/globals.css'
+import '../styles/CartDrawer.css'
 import { AuthProvider } from '../context/AuthContext'
 import { CurrencyProvider } from '../context/CurrencyContext'
 import { CartProvider } from '../context/CartContext'
@@ -6,6 +7,7 @@ import { WishlistProvider } from '../context/WishlistContext'
 import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import CartDrawer from '../components/cart/CartDrawer'
+import ToastViewport from '../components/ui/ToastViewport'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
@@ -24,6 +26,7 @@ function MyApp({ Component, pageProps }) {
               <Footer />
             </div>
             <CartDrawer />
+            <ToastViewport />
           </WishlistProvider>
         </CartProvider>
       </CurrencyProvider>

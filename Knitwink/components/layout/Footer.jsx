@@ -12,12 +12,13 @@ function WhatsAppIcon({ size = 14 }) {
   )
 }
 
-const SHOP_LINKS = [
-  { label: "Men's Collection",   href: '/collections/mens' },
-  { label: "Women's Collection", href: '/collections/womens' },
-  { label: 'New Arrivals',       href: '/collections' },
-  { label: 'Sale',               href: '/collections/sale' },
-]
+// Temporarily hidden — restore the Shop column when ready
+// const SHOP_LINKS = [
+//   { label: "Men's Collection",   href: '/collections/mens' },
+//   { label: "Women's Collection", href: '/collections/womens' },
+//   { label: 'New Arrivals',       href: '/collections' },
+//   { label: 'Sale',               href: '/collections/sale' },
+// ]
 
 const COMPANY_LINKS = [
   { label: 'Collections',      href: '/collections' },
@@ -39,9 +40,9 @@ export function Footer() {
   return (
     <footer className="bg-brand-black text-white">
 
-      {/* 5-column grid: Brand | Shop | Company | Help | Contact */}
+      {/* Column grid: Brand | Company | Policies | Contact (Shop temporarily hidden) */}
       <div className="px-6 py-16 md:px-10 lg:px-16">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-10">
 
           {/* Col 1 — Brand */}
           <div className="flex flex-col items-start gap-5 sm:col-span-2 md:col-span-1">
@@ -69,7 +70,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Col 2 — Shop */}
+          {/* Col 2 — Shop — temporarily hidden, restore when ready
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40 mb-5">Shop</p>
             <ul className="flex flex-col gap-3">
@@ -80,6 +81,7 @@ export function Footer() {
               ))}
             </ul>
           </div>
+          */}
 
           {/* Col 3 — Company */}
           <div>

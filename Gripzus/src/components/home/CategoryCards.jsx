@@ -25,12 +25,12 @@ export default function CategoryCards({ categories = [] }) {
             ) : (
               <Link
                 key={c.id ?? i}
-                href={`/products?category=${encodeURIComponent((c.name || '').trim())}`}
-                className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-paper-warm"
+                href={`/products?collection=${encodeURIComponent(c.slug || (c.name || '').trim())}`}
+                className="group relative overflow-hidden rounded-xl bg-paper-warm min-h-[260px] flex"
               >
                 {c.image
-                  ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  : <div className="absolute inset-0 bg-paper-deep" />}
+                  ? <img src={c.image} alt={c.name} className="block w-full h-auto" />
+                  : <div className="w-full min-h-[260px] bg-paper-deep" />}
                 <div className="absolute inset-0 bg-ink/15 group-hover:bg-ink/40 transition-colors" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
                   <span className="font-display text-paper text-2xl md:text-3xl">{c.name}</span>

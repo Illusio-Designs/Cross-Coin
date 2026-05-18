@@ -1,4 +1,6 @@
-// Comprehensive color name → hex map (sourced from Crosscoin colorMap)
+// Color name → hex map for product colour swatches.
+// Sourced from the Knitwink / Crosscoin colorMap so swatches show the
+// real product colour, not a placeholder.
 const colorMap = {
   red: '#FF0000', black: '#000000', blue: '#0000FF', white: '#FFFFFF',
   grey: '#808080', gray: '#808080', pink: '#FFC0CB', green: '#008000',
@@ -31,14 +33,14 @@ const colorMap = {
   'blush pink': '#F9C6C3', 'aqua teal': '#00BFAE', 'vanilla cream': '#F3E5AB',
   'biscoff': '#C68642', 'olive green': '#708238', 'crimson red': '#DC143C',
   'slate blue': '#6A5ACD', 'light heather blue': '#B0C4DE', 'ocean blue': '#006994',
-  'ice blue': '#D6EAF8', 'dusty blue': '#7393B3', 'dark gray': '#404040'
+  'ice blue': '#D6EAF8', 'dusty blue': '#7393B3', 'dark gray': '#404040',
 };
 
 export function getColorHex(name) {
-  const key = name.toLowerCase().trim();
-  // If already a hex value, return as-is
-  if (/^#[0-9a-f]{3,6}$/i.test(key)) return key;
-  return colorMap[key] ?? name;
+  if (!name) return '#9B9B9B';
+  const key = String(name).toLowerCase().trim();
+  if (/^#[0-9a-f]{3,8}$/i.test(key)) return key;       // already a hex
+  return colorMap[key] ?? '#9B9B9B';                    // fallback grey
 }
 
 export default colorMap;

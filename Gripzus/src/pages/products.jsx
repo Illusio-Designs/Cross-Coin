@@ -1,9 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import FilterDrawer from '../components/products/FilterDrawer';
-import { PRODUCTS } from '../data/products';
+import { getPublicCategories } from '../services/categories';
+import { getPublicProducts, getProductsByCategory } from '../services/products';
 
 /* Custom sort dropdown — site-coloured, replaces the native <select>. */
 function SortDropdown({ value, onChange, options }) {
@@ -44,7 +46,7 @@ function SortDropdown({ value, onChange, options }) {
             >
               {o.label}
               {o.value === value && (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-clay"><polyline points="20 6 9 17 4 12" /></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-ink"><polyline points="20 6 9 17 4 12" /></svg>
               )}
             </button>
           ))}
@@ -54,13 +56,6 @@ function SortDropdown({ value, onChange, options }) {
   );
 }
 
-const CATEGORIES = [
-  { value: 'athletic', label: 'Athletic' },
-  { value: 'dress',    label: 'Dress' },
-  { value: 'casual',   label: 'Casual' },
-  { value: 'wool',     label: 'Wool' },
-];
-
 const SORTS = [
   { value: 'featured',   label: 'Featured' },
   { value: 'newest',     label: 'Newest' },
@@ -68,67 +63,125 @@ const SORTS = [
   { value: 'price-desc', label: 'Price ↓' },
 ];
 
-const EMPTY_DRAFT = { categories: [], priceMin: '', priceMax: '', sizes: [] };
+const EMPTY_DRAFT = { priceMin: '', priceMax: '', sizes: [], colors: [] };
 
 export default function ProductsPage() {
-  const [chip, setChip]   = useState('all');
+  const router = useRouter();
+  const collectionParam = router.query.collection || '';
+
+  const [categories, setCategories] = useState([]);   // [{id,name,slug}]
+  const [activeCat, setActiveCat]   = useState('all'); // 'all' or category slug
+  const [products, setProducts]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+
   const [sort, setSort]   = useState('featured');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [filters, setFilters] = useState(EMPTY_DRAFT);
 
+  // Categories for the chips.
+  useEffect(() => {
+    getPublicCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
+
+  // Honour ?collection=<slug> from the URL once categories are known.
+  useEffect(() => {
+    if (!collectionParam) { setActiveCat('all'); return; }
+    setActiveCat(String(collectionParam));
+  }, [collectionParam]);
+
+  // Fetch products whenever the active collection changes.
+  useEffect(() => {
+    let alive = true;
+
+    // For a specific collection we need the categories list first so we
+    // can resolve the slug → the real category NAME — the by-name API
+    // 404s on a slug. Wait until categories have loaded.
+    if (activeCat !== 'all' && categories.length === 0) {
+      setLoading(true);
+      return;
+    }
+
+    setLoading(true);
+    const run = async () => {
+      if (activeCat === 'all') {
+        return getPublicProducts({ limit: 200 });
+      }
+      const cat = categories.find((c) => c.slug === activeCat || c.name === activeCat);
+      if (!cat) return getPublicProducts({ limit: 200 }); // unknown slug → show all
+      return getProductsByCategory(cat.name);             // always the real name
+    };
+    run()
+      .then((list) => { if (alive) setProducts(Array.isArray(list) ? list : []); })
+      .catch(() => { if (alive) setProducts([]); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [activeCat, categories]);
+
+  const selectChip = (slug) => {
+    setActiveCat(slug);
+    const url = slug === 'all' ? '/products' : `/products?collection=${encodeURIComponent(slug)}`;
+    router.push(url, undefined, { shallow: true });
+  };
+
+  // Filter option lists — dynamic, derived from the products on the page.
+  const sizeOptions = useMemo(
+    () => [...new Set(products.flatMap((p) => p.sizes || []))],
+    [products]
+  );
+  const colorOptions = useMemo(() => {
+    const seen = new Map();
+    products.forEach((p) => (p.colors || []).forEach((c) => {
+      if (c?.name && !seen.has(c.name)) seen.set(c.name, c);
+    }));
+    return [...seen.values()];
+  }, [products]);
+
+  // Apply a filter set (price + size + colour) to a product list.
+  const applyFilters = (list, f) => {
+    const min = Number(f.priceMin) || 0;
+    const max = Number(f.priceMax) || Infinity;
+    let out = list.filter((p) => { const pr = p.price ?? 0; return pr >= min && pr <= max; });
+    if (f.sizes.length)  out = out.filter((p) => (p.sizes || []).some((s) => f.sizes.includes(s)));
+    if (f.colors.length) out = out.filter((p) => (p.colors || []).some((c) => f.colors.includes(c.name)));
+    return out;
+  };
+
+  // Client-side filter + sort on the fetched list.
   const filtered = useMemo(() => {
-    let list = [...PRODUCTS];
-    if (chip !== 'all') list = list.filter((p) => p.category === chip);
-    if (filters.categories.length) list = list.filter((p) => filters.categories.includes(p.category));
-    const min = Number(filters.priceMin) || 0;
-    const max = Number(filters.priceMax) || Infinity;
-    list = list.filter((p) => { const pr = p.salePrice ?? p.price; return pr >= min && pr <= max; });
-    if (sort === 'price-asc')  list.sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price));
-    if (sort === 'price-desc') list.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? a.price));
+    let list = applyFilters([...products], filters);
+    if (sort === 'price-asc')  list.sort((a, b) => a.price - b.price);
+    if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
     if (sort === 'newest')     list.reverse();
     return list;
-  }, [chip, sort, filters]);
+  }, [products, sort, filters]);
 
-  const draftCount = useMemo(() => {
-    let list = [...PRODUCTS];
-    if (chip !== 'all') list = list.filter((p) => p.category === chip);
-    if (draft.categories.length) list = list.filter((p) => draft.categories.includes(p.category));
-    const min = Number(draft.priceMin) || 0;
-    const max = Number(draft.priceMax) || Infinity;
-    list = list.filter((p) => { const pr = p.salePrice ?? p.price; return pr >= min && pr <= max; });
-    return list.length;
-  }, [chip, draft]);
+  const draftCount = useMemo(() => applyFilters([...products], draft).length, [products, draft]);
 
   const activeFilterCount =
-    filters.categories.length + filters.sizes.length +
+    filters.sizes.length + filters.colors.length +
     (filters.priceMin ? 1 : 0) + (filters.priceMax ? 1 : 0);
 
   const openDrawer  = () => { setDraft(filters); setDrawerOpen(true); };
   const applyDrawer = () => { setFilters(draft); setDrawerOpen(false); };
   const clearDrawer = () => { setDraft(EMPTY_DRAFT); setFilters(EMPTY_DRAFT); };
 
+  const activeName = activeCat === 'all'
+    ? null
+    : (categories.find((c) => c.slug === activeCat || c.name === activeCat)?.name || activeCat);
+
   return (
     <>
-      <Head><title>All Pairs — Gripzus</title></Head>
+      <Head><title>{activeName ? `${activeName} — Gripzus` : 'All Pairs — Gripzus'}</title></Head>
 
       <PageHero
-        eyebrow="The Catalogue"
-        title="Every"
-        accent="pair."
-        intro="The full Gripzus archive — knit small-batch from combed cotton, merino and recycled nylon."
+        eyebrow={activeName ? 'Collection' : 'The Catalogue'}
+        title={activeName ? activeName : 'Every'}
+        accent={activeName ? '' : 'pair.'}
+        intro={activeName
+          ? `Every Gripzus pair in the ${activeName} collection.`
+          : 'The full Gripzus archive — knit small-batch from combed cotton, merino and recycled nylon.'}
       />
-
-      {/* Feature strip */}
-      <div className="bg-ink text-paper">
-        <div className="wrap py-2.5 flex items-center justify-center gap-6 text-[11px] tracking-[0.12em] uppercase">
-          <span>Free shipping over ₹999</span>
-          <span className="text-clay">·</span>
-          <span className="hidden sm:inline">New drops every month</span>
-          <span className="hidden sm:inline text-clay">·</span>
-          <span>Knit small-batch in India</span>
-        </div>
-      </div>
 
       <section className="section-y">
         <div className="wrap">
@@ -136,24 +189,32 @@ export default function ProductsPage() {
           {/* Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-5 border-b border-line">
             <div className="flex flex-wrap items-center gap-2">
-              {[{ value: 'all', label: 'All' }, ...CATEGORIES].map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setChip(c.value)}
-                  className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
-                    chip === c.value
-                      ? 'bg-ink text-paper border-ink'
-                      : 'border-line text-ink-soft hover:border-ink hover:text-ink'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
+              <button
+                onClick={() => selectChip('all')}
+                className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
+                  activeCat === 'all' ? 'bg-ink text-paper border-ink' : 'border-line text-ink-soft hover:border-ink hover:text-ink'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((c) => {
+                const key = c.slug || c.name;
+                return (
+                  <button
+                    key={c.id ?? key}
+                    onClick={() => selectChip(key)}
+                    className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
+                      activeCat === key ? 'bg-ink text-paper border-ink' : 'border-line text-ink-soft hover:border-ink hover:text-ink'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-3">
               <SortDropdown value={sort} onChange={setSort} options={SORTS} />
-
               <button
                 onClick={openDrawer}
                 className="flex items-center gap-2 px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border border-ink hover:bg-ink hover:text-paper transition-colors"
@@ -161,7 +222,7 @@ export default function ProductsPage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" /></svg>
                 Refine
                 {activeFilterCount > 0 && (
-                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-paper text-[10px] font-semibold flex items-center justify-center">
+                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-paper text-[10px] font-semibold flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}
@@ -170,10 +231,20 @@ export default function ProductsPage() {
           </div>
 
           {/* Grid */}
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i}>
+                  <div className="aspect-[4/5] rounded-lg bg-gray-200 animate-pulse" />
+                  <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
+                  <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-24 border border-line rounded-lg">
-              <p className="h-display text-3xl mb-3">No pairs match your filters</p>
-              <button onClick={() => { setChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
+              <p className="h-display text-3xl mb-3">No pairs found</p>
+              <button onClick={() => { selectChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
@@ -186,12 +257,13 @@ export default function ProductsPage() {
       <FilterDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        categories={CATEGORIES}
         draft={draft}
         setDraft={setDraft}
         onApply={applyDrawer}
         onClear={clearDrawer}
         resultCount={draftCount}
+        sizeOptions={sizeOptions}
+        colorOptions={colorOptions}
       />
     </>
   );

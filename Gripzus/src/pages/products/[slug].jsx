@@ -1,57 +1,135 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
-
-const SAMPLE = {
-  name: 'Performance Trail',
-  collection: 'Athletic',
-  serial: 'N°.001',
-  price: 599,
-  salePrice: 449,
-  rating: 4.9,
-  reviews: 218,
-  description:
-    'A cushion-zoned crew sock built for trail miles and grocery aisles alike. The body is combed cotton for breathability, the toe and heel reinforced with recycled nylon, and the arch held by a low-stretch elastic that wakes the foot up without pinching it.',
-  details: [
-    'Body — 78% combed cotton, 19% recycled nylon, 3% elastane',
-    'Toe + heel — hand-linked, no seam ridges',
-    'Arch — low-stretch compression band',
-    'Cuff — 1×1 ribbed, holds without biting',
-    'Care — cold wash, lay flat, no tumble',
-  ],
-  sizes: ['S', 'M', 'L', 'XL'],
-  colors: [
-    { name: 'Ink',       hex: '#141414' },
-    { name: 'Charcoal',  hex: '#3A3A3A' },
-    { name: 'Slate',     hex: '#6B6B6B' },
-    { name: 'Chalk',     hex: '#ECECEC' },
-  ],
-  images: [
-    'https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=1400&q=85&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1604644401890-0bd678c83788?w=1400&q=85&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1542219550-37153d387c27?w=1400&q=85&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1577538928305-3807c3993047?w=1400&q=85&auto=format&fit=crop',
-  ],
-};
-
-const RELATED = [
-  { id: '2', name: 'Heritage Charcoal', slug: 'heritage-charcoal', collection: 'Dress',    price: 799, badge: 'New', images: ['https://images.unsplash.com/photo-1589810635657-232948472d98?w=900&q=80&auto=format&fit=crop','https://images.unsplash.com/photo-1607793483011-d10bb1d8be0c?w=900&q=80&auto=format&fit=crop'] },
-  { id: '3', name: 'Weekend Oat',       slug: 'weekend-oat',       collection: 'Casual',   price: 549, images: ['https://images.unsplash.com/photo-1542219550-37153d387c27?w=900&q=80&auto=format&fit=crop'] },
-  { id: '4', name: 'Merino Forest',     slug: 'merino-forest',     collection: 'Wool',     price: 899, salePrice: 649, badge: 'Limited', images: ['https://images.unsplash.com/photo-1577538928305-3807c3993047?w=900&q=80&auto=format&fit=crop'] },
-  { id: '6', name: 'Court Crew',        slug: 'court-crew',        collection: 'Athletic', price: 499, images: ['https://images.unsplash.com/photo-1567010892083-3b2e2b6cd24c?w=900&q=80&auto=format&fit=crop'] },
-];
+import ProductTestimonials from '../../components/products/ProductTestimonials';
+import { getProductBySlug, getProductsByCategory, getPublicProducts } from '../../services/products';
+import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 export default function ProductDetail() {
-  const product = SAMPLE;
-  const [activeImg, setActiveImg] = useState(0);
-  const [size, setSize] = useState(product.sizes[1]);
-  const [color, setColor] = useState(product.colors[0].name);
-  const [qty, setQty] = useState(1);
-  const [wishlisted, setWishlisted] = useState(false);
+  const router = useRouter();
+  const slug = router.query.slug;
 
-  const price = product.salePrice ?? product.price;
-  const discount = product.salePrice ? Math.round((1 - product.salePrice / product.price) * 100) : 0;
+  const { addItem, openCart } = useCart();
+  const { has, toggle } = useWishlist();
+
+  const [product, setProduct] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const [activeImg, setActiveImg] = useState(0);
+  const [size, setSize]   = useState('');
+  const [color, setColor] = useState('');
+  const [qty, setQty]     = useState(1);
+  const [added, setAdded] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  // Fetch the product by slug.
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    setLoading(true);
+    setNotFound(false);
+    getProductBySlug(slug)
+      .then((p) => {
+        if (!alive) return;
+        if (!p) { setNotFound(true); return; }
+        setProduct(p);
+        setActiveImg(0);
+        setSize(p.sizes?.[0] || '');
+        setColor(p.colors?.[0]?.name || '');
+      })
+      .catch(() => { if (alive) setNotFound(true); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [slug]);
+
+  // Related products — same collection, fallback to catalogue.
+  useEffect(() => {
+    if (!product) return;
+    let alive = true;
+    getProductsByCategory(product.collection)
+      .then((list) => {
+        const pool = list.filter((p) => p.slug !== product.slug);
+        if (pool.length) return pool;
+        return getPublicProducts({ limit: 8 }).then((all) => all.filter((p) => p.slug !== product.slug));
+      })
+      .then((list) => { if (alive) setRelated(list.slice(0, 4)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [product]);
+
+  /* Auto-advance the gallery one image at a time every 3s.
+     Pauses while the shopper hovers the main image. */
+  useEffect(() => {
+    const count = product?.images?.length || 0;
+    if (count < 2 || paused) return;
+    const id = setTimeout(() => {
+      setActiveImg((i) => (i + 1) % count);
+    }, 3000);
+    return () => clearTimeout(id);
+  }, [product, paused, activeImg]);
+
+  /* ── Loading / not-found ─────────────────────────────────── */
+  if (loading) {
+    return (
+      <main className="bg-paper">
+        <div className="wrap py-12">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-14">
+            <div className="md:col-span-7 aspect-square rounded-lg bg-gray-200 animate-pulse" />
+            <div className="md:col-span-5 space-y-4 pt-4">
+              <div className="h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
+              <div className="h-10 w-3/4 rounded bg-gray-200 animate-pulse" />
+              <div className="h-8 w-1/3 rounded bg-gray-200 animate-pulse" />
+              <div className="h-24 w-full rounded bg-gray-200 animate-pulse" />
+              <div className="h-12 w-full rounded bg-gray-200 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (notFound || !product) {
+    return (
+      <main className="bg-paper">
+        <div className="wrap section-y text-center">
+          <p className="h-display text-3xl text-ink mb-3">Pair not found</p>
+          <p className="prose-body text-sm mb-6">This product may have sold out or moved.</p>
+          <Link href="/products" className="btn-outline inline-flex">Back to the catalogue</Link>
+        </div>
+      </main>
+    );
+  }
+
+  const price    = product.price;
+  const compare  = product.compareAtPrice;
+  const wished   = has(product.id);
+  const images   = product.images?.length ? product.images : ['/assets/Gripzus.JPG.jpeg'];
+  const activeColor = product.colors?.find((c) => c.name === color);
+  const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
+
+  const handleAdd = () => {
+    addItem({
+      id: product.id, name: product.name, slug: product.slug,
+      image: images[0], price, collection: product.collection,
+      size, color, qty,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
+  };
+
+  const handleBuyNow = () => {
+    addItem({
+      id: product.id, name: product.name, slug: product.slug,
+      image: images[0], price, collection: product.collection,
+      size, color, qty,
+    }, { openDrawer: false });
+    openCart();
+  };
 
   return (
     <>
@@ -59,7 +137,7 @@ export default function ProductDetail() {
       <main className="bg-paper">
 
         {/* Breadcrumb */}
-        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 pt-8">
+        <div className="wrap pt-8">
           <p className="eyebrow">
             <Link href="/" className="hover:text-ink">Home</Link>
             <span className="mx-2 text-line">/</span>
@@ -70,157 +148,214 @@ export default function ProductDetail() {
         </div>
 
         {/* Gallery + Info */}
-        <section className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-8 md:py-12">
+        <section className="wrap py-8 md:py-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-14">
 
-            {/* Gallery */}
-            <div className="md:col-span-7">
-              <div className="relative aspect-square bg-paper-deep overflow-hidden">
-                <img src={product.images[activeImg]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
-                <span className="absolute top-5 left-5 eyebrow">{product.serial}</span>
-              </div>
-              <div className="mt-3 grid grid-cols-4 gap-3">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImg(i)}
-                    className={`relative aspect-square bg-paper-deep overflow-hidden transition-all ${
-                      activeImg === i ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                  </button>
-                ))}
+            {/* Gallery — sticky while the info column scrolls */}
+            <div className="md:col-span-7 md:sticky md:top-24 md:self-start">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:gap-4">
+
+                {/* Thumbnail rail — natural height so the whole image shows */}
+                {images.length > 1 && (
+                  <div className="flex items-start gap-3 overflow-x-auto p-1.5 sm:max-h-[42rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto">
+                    {images.slice(0, 8).map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImg(i)}
+                        aria-label={`View image ${i + 1}`}
+                        className={`w-[4.75rem] shrink-0 overflow-hidden rounded-md bg-paper-warm transition-all duration-300 ${
+                          activeImg === i
+                            ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
+                            : 'opacity-45 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={img} alt="" className="block h-auto w-full" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Main image — natural height, auto-advances every 3s, pauses on hover */}
+                <div
+                  className="gz-pdp-main relative flex-1 overflow-hidden rounded-lg bg-paper-warm"
+                  onMouseEnter={() => setPaused(true)}
+                  onMouseLeave={() => setPaused(false)}
+                >
+                  <img
+                    key={activeImg}
+                    src={images[activeImg]}
+                    alt={product.name}
+                    className="gz-pdp-img block h-auto w-full"
+                  />
+
+                  {/* Image counter */}
+                  {images.length > 1 && (
+                    <span className="absolute bottom-4 right-4 rounded-full bg-ink/80 px-3 py-1 text-[10px] tracking-[0.16em] text-paper backdrop-blur-sm">
+                      {String(activeImg + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
+                    </span>
+                  )}
+
+                  <style jsx>{`
+                    .gz-pdp-img {
+                      animation: gz-pdp-fade 0.6s ease;
+                    }
+                    @keyframes gz-pdp-fade {
+                      from { opacity: 0; }
+                      to   { opacity: 1; }
+                    }
+                  `}</style>
+                </div>
               </div>
             </div>
 
             {/* Info */}
             <div className="md:col-span-5">
-              <div className="flex items-center justify-between mb-5">
-                <span className="eyebrow">{product.collection} · {product.serial}</span>
-                {product.salePrice && (
-                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase bg-clay text-paper px-2 py-0.5">
-                    {discount}% Off
-                  </span>
-                )}
-              </div>
+              <span className="eyebrow mb-3 block">{product.collection}</span>
 
-              <h1 className="h-display text-4xl md:text-5xl lg:text-6xl uppercase mb-4">{product.name}</h1>
-
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center gap-0.5">
-                  {[1,2,3,4,5].map((s) => (
-                    <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" className={s <= Math.round(product.rating) ? 'text-clay' : 'text-line'}>
-                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="eyebrow">{product.rating} · {product.reviews} reviews</span>
-              </div>
+              <h1 className="h-display text-2xl md:text-3xl mb-5">{product.name}</h1>
 
               <div className="flex items-baseline gap-3 mb-8 pb-8 border-b border-line">
-                <span className="font-display font-bold text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
-                {product.salePrice && (
-                  <span className="font-mono text-ink-muted text-base line-through">₹{product.price.toLocaleString('en-IN')}</span>
+                <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
+                {compare && compare > price && (
+                  <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
                 )}
               </div>
 
               {/* Colour */}
-              <div className="mb-7">
-                <p className="eyebrow mb-3">Colour — <span className="text-ink">{color}</span></p>
-                <div className="flex flex-wrap gap-2">
-                  {product.colors.map((c) => (
-                    <button
-                      key={c.name}
-                      onClick={() => setColor(c.name)}
-                      title={c.name}
-                      className={`w-10 h-10 rounded-full border transition-all ${
-                        color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
-                      }`}
-                      style={{ backgroundColor: c.hex }}
-                      aria-label={c.name}
-                    />
-                  ))}
+              {product.colors?.length > 0 && (
+                <div className="mb-7">
+                  <p className="eyebrow mb-3">Colour — <span className="text-ink">{colorLabel}</span></p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {product.colors.map((c) =>
+                      c.packColors ? (
+                        // Multi-colour pack — all colours shown together in one box
+                        <button
+                          key={c.name}
+                          onClick={() => setColor(c.name)}
+                          title={c.name}
+                          aria-label={`Pack of ${c.packColors.length}`}
+                          className={`flex h-12 items-center gap-1.5 rounded-sm border px-3 transition-all ${
+                            color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
+                          }`}
+                        >
+                          {c.packColors.map((pc) => (
+                            <span
+                              key={pc.name}
+                              title={pc.name}
+                              className="h-6 w-6 rounded-full border border-line"
+                              style={{ backgroundColor: pc.hex }}
+                            />
+                          ))}
+                        </button>
+                      ) : (
+                        <button
+                          key={c.name}
+                          onClick={() => setColor(c.name)}
+                          title={c.name}
+                          aria-label={c.name}
+                          className={`w-10 h-10 rounded-full border transition-all ${
+                            color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
+                          }`}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Size */}
-              <div className="mb-8">
-                <p className="eyebrow mb-3">Size — <span className="text-ink">{size}</span></p>
-                <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setSize(s)}
-                      className={`min-w-[3.5rem] px-4 py-3 font-mono text-[11px] tracking-[0.15em] uppercase transition-colors ${
-                        size === s ? 'bg-ink text-paper' : 'border border-line text-ink hover:border-ink'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+              {product.sizes?.length > 0 && (
+                <div className="mb-8">
+                  <p className="eyebrow mb-3">Size — <span className="text-ink">{size}</span></p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSize(s)}
+                        className={`min-w-[3.5rem] px-4 py-3 text-[11px] tracking-[0.12em] uppercase transition-colors rounded-sm ${
+                          size === s ? 'bg-ink text-paper' : 'border border-line text-ink hover:border-ink'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Qty + actions */}
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex items-center border border-line">
-                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-deep">−</button>
-                  <span className="w-12 text-center font-mono text-sm">{qty}</span>
-                  <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-deep">+</button>
+                <div className="flex items-center border border-line rounded-sm">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
+                  <span className="w-12 text-center text-sm">{qty}</span>
+                  <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
                 </div>
-                <button className="flex-1 cta justify-center !py-4">Add to Bag</button>
+                <button onClick={handleAdd} className={`btn flex-1 justify-center !py-4 ${added ? '!bg-ink-soft' : ''}`}>
+                  {added ? 'Added to bag ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+                </button>
                 <button
-                  onClick={() => setWishlisted((w) => !w)}
+                  onClick={() => toggle(product)}
                   aria-label="Wishlist"
-                  className={`w-12 h-12 border flex items-center justify-center transition-colors ${
-                    wishlisted ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
+                  className={`w-12 h-12 border flex items-center justify-center transition-colors rounded-sm ${
+                    wished ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
                   }`}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={wishlisted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
                     <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
                   </svg>
                 </button>
               </div>
-              <button className="w-full cta-ghost justify-center !py-4 mb-9">Buy Now</button>
+              <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-4 mb-9">Buy Now</button>
 
               {/* Description */}
-              <div className="mb-8">
-                <p className="eyebrow mb-3">About this pair</p>
-                <p className="prose-body text-sm md:text-base">{product.description}</p>
-              </div>
+              {product.description && (
+                <div className="mb-8">
+                  <p className="eyebrow mb-3">About this pair</p>
+                  <p className="prose-body text-sm md:text-base">{product.description}</p>
+                </div>
+              )}
 
-              {/* Spec sheet */}
+              {/* Spec */}
               <div className="border-t border-line pt-7">
-                <p className="eyebrow mb-4">Spec sheet</p>
-                <ul className="divide-y divide-line">
-                  {product.details.map((d, i) => (
-                    <li key={i} className="flex gap-4 py-2.5">
-                      <span className="eyebrow text-clay shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                      <span className="text-ink-soft text-sm">{d}</span>
-                    </li>
-                  ))}
+                <p className="eyebrow mb-4">Details</p>
+                <ul className="divide-y divide-line text-sm">
+                  {product.sku && (
+                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">SKU</span><span className="text-ink">{product.sku}</span></li>
+                  )}
+                  <li className="flex justify-between py-2.5"><span className="text-ink-muted">Collection</span><span className="text-ink">{product.collection}</span></li>
+                  {product.sizes?.length > 0 && (
+                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">Sizes</span><span className="text-ink">{product.sizes.join(', ')}</span></li>
+                  )}
+                  {product.colors?.length > 0 && (
+                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">Colours</span><span className="text-ink">{product.colors.map((c) => c.name).join(', ')}</span></li>
+                  )}
                 </ul>
               </div>
             </div>
           </div>
         </section>
 
+        {/* Testimonials + write-a-review */}
+        <ProductTestimonials productId={product.id} productName={product.name} />
+
         {/* Related */}
-        <section className="bg-paper-deep border-t border-line py-20 md:py-24">
-          <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20">
-            <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
-              <div>
-                <p className="eyebrow mb-4">More from the archive</p>
-                <h2 className="h-display text-4xl md:text-6xl">Pairs <em className="h-italic">like this.</em></h2>
+        {related.length > 0 && (
+          <section className="bg-paper-warm border-t border-line section-y">
+            <div className="wrap">
+              <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
+                <div>
+                  <p className="eyebrow mb-4">More from the collection</p>
+                  <h2 className="h-display text-3xl md:text-5xl">Pairs <span className="h-italic">like this.</span></h2>
+                </div>
+                <Link href="/products" className="btn-outline">See all</Link>
               </div>
-              <Link href="/products" className="cta-ghost">See all</Link>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                {related.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
-              {RELATED.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
     </>
   );

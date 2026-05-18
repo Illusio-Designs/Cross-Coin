@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import PageHero from '../components/common/PageHero';
+import { toastMessageSent } from '../utils/toast';
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
 
-  const onSubmit = (e) => { e.preventDefault(); setSent(true); };
+  const onSubmit = (e) => { e.preventDefault(); setSent(true); toastMessageSent(); };
 
   return (
     <>

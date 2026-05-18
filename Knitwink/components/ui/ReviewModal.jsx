@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Star, X, CheckCircle } from 'lucide-react'
 import { submitReview } from '@/lib/api/reviews'
 
@@ -32,8 +33,11 @@ export function ReviewModal({ isOpen, onClose, productId = null, productName = n
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  if (!isOpen) return null
+  useEffect(() => setMounted(true), [])
+
+  if (!isOpen || !mounted) return null
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -66,7 +70,7 @@ export function ReviewModal({ isOpen, onClose, productId = null, productName = n
     onClose()
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
@@ -131,6 +135,7 @@ export function ReviewModal({ isOpen, onClose, productId = null, productName = n
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
 /* Gripzus footer — cinematic editorial, refined palette.
    Dark ink ground · newsletter call-out · Care/House/Contact columns ·
@@ -46,9 +47,22 @@ export default function Footer() {
             <p className="text-paper/60 text-base leading-relaxed max-w-md mt-5 mb-7">
               Field notes, early drops, and a 10% welcome from us. No spam — twice a month, on Fridays.
             </p>
-            <form className="flex items-center border border-paper/20 max-w-md rounded-full overflow-hidden">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const email = e.target.email.value.trim();
+                if (!email) {
+                  toastValidationError('Please enter your email address.');
+                  return;
+                }
+                toastSubscribed();
+                e.target.reset();
+              }}
+              className="flex items-center border border-paper/20 max-w-md rounded-full overflow-hidden"
+            >
               <input
                 type="email"
+                name="email"
                 placeholder="Your email address"
                 className="flex-1 bg-transparent text-paper placeholder:text-paper/40 text-sm px-5 py-3.5 outline-none"
               />

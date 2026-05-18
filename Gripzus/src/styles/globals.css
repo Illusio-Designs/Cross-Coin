@@ -178,12 +178,58 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   .section-y { padding-top: 96px; padding-bottom: 96px; }
 }
 
+/* ── Policy / rich-text content (from the policies API) ───────────── */
+.policy-content {
+  font-family: var(--font-body);
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.8;
+  text-align: justify;
+  hyphens: auto;
+}
+.policy-content h1,
+.policy-content h2,
+.policy-content h3,
+.policy-content h4 { text-align: left; }
+.policy-content h1,
+.policy-content h2,
+.policy-content h3,
+.policy-content h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.2;
+  margin: 2em 0 0.6em;
+}
+.policy-content h1 { font-size: 1.9rem; }
+.policy-content h2 { font-size: 1.5rem; }
+.policy-content h3 { font-size: 1.2rem; }
+.policy-content h4 { font-size: 1.05rem; }
+.policy-content h2:first-child,
+.policy-content h1:first-child { margin-top: 0; }
+.policy-content p  { margin: 0 0 1.1em; }
+.policy-content ul,
+.policy-content ol { margin: 0 0 1.2em; padding-left: 1.3em; }
+.policy-content li { margin-bottom: 0.45em; }
+.policy-content a  { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.policy-content a:hover { color: var(--ink-soft); }
+.policy-content strong { color: var(--ink); font-weight: 600; }
+.policy-content hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+.policy-content table { width: 100%; border-collapse: collapse; margin: 0 0 1.2em; }
+.policy-content th,
+.policy-content td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+
 /* ── Misc ─────────────────────────────────────────────────────────── */
 .hairline { height: 1px; background: var(--line); }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @media (min-width: 768px) {
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--paper-warm); }
-  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
 }

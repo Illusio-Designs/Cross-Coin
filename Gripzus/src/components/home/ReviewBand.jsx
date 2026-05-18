@@ -1,6 +1,9 @@
 /* Customer reviews — infinite slider. Two rows scroll in opposite
-   directions and pause on hover. Prop-driven (`reviews`) with a seed
-   fallback so it is never empty. */
+   directions and pause on hover. Pulls every approved review from the
+   API on mount; falls back to seed data so it is never empty. */
+
+import { useEffect, useState } from 'react';
+import { getAllReviews } from '../../services/reviews';
 
 const SEED = [
   { id: 1, quote: 'Held a ten-day Himalayan trek and came back the exact same shape.', name: 'Anika S.', role: 'Trail editor', rating: 5 },
@@ -42,7 +45,20 @@ function ReviewCard({ r }) {
   );
 }
 
-export default function ReviewBand({ reviews = SEED }) {
+export default function ReviewBand({ reviews: reviewsProp }) {
+  const [reviews, setReviews] = useState(reviewsProp || SEED);
+
+  useEffect(() => {
+    if (reviewsProp) return; // parent supplied reviews — don't override
+    let active = true;
+    getAllReviews()
+      .then((data) => {
+        if (active && data && data.length) setReviews(data);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [reviewsProp]);
+
   if (!reviews.length) return null;
 
   // Split into two rows; duplicate each row for a seamless loop.

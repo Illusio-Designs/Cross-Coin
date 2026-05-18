@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import { useCart } from '@/hooks/useCart'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { StickyATCBar } from './StickyATCBar'
 import { formatPrice, cn } from '@/lib/utils'
+import { getProductReviews } from '@/lib/api/reviews'
 import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp, Star, Heart } from 'lucide-react'
 
 function seedNum(id, min, max) {
@@ -20,6 +21,29 @@ export function ProductInfo({ product, onColorChange }) {
   )
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
+  const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
+
+  /* Pull real review data so the rating row reflects actual customer
+     reviews instead of a hardcoded score. */
+  useEffect(() => {
+    let active = true
+    getProductReviews(product.id)
+      .then((data) => {
+        if (!active) return
+        const list = data?.reviews ?? data ?? []
+        const average =
+          data?.stats?.average ??
+          (list.length
+            ? list.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / list.length
+            : 0)
+        const count = data?.stats?.total ?? list.length
+        setReviewStats({ average: Number(average) || 0, count })
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [product.id])
   const { addItem, openDrawer } = useCart()
   const wishlisted = useWishlistStore((s) => s.hasItem(product.id))
   const toggleWishlist = useWishlistStore((s) => s.toggle)
@@ -142,12 +166,26 @@ export function ProductInfo({ product, onColorChange }) {
 
         {/* Rating + SKU row */}
         <div className="mt-2 flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            {[1,2,3,4,5].map(i => (
-              <Star key={i} size={12} className="fill-amber-400 text-amber-400" />
-            ))}
-            <span className="ml-1 text-xs text-gray-400">(4.8)</span>
-          </div>
+          {reviewStats.count > 0 ? (
+            <div className="flex items-center gap-1">
+              {[1,2,3,4,5].map(i => (
+                <Star
+                  key={i}
+                  size={12}
+                  className={
+                    i <= Math.round(reviewStats.average)
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'fill-gray-200 text-gray-200'
+                  }
+                />
+              ))}
+              <span className="ml-1 text-xs text-gray-400">
+                {reviewStats.average.toFixed(1)} ({reviewStats.count})
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-gray-400">No reviews yet</span>
+          )}
           {product.sku && (
             <>
               <span className="text-gray-200">|</span>
