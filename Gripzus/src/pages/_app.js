@@ -8,6 +8,8 @@ import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import CartDrawer from '../components/cart/CartDrawer'
 import ToastViewport from '../components/ui/ToastViewport'
+import WhatsAppChat from '../components/ui/WhatsAppChat'
+import BackToTop from '../components/ui/BackToTop'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
@@ -27,6 +29,8 @@ function MyApp({ Component, pageProps }) {
             </div>
             <CartDrawer />
             <ToastViewport />
+            <WhatsAppChat />
+            <BackToTop />
           </WishlistProvider>
         </CartProvider>
       </CurrencyProvider>

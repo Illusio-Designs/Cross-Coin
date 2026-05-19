@@ -23,6 +23,7 @@ function normalize(p) {
     badge: p.badge || '',
     images: imgs.length ? imgs : [p.image || FALLBACK_IMG],
     colors: Array.isArray(p.colors) ? p.colors.filter((c) => c?.name) : [],
+    sizes: Array.isArray(p.sizes) ? p.sizes : [],
     description: p.description || p.note || 'A considered pair from the Gripzus atelier.',
   };
 }
@@ -96,6 +97,7 @@ export default function ExclusiveSection({ products = [] }) {
     addItem({
       id: p.id, name: p.name, slug: p.slug, image: p.images[thumbIndex] || p.images[0],
       price: p.price, collection: p.collection, qty,
+      size: p.sizes[0] || '', color: activeCol?.name || '',
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
