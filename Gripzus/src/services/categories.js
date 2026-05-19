@@ -12,11 +12,13 @@ function cleanUrl(url) {
   return url;
 }
 
-/* All public collections — GET /api/categories/listing */
+/* All public collections — GET /api/categories/listing
+   A per-request timestamp + no-store busts any URL-keyed cache layer. */
 export async function getPublicCategories() {
   try {
-    const res = await fetch(`${API_URL}/api/categories/listing?nocache=1`, {
+    const res = await fetch(`${API_URL}/api/categories/listing?t=${Date.now()}`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
     const data = await res.json();

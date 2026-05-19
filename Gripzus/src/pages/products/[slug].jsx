@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -26,6 +26,10 @@ export default function ProductDetail() {
   const [qty, setQty]     = useState(1);
   const [added, setAdded] = useState(false);
   const [paused, setPaused] = useState(false);
+
+  // Sticky bottom bar — shown once the Add-to-Bag / Buy-Now block scrolls away.
+  const actionsRef = useRef(null);
+  const [showBar, setShowBar] = useState(false);
 
   // Fetch the product by slug.
   useEffect(() => {
@@ -72,6 +76,18 @@ export default function ProductDetail() {
     }, 3000);
     return () => clearTimeout(id);
   }, [product, paused, activeImg]);
+
+  // Watch the action block — when it leaves the viewport, reveal the bar.
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [product]);
 
   /* ── Loading / not-found ─────────────────────────────────── */
   if (loading) {
@@ -285,28 +301,30 @@ export default function ProductDetail() {
               )}
 
               {/* Qty + actions */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex items-center border border-line rounded-sm">
-                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
-                  <span className="w-12 text-center text-sm">{qty}</span>
-                  <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
+              <div ref={actionsRef}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center border border-line rounded-sm">
+                    <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
+                    <span className="w-12 text-center text-sm">{qty}</span>
+                    <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
+                  </div>
+                  <button onClick={handleAdd} className={`btn flex-1 justify-center !py-4 ${added ? '!bg-ink-soft' : ''}`}>
+                    {added ? 'Added to bag ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+                  </button>
+                  <button
+                    onClick={() => toggle(product)}
+                    aria-label="Wishlist"
+                    className={`w-12 h-12 border flex items-center justify-center transition-colors rounded-sm ${
+                      wished ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
+                    }`}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+                      <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
+                    </svg>
+                  </button>
                 </div>
-                <button onClick={handleAdd} className={`btn flex-1 justify-center !py-4 ${added ? '!bg-ink-soft' : ''}`}>
-                  {added ? 'Added to bag ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
-                </button>
-                <button
-                  onClick={() => toggle(product)}
-                  aria-label="Wishlist"
-                  className={`w-12 h-12 border flex items-center justify-center transition-colors rounded-sm ${
-                    wished ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
-                  }`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
-                    <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
-                  </svg>
-                </button>
+                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-4 mb-9">Buy Now</button>
               </div>
-              <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-4 mb-9">Buy Now</button>
 
               {/* Description */}
               {product.description && (
@@ -356,6 +374,29 @@ export default function ProductDetail() {
             </div>
           </section>
         )}
+
+        {/* Sticky add-to-bag bar — slides in once the action block scrolls away */}
+        <div
+          className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 backdrop-blur-md shadow-[0_-2px_16px_rgba(0,0,0,0.07)] transition-transform duration-300 ${
+            showBar ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <div className="wrap py-3 flex items-center gap-3 md:gap-5">
+            <img
+              src={images[0]}
+              alt={product.name}
+              className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-md object-cover bg-paper-warm"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="h-display text-ink text-sm md:text-base leading-tight truncate">{product.name}</p>
+              <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{price.toLocaleString('en-IN')}</p>
+            </div>
+            <button onClick={handleBuyNow} className="btn-outline hidden sm:inline-flex !py-3">Buy Now</button>
+            <button onClick={handleAdd} className={`btn justify-center !py-3 ${added ? '!bg-ink-soft' : ''}`}>
+              {added ? 'Added ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+            </button>
+          </div>
+        </div>
       </main>
     </>
   );
