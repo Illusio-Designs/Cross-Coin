@@ -44,7 +44,7 @@ export default function Footer() {
             <h3 className="h-display text-paper leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
               Stay <span className="h-italic">in step.</span>
             </h3>
-            <p className="text-paper/60 text-base leading-relaxed max-w-md mt-5 mb-7">
+            <p className="text-paper/60 text-base leading-relaxed max-w-[21rem] mt-5 mb-7">
               Field notes, early drops, and a 10% welcome from us. No spam — twice a month, on Fridays.
             </p>
             <form
@@ -58,7 +58,7 @@ export default function Footer() {
                 toastSubscribed();
                 e.target.reset();
               }}
-              className="flex items-center border border-paper/20 max-w-md rounded-full overflow-hidden"
+              className="flex items-center border border-paper/20 max-w-[21rem] rounded-full overflow-hidden"
             >
               <input
                 type="email"

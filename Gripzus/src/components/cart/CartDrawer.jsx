@@ -381,6 +381,7 @@ export default function CartDrawer() {
   return (
     <>
       <div className={`cd-backdrop ${open ? 'cd-backdrop-active' : ''}`} onClick={closeCart} />
+      <div className="cd-clip">
       <div className={`cd-drawer ${open ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
 
         {/* Header */}
@@ -643,6 +644,7 @@ export default function CartDrawer() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </>
   );

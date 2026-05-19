@@ -153,6 +153,19 @@ export async function getProductsByCategory(name) {
   }
 }
 
+/* Product search — GET /api/products/search?q= */
+export async function searchProducts(query) {
+  const q = (query || '').trim();
+  if (!q) return [];
+  try {
+    const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`);
+    const products = data?.data?.products || data?.products || data?.data || [];
+    return (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 /* Single product by slug — GET /api/products/by-slug/:slug */
 export async function getProductBySlug(slug) {
   if (!slug) return null;

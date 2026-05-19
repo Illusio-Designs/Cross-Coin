@@ -34,7 +34,7 @@ function SortDropdown({ value, onChange, options }) {
           className={`text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9" /></svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-paper border border-line rounded-lg shadow-card py-1.5 z-30">
+        <div className="absolute left-0 mt-2 w-48 bg-paper border border-line rounded-lg shadow-card py-1.5 z-30">
           {options.map((o) => (
             <button
               key={o.value}
@@ -187,8 +187,9 @@ export default function ProductsPage() {
         <div className="wrap">
 
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-5 border-b border-line">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-10 pb-5 border-b border-line">
+            {/* Collection chips — desktop only (mobile uses the Refine drawer) */}
+            <div className="hidden lg:flex flex-wrap items-center gap-2">
               <button
                 onClick={() => selectChip('all')}
                 className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
@@ -213,7 +214,7 @@ export default function ProductsPage() {
               })}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ml-auto">
               <SortDropdown value={sort} onChange={setSort} options={SORTS} />
               <button
                 onClick={openDrawer}
@@ -264,6 +265,9 @@ export default function ProductsPage() {
         resultCount={draftCount}
         sizeOptions={sizeOptions}
         colorOptions={colorOptions}
+        categories={categories}
+        activeCat={activeCat}
+        onSelectCollection={(slug) => { selectChip(slug); setDrawerOpen(false); }}
       />
     </>
   );

@@ -28,7 +28,6 @@ export default function Header() {
   const accountHref = isAuthenticated || authLoading ? '/account' : '/login';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -105,36 +104,22 @@ export default function Header() {
 
             {/* Actions — pushed to the far right */}
             <div className="flex items-center gap-0.5 ml-auto">
-              <IconBtn ariaLabel="Search" onClick={() => setSearchOpen((s) => !s)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
+              <IconBtn as={Link} href="/search" ariaLabel="Search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
               </IconBtn>
               <IconBtn as={Link} href={accountHref} ariaLabel={isAuthenticated ? 'Account' : 'Sign in'}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
               </IconBtn>
               <IconBtn as={Link} href="/wishlist" ariaLabel="Wishlist" badge={wishCount}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
               </IconBtn>
               <IconBtn ariaLabel="Bag" onClick={openCart} badge={count}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" strokeLinecap="round" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" strokeLinecap="round" /></svg>
               </IconBtn>
             </div>
           </div>
         </div>
         <div className="hairline" />
-
-        {searchOpen && (
-          <div className="bg-paper border-b border-line">
-            <div className="wrap py-4 flex items-center gap-4">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-muted"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
-              <input
-                autoFocus type="text" placeholder="Search socks, collections…"
-                onKeyDown={(e) => { if (e.key === 'Enter' && e.target.value.trim()) { router.push(`/search?q=${encodeURIComponent(e.target.value.trim())}`); setSearchOpen(false); } }}
-                className="flex-1 bg-transparent outline-none text-ink placeholder:text-ink-muted text-base"
-              />
-              <button onClick={() => setSearchOpen(false)} className="eyebrow hover:text-ink">Close</button>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Mobile drawer */}
@@ -145,7 +130,7 @@ export default function Header() {
             <div className="px-6 py-4 border-b border-line flex items-center justify-between">
               <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={120} height={36} className="h-8 w-auto object-contain" />
               <button onClick={() => setMobileOpen(false)} className="w-9 h-9 flex items-center justify-center text-ink" aria-label="Close menu">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto px-6 py-4">

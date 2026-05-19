@@ -1,97 +1,163 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
+import { searchProducts, getPublicProducts } from '../services/products';
 
-const CATALOG = [
-  { id: '1', name: 'Performance Trail',  slug: 'performance-trail',  collection: 'Athletic', category: 'athletic', price: 599, salePrice: 449, badge: 'Bestseller', images: ['https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?w=900&q=80&auto=format&fit=crop','https://images.unsplash.com/photo-1604644401890-0bd678c83788?w=900&q=80&auto=format&fit=crop'] },
-  { id: '2', name: 'Heritage Charcoal',  slug: 'heritage-charcoal',  collection: 'Dress',    category: 'dress',    price: 799, badge: 'New', images: ['https://images.unsplash.com/photo-1589810635657-232948472d98?w=900&q=80&auto=format&fit=crop','https://images.unsplash.com/photo-1607793483011-d10bb1d8be0c?w=900&q=80&auto=format&fit=crop'] },
-  { id: '3', name: 'Weekend Oat',        slug: 'weekend-oat',        collection: 'Casual',   category: 'casual',   price: 549, images: ['https://images.unsplash.com/photo-1542219550-37153d387c27?w=900&q=80&auto=format&fit=crop'] },
-  { id: '4', name: 'Merino Forest',      slug: 'merino-forest',      collection: 'Wool',     category: 'wool',     price: 899, salePrice: 649, badge: 'Limited', images: ['https://images.unsplash.com/photo-1577538928305-3807c3993047?w=900&q=80&auto=format&fit=crop'] },
-  { id: '5', name: 'Atelier Ribbed',     slug: 'atelier-ribbed',     collection: 'Dress',    category: 'dress',    price: 749, images: ['https://images.unsplash.com/photo-1607793483011-d10bb1d8be0c?w=900&q=80&auto=format&fit=crop'] },
-  { id: '6', name: 'Court Crew',         slug: 'court-crew',         collection: 'Athletic', category: 'athletic', price: 499, images: ['https://images.unsplash.com/photo-1567010892083-3b2e2b6cd24c?w=900&q=80&auto=format&fit=crop'] },
-  { id: '7', name: 'Mountain Wool',      slug: 'mountain-wool',      collection: 'Wool',     category: 'wool',     price: 999, images: ['https://images.unsplash.com/photo-1583500178690-f0d24cb16eaf?w=900&q=80&auto=format&fit=crop'] },
-  { id: '8', name: 'Studio Slip',        slug: 'studio-slip',        collection: 'Casual',   category: 'casual',   price: 449, images: ['https://images.unsplash.com/photo-1590247813693-5541d1c609fd?w=900&q=80&auto=format&fit=crop'] },
-];
-
-const POPULAR = ['Athletic', 'Dress', 'Wool', 'Merino', 'Trail'];
+/* Search — live API search (GET /api/products/search), same flow as the
+   Knitwink search page: a debounced field in the hero that syncs to
+   ?q=, results below, and a one-per-collection browse grid when empty. */
 
 export default function SearchPage() {
   const router = useRouter();
-  const [q, setQ] = useState((router.query.q || '').toString());
+  const urlQ = (router.query.q || '').toString();
 
-  const results = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (term.length < 2) return [];
-    return CATALOG.filter((p) =>
-      p.name.toLowerCase().includes(term) ||
-      p.collection.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term)
-    );
-  }, [q]);
+  const [value, setValue]   = useState('');   // what's typed
+  const [query, setQuery]   = useState('');   // the committed (debounced) term
+  const [results, setResults] = useState([]);
+  const [browse, setBrowse]   = useState([]); // one product per collection
+  const [loading, setLoading] = useState(false);
+
+  const debounceRef = useRef(null);
+  const seededRef   = useRef(false);
+
+  // Seed the field from ?q= once the router is ready.
+  useEffect(() => {
+    if (!router.isReady || seededRef.current) return;
+    seededRef.current = true;
+    setValue(urlQ);
+    setQuery(urlQ);
+  }, [router.isReady, urlQ]);
+
+  // Debounce typing → commit the term + sync the URL.
+  useEffect(() => {
+    if (!seededRef.current) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const q = value.trim();
+      setQuery(q);
+      router.replace(q ? `/search?q=${encodeURIComponent(q)}` : '/search', undefined, { shallow: true });
+    }, 350);
+    return () => clearTimeout(debounceRef.current);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Run the search whenever the committed term changes.
+  useEffect(() => {
+    if (!query) { setResults([]); setLoading(false); return; }
+    let alive = true;
+    setLoading(true);
+    searchProducts(query)
+      .then((list) => { if (alive) setResults(list); })
+      .catch(() => { if (alive) setResults([]); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [query]);
+
+  // Browse grid for the empty state — one pair from each collection.
+  useEffect(() => {
+    getPublicProducts({ limit: 100 })
+      .then((list) => {
+        const seen = new Map();
+        for (const p of list) {
+          const c = p.collection || 'Gripzus';
+          if (!seen.has(c)) seen.set(c, p);
+        }
+        setBrowse([...seen.values()]);
+      })
+      .catch(() => setBrowse([]));
+  }, []);
+
+  const hasQuery = query.trim().length > 0;
 
   return (
     <>
-      <Head><title>{q ? `"${q}"` : 'Search'} — Gripzus</title></Head>
+      <Head><title>{hasQuery ? `"${query}" — Search` : 'Search'} — Gripzus</title></Head>
       <main className="bg-paper">
-        <PageHero
-          chapter="05"
-          eyebrow="Find a pair"
-          title={q ? 'Results' : 'Search'}
-          accent={q ? `"${q}"` : 'the archive.'}
-          intro={q ? `${results.length} pair${results.length === 1 ? '' : 's'} match your search.` : 'Type a name, chapter or material — like "merino" or "trail".'}
-        />
 
-        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-10 md:py-14">
+        {/* Hero — title + search field */}
+        <section className="bg-paper-warm border-b border-line">
+          <div className="max-w-site mx-auto px-6 lg:px-10 py-14 md:py-20 text-center">
+            <p className="eyebrow mb-4">Find a pair</p>
+            <h1 className="h-display text-4xl md:text-6xl">
+              {hasQuery ? 'Results' : 'Search'}{' '}
+              <span className="h-italic">{hasQuery ? `“${query}”` : 'the archive.'}</span>
+            </h1>
+            <p className="prose-body text-sm md:text-base mt-4">
+              {hasQuery
+                ? `${results.length} pair${results.length === 1 ? '' : 's'} found`
+                : 'Type a name, collection or material — like “merino” or “trail”.'}
+            </p>
 
-          {/* Search field */}
-          <div className="relative max-w-3xl mx-auto mb-14">
-            <input
-              autoFocus
-              type="text"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="What are you looking for?"
-              className="w-full bg-transparent border-b-2 border-ink focus:border-clay outline-none pb-4 pr-10 font-serif italic text-3xl md:text-5xl text-ink placeholder:text-ink-muted transition-colors"
-            />
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="absolute right-0 bottom-5 text-ink">
-              <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-            </svg>
+            {/* Search field */}
+            <div className="relative max-w-xl mx-auto mt-8">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
+                className="absolute left-5 top-1/2 -translate-y-1/2 text-ink-muted">
+                <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+              </svg>
+              <input
+                autoFocus
+                type="text"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Search socks, colours, packs…"
+                className="w-full rounded-full border border-line bg-paper py-4 pl-12 pr-12 text-sm text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-ink"
+              />
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => setValue('')}
+                  aria-label="Clear search"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-ink text-paper transition-opacity hover:opacity-80"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+              )}
+            </div>
           </div>
+        </section>
 
-          {q.length >= 2 && results.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
-              {results.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
-            </div>
-          )}
+        <section className="section-y">
+          <div className="wrap">
 
-          {q.length >= 2 && results.length === 0 && (
-            <div className="text-center py-16 border border-line max-w-xl mx-auto">
-              <p className="h-display text-3xl uppercase mb-3">No matches</p>
-              <p className="prose-body text-sm mb-7">Try a different word, or open the full catalogue.</p>
-              <Link href="/products" className="cta inline-flex">Browse all pairs</Link>
-            </div>
-          )}
+            {/* WITH QUERY */}
+            {hasQuery && (
+              loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i}>
+                      <div className="aspect-[4/5] rounded-xl bg-gray-200 animate-pulse" />
+                      <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
+                      <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : results.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                  {results.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+              ) : (
+                <div className="text-center py-20 border border-line rounded-lg max-w-xl mx-auto">
+                  <p className="h-display text-3xl text-ink mb-3">No matches</p>
+                  <p className="prose-body text-sm mb-7">
+                    Nothing found for &ldquo;{query}&rdquo;. Try a different word, or open the full catalogue.
+                  </p>
+                  <Link href="/products" className="btn-outline inline-flex">Browse all pairs</Link>
+                </div>
+              )
+            )}
 
-          {q.length < 2 && (
-            <div className="max-w-2xl mx-auto text-center">
-              <p className="eyebrow mb-5">Popular searches</p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {POPULAR.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setQ(t)}
-                    className="px-4 py-2 border border-line hover:border-ink font-mono text-[11px] tracking-[0.12em] uppercase text-ink-soft hover:text-ink transition-colors"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            {/* NO QUERY — one pair per collection */}
+            {!hasQuery && browse.length > 0 && (
+              <>
+                <p className="eyebrow text-center mb-10">A pair from every collection</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                  {browse.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       </main>
     </>
   );
