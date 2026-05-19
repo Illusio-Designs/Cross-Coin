@@ -39,6 +39,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Off-canvas drawers sit past the right edge — clip so they never
+     widen the page or expose a blank strip. */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body { font-size: 15px; line-height: 1.6; }

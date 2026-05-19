@@ -71,7 +71,7 @@ export default function ReviewBand({ reviews: reviewsProp }) {
       <div className="wrap">
         <div className="text-center mb-12">
           <p className="eyebrow mb-3">Worn &amp; reviewed</p>
-          <h2 className="h-display text-3xl md:text-5xl">
+          <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">
             Loved by <span className="h-italic">thousands.</span>
           </h2>
         </div>

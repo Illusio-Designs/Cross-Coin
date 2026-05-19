@@ -70,7 +70,7 @@ export default function ProductCard({ product }) {
 
           {/* Badge — light frosted chip */}
           {badge && (
-            <span className="absolute top-3.5 left-3.5 bg-paper/95 backdrop-blur-sm text-ink text-[10px] tracking-[0.16em] uppercase px-2.5 py-1 rounded-full shadow-soft">
+            <span className="absolute top-3 left-3 bg-paper/95 backdrop-blur-sm text-ink text-[8px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full shadow-soft">
               {badge}
             </span>
           )}
@@ -80,9 +80,9 @@ export default function ProductCard({ product }) {
             type="button"
             onClick={(e) => { e.preventDefault(); toggle(product); }}
             aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
-            className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-paper/85 backdrop-blur-sm transition-all hover:bg-paper hover:scale-105"
+            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full bg-paper/85 backdrop-blur-sm transition-all hover:bg-paper hover:scale-105"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24"
+            <svg width="13" height="13" viewBox="0 0 24 24"
                  fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6"
                  className="text-ink">
               <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
@@ -104,14 +104,14 @@ export default function ProductCard({ product }) {
             type="button"
             onClick={handleAdd}
             aria-label={added ? 'Added to bag' : 'Add to bag'}
-            className={`absolute -bottom-5 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-card transition-all duration-200 hover:scale-110 ${
+            className={`absolute -bottom-4 right-3.5 w-10 h-10 rounded-full flex items-center justify-center shadow-card transition-all duration-200 hover:scale-110 ${
               added ? 'bg-ink-soft text-paper' : 'bg-ink text-paper hover:bg-ink-soft'
             }`}
           >
             {added ? (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             ) : (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" /></svg>
             )}
           </button>
         )}
@@ -121,10 +121,10 @@ export default function ProductCard({ product }) {
       <div className="pt-7 pr-1">
         <Link href={`/products/${slug}`} className="block">
           <p className="text-[10px] tracking-[0.24em] uppercase text-ink-muted mb-2">{collection}</p>
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="h-display text-ink text-[19px] leading-snug line-clamp-1">{name}</h3>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+            <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1">{name}</h3>
             <div className="shrink-0 flex items-baseline gap-1.5">
-              <span className="h-display text-ink text-[19px] leading-none">₹{price.toLocaleString('en-IN')}</span>
+              <span className="h-display text-ink text-[17px] sm:text-[19px] leading-none">₹{price.toLocaleString('en-IN')}</span>
               {compare && compare > price && (
                 <span className="text-ink-muted text-[12px] line-through">₹{compare.toLocaleString('en-IN')}</span>
               )}

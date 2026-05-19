@@ -27,20 +27,16 @@ export default function BlogStrip({ posts: postsProp }) {
   return (
     <section className="section-y bg-paper-warm border-y border-line">
       <div className="wrap">
-        <div className="flex items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col items-start gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
           <div>
             <p className="eyebrow mb-3">From The Thread</p>
-            <h2 className="h-display text-3xl md:text-5xl">Notes from <span className="h-italic">the atelier.</span></h2>
+            <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">Notes from <span className="h-italic">the atelier.</span></h2>
           </div>
-          <Link href="/journal" className="hidden sm:inline-flex btn-outline">All stories</Link>
+          <Link href="/journal" className="btn-outline shrink-0">All stories</Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
           {list.map((p) => <BlogCard key={p.slug} post={p} />)}
-        </div>
-
-        <div className="mt-9 sm:hidden">
-          <Link href="/journal" className="btn-outline w-full">All stories</Link>
         </div>
       </div>
     </section>

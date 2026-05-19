@@ -9,6 +9,9 @@ export default function FilterDrawer({
   resultCount = 0,
   sizeOptions = [],
   colorOptions = [],
+  categories = [],
+  activeCat = 'all',
+  onSelectCollection,
 }) {
   const toggleSize = (s) => {
     setDraft((d) => ({
@@ -32,8 +35,9 @@ export default function FilterDrawer({
           open ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       />
+      <div className="fixed inset-0 z-[61] overflow-hidden pointer-events-none">
       <aside
-        className={`fixed inset-y-0 right-0 z-[61] w-[92%] max-w-[400px] bg-paper flex flex-col shadow-card transition-transform duration-300 ease-out ${
+        className={`absolute inset-y-0 right-0 w-[92%] max-w-[400px] bg-paper flex flex-col shadow-card transition-transform duration-300 ease-out pointer-events-auto ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-label="Filter products"
@@ -46,6 +50,39 @@ export default function FilterDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-9">
+
+          {/* Collection — mobile only (desktop uses the toolbar chips) */}
+          {categories.length > 0 && onSelectCollection && (
+            <div className="lg:hidden">
+              <p className="eyebrow mb-4">Collection</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectCollection('all')}
+                  className={`px-3.5 py-2 text-[12px] tracking-[0.04em] border rounded-full transition-colors ${
+                    activeCat === 'all' ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
+                  }`}
+                >
+                  All
+                </button>
+                {categories.map((c) => {
+                  const key = c.slug || c.name;
+                  return (
+                    <button
+                      key={c.id ?? key}
+                      type="button"
+                      onClick={() => onSelectCollection(key)}
+                      className={`px-3.5 py-2 text-[12px] tracking-[0.04em] border rounded-full transition-colors ${
+                        activeCat === key ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Price */}
           <div>
@@ -131,6 +168,7 @@ export default function FilterDrawer({
           <button onClick={onApply} className="btn flex-1">Show {resultCount}</button>
         </div>
       </aside>
+      </div>
     </>
   );
 }
