@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send, CheckCircle, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -13,6 +14,7 @@ export default function ContactPage() {
   };
 
   return (
+    <SeoWrapper pageName="contact">
     <div className="bg-[var(--bg)] min-h-screen">
       <PageHeader
         eyebrow="Get in Touch"
@@ -105,5 +107,6 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+    </SeoWrapper>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getPublicCategories } from '@/lib/api/categories'
+import SeoWrapper from '@/components/SeoWrapper'
 
 function cleanImg(url) {
   if (!url) return ''
@@ -24,7 +25,7 @@ export default function CollectionsPage() {
   }, [])
 
   return (
-    <>
+    <SeoWrapper pageName="categories">
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black min-h-[240px] sm:min-h-[300px] md:min-h-[380px]">
         <img
@@ -80,6 +81,6 @@ export default function CollectionsPage() {
           </div>
         )}
       </div>
-    </>
+    </SeoWrapper>
   )
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getPolicyByName } from '@/lib/api/policies'
+import SeoWrapper from '@/components/SeoWrapper'
 
 function formatTitle(name) {
   return (name || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -24,7 +25,7 @@ export default function PolicyPage() {
   }, [name])
 
   return (
-    <>
+    <SeoWrapper pageName={name || 'policy'}>
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-16 text-center sm:px-6 sm:pt-36 sm:pb-20 md:px-10 md:pt-40 md:pb-28">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
@@ -66,6 +67,6 @@ export default function PolicyPage() {
           )}
         </div>
       </section>
-    </>
+    </SeoWrapper>
   )
 }

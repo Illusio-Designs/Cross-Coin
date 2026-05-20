@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import SeoWrapper from '@/components/SeoWrapper'
 
 const STATS = [
   { value: '2020',   label: 'Est.' },
@@ -69,7 +70,7 @@ const FEATURES = [
 
 export default function AboutPage() {
   return (
-    <>
+    <SeoWrapper pageName="about">
       {/* Hero */}
       <section className="relative min-h-[75vh] md:min-h-screen flex items-end bg-brand-black overflow-hidden">
         <img
@@ -178,6 +179,6 @@ export default function AboutPage() {
           <p className="mt-6 text-sm text-white/40">— The Knitwink Team</p>
         </div>
       </section>
-    </>
+    </SeoWrapper>
   )
 }

@@ -1,5 +1,6 @@
 
 import { WishlistPageClient } from './WishlistPageClient';
+import SeoWrapper from '@/components/SeoWrapper';
 
 export const metadata = {
   title: 'Wishlist',
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function WishlistPage() {
-  return <WishlistPageClient />;
+  return (
+    <SeoWrapper pageName="wishlist">
+      <WishlistPageClient />
+    </SeoWrapper>
+  );
 }

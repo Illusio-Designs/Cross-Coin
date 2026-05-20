@@ -6,6 +6,7 @@ import ProductCard from '@/components/shop/ProductCard';
 import { Search, ArrowUpRight } from 'lucide-react';
 import { searchProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
+import SeoWrapper from '@/components/SeoWrapper';
 
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -128,8 +129,10 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <Suspense>
-      <SearchResults />
-    </Suspense>
+    <SeoWrapper pageName="search">
+      <Suspense>
+        <SearchResults />
+      </Suspense>
+    </SeoWrapper>
   );
 }

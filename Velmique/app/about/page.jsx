@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
+import SeoWrapper from '@/components/SeoWrapper';
 
 const milestones = [
   { year: '2018', event: 'Velmique founded in Bandra West by Aarav Khanna, after his apprenticeship at Grasse and a year studying attars in Kannauj.' },
@@ -29,6 +30,7 @@ const values = [
 
 export default function AboutPage() {
   return (
+    <SeoWrapper pageName="about">
     <div className="bg-[var(--bg)] min-h-screen">
 
       {/* ── HERO — full-bleed background image with editorial text overlay ── */}
@@ -242,5 +244,6 @@ export default function AboutPage() {
         </div>
       </section>
     </div>
+    </SeoWrapper>
   );
 }

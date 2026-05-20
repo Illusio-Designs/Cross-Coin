@@ -6,6 +6,7 @@ import { Heart, ArrowUpRight, X } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProductBySlug } from '@/lib/api/products';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 
 export default function WishlistPage() {
   const { wishlist, wishlistLoading, toggleWishlist, addToCart, updateWishlistItem } = useStore();
@@ -66,6 +67,7 @@ export default function WishlistPage() {
   };
 
   return (
+    <SeoWrapper pageName="wishlist">
     <div className="bg-[var(--bg)] min-h-screen">
       <PageHeader
         eyebrow="Saved Items"
@@ -255,5 +257,6 @@ export default function WishlistPage() {
         )}
       </div>
     </div>
+    </SeoWrapper>
   );
 }

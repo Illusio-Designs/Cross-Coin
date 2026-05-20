@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, Clock, User, Share2 } from 'lucide-react'
 import { getPost, getPosts } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
+import SeoWrapper from '@/components/SeoWrapper'
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }
@@ -68,7 +69,7 @@ export default function BlogPostPage() {
   }
 
   return (
-    <>
+    <SeoWrapper pageName={slug || 'blog-details'} seoData={post?.seo || null}>
       {/* Cover image — full width, tall */}
       {post.coverImage && (
         <section className="bg-gray-50">
@@ -190,6 +191,6 @@ export default function BlogPostPage() {
           </div>
         </div>
       )}
-    </>
+    </SeoWrapper>
   )
 }
