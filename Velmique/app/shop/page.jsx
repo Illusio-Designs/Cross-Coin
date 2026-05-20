@@ -29,6 +29,8 @@ function ShopPageInner() {
   const [sortBy, setSortBy]           = useState('featured');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [priceRange, setPriceRange]   = useState([0, 50000]);
+  const [selectedGenders, setSelectedGenders] = useState([]);
+  const [selectedSeasons, setSelectedSeasons] = useState([]);
 
   // Lock body scroll while the mobile filter drawer is open. Only kicks in
   // below md breakpoint where the drawer overlay is shown.
@@ -104,9 +106,26 @@ function ShopPageInner() {
     return () => { alive = false; };
   }, [activeCategory, rawCategories]);
 
-  // API already filtered by category — just apply price + sort client-side.
+  // Aggregate gender + season values from the currently-loaded products
+  // so filter chips only show options that actually return results.
+  const availableGenders = useMemo(
+    () => Array.from(new Set(products.flatMap(p => p.genders || []))).filter(Boolean),
+    [products]
+  );
+  const availableSeasons = useMemo(
+    () => Array.from(new Set(products.flatMap(p => p.seasons || []))).filter(Boolean),
+    [products]
+  );
+
+  // API already filtered by category — apply price + gender + season + sort client-side.
   const filtered = useMemo(() => {
-    const list = products.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+    let list = products.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+    if (selectedGenders.length) {
+      list = list.filter(p => p.genders?.some(g => selectedGenders.includes(g)));
+    }
+    if (selectedSeasons.length) {
+      list = list.filter(p => p.seasons?.some(s => selectedSeasons.includes(s)));
+    }
     switch (sortBy) {
       case 'price-asc':  return [...list].sort((a, b) => a.price - b.price);
       case 'price-desc': return [...list].sort((a, b) => b.price - a.price);
@@ -114,7 +133,18 @@ function ShopPageInner() {
       case 'newest':     return [...list].reverse();
       default:           return list;
     }
-  }, [sortBy, priceRange, products]);
+  }, [sortBy, priceRange, products, selectedGenders, selectedSeasons]);
+
+  const toggleGender = (g) =>
+    setSelectedGenders(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+  const toggleSeason = (s) =>
+    setSelectedSeasons(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  const clearAllFilters = () => {
+    setActiveCategory('All');
+    setPriceRange([0, 50000]);
+    setSelectedGenders([]);
+    setSelectedSeasons([]);
+  };
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
@@ -168,8 +198,14 @@ function ShopPageInner() {
                 categories={categories}
                 activeCategory={activeCategory}
                 setActiveCategory={setActiveCategory}
+                availableGenders={availableGenders}
+                selectedGenders={selectedGenders}
+                onToggleGender={toggleGender}
+                availableSeasons={availableSeasons}
+                selectedSeasons={selectedSeasons}
+                onToggleSeason={toggleSeason}
                 onClose={() => setFiltersOpen(false)}
-                onClearAll={() => { setActiveCategory('All'); setPriceRange([0, 50000]); }}
+                onClearAll={clearAllFilters}
                 mobile
               />
             </aside>
@@ -193,8 +229,14 @@ function ShopPageInner() {
                   categories={categories}
                   activeCategory={activeCategory}
                   setActiveCategory={setActiveCategory}
+                  availableGenders={availableGenders}
+                  selectedGenders={selectedGenders}
+                  onToggleGender={toggleGender}
+                  availableSeasons={availableSeasons}
+                  selectedSeasons={selectedSeasons}
+                  onToggleSeason={toggleSeason}
                   onClose={() => setFiltersOpen(false)}
-                  onClearAll={() => { setActiveCategory('All'); setPriceRange([0, 50000]); }}
+                  onClearAll={clearAllFilters}
                 />
               </div>
             </aside>
@@ -216,7 +258,7 @@ function ShopPageInner() {
             ) : (
               <div className="text-center py-20">
                 <p className="font-display text-3xl text-[var(--ink-muted)] uppercase tracking-tight">No products found</p>
-                <button onClick={() => { setActiveCategory('All'); setPriceRange([0, 50000]); }}
+                <button onClick={clearAllFilters}
                   className="text-[var(--gold-deep)] text-[10px] tracking-[0.3em] uppercase font-body mt-4 hover:underline">
                   Clear Filters
                 </button>
@@ -307,6 +349,8 @@ function SortDropdown({ value, onChange, options }) {
 function FilterPanel({
   priceRange, setPriceRange,
   categories, activeCategory, setActiveCategory,
+  availableGenders = [], selectedGenders = [], onToggleGender = () => {},
+  availableSeasons = [], selectedSeasons = [], onToggleSeason = () => {},
   onClose, onClearAll, mobile = false,
 }) {
   const body = (
@@ -332,7 +376,7 @@ function FilterPanel({
       </div>
 
       <div>
-        <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Maison</p>
+        <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Collection</p>
         <div className="space-y-1">
           {categories.filter(c => c !== 'All').slice(0, 8).map(c => (
             <button
@@ -346,6 +390,48 @@ function FilterPanel({
           ))}
         </div>
       </div>
+
+      {availableGenders.length > 0 && (
+        <div>
+          <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Gender</p>
+          <div className="flex flex-wrap gap-2">
+            {availableGenders.map(g => {
+              const active = selectedGenders.includes(g);
+              return (
+                <button key={g} onClick={() => onToggleGender(g)}
+                  className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                    active
+                      ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
+                      : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
+                  }`}>
+                  {g}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {availableSeasons.length > 0 && (
+        <div>
+          <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Season</p>
+          <div className="flex flex-wrap gap-2">
+            {availableSeasons.map(s => {
+              const active = selectedSeasons.includes(s);
+              return (
+                <button key={s} onClick={() => onToggleSeason(s)}
+                  className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                    active
+                      ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
+                      : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
+                  }`}>
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <button onClick={onClearAll}
         className="text-[var(--gold-deep)] text-[10px] uppercase tracking-[0.3em] font-body hover:underline">
@@ -378,7 +464,7 @@ function FilterPanel({
           </div>
 
           <div>
-            <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Maison</p>
+            <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Collection</p>
             <div className="space-y-1">
               {categories.filter(c => c !== 'All').slice(0, 12).map(c => (
                 <button
@@ -392,6 +478,48 @@ function FilterPanel({
               ))}
             </div>
           </div>
+
+          {availableGenders.length > 0 && (
+            <div>
+              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Gender</p>
+              <div className="flex flex-wrap gap-2">
+                {availableGenders.map(g => {
+                  const active = selectedGenders.includes(g);
+                  return (
+                    <button key={g} onClick={() => onToggleGender(g)}
+                      className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                        active
+                          ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
+                          : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
+                      }`}>
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {availableSeasons.length > 0 && (
+            <div>
+              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Season</p>
+              <div className="flex flex-wrap gap-2">
+                {availableSeasons.map(s => {
+                  const active = selectedSeasons.includes(s);
+                  return (
+                    <button key={s} onClick={() => onToggleSeason(s)}
+                      className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                        active
+                          ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
+                          : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
+                      }`}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3">
           <button onClick={onClearAll}
