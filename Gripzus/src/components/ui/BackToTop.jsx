@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/router';
 
 /* Scroll-to-top arrow — sticky bottom-right, sits above the WhatsApp
    button. Fades in once the page is scrolled down. */
 
 export default function BackToTop() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -15,6 +17,9 @@ export default function BackToTop() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Hide on the product detail page — the sticky Add-to-Bag bar takes
+  // the bottom-right, no need for this on top of it.
+  if (router.pathname === '/products/[slug]') return null;
   if (!mounted) return null;
 
   return createPortal(

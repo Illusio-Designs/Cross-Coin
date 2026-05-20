@@ -36,7 +36,7 @@ export default function AboutPage() {
               <h1 className="h-display text-ink text-4xl md:text-6xl lg:text-7xl leading-[1.02]">
                 Knit with <span className="h-italic text-clay">intention.</span>
               </h1>
-              <p className="prose-body text-base md:text-lg mt-6 max-w-xl">
+              <p className="prose-body text-base md:text-lg mt-6 max-w-xl text-justify">
                 Gripzus is a small atelier in Ahmedabad, obsessed with one quiet question —
                 how should a sock hold the foot? Three fibres, hand-linked toes, runs of five
                 hundred. Sold while they last, then knit again, slowly.
@@ -81,12 +81,12 @@ export default function AboutPage() {
             </h2>
           </div>
           <div className="space-y-5">
-            <p className="prose-body text-base md:text-lg">
+            <p className="prose-body text-base md:text-lg text-justify">
               Gripzus began as a quiet idea — that a sock should be allowed to be a considered
               object. That the arch band, the cuff, and the toe should each earn their place.
               That a pair worn for a year should be more interesting at the end of it, not less.
             </p>
-            <p className="prose-body text-base md:text-lg">
+            <p className="prose-body text-base md:text-lg text-justify">
               We knit on circular machines in an Ahmedabad workshop, finish every pair by hand,
               and ship them in batches small enough that we still know the names of the people
               on the floor. We do not chase seasons. We make the same pair better, every run.
@@ -127,7 +127,7 @@ export default function AboutPage() {
                 <p className="h-display text-clay text-2xl md:text-3xl">{m.y}</p>
                 <div>
                   <h3 className="h-display text-ink text-xl md:text-2xl mb-2">{m.t}</h3>
-                  <p className="prose-body text-sm md:text-base max-w-2xl">{m.e}</p>
+                  <p className="prose-body text-sm md:text-base max-w-2xl text-justify">{m.e}</p>
                 </div>
               </div>
             ))}

@@ -67,7 +67,7 @@ export default function JournalPost({ post, related }) {
                   {text}
                 </h2>
               ) : (
-                <p key={i} className="prose-body text-base md:text-lg mb-5">{text}</p>
+                <p key={i} className="prose-body text-base md:text-lg mb-5 text-justify">{text}</p>
               );
             })}
             <div className="mt-10 pt-8 border-t border-line flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
