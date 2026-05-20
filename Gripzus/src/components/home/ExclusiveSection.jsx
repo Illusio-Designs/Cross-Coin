@@ -232,8 +232,8 @@ export default function ExclusiveSection({ products = [] }) {
 
             <p className="text-paper/65 text-sm md:text-base leading-relaxed mb-7 line-clamp-3">{p.description}</p>
 
-            {/* Qty + CTA */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* Qty + CTA — qty + Add on one row, View below */}
+            <div className="flex items-center gap-3 mb-3">
               <div className="flex shrink-0 items-center gap-3 rounded-full border border-paper/25 px-4 py-3">
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="text-paper/60 hover:text-paper">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -245,18 +245,18 @@ export default function ExclusiveSection({ products = [] }) {
               </div>
               <button
                 onClick={handleAdd}
-                className={`btn-light flex-1 justify-center ${added ? '!bg-paper/70' : ''}`}
+                className={`btn-light flex-1 justify-center whitespace-nowrap ${added ? '!bg-paper/70' : ''}`}
               >
-                {added ? 'Added to bag ✓' : 'Add to Bag'}
+                {added ? 'Added ✓' : 'Add to Bag'}
               </button>
-              <Link
-                href={`/products/${p.slug}`}
-                className="btn-outline flex-1 justify-center text-center"
-                style={{ color: 'var(--paper)', borderColor: 'rgba(255,255,255,0.35)' }}
-              >
-                View
-              </Link>
             </div>
+            <Link
+              href={`/products/${p.slug}`}
+              className="btn-outline w-full justify-center text-center whitespace-nowrap"
+              style={{ color: 'var(--paper)', borderColor: 'rgba(255,255,255,0.35)' }}
+            >
+              View details
+            </Link>
 
             {/* Numbered pair list */}
             <div className="mt-8 border-t border-paper/15">
