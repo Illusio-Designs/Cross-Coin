@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head';
 import PageHero from '../components/common/PageHero';
+import SeoWrapper from '../components/SeoWrapper';
 import { trackOrder } from '../services/orders';
 
 const STEPS = [
@@ -86,8 +86,7 @@ export default function TrackOrderPage() {
   const progressPct = activeStep > 0 ? (activeStep / (STEPS.length - 1)) * 100 : 0;
 
   return (
-    <>
-      <Head><title>Track Order — Gripzus</title></Head>
+    <SeoWrapper pageName="track-order">
       <main className="bg-paper">
         <PageHero
           eyebrow="Where is my pair?"
@@ -197,6 +196,6 @@ export default function TrackOrderPage() {
         </div>
       </div>
       </main>
-    </>
+    </SeoWrapper>
   );
 }

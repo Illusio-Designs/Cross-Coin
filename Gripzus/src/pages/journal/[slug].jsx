@@ -1,6 +1,6 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import BlogCard from '../../components/common/BlogCard';
+import SeoWrapper from '../../components/SeoWrapper';
 import { JOURNAL_POSTS, getPost as getLocalPost } from '../../data/journal';
 import { getPosts, getPostBySlug } from '../../services/blog';
 
@@ -20,9 +20,7 @@ export default function JournalPost({ post, related }) {
   const initials = (post.author || 'G').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    <>
-      <Head><title>{post.title} — Gripzus</title></Head>
-
+    <SeoWrapper pageName={post.slug || 'blog-details'} seoData={post.seo || null}>
       <article>
         {/* Title block */}
         <header className="bg-paper-warm border-b border-line">
@@ -90,7 +88,7 @@ export default function JournalPost({ post, related }) {
           </section>
         )}
       </article>
-    </>
+    </SeoWrapper>
   );
 }
 

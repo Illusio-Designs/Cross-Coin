@@ -1123,11 +1123,16 @@ export const reviewService = {
   },
 };
 
-// SEO Services — global/shared across all brands (backend falls back to brand_id=null rows)
+// SEO Services — adminApi by default sends NO brand header, but the backend
+// schema requires brand_id NOT NULL on writes. We tag every SEO write with
+// X-Brand-Name: crosscoin so the backend resolves brand_id to crosscoin (id=1)
+// instead of trying to insert NULL and failing.
+const SEO_BRAND_HEADER = { 'X-Brand-Name': 'crosscoin' };
+
 export const seoService = {
   getAllSEOData: async () => {
     try {
-      const response = await adminApi.get("/api/seo/all");
+      const response = await adminApi.get("/api/seo/all", { headers: SEO_BRAND_HEADER });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1136,7 +1141,7 @@ export const seoService = {
 
   getSEOData: async (pageName) => {
     try {
-      const response = await adminApi.get(`/api/seo?page_name=${pageName}`);
+      const response = await adminApi.get(`/api/seo?page_name=${pageName}`, { headers: SEO_BRAND_HEADER });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1159,7 +1164,7 @@ export const seoService = {
       }
 
       const response = await adminApi.post("/api/seo/create", data, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data", ...SEO_BRAND_HEADER },
       });
       return response.data;
     } catch (error) {
@@ -1170,7 +1175,7 @@ export const seoService = {
   updateSEOData: async (formData) => {
     try {
       const response = await adminApi.put("/api/seo/update", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data", ...SEO_BRAND_HEADER },
       });
       return response.data;
     } catch (error) {
@@ -1180,7 +1185,7 @@ export const seoService = {
 
   deleteSEOData: async (pageName) => {
     try {
-      const response = await adminApi.delete(`/api/seo/${pageName}`);
+      const response = await adminApi.delete(`/api/seo/${pageName}`, { headers: SEO_BRAND_HEADER });
       return response.data;
     } catch (error) {
       throw handleApiError(error);

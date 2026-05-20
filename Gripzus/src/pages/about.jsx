@@ -1,5 +1,5 @@
-import Head from 'next/head';
 import Link from 'next/link';
+import SeoWrapper from '../components/SeoWrapper';
 
 const VALUES = [
   { n: '01', title: 'Small batches',  body: 'We knit 500 pairs at a time, not 50,000. The atelier floor holds the entire run in one room.' },
@@ -24,9 +24,7 @@ const STATS = [
 
 export default function AboutPage() {
   return (
-    <>
-      <Head><title>Our Story — Gripzus</title></Head>
-
+    <SeoWrapper pageName="about">
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="bg-paper-warm border-b border-line">
         <div className="wrap section-y">
@@ -146,6 +144,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-    </>
+    </SeoWrapper>
   );
 }

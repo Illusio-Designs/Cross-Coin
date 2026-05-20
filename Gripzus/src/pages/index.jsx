@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
+import SeoWrapper from '../components/SeoWrapper';
 import HeroBanner from '../components/home/HeroBanner';
 import CategoryCards from '../components/home/CategoryCards';
 import ExclusiveSection from '../components/home/ExclusiveSection';
@@ -29,10 +30,8 @@ export default function Home() {
   }, []);
 
   return (
-    <>
+    <SeoWrapper pageName="home">
       <Head>
-        <title>Gripzus — Premium Socks, Knit With Intention</title>
-        <meta name="description" content="Gripzus is a small atelier in Ahmedabad knitting premium socks from combed cotton, merino and recycled fibres. Made in small batches." />
         <link rel="icon" href="/Gripzusfavicon.jpeg" />
       </Head>
 
@@ -43,6 +42,6 @@ export default function Home() {
       <ReviewBand />
       <BlogStrip />
       <TrustStrip />
-    </>
+    </SeoWrapper>
   );
 }

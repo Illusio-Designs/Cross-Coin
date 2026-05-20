@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Head from 'next/head';
 import PageHero from '../components/common/PageHero';
+import SeoWrapper from '../components/SeoWrapper';
 import { toastMessageSent } from '../utils/toast';
 
 export default function ContactPage() {
@@ -10,8 +10,7 @@ export default function ContactPage() {
   const onSubmit = (e) => { e.preventDefault(); setSent(true); toastMessageSent(); };
 
   return (
-    <>
-      <Head><title>Contact — Gripzus</title></Head>
+    <SeoWrapper pageName="contact">
       <main className="bg-paper">
         <PageHero
           chapter="07"
@@ -73,7 +72,7 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-    </>
+    </SeoWrapper>
   );
 }
 

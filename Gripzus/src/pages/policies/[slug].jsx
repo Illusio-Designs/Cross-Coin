@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PageHero from '../../components/common/PageHero';
+import SeoWrapper from '../../components/SeoWrapper';
 import { getPolicyByName } from '../../services/policies';
 
 /* Presentational chrome only — the legal text itself comes from the API.
@@ -40,9 +40,7 @@ export default function PolicyPage() {
   }, [slug]);
 
   return (
-    <>
-      <Head><title>{meta.title} {meta.accent} — Gripzus</title></Head>
-
+    <SeoWrapper pageName={slug || 'policy'}>
       <PageHero eyebrow={meta.eyebrow} title={meta.title} accent={meta.accent} intro={meta.intro} />
 
       <section className="section-y">
@@ -86,6 +84,6 @@ export default function PolicyPage() {
           </div>
         </div>
       </section>
-    </>
+    </SeoWrapper>
   );
 }
