@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
+import SeoWrapper from '../components/SeoWrapper';
 import { getPublicCategories } from '../services/categories';
 
 export default function CollectionsPage() {
@@ -19,9 +19,7 @@ export default function CollectionsPage() {
   const current = collections[active];
 
   return (
-    <>
-      <Head><title>Collections — Gripzus</title></Head>
-
+    <SeoWrapper pageName="categories">
       <PageHero
         eyebrow="Curated worlds"
         title="The"
@@ -113,6 +111,6 @@ export default function CollectionsPage() {
           )}
         </div>
       </section>
-    </>
+    </SeoWrapper>
   );
 }

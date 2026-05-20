@@ -1,6 +1,6 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
+import SeoWrapper from '../components/SeoWrapper';
 import ProductCard from '../components/products/ProductCard';
 import { useWishlist } from '../context/WishlistContext';
 
@@ -9,8 +9,7 @@ export default function WishlistPage() {
   const empty = count === 0;
 
   return (
-    <>
-      <Head><title>Your Wishlist — Gripzus</title></Head>
+    <SeoWrapper pageName="wishlist">
       <main className="bg-paper">
         <PageHero
           chapter="06"
@@ -47,6 +46,6 @@ export default function WishlistPage() {
           )}
         </div>
       </main>
-    </>
+    </SeoWrapper>
   );
 }

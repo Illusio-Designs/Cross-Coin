@@ -1,7 +1,7 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
 import BlogCard from '../components/common/BlogCard';
+import SeoWrapper from '../components/SeoWrapper';
 import { JOURNAL_POSTS } from '../data/journal';
 import { getPosts } from '../services/blog';
 
@@ -12,9 +12,7 @@ export default function JournalPage({ posts }) {
   const featureInitials = (feature.author || 'G').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    <>
-      <Head><title>The Thread — Gripzus</title></Head>
-
+    <SeoWrapper pageName="blog">
       <PageHero
         eyebrow="Notes from the atelier"
         title="The"
@@ -51,7 +49,7 @@ export default function JournalPage({ posts }) {
           </div>
         </div>
       </section>
-    </>
+    </SeoWrapper>
   );
 }
 

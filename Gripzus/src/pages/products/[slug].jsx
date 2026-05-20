@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
 import ProductTestimonials from '../../components/products/ProductTestimonials';
+import SeoWrapper from '../../components/SeoWrapper';
 import { getProductBySlug, getProductsByCategory, getPublicProducts } from '../../services/products';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -148,8 +148,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <>
-      <Head><title>{product.name} — Gripzus</title></Head>
+    <SeoWrapper pageName={slug || 'product-details'} seoData={product?.seo || null}>
       <main className="bg-paper">
 
         {/* Breadcrumb */}
@@ -398,6 +397,6 @@ export default function ProductDetail() {
           </div>
         </div>
       </main>
-    </>
+    </SeoWrapper>
   );
 }

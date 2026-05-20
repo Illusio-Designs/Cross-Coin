@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import FilterDrawer from '../components/products/FilterDrawer';
+import SeoWrapper from '../components/SeoWrapper';
 import { getPublicCategories } from '../services/categories';
 import { getPublicProducts, getProductsByCategory } from '../services/products';
 
@@ -171,9 +171,7 @@ export default function ProductsPage() {
     : (categories.find((c) => c.slug === activeCat || c.name === activeCat)?.name || activeCat);
 
   return (
-    <>
-      <Head><title>{activeName ? `${activeName} — Gripzus` : 'All Pairs — Gripzus'}</title></Head>
-
+    <SeoWrapper pageName="products">
       <PageHero
         eyebrow={activeName ? 'Collection' : 'The Catalogue'}
         title={activeName ? activeName : 'Every'}
@@ -269,6 +267,6 @@ export default function ProductsPage() {
         activeCat={activeCat}
         onSelectCollection={(slug) => { selectChip(slug); setDrawerOpen(false); }}
       />
-    </>
+    </SeoWrapper>
   );
 }

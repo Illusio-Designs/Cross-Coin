@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../components/products/ProductCard';
+import SeoWrapper from '../components/SeoWrapper';
 import { searchProducts, getPublicProducts } from '../services/products';
 
 /* Search — live API search (GET /api/products/search), same flow as the
@@ -71,8 +71,7 @@ export default function SearchPage() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <>
-      <Head><title>{hasQuery ? `"${query}" — Search` : 'Search'} — Gripzus</title></Head>
+    <SeoWrapper pageName="search">
       <main className="bg-paper">
 
         {/* Hero — title + search field */}
@@ -159,6 +158,6 @@ export default function SearchPage() {
           </div>
         </section>
       </main>
-    </>
+    </SeoWrapper>
   );
 }

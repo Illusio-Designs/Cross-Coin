@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+import SeoWrapper from '../components/SeoWrapper';
 import { getUserOrders, cancelOrder } from '../services/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { updateProfile } from '../services/auth';
@@ -143,14 +143,13 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <>
-        <Head><title>My Account — Gripzus</title></Head>
+      <SeoWrapper pageName="profile">
         <main className="bg-paper min-h-[60vh] flex flex-col items-center justify-center text-center px-6 gap-5">
           <p className="h-display text-3xl text-ink">Please sign in</p>
           <p className="prose-body text-sm">Sign in to view your orders, addresses and details.</p>
           <Link href="/login" className="cta">Go to Sign In</Link>
         </main>
-      </>
+      </SeoWrapper>
     );
   }
 
@@ -161,8 +160,7 @@ export default function AccountPage() {
   ];
 
   return (
-    <>
-      <Head><title>My Account — Gripzus</title></Head>
+    <SeoWrapper pageName="profile">
       <main className="bg-paper">
 
         {/* Hero */}
@@ -390,7 +388,7 @@ export default function AccountPage() {
           </div>
         )}
       </main>
-    </>
+    </SeoWrapper>
   );
 }
 
