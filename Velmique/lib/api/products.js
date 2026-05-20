@@ -115,6 +115,15 @@ export function mapProduct(p) {
   const sizes = Array.from(new Set(variations.flatMap(v => v.sizes)));
   const colors = Array.from(new Set(variations.flatMap(v => v.colors)));
 
+  // Aggregate gender + season attributes across variations so the shop
+  // page can offer them as multi-select filters without re-parsing.
+  const genders = Array.from(new Set(
+    variations.flatMap(v => v.attributes?.gender || [])
+  )).filter(Boolean);
+  const seasons = Array.from(new Set(
+    variations.flatMap(v => v.attributes?.season || [])
+  )).filter(Boolean);
+
   // In-stock if ANY variation has stock, or product-level fallback.
   const inStock = variations.length
     ? variations.some(v => v.inStock)
@@ -145,6 +154,8 @@ export function mapProduct(p) {
     collection:     p.Category?.name || p.category?.name || '',
     collectionName: p.Category?.name || p.category?.name || '',
     gender:         defaultVariation?.attributes?.gender?.[0] || 'Unisex',
+    genders,                          // all distinct genders across variations
+    seasons,                          // all distinct seasons across variations
     sizes:          sizes.length ? sizes : ['One Size'],
     colors,
     rating:         p.avg_rating ? Number(p.avg_rating) : 0,

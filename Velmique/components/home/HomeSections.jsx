@@ -203,9 +203,9 @@ export function BestSellers() {
 
   useEffect(() => {
     let alive = true;
-    getBestsellers(8).then(list => {
+    getBestsellers(4).then(list => {
       if (!alive) return;
-      setItems(Array.isArray(list) ? list.slice(0, 8) : []);
+      setItems(Array.isArray(list) ? list.slice(0, 4) : []);
       setLoaded(true);
     });
     return () => { alive = false; };
@@ -232,7 +232,7 @@ export function BestSellers() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {!loaded
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i}>

@@ -134,22 +134,65 @@ export default function ProductPage() {
     setCartOpen(true);
   };
 
-  // Variation-aware spec rows for the Details section
-  const variationDetails = activeVariation ? [
-    activeVariation.sku                         && ['SKU',          activeVariation.sku],
-    selectedSize                                && ['Size',         selectedSize],
-    selectedColor                               && ['Colour',       selectedColor],
-    activeVariation.material                    && ['Material',     activeVariation.material],
-    activeVariation.pack                        && ['Pack',         activeVariation.pack],
-    activeVariation.attributes?.season?.[0]     && ['Season',       activeVariation.attributes.season.join(', ')],
-    activeVariation.attributes?.length?.[0]     && ['Length',       activeVariation.attributes.length.join(', ')],
-    activeVariation.attributes?.style?.[0]      && ['Style',        activeVariation.attributes.style.join(', ')],
-    activeVariation.attributes?.activity?.[0]   && ['Best for',     activeVariation.attributes.activity.join(', ')],
-    activeVariation.attributes?.gender?.[0]     && ['Gender',       activeVariation.attributes.gender.join(', ')],
-    product.weight                              && ['Weight',       `${product.weight}${product.weightUnit || 'g'}`],
-    product.dimensions && (product.dimensions.length || product.dimensions.width || product.dimensions.height)
-                                                && ['Dimensions',   `${product.dimensions.length || '—'} × ${product.dimensions.width || '—'} × ${product.dimensions.height || '—'} ${product.dimensionUnit || 'cm'}`],
-  ].filter(Boolean) : [];
+  // Variation-aware spec rows for the Details section.
+  // Known keys get a curated label / order; any other attribute the admin
+  // configures (e.g. fragrance notes, concentration, occasion…) is still
+  // rendered with an auto-formatted label so nothing is silently dropped.
+  const KNOWN_ATTR_LABELS = {
+    activity:   'Best for',
+    occasion:   'Occasion',
+    season:     'Season',
+    length:     'Length',
+    style:      'Style',
+    gender:     'Gender',
+    fit:        'Fit',
+    pattern:    'Pattern',
+    fabric:     'Fabric',
+    care:       'Care',
+    concentration:    'Concentration',
+    fragrance_family: 'Fragrance Family',
+    longevity:  'Longevity',
+    sillage:    'Sillage',
+    notes:      'Notes',
+    top_notes:  'Top Notes',
+    heart_notes:'Heart Notes',
+    base_notes: 'Base Notes',
+    volume:     'Volume',
+    origin:     'Origin',
+  };
+  const prettifyKey = (k) =>
+    KNOWN_ATTR_LABELS[k] ||
+    k.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const variationDetails = activeVariation ? (() => {
+    const rows = [];
+    if (activeVariation.sku)  rows.push(['SKU',     activeVariation.sku]);
+    if (selectedSize)         rows.push(['Size',    selectedSize]);
+    if (selectedColor)        rows.push(['Colour',  selectedColor]);
+    if (activeVariation.material) rows.push(['Material', activeVariation.material]);
+    if (activeVariation.pack)     rows.push(['Pack',     activeVariation.pack]);
+
+    // Render every remaining variation attribute generically, so newly-
+    // added admin attributes appear without code changes.
+    const skip = new Set(['size', 'color', 'colour', 'material', 'pack']);
+    Object.entries(activeVariation.attributes || {}).forEach(([key, vals]) => {
+      if (skip.has(key.toLowerCase())) return;
+      const arr = Array.isArray(vals) ? vals : [vals];
+      const value = arr.filter(v => v != null && v !== '').join(', ');
+      if (!value) return;
+      rows.push([prettifyKey(key), value]);
+    });
+
+    if (product.weight) {
+      rows.push(['Weight', `${product.weight}${product.weightUnit || 'g'}`]);
+    }
+    const d = product.dimensions;
+    if (d && (d.length || d.width || d.height)) {
+      rows.push(['Dimensions',
+        `${d.length || '—'} × ${d.width || '—'} × ${d.height || '—'} ${product.dimensionUnit || 'cm'}`]);
+    }
+    return rows;
+  })() : [];
 
   return (
     <div className="bg-[var(--bg)] min-h-screen">
