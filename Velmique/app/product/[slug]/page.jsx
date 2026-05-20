@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ShoppingBag, Heart, ChevronRight, Star, Minus, Plus, ArrowUpRight, Zap,
+  ShoppingBag, Heart, ChevronRight, Star, Minus, Plus, Zap,
   Truck, RotateCcw, ShieldCheck, Sparkles,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import ProductCard from '@/components/shop/ProductCard';
-import { getProductBySlug, getPublicProducts } from '@/lib/api/products';
+import SeoWrapper from '@/components/SeoWrapper';
+import { getProductBySlug } from '@/lib/api/products';
 import ProductReviews from '@/components/reviews/ProductReviews';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -20,7 +20,6 @@ export default function ProductPage() {
   const { addToCart, toggleWishlist, isWishlisted, setCartOpen } = useStore();
 
   const [product, setProduct] = useState(null);
-  const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedSize,  setSelectedSize]  = useState('');
@@ -49,20 +48,6 @@ export default function ProductPage() {
     });
     return () => { alive = false; };
   }, [slug]);
-
-  // Related products
-  useEffect(() => {
-    if (!product) return;
-    let alive = true;
-    const cat = product.category || product.collection;
-    if (!cat) { setRelated([]); return; }
-    getPublicProducts({ category: cat, limit: 8 }).then(res => {
-      if (!alive) return;
-      const list = (res.products || []).filter(p => String(p.id) !== String(product.id));
-      setRelated(list.slice(0, 4));
-    });
-    return () => { alive = false; };
-  }, [product]);
 
   const activeVariation = useMemo(() => {
     if (!product || !product.variations?.length) return null;
@@ -195,6 +180,7 @@ export default function ProductPage() {
   })() : [];
 
   return (
+    <SeoWrapper pageName={slug || 'product-details'} seoData={product?.seo || null}>
     <div className="bg-[var(--bg)] min-h-screen">
       {/* Breadcrumb */}
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 py-6 flex items-center gap-2 text-xs font-body text-[var(--ink-muted)]">
@@ -465,28 +451,9 @@ export default function ProductPage() {
           </section>
         </div>
 
-        {/* Related products */}
-        {related.length > 0 && (
-          <div className="mt-24 pt-16 border-t border-[var(--border)]">
-            <div className="flex items-end justify-between mb-10 gap-6 flex-wrap">
-              <div>
-                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Continue Exploring</p>
-                <h2 className="font-display text-[var(--ink)] uppercase leading-tight tracking-tight"
-                  style={{ fontSize: 'clamp(2rem, 4.5vw, 3.4rem)' }}>
-                  YOU MAY ALSO <em className="not-italic gold-text">LIKE</em>
-                </h2>
-              </div>
-              <Link href="/shop" className="pill-cta pill-cta-light">
-                View All <ArrowUpRight size={14} strokeWidth={1.6} />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-              {related.map(p => <ProductCard key={p.id} product={p} />)}
-            </div>
-          </div>
-        )}
       </div>
     </div>
+    </SeoWrapper>
   );
 }
 

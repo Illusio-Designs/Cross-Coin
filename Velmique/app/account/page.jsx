@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 import { updateProfile } from '@/lib/api/auth';
 import { getUserOrders, cancelOrder } from '@/lib/api/orders';
 import {
@@ -100,6 +101,7 @@ export default function AccountPage() {
   const firstName = (user.username || user.name || 'friend').split(' ')[0];
 
   return (
+    <SeoWrapper pageName="profile">
     <div className="bg-[var(--bg)] min-h-screen">
       <PageHeader
         eyebrow={`Welcome back, ${firstName}`}
@@ -169,6 +171,7 @@ export default function AccountPage() {
         </div>
       )}
     </div>
+    </SeoWrapper>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getPosts } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
+import SeoWrapper from '@/components/SeoWrapper'
 
 export default function JournalPage() {
   const [posts, setPosts] = useState([])
@@ -13,7 +14,7 @@ export default function JournalPage() {
   }, [])
 
   return (
-    <>
+    <SeoWrapper pageName="blog">
       {/* Header */}
       <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-16 text-center sm:px-6 sm:pt-36 sm:pb-20 md:px-10 md:pt-40 md:pb-28">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
@@ -50,6 +51,6 @@ export default function JournalPage() {
           </div>
         )}
       </section>
-    </>
+    </SeoWrapper>
   )
 }

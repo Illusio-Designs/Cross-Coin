@@ -3,7 +3,7 @@
    client, fills in <Head> tags, and shows sensible defaults while the
    request resolves or if the endpoint 404s. */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { getSeoByPageName } from '../services/seo';
 
@@ -27,7 +27,6 @@ function absoluteCanonical(url) {
 
 export default function SeoWrapper({ pageName, seoData, children }) {
   const [fetched, setFetched] = useState(null);
-  const hasFetched = useRef(false);
 
   const defaults = useMemo(() => ({
     meta_title: 'Gripzus',
@@ -37,12 +36,17 @@ export default function SeoWrapper({ pageName, seoData, children }) {
     meta_image: null,
   }), []);
 
+  // Re-fetch whenever the pageName changes (e.g. navigating between
+  // product detail pages would otherwise keep the first slug's SEO
+  // because a useRef cache locked the fetch to the first render).
   useEffect(() => {
-    if (seoData || hasFetched.current || !pageName) return;
-    hasFetched.current = true;
+    if (seoData || !pageName) { setFetched(null); return; }
+    let alive = true;
+    setFetched(null);
     getSeoByPageName(pageName)
-      .then(d => setFetched(d || defaults))
-      .catch(() => setFetched(defaults));
+      .then(d => { if (alive) setFetched(d || defaults); })
+      .catch(() => { if (alive) setFetched(defaults); });
+    return () => { alive = false; };
   }, [pageName, seoData, defaults]);
 
   const data = seoData || fetched || defaults;

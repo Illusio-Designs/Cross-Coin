@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { getPublicCategories } from '@/lib/api/categories';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 
 export default function CollectionsPage() {
   const [collections, setCollections] = useState([]);
@@ -20,6 +21,7 @@ export default function CollectionsPage() {
   }, []);
 
   return (
+    <SeoWrapper pageName="categories">
     <div className="bg-[var(--bg)] min-h-screen">
       <PageHeader
         eyebrow="Curated Worlds"
@@ -85,5 +87,6 @@ export default function CollectionsPage() {
         </div>
       </div>
     </div>
+    </SeoWrapper>
   );
 }

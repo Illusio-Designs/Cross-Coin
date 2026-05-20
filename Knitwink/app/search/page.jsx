@@ -3,6 +3,7 @@ import { searchProducts, getPublicProducts } from '@/lib/api/products'
 import { ProductCard } from '@/components/collection/ProductCard'
 import { SearchInput } from './SearchInput'
 import { SITE_NAME } from '@/lib/constants'
+import SeoWrapper from '@/components/SeoWrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,7 @@ export default async function SearchPage({ searchParams }) {
   ])
 
   return (
+    <SeoWrapper pageName="search">
     <div className="min-h-screen bg-[#f5f5f5]">
 
       {/* Hero — same as contact/other pages */}
@@ -91,5 +93,6 @@ export default async function SearchPage({ searchParams }) {
 
       </div>
     </div>
+    </SeoWrapper>
   )
 }

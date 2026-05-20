@@ -1,5 +1,10 @@
 import { ContactPageClient } from './ContactPageClient'
+import SeoWrapper from '@/components/SeoWrapper'
 
 export default function ContactPage() {
-  return <ContactPageClient />
+  return (
+    <SeoWrapper pageName="contact">
+      <ContactPageClient />
+    </SeoWrapper>
+  )
 }

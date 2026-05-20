@@ -165,7 +165,6 @@ export function mapProduct(p) {
     details,
     variations,                       // full per-variation data for the detail page
     defaultVariationId: defaultVariation?.id || null,
-    seo: p.seo,
     raw: p,
   };
 }

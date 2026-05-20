@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Package, Truck, CheckCircle } from 'lucide-react'
 import { trackOrder } from '@/lib/api/orders'
+import SeoWrapper from '@/components/SeoWrapper'
 
 const STATUS_STEPS = ['confirmed', 'processing', 'shipped', 'delivered']
 
@@ -31,7 +32,7 @@ export default function TrackOrderPage() {
   const currentStep = order ? STATUS_STEPS.indexOf(order.status?.toLowerCase()) : -1
 
   return (
-    <>
+    <SeoWrapper pageName="track-order">
       <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
         <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
@@ -114,6 +115,6 @@ export default function TrackOrderPage() {
           )}
         </div>
       </section>
-    </>
+    </SeoWrapper>
   )
 }

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { trackOrder } from '@/lib/api/orders';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 
 const STEPS = [
   { key: 'placed',           label: 'Order Placed',         shortLabel: 'Placed' },
@@ -434,12 +435,14 @@ function Row({ label, value, highlight, mono }) {
 
 export default function TrackOrderPage() {
   return (
-    <Suspense fallback={
-      <div className="bg-[var(--bg)] min-h-screen flex items-center justify-center">
-        <p className="text-[var(--ink-muted)] text-xs tracking-[0.3em] uppercase font-body">Loading…</p>
-      </div>
-    }>
-      <TrackOrderInner />
-    </Suspense>
+    <SeoWrapper pageName="track-order">
+      <Suspense fallback={
+        <div className="bg-[var(--bg)] min-h-screen flex items-center justify-center">
+          <p className="text-[var(--ink-muted)] text-xs tracking-[0.3em] uppercase font-body">Loading…</p>
+        </div>
+      }>
+        <TrackOrderInner />
+      </Suspense>
+    </SeoWrapper>
   );
 }

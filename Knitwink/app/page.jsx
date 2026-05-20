@@ -11,6 +11,7 @@ import { BlogStrip } from '@/components/home/BlogStrip'
 import { getBestsellers } from '@/lib/api/products'
 import { getPublicSliders } from '@/lib/api/sliders'
 import { getPublicCategories } from '@/lib/api/categories'
+import SeoWrapper from '@/components/SeoWrapper'
 
 export default function HomePage() {
   const [slides, setSlides] = useState([])
@@ -24,7 +25,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <>
+    <SeoWrapper pageName="home">
       <HeroBanner slides={slides} />
       <CategoryCards categories={categories} />
       <ExclusiveSection products={bestsellers.slice(0, 3)} />
@@ -32,6 +33,6 @@ export default function HomePage() {
       <ReviewBand />
       <BlogStrip />
       <TrustStrip />
-    </>
+    </SeoWrapper>
   )
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Clock, User, Calendar, ArrowUpRight, ChevronRight } from 'lucide-react';
+import SeoWrapper from '@/components/SeoWrapper';
 import { getPost, getPosts } from '@/lib/api/blog';
 
 function formatDate(str) {
@@ -58,11 +59,12 @@ export default function BlogPostPage() {
   }
 
   return (
+    <SeoWrapper pageName={slug || 'blog-details'} seoData={post?.seo || null}>
     <div className="bg-[var(--bg)] min-h-screen">
 
       {/* ═══════════════ FULL-WIDTH HERO ═══════════════ */}
       <section className="relative w-full">
-        <div className="relative w-full h-[75vh] min-h-[520px] max-h-[820px] overflow-hidden bg-[var(--ink)]">
+        <div className="relative w-full min-h-[520px] max-h-[820px] overflow-hidden bg-[var(--ink)] flex flex-col">
           {post.coverImage ? (
             <img
               src={post.coverImage}
@@ -77,8 +79,8 @@ export default function BlogPostPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink)]/70 via-transparent to-transparent" />
 
           {/* Top — breadcrumb */}
-          <div className="absolute top-0 left-0 right-0">
-            <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pt-8 flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase font-body text-white/70">
+          <div className="relative z-10 pt-8">
+            <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase font-body text-white/70">
               <Link href="/" className="hover:text-[var(--gold)] transition-colors">Home</Link>
               <ChevronRight size={10} />
               <Link href="/blog" className="hover:text-[var(--gold)] transition-colors">Journal</Link>
@@ -87,8 +89,11 @@ export default function BlogPostPage() {
             </div>
           </div>
 
-          {/* Bottom — title block */}
-          <div className="absolute bottom-0 left-0 right-0 pb-12 md:pb-20">
+          {/* Flex spacer */}
+          <div className="flex-1" />
+
+          {/* Bottom — title block (extra top padding so a long title clears the breadcrumb) */}
+          <div className="relative z-10 pt-20 md:pt-24 pb-12 md:pb-20">
             <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
               <div className="max-w-4xl">
                 {post.category && (
@@ -250,5 +255,6 @@ export default function BlogPostPage() {
         </section>
       )}
     </div>
+    </SeoWrapper>
   );
 }

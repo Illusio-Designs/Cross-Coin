@@ -1,4 +1,4 @@
-const { SeoMetadata, Product, ProductSEO } = require('../model/associations.js');
+const { SeoMetadata, Product, ProductSEO, BlogPost, BlogSEO } = require('../model/associations.js');
 const path = require('path');
 const fs = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
@@ -200,6 +200,32 @@ module.exports.getSEOData = async (req, res) => {
                         meta_description: product.description || `Buy ${product.name} online at CrossCoin`,
                         meta_keywords: `${product.name}, buy online, crosscoin, shopping`,
                         canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ProductDetails?slug=${product.slug}`
+                    }
+                });
+            }
+
+            // No product matched — try a blog post by slug, with its
+            // BlogSEO association. Mirrors the product flow above so
+            // dashboard-added per-post SEO is reachable through the
+            // same /api/seo?page_name= endpoint the frontends already use.
+            logger.info('[SEO] Trying to find blog post by slug:', page_name);
+            const blogPost = await BlogPost.findOne({
+                where: { slug: page_name },
+                include: [{ model: BlogSEO, as: 'BlogSEO' }]
+            });
+            if (blogPost && blogPost.BlogSEO) {
+                logger.info('[SEO] Returning BlogSEO for slug:', page_name);
+                return res.json({ success: true, data: blogPost.BlogSEO });
+            }
+            if (blogPost) {
+                logger.info('[SEO] Blog post found but no BlogSEO, returning default');
+                return res.json({
+                    success: true,
+                    data: {
+                        meta_title: `${blogPost.title} - CrossCoin Journal`,
+                        meta_description: `Read "${blogPost.title}" on the CrossCoin journal.`,
+                        meta_keywords: `${blogPost.title}, blog, journal, crosscoin`,
+                        canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/journal/${blogPost.slug}`
                     }
                 });
             }

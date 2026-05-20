@@ -1,4 +1,5 @@
 import Hero3DWrapper from '@/components/home/Hero3DWrapper';
+import SeoWrapper from '@/components/SeoWrapper';
 import {
   Marquee,
   CollectionsBand,
@@ -22,7 +23,7 @@ import {
 */
 export default function HomePage() {
   return (
-    <>
+    <SeoWrapper pageName="home">
       <Hero3DWrapper />
       <Marquee />
       <CollectionsBand />
@@ -31,6 +32,6 @@ export default function HomePage() {
       <BestSellers />
       <NotesBand />
       <Testimonials />
-    </>
+    </SeoWrapper>
   );
 }

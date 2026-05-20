@@ -7,6 +7,7 @@ import { ProductPageClient } from '@/components/product/ProductPageClient'
 import { FeatureHighlight } from '@/components/product/FeatureHighlight'
 import { CrossSell } from '@/components/product/CrossSell'
 import { ReviewsSection } from '@/components/product/ReviewsSection'
+import SeoWrapper from '@/components/SeoWrapper'
 
 function ProductSkeleton() {
   return (
@@ -44,7 +45,7 @@ export default function ProductPage() {
   )
 
   return (
-    <>
+    <SeoWrapper pageName={handle || 'product-details'} seoData={product?.seo || null}>
       {/* Gallery + Info */}
       <div className="px-4 pt-40 pb-8 sm:pt-36 lg:px-8 lg:pt-30">
         <ProductPageClient product={product} />
@@ -124,6 +125,6 @@ export default function ProductPage() {
 
       {/* Cross-sell */}
         <CrossSell currentHandle={product.handle} />
-    </>
+    </SeoWrapper>
   )
 }

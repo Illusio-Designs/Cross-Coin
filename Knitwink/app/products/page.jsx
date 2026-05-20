@@ -6,6 +6,7 @@ import { SlidersHorizontal, X, ChevronDown } from 'lucide-react'
 import { getPublicProducts, mapProduct } from '@/lib/api/products'
 import { getPublicCategories, getCategoryByName } from '@/lib/api/categories'
 import { ProductCard } from '@/components/collection/ProductCard'
+import SeoWrapper from '@/components/SeoWrapper'
 
 const SORT_OPTIONS = [
   { value: 'featured',   label: 'Featured' },
@@ -169,7 +170,7 @@ export default function ProductsPage() {
   const toggleGender = (g) => setSelectedGenders(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
 
   return (
-    <>
+    <SeoWrapper pageName="products">
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black min-h-[240px] sm:min-h-[300px] md:min-h-[380px]">
         <img src="/product hero.jpg" alt="Products" className="absolute inset-0 h-full w-full object-cover opacity-60" />
@@ -334,6 +335,6 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
-    </>
+    </SeoWrapper>
   )
 }

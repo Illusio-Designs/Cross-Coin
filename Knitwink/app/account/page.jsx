@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
 import { updateProfile, changePassword } from '@/lib/api/auth'
+import SeoWrapper from '@/components/SeoWrapper'
 import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
 const TABS = ['My Orders', 'Addresses', 'Account Details', 'Reset Password']
@@ -174,6 +175,7 @@ export default function AccountPage() {
   )
 
   return (
+    <SeoWrapper pageName="profile">
     <div className="pf-page">
       {/* Hero — matches site style */}
       <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
@@ -419,5 +421,6 @@ export default function AccountPage() {
         </div>
       )}
     </div>
+    </SeoWrapper>
   )
 }

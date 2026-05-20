@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Clock, User } from 'lucide-react';
 import { getPosts } from '@/lib/api/blog';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); }
@@ -21,6 +22,7 @@ export default function BlogPage() {
   const [featured, ...rest] = posts;
 
   return (
+    <SeoWrapper pageName="blog">
     <div className="bg-[var(--bg)] min-h-screen">
       <PageHeader
         eyebrow="Stories & Notes"
@@ -115,5 +117,6 @@ export default function BlogPage() {
         )}
       </div>
     </div>
+    </SeoWrapper>
   );
 }

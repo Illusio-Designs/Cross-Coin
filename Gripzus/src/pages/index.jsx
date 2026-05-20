@@ -38,7 +38,7 @@ export default function Home() {
       <HeroBanner slides={slides} />
       <CategoryCards categories={categories} />
       <ExclusiveSection products={products} />
-      <BestsellerRow products={products} eyebrow="Most loved" title="Bestsellers" accent="this season." ctaHref="/products?sort=bestsellers" />
+      <BestsellerRow products={products} eyebrow="Most loved" title="Bestsellers" accent="this season." ctaHref="/products" />
       <ReviewBand />
       <BlogStrip />
       <TrustStrip />

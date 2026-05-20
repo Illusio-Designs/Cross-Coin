@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, ChevronDown, Check } from 'lucide-react';
 import ProductCard from '@/components/shop/ProductCard';
 import PageHeader from '@/components/layout/PageHeader';
+import SeoWrapper from '@/components/SeoWrapper';
 import { getPublicProducts, mapProduct } from '@/lib/api/products';
 import { getPublicCategories, getCategoryByName } from '@/lib/api/categories';
 // getCategoryByName is kept as a fallback for the rare case the catalog
@@ -273,9 +274,11 @@ function ShopPageInner() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
-      <ShopPageInner />
-    </Suspense>
+    <SeoWrapper pageName="products">
+      <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
+        <ShopPageInner />
+      </Suspense>
+    </SeoWrapper>
   );
 }
 
