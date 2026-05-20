@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/router';
 
 /* Floating WhatsApp chat button — sticky bottom-right, with a small
    greeting bubble that dismisses and hides on scroll. */
@@ -8,6 +9,7 @@ const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
 const WA_MESSAGE = 'Hi! I need help with Gripzus.';
 
 export default function WhatsAppChat() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [greetOpen, setGreetOpen] = useState(true);
   const [scrolled, setScrolled] = useState(false);
@@ -19,6 +21,9 @@ export default function WhatsAppChat() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Hide on the product detail page — the sticky Add-to-Bag bar lives there
+  // and we don't want the floating button overlapping it.
+  if (router.pathname === '/products/[slug]') return null;
   if (!mounted) return null;
 
   const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;

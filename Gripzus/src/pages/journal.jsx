@@ -33,7 +33,7 @@ export default function JournalPage({ posts }) {
             </div>
             <div className="flex flex-col justify-center">
               <h2 className="h-display text-3xl md:text-5xl mb-5 leading-[1.05]">{feature.title}</h2>
-              <p className="prose-body text-base md:text-lg max-w-xl mb-6">{feature.excerpt}</p>
+              <p className="prose-body text-base md:text-lg max-w-xl mb-6 text-justify">{feature.excerpt}</p>
               <div className="flex items-center gap-3 mb-7">
                 <span className="w-9 h-9 rounded-full bg-ink text-paper text-[12px] font-medium flex items-center justify-center">{featureInitials}</span>
                 <div>

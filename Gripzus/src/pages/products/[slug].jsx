@@ -302,19 +302,19 @@ export default function ProductDetail() {
 
               {/* Qty + actions */}
               <div ref={actionsRef}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center border border-line rounded-sm">
-                    <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
-                    <span className="w-12 text-center text-sm">{qty}</span>
-                    <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
+                <div className="flex items-center gap-2.5 mb-3 sm:gap-3">
+                  <div className="flex items-center border border-line rounded-sm shrink-0">
+                    <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
+                    <span className="w-9 sm:w-12 text-center text-sm">{qty}</span>
+                    <button onClick={() => setQty((q) => q + 1)} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
                   </div>
-                  <button onClick={handleAdd} className={`btn flex-1 justify-center !py-4 ${added ? '!bg-ink-soft' : ''}`}>
-                    {added ? 'Added to bag ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+                  <button onClick={handleAdd} className={`btn flex-1 justify-center !py-3.5 sm:!py-4 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
+                    {added ? 'Added ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
                   </button>
                   <button
                     onClick={() => toggle(product)}
                     aria-label="Wishlist"
-                    className={`w-12 h-12 border flex items-center justify-center transition-colors rounded-sm ${
+                    className={`shrink-0 w-11 h-11 sm:w-12 sm:h-12 border flex items-center justify-center transition-colors rounded-sm ${
                       wished ? 'bg-ink text-paper border-ink' : 'border-line text-ink hover:border-ink'
                     }`}
                   >
@@ -323,14 +323,14 @@ export default function ProductDetail() {
                     </svg>
                   </button>
                 </div>
-                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-4 mb-9">Buy Now</button>
+                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 mb-9 whitespace-nowrap">Buy Now</button>
               </div>
 
               {/* Description */}
               {product.description && (
                 <div className="mb-8">
                   <p className="eyebrow mb-3">About this pair</p>
-                  <p className="prose-body text-sm md:text-base">{product.description}</p>
+                  <p className="prose-body text-sm md:text-base text-justify">{product.description}</p>
                 </div>
               )}
 
@@ -339,14 +339,14 @@ export default function ProductDetail() {
                 <p className="eyebrow mb-4">Details</p>
                 <ul className="divide-y divide-line text-sm">
                   {product.sku && (
-                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">SKU</span><span className="text-ink">{product.sku}</span></li>
+                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">SKU</span><span className="text-ink sm:text-right">{product.sku}</span></li>
                   )}
-                  <li className="flex justify-between py-2.5"><span className="text-ink-muted">Collection</span><span className="text-ink">{product.collection}</span></li>
+                  <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Collection</span><span className="text-ink sm:text-right">{product.collection}</span></li>
                   {product.sizes?.length > 0 && (
-                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">Sizes</span><span className="text-ink">{product.sizes.join(', ')}</span></li>
+                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Sizes</span><span className="text-ink sm:text-right">{product.sizes.join(', ')}</span></li>
                   )}
                   {product.colors?.length > 0 && (
-                    <li className="flex justify-between py-2.5"><span className="text-ink-muted">Colours</span><span className="text-ink">{product.colors.map((c) => c.name).join(', ')}</span></li>
+                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Colours</span><span className="text-ink sm:text-right">{product.colors.map((c) => c.name).join(', ')}</span></li>
                   )}
                 </ul>
               </div>
@@ -391,8 +391,8 @@ export default function ProductDetail() {
               <p className="h-display text-ink text-sm md:text-base leading-tight truncate">{product.name}</p>
               <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{price.toLocaleString('en-IN')}</p>
             </div>
-            <button onClick={handleBuyNow} className="btn-outline hidden sm:inline-flex !py-3">Buy Now</button>
-            <button onClick={handleAdd} className={`btn justify-center !py-3 ${added ? '!bg-ink-soft' : ''}`}>
+            <button onClick={handleBuyNow} className="btn-outline hidden sm:inline-flex !py-3 whitespace-nowrap">Buy Now</button>
+            <button onClick={handleAdd} className={`btn justify-center !py-3 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
               {added ? 'Added ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
             </button>
           </div>

@@ -26,7 +26,7 @@ export default function BlogCard({ post }) {
         <h3 className="h-display text-xl md:text-[1.4rem] leading-snug text-ink group-hover:underline underline-offset-4 line-clamp-2">
           {post.title}
         </h3>
-        <p className="prose-body text-sm mt-2 line-clamp-2 flex-1">{post.excerpt}</p>
+        <p className="prose-body text-sm mt-2 line-clamp-2 flex-1 text-justify">{post.excerpt}</p>
 
         {/* Byline */}
         <div className="flex items-center gap-2.5 mt-4 pt-4 border-t border-line">
