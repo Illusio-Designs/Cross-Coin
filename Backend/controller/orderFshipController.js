@@ -24,6 +24,32 @@ const shippingProviderFactory = require('../services/shippingProviderFactory.js'
 const loyaltyService = require('../services/loyaltyService.js');
 const orderEmitter = require('../services/orderEvents.js');
 
+/**
+ * Pick the right shipping service for an order.
+ *  - If the order already has a shipment row, reuse that provider (you can't
+ *    update tracking on iThink for an order that was created in FShip, etc).
+ *  - Otherwise fall back to the brand's currently-active SHIPPING_PROVIDER.
+ * Returns { service, name }.
+ */
+async function resolveProviderForOrder(order) {
+  const brandId = order?.brand_id || 1;
+  if (order?.id) {
+    const shipment = await OrderShipment.findOne({
+      where: { order_id: order.id },
+      attributes: ['provider'],
+    });
+    if (shipment?.provider) {
+      return {
+        service: shippingProviderFactory.getProviderByName(shipment.provider, brandId),
+        name: shipment.provider,
+      };
+    }
+  }
+  const name = await shippingProviderFactory.getProviderName(brandId);
+  const service = await shippingProviderFactory.getShippingProvider(brandId);
+  return { service, name };
+}
+
 // ── Dual-write helper: sync shipment data to order_shipments table ──────
 async function upsertShipment(orderId, data, transaction = null) {
   try {
@@ -31,7 +57,7 @@ async function upsertShipment(orderId, data, transaction = null) {
     const existing = await OrderShipment.findOne({ where: { order_id: orderId }, ...opts });
     const payload = {
       order_id: orderId,
-      provider: data.provider || 'fship',
+      provider: data.provider || existing?.provider || 'fship',
       provider_order_id: data.provider_order_id || data.fship_order_id || null,
       waybill: data.waybill || data.fship_waybill || null,
       tracking_number: data.tracking_number || null,
@@ -451,22 +477,30 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
 // Enhanced sync functions with comprehensive order management
 module.exports.syncOrdersWithFShip = async (req, res) => {
   try {
-    logger.debug("=== ENHANCED FSHIP SYNC PROCESS START ===");
-    logger.debug("Flow: Check sync status → Create if needed → Update status → Handle COD payments");
+    // Determine which provider to use based on the requested brand (default 1).
+    // Different brands may be on different providers; if no brand is specified
+    // we test the default brand's provider here for fast-fail and then resolve
+    // per-order inside the loop.
+    const defaultBrandId = parseInt(req.query?.brand_id, 10) || 1;
+    const defaultProvider = await shippingProviderFactory.getShippingProvider(defaultBrandId);
+    const defaultProviderName = await shippingProviderFactory.getProviderName(defaultBrandId);
 
-    // STEP 1: Test FShip connection
+    logger.debug(`=== ${defaultProviderName.toUpperCase()} SYNC PROCESS START ===`);
+
+    // STEP 1: Test the provider connection
     try {
-      logger.debug("=== STEP 1: TESTING FSHIP CONNECTION ===");
-      const testResult = await fshipService.testConnection();
+      logger.debug(`=== STEP 1: TESTING ${defaultProviderName.toUpperCase()} CONNECTION ===`);
+      const testResult = await defaultProvider.testConnection();
       if (!testResult.success) {
         throw new Error(testResult.message);
       }
-      logger.debug("✅ FSHIP CONNECTION SUCCESS");
+      logger.debug(`✅ ${defaultProviderName.toUpperCase()} CONNECTION SUCCESS`);
     } catch (authError) {
-      logger.error("❌ FSHIP CONNECTION FAILED");
+      logger.error(`❌ ${defaultProviderName.toUpperCase()} CONNECTION FAILED`);
       return res.status(400).json({
         success: false,
-        message: "FShip connection failed",
+        message: `${defaultProviderName} connection failed`,
+        provider: defaultProviderName,
         error: authError.message,
         step: "connection"
       });
@@ -613,24 +647,31 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
 };
 
 // Enhanced single order sync with comprehensive logic
-module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
+module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provider = null, providerName = null) => {
   const localTransaction = transaction || await sequelize.transaction();
   const shouldCommit = !transaction;
 
+  // Resolve provider if not supplied (callers may not pass it yet during refactor).
+  if (!provider) {
+    const resolved = await resolveProviderForOrder(order);
+    provider = resolved.service;
+    providerName = resolved.name;
+  }
+
   try {
-    logger.debug(`🔍 Enhanced sync for order: ${order.order_number}`);
+    logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}`);
 
     // STEP 1: Check if order is already synced
     const isSynced = order.fship_order_id && order.fship_waybill;
 
     if (!isSynced) {
-      // STEP 2: Order not synced - Create in FShip
-      logger.debug(`📝 Order ${order.order_number} not synced. Creating in FShip...`);
+      // STEP 2: Order not synced — create at the active provider
+      logger.debug(`📝 Order ${order.order_number} not synced. Creating in ${providerName}...`);
 
-      const createResult = await this.createOrderInFShip(order, localTransaction);
+      const createResult = await this.createOrderInFShip(order, localTransaction, provider, providerName);
 
       if (createResult.success) {
-        logger.debug(`✅ Order ${order.order_number} created in FShip`);
+        logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
 
         if (shouldCommit) await localTransaction.commit();
 
@@ -638,21 +679,22 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
           success: true,
           action: 'synced',
           status: order.status,
+          provider: providerName,
           fship_order_id: createResult.fship_order_id,
           waybill: createResult.waybill,
-          message: 'Order created and synced with FShip'
+          message: `Order created and synced with ${providerName}`
         };
       } else {
         throw new Error(createResult.error);
       }
     } else {
-      // STEP 3: Order already synced - Update status
-      logger.debug(`🔄 Order ${order.order_number} already synced. Checking for updates...`);
+      // STEP 3: Order already synced — update status from provider
+      logger.debug(`🔄 Order ${order.order_number} already synced (${providerName}). Checking for updates...`);
 
-      const updateResult = await this.updateOrderStatusFromFShip(order, localTransaction);
+      const updateResult = await this.updateOrderStatusFromFShip(order, localTransaction, provider, providerName);
 
       if (updateResult.success) {
-        logger.debug(`✅ Order ${order.order_number} status updated`);
+        logger.debug(`✅ Order ${order.order_number} status updated via ${providerName}`);
 
         if (shouldCommit) await localTransaction.commit();
 
@@ -660,6 +702,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null) => {
           success: true,
           action: updateResult.statusChanged ? 'updated' : 'skipped',
           status: updateResult.newStatus || order.status,
+          provider: providerName,
           fship_order_id: order.fship_order_id,
           waybill: order.fship_waybill,
           message: updateResult.message
@@ -717,10 +760,18 @@ module.exports.validateOrderForFShip = (order) => {
   return issues;
 };
 
-// Create order in FShip
-module.exports.createOrderInFShip = async (order, transaction) => {
+// Create order at the active shipping provider for the order's brand.
+// Method name kept for backward compatibility; despite "FShip" in the name it
+// dispatches to whichever provider is currently configured (FShip or iThink).
+module.exports.createOrderInFShip = async (order, transaction, provider = null, providerName = null) => {
   try {
-    logger.debug(`🚀 Creating order ${order.order_number} in FShip...`);
+    if (!provider) {
+      const resolved = await resolveProviderForOrder(order);
+      provider = resolved.service;
+      providerName = resolved.name;
+    }
+
+    logger.debug(`🚀 Creating order ${order.order_number} in ${providerName}...`);
 
     // Reload order to get latest data and prevent race conditions
     await order.reload({ transaction });
@@ -757,13 +808,14 @@ module.exports.createOrderInFShip = async (order, transaction) => {
       await order.update({ fship_sync_error: null }, { transaction });
     }
 
-    // Prepare order data for FShip
+    // Prepare order payload (same shape works for both providers — each service
+    // formats it internally for its own API)
     const fshipOrderData = await this.prepareFShipOrderData(order);
 
-    // Create order using enhanced FShip service
-    const result = await fshipService.createOrUpdateForwardOrder(fshipOrderData);
+    // Create order using the resolved provider
+    const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
 
-    logger.debug('=== FShip Create Order Result ===');
+    logger.debug(`=== ${providerName} Create Order Result ===`);
     logger.debug('Success:', result.success);
     logger.debug('Order ID:', result.orderId);
     logger.debug('Waybill:', result.waybill);
@@ -777,7 +829,7 @@ module.exports.createOrderInFShip = async (order, transaction) => {
       if (result.waybill) {
         logger.debug(`📄 Fetching shipping label for waybill: ${result.waybill}`);
         try {
-          const labelData = await fshipService.getShippingLabel(result.waybill);
+          const labelData = await provider.getShippingLabel(result.waybill);
           logger.debug('📦 Label API Response:', JSON.stringify(labelData, null, 2));
 
           // Try multiple possible response structures
@@ -820,9 +872,9 @@ module.exports.createOrderInFShip = async (order, transaction) => {
         fship_last_synced_at: new Date() // Track last sync time
       }, { transaction });
 
-      // Dual-write to order_shipments table
+      // Dual-write to order_shipments table — record the provider that was used
       await upsertShipment(order.id, {
-        provider: 'fship',
+        provider: providerName,
         provider_order_id: result.orderId,
         waybill: result.waybill,
         tracking_number: result.waybill,
@@ -838,16 +890,16 @@ module.exports.createOrderInFShip = async (order, transaction) => {
       await OrderStatusHistory.create({
         order_id: order.id,
         status: 'processing',
-        notes: `Order synced with FShip. AWB: ${result.waybill}${result.courierName ? ` - Courier: ${result.courierName}` : ''}`,
-        created_by: 'fship_sync_system'
+        notes: `Order synced with ${providerName}. AWB: ${result.waybill}${result.courierName ? ` - Courier: ${result.courierName}` : ''}`,
+        created_by: `${providerName}_sync_system`
       }, { transaction });
 
-      logger.debug(`✅ Order ${order.order_number} created in FShip with AWB: ${result.waybill}${result.courierName ? `, Courier: ${result.courierName}` : ''}`);
+      logger.debug(`✅ Order ${order.order_number} created in ${providerName} with AWB: ${result.waybill}${result.courierName ? `, Courier: ${result.courierName}` : ''}`);
 
       // If courier name or tracking URL not in create response, try shipment summary
       if ((!result.courierName || !order.tracking_url) && result.waybill) {
         try {
-          const shipmentStatus = await fshipService.getShipmentStatus(result.waybill);
+          const shipmentStatus = await provider.getShipmentStatus(result.waybill);
           logger.debug('📡 Shipment summary after create:', JSON.stringify(shipmentStatus, null, 2));
           const summaryUpdates = {};
 
@@ -881,11 +933,11 @@ module.exports.createOrderInFShip = async (order, transaction) => {
         route_code: result.routeCode
       };
     } else {
-      throw new Error(result.message || 'Failed to create order in FShip');
+      throw new Error(result.message || `Failed to create order in ${providerName}`);
     }
 
   } catch (error) {
-    logger.error(`❌ Failed to create order ${order.order_number} in FShip:`, error.message);
+    logger.error(`❌ Failed to create order ${order.order_number} in ${providerName}:`, error.message);
     return {
       success: false,
       error: error.message
@@ -893,10 +945,18 @@ module.exports.createOrderInFShip = async (order, transaction) => {
   }
 };
 
-// Update order status from FShip
-module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
+// Update order status from the provider that originally shipped it.
+// Method name kept for backward compatibility — it dispatches to whatever
+// provider the order's shipment row was created under.
+module.exports.updateOrderStatusFromFShip = async (order, transaction, provider = null, providerName = null) => {
   try {
-    logger.debug(`🔄 Updating status for order ${order.order_number} from FShip...`);
+    if (!provider) {
+      const resolved = await resolveProviderForOrder(order);
+      provider = resolved.service;
+      providerName = resolved.name;
+    }
+
+    logger.debug(`🔄 Updating status for order ${order.order_number} from ${providerName}...`);
     logger.debug(`📋 Current order details - Label URL: ${order.fship_label_url || 'MISSING'}, Waybill: ${order.fship_waybill || 'MISSING'}`);
 
     const waybill = order.fship_waybill || order.tracking_number;
@@ -938,13 +998,13 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       logger.debug(`✓ Label URL already exists: ${order.fship_label_url}`);
     }
 
-    // Get tracking history from FShip
-    const trackingResult = await fshipService.getTrackingHistory(waybill);
-    logger.debug('📡 FShip tracking response:', JSON.stringify(trackingResult, null, 2));
+    // Get tracking history from the provider that created this shipment
+    const trackingResult = await provider.getTrackingHistory(waybill);
+    logger.debug(`📡 ${providerName} tracking response:`, JSON.stringify(trackingResult, null, 2));
 
     if (trackingResult && trackingResult.summary) {
       const fshipStatus = trackingResult.summary.status;
-      const newStatus = fshipService.mapFShipStatusToCrossCoin(fshipStatus);
+      const newStatus = provider.mapFShipStatusToCrossCoin(fshipStatus);
 
       // Extract courier name from tracking data (try every possible field)
       const courierFromTracking = trackingResult.summary.courier_name
@@ -1157,8 +1217,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction) => {
       await order.reload({ transaction });
       if (!order.courier_name || !order.tracking_url) {
         try {
-          const summary = await fshipService.getShipmentStatus(waybill);
-          logger.debug('📡 FShip shipment summary fallback:', JSON.stringify(summary, null, 2));
+          const summary = await provider.getShipmentStatus(waybill);
+          logger.debug(`📡 ${providerName} shipment summary fallback:`, JSON.stringify(summary, null, 2));
           const updates = {};
           const shipmentUpdates = {};
 
@@ -1327,36 +1387,41 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
       });
     }
 
-    // Test FShip connection
+    // Resolve provider for THIS order's brand and test the connection
+    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
     try {
-      const testResult = await fshipService.testConnection();
+      const testResult = await provider.testConnection();
       if (!testResult.success) {
         throw new Error(testResult.message);
       }
-      logger.debug("✅ FShip connection successful");
+      logger.debug(`✅ ${providerName} connection successful`);
     } catch (authError) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "FShip connection failed",
+        message: `${providerName} connection failed`,
+        provider: providerName,
         error: authError.message
       });
     }
 
-    // Use enhanced sync logic
-    const syncResult = await this.enhancedSyncSingleOrder(order, transaction);
+    // Use enhanced sync logic with the resolved provider
+    const syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName);
 
     if (syncResult.success) {
       await transaction.commit();
 
       return res.json({
         success: true,
-        message: `Order ${order.order_number} sync completed`,
+        message: `Order ${order.order_number} synced via ${providerName}`,
         data: {
+          provider: providerName,
           order: {
             id: order.id,
             order_number: order.order_number,
             status: syncResult.status,
+            provider: providerName,
+            provider_order_id: syncResult.fship_order_id,
             fship_order_id: syncResult.fship_order_id,
             waybill: syncResult.waybill,
             action: syncResult.action
@@ -1399,12 +1464,24 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 module.exports.bulkRefreshFShipStatus = async (req, res) => {
   try {
-    logger.debug("=== BULK FSHIP STATUS REFRESH START ===");
+    // Resolve provider for the requested brand (default 1) just to fail fast if
+    // credentials are wrong. Inside the loop, each order resolves its own
+    // provider based on the shipment row that created it.
+    const defaultBrandId = parseInt(req.query?.brand_id, 10) || 1;
+    const defaultProvider = await shippingProviderFactory.getShippingProvider(defaultBrandId);
+    const defaultProviderName = await shippingProviderFactory.getProviderName(defaultBrandId);
 
-    // STEP 1: Test FShip connection
-    const testResult = await fshipService.testConnection();
+    logger.debug(`=== BULK ${defaultProviderName.toUpperCase()} STATUS REFRESH START ===`);
+
+    // STEP 1: Test the default provider connection
+    const testResult = await defaultProvider.testConnection();
     if (!testResult.success) {
-      return res.status(400).json({ success: false, message: 'FShip connection failed', error: testResult.message });
+      return res.status(400).json({
+        success: false,
+        message: `${defaultProviderName} connection failed`,
+        provider: defaultProviderName,
+        error: testResult.message,
+      });
     }
 
     // STEP 2: Parse filters
