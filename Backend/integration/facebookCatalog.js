@@ -23,18 +23,21 @@ function resolveImageUrl(imagePath) {
 /**
  * Resolve which brand this feed request is for.
  * Priority:
- *   1. ?brand=<slug>          — explicit brand slug
- *   2. ?brand_id=<id>         — explicit brand id
- *   3. ?catalog_id=<fbCatId>  — look up brand whose FB_CATALOG_ID setting matches
- *   4. null                   — no brand scoping (legacy: all products)
+ *   1. path param :brandSlug  — explicit brand slug in URL path
+ *   2. ?brand=<slug>          — explicit brand slug query param
+ *   3. ?brand_id=<id>         — explicit brand id
+ *   4. ?catalog_id=<fbCatId>  — look up brand whose FB_CATALOG_ID setting matches
+ *   5. null                   — no brand scoping (legacy: all products)
  */
 async function resolveBrand(req) {
+  const pathSlug = req.params.brandSlug;
   const { brand: brandSlug, brand_id: brandIdParam, catalog_id: catalogId } =
     req.query;
 
-  if (brandSlug) {
+  const slug = pathSlug || brandSlug;
+  if (slug) {
     return await Brand.findOne({
-      where: { slug: String(brandSlug).toLowerCase(), status: "active" },
+      where: { slug: String(slug).toLowerCase(), status: "active" },
     });
   }
 
@@ -58,9 +61,19 @@ async function resolveBrand(req) {
   return null;
 }
 
-// Facebook Catalog Feed Endpoint
-router.get("/feed", async (req, res) => {
+async function buildFeed(req, res, { requireBrand = false } = {}) {
   const brand = await resolveBrand(req);
+
+  if (requireBrand && !brand) {
+    return res
+      .status(404)
+      .set("Content-Type", "application/xml")
+      .send(
+        `<?xml version="1.0" encoding="UTF-8"?><error>Brand '${
+          req.params.brandSlug || ""
+        }' not found or inactive</error>`
+      );
+  }
 
   const frontendUrl =
     (brand && brand.domain) ||
@@ -359,6 +372,17 @@ router.get("/feed", async (req, res) => {
   xml += `</channel></rss>`;
   res.set("Content-Type", "application/xml");
   res.send(xml);
-});
+}
+
+// Brand-scoped feed: /facebook-catalog/feed/<brand-slug>
+// Returns 404 if the brand slug doesn't match an active brand.
+router.get("/feed/:brandSlug", (req, res) =>
+  buildFeed(req, res, { requireBrand: true })
+);
+
+// Legacy / multi-resolution feed: /facebook-catalog/feed
+// Resolves brand from ?brand=, ?brand_id=, or ?catalog_id=.
+// With no params, returns all products (kept for backwards compatibility).
+router.get("/feed", (req, res) => buildFeed(req, res));
 
 module.exports = router;
