@@ -75,10 +75,13 @@ async function buildFeed(req, res, { requireBrand = false } = {}) {
       );
   }
 
-  const frontendUrl =
+  const rawFrontend =
     (brand && brand.domain) ||
     process.env.FRONTEND_URL ||
     "https://crosscoin.in";
+  const frontendUrl = /^https?:\/\//i.test(rawFrontend)
+    ? rawFrontend.replace(/\/+$/, "")
+    : `https://${rawFrontend.replace(/^\/+/, "").replace(/\/+$/, "")}`;
 
   const brandName = brand ? brand.display_name || brand.name : "Cross Coin";
 
