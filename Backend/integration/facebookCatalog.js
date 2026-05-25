@@ -4,6 +4,8 @@ const {
   ProductVariation,
   ProductImage,
   Category,
+  Brand,
+  BrandSetting,
 } = require("../model/associations.js");
 const imagekitService = require("../services/imagekitService");
 const router = express.Router();
@@ -18,59 +20,122 @@ function resolveImageUrl(imagePath) {
   return imagekitService.getOptimizedUrl(imagePath, "large");
 }
 
+/**
+ * Resolve which brand this feed request is for.
+ * Priority:
+ *   1. ?brand=<slug>          — explicit brand slug
+ *   2. ?brand_id=<id>         — explicit brand id
+ *   3. ?catalog_id=<fbCatId>  — look up brand whose FB_CATALOG_ID setting matches
+ *   4. null                   — no brand scoping (legacy: all products)
+ */
+async function resolveBrand(req) {
+  const { brand: brandSlug, brand_id: brandIdParam, catalog_id: catalogId } =
+    req.query;
+
+  if (brandSlug) {
+    return await Brand.findOne({
+      where: { slug: String(brandSlug).toLowerCase(), status: "active" },
+    });
+  }
+
+  if (brandIdParam) {
+    return await Brand.findOne({
+      where: { id: parseInt(brandIdParam, 10), status: "active" },
+    });
+  }
+
+  if (catalogId) {
+    const setting = await BrandSetting.findOne({
+      where: { key: "FB_CATALOG_ID", value: String(catalogId) },
+    });
+    if (setting) {
+      return await Brand.findOne({
+        where: { id: setting.brand_id, status: "active" },
+      });
+    }
+  }
+
+  return null;
+}
+
 // Facebook Catalog Feed Endpoint
 router.get("/feed", async (req, res) => {
-  const frontendUrl = process.env.FRONTEND_URL || "https://crosscoin.in";
+  const brand = await resolveBrand(req);
 
-  // Fetch all active products with their variations, images, and category
+  const frontendUrl =
+    (brand && brand.domain) ||
+    process.env.FRONTEND_URL ||
+    "https://crosscoin.in";
+
+  const brandName = brand ? brand.display_name || brand.name : "Cross Coin";
+
+  // Build include options — when a brand is resolved, inner-join through the
+  // Brands m2m association so only that brand's products are returned.
+  const includeOptions = [
+    {
+      model: Category,
+      as: "Category",
+      attributes: ["name"],
+    },
+    {
+      model: ProductVariation,
+      as: "ProductVariations",
+      attributes: ["id", "price", "comparePrice", "stock", "sku"],
+      order: [["price", "ASC"]],
+      include: [
+        {
+          model: ProductImage,
+          as: "VariationImages",
+          required: false,
+          attributes: [
+            "image_url",
+            "alt_text",
+            "is_primary",
+            "display_order",
+          ],
+          order: [
+            ["is_primary", "DESC"],
+            ["display_order", "ASC"],
+          ],
+        },
+      ],
+    },
+    {
+      model: ProductImage,
+      as: "ProductImages",
+      required: false,
+      attributes: ["image_url", "alt_text", "is_primary", "display_order"],
+      order: [
+        ["is_primary", "DESC"],
+        ["display_order", "ASC"],
+      ],
+    },
+  ];
+
+  if (brand) {
+    includeOptions.push({
+      model: Brand,
+      as: "Brands",
+      required: true,
+      attributes: ["id", "name", "slug", "display_name"],
+      where: { id: brand.id },
+      through: {
+        attributes: ["status"],
+        where: { status: "active" },
+      },
+    });
+  }
+
   const products = await Product.findAll({
     where: { status: "active" },
-    include: [
-      {
-        model: Category,
-        as: "Category",
-        attributes: ["name"],
-      },
-      {
-        model: ProductVariation,
-        as: "ProductVariations",
-        attributes: ["id", "price", "comparePrice", "stock", "sku"],
-        order: [["price", "ASC"]], // Get the lowest price first
-        include: [
-          {
-            model: ProductImage,
-            as: "VariationImages",
-            required: false,
-            attributes: [
-              "image_url",
-              "alt_text",
-              "is_primary",
-              "display_order",
-            ],
-            order: [
-              ["is_primary", "DESC"],
-              ["display_order", "ASC"],
-            ],
-          },
-        ],
-      },
-      {
-        model: ProductImage,
-        as: "ProductImages",
-        required: false,
-        attributes: ["image_url", "alt_text", "is_primary", "display_order"],
-        order: [
-          ["is_primary", "DESC"],
-          ["display_order", "ASC"],
-        ], // Primary images first, then by display order
-      },
-    ],
+    include: includeOptions,
     order: [["createdAt", "DESC"]],
+    distinct: true,
   });
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>`;
   xml += `<rss xmlns:g="http://base.google.com/ns/1.0"><channel>`;
-  xml += `<title>Cross Coin Product Feed</title>`;
+  xml += `<title>${brandName} Product Feed</title>`;
 
   for (const product of products) {
     // Get the lowest price and compare price from variations
@@ -159,7 +224,7 @@ router.get("/feed", async (req, res) => {
 
     // If description is empty or just whitespace, provide a default
     if (!description || description.trim() === "") {
-      description = `Discover ${product.name} - Premium quality product from Cross Coin.`;
+      description = `Discover ${product.name} - Premium quality product from ${brandName}.`;
     }
 
     // Generate items for each variation (if multiple variations exist)
@@ -208,7 +273,7 @@ router.get("/feed", async (req, res) => {
         xml += `<g:availability>${
           variation.stock > 0 ? "in stock" : "out of stock"
         }</g:availability>`;
-        xml += `<g:brand>Cross Coin</g:brand>`;
+        xml += `<g:brand>${brandName}</g:brand>`;
         xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
         xml += `<g:sku>${variation.sku}</g:sku>`;
         xml += `<g:condition>New</g:condition>`;
@@ -261,7 +326,7 @@ router.get("/feed", async (req, res) => {
       xml += `<g:availability>${
         firstVariation.stock > 0 ? "in stock" : "out of stock"
       }</g:availability>`;
-      xml += `<g:brand>Cross Coin</g:brand>`;
+      xml += `<g:brand>${brandName}</g:brand>`;
       xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
       xml += `<g:sku>${firstVariation.sku}</g:sku>`;
       xml += `<g:condition>New</g:condition>`;
@@ -284,7 +349,7 @@ router.get("/feed", async (req, res) => {
         xml += `<g:compare_at_price>${comparePrice} INR</g:compare_at_price>`;
       }
       xml += `<g:availability>${availability}</g:availability>`;
-      xml += `<g:brand>Cross Coin</g:brand>`;
+      xml += `<g:brand>${brandName}</g:brand>`;
       xml += `<g:product_type><![CDATA[${categoryName}]]></g:product_type>`;
       xml += `<g:condition>New</g:condition>`;
       xml += `</item>`;
