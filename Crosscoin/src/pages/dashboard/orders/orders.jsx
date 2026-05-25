@@ -141,7 +141,8 @@ const Orders = () => {
         try {
             const result = await orderService.syncOrdersWithFShip();
             const data = result.data || result.results || {};
-            let message = `FShip sync completed! `;
+            const providerLabel = result.provider === 'ithink' ? 'iThink' : (result.provider === 'fship' ? 'FShip' : 'Shipping');
+            let message = `${providerLabel} sync completed! `;
             if (data.total > 0) message += `Processed ${data.total} orders. `;
             else if (data.total_orders_processed > 0) message += `Processed ${data.total_orders_processed} orders. `;
             if (data.synced > 0) message += `${data.synced} new orders synced. `;
@@ -156,7 +157,7 @@ const Orders = () => {
             showSuccess('orderSynced', message);
             fetchOrders(); fetchAllOrdersForStats();
         } catch (error) {
-            showError('syncFailed', error.message || error.error || 'Failed to sync orders with FShip');
+            showError('syncFailed', error.message || error.error || 'Failed to sync orders');
         } finally { setSyncingAll(false); }
     };
 
@@ -190,7 +191,7 @@ const Orders = () => {
                 showSuccess('orderSynced', message);
                 fetchOrders(); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to update order'); }
-        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to update order from FShip'); }
+        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to update order from shipping provider'); }
     };
 
     const syncSingleOrder = async (orderId, orderNumber) => {
@@ -199,10 +200,12 @@ const Orders = () => {
             setSyncingOrders(prev => new Set(prev).add(orderId));
             const result = await orderService.syncSingleOrderWithFShip(orderId);
             if (result.success) {
-                showSuccess('orderSynced', `Order ${orderNumber} synced! AWB: ${result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated'}`);
+                const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : (result.data?.provider === 'fship' ? 'FShip' : 'shipping');
+                const awb = result.data?.order?.waybill || result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated';
+                showSuccess('orderSynced', `Order ${orderNumber} synced via ${providerLabel}! AWB: ${awb}`);
                 fetchOrders(); fetchAllOrdersForStats();
-            } else { showError('syncFailed', result.message || 'Failed to sync order with FShip'); }
-        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to sync order with FShip');
+            } else { showError('syncFailed', result.message || 'Failed to sync order'); }
+        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to sync order');
         } finally {
             setSyncingOrders(prev => { const s = new Set(prev); s.delete(orderId); return s; });
         }
@@ -221,7 +224,7 @@ const Orders = () => {
         setConfirmPrompt(null);
         try {
             const result = await orderService.confirmOrder(orderId);
-            if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — FShip sync triggered`); fetchOrders(); }
+            if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — shipping sync triggered`); fetchOrders(); }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
     };
@@ -395,33 +398,47 @@ const Orders = () => {
         { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
         { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span>, width: "160px" },
         {
-            header: "FShip Sync",
-            cell: (row) => row.fship_order_id || row.fship_waybill
-                ? (
-                    <span className="sync-tag sync-tag--synced">
-                        <span className="sync-tag-dot" />
-                        <span className="sync-tag-text">
-                            Synced
-                            {row.fship_waybill && <small className="sync-tag-awb">AWB: {row.fship_waybill}</small>}
-                            {row.courier_name && <small className="sync-tag-courier">{row.courier_name}</small>}
+            header: "Shipping Sync",
+            cell: (row) => {
+                // Prefer the shipment row (new source of truth) and fall back to legacy fship_* columns
+                const s = row.Shipment || {};
+                const providerName = (s.provider || (row.fship_order_id || row.fship_waybill ? 'fship' : null));
+                const providerLabel = providerName === 'ithink' ? 'iThink' : providerName === 'fship' ? 'FShip' : null;
+                const waybill = s.waybill || row.fship_waybill;
+                const courier = s.courier_name || row.courier_name;
+                const syncError = s.sync_error || row.fship_sync_error;
+                const isSynced = (s.sync_status === 'synced') || row.fship_order_id || row.fship_waybill;
+
+                if (isSynced) {
+                    return (
+                        <span className="sync-tag sync-tag--synced">
+                            <span className="sync-tag-dot" />
+                            <span className="sync-tag-text">
+                                Synced{providerLabel ? ` · ${providerLabel}` : ''}
+                                {waybill && <small className="sync-tag-awb">AWB: {waybill}</small>}
+                                {courier && <small className="sync-tag-courier">{courier}</small>}
+                            </span>
                         </span>
-                    </span>
-                )
-                : row.fship_sync_error ? (
-                    <span className="sync-tag sync-tag--error" title={row.fship_sync_error}>
-                        <span className="sync-tag-dot" />
-                        <span className="sync-tag-text">
-                            Sync Failed
-                            <small className="sync-tag-error">{row.fship_sync_error.length > 40 ? row.fship_sync_error.slice(0, 40) + '…' : row.fship_sync_error}</small>
+                    );
+                }
+                if (syncError) {
+                    return (
+                        <span className="sync-tag sync-tag--error" title={syncError}>
+                            <span className="sync-tag-dot" />
+                            <span className="sync-tag-text">
+                                Sync Failed{providerLabel ? ` · ${providerLabel}` : ''}
+                                <small className="sync-tag-error">{syncError.length > 40 ? syncError.slice(0, 40) + '…' : syncError}</small>
+                            </span>
                         </span>
-                    </span>
-                )
-                : (
+                    );
+                }
+                return (
                     <span className="sync-tag sync-tag--unsynced">
                         <span className="sync-tag-dot" />
                         Not Synced
                     </span>
-                )
+                );
+            }
         },
         {
             header: "Label",
@@ -460,7 +477,7 @@ const Orders = () => {
                             </svg>
                         </button>
                         <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
-                            title={isFinal ? `Order is ${row.status}` : (row.fship_order_id || row.fship_waybill ? 'Re-sync with FShip' : 'Sync with FShip')}
+                            title={isFinal ? `Order is ${row.status}` : ((row.Shipment?.waybill || row.fship_order_id || row.fship_waybill) ? 'Re-sync shipping' : 'Sync shipping')}
                             onClick={() => syncSingleOrder(row.id, row.order_number)}
                             disabled={isSyncing || isFinal}>
                             {isSyncing ? (
@@ -471,12 +488,12 @@ const Orders = () => {
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             )}
                         </button>
-                        {row.fship_waybill && (
-                            <button className="order-action-btn order-update-btn" title="Update from FShip" onClick={() => updateSingleOrder(row.id)}>
+                        {(row.Shipment?.waybill || row.fship_waybill) && (
+                            <button className="order-action-btn order-update-btn" title="Refresh tracking from shipping provider" onClick={() => updateSingleOrder(row.id)}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
                             </button>
                         )}
-                        <button className="order-action-btn order-awb-btn" title="Update AWB Number" onClick={() => handleAwbUpdate(row.id, row.fship_waybill, row.courier_name)}>
+                        <button className="order-action-btn order-awb-btn" title="Update AWB Number" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                         {(['awaiting_confirmation', 'pending'].includes(row.status)) && (
@@ -515,7 +532,7 @@ const Orders = () => {
                 onCancel={() => setCancelPrompt(null)}
             />
             <ConfirmModal
-                message={confirmPrompt ? `Are you sure you want to confirm order ${confirmPrompt.orderNumber}? This will trigger FShip sync.` : null}
+                message={confirmPrompt ? `Are you sure you want to confirm order ${confirmPrompt.orderNumber}? This will trigger shipping provider sync.` : null}
                 onConfirm={handleConfirmOrder}
                 onCancel={() => setConfirmPrompt(null)}
             />
@@ -538,7 +555,7 @@ const Orders = () => {
                             <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
                                 onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                {syncingAll ? 'Syncing...' : 'FShip Sync'}
+                                {syncingAll ? 'Syncing...' : 'Sync Orders'}
                             </button>
                             <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
                                 onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
@@ -888,46 +905,63 @@ const Orders = () => {
                                 )}
                             </div>
 
-                            {/* FShip block inside order info */}
-                            {(selectedOrder.fship_order_id || selectedOrder.fship_waybill || selectedOrder.tracking_number) && (
-                                <div className="odm-fship">
-                                    <div className="odm-fship-title">
-                                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                        FShip Tracking
-                                    </div>
-                                    <div className="odm-info-grid">
-                                        {selectedOrder.fship_order_id && <div className="odm-field"><span className="odm-label">FShip Order ID</span><span className="odm-value odm-mono">{selectedOrder.fship_order_id}</span></div>}
-                                        {selectedOrder.fship_waybill && <div className="odm-field"><span className="odm-label">AWB Number</span><span className="odm-value odm-mono">{selectedOrder.fship_waybill}</span></div>}
-                                        {selectedOrder.fship_route_code && <div className="odm-field"><span className="odm-label">Route Code</span><span className="odm-value odm-mono">{selectedOrder.fship_route_code}</span></div>}
-                                        {selectedOrder.tracking_number && <div className="odm-field"><span className="odm-label">Tracking No.</span><span className="odm-value odm-mono">{selectedOrder.tracking_number}</span></div>}
-                                        {selectedOrder.courier_name && <div className="odm-field"><span className="odm-label">Courier</span><span className="odm-value">{selectedOrder.courier_name}</span></div>}
-                                        {selectedOrder.fship_label_url && (
-                                            <div className="odm-field">
-                                                <span className="odm-label">Shipping Label</span>
-                                                <a href={selectedOrder.fship_label_url} target="_blank" rel="noopener noreferrer" className="odm-label-link">
-                                                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                                    Download PDF
-                                                </a>
+                            {/* Shipping tracking block — provider-aware */}
+                            {(() => {
+                                const s = selectedOrder.Shipment || {};
+                                const providerKey = s.provider || (selectedOrder.fship_order_id || selectedOrder.fship_waybill ? 'fship' : null);
+                                const providerLabel = providerKey === 'ithink' ? 'iThink Logistics' : providerKey === 'fship' ? 'FShip' : null;
+                                const providerOrderId = s.provider_order_id || selectedOrder.fship_order_id;
+                                const waybill = s.waybill || selectedOrder.fship_waybill;
+                                const routeCode = s.route_code || selectedOrder.fship_route_code;
+                                const trackingNo = s.tracking_number || selectedOrder.tracking_number;
+                                const courier = s.courier_name || selectedOrder.courier_name;
+                                const labelUrl = s.label_url || selectedOrder.fship_label_url;
+                                const syncErr = s.sync_error || selectedOrder.fship_sync_error;
+                                const showBlock = providerOrderId || waybill || trackingNo;
+                                return (
+                                    <>
+                                        {showBlock && (
+                                            <div className="odm-fship">
+                                                <div className="odm-fship-title">
+                                                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                                    {providerLabel ? `${providerLabel} Tracking` : 'Shipping Tracking'}
+                                                </div>
+                                                <div className="odm-info-grid">
+                                                    {providerLabel && <div className="odm-field"><span className="odm-label">Provider</span><span className="odm-value">{providerLabel}</span></div>}
+                                                    {providerOrderId && <div className="odm-field"><span className="odm-label">Provider Order ID</span><span className="odm-value odm-mono">{providerOrderId}</span></div>}
+                                                    {waybill && <div className="odm-field"><span className="odm-label">AWB Number</span><span className="odm-value odm-mono">{waybill}</span></div>}
+                                                    {routeCode && <div className="odm-field"><span className="odm-label">Route Code</span><span className="odm-value odm-mono">{routeCode}</span></div>}
+                                                    {trackingNo && trackingNo !== waybill && <div className="odm-field"><span className="odm-label">Tracking No.</span><span className="odm-value odm-mono">{trackingNo}</span></div>}
+                                                    {courier && <div className="odm-field"><span className="odm-label">Courier</span><span className="odm-value">{courier}</span></div>}
+                                                    {labelUrl && (
+                                                        <div className="odm-field">
+                                                            <span className="odm-label">Shipping Label</span>
+                                                            <a href={labelUrl} target="_blank" rel="noopener noreferrer" className="odm-label-link">
+                                                                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                Download PDF
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* FShip Sync Error */}
-                            {selectedOrder.fship_sync_error && (
-                                <div className="odm-sync-error">
-                                    <div className="odm-sync-error-title">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
-                                        FShip Sync Issues
-                                    </div>
-                                    <ul className="odm-sync-error-list">
-                                        {selectedOrder.fship_sync_error.split('; ').map((issue, i) => (
-                                            <li key={i}>{issue}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                                        {syncErr && (
+                                            <div className="odm-sync-error">
+                                                <div className="odm-sync-error-title">
+                                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
+                                                    {providerLabel ? `${providerLabel} Sync Issues` : 'Sync Issues'}
+                                                </div>
+                                                <ul className="odm-sync-error-list">
+                                                    {syncErr.split('; ').map((issue, i) => (
+                                                        <li key={i}>{issue}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
 
                         {/* ── Products Ordered — card rows, no scroll ── */}

@@ -1602,6 +1602,16 @@
             required: false,
           },
           {
+            model: require("../model/orderShipmentModel.js").OrderShipment,
+            as: "Shipment",
+            required: false,
+            attributes: [
+              "provider", "provider_order_id", "waybill", "tracking_number",
+              "tracking_url", "courier_name", "label_url", "sync_status",
+              "sync_error", "last_synced_at",
+            ],
+          },
+          {
             model: OrderItem,
             as: "OrderItems",
             include: [
