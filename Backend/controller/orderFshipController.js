@@ -810,7 +810,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
-    const fshipOrderData = await this.prepareFShipOrderData(order);
+    const fshipOrderData = await this.prepareFShipOrderData(order, providerName);
 
     // Create order using the resolved provider
     const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
@@ -1260,7 +1260,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
 };
 
 // Prepare order data for FShip API
-module.exports.prepareFShipOrderData = async (order) => {
+module.exports.prepareFShipOrderData = async (order, providerName = 'fship') => {
   try {
     // Get customer details
     const customer = order.User || order.GuestUser;
@@ -1295,7 +1295,26 @@ module.exports.prepareFShipOrderData = async (order) => {
     // Calculate shipment dimensions based on item quantities
     const dims = fshipService.calculateShipmentDimensions(order.OrderItems);
 
-    // Prepare FShip order data
+    // Resolve the warehouse/pickup ID for the active provider — each provider
+    // has its own warehouse identifiers; sending an FShip warehouse ID to
+    // iThink (or vice versa) makes the create-order call fail.
+    const brandId = order.brand_id || 1;
+    let pickAddressId = null;
+    let returnAddressId = null;
+    if (providerName === 'ithink') {
+      pickAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
+      returnAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_RETURN_ADDRESS_ID', pickAddressId);
+      if (!pickAddressId) {
+        throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
+      }
+    } else {
+      // FShip uses a numeric warehouse id
+      pickAddressId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
+      returnAddressId = pickAddressId;
+    }
+
+    // Prepare order payload — the same shape works for both providers; each
+    // service's formatter picks the fields it needs.
     const fshipOrderData = {
       orderId: order.order_number,
       customer_Name: customerName,
@@ -1320,8 +1339,8 @@ module.exports.prepareFShipOrderData = async (order) => {
       shipment_Height: dims.shipment_Height,
       latitude: 0,
       longitude: 0,
-      pick_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
-      return_Address_ID: parseInt(await settingsHelper.getSetting(1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729')),
+      pick_Address_ID: pickAddressId,
+      return_Address_ID: returnAddressId,
       products: products,
       courierId: 0 // Auto-selection
     };
@@ -1329,7 +1348,7 @@ module.exports.prepareFShipOrderData = async (order) => {
     return fshipOrderData;
 
   } catch (error) {
-    logger.error('Error preparing FShip order data:', error);
+    logger.error('Error preparing order data:', error);
     throw error;
   }
 };

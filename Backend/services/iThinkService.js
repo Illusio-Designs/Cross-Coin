@@ -173,9 +173,26 @@ class IThinkService {
       // iThink returns { status, status_code, data: { [orderId]: { waybill, ... } } }
       const orderKey = orderData.orderId;
       const result = response.data?.data?.[orderKey] || response.data?.data || {};
+      const success = result.status === 'success' || response.data?.status === 'success';
+
+      // Pull out a useful error message when the create call was rejected.
+      // iThink puts the reason in several places depending on the failure mode.
+      let message = null;
+      if (!success) {
+        message =
+          result.remark ||
+          result.message ||
+          result.error ||
+          response.data?.message ||
+          response.data?.status_message ||
+          response.data?.remark ||
+          response.data?.error ||
+          (typeof response.data?.data === 'string' ? response.data.data : null) ||
+          `iThink rejected the order (status_code ${response.data?.status_code ?? 'unknown'})`;
+      }
 
       return {
-        success: result.status === 'success' || response.data?.status === 'success',
+        success,
         orderId: orderKey,
         waybill: result.waybill || result.awb_number || null,
         routeCode: null,
@@ -183,6 +200,7 @@ class IThinkService {
         labelUrl: result.label_url || result.labelurl || null,
         courierName: result.courier_name || result.logistic || orderData.logistics || null,
         courierId: result.courier_id || null,
+        message,
         response: response.data,
       };
     } catch (error) {
