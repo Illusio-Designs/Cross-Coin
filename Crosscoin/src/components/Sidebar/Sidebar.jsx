@@ -71,6 +71,7 @@ const ALL_MENU = [
     submenu: [
       { label: 'Brands',         view: 'brands' },
       { label: 'Brand Settings', view: 'brand-settings' },
+      { label: 'Shipping',       view: 'shipping-settings' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
     ],
   },

@@ -13,6 +13,7 @@ import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import ShippingFees from "./shipping/shippingFees";
+import { ShippingSettingsManager } from "./shipping/shippingSettings";
 import Payments from "./payments/payments";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
@@ -137,6 +138,7 @@ function Dashboard() {
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
       case 'shippingFees':    return <ShippingFees />;
+      case 'shipping-settings': return <ShippingSettingsManager />;
       case 'payments':        return <Payments />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
