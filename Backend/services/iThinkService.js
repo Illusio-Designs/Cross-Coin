@@ -170,47 +170,57 @@ class IThinkService {
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
       console.log('iThink order response:', JSON.stringify(response.data, null, 2));
 
-      // iThink returns { status: "Success", status_code: 200, data: { [orderId]: { waybill, status, ... } } }
-      // The success indicator is reported in three different places depending on
-      // the failure mode, so check all of them (case-insensitively).
+      // iThink response shape varies. The real proof an order was created is
+      // a waybill (AWB) in the per-order data. status_code 200 alone only
+      // means "API request understood" — it does NOT mean the order was
+      // created. The per-order data may carry a different status / remark.
       const orderKey = orderData.orderId;
-      const result = response.data?.data?.[orderKey] || response.data?.data || {};
+      const dataRoot = response.data?.data;
+      const result =
+        (dataRoot && typeof dataRoot === 'object' && !Array.isArray(dataRoot) && dataRoot[orderKey]) ||
+        (Array.isArray(dataRoot) ? dataRoot[0] : null) ||
+        (dataRoot && typeof dataRoot === 'object' ? dataRoot : {}) ||
+        {};
 
-      const topStatus = String(response.data?.status || '').toLowerCase();
-      const topCode = response.data?.status_code;
+      const topStatus   = String(response.data?.status || '').toLowerCase();
       const orderStatus = String(result.status || '').toLowerCase();
+      const waybill     = result.waybill || result.awb_number || result.AWB || null;
 
-      const success =
-        topStatus === 'success' ||
-        orderStatus === 'success' ||
-        topCode === 200 || topCode === '200';
+      // Real success requires either:
+      //   - a waybill was issued, OR
+      //   - the per-order status explicitly says success
+      // Top-level status / status_code are NOT enough on their own because
+      // iThink returns status_code 200 even when an individual order failed.
+      const success = !!waybill || orderStatus === 'success';
 
-      // Pull out a useful error message when the create call was rejected.
-      // iThink puts the reason in several places depending on the failure mode.
+      // When we couldn't confirm success, extract the most useful reason
+      // iThink gave us. Different failure modes use different keys.
       let message = null;
       if (!success) {
         message =
           result.remark ||
           result.message ||
           result.error ||
+          result.reason ||
           response.data?.message ||
           response.data?.status_message ||
           response.data?.remark ||
           response.data?.error ||
-          (typeof response.data?.data === 'string' ? response.data.data : null) ||
-          // Last resort: include a snippet of the full response so the failure
+          (typeof dataRoot === 'string' ? dataRoot : null) ||
+          // Last resort: surface a snippet of the full response so the failure
           // is at least diagnosable from the toast in the admin UI.
-          `iThink rejected the order (status_code ${response.data?.status_code ?? 'unknown'}): ${
-            JSON.stringify(response.data).slice(0, 240)
+          `iThink did not return a waybill (top status: ${topStatus || 'none'}). Response: ${
+            JSON.stringify(response.data).slice(0, 300)
           }`;
+        console.error('iThink create rejected — full response:', JSON.stringify(response.data, null, 2));
       }
 
       return {
         success,
         orderId: orderKey,
-        waybill: result.waybill || result.awb_number || null,
+        waybill,
         routeCode: null,
-        status: result.status || 'booked',
+        status: result.status || (success ? 'booked' : 'failed'),
         labelUrl: result.label_url || result.labelurl || null,
         courierName: result.courier_name || result.logistic || orderData.logistics || null,
         courierId: result.courier_id || null,
