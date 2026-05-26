@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git commit -m ' *)",
       "Bash(git commit *)",
-      "Bash(xargs grep -l \"SHIPPING_PROVIDER\\\\|shipping.*provider\")"
+      "Bash(xargs grep -l \"SHIPPING_PROVIDER\\\\|shipping.*provider\")",
+      "Bash(node check-db.js)"
     ]
   }
 }
