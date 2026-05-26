@@ -542,22 +542,39 @@ class IThinkService {
   // ── Warehouse ───────────────────────────────────────────────────────────
 
   /**
-   * List warehouses visible to the current API credentials.
-   * Useful for diagnosing "Warehouse Address Not Found" errors — it shows
-   * exactly which pickup addresses iThink considers approved for THIS
-   * access_token / secret_key combination, which may differ from what the
-   * dashboard shows if the token belongs to a sub-account.
+   * Look up one pickup warehouse by ID using the iThink credentials.
+   * Returns the warehouse record (company_name, address, status, etc.) when
+   * the ID is recognised by the API for these credentials. Throws otherwise.
+   *
+   * Used by the Shipping Settings page diagnostic to confirm that the saved
+   * Pickup Address ID is approved for the brand's Access Token / Secret Key.
    */
-  async listWarehouses() {
+  async getWarehouse(warehouseId) {
     await this.initialize();
-    try {
-      console.log('=== iThink List Warehouses ===');
-      const payload = { data: this._authData() };
-      const response = await this.axiosInstance.post('/api_v3/warehouse/index.json', payload);
-      return response.data;
-    } catch (error) {
-      this.handleApiError(error, 'List Warehouses');
+    if (!warehouseId) throw new Error('warehouse_id is required');
+    const payload = {
+      data: {
+        warehouse_id: String(warehouseId).trim(),
+        ...this._authData(),
+      },
+    };
+
+    // iThink's warehouse endpoint isn't versioned the same way as order/*.
+    // Try the v3-style path first, fall back to the v1 path on 404 so the
+    // diagnostic works regardless of which is exposed for this account.
+    const paths = ['/api_v3/warehouse/get.json', '/api/warehouse/get.json'];
+    let lastErr = null;
+    for (const path of paths) {
+      try {
+        console.log(`=== iThink Get Warehouse (${path}) ===`);
+        const response = await this.axiosInstance.post(path, payload);
+        return response.data;
+      } catch (e) {
+        lastErr = e;
+        if (e.response?.status !== 404) break;
+      }
     }
+    this.handleApiError(lastErr, 'Get Warehouse');
   }
 
   async addWarehouse(warehouseData) {
