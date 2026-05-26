@@ -10,7 +10,7 @@
  * - File operations
  */
 
-const Client = require('basic-ftp');
+const { Client } = require('basic-ftp');
 require('dotenv').config();
 
 async function testFTPConnection() {
@@ -45,7 +45,8 @@ async function testFTPConnection() {
     console.log('✅ Connected successfully\n');
 
     // Get current directory
-    console.log('📂 Current directory:', client.pwd());
+    const cwd = await client.pwd();
+    console.log('📂 Current directory:', cwd);
 
     // List files in Backend directory
     console.log('\n📋 Listing /Backend/ directory:');
@@ -67,10 +68,12 @@ async function testFTPConnection() {
     console.log('\n🚀 Testing tmp/restart.txt creation...');
     try {
       const timestamp = new Date().toISOString();
+      const { Readable } = require('stream');
       const content = `Restart triggered: ${timestamp}\n`;
+      const stream = Readable.from([content]);
 
       await client.ensureDir('/Backend/tmp');
-      await client.uploadFrom(Buffer.from(content), '/Backend/tmp/restart.txt');
+      await client.uploadFrom(stream, '/Backend/tmp/restart.txt');
       console.log('✅ Successfully wrote /Backend/tmp/restart.txt');
       console.log('   (Passenger will restart the app on next request)\n');
     } catch (err) {

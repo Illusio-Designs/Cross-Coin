@@ -6,7 +6,7 @@
  * Or: node -r dotenv/config Backend/tests/ftp-deployment.test.js
  */
 
-const Client = require('basic-ftp');
+const { Client } = require('basic-ftp');
 require('dotenv').config();
 
 describe('FTP Deployment', () => {
@@ -142,8 +142,10 @@ if (require.main === module) {
       console.log('✅ Directory ready\n');
 
       console.log('Test 4: Write restart.txt');
-      const content = Buffer.from(`Test at ${new Date().toISOString()}\n`);
-      await testClient.uploadFrom(content, '/Backend/tmp/restart.txt');
+      const { Readable } = require('stream');
+      const content = `Test at ${new Date().toISOString()}\n`;
+      const stream = Readable.from([content]);
+      await testClient.uploadFrom(stream, '/Backend/tmp/restart.txt');
       console.log('✅ File written\n');
 
       console.log('✅ All FTP tests passed!');
