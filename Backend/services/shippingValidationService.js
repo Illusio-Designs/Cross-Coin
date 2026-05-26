@@ -181,7 +181,7 @@ async function validateOrderForShipping(orderId, options = {}) {
   const items = await OrderItem.findAll({
     where: { order_id: orderId },
     include: [
-      { model: Product, as: 'Product', attributes: ['name', 'id', 'is_active'] },
+      { model: Product, as: 'Product', attributes: ['name', 'id', 'status'] },
       { model: ProductVariation, as: 'ProductVariation', attributes: ['sku', 'price', 'stock'] },
     ],
   });
@@ -200,8 +200,8 @@ async function validateOrderForShipping(orderId, options = {}) {
       }
       if (!item.Product) {
         errors.push(`Item #${item.id}: linked product not found (may have been deleted)`);
-      } else if (item.Product.is_active === false) {
-        warnings.push(`${label}: product is inactive — still shippable but verify`);
+      } else if (item.Product.status && item.Product.status !== 'active') {
+        warnings.push(`${label}: product status is "${item.Product.status}" — still shippable but verify`);
       }
       if (item.ProductVariation && item.ProductVariation.stock !== null && item.ProductVariation.stock < item.quantity) {
         warnings.push(`${label}: current stock (${item.ProductVariation.stock}) is less than ordered quantity (${item.quantity})`);
