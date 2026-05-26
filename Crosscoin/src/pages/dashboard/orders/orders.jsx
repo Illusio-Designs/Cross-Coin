@@ -322,7 +322,24 @@ const Orders = () => {
         setConfirmPrompt(null);
         try {
             const result = await orderService.confirmOrder(orderId);
-            if (result.success) { showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — shipping sync triggered`); fetchOrders(); }
+            if (result.success) {
+                showSuccess('orderConfirmed', `Order ${orderNumber} confirmed`);
+
+                // For iThink orders, automatically open courier selection
+                // Check if order has been synced yet
+                const orderData = orders.find(o => o.id === orderId);
+                if (orderData && !orderData.Shipment?.waybill && !orderData.fship_waybill) {
+                    // Order not synced yet — try to open courier selection for iThink
+                    try {
+                        openCourierSelection(orderId, orderNumber);
+                    } catch (e) {
+                        // If courier selection fails, just proceed
+                        fetchOrders();
+                    }
+                } else {
+                    fetchOrders();
+                }
+            }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
     };
