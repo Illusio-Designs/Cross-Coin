@@ -1483,6 +1483,19 @@ export const brandSettingsService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // List the warehouses iThink considers visible to this brand's API token.
+  // Used by the Shipping Settings page to diagnose "Warehouse Address Not Found".
+  listIThinkWarehouses: async (brandId) => {
+    try {
+      const response = await adminApi.get('/api/admin/shipping/ithink-warehouses', {
+        params: { brandId },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 
