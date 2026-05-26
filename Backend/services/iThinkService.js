@@ -170,10 +170,20 @@ class IThinkService {
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
       console.log('iThink order response:', JSON.stringify(response.data, null, 2));
 
-      // iThink returns { status, status_code, data: { [orderId]: { waybill, ... } } }
+      // iThink returns { status: "Success", status_code: 200, data: { [orderId]: { waybill, status, ... } } }
+      // The success indicator is reported in three different places depending on
+      // the failure mode, so check all of them (case-insensitively).
       const orderKey = orderData.orderId;
       const result = response.data?.data?.[orderKey] || response.data?.data || {};
-      const success = result.status === 'success' || response.data?.status === 'success';
+
+      const topStatus = String(response.data?.status || '').toLowerCase();
+      const topCode = response.data?.status_code;
+      const orderStatus = String(result.status || '').toLowerCase();
+
+      const success =
+        topStatus === 'success' ||
+        orderStatus === 'success' ||
+        topCode === 200 || topCode === '200';
 
       // Pull out a useful error message when the create call was rejected.
       // iThink puts the reason in several places depending on the failure mode.
@@ -188,7 +198,11 @@ class IThinkService {
           response.data?.remark ||
           response.data?.error ||
           (typeof response.data?.data === 'string' ? response.data.data : null) ||
-          `iThink rejected the order (status_code ${response.data?.status_code ?? 'unknown'})`;
+          // Last resort: include a snippet of the full response so the failure
+          // is at least diagnosable from the toast in the admin UI.
+          `iThink rejected the order (status_code ${response.data?.status_code ?? 'unknown'}): ${
+            JSON.stringify(response.data).slice(0, 240)
+          }`;
       }
 
       return {
