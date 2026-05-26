@@ -269,7 +269,20 @@ const Orders = () => {
                 setCourierModalOrder(null);
                 setAvailableCouriers([]);
                 setSelectedCourier(null);
-                fetchOrders(); fetchAllOrdersForStats();
+
+                // After sync, AUTOMATICALLY confirm the order
+                setTimeout(async () => {
+                    try {
+                        const confirmResult = await orderService.confirmOrder(courierModalOrder.id);
+                        if (confirmResult.success) {
+                            showSuccess('orderConfirmed', `Order confirmed after courier selection!`);
+                        }
+                    } catch (e) {
+                        console.log('Auto-confirm failed:', e.message);
+                    }
+                    fetchOrders();
+                    fetchAllOrdersForStats();
+                }, 1000);
             } else {
                 showError('syncFailed', result.message || 'Failed to sync order with courier');
             }
@@ -328,7 +341,22 @@ const Orders = () => {
     };
 
     const confirmOrder = async (orderId, orderNumber) => {
-        setConfirmPrompt({ orderId, orderNumber });
+        // IMPORTANT: For iThink orders NOT yet synced, FORCE courier selection FIRST
+        const orderData = orders.find(o => o.id === orderId);
+        const isAlreadySynced = orderData?.Shipment?.waybill || orderData?.fship_waybill;
+
+        // Check if this is an iThink order
+        const isIThinkOrder = orderData?.Shipment?.provider === 'ithink' ||
+                             (!orderData?.Shipment && orderData?.brand_id); // If no shipment yet, will use brand's provider
+
+        if (!isAlreadySynced && isIThinkOrder) {
+            // FORCE courier selection FIRST before confirmation
+            showSuccess('courierRequired', 'Please select a shipping courier first');
+            openCourierSelection(orderId, orderNumber);
+        } else {
+            // Already synced or FShip order - proceed with confirmation
+            setConfirmPrompt({ orderId, orderNumber });
+        }
     };
 
     const handleConfirmOrder = async () => {
@@ -337,22 +365,9 @@ const Orders = () => {
         try {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) {
-                showSuccess('orderConfirmed', `Order ${orderNumber} confirmed`);
-
-                // For iThink orders, automatically open courier selection
-                // Check if order has been synced yet
-                const orderData = orders.find(o => o.id === orderId);
-                if (orderData && !orderData.Shipment?.waybill && !orderData.fship_waybill) {
-                    // Order not synced yet — try to open courier selection for iThink
-                    try {
-                        openCourierSelection(orderId, orderNumber);
-                    } catch (e) {
-                        // If courier selection fails, just proceed
-                        fetchOrders();
-                    }
-                } else {
-                    fetchOrders();
-                }
+                showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
+                fetchOrders();
+                fetchAllOrdersForStats();
             }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
