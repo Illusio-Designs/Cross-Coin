@@ -356,10 +356,10 @@ const Orders = () => {
                 await fetchOrders();
                 await fetchAllOrdersForStats();
 
-                // After orders are refreshed, check if this order needs courier selection
-                // Use setTimeout to ensure state updates are applied
+                // After orders are refreshed, use setTimeout to check if courier selection is needed
+                // The small delay ensures React has time to process state updates
                 setTimeout(() => {
-                    // Find the updated order in the refreshed list
+                    // Look for the just-confirmed order in the orders list
                     const updatedOrder = orders.find(o => o.id === orderId);
                     if (updatedOrder) {
                         const shipment = updatedOrder.Shipment || {};
