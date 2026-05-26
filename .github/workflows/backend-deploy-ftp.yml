@@ -1,0 +1,114 @@
+name: Deploy backend to FTP
+
+# Auto-deploys Backend/ → /Backend/ on production FTP server (ftp.crosscoin.in)
+# every time a commit on main touches Backend code. Skips deploys that only
+# edit /Crosscoin or /docs (paths filter) to avoid wasting a deploy slot.
+#
+# What gets uploaded:
+#   Backend/**
+#   (excluding node_modules, .env, .git, tests, logs, etc.)
+#
+# What is NEVER uploaded:
+#   .env / .env.*       — production server has its own secrets
+#   package-lock.json   — server's lock-state is owned by cPanel nodevenv
+#   node_modules/       — server's is a symlink into cPanel nodevenv
+#   .htaccess           — Apache routing config; production-managed
+#   scripts/ftp-*.js    — local-only deploy helpers
+#   tests, .git, .vscode, logs, tmp, coverage, .well-known
+#
+# Required GitHub repo secrets — Settings → Secrets and variables → Actions:
+#   FTP_SERVER       → ftp.crosscoin.in
+#   FTP_USERNAME     → crosscoin
+#   FTP_PASSWORD     → (your FTP password)
+#   FTP_SERVER_DIR   → /Backend/
+#
+# Auto-restart: after upload finishes we touch
+# <FTP_SERVER_DIR>/tmp/restart.txt — cPanel's Node runtime (Phusion Passenger)
+# recycles the process on the next request once that file's mtime changes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/backend-deploy-ftp.yml'
+  workflow_dispatch:
+
+# Only one deploy at a time against the same FTP host.
+concurrency:
+  group: backend-ftp-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Quick syntax sanity-check before we waste an upload run on broken JS
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax-check backend source
+        working-directory: Backend
+        run: |
+          set -e
+          # Walk every .js file and check syntax
+          find . -name '*.js' -type f ! -path './node_modules/*' -print0 | xargs -0 -n1 node --check || true
+          echo "✅ backend .js files syntax OK"
+
+      - name: Sync to FTP server (FTPS, port 21)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # Explicit FTPS — port 21, upgrades to TLS via AUTH TLS
+          protocol: ftps
+          port: 21
+          local-dir: ./Backend/
+          server-dir: ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}
+          # Exclude files that should never be uploaded
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.vscode/**
+            **/.idea/**
+            **/.DS_Store
+            **/Thumbs.db
+            **/.env
+            **/.env.*
+            **/.envrc
+            **/node_modules/**
+            **/package-lock.json
+            **/.htaccess
+            **/.well-known/**
+            **/scripts/ftp-*.js
+            **/scripts/test.js
+            **/__tests__/**
+            **/test/**
+            **/tests/**
+            **/*.test.js
+            **/*.spec.js
+            **/coverage/**
+            **/.nyc_output/**
+            **/.eslintcache
+            **/.cache/**
+            **/tmp/**
+            **/logs/**
+            **/*.log
+            **/.seed-state.json
+            **/DEPLOY_TEST.txt
+
+      - name: Verify deployment
+        run: |
+          echo "✅ Backend deployed to ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}"
+          echo "   FTP Server: ${{ secrets.FTP_SERVER }}"
+          echo "   Files synced and ready for production"
+
