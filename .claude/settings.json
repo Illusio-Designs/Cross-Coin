@@ -20,7 +20,11 @@
       "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)",
       "Bash(sed -i \"s|const orderFshipController|const orderShippingController|g\" Backend/services/orderEvents.js)",
       "Bash(sed -i \"s|orderFshipController\\\\.enhancedSyncSingleOrder|orderShippingController.enhancedSyncSingleOrder|g\" Backend/services/orderEvents.js)",
-      "Bash(FTP_SERVER=ftp.crosscoin.in FTP_USER=crosscoin FTP_PASSWORD=\"Rishi@1995\" FTP_PORT=21 FTP_SECURE=explicit node scripts/ftp-test.js)"
+      "Bash(FTP_SERVER=ftp.crosscoin.in FTP_USER=crosscoin FTP_PASSWORD=\"Rishi@1995\" FTP_PORT=21 FTP_SECURE=explicit node scripts/ftp-test.js)",
+      "Bash(FTP_SERVER=ftp.crosscoin.in FTP_USER=crosscoin FTP_PASSWORD=Rishi@1995 FTP_PORT=21 FTP_SECURE=explicit node -e ' *)",
+      "Bash(rm -f stderr.log check-db.js worker.js)",
+      "Bash(rm -rf logs/ docs/ tests/ uploads/ integration/)",
+      "Bash(xargs rm -f)"
     ]
   }
 }
