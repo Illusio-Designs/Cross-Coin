@@ -341,22 +341,8 @@ const Orders = () => {
     };
 
     const confirmOrder = async (orderId, orderNumber) => {
-        // IMPORTANT: For iThink orders NOT yet synced, FORCE courier selection FIRST
-        const orderData = orders.find(o => o.id === orderId);
-        const isAlreadySynced = orderData?.Shipment?.waybill || orderData?.fship_waybill;
-
-        // Check if this is an iThink order
-        const isIThinkOrder = orderData?.Shipment?.provider === 'ithink' ||
-                             (!orderData?.Shipment && orderData?.brand_id); // If no shipment yet, will use brand's provider
-
-        if (!isAlreadySynced && isIThinkOrder) {
-            // FORCE courier selection FIRST before confirmation
-            showSuccess('courierRequired', 'Please select a shipping courier first');
-            openCourierSelection(orderId, orderNumber);
-        } else {
-            // Already synced or FShip order - proceed with confirmation
-            setConfirmPrompt({ orderId, orderNumber });
-        }
+        // For ALL orders: First confirm the order, THEN handle courier selection if needed
+        setConfirmPrompt({ orderId, orderNumber, needsCourier: true });
     };
 
     const handleConfirmOrder = async () => {
@@ -366,8 +352,26 @@ const Orders = () => {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) {
                 showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
-                fetchOrders();
-                fetchAllOrdersForStats();
+                // Refresh orders to get updated status
+                await fetchOrders();
+                await fetchAllOrdersForStats();
+
+                // After orders are refreshed, check if this order needs courier selection
+                // Use setTimeout to ensure state updates are applied
+                setTimeout(() => {
+                    // Find the updated order in the refreshed list
+                    const updatedOrder = orders.find(o => o.id === orderId);
+                    if (updatedOrder) {
+                        const shipment = updatedOrder.Shipment || {};
+                        const provider = shipment.provider || (updatedOrder.fship_order_id || updatedOrder.fship_waybill ? 'fship' : null);
+                        const isSynced = (shipment.sync_status === 'synced') || updatedOrder.fship_order_id || updatedOrder.fship_waybill;
+
+                        // If iThink and NOT synced, open courier selection modal
+                        if (provider === 'ithink' && !isSynced) {
+                            openCourierSelection(orderId, orderNumber);
+                        }
+                    }
+                }, 300);
             }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
