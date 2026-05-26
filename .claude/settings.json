@@ -17,7 +17,9 @@
       "WebFetch(domain:knowledgebase.ithinklogistics.com)",
       "WebFetch(domain:docs.ithinklogistics.com)",
       "Bash(curl -s -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)",
-      "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)"
+      "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(sed -i \"s|const orderFshipController|const orderShippingController|g\" Backend/services/orderEvents.js)",
+      "Bash(sed -i \"s|orderFshipController\\\\.enhancedSyncSingleOrder|orderShippingController.enhancedSyncSingleOrder|g\" Backend/services/orderEvents.js)"
     ]
   }
 }
