@@ -392,7 +392,9 @@ class IThinkService {
     const pickupId = String(orderData.pick_Address_ID || this.pickupAddressId || '').trim();
     const returnId = String(orderData.return_Address_ID || this.returnAddressId || this.pickupAddressId || '').trim();
 
-    console.log(`📍 iThink Order Format - Order: ${orderData.orderId}, Logistics: ${selectedLogistics}, Pickup: ${pickupId}, Return: ${returnId}`);
+    console.log(`📍 iThink Order Format - Order: ${orderData.orderId}, Logistics: ${selectedLogistics}`);
+    console.log(`   Warehouse Resolution: orderData.pick_Address_ID=${orderData.pick_Address_ID}, this.pickupAddressId=${this.pickupAddressId}, final=${pickupId}`);
+    console.log(`   Final Warehouse IDs: Pickup: ${pickupId || '(EMPTY - will default to 117173)'}, Return: ${returnId || '(EMPTY - will default to 117173)'}`);
 
     return {
       data: {
@@ -637,17 +639,19 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/order/label.json', payload);
+      const response = await this.axiosInstance.post('/api_v3/shipping/manifest.json', payload);
       console.log('Manifest generated successfully for iThink');
 
       // Extract PDF URL from response
-      let pdfUrl = null;
-      if (response.data?.data?.label_url) {
-        pdfUrl = response.data.data.label_url;
-      } else if (response.data?.label_url) {
-        pdfUrl = response.data.label_url;
-      } else if (Array.isArray(response.data?.data) && response.data.data.length > 0) {
-        pdfUrl = response.data.data[0]?.label_url || response.data.data[0]?.labelurl;
+      let pdfUrl = response.data?.file_name;
+
+      if (!pdfUrl) {
+        // Fallback: check alternative response structures
+        if (response.data?.data?.file_name) {
+          pdfUrl = response.data.data.file_name;
+        } else if (response.data?.data?.label_url) {
+          pdfUrl = response.data.data.label_url;
+        }
       }
 
       return {
