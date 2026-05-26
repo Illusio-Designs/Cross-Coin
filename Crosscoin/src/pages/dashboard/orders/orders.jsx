@@ -250,7 +250,21 @@ const Orders = () => {
                 const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
                 const awb = result.data?.order?.waybill || 'Generated';
                 const displayName = selectedCourier._displayName || 'Selected Courier';
+                const manifestUrl = result.data?.manifest?.pdfUrl;
+
                 showSuccess('orderSynced', `Order ${courierModalOrder.order_number} synced with ${displayName}! AWB: ${awb}`);
+
+                // Auto-download manifest PDF if available
+                if (manifestUrl) {
+                    setTimeout(() => {
+                        try {
+                            window.open(manifestUrl, '_blank');
+                        } catch (e) {
+                            console.log('Could not open manifest URL:', e.message);
+                        }
+                    }, 500);
+                }
+
                 setIsCourierModalOpen(false);
                 setCourierModalOrder(null);
                 setAvailableCouriers([]);
