@@ -10,7 +10,7 @@
  * - No manual restart needed; auto-scales with traffic
  */
 
-const Client = require('basic-ftp');
+const { Client } = require('basic-ftp');
 require('dotenv').config();
 
 async function triggerPassengerRestart() {
@@ -54,9 +54,11 @@ async function triggerPassengerRestart() {
     const restartFile = `${baseDir}tmp/restart.txt`;
     const timestamp = new Date().toISOString();
     const content = `Restart triggered at ${timestamp}\n`;
+    const { Readable } = require('stream');
+    const stream = Readable.from([content]);
 
     console.log(`📝 Writing ${restartFile}...`);
-    await client.uploadFrom(Buffer.from(content), restartFile);
+    await client.uploadFrom(stream, restartFile);
     console.log(`✅ File written\n`);
 
     console.log('🎯 Passenger restart triggered!');
