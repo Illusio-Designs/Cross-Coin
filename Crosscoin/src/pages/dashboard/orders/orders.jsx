@@ -1157,16 +1157,13 @@ const Orders = () => {
                                     else if (courier.delivery_days !== undefined && courier.delivery_days !== null) eta = courier.delivery_days;
                                     else if (courier.service_type) eta = courier.service_type;
 
-                                    // Check if selected
-                                    const isSelected = selectedCourier &&
-                                        ((selectedCourier.logistics === courier.logistics) ||
-                                         (selectedCourier.name === courier.name) ||
-                                         (selectedCourier.courier_name === courier.courier_name));
+                                    // Check if selected - use index as unique identifier
+                                    const isSelected = selectedCourier && selectedCourier._courierIndex === idx;
 
                                     return (
                                         <div
                                             key={idx}
-                                            onClick={() => setSelectedCourier(courier)}
+                                            onClick={() => setSelectedCourier({ ...courier, _courierIndex: idx })}
                                             style={{
                                                 padding: '16px',
                                                 border: isSelected ? '2px solid #4CAF50' : '1px solid #e0e0e0',
