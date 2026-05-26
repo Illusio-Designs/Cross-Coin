@@ -52,8 +52,8 @@ orderEmitter.on('order.confirmed', async (order) => {
       });
 
       if (fullOrder && fullOrder.fship_sync_status !== 'synced') {
-        const orderFshipController = require('../controller/orderFshipController.js');
-        const syncResult = await orderFshipController.enhancedSyncSingleOrder(fullOrder);
+        const orderShippingController = require('../controller/orderShippingController.js');
+        const syncResult = await orderShippingController.enhancedSyncSingleOrder(fullOrder);
         if (syncResult.success) {
           logger.info(`[Event] FShip sync triggered for ${order.order_number}: ${syncResult.action} — AWB: ${syncResult.waybill || 'N/A'}`);
         } else {

@@ -14,7 +14,7 @@ const {
     bulkRefreshFShipStatus,
     validateOrderForShipping, getAvailableCouriers, syncWithCourier,
     generateManifest, downloadManifest,
-} = require('../controller/orderFshipController.js');
+} = require('../controller/orderShippingController.js');
 const {
     exportDeliveredOrders,
     markLabelDownloaded, downloadLabel, bulkDownloadLabels,
