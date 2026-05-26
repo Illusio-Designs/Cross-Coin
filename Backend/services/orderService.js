@@ -126,7 +126,28 @@ async function confirmOrder(orderId, adminId) {
     // Emit events AFTER commit
     setImmediate(() => {
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[orderService] order.confirmed emit failed:', e.message); }
-      syncOrderToFShip(order).catch(e => logger.warn('[orderService] FShip sync failed:', e.message));
+      // Only auto-sync if order is not already synced and provider is ready
+      // For iThink, require explicit courier selection via syncWithCourier endpoint
+      const shippingProviderFactory = require('./shippingProviderFactory.js');
+      const { OrderShipment } = require('../model/orderShipmentModel.js');
+
+      (async () => {
+        try {
+          const shipment = await OrderShipment.findOne({ where: { order_id: order.id } });
+          const providerName = await shippingProviderFactory.getProviderName(order.brand_id || 1);
+
+          // Only auto-sync for FShip (not iThink — requires manual courier selection)
+          if (!shipment && providerName === 'fship') {
+            syncOrderToFShip(order).catch(e => logger.warn('[orderService] FShip sync failed:', e.message));
+          } else if (shipment) {
+            logger.info(`[orderService] Order ${order.order_number} already synced with ${shipment.provider}`);
+          } else if (providerName === 'ithink') {
+            logger.info(`[orderService] iThink order ${order.order_number} confirmed. Awaiting courier selection via /sync-with-courier endpoint.`);
+          }
+        } catch (e) {
+          logger.warn('[orderService] Auto-sync logic failed:', e.message);
+        }
+      })();
     });
 
     return order;
