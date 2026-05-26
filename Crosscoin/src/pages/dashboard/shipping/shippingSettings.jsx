@@ -320,9 +320,18 @@ export function ShippingSettingsManager() {
 
           {/* FShip credentials */}
           {form.provider === 'fship' && (
-            <div style={sectionStyle}>
-              <div style={sectionTitle}>FShip Credentials</div>
-              <div style={sectionSub}>Get these from your FShip dashboard → API settings.</div>
+            <>
+              <div style={{ ...sectionStyle, background: '#dbeafe', border: '1px solid #0284c7', padding: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#0c4a6e' }}>
+                  ✓ Active Provider: FShip
+                </div>
+                <div style={{ fontSize: 13, color: '#0c4a6e', marginTop: 4 }}>
+                  All new orders for this brand will be shipped exclusively via <strong>FShip</strong>. Only FShip configuration below will be used.
+                </div>
+              </div>
+              <div style={sectionStyle}>
+                <div style={sectionTitle}>FShip Credentials</div>
+                <div style={sectionSub}>Get these from your FShip dashboard → API settings.</div>
               <div style={fieldGrid}>
                 <div>
                   <label style={labelStyle}>Environment</label>
@@ -349,13 +358,23 @@ export function ShippingSettingsManager() {
                 </div>
               </div>
             </div>
+            </>
           )}
 
           {/* iThink credentials */}
           {form.provider === 'ithink' && (
-            <div style={sectionStyle}>
-              <div style={sectionTitle}>iThink Logistics Credentials</div>
-              <div style={sectionSub}>
+            <>
+              <div style={{ ...sectionStyle, background: '#dcfce7', border: '1px solid #15803d', padding: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#15803d' }}>
+                  ✓ Active Provider: iThink Logistics
+                </div>
+                <div style={{ fontSize: 13, color: '#15803d', marginTop: 4 }}>
+                  All new orders for this brand will be shipped exclusively via <strong>iThink Logistics</strong>. Only iThink configuration below will be used.
+                </div>
+              </div>
+              <div style={sectionStyle}>
+                <div style={sectionTitle}>iThink Logistics Credentials</div>
+                <div style={sectionSub}>
                 Get these from <a href="https://my.ithinklogistics.com" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>my.ithinklogistics.com</a> → API settings & Pickup Locations.
               </div>
               <div style={fieldGrid}>
@@ -485,6 +504,7 @@ export function ShippingSettingsManager() {
                 )}
               </div>
             </div>
+            </>
           )}
 
           {/* Save bar */}
