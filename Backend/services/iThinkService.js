@@ -183,16 +183,23 @@ class IThinkService {
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
       console.log('iThink order response:', JSON.stringify(response.data, null, 2));
 
-      // iThink response shape varies. The real proof an order was created is
-      // a waybill (AWB) in the per-order data. status_code 200 alone only
-      // means "API request understood" — it does NOT mean the order was
-      // created. The per-order data may carry a different status / remark.
+      // iThink's /order/add.json keys per-shipment results by the 1-based
+      // shipment index (e.g. data: { "1": { status, remark, waybill, ... } }),
+      // NOT by the order number. Other iThink endpoints key by order number,
+      // and the international endpoint returns an array. Cover all three shapes.
       const orderKey = orderData.orderId;
       const dataRoot = response.data?.data;
       const result =
+        // Per-order keyed (some iThink endpoints)
         (dataRoot && typeof dataRoot === 'object' && !Array.isArray(dataRoot) && dataRoot[orderKey]) ||
+        // Per-shipment keyed by index — what /order/add.json actually returns
+        (dataRoot && typeof dataRoot === 'object' && !Array.isArray(dataRoot) && dataRoot['1']) ||
+        // Array form
         (Array.isArray(dataRoot) ? dataRoot[0] : null) ||
-        (dataRoot && typeof dataRoot === 'object' ? dataRoot : {}) ||
+        // Fallback: first value of the data object (handles unknown key formats)
+        (dataRoot && typeof dataRoot === 'object' && !Array.isArray(dataRoot)
+          ? Object.values(dataRoot).find(v => v && typeof v === 'object')
+          : null) ||
         {};
 
       const topStatus   = String(response.data?.status || '').toLowerCase();
