@@ -610,6 +610,57 @@ class IThinkService {
     }
   }
 
+  /**
+   * Generate manifest for one or more orders.
+   * For iThink, manifest = label PDF containing all waybills.
+   * Returns same structure as FShip for consistency.
+   */
+  async getManifest({ waybills }) {
+    await this.initialize();
+    try {
+      console.log('=== iThink Generate Manifest ===');
+      if (!waybills || waybills.length === 0) {
+        throw new Error('At least one waybill is required');
+      }
+
+      const awbStr = Array.isArray(waybills) ? waybills.join(',') : waybills;
+      const payload = {
+        data: {
+          ...this._authData(),
+          awb_numbers: awbStr,
+        },
+      };
+
+      const response = await this.axiosInstance.post('/api_v3/order/label.json', payload);
+      console.log('Manifest generated successfully for iThink');
+
+      // Extract PDF URL from response
+      let pdfUrl = null;
+      if (response.data?.data?.label_url) {
+        pdfUrl = response.data.data.label_url;
+      } else if (response.data?.label_url) {
+        pdfUrl = response.data.label_url;
+      } else if (Array.isArray(response.data?.data) && response.data.data.length > 0) {
+        pdfUrl = response.data.data[0]?.label_url || response.data.data[0]?.labelurl;
+      }
+
+      return {
+        success: true,
+        manifestId: `MANIFEST-ITHINK-${Date.now()}`,
+        waybills: Array.isArray(waybills) ? waybills : [waybills],
+        pdfUrl: pdfUrl,
+        message: 'Manifest generated successfully'
+      };
+    } catch (error) {
+      console.error('Failed to generate manifest:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        message: `Failed to generate manifest: ${error.message}`
+      };
+    }
+  }
+
   // ── Warehouse ───────────────────────────────────────────────────────────
 
   /**

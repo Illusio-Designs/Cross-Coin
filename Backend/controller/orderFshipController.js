@@ -938,11 +938,32 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         }
       }
 
+      // Generate manifest automatically and get PDF URL
+      let manifestUrl = null;
+      let manifestId = null;
+      try {
+        if (result.waybill && typeof provider.getManifest === 'function') {
+          logger.debug(`📑 Generating manifest for order ${order.order_number}...`);
+          const manifestResult = await provider.getManifest({ waybills: [result.waybill] });
+          if (manifestResult.success) {
+            manifestUrl = manifestResult.pdfUrl;
+            manifestId = manifestResult.manifestId;
+            logger.debug(`✅ Manifest generated. PDF URL: ${manifestUrl}`);
+          } else {
+            logger.debug(`⚠️ Manifest generation failed: ${manifestResult.error}`);
+          }
+        }
+      } catch (manifestErr) {
+        logger.debug(`⚠️ Could not generate manifest: ${manifestErr.message}`);
+      }
+
       return {
         success: true,
         fship_order_id: result.orderId,
         waybill: result.waybill,
-        route_code: result.routeCode
+        route_code: result.routeCode,
+        manifestId: manifestId,
+        manifestUrl: manifestUrl
       };
     } else {
       throw new Error(result.message || `Failed to create order in ${providerName}`);
@@ -1914,6 +1935,11 @@ module.exports.syncWithCourier = async (req, res) => {
             waybill: syncResult.waybill,
             action: syncResult.action
           },
+          manifest: syncResult.manifestId ? {
+            manifestId: syncResult.manifestId,
+            pdfUrl: syncResult.manifestUrl,
+            downloadUrl: syncResult.manifestUrl ? `/api/orders/manifest/download/${syncResult.manifestId}` : null
+          } : null,
           result: syncResult
         }
       });
