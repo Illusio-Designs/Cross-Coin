@@ -167,6 +167,19 @@ class IThinkService {
       this.validateOrderData(orderData);
 
       const payload = this.formatOrderDataForIThink(orderData);
+      // PII-safe payload preview for diagnosing iThink rejections.
+      console.log('iThink order payload (preview):', JSON.stringify({
+        logistics: payload.data?.logistics,
+        s_type: payload.data?.s_type,
+        shipment_count: payload.data?.shipments?.length,
+        pickup_address_id: payload.data?.shipments?.[0]?.pickup_address_id,
+        return_address_id: payload.data?.shipments?.[0]?.return_address_id,
+        order: payload.data?.shipments?.[0]?.order,
+        pin: payload.data?.shipments?.[0]?.pin,
+        payment_mode: payload.data?.shipments?.[0]?.payment_mode,
+        weight: payload.data?.shipments?.[0]?.weight,
+        product_count: payload.data?.shipments?.[0]?.products?.length,
+      }));
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
       console.log('iThink order response:', JSON.stringify(response.data, null, 2));
 
@@ -289,13 +302,20 @@ class IThinkService {
     const selectedLogistics = orderData.logistics || this.defaultLogistics || '';
     const selectedServiceType = orderData.s_type || '';
 
+    // Per iThink v3 docs (POST /api_v3/order/add.json) the warehouse fields
+    // are `pickup_address_id` and `return_address_id` and they live INSIDE
+    // each shipment object — not at the outer `data` level. The value is
+    // the numeric ID of a pickup location registered in the iThink dashboard
+    // (Settings → Pickup Locations).
+    const pickupId = String(orderData.pick_Address_ID || this.pickupAddressId || '').trim();
+    const returnId = String(orderData.return_Address_ID || this.returnAddressId || this.pickupAddressId || '').trim();
+
     return {
       data: {
         ...this._authData(),
         logistics: selectedLogistics,
         s_type: selectedServiceType,
         order_type: '',
-        pickup_address_id: String(orderData.pick_Address_ID || this.pickupAddressId),
         shipments: [{
           waybill: '',
           order: String(orderData.orderId),
@@ -340,7 +360,8 @@ class IThinkService {
           eway_bill_number: '',
           gst_number: '',
           what3words: '',
-          return_address_id: String(orderData.return_Address_ID || this.returnAddressId || this.pickupAddressId),
+          pickup_address_id: pickupId,
+          return_address_id: returnId,
         }],
       },
     };
