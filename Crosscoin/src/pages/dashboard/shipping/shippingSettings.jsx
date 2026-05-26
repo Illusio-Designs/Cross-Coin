@@ -180,21 +180,44 @@ export function ShippingSettingsManager() {
 
   const handleVerifyWarehouses = async () => {
     if (!selectedBrandId) return;
+    if (!form.ithinkPickup) {
+      showError('Enter a Pickup Address ID before verifying');
+      return;
+    }
     setVerifying(true);
     setWarehousesPreview(null);
     try {
       const res = await brandSettingsService.listIThinkWarehouses(selectedBrandId);
-      // iThink's response shape is { status, status_code, data: [ {id, company_name, ... }, ... ] }
-      const list =
-        (Array.isArray(res?.data?.data) && res.data.data) ||
-        (res?.data?.data && typeof res.data.data === 'object' ? Object.values(res.data.data) : null) ||
-        (Array.isArray(res?.data) ? res.data : null) ||
-        [];
-      setWarehousesPreview({ ok: true, list, raw: res?.data ?? res });
-      showSuccess('Fetched iThink warehouses');
+      // iThink response: { status, status_code, data: { ... warehouse fields ... } }
+      // or { status: 'error', message: '...' } when the ID isn't found.
+      const raw = res?.data ?? res ?? {};
+      const wh = raw?.data && typeof raw.data === 'object' && !Array.isArray(raw.data)
+        ? raw.data
+        : null;
+      const status = String(raw?.status || wh?.status || '').toLowerCase();
+      const approval = String(wh?.status || wh?.approval_status || '').toLowerCase();
+      const remark = wh?.remark || raw?.message || raw?.html_message || null;
+
+      const found = !!wh && (wh.company_name || wh.id || wh.warehouse_id);
+      const approved = found && (approval === 'approved' || approval === 'active' || approval === '1');
+
+      setWarehousesPreview({
+        ok: true,
+        found,
+        approved,
+        status,
+        approval,
+        remark,
+        warehouse: wh,
+        warehouseId: res?.warehouse_id || form.ithinkPickup,
+      });
+
+      if (approved) showSuccess(`Pickup ID ${form.ithinkPickup} is approved on iThink — sync should work`);
+      else if (found) showError(`Pickup ID ${form.ithinkPickup} found but not approved (status: ${approval})`);
+      else showError(`iThink does not recognise pickup ID ${form.ithinkPickup} for these credentials`);
     } catch (e) {
-      setWarehousesPreview({ ok: false, error: e?.message || 'Failed to fetch warehouses' });
-      showError('Failed to fetch warehouses', e?.message);
+      setWarehousesPreview({ ok: false, error: e?.message || 'Failed to verify' });
+      showError('Failed to verify pickup', e?.message);
     } finally {
       setVerifying(false);
     }
@@ -396,65 +419,66 @@ export function ShippingSettingsManager() {
                 </div>
               </div>
 
-              {/* Diagnostic: list warehouses iThink shows for these credentials */}
+              {/* Diagnostic: verify the saved Pickup Address ID against iThink */}
               <div style={{ marginTop: 16, padding: 12, background: '#f3f4f6', borderRadius: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div style={{ fontSize: 13, color: '#374151' }}>
-                    <strong>Diagnostic:</strong> ask iThink which pickup warehouses are visible to the current Access Token / Secret Key.
-                    Use this when you're getting "Warehouse Address Not Found" — the listed IDs are the only ones the API will accept.
+                    <strong>Diagnostic:</strong> ask iThink to look up the Pickup Address ID using the saved Access Token & Secret Key.
+                    Use this when sync fails with "Warehouse Address Not Found" — it tells you whether iThink recognises this pickup for these credentials and whether it's approved.
                   </div>
                   <Button variant="secondary" onClick={handleVerifyWarehouses} disabled={verifying || saving}>
-                    {verifying ? 'Checking…' : 'Verify warehouses'}
+                    {verifying ? 'Checking…' : 'Verify pickup'}
                   </Button>
                 </div>
 
                 {warehousesPreview && (
                   <div style={{ marginTop: 12 }}>
                     {!warehousesPreview.ok && (
+                      <div style={{ color: '#b91c1c', fontSize: 13 }}>{warehousesPreview.error}</div>
+                    )}
+                    {warehousesPreview.ok && !warehousesPreview.found && (
                       <div style={{ color: '#b91c1c', fontSize: 13 }}>
-                        {warehousesPreview.error}
+                        <strong>iThink does not recognise pickup ID {warehousesPreview.warehouseId} for these credentials.</strong>
+                        <div style={{ marginTop: 6, color: '#6b7280' }}>
+                          {warehousesPreview.remark || 'Most likely the Access Token belongs to a different iThink (sub)account than the one that owns the warehouse, or the warehouse is pending approval.'}
+                        </div>
                       </div>
                     )}
-                    {warehousesPreview.ok && warehousesPreview.list.length === 0 && (
-                      <div style={{ color: '#b91c1c', fontSize: 13 }}>
-                        iThink returned no warehouses for these credentials. The Access Token belongs to an account that has no approved pickup locations.
-                      </div>
-                    )}
-                    {warehousesPreview.ok && warehousesPreview.list.length > 0 && (
+                    {warehousesPreview.ok && warehousesPreview.found && (
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 6 }}>
-                          {warehousesPreview.list.length} warehouse{warehousesPreview.list.length !== 1 ? 's' : ''} visible to this token:
+                        <div style={{
+                          fontSize: 14, fontWeight: 700,
+                          color: warehousesPreview.approved ? '#15803d' : '#b45309',
+                          marginBottom: 6,
+                        }}>
+                          {warehousesPreview.approved
+                            ? `✓ Pickup ID ${warehousesPreview.warehouseId} is approved`
+                            : `⚠ Pickup ID ${warehousesPreview.warehouseId} found — but status is "${warehousesPreview.approval || 'unknown'}"`}
                         </div>
                         <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: '#e5e7eb' }}>
-                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>ID</th>
-                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Name</th>
-                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Pincode</th>
-                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Status</th>
-                            </tr>
-                          </thead>
                           <tbody>
-                            {warehousesPreview.list.map((w, i) => {
-                              const id = w.id || w.warehouse_id || w.pickup_address_id || '';
-                              const name = w.company_name || w.name || w.warehouse_name || '—';
-                              const pin = w.pincode || w.pin || '—';
-                              const status = w.status || w.approval_status || (w.is_active ? 'active' : '');
-                              const isCurrent = String(id) === String(form.ithinkPickup);
-                              return (
-                                <tr key={i} style={{ background: isCurrent ? '#dcfce7' : 'transparent' }}>
-                                  <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{String(id)}</td>
-                                  <td style={{ padding: '6px 8px' }}>{name}</td>
-                                  <td style={{ padding: '6px 8px' }}>{pin}</td>
-                                  <td style={{ padding: '6px 8px' }}>{status}</td>
-                                </tr>
-                              );
-                            })}
+                            {[
+                              ['Name',     warehousesPreview.warehouse?.company_name || warehousesPreview.warehouse?.name],
+                              ['Address',  [warehousesPreview.warehouse?.address1, warehousesPreview.warehouse?.address2].filter(Boolean).join(', ')],
+                              ['City',     warehousesPreview.warehouse?.city_name || warehousesPreview.warehouse?.city],
+                              ['State',    warehousesPreview.warehouse?.state_name || warehousesPreview.warehouse?.state],
+                              ['Country',  warehousesPreview.warehouse?.country_name || warehousesPreview.warehouse?.country],
+                              ['Pincode',  warehousesPreview.warehouse?.pincode || warehousesPreview.warehouse?.pin],
+                              ['Mobile',   warehousesPreview.warehouse?.mobile || warehousesPreview.warehouse?.phone],
+                              ['Status',   warehousesPreview.approval],
+                            ].filter(([, v]) => v).map(([k, v]) => (
+                              <tr key={k}>
+                                <td style={{ padding: '4px 8px', color: '#6b7280', width: 90 }}>{k}</td>
+                                <td style={{ padding: '4px 8px', color: '#111827' }}>{v}</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
-                          The row highlighted in green matches your saved Pickup Address ID. If your dashboard shows a warehouse that's not in this list, the Access Token is for a different iThink (sub)account.
-                        </div>
+                        {!warehousesPreview.approved && (
+                          <div style={{ fontSize: 11, color: '#b45309', marginTop: 6 }}>
+                            iThink requires the warehouse to be "approved" before it accepts orders for it. Contact iThink support to approve this pickup, or switch to one that's already approved (often the default warehouse).
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
