@@ -230,14 +230,26 @@ const Orders = () => {
         if (!courierModalOrder || !selectedCourier) { showError('noSelection', 'Please select a courier'); return; }
         setSyncingWithCourier(true);
         try {
+            // Use the pre-extracted logistics value
+            let logisticsName = selectedCourier._logisticsValue || '';
+
+            // Convert to lowercase for iThink API
+            logisticsName = logisticsName.toLowerCase().trim();
+
+            if (!logisticsName) {
+                showError('noCourierName', 'Unable to extract courier name. Please try again.');
+                return;
+            }
+
             const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
-                logistics: selectedCourier.logistics || selectedCourier.name,
-                s_type: selectedCourier.service_type || selectedCourier.s_type
+                logistics: logisticsName,
+                s_type: selectedCourier.service_type || selectedCourier.s_type || ''
             });
             if (result.success) {
                 const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
                 const awb = result.data?.order?.waybill || 'Generated';
-                showSuccess('orderSynced', `Order ${courierModalOrder.order_number} synced with ${selectedCourier.logistics || selectedCourier.name}! AWB: ${awb}`);
+                const displayName = selectedCourier._displayName || 'Selected Courier';
+                showSuccess('orderSynced', `Order ${courierModalOrder.order_number} synced with ${displayName}! AWB: ${awb}`);
                 setIsCourierModalOpen(false);
                 setCourierModalOrder(null);
                 setAvailableCouriers([]);
@@ -1137,18 +1149,36 @@ const Orders = () => {
                         <>
                             <div className="courier-list" style={{ marginBottom: '20px' }}>
                                 {availableCouriers.map((courier, idx) => {
-                                    // Extract courier name from various possible fields
+                                    // Extract courier name and logistics field from various possible fields
                                     let courierName = '';
-                                    if (courier.logistics) courierName = courier.logistics.charAt(0).toUpperCase() + courier.logistics.slice(1);
-                                    else if (courier.name) courierName = courier.name;
-                                    else if (courier.courier_name) courierName = courier.courier_name;
-                                    else courierName = `Courier ${idx + 1}`;
+                                    let logisticsValue = '';
+
+                                    if (courier.logistics) {
+                                        logisticsValue = courier.logistics;
+                                        courierName = courier.logistics.charAt(0).toUpperCase() + courier.logistics.slice(1);
+                                    } else if (courier.name) {
+                                        logisticsValue = courier.name;
+                                        courierName = courier.name;
+                                    } else if (courier.courier_name) {
+                                        logisticsValue = courier.courier_name;
+                                        courierName = courier.courier_name;
+                                    } else if (courier.logistic_name) {
+                                        logisticsValue = courier.logistic_name;
+                                        courierName = courier.logistic_name;
+                                    } else if (courier.provider) {
+                                        logisticsValue = courier.provider;
+                                        courierName = courier.provider.charAt(0).toUpperCase() + courier.provider.slice(1);
+                                    } else {
+                                        logisticsValue = `courier_${idx}`;
+                                        courierName = `Courier ${idx + 1}`;
+                                    }
 
                                     // Extract rate
                                     let rate = 'N/A';
                                     if (courier.rate !== undefined && courier.rate !== null) rate = parseFloat(courier.rate);
                                     else if (courier.cost !== undefined && courier.cost !== null) rate = parseFloat(courier.cost);
                                     else if (courier.price !== undefined && courier.price !== null) rate = parseFloat(courier.price);
+                                    else if (courier.charges !== undefined && courier.charges !== null) rate = parseFloat(courier.charges);
 
                                     // Extract ETA
                                     let eta = 'N/A';
@@ -1156,6 +1186,7 @@ const Orders = () => {
                                     else if (courier.days !== undefined && courier.days !== null) eta = courier.days;
                                     else if (courier.delivery_days !== undefined && courier.delivery_days !== null) eta = courier.delivery_days;
                                     else if (courier.service_type) eta = courier.service_type;
+                                    else if (courier.tat) eta = courier.tat;
 
                                     // Check if selected - use index as unique identifier
                                     const isSelected = selectedCourier && selectedCourier._courierIndex === idx;
@@ -1163,7 +1194,12 @@ const Orders = () => {
                                     return (
                                         <div
                                             key={idx}
-                                            onClick={() => setSelectedCourier({ ...courier, _courierIndex: idx })}
+                                            onClick={() => setSelectedCourier({
+                                                ...courier,
+                                                _courierIndex: idx,
+                                                _logisticsValue: logisticsValue,
+                                                _displayName: courierName
+                                            })}
                                             style={{
                                                 padding: '16px',
                                                 border: isSelected ? '2px solid #4CAF50' : '1px solid #e0e0e0',
