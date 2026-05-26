@@ -106,9 +106,24 @@ jobs:
             **/.seed-state.json
             **/DEPLOY_TEST.txt
 
+      # Auto-restart the Node app via Phusion Passenger
+      - name: Trigger Passenger restart
+        working-directory: Backend
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_PORT: '21'
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SECURE: explicit
+          FTP_BASE_DIR: ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}
+        run: |
+          npm install --no-save --no-audit --no-fund --silent basic-ftp
+          node scripts/ftp-restart.js
+
       - name: Verify deployment
         run: |
           echo "✅ Backend deployed to ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}"
           echo "   FTP Server: ${{ secrets.FTP_SERVER }}"
-          echo "   Files synced and ready for production"
+          echo "   Passenger restart triggered"
+          echo "   Files synced and app restarted""
 
