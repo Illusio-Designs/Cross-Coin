@@ -12,7 +12,7 @@ const {
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
     syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
-    validateOrderForShipping, getAvailableCouriers,
+    validateOrderForShipping, getAvailableCouriers, syncWithCourier,
 } = require('../controller/orderFshipController.js');
 const {
     exportDeliveredOrders,
@@ -44,6 +44,7 @@ router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloa
 router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
 router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
+router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, updateAwbNumber);

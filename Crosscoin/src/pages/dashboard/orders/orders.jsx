@@ -57,6 +57,12 @@ const Orders = () => {
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
     const [brandFilter, setBrandFilter] = useState('all');
     const [brands, setBrands] = useState([]);
+    const [isCourierModalOpen, setIsCourierModalOpen] = useState(false);
+    const [courierModalOrder, setCourierModalOrder] = useState(null);
+    const [availableCouriers, setAvailableCouriers] = useState([]);
+    const [loadingCouriers, setLoadingCouriers] = useState(false);
+    const [selectedCourier, setSelectedCourier] = useState(null);
+    const [syncingWithCourier, setSyncingWithCourier] = useState(false);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -192,6 +198,59 @@ const Orders = () => {
                 fetchOrders(); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to update order'); }
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to update order from shipping provider'); }
+    };
+
+    const openCourierSelection = async (orderId, orderNumber) => {
+        if (syncingOrders.has(orderId) || syncingAll) { showError('syncInProgress'); return; }
+        setCourierModalOrder({ id: orderId, order_number: orderNumber });
+        setIsCourierModalOpen(true);
+        setLoadingCouriers(true);
+        setSelectedCourier(null);
+        try {
+            const response = await orderService.getAvailableCouriers(orderId);
+            if (response.success) {
+                setAvailableCouriers(response.couriers || []);
+                if (response.couriers?.length === 0) {
+                    showError('noCouriers', 'No available couriers for this order');
+                    setIsCourierModalOpen(false);
+                }
+            } else {
+                showError('fetchCouriersFailed', response.message || 'Failed to fetch available couriers');
+                setIsCourierModalOpen(false);
+            }
+        } catch (error) {
+            showError('fetchCouriersFailed', error.message || 'Failed to fetch couriers');
+            setIsCourierModalOpen(false);
+        } finally {
+            setLoadingCouriers(false);
+        }
+    };
+
+    const syncWithSelectedCourier = async () => {
+        if (!courierModalOrder || !selectedCourier) { showError('noSelection', 'Please select a courier'); return; }
+        setSyncingWithCourier(true);
+        try {
+            const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
+                logistics: selectedCourier.logistics || selectedCourier.name,
+                s_type: selectedCourier.service_type || selectedCourier.s_type
+            });
+            if (result.success) {
+                const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
+                const awb = result.data?.order?.waybill || 'Generated';
+                showSuccess('orderSynced', `Order ${courierModalOrder.order_number} synced with ${selectedCourier.logistics || selectedCourier.name}! AWB: ${awb}`);
+                setIsCourierModalOpen(false);
+                setCourierModalOrder(null);
+                setAvailableCouriers([]);
+                setSelectedCourier(null);
+                fetchOrders(); fetchAllOrdersForStats();
+            } else {
+                showError('syncFailed', result.message || 'Failed to sync order with courier');
+            }
+        } catch (error) {
+            showError('syncFailed', error.message || 'Failed to sync order with courier');
+        } finally {
+            setSyncingWithCourier(false);
+        }
     };
 
     const syncSingleOrder = async (orderId, orderNumber) => {
@@ -478,7 +537,7 @@ const Orders = () => {
                         </button>
                         <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
                             title={isFinal ? `Order is ${row.status}` : ((row.Shipment?.waybill || row.fship_order_id || row.fship_waybill) ? 'Re-sync shipping' : 'Sync shipping')}
-                            onClick={() => syncSingleOrder(row.id, row.order_number)}
+                            onClick={() => openCourierSelection(row.id, row.order_number)}
                             disabled={isSyncing || isFinal}>
                             {isSyncing ? (
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -1060,6 +1119,92 @@ const Orders = () => {
                     <div className="modal-footer">
                         <Button variant="secondary" onClick={() => { setIsAwbModalOpen(false); setAwbNumber(''); setCourierName(''); setAwbOrderId(null); }}>Cancel</Button>
                         <Button variant="primary" onClick={submitAwbUpdate}>Update AWB</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Courier Selection Modal */}
+            <Modal isOpen={isCourierModalOpen}
+                onClose={() => { setIsCourierModalOpen(false); setCourierModalOrder(null); setAvailableCouriers([]); setSelectedCourier(null); }}
+                title={`Select Courier for Order #${courierModalOrder?.order_number}`}>
+                <div className="courier-modal-body">
+                    {loadingCouriers ? (
+                        <div className="courier-loading">
+                            <Loader />
+                            <p>Fetching available couriers...</p>
+                        </div>
+                    ) : availableCouriers.length > 0 ? (
+                        <>
+                            <div className="courier-list">
+                                {availableCouriers.map((courier, idx) => {
+                                    const courierName = courier.logistics || courier.name || `Courier ${idx + 1}`;
+                                    const rate = courier.rate || courier.cost || courier.price || 'N/A';
+                                    const eta = courier.eta || courier.days || courier.delivery_days || 'N/A';
+                                    const isSelected = selectedCourier && (selectedCourier.logistics === courier.logistics || selectedCourier.name === courier.name);
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={`courier-card${isSelected ? ' selected' : ''}`}
+                                            onClick={() => setSelectedCourier(courier)}
+                                            style={{
+                                                padding: '16px',
+                                                border: isSelected ? '2px solid #2196F3' : '1px solid #ddd',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                marginBottom: '12px',
+                                                backgroundColor: isSelected ? '#e3f2fd' : '#fff',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                                <div>
+                                                    <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>
+                                                        {isSelected && '✓ '}{courierName}
+                                                    </h4>
+                                                    <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#666' }}>
+                                                        Rate: ₹{typeof rate === 'number' ? rate.toFixed(2) : rate}
+                                                    </p>
+                                                    <p style={{ margin: '0', fontSize: '14px', color: '#888' }}>
+                                                        TAT: {eta} {typeof eta === 'number' ? 'days' : ''}
+                                                    </p>
+                                                </div>
+                                                {isSelected && (
+                                                    <div style={{ color: '#2196F3', fontSize: '20px' }}>✓</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <p style={{ marginTop: '16px', fontSize: '12px', color: '#999', textAlign: 'center' }}>
+                                Click on a courier to select it
+                            </p>
+                        </>
+                    ) : (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                            <p style={{ color: '#f44336', fontWeight: '500' }}>No couriers available for this order</p>
+                        </div>
+                    )}
+                    <div className="modal-footer" style={{ marginTop: '24px' }}>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                setIsCourierModalOpen(false);
+                                setCourierModalOrder(null);
+                                setAvailableCouriers([]);
+                                setSelectedCourier(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="primary"
+                            disabled={!selectedCourier || syncingWithCourier}
+                            onClick={syncWithSelectedCourier}
+                        >
+                            {syncingWithCourier ? 'Syncing...' : 'Sync with Selected Courier'}
+                        </Button>
                     </div>
                 </div>
             </Modal>

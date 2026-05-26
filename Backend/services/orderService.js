@@ -232,8 +232,9 @@ async function syncOrderToFShip(order) {
   const { ProductVariation } = require('../model/productVariationModel.js');
   const { ShippingAddress } = require('../model/shippingAddressModel.js');
   const { User } = require('../model/userModel.js');
-  const fshipService = require('./fshipService.js');
+  const { OrderShipment } = require('../model/orderShipmentModel.js');
   const settingsHelper = require('./settingsHelper.js');
+  const shippingProviderFactory = require('./shippingProviderFactory.js');
   const { breakers } = require('../utils/circuitBreaker.js');
   const { sequelize } = require('../config/db.js');
 
@@ -245,7 +246,7 @@ async function syncOrderToFShip(order) {
       { replacements: [order.id] }
     );
     if (!affectedRows || affectedRows.affectedRows === 0) {
-      logger.info(`[FShip] Skipping order ${order.order_number} — already syncing/synced`);
+      logger.info(`[Shipping] Skipping order ${order.order_number} — already syncing/synced`);
       return;
     }
 
@@ -290,7 +291,23 @@ async function syncOrderToFShip(order) {
       await Order.update({ fship_sync_error: null }, { where: { id: order.id } });
     }
 
-    const warehouseId = parseInt(await settingsHelper.getSetting(order.brand_id || 1, 'FSHIP_DEFAULT_WAREHOUSE_ID', '12191'));
+    // Resolve the correct shipping provider for this brand (FShip or iThink)
+    const brandId = order.brand_id || 1;
+    const providerName = await shippingProviderFactory.getProviderName(brandId);
+    const provider = await shippingProviderFactory.getShippingProvider(brandId);
+
+    logger.debug(`[Shipping] Syncing order ${order.order_number} via ${providerName}`);
+
+    // Determine warehouse ID based on provider
+    let warehouseId = null;
+    if (providerName === 'ithink') {
+      warehouseId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
+      if (!warehouseId) {
+        throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
+      }
+    } else {
+      warehouseId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
+    }
 
     const fshipPayload = {
       customer_Name: addr.full_name || user?.username || 'Customer',
@@ -311,7 +328,7 @@ async function syncOrderToFShip(order) {
       tax_Amount: 0,
       extra_Charges: 0,
       total_Amount: parseFloat(order.final_amount),
-      shipment_Weight: items.reduce((s, i) => s + i.quantity, 0) * 0.07,
+      shipment_Weight: 0.10,
       shipment_Length: 14,
       shipment_Width: 3,
       shipment_Height: 10,
@@ -330,7 +347,7 @@ async function syncOrderToFShip(order) {
     };
 
     const response = await breakers.fship.call(() =>
-      fshipService.createOrUpdateForwardOrder(fshipPayload)
+      provider.createOrUpdateForwardOrder(fshipPayload)
     );
 
     if (response.success) {
@@ -345,13 +362,36 @@ async function syncOrderToFShip(order) {
         fship_last_synced_at: new Date(),
       });
 
-      await fshipService.registerPickup([response.waybill])
-        .catch(e => logger.warn(`FShip pickup failed for ${order.order_number}:`, e.message));
+      // Also update the order_shipments table
+      await OrderShipment.findOne({ where: { order_id: order.id } })
+        .then(shipment => shipment
+          ? shipment.update({
+              provider: providerName,
+              waybill: response.waybill,
+              tracking_number: response.waybill,
+              sync_status: 'synced',
+              last_synced_at: new Date(),
+            })
+          : OrderShipment.create({
+              order_id: order.id,
+              provider: providerName,
+              waybill: response.waybill,
+              tracking_number: response.waybill,
+              sync_status: 'synced',
+              last_synced_at: new Date(),
+            })
+        )
+        .catch(e => logger.warn(`[Shipping] Failed to update order_shipments for ${order.order_number}:`, e.message));
 
-      logger.info(`[FShip] Synced order ${order.order_number} → waybill ${response.waybill}`);
+      if (provider.registerPickup) {
+        await provider.registerPickup([response.waybill])
+          .catch(e => logger.warn(`[Shipping] Pickup registration failed for ${order.order_number}:`, e.message));
+      }
+
+      logger.info(`[Shipping] Synced order ${order.order_number} via ${providerName} → waybill ${response.waybill}`);
     }
   } catch (e) {
-    logger.error(`[FShip] Sync failed for ${order.order_number}:`, e.message);
+    logger.error(`[Shipping] Sync failed for ${order.order_number}:`, e.message);
     await Order.update(
       { fship_sync_status: 'failed', fship_sync_error: e.message },
       { where: { id: order.id } }

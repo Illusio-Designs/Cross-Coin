@@ -542,6 +542,26 @@ export const orderService = {
     }
   },
 
+  // Get available couriers for an order
+  getAvailableCouriers: async (orderId) => {
+    try {
+      const response = await adminApi.get(`/api/orders/${orderId}/shipping/couriers`, { timeout: 30000 });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Sync order with a selected courier
+  syncOrderWithCourier: async (orderId, courierData) => {
+    try {
+      const response = await adminApi.post(`/api/orders/${orderId}/sync-with-courier`, courierData, { timeout: 30000 });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services
