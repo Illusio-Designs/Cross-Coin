@@ -41,7 +41,7 @@ class IThinkService {
 
       this.axiosInstance = axios.create({
         baseURL: this.baseURL,
-        timeout: 30000,
+        timeout: 60000,
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -180,15 +180,76 @@ class IThinkService {
         weight: payload.data?.shipments?.[0]?.weight,
         product_count: payload.data?.shipments?.[0]?.products?.length,
       }));
+      console.log('iThink API Request URL:', `${this.baseURL}/api_v3/order/add.json`);
+      console.log('iThink API Request Headers:', { 'Content-Type': 'application/json' });
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
-      console.log('iThink order response:', JSON.stringify(response.data, null, 2));
+
+      let responseData = response.data;
+
+      // Handle case where axios doesn't auto-parse JSON (e.g., with chunked encoding)
+      // Also handle the case where iThink API returns literal null string
+      if (responseData === undefined || responseData === 'null' || (responseData === null && response.status === 200)) {
+        console.warn('Response.data is null/undefined, attempting fallback parsing...');
+
+        // Try multiple fallback approaches
+        if (response.request?.response) {
+          try {
+            console.warn('Parsing from request.response...');
+            const parsed = JSON.parse(response.request.response);
+            responseData = parsed;
+            console.warn('Successfully parsed from request.response');
+          } catch (e) {
+            console.warn('Failed to parse request.response:', e.message);
+            // If parsing returns null, that's actually valid
+            responseData = null;
+          }
+        }
+
+        if (responseData === undefined && response.request?.responseText) {
+          try {
+            console.warn('Parsing from request.responseText...');
+            const parsed = JSON.parse(response.request.responseText);
+            responseData = parsed;
+            console.warn('Successfully parsed from request.responseText');
+          } catch (e) {
+            console.warn('Failed to parse request.responseText:', e.message);
+            responseData = null;
+          }
+        }
+      }
+
+      // If we still have no data but got a 200 response, try to get it from request
+      if (responseData === undefined && response.status === 200) {
+        const rawBody = response.request?.response || response.request?.responseText;
+        if (rawBody) {
+          try {
+            responseData = JSON.parse(rawBody);
+          } catch (e) {
+            console.error('Failed to parse response body:', rawBody?.substring(0, 100));
+            throw new Error(`iThink API returned status 200 but invalid JSON: ${rawBody?.substring(0, 100)}`);
+          }
+        }
+      }
+
+      // At this point, responseData can be null, which is valid if status is 200
+      if (response.status !== 200) {
+        throw new Error(`iThink API returned status ${response.status}`);
+      }
+
+      console.log('iThink order response:', JSON.stringify(responseData, null, 2));
+
+      // Handle case where iThink returns null — this is NOT success
+      if (responseData === null) {
+        console.error('❌ iThink returned null response — order may not have been created');
+        throw new Error('iThink API returned null response. Order may not have been accepted. Check iThink dashboard for details.');
+      }
 
       // iThink's /order/add.json keys per-shipment results by the 1-based
       // shipment index (e.g. data: { "1": { status, remark, waybill, ... } }),
       // NOT by the order number. Other iThink endpoints key by order number,
       // and the international endpoint returns an array. Cover all three shapes.
       const orderKey = orderData.orderId;
-      const dataRoot = response.data?.data;
+      const dataRoot = responseData?.data;
       const result =
         // Per-order keyed (some iThink endpoints)
         (dataRoot && typeof dataRoot === 'object' && !Array.isArray(dataRoot) && dataRoot[orderKey]) ||
@@ -202,7 +263,7 @@ class IThinkService {
           : null) ||
         {};
 
-      const topStatus   = String(response.data?.status || '').toLowerCase();
+      const topStatus   = String(responseData?.status || '').toLowerCase();
       const orderStatus = String(result.status || '').toLowerCase();
       const waybill     = result.waybill || result.awb_number || result.AWB || null;
 
@@ -222,17 +283,17 @@ class IThinkService {
           result.message ||
           result.error ||
           result.reason ||
-          response.data?.message ||
-          response.data?.status_message ||
-          response.data?.remark ||
-          response.data?.error ||
+          responseData?.message ||
+          responseData?.status_message ||
+          responseData?.remark ||
+          responseData?.error ||
           (typeof dataRoot === 'string' ? dataRoot : null) ||
           // Last resort: surface a snippet of the full response so the failure
           // is at least diagnosable from the toast in the admin UI.
           `iThink did not return a waybill (top status: ${topStatus || 'none'}). Response: ${
-            JSON.stringify(response.data).slice(0, 300)
+            JSON.stringify(responseData).slice(0, 300)
           }`;
-        console.error('iThink create rejected — full response:', JSON.stringify(response.data, null, 2));
+        console.error('iThink create rejected — full response:', JSON.stringify(responseData, null, 2));
       }
 
       return {
@@ -245,9 +306,19 @@ class IThinkService {
         courierName: result.courier_name || result.logistic || orderData.logistics || null,
         courierId: result.courier_id || null,
         message,
-        response: response.data,
+        response: responseData,
       };
     } catch (error) {
+      console.error('=== iThink Create Order Exception ===');
+      console.error('Error Type:', error.constructor.name);
+      console.error('Error Message:', error.message);
+      if (error.code === 'ECONNABORTED') {
+        console.error('Request timeout — iThink API did not respond within 60 seconds');
+      }
+      if (error.response) {
+        console.error('Response Status:', error.response.status);
+        console.error('Response Data:', this._redactPII(error.response.data));
+      }
       this.handleApiError(error, 'Create Forward Order');
     }
   }
@@ -297,7 +368,7 @@ class IThinkService {
    */
   formatOrderDataForIThink(orderData) {
     const totalQty = orderData.products.reduce((s, p) => s + (p.quantity || 1), 0);
-    const weightGrams = Math.round((orderData.shipment_Weight || totalQty * 0.07) * 1000);
+    const weightKg = orderData.shipment_Weight || 0.10;
 
     const paymentMode = orderData.payment_Mode === 1 || String(orderData.payment_Mode).toLowerCase() === 'cod'
       ? 'COD' : 'Prepaid';
@@ -355,7 +426,7 @@ class IThinkService {
           shipment_length: String(orderData.shipment_Length || 14),
           shipment_width: String(orderData.shipment_Width || 3),
           shipment_height: String(orderData.shipment_Height || 10),
-          weight: String(weightGrams),
+          weight: String(weightKg.toFixed(2)),
           shipping_charges: '0',
           giftwrap_charges: '0',
           transaction_charges: '0',

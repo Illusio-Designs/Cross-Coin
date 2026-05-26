@@ -647,7 +647,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
 };
 
 // Enhanced single order sync with comprehensive logic
-module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provider = null, providerName = null) => {
+module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
   const localTransaction = transaction || await sequelize.transaction();
   const shouldCommit = !transaction;
 
@@ -659,16 +659,28 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
   }
 
   try {
-    logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}`);
+    logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}${selectedLogistics ? ` with courier: ${selectedLogistics}` : ''}`);
 
-    // STEP 1: Check if order is already synced
+    // STEP 1: Check if order is already synced or currently syncing
     const isSynced = order.fship_order_id && order.fship_waybill;
+    const isSyncing = order.fship_sync_status === 'syncing';
+
+    if (isSyncing) {
+      logger.debug(`⏳ Order ${order.order_number} is currently syncing. Skipping to avoid duplicate...`);
+      if (shouldCommit) await localTransaction.commit();
+
+      return {
+        success: false,
+        error: `Order ${order.order_number} is already being synced. Please wait.`,
+        action: 'skipped'
+      };
+    }
 
     if (!isSynced) {
       // STEP 2: Order not synced — create at the active provider
       logger.debug(`📝 Order ${order.order_number} not synced. Creating in ${providerName}...`);
 
-      const createResult = await this.createOrderInFShip(order, localTransaction, provider, providerName);
+      const createResult = await this.createOrderInFShip(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
 
       if (createResult.success) {
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
@@ -763,7 +775,7 @@ module.exports.validateOrderForFShip = (order) => {
 // Create order at the active shipping provider for the order's brand.
 // Method name kept for backward compatibility; despite "FShip" in the name it
 // dispatches to whichever provider is currently configured (FShip or iThink).
-module.exports.createOrderInFShip = async (order, transaction, provider = null, providerName = null) => {
+module.exports.createOrderInFShip = async (order, transaction, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
   try {
     if (!provider) {
       const resolved = await resolveProviderForOrder(order);
@@ -771,7 +783,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
       providerName = resolved.name;
     }
 
-    logger.debug(`🚀 Creating order ${order.order_number} in ${providerName}...`);
+    logger.debug(`🚀 Creating order ${order.order_number} in ${providerName}...${selectedLogistics ? ` with courier: ${selectedLogistics}` : ''}`);
 
     // Reload order to get latest data and prevent race conditions
     await order.reload({ transaction });
@@ -810,7 +822,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
-    const fshipOrderData = await this.prepareFShipOrderData(order, providerName);
+    const fshipOrderData = await this.prepareFShipOrderData(order, providerName, selectedLogistics, serviceType);
 
     // Create order using the resolved provider
     const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
@@ -1260,7 +1272,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
 };
 
 // Prepare order data for FShip API
-module.exports.prepareFShipOrderData = async (order, providerName = 'fship') => {
+module.exports.prepareFShipOrderData = async (order, providerName = 'fship', selectedLogistics = null, serviceType = null) => {
   try {
     // Get customer details
     const customer = order.User || order.GuestUser;
@@ -1342,7 +1354,10 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship') => 
       pick_Address_ID: pickAddressId,
       return_Address_ID: returnAddressId,
       products: products,
-      courierId: 0 // Auto-selection
+      courierId: 0, // Auto-selection
+      // For iThink courier selection (passed by admin via modal)
+      logistics: selectedLogistics || null,
+      s_type: serviceType || null
     };
 
     return fshipOrderData;
@@ -1740,5 +1755,153 @@ module.exports.getAvailableCouriers = async (req, res) => {
   } catch (error) {
     logger.error('getAvailableCouriers error:', error.message);
     return res.status(500).json({ success: false, message: 'Failed to fetch couriers', error: error.message });
+  }
+};
+
+/**
+ * Sync an order with a user-selected courier
+ * POST /api/orders/:id/sync-with-courier
+ * Body: { logistics: 'delhivery', s_type: 'surface' }
+ */
+module.exports.syncWithCourier = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+    const { logistics, s_type } = req.body;
+
+    logger.debug(`=== SYNC WITH COURIER: Order ${id}, Logistics: ${logistics} ===`);
+
+    if (!logistics) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Courier selection (logistics) is required'
+      });
+    }
+
+    // Load the order
+    const order = await Order.findByPk(id, {
+      include: [
+        {
+          model: OrderItem,
+          as: 'OrderItems',
+          include: [
+            { model: Product, as: 'Product' },
+            { model: ProductVariation, as: 'ProductVariation' }
+          ]
+        },
+        { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
+        { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
+        { model: ShippingAddress, as: 'ShippingAddress' },
+      ]
+    }, { transaction });
+
+    if (!order) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    logger.debug(`Found order: ${order.order_number} - Status: ${order.status}`);
+
+    // Skip sync for cancelled orders
+    if (order.status === 'cancelled') {
+      await transaction.rollback();
+      return res.json({
+        success: true,
+        message: `Order ${order.order_number} is cancelled. No sync needed.`,
+        data: {
+          order: {
+            id: order.id,
+            order_number: order.order_number,
+            status: order.status,
+            action: 'skipped'
+          }
+        }
+      });
+    }
+
+    // Validate order for shipping
+    const { validateOrderForShipping } = require('../services/shippingValidationService');
+    const validation = await validateOrderForShipping(id);
+    if (!validation.valid) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Order has validation errors',
+        errors: validation.errors
+      });
+    }
+
+    // Resolve provider and test connection
+    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+    try {
+      const testResult = await provider.testConnection();
+      if (!testResult.success) {
+        throw new Error(testResult.message);
+      }
+      logger.debug(`✅ ${providerName} connection successful`);
+    } catch (authError) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `${providerName} connection failed`,
+        provider: providerName,
+        error: authError.message
+      });
+    }
+
+    // Sync with selected courier
+    const syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName, logistics, s_type);
+
+    if (syncResult.success) {
+      await transaction.commit();
+
+      return res.json({
+        success: true,
+        message: `Order ${order.order_number} synced with ${logistics} via ${providerName}`,
+        data: {
+          provider: providerName,
+          logistics: logistics,
+          order: {
+            id: order.id,
+            order_number: order.order_number,
+            status: syncResult.status,
+            provider: providerName,
+            provider_order_id: syncResult.fship_order_id,
+            waybill: syncResult.waybill,
+            action: syncResult.action
+          },
+          result: syncResult
+        }
+      });
+    } else {
+      // Save the sync error to the order
+      await order.update({
+        fship_sync_status: 'failed',
+        fship_sync_error: syncResult.error || 'Sync failed — unknown error',
+      }, { transaction });
+
+      await transaction.commit();
+
+      return res.status(400).json({
+        success: false,
+        message: `Failed to sync order ${order.order_number} with ${logistics}`,
+        error: syncResult.error
+      });
+    }
+
+  } catch (error) {
+    logger.error('❌ SYNC WITH COURIER FAILED:', error);
+    await transaction.rollback();
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to sync order with courier',
+      error: error.message
+    });
   }
 };
