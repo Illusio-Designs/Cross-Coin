@@ -12,7 +12,10 @@
       "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/order/add.json -H 'Content-Type: application/json' -d '{ *)",
       "Bash(curl -X POST https://pre-alpha.ithinklogistics.com/api_v3/pickup/list.json -H 'Content-Type: application/json' -d '{ *)",
       "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/pickup/get.json -H 'Content-Type: application/json' -d '{ *)",
-      "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/user/profile.json -H 'Content-Type: application/json' -d '{ *)"
+      "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/user/profile.json -H 'Content-Type: application/json' -d '{ *)",
+      "WebSearch",
+      "WebFetch(domain:knowledgebase.ithinklogistics.com)",
+      "WebFetch(domain:docs.ithinklogistics.com)"
     ]
   }
 }
