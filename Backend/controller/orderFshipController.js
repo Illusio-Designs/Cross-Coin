@@ -835,51 +835,61 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
     logger.debug('Full Result:', JSON.stringify(result, null, 2));
 
     if (result.success) {
-      // Always fetch label URL separately using waybill
+      // Always fetch label/manifest URL separately using waybill
       let labelUrl = result.labelUrl || null;
 
       if (result.waybill) {
-        logger.debug(`📄 Fetching shipping label for waybill: ${result.waybill}`);
+        logger.debug(`📄 Fetching manifest/label for waybill: ${result.waybill} (Provider: ${providerName})`);
         try {
-          const labelData = await provider.getShippingLabel(result.waybill);
-          logger.debug('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+          let labelData = null;
 
-          // Try multiple possible response structures
-          if (labelData) {
-            // Check if data is in array format
-            if (Array.isArray(labelData.data) && labelData.data.length > 0) {
-              labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
-            }
-            // Check if data is direct object
-            else if (labelData.data && typeof labelData.data === 'object') {
-              labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
-            }
-            // Check root level
-            else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
-              labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
-            }
+          // For iThink, use getManifest (uses correct /api_v3/shipping/manifest.json endpoint)
+          // For FShip, use getShippingLabel
+          if (providerName === 'ithink') {
+            labelData = await provider.getManifest({ waybills: [result.waybill] });
+            logger.debug('📦 iThink Manifest Response:', JSON.stringify(labelData, null, 2));
 
-            if (labelUrl) {
-              logger.debug(`✅ Label URL found: ${labelUrl}`);
-            } else {
-              logger.debug('⚠️ Label URL not found in response. Full response:', JSON.stringify(labelData, null, 2));
+            if (labelData && labelData.pdfUrl) {
+              labelUrl = labelData.pdfUrl;
+            } else if (labelData && labelData.file_name) {
+              labelUrl = labelData.file_name;
+            }
+          } else {
+            labelData = await provider.getShippingLabel(result.waybill);
+            logger.debug('📦 Label API Response:', JSON.stringify(labelData, null, 2));
+
+            // Try multiple possible response structures for FShip
+            if (labelData) {
+              if (Array.isArray(labelData.data) && labelData.data.length > 0) {
+                labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
+              } else if (labelData.data && typeof labelData.data === 'object') {
+                labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
+              } else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
+                labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
+              }
             }
           }
+
+          if (labelUrl) {
+            logger.debug(`✅ Manifest/Label URL found: ${labelUrl}`);
+          } else {
+            logger.debug('⚠️ Manifest/Label URL not found in response. Full response:', JSON.stringify(labelData, null, 2));
+          }
         } catch (labelError) {
-          logger.error('❌ Failed to fetch label URL:', labelError.message);
+          logger.error('❌ Failed to fetch manifest/label URL:', labelError.message);
           logger.error('Error details:', labelError);
         }
       }
 
-      // Update order with FShip details
+      // Update order with provider details (fship_* columns used for both FShip and iThink)
       await order.update({
-        fship_order_id: result.orderId,
-        fship_waybill: result.waybill,
-        fship_route_code: result.routeCode,
-        fship_label_url: labelUrl,
+        fship_order_id: result.orderId || null,
+        fship_waybill: result.waybill || null,
+        fship_route_code: result.routeCode || null,
+        fship_label_url: labelUrl || null,
         fship_courier_id: result.courierId || null,
         courier_name: result.courierName || null,
-        tracking_number: result.waybill,
+        tracking_number: result.waybill || null,
         status: 'processing', // Update status to processing when synced
         fship_last_synced_at: new Date() // Track last sync time
       }, { transaction });
@@ -1378,12 +1388,16 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
 
     if (providerName === 'ithink') {
       // Clear cache to ensure we get latest settings
+      logger.debug(`🔄 Clearing cache for brand ${brandId}`);
       settingsHelper.clearCache(brandId);
 
       pickAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
       returnAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_RETURN_ADDRESS_ID', pickAddressId);
 
       logger.debug(`🏢 iThink Warehouse: pickup=${pickAddressId}, return=${returnAddressId}`);
+      if (!pickAddressId) {
+        logger.warn(`⚠️ No ITHINK_PICKUP_ADDRESS_ID found for brand ${brandId}. Will use iThink default (117173)`);
+      }
 
       if (!pickAddressId) {
         throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);

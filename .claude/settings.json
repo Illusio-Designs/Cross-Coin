@@ -15,7 +15,9 @@
       "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/user/profile.json -H 'Content-Type: application/json' -d '{ *)",
       "WebSearch",
       "WebFetch(domain:knowledgebase.ithinklogistics.com)",
-      "WebFetch(domain:docs.ithinklogistics.com)"
+      "WebFetch(domain:docs.ithinklogistics.com)",
+      "Bash(curl -s -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -X POST https://my.ithinklogistics.com/api_v3/shipping/manifest.json -H 'Content-Type: application/json' -d '{ *)"
     ]
   }
 }
