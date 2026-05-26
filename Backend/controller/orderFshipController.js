@@ -982,29 +982,55 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
 
     // Fetch label URL if not already present (check for both NULL and empty string)
     if ((!order.fship_label_url || order.fship_label_url.trim() === '') && waybill) {
-      logger.debug(`📄 Label URL missing. Constructing label URL for waybill: ${waybill}`);
+      logger.debug(`📄 Label URL missing. Attempting to fetch for waybill: ${waybill}`);
 
-      // FShip label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{FSHIP_ORDER_ID}_TH.pdf
-      const fshipOrderId = order.fship_order_id;
+      const orderId = order.fship_order_id;
 
-      if (fshipOrderId) {
-        const labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${fshipOrderId}_TH.pdf`;
+      if (orderId) {
+        let labelUrl = null;
 
-        logger.debug(`✅ Label URL constructed: ${labelUrl}`);
+        // Construct label URL based on provider
+        if (providerName === 'fship') {
+          // FShip label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{ORDER_ID}_TH.pdf
+          labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${orderId}_TH.pdf`;
+          logger.debug(`✅ FShip label URL constructed: ${labelUrl}`);
+        } else if (providerName === 'ithink') {
+          // iThink typically provides the label URL via API, so we'll try to fetch it
+          logger.debug(`📄 Fetching iThink label URL via API for waybill: ${waybill}`);
+          try {
+            const labelData = await provider.getShippingLabel(waybill);
+            if (labelData) {
+              if (Array.isArray(labelData.data) && labelData.data.length > 0) {
+                labelUrl = labelData.data[0].labelurl || labelData.data[0].label_url || labelData.data[0].LabelUrl;
+              } else if (labelData.data && typeof labelData.data === 'object') {
+                labelUrl = labelData.data.labelurl || labelData.data.label_url || labelData.data.LabelUrl;
+              } else if (labelData.labelurl || labelData.label_url || labelData.LabelUrl) {
+                labelUrl = labelData.labelurl || labelData.label_url || labelData.LabelUrl;
+              }
+              if (labelUrl) logger.debug(`✅ iThink label URL fetched: ${labelUrl}`);
+            }
+          } catch (fetchErr) {
+            logger.debug(`⚠️ Could not fetch iThink label URL: ${fetchErr.message}`);
+          }
+        }
 
-        try {
-          await order.update({
-            fship_label_url: labelUrl,
-            notes: order.notes ? `${order.notes}\nLabel URL constructed from waybill and FShip order ID` : 'Label URL constructed from waybill and FShip order ID'
-          }, { transaction });
-          await upsertShipment(order.id, { label_url: labelUrl }, transaction);
-          await order.reload({ transaction });
-          logger.debug(`💾 Label URL saved to database`);
-        } catch (updateError) {
-          logger.error('❌ Failed to save label URL:', updateError.message);
+        if (labelUrl) {
+          try {
+            await order.update({
+              fship_label_url: labelUrl,
+              notes: order.notes ? `${order.notes}\nLabel URL obtained for ${providerName}` : `Label URL obtained for ${providerName}`
+            }, { transaction });
+            await upsertShipment(order.id, { label_url: labelUrl }, transaction);
+            await order.reload({ transaction });
+            logger.debug(`💾 Label URL saved to database`);
+          } catch (updateError) {
+            logger.error('❌ Failed to save label URL:', updateError.message);
+          }
+        } else {
+          logger.debug(`⚠️ Could not construct or fetch label URL for ${providerName}`);
         }
       } else {
-        logger.debug('⚠️ FShip order ID not found, cannot construct label URL');
+        logger.debug(`⚠️ Order ID not found, cannot fetch label URL`);
       }
     } else {
       logger.debug(`✓ Label URL already exists: ${order.fship_label_url}`);
@@ -1014,15 +1040,28 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
     const trackingResult = await provider.getTrackingHistory(waybill);
     logger.debug(`📡 ${providerName} tracking response:`, JSON.stringify(trackingResult, null, 2));
 
+    // Extract status and courier data from either FShip (summary) or iThink (data[waybill]) format
+    let statusData = null;
+    let providerStatus = null;
+
     if (trackingResult && trackingResult.summary) {
-      const fshipStatus = trackingResult.summary.status;
-      const newStatus = provider.mapFShipStatusToCrossCoin(fshipStatus);
+      // FShip format: { summary: { status, courier_name, ... } }
+      statusData = trackingResult.summary;
+      providerStatus = statusData.status;
+    } else if (trackingResult && trackingResult.data && trackingResult.data[waybill]) {
+      // iThink format: { data: { [waybill]: { current_status, current_status_code, ... } } }
+      statusData = trackingResult.data[waybill];
+      providerStatus = statusData.current_status;
+    }
+
+    if (statusData && providerStatus) {
+      const newStatus = provider.mapFShipStatusToCrossCoin(providerStatus);
 
       // Extract courier name from tracking data (try every possible field)
-      const courierFromTracking = trackingResult.summary.courier_name
-        || trackingResult.summary.courierName
-        || trackingResult.summary.courier
-        || trackingResult.summary.Courier
+      const courierFromTracking = statusData.courier_name
+        || statusData.courierName
+        || statusData.courier
+        || statusData.Courier
         || trackingResult.courier_name
         || trackingResult.courierName
         || null;
@@ -1033,9 +1072,9 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
       }
 
       // Extract tracking URL from tracking data
-      const trackingUrl = trackingResult.summary.tracking_url
-        || trackingResult.summary.trackingUrl
-        || trackingResult.summary.tracking_link
+      const trackingUrl = statusData.tracking_url
+        || statusData.trackingUrl
+        || statusData.tracking_link
         || trackingResult.tracking_url
         || trackingResult.trackingUrl
         || null;
@@ -1045,7 +1084,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         logger.debug(`🔗 Tracking URL updated: ${trackingUrl}`);
       }
 
-      logger.debug(`📊 FShip status: "${fshipStatus}" → CrossCoin status: "${newStatus}"`);
+      logger.debug(`📊 ${providerName} status: "${providerStatus}" → CrossCoin status: "${newStatus}"`);
 
       const statusChanged = order.status !== newStatus;
 
