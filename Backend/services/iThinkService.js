@@ -376,8 +376,12 @@ class IThinkService {
     const now = new Date();
     const orderDate = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
-    // Manual courier selection: use orderData.logistics if provided, else fall back to brand default
-    const selectedLogistics = orderData.logistics || this.defaultLogistics || '';
+    // REQUIRE explicit courier selection - NO DEFAULT FALLBACK
+    // User must manually select courier via /sync-with-courier endpoint
+    const selectedLogistics = orderData.logistics || '';
+    if (!selectedLogistics) {
+      throw new Error('Courier selection (logistics) is REQUIRED for iThink orders. Please use the courier selection modal to choose a courier before syncing.');
+    }
     const selectedServiceType = orderData.s_type || '';
 
     // Per iThink v3 docs (POST /api_v3/order/add.json) the warehouse fields
