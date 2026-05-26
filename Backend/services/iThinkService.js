@@ -398,7 +398,7 @@ class IThinkService {
       data: {
         ...this._authData(),
         logistics: selectedLogistics,
-        s_type: selectedServiceType,
+        s_type: selectedServiceType || 'standard',
         order_type: '',
         shipments: [{
           waybill: '',
