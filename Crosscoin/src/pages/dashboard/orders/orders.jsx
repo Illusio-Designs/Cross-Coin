@@ -1127,66 +1127,113 @@ const Orders = () => {
             <Modal isOpen={isCourierModalOpen}
                 onClose={() => { setIsCourierModalOpen(false); setCourierModalOrder(null); setAvailableCouriers([]); setSelectedCourier(null); }}
                 title={`Select Courier for Order #${courierModalOrder?.order_number}`}>
-                <div className="courier-modal-body">
+                <div className="courier-modal-body" style={{ minWidth: '500px' }}>
                     {loadingCouriers ? (
-                        <div className="courier-loading">
+                        <div className="courier-loading" style={{ textAlign: 'center', padding: '40px 20px' }}>
                             <Loader />
-                            <p>Fetching available couriers...</p>
+                            <p style={{ marginTop: '12px', color: '#666' }}>Fetching available couriers...</p>
                         </div>
                     ) : availableCouriers.length > 0 ? (
                         <>
-                            <div className="courier-list">
+                            <div className="courier-list" style={{ marginBottom: '20px' }}>
                                 {availableCouriers.map((courier, idx) => {
-                                    const courierName = courier.logistics || courier.name || `Courier ${idx + 1}`;
-                                    const rate = courier.rate || courier.cost || courier.price || 'N/A';
-                                    const eta = courier.eta || courier.days || courier.delivery_days || 'N/A';
-                                    const isSelected = selectedCourier && (selectedCourier.logistics === courier.logistics || selectedCourier.name === courier.name);
+                                    // Extract courier name from various possible fields
+                                    let courierName = '';
+                                    if (courier.logistics) courierName = courier.logistics.charAt(0).toUpperCase() + courier.logistics.slice(1);
+                                    else if (courier.name) courierName = courier.name;
+                                    else if (courier.courier_name) courierName = courier.courier_name;
+                                    else courierName = `Courier ${idx + 1}`;
+
+                                    // Extract rate
+                                    let rate = 'N/A';
+                                    if (courier.rate !== undefined && courier.rate !== null) rate = parseFloat(courier.rate);
+                                    else if (courier.cost !== undefined && courier.cost !== null) rate = parseFloat(courier.cost);
+                                    else if (courier.price !== undefined && courier.price !== null) rate = parseFloat(courier.price);
+
+                                    // Extract ETA
+                                    let eta = 'N/A';
+                                    if (courier.eta !== undefined && courier.eta !== null) eta = courier.eta;
+                                    else if (courier.days !== undefined && courier.days !== null) eta = courier.days;
+                                    else if (courier.delivery_days !== undefined && courier.delivery_days !== null) eta = courier.delivery_days;
+                                    else if (courier.service_type) eta = courier.service_type;
+
+                                    // Check if selected
+                                    const isSelected = selectedCourier &&
+                                        ((selectedCourier.logistics === courier.logistics) ||
+                                         (selectedCourier.name === courier.name) ||
+                                         (selectedCourier.courier_name === courier.courier_name));
 
                                     return (
                                         <div
                                             key={idx}
-                                            className={`courier-card${isSelected ? ' selected' : ''}`}
                                             onClick={() => setSelectedCourier(courier)}
                                             style={{
                                                 padding: '16px',
-                                                border: isSelected ? '2px solid #2196F3' : '1px solid #ddd',
+                                                border: isSelected ? '2px solid #4CAF50' : '1px solid #e0e0e0',
                                                 borderRadius: '8px',
                                                 cursor: 'pointer',
                                                 marginBottom: '12px',
-                                                backgroundColor: isSelected ? '#e3f2fd' : '#fff',
-                                                transition: 'all 0.2s ease'
+                                                backgroundColor: isSelected ? '#f1f8f4' : '#fafafa',
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '16px'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <div>
-                                                    <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>
-                                                        {isSelected && '✓ '}{courierName}
-                                                    </h4>
-                                                    <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#666' }}>
-                                                        Rate: ₹{typeof rate === 'number' ? rate.toFixed(2) : rate}
-                                                    </p>
-                                                    <p style={{ margin: '0', fontSize: '14px', color: '#888' }}>
-                                                        TAT: {eta} {typeof eta === 'number' ? 'days' : ''}
-                                                    </p>
+                                            {/* Radio Button */}
+                                            <div style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                border: isSelected ? '2px solid #4CAF50' : '2px solid #ccc',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                backgroundColor: isSelected ? '#4CAF50' : 'transparent'
+                                            }}>
+                                                {isSelected && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
+                                            </div>
+
+                                            {/* Courier Details */}
+                                            <div style={{ flex: 1 }}>
+                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: '#222' }}>
+                                                    {courierName}
+                                                </h4>
+                                                <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
+                                                    <div>
+                                                        <span style={{ color: '#666' }}>Rate: </span>
+                                                        <span style={{ fontWeight: '600', color: '#2196F3' }}>
+                                                            ₹{typeof rate === 'number' ? rate.toFixed(2) : rate}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span style={{ color: '#666' }}>TAT: </span>
+                                                        <span style={{ fontWeight: '600', color: '#FF9800' }}>
+                                                            {typeof eta === 'number' ? `${eta} days` : eta}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                {isSelected && (
-                                                    <div style={{ color: '#2196F3', fontSize: '20px' }}>✓</div>
-                                                )}
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                            <p style={{ marginTop: '16px', fontSize: '12px', color: '#999', textAlign: 'center' }}>
-                                Click on a courier to select it
+                            <p style={{ marginTop: '12px', fontSize: '12px', color: '#999', textAlign: 'center' }}>
+                                Select a courier to proceed
                             </p>
                         </>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '20px' }}>
-                            <p style={{ color: '#f44336', fontWeight: '500' }}>No couriers available for this order</p>
+                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                            <p style={{ color: '#f44336', fontWeight: '500', fontSize: '14px' }}>
+                                No couriers available for this order
+                            </p>
+                            <p style={{ color: '#999', fontSize: '12px', margin: '8px 0 0 0' }}>
+                                Please verify the order details and try again
+                            </p>
                         </div>
                     )}
-                    <div className="modal-footer" style={{ marginTop: '24px' }}>
+                    <div className="modal-footer" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
                         <Button
                             variant="secondary"
                             onClick={() => {
@@ -1203,7 +1250,17 @@ const Orders = () => {
                             disabled={!selectedCourier || syncingWithCourier}
                             onClick={syncWithSelectedCourier}
                         >
-                            {syncingWithCourier ? 'Syncing...' : 'Sync with Selected Courier'}
+                            {syncingWithCourier ? (
+                                <>
+                                    <span style={{ marginRight: '8px' }}>⏳</span>
+                                    Syncing...
+                                </>
+                            ) : (
+                                <>
+                                    <span style={{ marginRight: '8px' }}>✓</span>
+                                    Sync with {selectedCourier ? (selectedCourier.logistics || selectedCourier.name || 'Selected Courier') : 'Selected Courier'}
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
