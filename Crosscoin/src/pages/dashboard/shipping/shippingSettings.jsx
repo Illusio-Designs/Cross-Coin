@@ -68,6 +68,8 @@ export function ShippingSettingsManager() {
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [warehousesPreview, setWarehousesPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [reveal, setReveal] = useState({}); // { key: bool }
 
@@ -174,6 +176,28 @@ export function ShippingSettingsManager() {
       loadSettings();
     } catch (e) { showError('saveFailed', e?.message); }
     finally { setSaving(false); }
+  };
+
+  const handleVerifyWarehouses = async () => {
+    if (!selectedBrandId) return;
+    setVerifying(true);
+    setWarehousesPreview(null);
+    try {
+      const res = await brandSettingsService.listIThinkWarehouses(selectedBrandId);
+      // iThink's response shape is { status, status_code, data: [ {id, company_name, ... }, ... ] }
+      const list =
+        (Array.isArray(res?.data?.data) && res.data.data) ||
+        (res?.data?.data && typeof res.data.data === 'object' ? Object.values(res.data.data) : null) ||
+        (Array.isArray(res?.data) ? res.data : null) ||
+        [];
+      setWarehousesPreview({ ok: true, list, raw: res?.data ?? res });
+      showSuccess('Fetched iThink warehouses');
+    } catch (e) {
+      setWarehousesPreview({ ok: false, error: e?.message || 'Failed to fetch warehouses' });
+      showError('Failed to fetch warehouses', e?.message);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
@@ -370,6 +394,71 @@ export function ShippingSettingsManager() {
                     style={inputStyle}
                   />
                 </div>
+              </div>
+
+              {/* Diagnostic: list warehouses iThink shows for these credentials */}
+              <div style={{ marginTop: 16, padding: 12, background: '#f3f4f6', borderRadius: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: '#374151' }}>
+                    <strong>Diagnostic:</strong> ask iThink which pickup warehouses are visible to the current Access Token / Secret Key.
+                    Use this when you're getting "Warehouse Address Not Found" — the listed IDs are the only ones the API will accept.
+                  </div>
+                  <Button variant="secondary" onClick={handleVerifyWarehouses} disabled={verifying || saving}>
+                    {verifying ? 'Checking…' : 'Verify warehouses'}
+                  </Button>
+                </div>
+
+                {warehousesPreview && (
+                  <div style={{ marginTop: 12 }}>
+                    {!warehousesPreview.ok && (
+                      <div style={{ color: '#b91c1c', fontSize: 13 }}>
+                        {warehousesPreview.error}
+                      </div>
+                    )}
+                    {warehousesPreview.ok && warehousesPreview.list.length === 0 && (
+                      <div style={{ color: '#b91c1c', fontSize: 13 }}>
+                        iThink returned no warehouses for these credentials. The Access Token belongs to an account that has no approved pickup locations.
+                      </div>
+                    )}
+                    {warehousesPreview.ok && warehousesPreview.list.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 6 }}>
+                          {warehousesPreview.list.length} warehouse{warehousesPreview.list.length !== 1 ? 's' : ''} visible to this token:
+                        </div>
+                        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: '#e5e7eb' }}>
+                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>ID</th>
+                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Name</th>
+                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Pincode</th>
+                              <th style={{ padding: '6px 8px', textAlign: 'left' }}>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {warehousesPreview.list.map((w, i) => {
+                              const id = w.id || w.warehouse_id || w.pickup_address_id || '';
+                              const name = w.company_name || w.name || w.warehouse_name || '—';
+                              const pin = w.pincode || w.pin || '—';
+                              const status = w.status || w.approval_status || (w.is_active ? 'active' : '');
+                              const isCurrent = String(id) === String(form.ithinkPickup);
+                              return (
+                                <tr key={i} style={{ background: isCurrent ? '#dcfce7' : 'transparent' }}>
+                                  <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{String(id)}</td>
+                                  <td style={{ padding: '6px 8px' }}>{name}</td>
+                                  <td style={{ padding: '6px 8px' }}>{pin}</td>
+                                  <td style={{ padding: '6px 8px' }}>{status}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                          The row highlighted in green matches your saved Pickup Address ID. If your dashboard shows a warehouse that's not in this list, the Access Token is for a different iThink (sub)account.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

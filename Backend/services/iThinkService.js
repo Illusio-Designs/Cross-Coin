@@ -541,6 +541,25 @@ class IThinkService {
 
   // ── Warehouse ───────────────────────────────────────────────────────────
 
+  /**
+   * List warehouses visible to the current API credentials.
+   * Useful for diagnosing "Warehouse Address Not Found" errors — it shows
+   * exactly which pickup addresses iThink considers approved for THIS
+   * access_token / secret_key combination, which may differ from what the
+   * dashboard shows if the token belongs to a sub-account.
+   */
+  async listWarehouses() {
+    await this.initialize();
+    try {
+      console.log('=== iThink List Warehouses ===');
+      const payload = { data: this._authData() };
+      const response = await this.axiosInstance.post('/api_v3/warehouse/index.json', payload);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'List Warehouses');
+    }
+  }
+
   async addWarehouse(warehouseData) {
     await this.initialize();
     try {
