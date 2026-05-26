@@ -1905,3 +1905,133 @@ module.exports.syncWithCourier = async (req, res) => {
     });
   }
 };
+
+/**
+ * Generate manifest for selected orders
+ * POST /api/orders/manifest/generate
+ * Body: { orderIds: [1, 2, 3, ...] }
+ */
+module.exports.generateManifest = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide at least one order ID'
+      });
+    }
+
+    logger.debug(`=== GENERATE MANIFEST ===`, { orderIds });
+
+    // Fetch orders
+    const orders = await Order.findAll({
+      where: { id: orderIds },
+      include: [
+        { model: OrderShipment, as: 'Shipment' },
+        { model: ShippingAddress, as: 'ShippingAddress' }
+      ]
+    });
+
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No orders found'
+      });
+    }
+
+    // Filter only synced orders (have waybill)
+    const syncedOrders = orders.filter(o => o.Shipment?.waybill || o.fship_waybill);
+
+    if (syncedOrders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected orders have not been synced yet. Please sync them first.'
+      });
+    }
+
+    // Get provider from first order
+    const { service: provider, name: providerName } = await resolveProviderForOrder(orders[0]);
+
+    // Get waybills
+    const waybills = syncedOrders.map(o => o.Shipment?.waybill || o.fship_waybill).filter(Boolean);
+
+    logger.debug(`Generating manifest for ${waybills.length} orders via ${providerName}`);
+
+    // Call provider to generate manifest
+    let manifestResult = null;
+    if (providerName === 'ithink' && typeof provider.getManifest === 'function') {
+      manifestResult = await provider.getManifest({ waybills });
+    } else if (providerName === 'fship' && typeof provider.getManifest === 'function') {
+      manifestResult = await provider.getManifest({ waybills });
+    } else {
+      // If provider doesn't have manifest generation, create a simple manifest document
+      manifestResult = {
+        success: true,
+        manifestId: `MANIFEST-${Date.now()}`,
+        waybills: waybills,
+        orderCount: waybills.length,
+        generatedAt: new Date().toISOString(),
+        pdfUrl: null,
+        message: 'Manifest prepared. Use waybills to generate label from provider dashboard.'
+      };
+    }
+
+    if (manifestResult.success) {
+      return res.json({
+        success: true,
+        message: `Manifest generated for ${waybills.length} orders`,
+        data: {
+          provider: providerName,
+          manifestId: manifestResult.manifestId,
+          waybills: waybills,
+          orderCount: waybills.length,
+          pdfUrl: manifestResult.pdfUrl,
+          downloadUrl: manifestResult.pdfUrl ? `/api/orders/manifest/download/${manifestResult.manifestId}` : null
+        }
+      });
+    } else {
+      throw new Error(manifestResult.message || 'Failed to generate manifest');
+    }
+
+  } catch (error) {
+    logger.error('❌ GENERATE MANIFEST FAILED:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate manifest',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get manifest PDF
+ * GET /api/orders/manifest/download/:manifestId
+ */
+module.exports.downloadManifest = async (req, res) => {
+  try {
+    const { manifestId } = req.params;
+
+    logger.debug(`=== DOWNLOAD MANIFEST ===`, { manifestId });
+
+    // For now, return a simple response
+    // In production, you would:
+    // 1. Store manifests in a database
+    // 2. Fetch the manifest
+    // 3. Generate PDF if not already generated
+    // 4. Send file
+
+    return res.status(501).json({
+      success: false,
+      message: 'Manifest PDF download will be available soon. Use your provider dashboard to download.'
+    });
+
+  } catch (error) {
+    logger.error('❌ DOWNLOAD MANIFEST FAILED:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to download manifest',
+      error: error.message
+    });
+  }
+};

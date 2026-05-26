@@ -562,6 +562,40 @@ export const orderService = {
     }
   },
 
+  // Generate manifest for multiple orders
+  generateManifest: async (orderIds) => {
+    try {
+      const response = await adminApi.post('/api/orders/manifest/generate', { orderIds }, { timeout: 30000 });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Download manifest PDF
+  downloadManifest: async (manifestId) => {
+    try {
+      const response = await adminApi.get(`/api/orders/manifest/download/${manifestId}`, {
+        responseType: 'blob',
+        timeout: 30000
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `manifest_${manifestId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, message: 'Manifest downloaded successfully' };
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 };
 
 // Payment Services
