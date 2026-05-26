@@ -188,7 +188,8 @@ const Orders = () => {
 
     const updateSingleOrder = async (orderId) => {
         try {
-            const result = await orderService.updateSingleOrderFromFShip(orderId);
+            // Refresh tracking from active provider (FShip or iThink) - endpoint is provider-aware
+            const result = await orderService.refreshOrderStatus(orderId);
             if (result.success) {
                 let message = result.message;
                 if (result.update_result?.updated) {
@@ -198,7 +199,7 @@ const Orders = () => {
                 showSuccess('orderSynced', message);
                 fetchOrders(); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to update order'); }
-        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to update order from shipping provider'); }
+        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
     };
 
     const openCourierSelection = async (orderId, orderNumber) => {

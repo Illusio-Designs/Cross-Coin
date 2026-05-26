@@ -1326,9 +1326,10 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
       }
 
     } else {
+      logger.warn(`⚠️ No tracking data found in ${providerName} for waybill: ${waybill}. Response was: ${JSON.stringify(trackingResult)}`);
       return {
         success: false,
-        error: 'No tracking data found in FShip'
+        error: `No tracking data found in ${providerName}`
       };
     }
 

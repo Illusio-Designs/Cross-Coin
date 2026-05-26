@@ -293,6 +293,20 @@ export const orderService = {
     }
   },
 
+  // Refresh order status from active shipping provider (works for both FShip and iThink)
+  refreshOrderStatus: async (orderId) => {
+    try {
+      const response = await adminApi.put(
+        `/api/orders/${orderId}/fship/sync`,
+        {},
+        { timeout: 30000 }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Bulk refresh order statuses from FShip
   bulkRefreshFShipStatus: async () => {
     try {
