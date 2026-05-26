@@ -392,6 +392,8 @@ class IThinkService {
     const pickupId = String(orderData.pick_Address_ID || this.pickupAddressId || '').trim();
     const returnId = String(orderData.return_Address_ID || this.returnAddressId || this.pickupAddressId || '').trim();
 
+    console.log(`📍 iThink Order Format - Order: ${orderData.orderId}, Logistics: ${selectedLogistics}, Pickup: ${pickupId}, Return: ${returnId}`);
+
     return {
       data: {
         ...this._authData(),
