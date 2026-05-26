@@ -1373,9 +1373,18 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
     const brandId = order.brand_id || 1;
     let pickAddressId = null;
     let returnAddressId = null;
+
+    logger.debug(`📍 Resolving warehouse ID for ${providerName} (Brand: ${brandId})`);
+
     if (providerName === 'ithink') {
+      // Clear cache to ensure we get latest settings
+      settingsHelper.clearCache(brandId);
+
       pickAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
       returnAddressId = await settingsHelper.getSetting(brandId, 'ITHINK_RETURN_ADDRESS_ID', pickAddressId);
+
+      logger.debug(`🏢 iThink Warehouse: pickup=${pickAddressId}, return=${returnAddressId}`);
+
       if (!pickAddressId) {
         throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
       }
@@ -1383,6 +1392,7 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
       // FShip uses a numeric warehouse id
       pickAddressId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
       returnAddressId = pickAddressId;
+      logger.debug(`🏢 FShip Warehouse: ${pickAddressId}`);
     }
 
     // Prepare order payload — the same shape works for both providers; each
