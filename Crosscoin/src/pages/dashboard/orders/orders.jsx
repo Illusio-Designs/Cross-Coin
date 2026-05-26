@@ -63,7 +63,7 @@ const Orders = () => {
     const [loadingCouriers, setLoadingCouriers] = useState(false);
     const [selectedCourier, setSelectedCourier] = useState(null);
     const [syncingWithCourier, setSyncingWithCourier] = useState(false);
-    const [generatingManifest, setGeneratingManifest] = useState(false);
+    const [generatingManifest, setGeneratingManifest] = useState(new Set());
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -268,8 +268,9 @@ const Orders = () => {
 
     const generateManifestForOrder = async (orderId) => {
         if (!orderId) return;
-        setGeneratingManifest(true);
+        if (generatingManifest.has(orderId)) return;
         try {
+            setGeneratingManifest(prev => new Set(prev).add(orderId));
             const result = await orderService.generateManifest([orderId]);
             if (result.success) {
                 showSuccess('manifestGenerated', `Manifest generated for order! Waybills: ${result.data.waybills.join(', ')}`);
@@ -283,7 +284,11 @@ const Orders = () => {
         } catch (error) {
             showError('manifestFailed', error.message || 'Failed to generate manifest');
         } finally {
-            setGeneratingManifest(false);
+            setGeneratingManifest(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(orderId);
+                return newSet;
+            });
         }
     };
 
@@ -589,6 +594,17 @@ const Orders = () => {
                         <button className="order-action-btn order-awb-btn" title="Update AWB Number" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
+                        {(row.Shipment?.waybill || row.fship_waybill) && (
+                            <button className={`order-action-btn order-manifest-btn${generatingManifest.has(row.id) ? ' disabled' : ''}`}
+                                title="Generate Manifest" onClick={() => generateManifestForOrder(row.id)}
+                                disabled={generatingManifest.has(row.id)}>
+                                {generatingManifest.has(row.id) ? (
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                )}
+                            </button>
+                        )}
                         {(['awaiting_confirmation', 'pending'].includes(row.status)) && (
                             <button className="order-action-btn order-confirm-btn" title="Confirm Order" onClick={() => confirmOrder(row.id, row.order_number)}
                                 style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
