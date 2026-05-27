@@ -2127,6 +2127,122 @@ module.exports.generateLabel = async (req, res) => {
 };
 
 /**
+ * Generate label for a single order
+ * GET /api/orders/:id/label/generate
+ */
+module.exports.generateLabelForOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    logger.debug(`=== GENERATE LABEL FOR ORDER ${id} ===`);
+
+    // Fetch the order with shipment info
+    const order = await Order.findByPk(id, {
+      include: [
+        { model: OrderShipment, as: 'Shipment' }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: `Order ${id} not found`
+      });
+    }
+
+    // Check if order has a waybill (is synced)
+    const waybill = order.Shipment?.waybill || order.fship_waybill;
+    if (!waybill) {
+      return res.status(400).json({
+        success: false,
+        message: `Order ${order.order_number} has not been synced yet. Please sync the order first.`
+      });
+    }
+
+    // Get provider for this order
+    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+
+    logger.debug(`📄 Generating label for waybill: ${waybill} via ${providerName}`);
+
+    // Call provider to generate label
+    let labelResult = null;
+    let labelUrl = null;
+
+    if (providerName === 'ithink' && typeof provider.getLabel === 'function') {
+      labelResult = await provider.getLabel({ waybills: [waybill] });
+      if (labelResult.success) {
+        labelUrl = labelResult.pdfUrl || labelResult.file_name;
+        logger.debug(`✅ iThink label generated. URL: ${labelUrl}`);
+      }
+    } else if (providerName === 'fship') {
+      // Try FShip label endpoint
+      if (typeof provider.getShippingLabel === 'function') {
+        const fshipLabelData = await provider.getShippingLabel(waybill);
+        if (fshipLabelData) {
+          if (Array.isArray(fshipLabelData.data) && fshipLabelData.data.length > 0) {
+            labelUrl = fshipLabelData.data[0].labelurl || fshipLabelData.data[0].label_url || fshipLabelData.data[0].LabelUrl;
+          } else if (fshipLabelData.data && typeof fshipLabelData.data === 'object') {
+            labelUrl = fshipLabelData.data.labelurl || fshipLabelData.data.label_url || fshipLabelData.data.LabelUrl;
+          } else {
+            labelUrl = fshipLabelData.labelurl || fshipLabelData.label_url || fshipLabelData.LabelUrl;
+          }
+          logger.debug(`✅ FShip label found. URL: ${labelUrl}`);
+        }
+      }
+
+      // If no label from getShippingLabel, construct FShip label URL
+      if (!labelUrl && order.fship_order_id) {
+        labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${order.fship_order_id}_TH.pdf`;
+        logger.debug(`✅ FShip label URL constructed: ${labelUrl}`);
+      }
+    }
+
+    // If we got a label URL but it's not saved, save it
+    if (labelUrl && (!order.fship_label_url || order.fship_label_url !== labelUrl)) {
+      await order.update({ fship_label_url: labelUrl });
+      if (order.Shipment) {
+        await order.Shipment.update({ label_url: labelUrl });
+      }
+      logger.debug(`💾 Label URL saved to database`);
+    }
+
+    if (labelUrl) {
+      return res.json({
+        success: true,
+        message: `Label generated for order ${order.order_number}`,
+        data: {
+          provider: providerName,
+          order_id: order.id,
+          order_number: order.order_number,
+          waybill: waybill,
+          labelUrl: labelUrl,
+          labelId: `LABEL-${order.id}-${Date.now()}`
+        }
+      });
+    } else {
+      logger.warn(`⚠️ Could not generate label for order ${order.order_number}`);
+      return res.status(400).json({
+        success: false,
+        message: `Could not generate label for order ${order.order_number}. Try syncing the order again or contact support.`,
+        data: {
+          order_number: order.order_number,
+          waybill: waybill,
+          provider: providerName
+        }
+      });
+    }
+
+  } catch (error) {
+    logger.error('❌ GENERATE LABEL FAILED:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate label',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Get order label PDF
  * GET /api/orders/label/download/:labelId
  */
