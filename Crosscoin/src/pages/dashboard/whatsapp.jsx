@@ -535,7 +535,6 @@ export function WhatsAppManager() {
       if (data.success) setStats(data.stats);
       else setStats(null);
     } catch (err) {
-      console.error('Stats fetch error:', err);
       setStats(null);
     }
     setStatsLoading(false);
@@ -550,7 +549,6 @@ export function WhatsAppManager() {
       if (data.success) setTemplateList(data.templates || []);
       else setTemplateList([]);
     } catch (err) {
-      console.error('Templates fetch error:', err);
       setTemplateList([]);
     }
     setListLoading(false);
@@ -643,7 +641,6 @@ export function WhatsAppManager() {
       if (data.success) setConversations(data.conversations || []);
       else setConversations([]);
     } catch (err) {
-      console.error('Conversations fetch error:', err);
       setConversations([]);
     }
     setConvLoading(false);
@@ -662,7 +659,6 @@ export function WhatsAppManager() {
         showError('loadingFailed', 'Failed to load messages');
       }
     } catch (err) {
-      console.error('Messages fetch error:', err);
       setMessages([]);
       showError('loadingFailed', 'Failed to load messages');
     }
@@ -771,7 +767,6 @@ export function WhatsAppManager() {
       if (data.success) setCannedResponses(data.cannedResponses || []);
       else setCannedResponses([]);
     } catch (err) {
-      console.error('Canned responses fetch error:', err);
       setCannedResponses([]);
     }
     setCannedLoading(false);
@@ -815,7 +810,6 @@ export function WhatsAppManager() {
       if (data.success) setBroadcasts(data.broadcasts || []);
       else setBroadcasts([]);
     } catch (err) {
-      console.error('Broadcasts fetch error:', err);
       setBroadcasts([]);
     }
     setBroadcastLoading(false);
@@ -853,7 +847,6 @@ export function WhatsAppManager() {
       if (data.success) setSlaStats(data.sla);
       else setSlaStats(null);
     } catch (err) {
-      console.error('SLA stats fetch error:', err);
       setSlaStats(null);
     }
     setSlaLoading(false);
