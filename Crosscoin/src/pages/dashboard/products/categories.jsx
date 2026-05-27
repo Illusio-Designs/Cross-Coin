@@ -25,16 +25,18 @@ export default function Categories() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await categoryService.getAllCategories();
       setCategories(data);
     } catch (err) {
-      console.error(err);
+      setError(err.message || 'Failed to load categories');
     } finally {
       setLoading(false);
     }
@@ -57,10 +59,13 @@ export default function Categories() {
   const handleEdit = async (id) => {
     try {
       setLoading(true);
+      setError(null);
       const data = await categoryService.getCategoryById(id);
       setFormData({ id: data.id, name: data.name || "", description: data.description || "", status: data.status || "active", metaKeywords: data.metaKeywords || "", image: data.image || null, brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [] });
       setIsModalOpen(true);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      setError(err.message || 'Failed to load category');
+    }
     finally { setLoading(false); }
   };
 
@@ -69,9 +74,12 @@ export default function Categories() {
       setConfirmState(null);
       try {
         setLoading(true);
+        setError(null);
         await categoryService.deleteCategory(id);
         await fetchCategories();
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        setError(err.message || 'Failed to delete category');
+      }
       finally { setLoading(false); }
     }});
   };
@@ -87,6 +95,7 @@ export default function Categories() {
     e.preventDefault();
     try {
       setLoading(true);
+      setError(null);
       const fd = new FormData();
       Object.keys(formData).forEach(key => {
         if (key === 'image') {
@@ -102,7 +111,9 @@ export default function Categories() {
       else await categoryService.createCategory(fd);
       await fetchCategories();
       handleModalClose();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      setError(err.message || 'Failed to save category');
+    }
     finally { setLoading(false); }
   };
 
@@ -128,6 +139,12 @@ export default function Categories() {
   return (
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
+      {error && (
+        <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+        </div>
+      )}
       <div className="dashboard-page">
         <div className="sl-page-header">
           <div className="sl-header-left">
