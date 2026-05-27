@@ -619,14 +619,14 @@ class IThinkService {
   }
 
   /**
-   * Generate manifest for one or more orders.
-   * For iThink, manifest = label PDF containing all waybills.
+   * Generate label for one or more orders.
+   * For iThink, label = PDF containing waybill and shipping info.
    * Returns same structure as FShip for consistency.
    */
-  async getManifest({ waybills }) {
+  async getLabel({ waybills }) {
     await this.initialize();
     try {
-      console.log('=== iThink Generate Manifest ===');
+      console.log('=== iThink Generate Label ===');
       if (!waybills || waybills.length === 0) {
         throw new Error('At least one waybill is required');
       }
@@ -639,8 +639,8 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/shipping/manifest.json', payload);
-      console.log('Manifest generated successfully for iThink');
+      const response = await this.axiosInstance.post('/api_v3/order/label.json', payload);
+      console.log('Label generated successfully for iThink');
 
       // Extract PDF URL from response
       let pdfUrl = response.data?.file_name;
@@ -656,17 +656,17 @@ class IThinkService {
 
       return {
         success: true,
-        manifestId: `MANIFEST-ITHINK-${Date.now()}`,
+        labelId: `LABEL-ITHINK-${Date.now()}`,
         waybills: Array.isArray(waybills) ? waybills : [waybills],
         pdfUrl: pdfUrl,
-        message: 'Manifest generated successfully'
+        message: 'Label generated successfully'
       };
     } catch (error) {
-      console.error('Failed to generate manifest:', error.message);
+      console.error('Failed to generate label:', error.message);
       return {
         success: false,
         error: error.message,
-        message: `Failed to generate manifest: ${error.message}`
+        message: `Failed to generate label: ${error.message}`
       };
     }
   }

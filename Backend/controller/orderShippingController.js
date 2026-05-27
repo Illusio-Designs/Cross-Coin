@@ -834,9 +834,9 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
           let labelData = null;
 
           if (providerName === 'ithink') {
-            // iThink: use getManifest for PDF
-            labelData = await provider.getManifest({ waybills: [result.waybill] });
-            logger.debug('📦 iThink Manifest Response:', JSON.stringify(labelData, null, 2));
+            // iThink: use getLabel for PDF
+            labelData = await provider.getLabel({ waybills: [result.waybill] });
+            logger.debug('📦 iThink Label Response:', JSON.stringify(labelData, null, 2));
 
             if (labelData && labelData.pdfUrl) {
               labelUrl = labelData.pdfUrl;
@@ -940,9 +940,9 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
       let manifestUrl = null;
       let manifestId = null;
       try {
-        if (result.waybill && typeof provider.getManifest === 'function') {
-          logger.debug(`📑 Generating manifest for order ${order.order_number}...`);
-          const manifestResult = await provider.getManifest({ waybills: [result.waybill] });
+        if (result.waybill && typeof provider.getLabel === 'function') {
+          logger.debug(`📑 Generating label for order ${order.order_number}...`);
+          const manifestResult = await provider.getLabel({ waybills: [result.waybill] });
           if (manifestResult.success) {
             manifestUrl = manifestResult.pdfUrl;
             manifestId = manifestResult.manifestId;
@@ -2031,10 +2031,10 @@ module.exports.generateManifest = async (req, res) => {
 
     logger.debug(`Generating manifest for ${waybills.length} orders via ${providerName}`);
 
-    // Call provider to generate manifest
+    // Call provider to generate label
     let manifestResult = null;
-    if (providerName === 'ithink' && typeof provider.getManifest === 'function') {
-      manifestResult = await provider.getManifest({ waybills });
+    if (providerName === 'ithink' && typeof provider.getLabel === 'function') {
+      manifestResult = await provider.getLabel({ waybills });
     } else if (providerName === 'fship' && typeof provider.getManifest === 'function') {
       manifestResult = await provider.getManifest({ waybills });
     } else {
