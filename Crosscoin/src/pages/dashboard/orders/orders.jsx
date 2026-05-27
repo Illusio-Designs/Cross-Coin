@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { orderService, dashboardService, brandService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
+import Tooltip from "../../../components/ui/Tooltip";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -573,13 +574,15 @@ const Orders = () => {
                     const isDownloaded = row.fship_label_downloaded;
                     return (
                         <div className="label-cell">
-                            <button onClick={() => handleLabelDownload(row.id, row.fship_label_url)}
-                                className={`download-label-link${isDownloaded ? ' downloaded' : ''}`} title="Download Shipping Label">
+                            <Tooltip text="Download shipping label PDF for printing" position="top">
+                                <button onClick={() => handleLabelDownload(row.id, row.fship_label_url)}
+                                    className={`download-label-link${isDownloaded ? ' downloaded' : ''}`}>
                                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 {isDownloaded ? 'Downloaded' : 'Download'}
                             </button>
+                            </Tooltip>
                             {isDownloaded && row.fship_label_downloaded_at && (
                                 <span className="label-date">{new Date(row.fship_label_downloaded_at).toLocaleDateString()}</span>
                             )}
@@ -596,16 +599,18 @@ const Orders = () => {
                 const isSyncing = syncingOrders.has(row.id) || syncingAll;
                 return (
                     <div className="sl-actions">
-                        <button className="sl-btn-edit" title="View Details"
-                            onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                        <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
-                            title={isFinal ? `Order is ${row.status}` : ((row.Shipment?.waybill || row.fship_order_id || row.fship_waybill) ? 'Re-sync shipping' : 'Sync shipping')}
-                            onClick={() => openCourierSelection(row.id, row.order_number)}
-                            disabled={isSyncing || isFinal}>
+                        <Tooltip text="View order details and customer information" position="top">
+                            <button className="sl-btn-edit"
+                                onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                        </Tooltip>
+                        <Tooltip text={isFinal ? `Order is ${row.status}` : 'Automatically sync with best available courier'} position="top">
+                            <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
+                                onClick={() => openCourierSelection(row.id, row.order_number)}
+                                disabled={isSyncing || isFinal}>
                             {isSyncing ? (
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             ) : isFinal ? (
@@ -614,35 +619,46 @@ const Orders = () => {
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             )}
                         </button>
+                        </Tooltip>
                         {(row.Shipment?.waybill || row.fship_waybill) && (
-                            <button className="order-action-btn order-update-btn" title="Refresh tracking from shipping provider" onClick={() => updateSingleOrder(row.id)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
-                            </button>
+                            <Tooltip text="Refresh tracking information from courier" position="top">
+                                <button className="order-action-btn order-update-btn" onClick={() => updateSingleOrder(row.id)}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                </button>
+                            </Tooltip>
                         )}
-                        <button className="order-action-btn order-awb-btn" title="Update AWB Number" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                        {(row.Shipment?.waybill || row.fship_waybill) && (
-                            <button className={`order-action-btn order-manifest-btn${generatingManifest.has(row.id) ? ' disabled' : ''}`}
-                                title="Generate Manifest" onClick={() => generateManifestForOrder(row.id)}
-                                disabled={generatingManifest.has(row.id)}>
-                                {generatingManifest.has(row.id) ? (
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                ) : (
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                )}
+                        <Tooltip text="Update or correct the Air Waybill number" position="top">
+                            <button className="order-action-btn order-awb-btn" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                             </button>
+                        </Tooltip>
+                        {(row.Shipment?.waybill || row.fship_waybill) && (
+                            <Tooltip text="Generate shipping label for this order" position="top">
+                                <button className={`order-action-btn order-manifest-btn${generatingManifest.has(row.id) ? ' disabled' : ''}`}
+                                    onClick={() => generateManifestForOrder(row.id)}
+                                    disabled={generatingManifest.has(row.id)}>
+                                    {generatingManifest.has(row.id) ? (
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    ) : (
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                    )}
+                                </button>
+                            </Tooltip>
                         )}
                         {(['awaiting_confirmation', 'pending'].includes(row.status)) && (
-                            <button className="order-action-btn order-confirm-btn" title="Confirm Order" onClick={() => confirmOrder(row.id, row.order_number)}
-                                style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
-                                ✓
-                            </button>
+                            <Tooltip text="Confirm order and proceed to shipping" position="top">
+                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}
+                                    style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
+                                    ✓
+                                </button>
+                            </Tooltip>
                         )}
                         {row.payment_type?.toLowerCase() === 'cod' && (row.status === 'pending' || row.status === 'awaiting_confirmation') && (
-                            <button className="sl-btn-delete" title="Cancel Order" onClick={() => cancelOrder(row.id, row.order_number)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+                            <Tooltip text="Cancel this order permanently" position="top">
+                                <button className="sl-btn-delete" onClick={() => cancelOrder(row.id, row.order_number)}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </Tooltip>
                         )}
                     </div>
                 );
