@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
 import { validateListResponse, validateItemResponse, validatePaginatedResponse, getErrorMessage } from '../utils/apiResponseValidator';
+import { rateLimiter } from '../utils/rateLimiter';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
@@ -115,6 +116,19 @@ const handleApiError = (error) => {
   }
 };
 
+// Rate-limited API call wrapper - prevents API overload from rapid/duplicate requests
+const makeRateLimitedCall = async (endpoint, requestFn, dedupeKey = null) => {
+  // Wait for rate limit slot to be available
+  await rateLimiter.waitForSlot(endpoint);
+
+  // If deduping key provided, use deduplication to prevent concurrent duplicates
+  if (dedupeKey) {
+    return rateLimiter.deduplicateRequest(dedupeKey, requestFn);
+  }
+
+  return requestFn();
+};
+
 // Shipping Fee Services
 export const shippingFeeService = {
   getAllShippingFees: async () => {
@@ -216,36 +230,40 @@ export const shippingAddressService = {
 // Order Services
 export const orderService = {
   getAllOrders: async (params = {}, signal = null) => {
-    try {
-      const config = { params };
-      if (signal) config.signal = signal;
-      const response = await adminApi.get("/api/orders", config);
-      const validated = validatePaginatedResponse(response.data);
-      return {
-        orders: validated.items,
-        data: validated.items,
-        total: validated.total,
-        page: validated.page,
-        pages: validated.pages,
-        limit: validated.limit
-      };
-    } catch (error) {
-      if (error.name === 'CanceledError') return { orders: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall('/api/orders', async () => {
+      try {
+        const config = { params };
+        if (signal) config.signal = signal;
+        const response = await adminApi.get("/api/orders", config);
+        const validated = validatePaginatedResponse(response.data);
+        return {
+          orders: validated.items,
+          data: validated.items,
+          total: validated.total,
+          page: validated.page,
+          pages: validated.pages,
+          limit: validated.limit
+        };
+      } catch (error) {
+        if (error.name === 'CanceledError') return { orders: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `orders_list_${JSON.stringify(params)}`);
   },
 
   getOrderById: async (id, signal = null) => {
-    try {
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get(`/api/orders/${id}`, config);
-      const order = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
-      return order || {};
-    } catch (error) {
-      if (error.name === 'CanceledError') return {};
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall(`/api/orders/${id}`, async () => {
+      try {
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get(`/api/orders/${id}`, config);
+        const order = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+        return order || {};
+      } catch (error) {
+        if (error.name === 'CanceledError') return {};
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `order_${id}`);
   },
 
   updateOrderStatus: async (id, statusData) => {
@@ -636,36 +654,40 @@ export const orderService = {
 // Payment Services
 export const paymentService = {
   getAllPayments: async (params = {}, signal = null) => {
-    try {
-      const config = { params };
-      if (signal) config.signal = signal;
-      const response = await adminApi.get("/api/payments", config);
-      const validated = validatePaginatedResponse(response.data);
-      return {
-        payments: validated.items,
-        data: validated.items,
-        total: validated.total,
-        page: validated.page,
-        pages: validated.pages,
-        limit: validated.limit
-      };
-    } catch (error) {
-      if (error.name === 'CanceledError') return { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall('/api/payments', async () => {
+      try {
+        const config = { params };
+        if (signal) config.signal = signal;
+        const response = await adminApi.get("/api/payments", config);
+        const validated = validatePaginatedResponse(response.data);
+        return {
+          payments: validated.items,
+          data: validated.items,
+          total: validated.total,
+          page: validated.page,
+          pages: validated.pages,
+          limit: validated.limit
+        };
+      } catch (error) {
+        if (error.name === 'CanceledError') return { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `payments_list_${JSON.stringify(params)}`);
   },
 
   getPaymentById: async (id, signal = null) => {
-    try {
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get(`/api/payments/${id}`, config);
-      const payment = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
-      return payment || {};
-    } catch (error) {
-      if (error.name === 'CanceledError') return {};
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall(`/api/payments/${id}`, async () => {
+      try {
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get(`/api/payments/${id}`, config);
+        const payment = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+        return payment || {};
+      } catch (error) {
+        if (error.name === 'CanceledError') return {};
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `payment_${id}`);
   },
 
   updatePaymentStatus: async (id, statusData) => {
@@ -759,27 +781,29 @@ export const authService = {
 // User Services
 export const userService = {
   getCurrentUser: async (signal = null) => {
-    try {
-      const token = localStorage.getItem("token");
+    return makeRateLimitedCall('/api/users/me', async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get("/api/users/me", config);
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get("/api/users/me", config);
 
-      // The API returns user data directly, not nested under a user property
-      if (!response.data) {
-        return null;
+        // The API returns user data directly, not nested under a user property
+        if (!response.data) {
+          return null;
+        }
+
+        const user = validateItemResponse(response.data) || {};
+        return user.id ? user : null;
+      } catch (error) {
+        if (error.name === 'CanceledError') return null;
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+        }
+        throw new Error(getErrorMessage(error.response?.data || error.message));
       }
-
-      const user = validateItemResponse(response.data) || {};
-      return user.id ? user : null;
-    } catch (error) {
-      if (error.name === 'CanceledError') return null;
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-      }
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    }, 'current_user');
   },
 
   getProfile: async () => {
@@ -992,40 +1016,44 @@ export const productService = {
   },
 
   getAllProducts: async (page = 1, limit = 10, search = "", signal = null) => {
-    try {
-      const params = { page, limit, search };
-      if (!search) {
-        delete params.search;
+    return makeRateLimitedCall('/api/products', async () => {
+      try {
+        const params = { page, limit, search };
+        if (!search) {
+          delete params.search;
+        }
+        const config = { params };
+        if (signal) config.signal = signal;
+        const response = await adminApi.get("/api/products", config);
+        const validated = validatePaginatedResponse(response.data);
+        return {
+          products: validated.items,
+          data: validated.items,
+          total: validated.total,
+          page: validated.page,
+          pages: validated.pages,
+          limit: validated.limit
+        };
+      } catch (error) {
+        if (error.name === 'CanceledError') return { products: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        throw new Error(getErrorMessage(error.response?.data || error.message));
       }
-      const config = { params };
-      if (signal) config.signal = signal;
-      const response = await adminApi.get("/api/products", config);
-      const validated = validatePaginatedResponse(response.data);
-      return {
-        products: validated.items,
-        data: validated.items,
-        total: validated.total,
-        page: validated.page,
-        pages: validated.pages,
-        limit: validated.limit
-      };
-    } catch (error) {
-      if (error.name === 'CanceledError') return { products: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    }, `products_list_page${page}_limit${limit}_search${search}`);
   },
 
   getProduct: async (id, signal = null) => {
-    try {
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get(`/api/products/${id}`, config);
-      const product = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
-      return product || {};
-    } catch (error) {
-      if (error.name === 'CanceledError') return {};
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall(`/api/products/${id}`, async () => {
+      try {
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get(`/api/products/${id}`, config);
+        const product = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+        return product || {};
+      } catch (error) {
+        if (error.name === 'CanceledError') return {};
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `product_${id}`);
   },
 
   updateProduct: async (id, productData) => {
@@ -1127,29 +1155,33 @@ export const couponService = {
   },
 
   getAllCoupons: async (signal = null) => {
-    try {
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get("/api/coupons", config);
-      const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
-      return { coupons, data: coupons };
-    } catch (error) {
-      if (error.name === 'CanceledError') return { coupons: [], data: [] };
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall('/api/coupons', async () => {
+      try {
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get("/api/coupons", config);
+        const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
+        return { coupons, data: coupons };
+      } catch (error) {
+        if (error.name === 'CanceledError') return { coupons: [], data: [] };
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, 'coupons_list');
   },
 
   getCouponById: async (id, signal = null) => {
-    try {
-      const config = {};
-      if (signal) config.signal = signal;
-      const response = await adminApi.get(`/api/coupons/${id}`, config);
-      const coupon = validateItemResponse(response.data, 'coupon') || validateItemResponse(response.data, 'data');
-      return coupon || {};
-    } catch (error) {
-      if (error.name === 'CanceledError') return {};
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+    return makeRateLimitedCall(`/api/coupons/${id}`, async () => {
+      try {
+        const config = {};
+        if (signal) config.signal = signal;
+        const response = await adminApi.get(`/api/coupons/${id}`, config);
+        const coupon = validateItemResponse(response.data, 'coupon') || validateItemResponse(response.data, 'data');
+        return coupon || {};
+      } catch (error) {
+        if (error.name === 'CanceledError') return {};
+        throw new Error(getErrorMessage(error.response?.data || error.message));
+      }
+    }, `coupon_${id}`);
   },
 
   updateCoupon: async (id, couponData) => {
