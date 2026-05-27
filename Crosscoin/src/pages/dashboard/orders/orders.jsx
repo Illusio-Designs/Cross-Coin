@@ -61,12 +61,6 @@ const Orders = () => {
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
     const [brandFilter, setBrandFilter] = useState('all');
     const [brands, setBrands] = useState([]);
-    const [isCourierModalOpen, setIsCourierModalOpen] = useState(false);
-    const [courierModalOrder, setCourierModalOrder] = useState(null);
-    const [availableCouriers, setAvailableCouriers] = useState([]);
-    const [loadingCouriers, setLoadingCouriers] = useState(false);
-    const [selectedCourier, setSelectedCourier] = useState(null);
-    const [syncingWithCourier, setSyncingWithCourier] = useState(false);
     const [generatingManifest, setGeneratingManifest] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
     const [labelPollTimer, setLabelPollTimer] = useState(null);
@@ -208,50 +202,17 @@ const Orders = () => {
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
     };
 
-    const openCourierSelection = async (orderId, orderNumber) => {
+    const syncOrderDirectly = async (orderId, orderNumber) => {
         if (syncingOrders.has(orderId) || syncingAll) { showError('syncInProgress'); return; }
-        setCourierModalOrder({ id: orderId, order_number: orderNumber });
-        setIsCourierModalOpen(true);
-        setLoadingCouriers(true);
-        setSelectedCourier(null);
+        setSyncingOrders(prev => new Set(prev).add(orderId));
         try {
-            const response = await orderService.getAvailableCouriers(orderId);
-            if (response.success) {
-                setAvailableCouriers(response.couriers || []);
-                if (response.couriers?.length === 0) {
-                    showError('noCouriers', 'No available couriers for this order');
-                    setIsCourierModalOpen(false);
-                }
-            } else {
-                showError('fetchCouriersFailed', response.message || 'Failed to fetch available couriers');
-                setIsCourierModalOpen(false);
-            }
-        } catch (error) {
-            showError('fetchCouriersFailed', error.message || 'Failed to fetch couriers');
-            setIsCourierModalOpen(false);
-        } finally {
-            setLoadingCouriers(false);
-        }
-    };
-
-    const syncWithAutoSelect = async () => {
-        if (!courierModalOrder) { showError('noOrder', 'Order not found'); return; }
-        setSyncingWithCourier(true);
-        try {
-            const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
-                auto: true
-            });
+            const result = await orderService.syncOrderWithCourier(orderId, { auto: true });
             if (result.success) {
                 const courierUsed = result.data?.logistics || 'Auto-selected Courier';
                 const awb = result.data?.order?.waybill || 'Generated';
                 const labelUrl = result.data?.label?.pdfUrl;
-
-                showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} synced with ${courierUsed}! AWB: ${awb}`);
-
-                // Highlight the row for visual feedback
-                highlightRow(courierModalOrder.id);
-
-                // Auto-download label PDF if available
+                showSuccess('orderSynced', `✅ Order ${orderNumber} synced with ${courierUsed}! AWB: ${awb}`);
+                highlightRow(orderId);
                 if (labelUrl) {
                     setTimeout(() => {
                         try {
@@ -261,14 +222,8 @@ const Orders = () => {
                         }
                     }, 500);
                 }
-
-                // Refresh orders and close modal
                 await fetchOrders();
                 fetchAllOrdersForStats();
-                setIsCourierModalOpen(false);
-                setCourierModalOrder(null);
-                setSelectedCourier(null);
-                setAvailableCouriers([]);
             } else {
                 const errorMsg = result.error || 'Auto-sync failed for all couriers (tried: Delhivery, Amazon, Xpressbees)';
                 showError('autoSyncFailed', `❌ ${errorMsg}`);
@@ -276,7 +231,7 @@ const Orders = () => {
         } catch (error) {
             showError('syncFailed', `❌ ${error.message || 'Failed to sync order with courier'}`);
         } finally {
-            setSyncingWithCourier(false);
+            setSyncingOrders(prev => { const s = new Set(prev); s.delete(orderId); return s; });
         }
     };
 
@@ -655,7 +610,7 @@ const Orders = () => {
                         </Tooltip>
                         <Tooltip text={isFinal ? `Order is ${row.status}` : 'Automatically sync with best available courier'} position="top">
                             <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
-                                onClick={() => openCourierSelection(row.id, row.order_number)}
+                                onClick={() => syncOrderDirectly(row.id, row.order_number)}
                                 disabled={isSyncing || isFinal}>
                             {isSyncing ? (
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -1326,58 +1281,6 @@ const Orders = () => {
                 </div>
             </Modal>
 
-            {/* Courier Selection Modal */}
-            <Modal isOpen={isCourierModalOpen}
-                onClose={() => { setIsCourierModalOpen(false); setCourierModalOrder(null); setAvailableCouriers([]); setSelectedCourier(null); }}
-                title={`Select Courier for Order #${courierModalOrder?.order_number}`}>
-                <div className="courier-modal-body" style={{ minWidth: '500px' }}>
-                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                        <p style={{ fontSize: '16px', color: '#333', marginBottom: '12px', fontWeight: '500' }}>
-                            🤖 Auto-Select Courier
-                        </p>
-                        <p style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>
-                            System will automatically select the best available courier:
-                        </p>
-                        <p style={{ color: '#2196F3', fontSize: '13px', marginBottom: '20px', fontWeight: '500' }}>
-                            Delhivery → Amazon → Xpressbees
-                        </p>
-                        <p style={{ color: '#999', fontSize: '12px' }}>
-                            Click "Sync Automatically" to proceed
-                        </p>
-                    </div>
-                    <div className="modal-footer" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <Button
-                            variant="secondary"
-                            onClick={() => {
-                                setIsCourierModalOpen(false);
-                                setCourierModalOrder(null);
-                                setAvailableCouriers([]);
-                                setSelectedCourier(null);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="primary"
-                            disabled={syncingWithCourier}
-                            onClick={syncWithAutoSelect}
-                            title="Auto-selects first available courier (Delhivery → Amazon → Xpressbees)"
-                        >
-                            {syncingWithCourier ? (
-                                <>
-                                    <span style={{ marginRight: '8px' }}>⏳</span>
-                                    Syncing...
-                                </>
-                            ) : (
-                                <>
-                                    <span style={{ marginRight: '8px' }}>✓</span>
-                                    Sync Automatically
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
         </>
     );
 };
