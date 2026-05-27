@@ -108,11 +108,8 @@ app.use('/api/shipping-addresses', mediumLimiter);
 // General
 app.use('/api/', generalLimiter);
 
-// CORS middleware - MUST be before other middleware
+// CORS middleware - MUST be before other middleware (handles preflight requests)
 app.use(cors(corsOptions));
-
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
 
 // Body parsing middleware — keep limits tight on 2GB server
 app.use(express.json({ 
@@ -277,7 +274,7 @@ app.use('/api/v1/*', (req, res) => {
 });
 
 // 404 handler for non-API routes (static files, etc.)
-app.use('*', (req, res) => {
+app.use((req, res) => {
     res.status(404).send('File not found');
 });
 
