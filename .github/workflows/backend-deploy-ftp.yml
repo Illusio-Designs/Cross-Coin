@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Quick syntax sanity-check before we waste an upload run on broken JS
       - name: Setup Node 24
