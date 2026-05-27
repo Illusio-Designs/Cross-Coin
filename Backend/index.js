@@ -265,7 +265,7 @@ app.use('/api', routesManager);  // backward compat
 require('./docs/swagger.js')(app);
 
 // 404 handler for API routes only
-app.use('/api/v1/*', (req, res) => {
+app.use(/^\/api\/v1\//, (req, res) => {
     res.status(404).json({
         success: false,
         message: 'API endpoint not found',
