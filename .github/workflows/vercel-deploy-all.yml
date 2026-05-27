@@ -1,0 +1,210 @@
+name: Deploy Frontend Projects to Vercel (Multi-Project)
+
+# Smart deployment that detects which frontend project changed and deploys only that one.
+# Projects: Crosscoin, Gripzus, Knitwink, Velmique, jewellery
+#
+# Behavior:
+#   - If Crosscoin/** changed → deploy Crosscoin to Vercel
+#   - If Gripzus/** changed → deploy Gripzus to Vercel
+#   - If Knitwink/** changed → deploy Knitwink to Vercel
+#   - If Velmique/** changed → deploy Velmique to Vercel
+#   - If jewellery/** changed → deploy jewellery to Vercel
+#   - If Backend/** changed → skip all Vercel deployments
+#   - If multiple projects changed → deploy all that changed
+#
+# Required GitHub Secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN              → Vercel API token
+#   VERCEL_ORG_ID             → Vercel Organization ID
+#   CROSSCOIN_VERCEL_PROJECT  → Crosscoin project ID
+#   GRIPZUS_VERCEL_PROJECT    → Gripzus project ID
+#   KNITWINK_VERCEL_PROJECT   → Knitwink project ID
+#   VELMIQUE_VERCEL_PROJECT   → Velmique project ID
+#   JEWELLERY_VERCEL_PROJECT  → jewellery project ID
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Crosscoin/**'
+      - 'Gripzus/**'
+      - 'Knitwink/**'
+      - 'Velmique/**'
+      - 'jewellery/**'
+      - '.github/workflows/vercel-deploy-all.yml'
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Project to deploy (leave empty for auto-detect)'
+        required: false
+        default: ''
+
+concurrency:
+  group: vercel-deploy-all
+  cancel-in-progress: false
+
+jobs:
+  # Detect which projects changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      crosscoin: ${{ steps.changes.outputs.crosscoin }}
+      gripzus: ${{ steps.changes.outputs.gripzus }}
+      knitwink: ${{ steps.changes.outputs.knitwink }}
+      velmique: ${{ steps.changes.outputs.velmique }}
+      jewellery: ${{ steps.changes.outputs.jewellery }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed projects
+        id: changes
+        run: |
+          # Get changed files in this commit
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.project }}" != "" ]; then
+            # Manual trigger - deploy specified project
+            echo "Manual deployment requested: ${{ github.event.inputs.project }}"
+            case "${{ github.event.inputs.project }}" in
+              crosscoin) echo "crosscoin=true" >> $GITHUB_OUTPUT;;
+              gripzus) echo "gripzus=true" >> $GITHUB_OUTPUT;;
+              knitwink) echo "knitwink=true" >> $GITHUB_OUTPUT;;
+              velmique) echo "velmique=true" >> $GITHUB_OUTPUT;;
+              jewellery) echo "jewellery=true" >> $GITHUB_OUTPUT;;
+            esac
+          else
+            # Auto-detect based on changed files
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD)
+
+            echo "crosscoin=$(echo "$CHANGED_FILES" | grep -q "^Crosscoin/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "gripzus=$(echo "$CHANGED_FILES" | grep -q "^Gripzus/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "knitwink=$(echo "$CHANGED_FILES" | grep -q "^Knitwink/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "velmique=$(echo "$CHANGED_FILES" | grep -q "^Velmique/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "jewellery=$(echo "$CHANGED_FILES" | grep -q "^jewellery/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          fi
+
+  # Deploy Crosscoin
+  deploy-crosscoin:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.crosscoin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy Crosscoin to Vercel
+        run: |
+          cd Crosscoin
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.CROSSCOIN_VERCEL_PROJECT }}
+
+      - name: Notify Success
+        run: echo "✅ Crosscoin deployed to Vercel successfully!"
+
+  # Deploy Gripzus
+  deploy-gripzus:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gripzus == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy Gripzus to Vercel
+        run: |
+          cd Gripzus
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.GRIPZUS_VERCEL_PROJECT }}
+
+      - name: Notify Success
+        run: echo "✅ Gripzus deployed to Vercel successfully!"
+
+  # Deploy Knitwink
+  deploy-knitwink:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.knitwink == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy Knitwink to Vercel
+        run: |
+          cd Knitwink
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.KNITWINK_VERCEL_PROJECT }}
+
+      - name: Notify Success
+        run: echo "✅ Knitwink deployed to Vercel successfully!"
+
+  # Deploy Velmique
+  deploy-velmique:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.velmique == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy Velmique to Vercel
+        run: |
+          cd Velmique
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VELMIQUE_VERCEL_PROJECT }}
+
+      - name: Notify Success
+        run: echo "✅ Velmique deployed to Vercel successfully!"
+
+  # Deploy jewellery
+  deploy-jewellery:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.jewellery == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy jewellery to Vercel
+        run: |
+          cd jewellery
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.JEWELLERY_VERCEL_PROJECT }}
+
+      - name: Notify Success
+        run: echo "✅ jewellery deployed to Vercel successfully!"

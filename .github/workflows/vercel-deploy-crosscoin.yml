@@ -1,0 +1,65 @@
+name: Deploy Crosscoin to Vercel
+
+# Auto-deploys Crosscoin frontend to Vercel on main branch
+# only when Crosscoin/** files are changed.
+# Skips deployment if only Backend/, docs, or other projects change.
+#
+# What triggers deployment:
+#   - Changes to Crosscoin/** (frontend code, styles, components, pages)
+#   - Changes to this workflow file itself
+#
+# What does NOT trigger deployment:
+#   - Changes to Backend/**
+#   - Changes to other project directories
+#   - Documentation changes
+#
+# Required GitHub repo secrets — Settings → Secrets and variables → Actions:
+#   VERCEL_TOKEN     → Vercel API token (get from https://vercel.com/account/tokens)
+#   VERCEL_ORG_ID    → Your Vercel Organization ID
+#   VERCEL_PROJECT_ID → Crosscoin project ID from Vercel
+#
+# Vercel project must be pre-configured to:
+#   - Root directory: Crosscoin
+#   - Framework: Next.js
+#   - Build command: npm run build
+#   - Install command: npm ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Crosscoin/**'
+      - '.github/workflows/vercel-deploy-crosscoin.yml'
+  workflow_dispatch:
+
+# Only one deployment at a time
+concurrency:
+  group: vercel-crosscoin-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy to Vercel (Production)
+        run: |
+          cd Crosscoin
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deployment Success
+        run: echo "✅ Crosscoin deployed to Vercel successfully!"
+
+      - name: Notify on Failure
+        if: failure()
+        run: echo "❌ Vercel deployment failed. Check logs above for details."
