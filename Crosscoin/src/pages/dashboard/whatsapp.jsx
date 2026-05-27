@@ -517,6 +517,8 @@ export function WhatsAppManager() {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [sendMode, setSendMode] = useState('single'); // 'single' | 'catalogue'
   const [sendingProduct, setSendingProduct] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+  const [productSearchAbort, setProductSearchAbort] = useState(null);
 
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
@@ -530,7 +532,11 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getStats(brandId);
       if (data.success) setStats(data.stats);
-    } catch { }
+      else setStats(null);
+    } catch (err) {
+      console.error('Stats fetch error:', err);
+      setStats(null);
+    }
     setStatsLoading(false);
   };
 
@@ -541,7 +547,11 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.listTemplates(brandId);
       if (data.success) setTemplateList(data.templates || []);
-    } catch { }
+      else setTemplateList([]);
+    } catch (err) {
+      console.error('Templates fetch error:', err);
+      setTemplateList([]);
+    }
     setListLoading(false);
   };
 
@@ -550,19 +560,21 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.seedTemplates(brandId);
       if (data.success) {
-        const { created, skipped, failed } = data.summary;
-        showSuccess('templateCreated', `Created: ${created} Â· Skipped: ${skipped} Â· Failed: ${failed}`);
+        const { created, skipped, failed } = data.summary || { created:0, skipped:0, failed:0 };
+        showSuccess('templateCreated', `Created: ${created} · Skipped: ${skipped} · Failed: ${failed}`);
         fetchTemplates();
       } else {
-        showError('loadingFailed', data.message);
+        showError('loadingFailed', data.message || 'Failed to seed templates');
       }
-    } catch (e) { showError('loadingFailed', e.message); }
+    } catch (e) { showError('loadingFailed', e.message || 'Failed to seed templates'); }
     setSeedLoading(false);
   };
 
   const createTemplate = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.body.trim()) { showError('fieldRequired'); return; }
+    if (!form.name.trim()) { showError('fieldRequired', 'Template name is required'); return; }
+    if (!form.body.trim()) { showError('fieldRequired', 'Template body is required'); return; }
+    if (form.body.length < 20) { showError('fieldRequired', 'Template body must be at least 20 characters'); return; }
     setFormLoading(true); setFormResponse(null);
     try {
       const components = [{ type:'BODY', text: form.body }];
@@ -570,8 +582,22 @@ export function WhatsAppManager() {
       const buttons = [];
       if (form.btn1Type && form.btn1Text) {
         const b = { type: form.btn1Type, text: form.btn1Text };
-        if (form.btn1Type === 'URL') b.url = form.btn1Val;
-        if (form.btn1Type === 'PHONE_NUMBER') b.phone_number = form.btn1Val;
+        if (form.btn1Type === 'URL') {
+          if (!form.btn1Val || !form.btn1Val.startsWith('http')) {
+            setFormResponse({ type:'error', text: 'Button URL must be a valid link starting with http://' });
+            setFormLoading(false);
+            return;
+          }
+          b.url = form.btn1Val;
+        }
+        if (form.btn1Type === 'PHONE_NUMBER') {
+          if (!form.btn1Val || form.btn1Val.replace(/\D/g,'').length < 10) {
+            setFormResponse({ type:'error', text: 'Phone number must be valid (10+ digits)' });
+            setFormLoading(false);
+            return;
+          }
+          b.phone_number = form.btn1Val;
+        }
         buttons.push(b);
       }
       if (form.btn2Text) buttons.push({ type:'QUICK_REPLY', text: form.btn2Text });
@@ -579,7 +605,7 @@ export function WhatsAppManager() {
       const data = await whatsappService.createTemplate({
         brandId, name: form.name, category: form.category, language: form.language, components
       });
-      if (data.success) { showSuccess('templateCreated'); setCreateModal(false); fetchTemplates(); }
+      if (data.success) { showSuccess('templateCreated', 'Template submitted. Approval takes 5 min - a few hours'); setCreateModal(false); fetchTemplates(); }
       else setFormResponse({ type:'error', text: data.message || JSON.stringify(data) });
     } catch (err) { setFormResponse({ type:'error', text: err.message || 'Failed to create template' }); }
     setFormLoading(false);
@@ -596,20 +622,31 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getConversations(brandId, statusFilter);
       if (data.success) setConversations(data.conversations || []);
-    } catch { }
+      else setConversations([]);
+    } catch (err) {
+      console.error('Conversations fetch error:', err);
+      setConversations([]);
+    }
     setConvLoading(false);
   };
 
   const fetchMessages = async (conv) => {
     setActiveConv(conv); setMsgLoading(true);
-    isNearBottomRef.current = false; // don't auto-scroll when opening a chat
+    isNearBottomRef.current = false;
     try {
       const data = await whatsappService.getMessages(conv.id);
       if (data.success) {
         setMessages(data.messages || []);
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c));
+      } else {
+        setMessages([]);
+        showError('loadingFailed', 'Failed to load messages');
       }
-    } catch { }
+    } catch (err) {
+      console.error('Messages fetch error:', err);
+      setMessages([]);
+      showError('loadingFailed', 'Failed to load messages');
+    }
     setMsgLoading(false);
   };
 
@@ -618,41 +655,56 @@ export function WhatsAppManager() {
     if (!reply.trim() || !activeConv) return;
     setSending(true);
     try {
-      // Include quoted context in the message body as a prefix marker
-      const quotedPrefix = replyTo
-        ? `[quoted:${replyTo.id}:${msgPreview(replyTo).substring(0, 60)}]\n`
-        : '';
       const fullMessage = reply.trim();
       const quotedWaId = replyTo?.wa_message_id || null;
       const data = await whatsappService.sendReply(activeConv.id, fullMessage, brandId, quotedWaId);
       if (data.success) {
-        // Attach quoted context to the saved message for display
         const savedMsg = { ...data.message, _quotedMsg: replyTo || null };
         setMessages(prev => [...prev, savedMsg]);
         setReply(''); setReplyTo(null); isNearBottomRef.current = true;
+      } else {
+        showError('sendFailed', data.message || 'Failed to send message');
       }
-      else showError('sendFailed', data.message);
-    } catch (err) { showError('sendFailed', err.message); }
+    } catch (err) {
+      showError('sendFailed', err.message || 'Failed to send message');
+    }
     setSending(false);
   };
 
   const resolveConv = async (id) => {
+    if (!window.confirm('Mark this conversation as resolved? It will be removed from your inbox.')) return;
     try {
       await whatsappService.resolveConversation(id);
-      showSuccess('resolved');
+      showSuccess('resolved', 'Conversation marked as resolved');
       setConversations(prev => prev.filter(c => c.id !== id));
       if (activeConv?.id === id) { setActiveConv(null); setMessages([]); }
-    } catch { showError('updateFailed'); }
+    } catch (err) { showError('updateFailed', err.message); }
+  };
+
+  const saveConvNote = async () => {
+    if (!activeConv || !convNote.trim()) return;
+    setSavingNote(true);
+    try {
+      await whatsappService.updateConversationNote(activeConv.id, convNote.trim(), brandId);
+      showSuccess('saved', 'Note saved successfully');
+    } catch (err) { showError('saveFailed', err.message); }
+    setSavingNote(false);
   };
 
   const sendTest = async (e) => {
     e.preventDefault();
-    if (!testPhone.trim()) { showError('fieldRequired'); return; }
+    if (!testPhone.trim()) { showError('fieldRequired', 'Phone number is required'); return; }
+    if (testPhone.replace(/\D/g,'').length < 10) { showError('fieldRequired', 'Phone number must be 10 digits'); return; }
     setTestLoading(true);
     try {
       const data = await whatsappService.testConnection(testPhone, brandId);
-      if (data.success) showSuccess('messageSent'); else showError('sendFailed', data.message);
-    } catch (err) { showError('sendFailed', err.message); }
+      if (data.success) {
+        showSuccess('messageSent', 'Test message sent! Check your WhatsApp inbox.');
+        setTestPhone('');
+      } else {
+        showError('sendFailed', data.message || 'Failed to send test message');
+      }
+    } catch (err) { showError('sendFailed', err.message || 'Failed to send test message'); }
     setTestLoading(false);
   };
 
@@ -698,20 +750,28 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getCannedResponses(brandId);
       if (data.success) setCannedResponses(data.cannedResponses || []);
-    } catch { }
+      else setCannedResponses([]);
+    } catch (err) {
+      console.error('Canned responses fetch error:', err);
+      setCannedResponses([]);
+    }
     setCannedLoading(false);
   };
 
   const saveCannedResponse = async (e) => {
     e.preventDefault();
-    if (!cannedForm.shortcut || !cannedForm.title || !cannedForm.body) { showError('fieldRequired'); return; }
+    if (!cannedForm.shortcut?.trim()) { showError('fieldRequired', 'Shortcut is required (e.g., /track)'); return; }
+    if (!cannedForm.title?.trim()) { showError('fieldRequired', 'Title is required'); return; }
+    if (!cannedForm.body?.trim()) { showError('fieldRequired', 'Message body is required'); return; }
+    if (cannedForm.shortcut && !cannedForm.shortcut.startsWith('/')) { showError('fieldRequired', 'Shortcut must start with /'); return; }
     try {
       if (cannedEditId) {
         await whatsappService.updateCannedResponse(cannedEditId, cannedForm);
+        showSuccess('updated', 'Canned response updated');
       } else {
         await whatsappService.createCannedResponse({ ...cannedForm, brandId });
+        showSuccess('saved', 'Canned response created');
       }
-      showSuccess('saved');
       setCannedModal(false);
       setCannedEditId(null);
       setCannedForm({ shortcut: '', title: '', body: '' });
@@ -720,11 +780,12 @@ export function WhatsAppManager() {
   };
 
   const deleteCannedResponse = async (id) => {
+    if (!window.confirm('Delete this canned response? This cannot be undone.')) return;
     try {
       await whatsappService.deleteCannedResponse(id);
-      showSuccess('deleted');
+      showSuccess('deleted', 'Canned response deleted');
       fetchCannedResponses();
-    } catch { showError('deleteFailed'); }
+    } catch (err) { showError('deleteFailed', err.message); }
   };
 
   // Fetch broadcasts
@@ -733,29 +794,35 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getBroadcasts(brandId);
       if (data.success) setBroadcasts(data.broadcasts || []);
-    } catch { }
+      else setBroadcasts([]);
+    } catch (err) {
+      console.error('Broadcasts fetch error:', err);
+      setBroadcasts([]);
+    }
     setBroadcastLoading(false);
   };
 
   const createBroadcast = async (e) => {
     e.preventDefault();
-    if (!broadcastForm.name || !broadcastForm.templateName) { showError('fieldRequired'); return; }
+    if (!broadcastForm.name?.trim()) { showError('fieldRequired', 'Campaign name is required'); return; }
+    if (!broadcastForm.templateName?.trim()) { showError('fieldRequired', 'Template name is required'); return; }
     try {
       await whatsappService.createBroadcast({ ...broadcastForm, brandId });
-      showSuccess('broadcastCreated');
+      showSuccess('broadcastCreated', 'Broadcast campaign created. You can now run it.');
       setBroadcastModal(false);
       setBroadcastForm({ name: '', templateName: '', audienceFilter: '' });
       fetchBroadcasts();
-    } catch (err) { showError('saveFailed', err.message); }
+    } catch (err) { showError('saveFailed', err.message || 'Failed to create broadcast'); }
   };
 
   const runBroadcast = async (id) => {
+    if (!window.confirm('Start this broadcast? It will be sent to all opted-in customers.')) return;
     setBroadcastRunning(id);
     try {
       const data = await whatsappService.runBroadcast(id);
-      if (data.success) { showSuccess('broadcastStarted'); fetchBroadcasts(); }
-      else showError('sendFailed', data.message);
-    } catch (err) { showError('sendFailed', err.message); }
+      if (data.success) { showSuccess('broadcastStarted', 'Broadcast started. Check status below'); fetchBroadcasts(); }
+      else showError('sendFailed', data.message || 'Failed to start broadcast');
+    } catch (err) { showError('sendFailed', err.message || 'Failed to start broadcast'); }
     setBroadcastRunning(null);
   };
 
@@ -765,7 +832,11 @@ export function WhatsAppManager() {
     try {
       const data = await whatsappService.getSLAStats(brandId);
       if (data.success) setSlaStats(data.sla);
-    } catch { }
+      else setSlaStats(null);
+    } catch (err) {
+      console.error('SLA stats fetch error:', err);
+      setSlaStats(null);
+    }
     setSlaLoading(false);
   };
 
@@ -773,7 +844,8 @@ export function WhatsAppManager() {
   const handleReplyChange = (val) => {
     setReply(val);
     if (val.startsWith('/')) {
-      const match = cannedResponses.find(c => c.shortcut === val.trim());
+      const trimmed = val.trim().toLowerCase();
+      const match = cannedResponses.find(c => (c.shortcut || '').toLowerCase() === trimmed);
       if (match) setReply(match.body);
     }
   };
@@ -789,7 +861,10 @@ export function WhatsAppManager() {
       const { productService } = await import('../../services');
       const data = await productService.getAllProducts(1, 20, q);
       setProductList(data?.products || data?.rows || []);
-    } catch { setProductList([]); }
+    } catch (err) {
+      showError('loadingFailed', 'Failed to load products');
+      setProductList([]);
+    }
     setProductLoading(false);
   };
 
@@ -823,22 +898,25 @@ export function WhatsAppManager() {
     setSendingProduct(true);
     try {
       if (sendMode === 'single') {
-        // Pass productId â€” backend auto-resolves to {productId}_{variationId} matching catalogue
         await whatsappService.sendProduct(activeConv.id, selectedProducts[0].id, brandId);
-        showSuccess('messageSent');
+        showSuccess('messageSent', 'Product card sent successfully');
       } else {
-        // Pass productIds array â€” backend resolves each to first variation retailer ID
+        if (selectedProducts.length > 30) {
+          showError('sendFailed', 'Maximum 30 products allowed in catalogue');
+          setSendingProduct(false);
+          return;
+        }
         await whatsappService.sendCatalogue(
           activeConv.id,
-          null,                                    // retailerIds â€” let backend resolve
-          selectedProducts.map(p => p.id),         // productIds
+          null,
+          selectedProducts.map(p => p.id),
           null, null, brandId
         );
-        showSuccess('messageSent');
+        showSuccess('messageSent', 'Catalogue sent successfully');
       }
       setProductModal(false);
       fetchMessages(activeConv);
-    } catch (err) { showError('sendFailed', err.message); }
+    } catch (err) { showError('sendFailed', err.message || 'Failed to send product'); }
     setSendingProduct(false);
   };
 
@@ -846,9 +924,10 @@ export function WhatsAppManager() {
   const seedCannedResponses = async () => {
     try {
       const data = await whatsappService.seedCannedResponses(brandId);
-      showSuccess('saved', `Created: ${data.summary?.created} Â· Skipped: ${data.summary?.skipped}`);
+      const { created, skipped } = data.summary || { created:0, skipped:0 };
+      showSuccess('saved', `Created: ${created} · Skipped: ${skipped}`);
       fetchCannedResponses();
-    } catch (err) { showError('loadingFailed', err.message); }
+    } catch (err) { showError('loadingFailed', err.message || 'Failed to seed canned responses'); }
   };
 
   const filteredConvs = conversations.filter(c =>
@@ -1394,10 +1473,12 @@ export function WhatsAppManager() {
                         value={convNote}
                         onChange={e => setConvNote(e.target.value)}
                         rows={6}
+                        disabled={savingNote}
                       />
                       <button className="was-btn-primary" style={{width:'100%',marginTop:8,justifyContent:'center',fontSize:12}}
-                        onClick={() => showSuccess('saved', 'Note saved')}>
-                        Save Note
+                        onClick={saveConvNote}
+                        disabled={savingNote || !convNote.trim()}>
+                        {savingNote ? 'Saving...' : 'Save Note'}
                       </button>
                     </div>
                   )}
@@ -1726,8 +1807,18 @@ export function WhatsAppManager() {
           <div className="modal-body">
             <div className="dm-2col">
               <div className="dm-field">
-                <label className="dm-label">Shortcut *</label>
-                <input className="dm-input" value={cannedForm.shortcut} onChange={e => setCannedForm(p => ({...p, shortcut: e.target.value.toLowerCase().replace(/\s/g,'')}))} placeholder="/track" required />
+                <label className="dm-label">Shortcut * (type /shortcut in reply)</label>
+                <input
+                  className="dm-input"
+                  value={cannedForm.shortcut}
+                  onChange={e => {
+                    let val = e.target.value.toLowerCase().replace(/\s/g,'').replace(/[^a-z0-9/_-]/g,'');
+                    if (val && !val.startsWith('/')) val = '/' + val;
+                    setCannedForm(p => ({...p, shortcut: val}));
+                  }}
+                  placeholder="/track"
+                  required
+                />
               </div>
               <div className="dm-field">
                 <label className="dm-label">Title *</label>
