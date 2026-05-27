@@ -215,9 +215,11 @@ export const shippingAddressService = {
 
 // Order Services
 export const orderService = {
-  getAllOrders: async (params = {}) => {
+  getAllOrders: async (params = {}, signal = null) => {
     try {
-      const response = await adminApi.get("/api/orders", { params });
+      const config = { params };
+      if (signal) config.signal = signal;
+      const response = await adminApi.get("/api/orders", config);
       const validated = validatePaginatedResponse(response.data);
       return {
         orders: validated.items,
@@ -228,16 +230,20 @@ export const orderService = {
         limit: validated.limit
       };
     } catch (error) {
+      if (error.name === 'CanceledError') return { orders: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
-  getOrderById: async (id) => {
+  getOrderById: async (id, signal = null) => {
     try {
-      const response = await adminApi.get(`/api/orders/${id}`);
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get(`/api/orders/${id}`, config);
       const order = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
       return order || {};
     } catch (error) {
+      if (error.name === 'CanceledError') return {};
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
@@ -629,9 +635,11 @@ export const orderService = {
 
 // Payment Services
 export const paymentService = {
-  getAllPayments: async (params = {}) => {
+  getAllPayments: async (params = {}, signal = null) => {
     try {
-      const response = await adminApi.get("/api/payments", { params });
+      const config = { params };
+      if (signal) config.signal = signal;
+      const response = await adminApi.get("/api/payments", config);
       const validated = validatePaginatedResponse(response.data);
       return {
         payments: validated.items,
@@ -642,16 +650,20 @@ export const paymentService = {
         limit: validated.limit
       };
     } catch (error) {
+      if (error.name === 'CanceledError') return { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
-  getPaymentById: async (id) => {
+  getPaymentById: async (id, signal = null) => {
     try {
-      const response = await adminApi.get(`/api/payments/${id}`);
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get(`/api/payments/${id}`, config);
       const payment = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
       return payment || {};
     } catch (error) {
+      if (error.name === 'CanceledError') return {};
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
@@ -746,11 +758,13 @@ export const authService = {
 
 // User Services
 export const userService = {
-  getCurrentUser: async () => {
+  getCurrentUser: async (signal = null) => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await adminApi.get("/api/users/me");
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get("/api/users/me", config);
 
       // The API returns user data directly, not nested under a user property
       if (!response.data) {
@@ -760,6 +774,7 @@ export const userService = {
       const user = validateItemResponse(response.data) || {};
       return user.id ? user : null;
     } catch (error) {
+      if (error.name === 'CanceledError') return null;
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
       }
@@ -976,13 +991,15 @@ export const productService = {
     }
   },
 
-  getAllProducts: async (page = 1, limit = 10, search = "") => {
+  getAllProducts: async (page = 1, limit = 10, search = "", signal = null) => {
     try {
       const params = { page, limit, search };
       if (!search) {
         delete params.search;
       }
-      const response = await adminApi.get("/api/products", { params });
+      const config = { params };
+      if (signal) config.signal = signal;
+      const response = await adminApi.get("/api/products", config);
       const validated = validatePaginatedResponse(response.data);
       return {
         products: validated.items,
@@ -993,16 +1010,20 @@ export const productService = {
         limit: validated.limit
       };
     } catch (error) {
+      if (error.name === 'CanceledError') return { products: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
-  getProduct: async (id) => {
+  getProduct: async (id, signal = null) => {
     try {
-      const response = await adminApi.get(`/api/products/${id}`);
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get(`/api/products/${id}`, config);
       const product = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
       return product || {};
     } catch (error) {
+      if (error.name === 'CanceledError') return {};
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
@@ -1105,22 +1126,28 @@ export const couponService = {
     }
   },
 
-  getAllCoupons: async () => {
+  getAllCoupons: async (signal = null) => {
     try {
-      const response = await adminApi.get("/api/coupons");
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get("/api/coupons", config);
       const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
       return { coupons, data: coupons };
     } catch (error) {
+      if (error.name === 'CanceledError') return { coupons: [], data: [] };
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
-  getCouponById: async (id) => {
+  getCouponById: async (id, signal = null) => {
     try {
-      const response = await adminApi.get(`/api/coupons/${id}`);
+      const config = {};
+      if (signal) config.signal = signal;
+      const response = await adminApi.get(`/api/coupons/${id}`, config);
       const coupon = validateItemResponse(response.data, 'coupon') || validateItemResponse(response.data, 'data');
       return coupon || {};
     } catch (error) {
+      if (error.name === 'CanceledError') return {};
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
