@@ -218,7 +218,7 @@ const Orders = () => {
                         try {
                             window.open(labelUrl, '_blank');
                         } catch (e) {
-                            console.error('Failed to open label:', e);
+                            // Failed to open label in new window
                         }
                     }, 500);
                 }
