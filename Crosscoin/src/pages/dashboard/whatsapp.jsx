@@ -1020,7 +1020,7 @@ export function WhatsAppManager() {
             <div className="was-content-pad">
               <div className="was-page-head">
                 <h2 className="was-page-title">Dashboard</h2>
-                <span className="was-page-sub">CrossCoin Â· WhatsApp Overview</span>
+                <span className="was-page-sub">CrossCoin  · WhatsApp Overview</span>
                 <div style={{display:'flex', gap:8}}>
                   <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
@@ -1106,9 +1106,9 @@ export function WhatsAppManager() {
               {/* Quick cards */}
               <div className="was-quick-row">
                 {[
-                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending Â· ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#CE1E36', icon: IC.tpl },
+                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending  · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#CE1E36', icon: IC.tpl },
                   { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
-                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent Â· ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
+                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent  · ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
                 ].map(q => (
                   <div key={q.label} className="was-quick-card">
                     <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
@@ -1696,7 +1696,7 @@ export function WhatsAppManager() {
                         </div>
                         <div className="was-tpl-name">{b.name}</div>
                         <div className="was-tpl-body" style={{fontSize:12}}>
-                          Recipients: {b.total_recipients} Â· Sent: {b.sent_count} Â· Failed: {b.failed_count}
+                          Recipients: {b.total_recipients}  · Sent: {b.sent_count}  · Failed: {b.failed_count}
                         </div>
                         <div className="was-tpl-foot">
                           {(b.status === 'draft' || b.status === 'failed') && (
@@ -1929,7 +1929,7 @@ export function WhatsAppManager() {
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
-                        <div style={{ fontSize:11, color:'#6b7280' }}>â‚¹{price} Â· ID: {p.id}</div>
+                        <div style={{ fontSize:11, color:'#6b7280' }}>₹{price}  · ID: {p.id}</div>
                       </div>
                     </div>
                   );
