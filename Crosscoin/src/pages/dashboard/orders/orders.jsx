@@ -691,6 +691,12 @@ const Orders = () => {
                 onCancel={() => setConfirmPrompt(null)}
             />
             <div className="dashboard-page">
+                {error && (
+                    <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{error}</span>
+                        <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+                    </div>
+                )}
                 <div className="orders-header-container">
                     {/* ── Top Bar: Title + Search + Actions ── */}
                     <div className="ord-topbar">
