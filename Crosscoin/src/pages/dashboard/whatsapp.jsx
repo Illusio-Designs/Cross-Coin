@@ -1369,7 +1369,7 @@ export function WhatsAppManager() {
                           onClick={() => openProductModal('single')}
                           title="Send a single product card"
                         >
-                          🛍️️ Send Product
+                          🛍️ Send Product
                         </button>
                         <button
                           className="was-btn-secondary"
