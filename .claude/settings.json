@@ -65,10 +65,7 @@
       "Bash(grep -E \"\\\\.\\(js|ts\\)$\")",
       "Bash(grep \":0$\")",
       "Bash(dir \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\\\\src\\\\pages\\\\dashboard\" /s /b)",
-      "Bash(node -e \"const fs=require\\('fs'\\);const t=fs.readFileSync\\('c:/Users/K N Corporation/Cross-Coin/Crosscoin/src/components/cart/CartDrawer.jsx','utf8'\\);const i=t.indexOf\\('Most Popular'\\);console.log\\('chars around Most Popular:'\\);for\\(let j=i-10;j<i;j++\\){console.log\\(j,t[j],t.charCodeAt\\(j\\).toString\\(16\\)\\)}\")",
-      "Bash(node \"c:/Users/K N Corporation/Cross-Coin/fix-mojibake.js\" \"c:/Users/K N Corporation/Cross-Coin/CartDrawer.preview.jsx\")",
-      "Bash(node \"c:/Users/K N Corporation/Cross-Coin/fix-mojibake.js\" \"c:/Users/K N Corporation/Cross-Coin/whatsapp.preview.jsx\" \"c:/Users/K N Corporation/Cross-Coin/whatsapp.preview.css\" \"c:/Users/K N Corporation/Cross-Coin/ProductDetails.preview.jsx\" \"c:/Users/K N Corporation/Cross-Coin/login.preview.jsx\")",
-      "Bash(node \"c:/Users/K N Corporation/Cross-Coin/fix-mojibake.js\" \"c:/Users/K N Corporation/Cross-Coin/whatsapp.preview.css\")"
+      "Bash(node fix-mojibake.js Crosscoin/src Crosscoin/public)"
     ]
   }
 }

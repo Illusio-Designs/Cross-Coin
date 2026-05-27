@@ -1,5 +1,5 @@
 /* ============================================================
-   WA STUDIO Ã¢â‚¬â€ Redesigned CRM Layout
+   WA STUDIO — Redesigned CRM Layout
    ============================================================ */
 
 :root {
@@ -23,7 +23,7 @@
   --wa-transition: 150ms cubic-bezier(.4, 0, .2, 1);
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Outer shell Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── Outer shell ── */
 .was-studio {
   display: flex;
   height: calc(100vh - 156px);
@@ -34,7 +34,7 @@
   font-family: 'DM Sans', -apple-system, sans-serif;
 }
 
-/* Ã¢â€¢ÂÃ¢â€¢Â LEFT SIDEBAR Ã¢â€¢ÂÃ¢â€¢Â */
+/* ══ LEFT SIDEBAR ══ */
 .was-nav {
   width: 240px;
   flex-shrink: 0;
@@ -203,7 +203,7 @@
   color: #fff;
 }
 
-/* Ã¢â€¢ÂÃ¢â€¢Â MAIN AREA Ã¢â€¢ÂÃ¢â€¢Â */
+/* ══ MAIN AREA ══ */
 .was-main {
   flex: 1;
   display: flex;
@@ -294,7 +294,7 @@
   color: #CE1E36;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ DASHBOARD Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── DASHBOARD ── */
 .was-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -558,7 +558,7 @@
   margin-top: 1px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ TEMPLATES Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── TEMPLATES ── */
 .was-tpl-layout {
   display: grid;
   grid-template-columns: 180px 1fr 200px;
@@ -939,7 +939,7 @@
   line-height: 1.5;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ INBOX Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── INBOX ── */
 .was-inbox-wrap {
   display: flex;
   flex: 1;
@@ -1342,7 +1342,7 @@
   flex-shrink: 0;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ LIBRARY Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── LIBRARY ── */
 .was-lib-toolbar {
   display: flex;
   align-items: center;
@@ -1534,7 +1534,7 @@
   height: 11px;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ TEST Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── TEST ── */
 .was-test-layout {
   display: grid;
   grid-template-columns: 380px 1fr;
@@ -1706,7 +1706,7 @@
   line-height: 1.5;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ CANNED / BROADCAST / ANALYTICS Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── CANNED / BROADCAST / ANALYTICS ── */
 .was-coming-soon {
   display: flex;
   flex-direction: column;
@@ -1732,7 +1732,7 @@
   margin: 0;
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ MODALS Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── MODALS ── */
 .was-modal-notice {
   background: #fffbeb;
   border: 1px solid #fde68a;
@@ -1836,7 +1836,7 @@
   }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ RESPONSIVE Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
   .was-stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1908,7 +1908,7 @@
   }
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ RIGHT PANEL Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── RIGHT PANEL ── */
 .was-right-panel {
   width: 260px;
   flex-shrink: 0;
