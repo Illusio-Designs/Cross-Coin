@@ -228,67 +228,19 @@ const Orders = () => {
         }
     };
 
-    const syncWithSelectedCourier = async () => {
+    const syncWithAutoSelect = async () => {
         if (!courierModalOrder) { showError('noOrder', 'Order not found'); return; }
         setSyncingWithCourier(true);
         try {
-            // Auto-sync mode: no courier selected, system will try fallback
-            if (!selectedCourier) {
-                const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
-                    auto: true
-                });
-                if (result.success) {
-                    const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
-                    const courierUsed = result.data?.logistics || 'Auto-selected Courier';
-                    const awb = result.data?.order?.waybill || 'Generated';
-                    const labelUrl = result.data?.label?.pdfUrl;
-
-                    showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} auto-synced with ${courierUsed}! AWB: ${awb}`);
-
-                    // Auto-download label PDF if available
-                    if (labelUrl) {
-                        setTimeout(() => {
-                            try {
-                                window.open(labelUrl, '_blank');
-                            } catch (e) {
-                                console.error('Failed to open label:', e);
-                            }
-                        }, 500);
-                    }
-
-                    // Refresh orders and close modal
-                    await fetchOrders();
-                    setIsCourierModalOpen(false);
-                    setCourierModalOrder(null);
-                    setSelectedCourier(null);
-                } else {
-                    const errorMsg = result.error || 'Auto-sync failed for all couriers (tried: Delhivery, Amazon, Xpressbees)';
-                    showError('autoSyncFailed', `❌ ${errorMsg}`);
-                }
-                return;
-            }
-
-            // Manual sync: specific courier selected
-            let logisticsName = selectedCourier._logisticsValue || '';
-
-            // Convert to lowercase for iThink API
-            logisticsName = logisticsName.toLowerCase().trim();
-
-            if (!logisticsName) {
-                showError('noCourierName', 'Unable to extract courier name. Please try again.');
-                return;
-            }
-
             const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
-                logistics: logisticsName,
-                s_type: selectedCourier.service_type || selectedCourier.s_type || ''
+                auto: true
             });
             if (result.success) {
+                const courierUsed = result.data?.logistics || 'Auto-selected Courier';
                 const awb = result.data?.order?.waybill || 'Generated';
-                const displayName = selectedCourier._displayName || 'Selected Courier';
                 const labelUrl = result.data?.label?.pdfUrl;
 
-                showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} synced with ${displayName}! AWB: ${awb}`);
+                showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} synced with ${courierUsed}! AWB: ${awb}`);
 
                 // Auto-download label PDF if available
                 if (labelUrl) {
@@ -296,32 +248,21 @@ const Orders = () => {
                         try {
                             window.open(labelUrl, '_blank');
                         } catch (e) {
-                            console.log('Could not open manifest URL:', e.message);
+                            console.error('Failed to open label:', e);
                         }
                     }, 500);
                 }
 
+                // Refresh orders and close modal
+                await fetchOrders();
+                fetchAllOrdersForStats();
                 setIsCourierModalOpen(false);
                 setCourierModalOrder(null);
-                setAvailableCouriers([]);
                 setSelectedCourier(null);
-
-                // After sync, AUTOMATICALLY confirm the order
-                setTimeout(async () => {
-                    try {
-                        const confirmResult = await orderService.confirmOrder(courierModalOrder.id);
-                        if (confirmResult.success) {
-                            showSuccess('orderConfirmed', `Order confirmed after courier selection!`);
-                        }
-                    } catch (e) {
-                        console.log('Auto-confirm failed:', e.message);
-                    }
-                    fetchOrders();
-                    fetchAllOrdersForStats();
-                }, 1000);
+                setAvailableCouriers([]);
             } else {
-                const errorMsg = result.error || result.message || 'Failed to sync order with courier';
-                showError('syncFailed', `❌ ${errorMsg}`);
+                const errorMsg = result.error || 'Auto-sync failed for all couriers (tried: Delhivery, Amazon, Xpressbees)';
+                showError('autoSyncFailed', `❌ ${errorMsg}`);
             }
         } catch (error) {
             showError('syncFailed', `❌ ${error.message || 'Failed to sync order with courier'}`);
@@ -1315,132 +1256,20 @@ const Orders = () => {
                 onClose={() => { setIsCourierModalOpen(false); setCourierModalOrder(null); setAvailableCouriers([]); setSelectedCourier(null); }}
                 title={`Select Courier for Order #${courierModalOrder?.order_number}`}>
                 <div className="courier-modal-body" style={{ minWidth: '500px' }}>
-                    {loadingCouriers ? (
-                        <div className="courier-loading" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                            <Loader />
-                            <p style={{ marginTop: '12px', color: '#666' }}>Fetching available couriers...</p>
-                        </div>
-                    ) : availableCouriers.length > 0 ? (
-                        <>
-                            <div className="courier-list" style={{ marginBottom: '20px' }}>
-                                {availableCouriers.map((courier, idx) => {
-                                    // Extract courier name and logistics field from various possible fields
-                                    let courierName = '';
-                                    let logisticsValue = '';
-
-                                    if (courier.logistics) {
-                                        logisticsValue = courier.logistics;
-                                        courierName = courier.logistics.charAt(0).toUpperCase() + courier.logistics.slice(1);
-                                    } else if (courier.name) {
-                                        logisticsValue = courier.name;
-                                        courierName = courier.name;
-                                    } else if (courier.courier_name) {
-                                        logisticsValue = courier.courier_name;
-                                        courierName = courier.courier_name;
-                                    } else if (courier.logistic_name) {
-                                        logisticsValue = courier.logistic_name;
-                                        courierName = courier.logistic_name;
-                                    } else if (courier.provider) {
-                                        logisticsValue = courier.provider;
-                                        courierName = courier.provider.charAt(0).toUpperCase() + courier.provider.slice(1);
-                                    } else {
-                                        logisticsValue = `courier_${idx}`;
-                                        courierName = `Courier ${idx + 1}`;
-                                    }
-
-                                    // Extract rate
-                                    let rate = 'N/A';
-                                    if (courier.rate !== undefined && courier.rate !== null) rate = parseFloat(courier.rate);
-                                    else if (courier.cost !== undefined && courier.cost !== null) rate = parseFloat(courier.cost);
-                                    else if (courier.price !== undefined && courier.price !== null) rate = parseFloat(courier.price);
-                                    else if (courier.charges !== undefined && courier.charges !== null) rate = parseFloat(courier.charges);
-
-                                    // Extract ETA
-                                    let eta = 'N/A';
-                                    if (courier.eta !== undefined && courier.eta !== null) eta = courier.eta;
-                                    else if (courier.days !== undefined && courier.days !== null) eta = courier.days;
-                                    else if (courier.delivery_days !== undefined && courier.delivery_days !== null) eta = courier.delivery_days;
-                                    else if (courier.service_type) eta = courier.service_type;
-                                    else if (courier.tat) eta = courier.tat;
-
-                                    // Check if selected - use index as unique identifier
-                                    const isSelected = selectedCourier && selectedCourier._courierIndex === idx;
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            onClick={() => setSelectedCourier({
-                                                ...courier,
-                                                _courierIndex: idx,
-                                                _logisticsValue: logisticsValue,
-                                                _displayName: courierName
-                                            })}
-                                            style={{
-                                                padding: '16px',
-                                                border: isSelected ? '2px solid #4CAF50' : '1px solid #e0e0e0',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                marginBottom: '12px',
-                                                backgroundColor: isSelected ? '#f1f8f4' : '#fafafa',
-                                                transition: 'all 0.2s ease',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '16px'
-                                            }}
-                                        >
-                                            {/* Radio Button */}
-                                            <div style={{
-                                                width: '20px',
-                                                height: '20px',
-                                                borderRadius: '50%',
-                                                border: isSelected ? '2px solid #4CAF50' : '2px solid #ccc',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                flexShrink: 0,
-                                                backgroundColor: isSelected ? '#4CAF50' : 'transparent'
-                                            }}>
-                                                {isSelected && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
-                                            </div>
-
-                                            {/* Courier Details */}
-                                            <div style={{ flex: 1 }}>
-                                                <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '600', color: '#222' }}>
-                                                    {courierName}
-                                                </h4>
-                                                <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
-                                                    <div>
-                                                        <span style={{ color: '#666' }}>Rate: </span>
-                                                        <span style={{ fontWeight: '600', color: '#2196F3' }}>
-                                                            ₹{typeof rate === 'number' ? rate.toFixed(2) : rate}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <span style={{ color: '#666' }}>TAT: </span>
-                                                        <span style={{ fontWeight: '600', color: '#FF9800' }}>
-                                                            {typeof eta === 'number' ? `${eta} days` : eta}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <p style={{ marginTop: '12px', fontSize: '12px', color: '#999', textAlign: 'center' }}>
-                                Select a courier to proceed
-                            </p>
-                        </>
-                    ) : (
-                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                            <p style={{ color: '#f44336', fontWeight: '500', fontSize: '14px' }}>
-                                No couriers available for this order
-                            </p>
-                            <p style={{ color: '#999', fontSize: '12px', margin: '8px 0 0 0' }}>
-                                Please verify the order details and try again
-                            </p>
-                        </div>
-                    )}
+                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                        <p style={{ fontSize: '16px', color: '#333', marginBottom: '12px', fontWeight: '500' }}>
+                            🤖 Auto-Select Courier
+                        </p>
+                        <p style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>
+                            System will automatically select the best available courier:
+                        </p>
+                        <p style={{ color: '#2196F3', fontSize: '13px', marginBottom: '20px', fontWeight: '500' }}>
+                            Delhivery → Amazon → Xpressbees
+                        </p>
+                        <p style={{ color: '#999', fontSize: '12px' }}>
+                            Click "Sync Automatically" to proceed
+                        </p>
+                    </div>
                     <div className="modal-footer" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <Button
                             variant="secondary"
@@ -1454,27 +1283,10 @@ const Orders = () => {
                             Cancel
                         </Button>
                         <Button
-                            variant="outline"
-                            disabled={syncingWithCourier}
-                            onClick={syncWithSelectedCourier}
-                            title="Auto-selects first available courier (tries: Delhivery → Amazon → Xpressbees)"
-                        >
-                            {syncingWithCourier ? (
-                                <>
-                                    <span style={{ marginRight: '8px' }}>⏳</span>
-                                    Auto-selecting...
-                                </>
-                            ) : (
-                                <>
-                                    <span style={{ marginRight: '8px' }}>🤖</span>
-                                    Auto-Select Courier
-                                </>
-                            )}
-                        </Button>
-                        <Button
                             variant="primary"
-                            disabled={!selectedCourier || syncingWithCourier}
-                            onClick={syncWithSelectedCourier}
+                            disabled={syncingWithCourier}
+                            onClick={syncWithAutoSelect}
+                            title="Auto-selects first available courier (Delhivery → Amazon → Xpressbees)"
                         >
                             {syncingWithCourier ? (
                                 <>
@@ -1484,7 +1296,7 @@ const Orders = () => {
                             ) : (
                                 <>
                                     <span style={{ marginRight: '8px' }}>✓</span>
-                                    Sync with {selectedCourier ? (selectedCourier.logistics || selectedCourier.name || 'Selected Courier') : 'Selected Courier'}
+                                    Sync Automatically
                                 </>
                             )}
                         </Button>
