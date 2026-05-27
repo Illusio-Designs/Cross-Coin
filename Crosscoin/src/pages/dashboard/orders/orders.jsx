@@ -229,10 +229,46 @@ const Orders = () => {
     };
 
     const syncWithSelectedCourier = async () => {
-        if (!courierModalOrder || !selectedCourier) { showError('noSelection', 'Please select a courier'); return; }
+        if (!courierModalOrder) { showError('noOrder', 'Order not found'); return; }
         setSyncingWithCourier(true);
         try {
-            // Use the pre-extracted logistics value
+            // Auto-sync mode: no courier selected, system will try fallback
+            if (!selectedCourier) {
+                const result = await orderService.syncOrderWithCourier(courierModalOrder.id, {
+                    auto: true
+                });
+                if (result.success) {
+                    const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
+                    const courierUsed = result.data?.logistics || 'Auto-selected Courier';
+                    const awb = result.data?.order?.waybill || 'Generated';
+                    const labelUrl = result.data?.label?.pdfUrl;
+
+                    showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} auto-synced with ${courierUsed}! AWB: ${awb}`);
+
+                    // Auto-download label PDF if available
+                    if (labelUrl) {
+                        setTimeout(() => {
+                            try {
+                                window.open(labelUrl, '_blank');
+                            } catch (e) {
+                                console.error('Failed to open label:', e);
+                            }
+                        }, 500);
+                    }
+
+                    // Refresh orders and close modal
+                    await fetchOrders();
+                    setIsCourierModalOpen(false);
+                    setCourierModalOrder(null);
+                    setSelectedCourier(null);
+                } else {
+                    const errorMsg = result.error || 'Auto-sync failed for all couriers (tried: Delhivery, Amazon, Xpressbees)';
+                    showError('autoSyncFailed', `❌ ${errorMsg}`);
+                }
+                return;
+            }
+
+            // Manual sync: specific courier selected
             let logisticsName = selectedCourier._logisticsValue || '';
 
             // Convert to lowercase for iThink API
@@ -248,18 +284,17 @@ const Orders = () => {
                 s_type: selectedCourier.service_type || selectedCourier.s_type || ''
             });
             if (result.success) {
-                const providerLabel = result.data?.provider === 'ithink' ? 'iThink' : 'FShip';
                 const awb = result.data?.order?.waybill || 'Generated';
                 const displayName = selectedCourier._displayName || 'Selected Courier';
-                const manifestUrl = result.data?.manifest?.pdfUrl;
+                const labelUrl = result.data?.label?.pdfUrl;
 
-                showSuccess('orderSynced', `Order ${courierModalOrder.order_number} synced with ${displayName}! AWB: ${awb}`);
+                showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} synced with ${displayName}! AWB: ${awb}`);
 
-                // Auto-download manifest PDF if available
-                if (manifestUrl) {
+                // Auto-download label PDF if available
+                if (labelUrl) {
                     setTimeout(() => {
                         try {
-                            window.open(manifestUrl, '_blank');
+                            window.open(labelUrl, '_blank');
                         } catch (e) {
                             console.log('Could not open manifest URL:', e.message);
                         }
@@ -285,10 +320,11 @@ const Orders = () => {
                     fetchAllOrdersForStats();
                 }, 1000);
             } else {
-                showError('syncFailed', result.message || 'Failed to sync order with courier');
+                const errorMsg = result.error || result.message || 'Failed to sync order with courier';
+                showError('syncFailed', `❌ ${errorMsg}`);
             }
         } catch (error) {
-            showError('syncFailed', error.message || 'Failed to sync order with courier');
+            showError('syncFailed', `❌ ${error.message || 'Failed to sync order with courier'}`);
         } finally {
             setSyncingWithCourier(false);
         }
@@ -1405,7 +1441,7 @@ const Orders = () => {
                             </p>
                         </div>
                     )}
-                    <div className="modal-footer" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+                    <div className="modal-footer" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <Button
                             variant="secondary"
                             onClick={() => {
@@ -1416,6 +1452,24 @@ const Orders = () => {
                             }}
                         >
                             Cancel
+                        </Button>
+                        <Button
+                            variant="outline"
+                            disabled={syncingWithCourier}
+                            onClick={syncWithSelectedCourier}
+                            title="Auto-selects first available courier (tries: Delhivery → Amazon → Xpressbees)"
+                        >
+                            {syncingWithCourier ? (
+                                <>
+                                    <span style={{ marginRight: '8px' }}>⏳</span>
+                                    Auto-selecting...
+                                </>
+                            ) : (
+                                <>
+                                    <span style={{ marginRight: '8px' }}>🤖</span>
+                                    Auto-Select Courier
+                                </>
+                            )}
                         </Button>
                         <Button
                             variant="primary"
