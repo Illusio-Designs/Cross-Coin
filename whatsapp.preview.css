@@ -1,5 +1,5 @@
 /* ============================================================
-   WA STUDIO  Redesigned CRM Layout
+   WA STUDIO — Redesigned CRM Layout
    ============================================================ */
 
 :root {
@@ -34,7 +34,7 @@
   font-family: 'DM Sans', -apple-system, sans-serif;
 }
 
-/* ══ LEFT SIDEBAR ══ */
+/* â•Ââ•Â LEFT SIDEBAR â•Ââ•Â */
 .was-nav {
   width: 240px;
   flex-shrink: 0;
@@ -203,7 +203,7 @@
   color: #fff;
 }
 
-/* ══ MAIN AREA ══ */
+/* â•Ââ•Â MAIN AREA â•Ââ•Â */
 .was-main {
   flex: 1;
   display: flex;

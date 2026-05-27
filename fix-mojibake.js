@@ -28,40 +28,50 @@ function utf8Len(b) {
 function isCont(b) { return (b & 0xC0) === 0x80; }
 
 function fixOnce(text) {
+  // Token = { byte: 0xXX | undefined, ch: originalChar }
+  // byte is the Win1252-byte interpretation; ch is what to emit if we can't combine.
   const tokens = [];
   for (const ch of text) {
     const cp = ch.codePointAt(0);
     const b = toW1252Byte(cp);
-    if (b !== undefined) tokens.push({ type: 'byte', value: b });
-    else tokens.push({ type: 'char', value: ch });
+    tokens.push({ byte: b, ch: ch });
   }
   let out = '';
   let i = 0;
   while (i < tokens.length) {
     const t = tokens[i];
-    if (t.type === 'char') { out += t.value; i++; continue; }
-    const b0 = t.value;
-    const len = utf8Len(b0);
+    const b0 = t.byte;
+    const len = b0 !== undefined ? utf8Len(b0) : 0;
     if (len >= 2 && i + len <= tokens.length) {
       let ok = true;
       const bytes = [b0];
       for (let k = 1; k < len; k++) {
         const tk = tokens[i + k];
-        if (tk.type !== 'byte' || !isCont(tk.value)) { ok = false; break; }
-        bytes.push(tk.value);
+        if (tk.byte === undefined || !isCont(tk.byte)) { ok = false; break; }
+        bytes.push(tk.byte);
       }
       if (ok) {
         const buf = Buffer.from(bytes);
         const decoded = buf.toString('utf8');
         const reenc = Buffer.from(decoded, 'utf8');
         if (reenc.length === bytes.length && reenc.equals(buf)) {
-          out += decoded;
-          i += len;
-          continue;
+          // Only accept the recombination if the decoded result does NOT
+          // contain control chars (U+0080-U+009F) or replacement chars,
+          // and is materially different from the source chars.
+          let bad = false;
+          for (const dc of decoded) {
+            const dcp = dc.codePointAt(0);
+            if (dcp === 0xFFFD || (dcp >= 0x80 && dcp <= 0x9F)) { bad = true; break; }
+          }
+          if (!bad) {
+            out += decoded;
+            i += len;
+            continue;
+          }
         }
       }
     }
-    out += String.fromCodePoint(b0);
+    out += t.ch;
     i++;
   }
   return out;
