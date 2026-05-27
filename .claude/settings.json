@@ -24,7 +24,14 @@
       "Bash(FTP_SERVER=ftp.crosscoin.in FTP_USER=crosscoin FTP_PASSWORD=Rishi@1995 FTP_PORT=21 FTP_SECURE=explicit node -e ' *)",
       "Bash(rm -f stderr.log check-db.js worker.js)",
       "Bash(rm -rf logs/ docs/ tests/ uploads/ integration/)",
-      "Bash(xargs rm -f)"
+      "Bash(xargs rm -f)",
+      "Bash(node -e ' *)",
+      "Bash(npm list *)",
+      "Bash(node --check index.js)",
+      "Bash(node --check controller/orderShippingController.js)",
+      "Bash(node --check routes/orderRoutes.js)",
+      "Bash(test\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\K N Corporation\\\\Cross-Coin\" | Where-Object { $_.Name -match \"TEST|test\" } | Select-Object Name)"
     ]
   }
 }
