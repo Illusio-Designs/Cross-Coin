@@ -13,7 +13,7 @@ const {
     syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
     validateOrderForShipping, getAvailableCouriers, syncWithCourier,
-    generateManifest, downloadManifest,
+    generateLabel, downloadOrderLabel,
 } = require('../controller/orderShippingController.js');
 const {
     exportDeliveredOrders,
@@ -37,8 +37,8 @@ router.post('/fship/sync',              isAuthenticated, isOrderManager, syncOrd
 router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
-router.post('/manifest/generate',       isAuthenticated, isOrderManager, generateManifest);
-router.get('/manifest/download/:manifestId', isAuthenticated, isOrderManager, downloadManifest);
+router.post('/label/generate',          isAuthenticated, isOrderManager, generateLabel);
+router.get('/label/download/:labelId',  isAuthenticated, isOrderManager, downloadOrderLabel);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
 router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabelDownloadStats);
 router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDownloadLabels);

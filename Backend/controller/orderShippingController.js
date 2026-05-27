@@ -825,11 +825,11 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
     logger.debug('Full Result:', JSON.stringify(result, null, 2));
 
     if (result.success) {
-      // Generate/fetch manifest or label for waybill based on provider
+      // Generate/fetch label for waybill based on provider
       let labelUrl = result.labelUrl || null;
 
       if (result.waybill) {
-        logger.debug(`📄 Fetching manifest/label for waybill: ${result.waybill} (Provider: ${providerName})`);
+        logger.debug(`📄 Fetching label for waybill: ${result.waybill} (Provider: ${providerName})`);
         try {
           let labelData = null;
 
@@ -865,7 +865,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
             logger.debug('⚠️ Label/Manifest URL not found in response');
           }
         } catch (labelError) {
-          logger.error(`❌ Failed to fetch ${providerName} manifest/label:`, labelError.message);
+          logger.error(`❌ Failed to fetch ${providerName} label:`, labelError.message);
         }
       }
 
@@ -936,23 +936,23 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         }
       }
 
-      // Generate manifest automatically and get PDF URL
-      let manifestUrl = null;
-      let manifestId = null;
+      // Generate label automatically and get PDF URL
+      let labelUrl2 = null;
+      let labelId = null;
       try {
         if (result.waybill && typeof provider.getLabel === 'function') {
           logger.debug(`📑 Generating label for order ${order.order_number}...`);
-          const manifestResult = await provider.getLabel({ waybills: [result.waybill] });
-          if (manifestResult.success) {
-            manifestUrl = manifestResult.pdfUrl;
-            manifestId = manifestResult.manifestId;
-            logger.debug(`✅ Manifest generated. PDF URL: ${manifestUrl}`);
+          const labelResult = await provider.getLabel({ waybills: [result.waybill] });
+          if (labelResult.success) {
+            labelUrl2 = labelResult.pdfUrl;
+            labelId = labelResult.labelId;
+            logger.debug(`✅ Label generated. PDF URL: ${labelUrl2}`);
           } else {
-            logger.debug(`⚠️ Manifest generation failed: ${manifestResult.error}`);
+            logger.debug(`⚠️ Label generation failed: ${labelResult.error}`);
           }
         }
-      } catch (manifestErr) {
-        logger.debug(`⚠️ Could not generate manifest: ${manifestErr.message}`);
+      } catch (labelErr) {
+        logger.debug(`⚠️ Could not generate label: ${labelErr.message}`);
       }
 
       return {
@@ -960,8 +960,8 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         fship_order_id: result.orderId,
         waybill: result.waybill,
         route_code: result.routeCode,
-        manifestId: manifestId,
-        manifestUrl: manifestUrl
+        labelId: labelId,
+        labelUrl2: labelUrl2
       };
     } else {
       throw new Error(result.message || `Failed to create order in ${providerName}`);
@@ -1043,13 +1043,13 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
             await order.reload({ transaction });
             logger.debug(`💾 Manifest URL saved to database`);
           } catch (updateError) {
-            logger.error('❌ Failed to save manifest URL:', updateError.message);
+            logger.error('❌ Failed to save label URL:', updateError.message);
           }
         } else {
-          logger.debug(`⚠️ Could not fetch manifest URL`);
+          logger.debug(`⚠️ Could not fetch label URL`);
         }
       } else {
-        logger.debug(`⚠️ Order ID not found, cannot fetch manifest`);
+        logger.debug(`⚠️ Order ID not found, cannot fetch label`);
       }
     } else {
       logger.debug(`✓ Manifest URL already exists: ${order.fship_label_url}`);
@@ -1943,10 +1943,10 @@ module.exports.syncWithCourier = async (req, res) => {
             waybill: syncResult.waybill,
             action: syncResult.action
           },
-          manifest: syncResult.manifestId ? {
-            manifestId: syncResult.manifestId,
-            pdfUrl: syncResult.manifestUrl,
-            downloadUrl: syncResult.manifestUrl ? `/api/orders/manifest/download/${syncResult.manifestId}` : null
+          label: syncResult.labelId ? {
+            labelId: syncResult.labelId,
+            pdfUrl: syncResult.labelUrl2,
+            downloadUrl: syncResult.labelUrl2 ? `/api/orders/label/download/${syncResult.labelId}` : null
           } : null,
           result: syncResult
         }
@@ -1980,11 +1980,11 @@ module.exports.syncWithCourier = async (req, res) => {
 };
 
 /**
- * Generate manifest for selected orders
- * POST /api/orders/manifest/generate
+ * Generate label for selected orders
+ * POST /api/orders/label/generate
  * Body: { orderIds: [1, 2, 3, ...] }
  */
-module.exports.generateManifest = async (req, res) => {
+module.exports.generateLabel = async (req, res) => {
   try {
     const { orderIds } = req.body;
 
@@ -2029,68 +2029,68 @@ module.exports.generateManifest = async (req, res) => {
     // Get waybills
     const waybills = syncedOrders.map(o => o.Shipment?.waybill || o.fship_waybill).filter(Boolean);
 
-    logger.debug(`Generating manifest for ${waybills.length} orders via ${providerName}`);
+    logger.debug(`Generating label for ${waybills.length} orders via ${providerName}`);
 
     // Call provider to generate label
-    let manifestResult = null;
+    let labelResult = null;
     if (providerName === 'ithink' && typeof provider.getLabel === 'function') {
-      manifestResult = await provider.getLabel({ waybills });
+      labelResult = await provider.getLabel({ waybills });
     } else if (providerName === 'fship' && typeof provider.getManifest === 'function') {
-      manifestResult = await provider.getManifest({ waybills });
+      labelResult = await provider.getManifest({ waybills });
     } else {
-      // If provider doesn't have manifest generation, create a simple manifest document
-      manifestResult = {
+      // If provider doesn't have label generation, create a simple label document
+      labelResult = {
         success: true,
-        manifestId: `MANIFEST-${Date.now()}`,
+        labelId: `LABEL-${Date.now()}`,
         waybills: waybills,
         orderCount: waybills.length,
         generatedAt: new Date().toISOString(),
         pdfUrl: null,
-        message: 'Manifest prepared. Use waybills to generate label from provider dashboard.'
+        message: 'Label prepared. Use waybills to generate label from provider dashboard.'
       };
     }
 
-    if (manifestResult.success) {
+    if (labelResult.success) {
       return res.json({
         success: true,
-        message: `Manifest generated for ${waybills.length} orders`,
+        message: `Label generated for ${waybills.length} orders`,
         data: {
           provider: providerName,
-          manifestId: manifestResult.manifestId,
+          labelId: labelResult.labelId,
           waybills: waybills,
           orderCount: waybills.length,
-          pdfUrl: manifestResult.pdfUrl,
-          downloadUrl: manifestResult.pdfUrl ? `/api/orders/manifest/download/${manifestResult.manifestId}` : null
+          pdfUrl: labelResult.pdfUrl,
+          downloadUrl: labelResult.pdfUrl ? `/api/orders/label/download/${labelResult.labelId}` : null
         }
       });
     } else {
-      throw new Error(manifestResult.message || 'Failed to generate manifest');
+      throw new Error(labelResult.message || 'Failed to generate label');
     }
 
   } catch (error) {
-    logger.error('❌ GENERATE MANIFEST FAILED:', error);
+    logger.error('❌ GENERATE LABEL FAILED:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to generate manifest',
+      message: 'Failed to generate label',
       error: error.message
     });
   }
 };
 
 /**
- * Get manifest PDF
- * GET /api/orders/manifest/download/:manifestId
+ * Get order label PDF
+ * GET /api/orders/label/download/:labelId
  */
-module.exports.downloadManifest = async (req, res) => {
+module.exports.downloadOrderLabel = async (req, res) => {
   try {
-    const { manifestId } = req.params;
+    const { labelId } = req.params;
 
-    logger.debug(`=== DOWNLOAD MANIFEST ===`, { manifestId });
+    logger.debug(`=== DOWNLOAD LABEL ===`, { labelId });
 
     // For now, return a simple response
     // In production, you would:
-    // 1. Store manifests in a database
-    // 2. Fetch the manifest
+    // 1. Store labels in a database
+    // 2. Fetch the label
     // 3. Generate PDF if not already generated
     // 4. Send file
 
@@ -2103,7 +2103,7 @@ module.exports.downloadManifest = async (req, res) => {
     logger.error('❌ DOWNLOAD MANIFEST FAILED:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to download manifest',
+      message: 'Failed to download label',
       error: error.message
     });
   }

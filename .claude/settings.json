@@ -31,7 +31,24 @@
       "Bash(node --check controller/orderShippingController.js)",
       "Bash(node --check routes/orderRoutes.js)",
       "Bash(test\")",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\K N Corporation\\\\Cross-Coin\" | Where-Object { $_.Name -match \"TEST|test\" } | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\K N Corporation\\\\Cross-Coin\" | Where-Object { $_.Name -match \"TEST|test\" } | Select-Object Name)",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\docs\" -Force)",
+      "Bash(node --check Backend/docs/swagger.js)",
+      "Bash(node --check routes/cartRoutes.js)",
+      "Bash(node --check routes/cartRoutes.js routes/reviewRoutes.js)",
+      "Bash(node -e \"require\\('./routes/routesManager.js'\\)\")",
+      "Bash(node -e \"require\\('./routes/routesManager.js'\\); console.log\\('✅ All routes load successfully'\\)\")",
+      "Bash(grep -E \"\\\\\\('\\\\*'\\\\|\\\\\"\\\\\\\\*\\\\\"\\\\\\)\")",
+      "Bash(grep -rn \"'\\\\*'\" . --include=\"*.js\" ! -path \"./node_modules/*\")",
+      "Bash(grep -rn \"\\\\*\" . --include=\"*.js\" ! -path \"./node_modules/*\")",
+      "Bash(node -e \"require\\('./index.js'\\)\")",
+      "Bash(node -e \"console.log\\('Testing routes...'\\); require\\('./routes/routesManager.js'\\); console.log\\('✅ All routes and index.js load successfully'\\)\")",
+      "Bash(timeout 10 node index.js)",
+      "Bash(timeout 15 node index.js)",
+      "Bash(node index.js)",
+      "Bash(pkill -f \"node index.js\")",
+      "Bash(grep -rn \"manifest\\\\|Manifest\" . --include=\"*.js\" ! -path \"./node_modules/*\")",
+      "Bash(node --check controller/orderShippingController.js routes/orderRoutes.js)"
     ]
   }
 }
