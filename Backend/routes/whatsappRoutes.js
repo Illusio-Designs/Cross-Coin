@@ -47,7 +47,7 @@ router.post('/broadcasts',        isAuthenticated, isWhatsappManager, ctrl.creat
 router.post('/broadcasts/:id/run', isAuthenticated, isAdmin, ctrl.runBroadcast);
 
 // ── Media proxy (supports token via query param for browser audio/video/img tags) ──
-router.get('/media/:mediaId(*)', async (req, res, next) => {
+router.get('/media/:mediaId', async (req, res, next) => {
   // Allow token via query param so <audio src="..."> works in browser
   if (req.query.token && !req.headers.authorization) {
     req.headers.authorization = `Bearer ${req.query.token}`;
