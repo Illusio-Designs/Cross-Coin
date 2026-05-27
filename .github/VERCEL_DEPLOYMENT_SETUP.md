@@ -50,19 +50,24 @@ JEWELLERY_VERCEL_PROJECT  → jewellery project ID from Vercel
 
 ### Vercel Token:
 1. Go to https://vercel.com/account/tokens
-2. Create a new token (Name: "GitHub Actions", Scope: "Full Access")
-3. Copy the token value
+2. Click "Create New Token"
+3. Set Name: `GitHub Actions`
+4. Set Scope: `Full Access`
+5. Click Create and copy the token immediately (won't be shown again)
 
-### Vercel Organization ID:
-1. Go to https://vercel.com/account
-2. Look for "Team ID" or open your team/organization settings
-3. The ID will be visible in the dashboard or URL
+### Vercel Organization ID (Team ID):
+1. Go to https://vercel.com/account/teams
+2. Or go to any project Settings → General
+3. Look for "Team ID" in the settings
+4. Copy the ID
 
-### Project IDs:
-1. For each project on Vercel dashboard:
-2. Click on the project
-3. Go to Settings → General
-4. Copy the "Project ID" value
+### Project IDs (one per frontend project):
+1. Go to https://vercel.com/dashboard
+2. For EACH project (Crosscoin, Gripzus, Knitwink, Velmique, jewellery):
+   - Click on the project name
+   - Go to Settings → General
+   - Find "Project ID" field
+   - Copy and save it with the project name
 
 ## Vercel Project Configuration
 
@@ -107,21 +112,44 @@ Project deployed to Vercel (live)
 
 ## Troubleshooting
 
-### Deployment doesn't trigger:
-- Verify secrets are set correctly
-- Check that workflow file has correct project paths
-- Ensure commit changes match project directories
+### Error: "you forgot to specify `VERCEL_PROJECT_ID`"
+**Cause:** GitHub secret `CROSSCOIN_VERCEL_PROJECT` (or other project) is not configured
+**Fix:**
+1. Go to GitHub → Settings → Secrets and variables → Actions
+2. Check that ALL required secrets are added:
+   - `VERCEL_TOKEN` (not empty)
+   - `VERCEL_ORG_ID` (not empty)
+   - `CROSSCOIN_VERCEL_PROJECT` (not empty)
+   - Other project secrets as needed
+3. Re-run the deployment after adding/updating secrets
 
-### Deployment fails:
-- Check workflow logs: Actions → recent run → logs
-- Verify Vercel project settings (root directory, build command)
+### Deployment doesn't trigger:
+- Verify all secrets are set correctly (copy-paste carefully, no extra spaces)
+- Check that workflow file has correct project paths
+- Ensure commit changes match project directories (`Crosscoin/**`, `Gripzus/**`, etc.)
+- For manual trigger: ensure project name matches exactly (case-sensitive)
+
+### Deployment fails with build error:
+- Check workflow logs: GitHub → Actions → recent run → Logs
+- Verify Vercel project settings:
+  - Root Directory: `Crosscoin` (or project name)
+  - Framework: `Next.js`
+  - Build Command: `npm run build`
+  - Install Command: `npm ci`
 - Confirm `package.json` exists in project root
-- Check for build errors in Vercel logs
+- Check for build errors in Vercel dashboard logs
 
 ### Multiple projects deployed unintentionally:
-- This is expected if you modified multiple projects
-- Each project gets its own deployment
+- This is expected if you modified multiple projects in one commit
+- Each changed project gets its own deployment
 - Verify file changes didn't accidentally touch other projects
+- Use more focused commits (one project per commit) to avoid this
+
+### Secret shows as empty even though I set it:
+- Don't copy the GitHub secret name (e.g., `VERCEL_TOKEN`) as the value
+- Copy the actual secret VALUE from Vercel (the token itself)
+- Verify no extra spaces or newlines when pasting
+- Try deleting and re-creating the secret if it still fails
 
 ## Security Notes
 
