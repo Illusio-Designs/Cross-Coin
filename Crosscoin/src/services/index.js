@@ -2,6 +2,8 @@ import axios from "axios";
 import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
 import { validateListResponse, validateItemResponse, validatePaginatedResponse, getErrorMessage } from '../utils/apiResponseValidator';
 import { rateLimiter } from '../utils/rateLimiter';
+import { retryHandler } from '../utils/retryHandler';
+import { dataCache } from '../utils/dataCache';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
@@ -101,6 +103,13 @@ adminApi.interceptors.response.use(
         window.location.href = "/auth/adminlogin";
       }
     }
+
+    // Track errors for circuit breaker pattern
+    if (error.response?.status >= 500) {
+      const endpoint = error.config?.url || 'unknown';
+      retryHandler.getCircuitStatus(endpoint) || retryHandler.resetCircuit(endpoint);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -116,17 +125,28 @@ const handleApiError = (error) => {
   }
 };
 
-// Rate-limited API call wrapper - prevents API overload from rapid/duplicate requests
-const makeRateLimitedCall = async (endpoint, requestFn, dedupeKey = null) => {
+// Rate-limited + Retry API call wrapper
+// Prevents API overload AND handles transient failures with exponential backoff
+const makeRateLimitedCall = async (endpoint, requestFn, dedupeKey = null, enableRetry = true) => {
   // Wait for rate limit slot to be available
   await rateLimiter.waitForSlot(endpoint);
 
+  // Wrapper function that applies retry logic
+  const wrappedFn = enableRetry ? () => retryHandler.executeWithRetry(requestFn, {
+    maxRetries: 2, // 2 retries = 3 total attempts
+    onRetry: ({ attempt, maxRetries, delay, error }) => {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn(`API retry: ${endpoint} attempt ${attempt}/${maxRetries + 1} after ${Math.round(delay)}ms due to: ${error.message}`);
+      }
+    },
+  }) : requestFn;
+
   // If deduping key provided, use deduplication to prevent concurrent duplicates
   if (dedupeKey) {
-    return rateLimiter.deduplicateRequest(dedupeKey, requestFn);
+    return rateLimiter.deduplicateRequest(dedupeKey, wrappedFn);
   }
 
-  return requestFn();
+  return wrappedFn();
 };
 
 // Shipping Fee Services
@@ -229,14 +249,22 @@ export const shippingAddressService = {
 
 // Order Services
 export const orderService = {
-  getAllOrders: async (params = {}, signal = null) => {
+  getAllOrders: async (params = {}, signal = null, forceRefresh = false) => {
+    const cacheKey = JSON.stringify(params);
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = dataCache.get('/api/orders', params);
+      if (cached) return cached;
+    }
+
     return makeRateLimitedCall('/api/orders', async () => {
       try {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/orders", config);
         const validated = validatePaginatedResponse(response.data);
-        return {
+        const result = {
           orders: validated.items,
           data: validated.items,
           total: validated.total,
@@ -244,11 +272,20 @@ export const orderService = {
           pages: validated.pages,
           limit: validated.limit
         };
+        // Cache successful response
+        dataCache.set('/api/orders', result, params, 3 * 60 * 1000); // 3 min TTL
+        return result;
       } catch (error) {
-        if (error.name === 'CanceledError') return { orders: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        if (error.name === 'CanceledError') {
+          const emptyResult = { orders: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+          return emptyResult;
+        }
+        // Try to use stale cache on error
+        const stale = dataCache.getStale('/api/orders', params);
+        if (stale) return stale;
         throw new Error(getErrorMessage(error.response?.data || error.message));
       }
-    }, `orders_list_${JSON.stringify(params)}`);
+    }, `orders_list_${cacheKey}`);
   },
 
   getOrderById: async (id, signal = null) => {
@@ -653,14 +690,20 @@ export const orderService = {
 
 // Payment Services
 export const paymentService = {
-  getAllPayments: async (params = {}, signal = null) => {
+  getAllPayments: async (params = {}, signal = null, forceRefresh = false) => {
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = dataCache.get('/api/payments', params);
+      if (cached) return cached;
+    }
+
     return makeRateLimitedCall('/api/payments', async () => {
       try {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/payments", config);
         const validated = validatePaginatedResponse(response.data);
-        return {
+        const result = {
           payments: validated.items,
           data: validated.items,
           total: validated.total,
@@ -668,8 +711,17 @@ export const paymentService = {
           pages: validated.pages,
           limit: validated.limit
         };
+        // Cache successful response
+        dataCache.set('/api/payments', result, params, 3 * 60 * 1000); // 3 min TTL
+        return result;
       } catch (error) {
-        if (error.name === 'CanceledError') return { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        if (error.name === 'CanceledError') {
+          const emptyResult = { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+          return emptyResult;
+        }
+        // Try to use stale cache on error
+        const stale = dataCache.getStale('/api/payments', params);
+        if (stale) return stale;
         throw new Error(getErrorMessage(error.response?.data || error.message));
       }
     }, `payments_list_${JSON.stringify(params)}`);
@@ -1015,7 +1067,15 @@ export const productService = {
     }
   },
 
-  getAllProducts: async (page = 1, limit = 10, search = "", signal = null) => {
+  getAllProducts: async (page = 1, limit = 10, search = "", signal = null, forceRefresh = false) => {
+    const cacheParams = { page, limit, search: search || '' };
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = dataCache.get('/api/products', cacheParams);
+      if (cached) return cached;
+    }
+
     return makeRateLimitedCall('/api/products', async () => {
       try {
         const params = { page, limit, search };
@@ -1026,7 +1086,7 @@ export const productService = {
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/products", config);
         const validated = validatePaginatedResponse(response.data);
-        return {
+        const result = {
           products: validated.items,
           data: validated.items,
           total: validated.total,
@@ -1034,8 +1094,17 @@ export const productService = {
           pages: validated.pages,
           limit: validated.limit
         };
+        // Cache successful response
+        dataCache.set('/api/products', result, cacheParams, 3 * 60 * 1000); // 3 min TTL
+        return result;
       } catch (error) {
-        if (error.name === 'CanceledError') return { products: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+        if (error.name === 'CanceledError') {
+          const emptyResult = { products: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
+          return emptyResult;
+        }
+        // Try to use stale cache on error
+        const stale = dataCache.getStale('/api/products', cacheParams);
+        if (stale) return stale;
         throw new Error(getErrorMessage(error.response?.data || error.message));
       }
     }, `products_list_page${page}_limit${limit}_search${search}`);
@@ -1154,16 +1223,31 @@ export const couponService = {
     }
   },
 
-  getAllCoupons: async (signal = null) => {
+  getAllCoupons: async (signal = null, forceRefresh = false) => {
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = dataCache.get('/api/coupons');
+      if (cached) return cached;
+    }
+
     return makeRateLimitedCall('/api/coupons', async () => {
       try {
         const config = {};
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/coupons", config);
         const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
-        return { coupons, data: coupons };
+        const result = { coupons, data: coupons };
+        // Cache successful response
+        dataCache.set('/api/coupons', result, {}, 5 * 60 * 1000); // 5 min TTL
+        return result;
       } catch (error) {
-        if (error.name === 'CanceledError') return { coupons: [], data: [] };
+        if (error.name === 'CanceledError') {
+          const emptyResult = { coupons: [], data: [] };
+          return emptyResult;
+        }
+        // Try to use stale cache on error
+        const stale = dataCache.getStale('/api/coupons');
+        if (stale) return stale;
         throw new Error(getErrorMessage(error.response?.data || error.message));
       }
     }, 'coupons_list');
