@@ -40,6 +40,35 @@ async function resolveProviderForOrder(order) {
   return { service, name };
 }
 
+// ── Courier fallback helper: try Delhivery → Amazon → Xpressbees ────────
+async function autoSelectCourierWithFallback(order, provider, transaction = null) {
+  const couriers = ['delhivery', 'amazon', 'xpressbees'];
+  logger.debug(`🔄 Auto-selecting courier with fallback: ${couriers.join(' → ')}`);
+
+  for (const courier of couriers) {
+    try {
+      logger.debug(`📦 Attempting sync with ${courier}...`);
+      const syncResult = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', courier, 'surface');
+
+      if (syncResult.success) {
+        logger.info(`✅ Courier auto-selected: ${courier}`);
+        return { success: true, courier, result: syncResult };
+      } else {
+        logger.warn(`⚠️  ${courier} failed: ${syncResult.error}`);
+      }
+    } catch (error) {
+      logger.warn(`⚠️  ${courier} error: ${error.message}`);
+    }
+  }
+
+  logger.error(`❌ All couriers failed (delhivery, amazon, xpressbees)`);
+  return {
+    success: false,
+    courier: null,
+    error: 'No courier available — all failed (delhivery, amazon, xpressbees)'
+  };
+}
+
 // ── Dual-write helper: sync shipment data to order_shipments table ──────
 async function upsertShipment(orderId, data, transaction = null) {
   try {
@@ -1836,16 +1865,14 @@ module.exports.syncWithCourier = async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { logistics, s_type } = req.body;
+    let { logistics, s_type, auto } = req.body;
+    s_type = s_type || 'surface';
 
-    logger.debug(`=== SYNC WITH COURIER: Order ${id}, Logistics: ${logistics} ===`);
+    logger.debug(`=== SYNC WITH COURIER: Order ${id}, Logistics: ${logistics}, Auto: ${auto} ===`);
 
-    if (!logistics) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: 'Courier selection (logistics) is required'
-      });
+    // Auto mode: try couriers with fallback (Delhivery → Amazon → Xpressbees)
+    if (auto || !logistics) {
+      logger.debug(`🔄 Auto courier selection enabled`);
     }
 
     // Load the order
@@ -1922,18 +1949,40 @@ module.exports.syncWithCourier = async (req, res) => {
       });
     }
 
-    // Sync with selected courier
-    const syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName, logistics, s_type);
+    // Auto or manual sync
+    let syncResult;
+    let selectedCourier;
+
+    if (auto || !logistics) {
+      // Auto mode: try couriers with fallback (Delhivery → Amazon → Xpressbees)
+      const autoResult = await autoSelectCourierWithFallback(order, provider, transaction);
+      if (autoResult.success) {
+        syncResult = autoResult.result;
+        selectedCourier = autoResult.courier;
+      } else {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Failed to auto-select courier for order ${order.order_number}`,
+          error: autoResult.error
+        });
+      }
+    } else {
+      // Manual mode: sync with specified courier
+      syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName, logistics, s_type);
+      selectedCourier = logistics;
+    }
 
     if (syncResult.success) {
       await transaction.commit();
 
       return res.json({
         success: true,
-        message: `Order ${order.order_number} synced with ${logistics} via ${providerName}`,
+        message: `Order ${order.order_number} synced with ${selectedCourier} via ${providerName}`,
         data: {
           provider: providerName,
-          logistics: logistics,
+          logistics: selectedCourier,
+          auto: auto || !logistics,
           order: {
             id: order.id,
             order_number: order.order_number,
@@ -1962,7 +2011,7 @@ module.exports.syncWithCourier = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: `Failed to sync order ${order.order_number} with ${logistics}`,
+        message: `Failed to sync order ${order.order_number} with ${selectedCourier}`,
         error: syncResult.error
       });
     }
