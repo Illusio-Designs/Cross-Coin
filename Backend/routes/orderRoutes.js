@@ -37,10 +37,10 @@ router.post('/fship/sync',              isAuthenticated, isOrderManager, syncOrd
 router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
-router.post('/label/generate',          isAuthenticated, isOrderManager, generateLabel);
-router.get('/:id/label/generate',       isAuthenticated, isOrderManager, generateLabelForOrder);
-router.post('/:id/label/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
-router.get('/label/download/:labelId',  isAuthenticated, isOrderManager, downloadOrderLabel);
+router.post('/labels/generate',         isAuthenticated, isOrderManager, generateLabel);
+router.get('/:id/labels/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
+router.post('/:id/labels/generate',     isAuthenticated, isOrderManager, generateLabelForOrder);
+router.get('/labels/download/:labelId', isAuthenticated, isOrderManager, downloadOrderLabel);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
 router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabelDownloadStats);
 router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDownloadLabels);

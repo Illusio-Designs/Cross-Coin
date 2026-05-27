@@ -582,7 +582,7 @@ export const orderService = {
       // Call label generation endpoint instead of manifest
       if (Array.isArray(orderIds) && orderIds.length > 0) {
         const orderId = orderIds[0];
-        const response = await adminApi.post(`/api/orders/${orderId}/label/generate`, {}, { timeout: 30000 });
+        const response = await adminApi.post(`/api/orders/${orderId}/labels/generate`, {}, { timeout: 30000 });
         return response.data;
       }
       throw new Error('No order ID provided');
@@ -592,9 +592,9 @@ export const orderService = {
   },
 
   // Download manifest PDF
-  downloadManifest: async (manifestId) => {
+  downloadManifest: async (orderId) => {
     try {
-      const response = await adminApi.get(`/api/orders/manifest/download/${manifestId}`, {
+      const response = await adminApi.get(`/api/orders/${orderId}/labels/download`, {
         responseType: 'blob',
         timeout: 30000
       });
@@ -603,13 +603,13 @@ export const orderService = {
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `manifest_${manifestId}.pdf`);
+      link.setAttribute('download', `label_${orderId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      return { success: true, message: 'Manifest downloaded successfully' };
+      return { success: true, message: 'Label downloaded successfully' };
     } catch (error) {
       throw error.response?.data || error.message;
     }
