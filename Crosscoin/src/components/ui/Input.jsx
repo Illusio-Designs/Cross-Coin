@@ -20,8 +20,15 @@ const Input = forwardRef(({
   className = '',
   name,
   options = [],
+  ariaLabel = null,
+  ariaDescribedBy = null,
   ...props
 }, ref) => {
+  // Generate IDs for accessibility
+  const fieldId = name || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const errorId = error ? `${fieldId}-error` : null;
+  const helperId = helperText ? `${fieldId}-helper` : null;
+  const describedById = [ariaDescribedBy, errorId, helperId].filter(Boolean).join(' ') || undefined;
   const fieldCls = [
     'input-field',
     `input-${size}`,
@@ -43,28 +50,48 @@ const Input = forwardRef(({
   if (type === 'file') {
     return (
       <div className={containerCls}>
-        {label && <label className="input-label">{label}{required && <span className="input-required">*</span>}</label>}
+        {label && <label className="input-label" htmlFor={fieldId}>{label}{required && <span className="input-required" aria-label="required">*</span>}</label>}
         <div className="input-file-container">
           <div className="input-file-wrapper">
-            <input ref={ref} type="file" onChange={handleFileChange} accept={accept} required={required}
-              className="input-file-input" name={name} disabled={disabled} multiple {...props} />
-            <div className="input-file-placeholder">
+            <input
+              ref={ref}
+              id={fieldId}
+              type="file"
+              onChange={handleFileChange}
+              accept={accept}
+              required={required}
+              className="input-file-input"
+              name={name}
+              disabled={disabled}
+              aria-label={ariaLabel || label}
+              aria-invalid={!!error}
+              aria-describedby={describedById}
+              aria-required={required}
+              multiple
+              {...props}
+            />
+            <div className="input-file-placeholder" aria-live="polite">
               {Array.isArray(value) && value.length > 0
                 ? value.map((f, i) => f.name || (f.url && f.url.split('/').pop()) || `File ${i + 1}`).join(', ')
                 : (value && value.name) || placeholder || 'Choose a file'}
             </div>
-            <button type="button" className="input-file-button" disabled={disabled}>Browse</button>
+            <button type="button" className="input-file-button" disabled={disabled} aria-label="Browse files">Browse</button>
           </div>
           {Array.isArray(value) && value.length > 0 && (
-            <div className="input-file-preview-grid">
+            <div className="input-file-preview-grid" role="region" aria-label="File previews">
               {value.map((f, i) => (
-                <img key={i} src={f instanceof File ? URL.createObjectURL(f) : (f.url || f)}
-                  alt={`Preview ${i + 1}`} className="input-file-preview-image" />
+                <img
+                  key={i}
+                  src={f instanceof File ? URL.createObjectURL(f) : (f.url || f)}
+                  alt={`Preview of ${f.name || f.url?.split('/').pop() || 'file'}`}
+                  className="input-file-preview-image"
+                />
               ))}
             </div>
           )}
         </div>
-        {(error || helperText) && <div className={error ? 'input-error-text' : 'input-helper-text'}>{error || helperText}</div>}
+        {error && <div id={errorId} className="input-error-text" role="alert">{error}</div>}
+        {helperText && <div id={helperId} className="input-helper-text">{helperText}</div>}
       </div>
     );
   }
@@ -72,16 +99,30 @@ const Input = forwardRef(({
   if (type === 'select') {
     return (
       <div className={containerCls}>
-        {label && <label className="input-label">{label}{required && <span className="input-required">*</span>}</label>}
+        {label && <label className="input-label" htmlFor={fieldId}>{label}{required && <span className="input-required" aria-label="required">*</span>}</label>}
         <div className="input-wrapper">
-          {leftIcon && <span className="input-left-icon">{leftIcon}</span>}
-          <select ref={ref} value={value} onChange={onChange} required={required} disabled={disabled}
-            className={fieldCls} name={name} {...props}>
+          {leftIcon && <span className="input-left-icon" aria-hidden="true">{leftIcon}</span>}
+          <select
+            ref={ref}
+            id={fieldId}
+            value={value}
+            onChange={onChange}
+            required={required}
+            disabled={disabled}
+            className={fieldCls}
+            name={name}
+            aria-label={ariaLabel || label}
+            aria-invalid={!!error}
+            aria-describedby={describedById}
+            aria-required={required}
+            {...props}
+          >
             {options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          {rightIcon && <span className="input-right-icon">{rightIcon}</span>}
+          {rightIcon && <span className="input-right-icon" aria-hidden="true">{rightIcon}</span>}
         </div>
-        {(error || helperText) && <div className={error ? 'input-error-text' : 'input-helper-text'}>{error || helperText}</div>}
+        {error && <div id={errorId} className="input-error-text" role="alert">{error}</div>}
+        {helperText && <div id={helperId} className="input-helper-text">{helperText}</div>}
       </div>
     );
   }
@@ -89,26 +130,58 @@ const Input = forwardRef(({
   if (multiline) {
     return (
       <div className={containerCls}>
-        {label && <label className="input-label">{label}{required && <span className="input-required">*</span>}</label>}
+        {label && <label className="input-label" htmlFor={fieldId}>{label}{required && <span className="input-required" aria-label="required">*</span>}</label>}
         <div className="input-wrapper">
-          <textarea ref={ref} value={value} onChange={onChange} placeholder={placeholder} required={required}
-            disabled={disabled} className={fieldCls} rows={rows} name={name} {...props} />
+          <textarea
+            ref={ref}
+            id={fieldId}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            required={required}
+            disabled={disabled}
+            className={fieldCls}
+            rows={rows}
+            name={name}
+            aria-label={ariaLabel || label}
+            aria-invalid={!!error}
+            aria-describedby={describedById}
+            aria-required={required}
+            {...props}
+          />
         </div>
-        {(error || helperText) && <div className={error ? 'input-error-text' : 'input-helper-text'}>{error || helperText}</div>}
+        {error && <div id={errorId} className="input-error-text" role="alert">{error}</div>}
+        {helperText && <div id={helperId} className="input-helper-text">{helperText}</div>}
       </div>
     );
   }
 
   return (
     <div className={containerCls}>
-      {label && <label className="input-label">{label}{required && <span className="input-required">*</span>}</label>}
+      {label && <label className="input-label" htmlFor={fieldId}>{label}{required && <span className="input-required" aria-label="required">*</span>}</label>}
       <div className="input-wrapper">
-        {leftIcon && <span className="input-left-icon">{leftIcon}</span>}
-        <input ref={ref} type={type} value={value} onChange={onChange} placeholder={placeholder}
-          required={required} disabled={disabled} className={fieldCls} name={name} {...props} />
-        {rightIcon && <span className="input-right-icon">{rightIcon}</span>}
+        {leftIcon && <span className="input-left-icon" aria-hidden="true">{leftIcon}</span>}
+        <input
+          ref={ref}
+          id={fieldId}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          className={fieldCls}
+          name={name}
+          aria-label={ariaLabel || label}
+          aria-invalid={!!error}
+          aria-describedby={describedById}
+          aria-required={required}
+          {...props}
+        />
+        {rightIcon && <span className="input-right-icon" aria-hidden="true">{rightIcon}</span>}
       </div>
-      {(error || helperText) && <div className={error ? 'input-error-text' : 'input-helper-text'}>{error || helperText}</div>}
+      {error && <div id={errorId} className="input-error-text" role="alert">{error}</div>}
+      {helperText && <div id={helperId} className="input-helper-text">{helperText}</div>}
     </div>
   );
 });
