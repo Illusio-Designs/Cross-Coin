@@ -302,6 +302,87 @@ const setupDatabase = async () => {
       );
     }
 
+    // Pre-sync fix: ensure WhatsApp catalog columns exist before Sequelize
+    // attempts to use them during model sync
+    console.log("Ensuring WhatsApp catalog columns before sync...");
+    try {
+      // Check if products table exists and add whatsapp_synced column
+      const [productsTable] = await sequelize.query(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'products'
+      `);
+
+      if (productsTable.length) {
+        const [whatsappSyncedColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'products'
+            AND COLUMN_NAME = 'whatsapp_synced'
+        `);
+
+        if (!whatsappSyncedColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE products
+            ADD COLUMN whatsapp_synced BOOLEAN DEFAULT false COMMENT 'Whether this product has been synced to WhatsApp catalog'
+          `);
+          console.log("✓ Added whatsapp_synced column to products table");
+        }
+      }
+
+      // Check if product_variations table exists and add whatsapp_retailer_id column
+      const [variationsTable] = await sequelize.query(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'product_variations'
+      `);
+
+      if (variationsTable.length) {
+        const [whatsappRetailerIdColumn] = await sequelize.query(`
+          SELECT COLUMN_NAME
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'product_variations'
+            AND COLUMN_NAME = 'whatsapp_retailer_id'
+        `);
+
+        if (!whatsappRetailerIdColumn.length) {
+          await sequelize.query(`
+            ALTER TABLE product_variations
+            ADD COLUMN whatsapp_retailer_id VARCHAR(255) UNIQUE COMMENT 'WhatsApp product_retailer_id in format {productId}_{variationId}'
+          `);
+          console.log("✓ Added whatsapp_retailer_id column to product_variations table");
+        }
+
+        // Add index for whatsapp_retailer_id
+        const [whatsappIndex] = await sequelize.query(`
+          SELECT INDEX_NAME
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'product_variations'
+            AND INDEX_NAME = 'idx_whatsapp_retailer_id'
+        `);
+
+        if (!whatsappIndex.length) {
+          await sequelize.query(`
+            ALTER TABLE product_variations
+            ADD INDEX idx_whatsapp_retailer_id (whatsapp_retailer_id)
+          `);
+          console.log("✓ Added idx_whatsapp_retailer_id index to product_variations table");
+        }
+      }
+
+      console.log("✓ WhatsApp catalog columns ensured pre-sync");
+    } catch (whatsappPreSyncError) {
+      console.log(
+        "⚠️ Pre-sync WhatsApp catalog column fix skipped:",
+        whatsappPreSyncError.message
+      );
+    }
+
     // Sync all tables at once (this creates all tables and relationships)
     // Use force: false and alter: false to prevent constraint issues
     console.log("Syncing all tables...");

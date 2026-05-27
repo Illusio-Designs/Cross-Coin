@@ -48,7 +48,16 @@
       "Bash(node index.js)",
       "Bash(pkill -f \"node index.js\")",
       "Bash(grep -rn \"manifest\\\\|Manifest\" . --include=\"*.js\" ! -path \"./node_modules/*\")",
-      "Bash(node --check controller/orderShippingController.js routes/orderRoutes.js)"
+      "Bash(node --check controller/orderShippingController.js routes/orderRoutes.js)",
+      "Bash(node -c Crosscoin/src/pages/dashboard/orders/orders.jsx)",
+      "Bash(git restore *)",
+      "Bash(npx eslint *)",
+      "Bash(node -c src/pages/dashboard/whatsapp.jsx)",
+      "Bash(grep -E \"\\\\.\\(css|scss\\)$\")",
+      "Bash(node scripts/migrate-whatsapp-catalog.js)",
+      "Bash(Remove-Item -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\scripts\\\\001-add-whatsapp-sync-columns.sql\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\scripts\\\\migrate-whatsapp-catalog.js\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"✓ Temporary migration files removed\")"
     ]
   }
 }
