@@ -39,6 +39,7 @@ router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelO
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
 router.post('/label/generate',          isAuthenticated, isOrderManager, generateLabel);
 router.get('/:id/label/generate',       isAuthenticated, isOrderManager, generateLabelForOrder);
+router.post('/:id/label/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
 router.get('/label/download/:labelId',  isAuthenticated, isOrderManager, downloadOrderLabel);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
 router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabelDownloadStats);
