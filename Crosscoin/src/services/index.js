@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
+import { validateListResponse, validateItemResponse, validatePaginatedResponse, getErrorMessage } from '../utils/apiResponseValidator';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
@@ -217,18 +218,27 @@ export const orderService = {
   getAllOrders: async (params = {}) => {
     try {
       const response = await adminApi.get("/api/orders", { params });
-      return response.data;
+      const validated = validatePaginatedResponse(response.data);
+      return {
+        orders: validated.items,
+        data: validated.items,
+        total: validated.total,
+        page: validated.page,
+        pages: validated.pages,
+        limit: validated.limit
+      };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
   getOrderById: async (id) => {
     try {
       const response = await adminApi.get(`/api/orders/${id}`);
-      return response.data;
+      const order = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+      return order || {};
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
@@ -622,18 +632,27 @@ export const paymentService = {
   getAllPayments: async (params = {}) => {
     try {
       const response = await adminApi.get("/api/payments", { params });
-      return response.data;
+      const validated = validatePaginatedResponse(response.data);
+      return {
+        payments: validated.items,
+        data: validated.items,
+        total: validated.total,
+        page: validated.page,
+        pages: validated.pages,
+        limit: validated.limit
+      };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
   getPaymentById: async (id) => {
     try {
       const response = await adminApi.get(`/api/payments/${id}`);
-      return response.data;
+      const payment = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+      return payment || {};
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
@@ -738,21 +757,23 @@ export const userService = {
         return null;
       }
 
-      return response.data;
+      const user = validateItemResponse(response.data) || {};
+      return user.id ? user : null;
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
       }
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
   getProfile: async () => {
     try {
       const response = await adminApi.get("/api/users/profile");
-      return response.data;
+      const profile = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+      return profile || {};
     } catch (error) {
-      throw handleApiError(error);
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
@@ -962,19 +983,27 @@ export const productService = {
         delete params.search;
       }
       const response = await adminApi.get("/api/products", { params });
-      return response.data;
+      const validated = validatePaginatedResponse(response.data);
+      return {
+        products: validated.items,
+        data: validated.items,
+        total: validated.total,
+        page: validated.page,
+        pages: validated.pages,
+        limit: validated.limit
+      };
     } catch (error) {
-      handleApiError(error);
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
   getProduct: async (id) => {
     try {
       const response = await adminApi.get(`/api/products/${id}`);
-      // Return the data directly since the API response is already in the correct format
-      return response.data;
+      const product = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
+      return product || {};
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
@@ -1079,18 +1108,20 @@ export const couponService = {
   getAllCoupons: async () => {
     try {
       const response = await adminApi.get("/api/coupons");
-      return response.data;
+      const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
+      return { coupons, data: coupons };
     } catch (error) {
-      throw handleApiError(error);
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
   getCouponById: async (id) => {
     try {
       const response = await adminApi.get(`/api/coupons/${id}`);
-      return response.data;
+      const coupon = validateItemResponse(response.data, 'coupon') || validateItemResponse(response.data, 'data');
+      return coupon || {};
     } catch (error) {
-      throw handleApiError(error);
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 
