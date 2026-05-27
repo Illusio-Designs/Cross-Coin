@@ -63,7 +63,8 @@
       "Bash(cat)",
       "Bash(bash /tmp/audit.sh)",
       "Bash(grep -E \"\\\\.\\(js|ts\\)$\")",
-      "Bash(grep \":0$\")"
+      "Bash(grep \":0$\")",
+      "Bash(dir \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\\\\src\\\\pages\\\\dashboard\" /s /b)"
     ]
   }
 }

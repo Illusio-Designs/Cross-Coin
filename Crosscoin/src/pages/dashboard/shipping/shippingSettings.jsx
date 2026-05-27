@@ -72,6 +72,7 @@ export function ShippingSettingsManager() {
   const [warehousesPreview, setWarehousesPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [reveal, setReveal] = useState({}); // { key: bool }
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchBrands(); }, []);
   useEffect(() => { if (selectedBrandId) loadSettings(); }, [selectedBrandId]);
@@ -278,6 +279,13 @@ export function ShippingSettingsManager() {
           />
         </div>
       </div>
+
+      {error && (
+        <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+        </div>
+      )}
 
       {loading ? (
         <Loader />
