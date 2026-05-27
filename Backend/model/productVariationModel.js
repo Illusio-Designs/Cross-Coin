@@ -41,6 +41,12 @@ const ProductVariation = sequelize.define('ProductVariation', {
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         defaultValue: 'active'
+    },
+    whatsapp_retailer_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+        comment: 'WhatsApp product_retailer_id in format "{productId}_{variationId}"'
     }
 }, {
     tableName: 'product_variations',

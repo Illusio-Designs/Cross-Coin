@@ -494,6 +494,7 @@ export function WhatsAppManager() {
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [syncCatalogLoading, setSyncCatalogLoading] = useState(false);
   // Canned Responses
   const [cannedResponses, setCannedResponses] = useState([]);
   const [cannedLoading, setCannedLoading] = useState(false);
@@ -568,6 +569,24 @@ export function WhatsAppManager() {
       }
     } catch (e) { showError('loadingFailed', e.message || 'Failed to seed templates'); }
     setSeedLoading(false);
+  };
+
+  const syncProductsCatalog = async () => {
+    setSyncCatalogLoading(true);
+    try {
+      const data = await whatsappService.syncProductsCatalog(brandId);
+      if (data.success) {
+        const { synced, skipped, errors } = data;
+        if (errors.length > 0) {
+          showError('syncFailed', `Synced: ${synced} · Skipped: ${skipped} · Failed: ${errors.length}`);
+        } else {
+          showSuccess('synced', `Synced: ${synced} · Skipped: ${skipped}`);
+        }
+      } else {
+        showError('syncFailed', data.message || 'Failed to sync products');
+      }
+    } catch (e) { showError('syncFailed', e.message || 'Failed to sync products to WhatsApp catalog'); }
+    setSyncCatalogLoading(false);
   };
 
   const createTemplate = async (e) => {
@@ -1002,10 +1021,16 @@ export function WhatsAppManager() {
               <div className="was-page-head">
                 <h2 className="was-page-title">Dashboard</h2>
                 <span className="was-page-sub">CrossCoin Â· WhatsApp Overview</span>
-                <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
-                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
-                  {seedLoading ? 'Seeding...' : 'Seed Templates'}
-                </button>
+                <div style={{display:'flex', gap:8}}>
+                  <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
+                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
+                    {seedLoading ? 'Seeding...' : 'Seed Templates'}
+                  </button>
+                  <button className="was-btn-secondary" onClick={syncProductsCatalog} disabled={syncCatalogLoading} title="Sync all active products to WhatsApp catalog">
+                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
+                    {syncCatalogLoading ? 'Syncing...' : 'Sync Products'}
+                  </button>
+                </div>
               </div>
 
               {/* Stats */}

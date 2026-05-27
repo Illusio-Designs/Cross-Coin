@@ -97,6 +97,11 @@ const Product = sequelize.define('Product', {
             key: 'id'
         },
         onUpdate: 'CASCADE'
+    },
+    whatsapp_synced: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        comment: 'Whether this product has been synced to WhatsApp catalog'
     }
 }, {
     tableName: 'products',

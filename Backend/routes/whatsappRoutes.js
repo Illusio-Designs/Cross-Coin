@@ -65,4 +65,7 @@ router.post('/canned-responses/seed', isAuthenticated, isAdmin, ctrl.seedCannedR
 router.post('/conversations/:id/send-product',   isAuthenticated, isWhatsappManager, ctrl.sendProduct);
 router.post('/conversations/:id/send-catalogue', isAuthenticated, isWhatsappManager, ctrl.sendCatalogue);
 
+// Sync products to WhatsApp catalog
+router.post('/products/sync-catalog', isAuthenticated, isAdmin, ctrl.syncProductsCatalog);
+
 module.exports = router;
