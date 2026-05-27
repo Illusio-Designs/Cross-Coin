@@ -2243,8 +2243,9 @@ module.exports.generateLabelForOrder = async (req, res) => {
 };
 
 /**
- * Get order label PDF
+ * Get order label PDF by labelId (redirects to orderId-based endpoint)
  * GET /api/orders/label/download/:labelId
+ * Format: LABEL-{orderId}-{timestamp}
  */
 module.exports.downloadOrderLabel = async (req, res) => {
   try {
@@ -2252,20 +2253,28 @@ module.exports.downloadOrderLabel = async (req, res) => {
 
     logger.debug(`=== DOWNLOAD LABEL ===`, { labelId });
 
-    // For now, return a simple response
-    // In production, you would:
-    // 1. Store labels in a database
-    // 2. Fetch the label
-    // 3. Generate PDF if not already generated
-    // 4. Send file
+    // Extract orderId from labelId (format: LABEL-{orderId}-{timestamp})
+    const match = labelId.match(/^LABEL-(\d+)-/);
+    if (!match) {
+      logger.warn(`Invalid labelId format: ${labelId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid label ID format. Expected format: LABEL-{orderId}-{timestamp}'
+      });
+    }
 
-    return res.status(501).json({
-      success: false,
-      message: 'Manifest PDF download will be available soon. Use your provider dashboard to download.'
-    });
+    const orderId = match[1];
+    logger.debug(`Redirecting to orderId: ${orderId}`);
+
+    // Forward to the correct endpoint
+    req.params.orderId = orderId;
+
+    // Import the orderLabelController to use its downloadLabel function
+    const { downloadLabel } = require('./orderLabelController.js');
+    return await downloadLabel(req, res);
 
   } catch (error) {
-    logger.error('❌ DOWNLOAD MANIFEST FAILED:', error);
+    logger.error('❌ DOWNLOAD LABEL FAILED:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to download label',

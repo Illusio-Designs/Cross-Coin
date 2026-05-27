@@ -57,7 +57,12 @@
       "Bash(node scripts/migrate-whatsapp-catalog.js)",
       "Bash(Remove-Item -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\scripts\\\\001-add-whatsapp-sync-columns.sql\" -Force -ErrorAction SilentlyContinue)",
       "Bash(Remove-Item -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\scripts\\\\migrate-whatsapp-catalog.js\" -Force -ErrorAction SilentlyContinue)",
-      "Bash(Write-Output \"✓ Temporary migration files removed\")"
+      "Bash(Write-Output \"✓ Temporary migration files removed\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\\\\routes\" -Filter \"*.js\")",
+      "Bash(Select-Object Name)",
+      "Bash(cat)",
+      "Bash(bash /tmp/audit.sh)",
+      "Bash(grep -E \"\\\\.\\(js|ts\\)$\")"
     ]
   }
 }

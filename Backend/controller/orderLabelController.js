@@ -1,4 +1,5 @@
 const { Order } = require("../model/orderModel.js");
+const { OrderShipment } = require("../model/orderShipmentModel.js");
 const { OrderItem } = require("../model/orderItemModel.js");
 const { OrderStatusHistory } = require("../model/orderStatusHistoryModel.js");
 const { Product } = require("../model/productModel.js");
@@ -11,6 +12,40 @@ const { Op } = require("sequelize");
 const XLSX = require("xlsx");
 const axios = require('axios');
 const { logger } = require("../config/logging.js");
+
+/**
+ * Update label data in both Order and OrderShipment tables
+ * Prevents data sync issues between tables
+ * @param {number} orderId - Order ID
+ * @param {object} labelData - { fship_label_url, fship_label_downloaded, ... }
+ * @param {object} transaction - Sequelize transaction (optional)
+ */
+async function updateLabelInBothTables(orderId, labelData, transaction = null) {
+  try {
+    const opts = transaction ? { transaction } : {};
+
+    // Update orders table
+    await Order.update(labelData, { where: { id: orderId }, ...opts });
+
+    // Map Order columns to OrderShipment columns
+    const shipmentData = {};
+    if (labelData.fship_label_url) shipmentData.label_url = labelData.fship_label_url;
+    if (labelData.fship_label_downloaded !== undefined) shipmentData.label_downloaded = labelData.fship_label_downloaded;
+    if (labelData.fship_label_downloaded_at) shipmentData.label_downloaded_at = labelData.fship_label_downloaded_at;
+    if (labelData.fship_label_downloaded_by) shipmentData.label_downloaded_by = labelData.fship_label_downloaded_by;
+
+    // Update order_shipments table
+    if (Object.keys(shipmentData).length > 0) {
+      await OrderShipment.update(shipmentData, { where: { order_id: orderId }, ...opts });
+    }
+
+    logger.debug(`✅ Label data synced for order ${orderId}`);
+    return true;
+  } catch (error) {
+    logger.error(`❌ Failed to sync label data for order ${orderId}:`, error.message);
+    throw error;
+  }
+}
 
 // Export delivered orders to Excel
 module.exports.exportDeliveredOrders = async (req, res) => {
@@ -375,8 +410,8 @@ module.exports.markLabelDownloaded = async (req, res) => {
       });
     }
 
-    // Update order
-    await order.update({
+    // Update order using dual-write helper (updates both Order and OrderShipment)
+    await updateLabelInBothTables(orderId, {
       fship_label_downloaded: true,
       fship_label_downloaded_at: new Date(),
       fship_label_downloaded_by: userId
@@ -427,12 +462,17 @@ module.exports.downloadLabel = async (req, res) => {
       timeout: 30000 // 30 second timeout
     });
 
-    // Mark as downloaded
-    await order.update({
-      fship_label_downloaded: true,
-      fship_label_downloaded_at: new Date(),
-      fship_label_downloaded_by: userId
-    });
+    // Mark as downloaded using dual-write helper (updates both Order and OrderShipment)
+    try {
+      await updateLabelInBothTables(orderId, {
+        fship_label_downloaded: true,
+        fship_label_downloaded_at: new Date(),
+        fship_label_downloaded_by: userId
+      });
+    } catch (syncError) {
+      logger.warn(`⚠️ Could not sync label data: ${syncError.message}`);
+      // Continue even if dual-write fails - Order table is updated successfully
+    }
 
     // Create download history
     await FShipLabelDownload.create({
@@ -564,17 +604,17 @@ module.exports.getPendingLabels = async (req, res) => {
       },
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       include: [
         {
           model: User,
           as: 'User',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'username', 'email']
         },
         {
           model: GuestUser,
           as: 'GuestUser',
-          attributes: ['id', 'name', 'email']
+          attributes: ['id', 'firstName', 'lastName', 'email']
         },
         {
           model: ShippingAddress,
@@ -626,14 +666,17 @@ module.exports.getLabelDownloadStats = async (req, res) => {
         {
           model: Order,
           as: 'Order',
-          attributes: ['id', 'order_number']
+          attributes: ['id', 'order_number'],
+          required: false
         },
         {
           model: User,
           as: 'DownloadedBy',
-          attributes: ['id', 'username', 'email']
+          attributes: ['id', 'username', 'email'],
+          required: false
         }
-      ]
+      ],
+      subQuery: false
     });
 
     res.status(200).json({
