@@ -6,7 +6,7 @@ import OrderStatusBadge from "../../../components/ui/OrderStatusBadge";
 import ShipmentStatusBadge from "../../../components/ui/ShipmentStatusBadge";
 import LabelStatusBadge from "../../../components/ui/LabelStatusBadge";
 import SafeImage from "../../../components/common/SafeImage";
-import Loader from "../../../components/common/Loader";
+import { TableSkeleton } from "../../../components/common/SkeletonLoader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
@@ -939,7 +939,9 @@ const Orders = () => {
                 {/* Table Section */}
                 <div className="sl-table-wrap">
                     {loading ? (
-                        <div className="orders-loader-wrap"><Loader /></div>
+                        <div style={{ padding: '20px' }}>
+                            <TableSkeleton rows={itemsPerPage} columns={8} />
+                        </div>
                     ) : orders.length === 0 ? (
                         <div className="sl-empty">
                             <div className="sl-empty-icon">

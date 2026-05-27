@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
+import { TableSkeleton } from "../../../components/common/SkeletonLoader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { productService } from "../../../services";
 import { categoryService } from "../../../services";
@@ -1369,8 +1370,8 @@ const ProductsPage = () => {
       {/* Table Section */}
       <div className="sl-table-wrap">
         {loading ? (
-          <div className="sl-loader-wrap">
-            <Loader />
+          <div style={{ padding: '20px' }}>
+            <TableSkeleton rows={itemsPerPage} columns={6} />
           </div>
         ) : (
           <>
