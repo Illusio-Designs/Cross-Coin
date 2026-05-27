@@ -2773,6 +2773,30 @@
   background: #e1bee7;
 }
 
+.order-manifest-btn {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.order-manifest-btn:hover:not(.disabled) {
+  background: #ffe0b2;
+}
+
+.order-manifest-btn.disabled {
+  background: #f5f5f5;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.order-confirm-btn {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.order-confirm-btn:hover {
+  background: #c8e6c9;
+}
+
 /* Export section */
 .orders-export-section {
   display: flex;

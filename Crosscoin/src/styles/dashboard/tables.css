@@ -190,3 +190,23 @@
   .common-table thead th { padding: 6px 8px; font-size: 10px; }
   .common-table td { padding: 6px 8px; }
 }
+
+/* ── Row Highlighting and Status Borders ── */
+
+@keyframes rowHighlight {
+  0% { background-color: rgba(33, 150, 243, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.tbl-row {
+  transition: background-color 0.3s ease, border-left-color 0.2s ease;
+}
+
+.tbl-row[style*="background-color: rgba"] {
+  animation: rowHighlight 2.5s ease-out forwards;
+}
+
+/* Row status indicators — left border colors */
+.tbl-row[style*="border-left"] {
+  border-left: 2px solid #e5e7eb;
+}

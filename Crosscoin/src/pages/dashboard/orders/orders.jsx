@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { orderService, dashboardService, brandService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import Tooltip from "../../../components/ui/Tooltip";
+import OrderStatusBadge from "../../../components/ui/OrderStatusBadge";
+import ShipmentStatusBadge from "../../../components/ui/ShipmentStatusBadge";
+import LabelStatusBadge from "../../../components/ui/LabelStatusBadge";
 import SafeImage from "../../../components/common/SafeImage";
 import Loader from "../../../components/common/Loader";
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -65,6 +68,8 @@ const Orders = () => {
     const [selectedCourier, setSelectedCourier] = useState(null);
     const [syncingWithCourier, setSyncingWithCourier] = useState(false);
     const [generatingManifest, setGeneratingManifest] = useState(new Set());
+    const [highlightedRows, setHighlightedRows] = useState(new Set());
+    const [labelPollTimer, setLabelPollTimer] = useState(null);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -243,6 +248,9 @@ const Orders = () => {
 
                 showSuccess('orderSynced', `✅ Order ${courierModalOrder.order_number} synced with ${courierUsed}! AWB: ${awb}`);
 
+                // Highlight the row for visual feedback
+                highlightRow(courierModalOrder.id);
+
                 // Auto-download label PDF if available
                 if (labelUrl) {
                     setTimeout(() => {
@@ -280,10 +288,12 @@ const Orders = () => {
             const result = await orderService.generateManifest([orderId]);
             if (result.success) {
                 showSuccess('manifestGenerated', `Manifest generated for order! Waybills: ${result.data.waybills.join(', ')}`);
+                highlightRow(orderId);
                 // You can store manifest info or download it if URL available
                 if (result.data.pdfUrl) {
                     // window.open(result.data.pdfUrl, '_blank');
                 }
+                fetchOrders();
             } else {
                 showError('manifestFailed', result.message || 'Failed to generate manifest');
             }
@@ -331,6 +341,7 @@ const Orders = () => {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) {
                 showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
+                highlightRow(orderId);
                 // Refresh orders to get updated status
                 await fetchOrders();
                 await fetchAllOrdersForStats();
@@ -361,7 +372,12 @@ const Orders = () => {
         setCancelPrompt(null);
         try {
             const result = await orderService.adminCancelOrder(orderId, reason);
-            if (result.success) { showSuccess('orderCancelled', `Order ${orderNumber} cancelled successfully`); fetchOrders(); fetchAllOrdersForStats(); }
+            if (result.success) {
+                showSuccess('orderCancelled', `Order ${orderNumber} cancelled successfully`);
+                highlightRow(orderId);
+                fetchOrders();
+                fetchAllOrdersForStats();
+            }
             else { showError('saveFailed', result.message || 'Failed to cancel order'); }
         } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to cancel order'); }
     };
@@ -375,6 +391,7 @@ const Orders = () => {
         try {
             await orderService.updateAwbNumber(awbOrderId, { awbNumber: awbNumber.trim(), courierName: courierName.trim() || 'Manual Entry' });
             showSuccess('awbUpdated', 'AWB number updated successfully!');
+            highlightRow(awbOrderId);
             setIsAwbModalOpen(false); setAwbNumber(''); setCourierName(''); setAwbOrderId(null);
             fetchOrders(currentPage);
         } catch (error) { showError('updateFailed', error.message || 'Failed to update AWB number'); }
@@ -435,6 +452,16 @@ const Orders = () => {
         brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data || []); }).catch(() => {});
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Real-time polling for label status (every 30 seconds)
+    useEffect(() => {
+        const timer = setInterval(() => {
+            fetchLabelStats();
+            if (!loading) fetchOrders(currentPage);
+        }, 30000);
+        setLabelPollTimer(timer);
+        return () => clearInterval(timer);
+    }, [currentPage, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Stats panel re-fetches when its date range changes
     useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -449,6 +476,30 @@ const Orders = () => {
     useEffect(() => { fetchOrders(currentPage); }, [fetchOrders, currentPage]);
 
     const handleSearchChange = (e) => setFilterValue(e.target.value);
+
+    const highlightRow = (orderId) => {
+        setHighlightedRows(prev => new Set(prev).add(orderId));
+        setTimeout(() => {
+            setHighlightedRows(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(orderId);
+                return newSet;
+            });
+        }, 2500);
+    };
+
+    const getRowBorderColor = (status) => {
+        const borderColorMap = {
+            confirmed: '#10b981',
+            processing: '#2196f3',
+            booked: '#10b981',
+            'in transit': '#06b6d4',
+            delivered: '#10b981',
+            'pending sync': '#f59e0b',
+            'failed sync': '#ef4444'
+        };
+        return borderColorMap[status?.toLowerCase()] || '#e5e7eb';
+    };
 
     const formatDate = (dateString) => {
         const d = new Date(dateString);
@@ -523,74 +574,69 @@ const Orders = () => {
         { header: "Payment Type", cell: (row) => formatPaymentType(row.payment_type), width: "100px" },
         { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>, width: "120px" },
         { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
-        { header: "Order Status", cell: (row) => <span className={`status-badge status-${getStatusClassName(row.status)}`}>{getStatusDisplayText(row.status)}</span>, width: "160px" },
+        { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "160px" },
         {
-            header: "Shipping Sync",
+            header: "Shipment Status",
             cell: (row) => {
-                // Prefer the shipment row (new source of truth) and fall back to legacy fship_* columns
                 const s = row.Shipment || {};
-                const providerName = (s.provider || (row.fship_order_id || row.fship_waybill ? 'fship' : null));
-                const providerLabel = providerName === 'ithink' ? 'iThink' : providerName === 'fship' ? 'FShip' : null;
-                const waybill = s.waybill || row.fship_waybill;
-                const courier = s.courier_name || row.courier_name;
+                const status = s.sync_status || (row.fship_order_id || row.fship_waybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
-                const isSynced = (s.sync_status === 'synced') || row.fship_order_id || row.fship_waybill;
-
-                if (isSynced) {
-                    return (
-                        <span className="sync-tag sync-tag--synced">
-                            <span className="sync-tag-dot" />
-                            <span className="sync-tag-text">
-                                Synced{providerLabel ? ` · ${providerLabel}` : ''}
-                                {waybill && <small className="sync-tag-awb">AWB: {waybill}</small>}
-                                {courier && <small className="sync-tag-courier">{courier}</small>}
-                            </span>
-                        </span>
-                    );
-                }
-                if (syncError) {
-                    return (
-                        <span className="sync-tag sync-tag--error" title={syncError}>
-                            <span className="sync-tag-dot" />
-                            <span className="sync-tag-text">
-                                Sync Failed{providerLabel ? ` · ${providerLabel}` : ''}
-                                <small className="sync-tag-error">{syncError.length > 40 ? syncError.slice(0, 40) + '…' : syncError}</small>
-                            </span>
-                        </span>
-                    );
-                }
-                return (
-                    <span className="sync-tag sync-tag--unsynced">
-                        <span className="sync-tag-dot" />
-                        Not Synced
-                    </span>
-                );
-            }
+                return <ShipmentStatusBadge status={status} syncError={syncError} />;
+            },
+            width: "150px"
         },
         {
-            header: "Label",
+            header: "AWB",
             cell: (row) => {
-                if (row.fship_label_url) {
-                    const isDownloaded = row.fship_label_downloaded;
+                const waybill = row.Shipment?.waybill || row.fship_waybill;
+                const courier = row.Shipment?.courier_name || row.courier_name;
+                if (waybill) {
                     return (
-                        <div className="label-cell">
-                            <Tooltip text="Download shipping label PDF for printing" position="top">
-                                <button onClick={() => handleLabelDownload(row.id, row.fship_label_url)}
-                                    className={`download-label-link${isDownloaded ? ' downloaded' : ''}`}>
-                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                {isDownloaded ? 'Downloaded' : 'Download'}
-                            </button>
-                            </Tooltip>
-                            {isDownloaded && row.fship_label_downloaded_at && (
-                                <span className="label-date">{new Date(row.fship_label_downloaded_at).toLocaleDateString()}</span>
-                            )}
+                        <div style={{ fontSize: '12px' }}>
+                            <div style={{ fontWeight: '500', color: '#2196f3' }}>{waybill}</div>
+                            {courier && <div style={{ color: '#999', fontSize: '11px' }}>({courier})</div>}
                         </div>
                     );
                 }
-                return <span className="label-none">No Label</span>;
-            }
+                return <span style={{ color: '#999', fontSize: '12px' }}>—</span>;
+            },
+            width: "140px"
+        },
+        {
+            header: "Label Status",
+            cell: (row) => {
+                const hasLabel = row.Shipment?.label_url || row.fship_label_url;
+                const labelDownloadedAt = row.Shipment?.label_downloaded_at || row.fship_label_downloaded_at;
+                return (
+                    <Tooltip text={hasLabel ? (labelDownloadedAt ? "Label downloaded" : "Click to download label") : "No label available"} position="top">
+                        <div onClick={() => hasLabel && !labelDownloadedAt && handleLabelDownload(row.id, hasLabel)}
+                            style={{ cursor: (hasLabel && !labelDownloadedAt) ? 'pointer' : 'default' }}>
+                            <LabelStatusBadge hasLabel={hasLabel} downloadedAt={labelDownloadedAt} />
+                        </div>
+                    </Tooltip>
+                );
+            },
+            width: "150px"
+        },
+        {
+            header: "Last Updated",
+            cell: (row) => {
+                const lastUpdate = row.updatedAt || row.Shipment?.updatedAt;
+                if (!lastUpdate) return <span style={{ color: '#999', fontSize: '12px' }}>—</span>;
+                const date = new Date(lastUpdate);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                let timeAgo = '';
+                if (diffMins < 1) timeAgo = 'Just now';
+                else if (diffMins < 60) timeAgo = `${diffMins}m ago`;
+                else if (diffHours < 24) timeAgo = `${diffHours}h ago`;
+                else timeAgo = `${diffDays}d ago`;
+                return <span style={{ fontSize: '12px', color: '#666' }} title={date.toLocaleString()}>{timeAgo}</span>;
+            },
+            width: "100px"
         },
         {
             header: "Actions",
@@ -647,8 +693,7 @@ const Orders = () => {
                         )}
                         {(['awaiting_confirmation', 'pending'].includes(row.status)) && (
                             <Tooltip text="Confirm order and proceed to shipping" position="top">
-                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}
-                                    style={{ background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
+                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
                                     ✓
                                 </button>
                             </Tooltip>
@@ -942,7 +987,21 @@ const Orders = () => {
                         </div>
                     ) : (
                         <>
-                            <Table columns={columns} data={currentItemsWithSN} striped={true} hoverable={true} />
+                            <Table
+                                columns={columns}
+                                data={currentItemsWithSN}
+                                striped={true}
+                                hoverable={true}
+                                getRowStyle={(row) => {
+                                    const borderColor = getRowBorderColor(row.status);
+                                    const isHighlighted = highlightedRows.has(row.id);
+                                    return {
+                                        borderLeft: `2px solid ${borderColor}`,
+                                        backgroundColor: isHighlighted ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
+                                        transition: 'background-color 0.3s ease'
+                                    };
+                                }}
+                            />
                             {totalOrders > itemsPerPage && (
                                 <div className="sl-pagination">
                                     <Pagination currentPage={currentPage} totalPages={totalPages}

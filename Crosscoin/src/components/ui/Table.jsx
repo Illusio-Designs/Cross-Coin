@@ -21,6 +21,8 @@ const Table = ({
   size = 'md',
   variant = 'default',
   stickyHeader = false,
+  getRowStyle = null,
+  getRowClassName = null,
   ...props
 }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -117,7 +119,8 @@ const Table = ({
         <tbody>
           {sortedData.map((row, ri) => (
             <tr key={row.id || ri}
-              className={['tbl-row', onRowClick && 'tbl-row-clickable', selectable && selectedRows.includes(row.id) && 'tbl-row-selected'].filter(Boolean).join(' ')}
+              className={['tbl-row', onRowClick && 'tbl-row-clickable', selectable && selectedRows.includes(row.id) && 'tbl-row-selected', getRowClassName && getRowClassName(row)].filter(Boolean).join(' ')}
+              style={getRowStyle ? getRowStyle(row) : {}}
               onClick={() => onRowClick && onRowClick(row, ri)}>
               {selectable && (
                 <td className="tbl-cell tbl-select-col">
