@@ -661,7 +661,6 @@ async function syncProductsToCatalog(brandId = 1) {
         model: ProductVariation,
         where: { status: 'active' },
         required: true,
-        as: 'variations',
       },
     ],
   });
@@ -670,7 +669,8 @@ async function syncProductsToCatalog(brandId = 1) {
   const errors = [];
 
   for (const product of products) {
-    for (const variation of (product.variations || [])) {
+    const variations = product.ProductVariations || product.variations || [];
+    for (const variation of variations) {
       try {
         // Skip if already synced
         if (variation.whatsapp_retailer_id) {
