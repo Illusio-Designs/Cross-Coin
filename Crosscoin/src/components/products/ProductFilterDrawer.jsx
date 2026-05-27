@@ -99,9 +99,6 @@ const ProductFilterDrawer = ({
     row?.classList.toggle('open');
   };
 
-  useEffect(() => {
-    console.log('ProductFilterDrawer - isOpen:', isOpen);
-  }, [isOpen]);
 
   return (
     <>

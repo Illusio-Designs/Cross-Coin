@@ -19,11 +19,6 @@ export const filterOptions = {
 const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("ProductCard:", { id: product?.id, badge: product?.badge });
-    }
-  }, [product?.id, product?.badge]);
 
   const variation = product?.variations?.[0];
   const imageData = selectProductImage(product, variation);

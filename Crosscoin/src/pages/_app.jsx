@@ -116,6 +116,7 @@ import PhonePopupModal from "../components/common/PhonePopupModal";
 import "../styles/components/PhonePopupModal.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
@@ -273,11 +274,13 @@ function App({ Component, pageProps }) {
           <VercelAnalytics />
         </>
       )}
-      <AppWrapper 
-        Component={Component} 
-        pageProps={pageProps}
-        progressRef={progressRef}
-      />
+      <ErrorBoundary>
+        <AppWrapper
+          Component={Component}
+          pageProps={pageProps}
+          progressRef={progressRef}
+        />
+      </ErrorBoundary>
     </>
   );
 }

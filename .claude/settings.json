@@ -62,7 +62,8 @@
       "Bash(Select-Object Name)",
       "Bash(cat)",
       "Bash(bash /tmp/audit.sh)",
-      "Bash(grep -E \"\\\\.\\(js|ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(js|ts\\)$\")",
+      "Bash(grep \":0$\")"
     ]
   }
 }
