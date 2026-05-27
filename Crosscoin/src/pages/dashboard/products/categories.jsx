@@ -6,6 +6,7 @@ import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
 import { categoryService } from "../../../services";
 import { extractErrorMessage, formatErrorForDisplay } from "../../../utils/errorMessages";
+import { validateForm, isFormValid } from "../../../utils/formValidation";
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -18,6 +19,11 @@ const IC = {
 
 const EMPTY_FORM = { name: "", description: "", status: "active", metaKeywords: "", image: null, brandIds: [1] };
 
+const VALIDATION_SCHEMA = {
+  name: [{ type: 'required' }, { type: 'minLength', value: 2 }, { type: 'maxLength', value: 100 }],
+  description: [{ type: 'required' }, { type: 'minLength', value: 5 }, { type: 'maxLength', value: 500 }],
+};
+
 export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -29,6 +35,7 @@ export default function Categories() {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState({});
 
   const fetchCategories = async () => {
     try {
@@ -92,11 +99,25 @@ export default function Categories() {
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'file' ? e.target.files[0] : value }));
+    const newValue = type === 'file' ? e.target.files[0] : value;
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form
+    const errors = validateForm(formData, VALIDATION_SCHEMA);
+    setFormErrors(errors);
+
+    if (!isFormValid(errors)) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -224,11 +245,13 @@ export default function Categories() {
           <div className="modal-body">
             <div className="dm-field">
               <label className="dm-label">Category Name <span className="dm-required">*</span></label>
-              <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Footwear" required />
+              <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Footwear" required style={formErrors.name ? { borderColor: '#dc2626' } : {}} />
+              {formErrors.name && <span style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.name}</span>}
             </div>
             <div className="dm-field">
               <label className="dm-label">Description <span className="dm-required">*</span></label>
-              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required />
+              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required style={formErrors.description ? { borderColor: '#dc2626' } : {}} />
+              {formErrors.description && <span style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.description}</span>}
             </div>
             <div className="dm-2col">
               <div className="dm-field">
