@@ -576,11 +576,16 @@ export const orderService = {
     }
   },
 
-  // Generate manifest for multiple orders
+  // Generate label for order
   generateManifest: async (orderIds) => {
     try {
-      const response = await adminApi.post('/api/orders/manifest/generate', { orderIds }, { timeout: 30000 });
-      return response.data;
+      // Call label generation endpoint instead of manifest
+      if (Array.isArray(orderIds) && orderIds.length > 0) {
+        const orderId = orderIds[0];
+        const response = await adminApi.post(`/api/orders/${orderId}/label/generate`, {}, { timeout: 30000 });
+        return response.data;
+      }
+      throw new Error('No order ID provided');
     } catch (error) {
       throw error.response?.data || error.message;
     }
