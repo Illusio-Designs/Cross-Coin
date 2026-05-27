@@ -61,7 +61,7 @@ const Orders = () => {
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
     const [brandFilter, setBrandFilter] = useState('all');
     const [brands, setBrands] = useState([]);
-    const [generatingManifest, setGeneratingManifest] = useState(new Set());
+    const [generatingLabel, setGeneratingLabel] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
     const [labelPollTimer, setLabelPollTimer] = useState(null);
 
@@ -235,27 +235,28 @@ const Orders = () => {
         }
     };
 
-    const generateManifestForOrder = async (orderId) => {
+    const generateLabelForOrder = async (orderId) => {
         if (!orderId) return;
-        if (generatingManifest.has(orderId)) return;
+        if (generatingLabel.has(orderId)) return;
         try {
-            setGeneratingManifest(prev => new Set(prev).add(orderId));
+            setGeneratingLabel(prev => new Set(prev).add(orderId));
             const result = await orderService.generateManifest([orderId]);
             if (result.success) {
-                showSuccess('manifestGenerated', `Manifest generated for order! Waybills: ${result.data.waybills.join(', ')}`);
+                showSuccess('labelGenerated', `Label generated successfully! Download will start automatically.`);
                 highlightRow(orderId);
-                // You can store manifest info or download it if URL available
-                if (result.data.pdfUrl) {
-                    // window.open(result.data.pdfUrl, '_blank');
+                if (result.data.labelUrl) {
+                    window.open(result.data.labelUrl, '_blank');
+                } else if (result.data.pdfUrl) {
+                    window.open(result.data.pdfUrl, '_blank');
                 }
                 fetchOrders();
             } else {
-                showError('manifestFailed', result.message || 'Failed to generate manifest');
+                showError('labelFailed', result.message || 'Failed to generate label');
             }
         } catch (error) {
-            showError('manifestFailed', error.message || 'Failed to generate manifest');
+            showError('labelFailed', error.message || 'Failed to generate label');
         } finally {
-            setGeneratingManifest(prev => {
+            setGeneratingLabel(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(orderId);
                 return newSet;
@@ -635,10 +636,10 @@ const Orders = () => {
                         </Tooltip>
                         {(row.Shipment?.waybill || row.fship_waybill) && (
                             <Tooltip text="Generate shipping label for this order" position="top">
-                                <button className={`order-action-btn order-manifest-btn${generatingManifest.has(row.id) ? ' disabled' : ''}`}
-                                    onClick={() => generateManifestForOrder(row.id)}
-                                    disabled={generatingManifest.has(row.id)}>
-                                    {generatingManifest.has(row.id) ? (
+                                <button className={`order-action-btn order-label-btn${generatingLabel.has(row.id) ? ' disabled' : ''}`}
+                                    onClick={() => generateLabelForOrder(row.id)}
+                                    disabled={generatingLabel.has(row.id)}>
+                                    {generatingLabel.has(row.id) ? (
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                     ) : (
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
@@ -1219,11 +1220,11 @@ const Orders = () => {
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <Button
                                             variant="primary"
-                                            onClick={() => generateManifestForOrder(selectedOrder.id)}
+                                            onClick={() => generateLabelForOrder(selectedOrder.id)}
                                             disabled={generatingManifest}
                                             style={{ flex: 1, fontSize: '12px' }}
                                         >
-                                            {generatingManifest ? 'Generating...' : '📄 Generate Manifest'}
+                                            {generatingLabel ? 'Downloading...' : '📥 Download Label'}
                                         </Button>
                                         {selectedOrder.fship_label_url && (
                                             <a
