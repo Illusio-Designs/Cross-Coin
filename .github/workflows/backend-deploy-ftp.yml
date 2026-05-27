@@ -127,5 +127,5 @@ jobs:
           echo "✅ Backend deployed to ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}"
           echo "   FTP Server: ${{ secrets.FTP_SERVER }}"
           echo "   Passenger restart triggered"
-          echo "   Files synced and app restarted""
+          echo "   Files synced and app restarted"
 
