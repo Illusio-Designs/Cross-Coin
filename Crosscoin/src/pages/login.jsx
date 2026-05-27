@@ -25,7 +25,7 @@ export default function Login() {
   const digits = phone.replace(/\D/g, "").slice(0, 10);
   const identifier = digits.length === 10 ? "91" + digits : digits;
 
-  // Send OTP via MSG91 â€” same as CartDrawer
+  // Send OTP via MSG91 — same as CartDrawer
   const handleSendOtp = () => {
     setError(""); setHint("");
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
@@ -65,7 +65,7 @@ export default function Login() {
     trySend();
   };
 
-  // Verify OTP via MSG91 then login â€” same widget flow as CartDrawer
+  // Verify OTP via MSG91 then login — same widget flow as CartDrawer
   const handleVerifyOtp = () => {
     if (otpCode.length < 4) { setError("Enter the OTP you received."); return; }
     if (typeof window.verifyOtp !== "function") {
@@ -76,7 +76,7 @@ export default function Login() {
     window.verifyOtp(
       otpCode,
       (data) => {
-        // MSG91 verified â€” data is the access token
+        // MSG91 verified — data is the access token
         const accessToken = typeof data === "string" ? data : (data?.message || data?.token || JSON.stringify(data));
         doLogin(accessToken);
       },
@@ -170,7 +170,7 @@ export default function Login() {
               <div className="auth-form">
                 {hint && <p className="auth-hint">{hint}</p>}
 
-                {/* 4-box OTP input â€” same as CartDrawer */}
+                {/* 4-box OTP input — same as CartDrawer */}
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", margin: "20px 0" }}>
                   {otpDigits.map((digit, i) => (
                     <input

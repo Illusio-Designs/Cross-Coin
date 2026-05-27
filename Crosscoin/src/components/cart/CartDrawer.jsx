@@ -34,7 +34,7 @@ const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
 const PREPAID_NUDGE_LINE =
   process.env.NEXT_PUBLIC_PREPAID_NUDGE_TEXT ||
   (PREPAID_INSTANT_DISCOUNT_INR > 0
-    ? `Get â‚¹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} Instant Discount on Prepaid`
+    ? `Get ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} Instant Discount on Prepaid`
     : 'Free Surprise Gift on Prepaid Orders.');
 const OTP_VERIFY_SKIP = process.env.NEXT_PUBLIC_OTP_VERIFY_SKIP === 'true';
 
@@ -44,7 +44,7 @@ const FALLBACK_SHIPPING_FEES = [
   { id: 'fallback-cod', orderType: 'cod', fee: 0 },
 ];
 
-// FIX 1 â€” cookie-backed UUID guest session (30-day expiry)
+// FIX 1 — cookie-backed UUID guest session (30-day expiry)
 function getOrCreateGuestSessionId() {
   if (typeof document === 'undefined') return 'guest-' + Date.now();
   const key = 'guestSessionId';
@@ -56,12 +56,12 @@ function getOrCreateGuestSessionId() {
   return id;
 }
 
-// FIX 2 â€” idempotency key generator
+// FIX 2 — idempotency key generator
 function generateIdempotencyKey() {
   return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 }
 
-// FIX 3 â€” comprehensive address validation (mirrors backend shippingValidationService)
+// FIX 3 — comprehensive address validation (mirrors backend shippingValidationService)
 function validateShippingAddress(addr) {
   if (!addr) return { valid: false, errors: ['Address is empty'], warnings: [] };
   const errors = [];
@@ -76,10 +76,10 @@ function validateShippingAddress(addr) {
   // Address line
   const addrLine = String(addr.address || '').trim();
   if (!addrLine) errors.push('Street address is required');
-  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters) â€” add house/flat number and area');
-  else if (addrLine.length < 20) warnings.push('Address is short â€” add a landmark for better delivery');
+  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters) — add house/flat number and area');
+  else if (addrLine.length < 20) warnings.push('Address is short — add a landmark for better delivery');
   const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i, /^\.+$/, /^-+$/];
-  if (junk.some(p => p.test(addrLine))) errors.push('Address looks like a placeholder â€” please enter a real address');
+  if (junk.some(p => p.test(addrLine))) errors.push('Address looks like a placeholder — please enter a real address');
 
   // City
   const city = String(addr.city || '').trim();
@@ -107,7 +107,7 @@ function validateShippingAddress(addr) {
     else if (phone.length === 11 && phone.startsWith('0')) ten = phone.substring(1);
     else if (phone.length > 10) ten = phone.slice(-10);
     if (!/^[6-9]\d{9}$/.test(ten)) errors.push('Phone must be a valid Indian mobile (starts with 6-9)');
-    else if (/^(\d)\1{9}$/.test(ten)) errors.push('Phone number is a repeated digit â€” please enter a real number');
+    else if (/^(\d)\1{9}$/.test(ten)) errors.push('Phone number is a repeated digit — please enter a real number');
     else if (ten === '9876543210' || ten === '1234567890') errors.push('Phone number looks like a placeholder');
   }
 
@@ -132,14 +132,14 @@ function isValidEmail(value) {
   return true;
 }
 
-/** Indian mobile: exactly 10 digits, starts with 6â€“9 */
+/** Indian mobile: exactly 10 digits, starts with 6–9 */
 function isValidIndianMobileDigits(raw) {
   const digits = String(raw || '').replace(/\D/g, '');
   if (digits.length !== 10) return false;
   return /^[6-9]\d{9}$/.test(digits);
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function pickImage(item) {
   if (Array.isArray(item.images) && item.images.length > 0)
@@ -174,7 +174,7 @@ function getDeliveryDateStr() {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-// â”€â”€â”€ SVG Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
 
 const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
 const IconBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>;
@@ -199,7 +199,7 @@ const IconShield = () => (
 );
 const IconTruckSmall = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const CartDrawer = ({ isOpen, onClose }) => {
   const { cartItems, cartTotal, removeFromCart, updateQuantity, clearCart, lastAddedItem, buyNowItem, buyNowTotal, clearBuyNow } = useCart();
@@ -288,7 +288,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     });
   };
 
-  // â”€â”€ Visibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Visibility ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -305,10 +305,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // â”€â”€ InitiateCheckout when drawer opens (one shot per open) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── InitiateCheckout when drawer opens (one shot per open) ──────────────
   useEffect(() => {
     if (!isOpen) return;
-    // Skip when buyNowItem is set â€” ProductDetails.handleBuyNow already fired InitiateCheckout
+    // Skip when buyNowItem is set — ProductDetails.handleBuyNow already fired InitiateCheckout
     if (buyNowItem) return;
     const activeItems = cartItems;
     const activeTotal = cartTotal;
@@ -334,7 +334,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // â”€â”€ Shipping fees â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Shipping fees ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     getShippingFees().then(data => {
@@ -362,7 +362,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     });
   }, [shippingFees]);
 
-  // â”€â”€ Load addresses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Load addresses ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
     setAddressLoading(true);
@@ -393,7 +393,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     if (!selectedAddress) setShowAddressForm(true);
   }, [isOpen, isAuthenticated, selectedAddress]);
 
-  // Live email validation (guest) â€” debounced while typing
+  // Live email validation (guest) — debounced while typing
   useEffect(() => {
     if (!isOpen || isAuthenticated) return;
     const t = setTimeout(() => {
@@ -413,11 +413,11 @@ const CartDrawer = ({ isOpen, onClose }) => {
     const digits = String(addressForm.phoneNumber || '').replace(/\D/g, '');
     if (digits.length === 0) setAddressPhoneError('');
     else if (!isValidIndianMobileDigits(digits)) {
-      setAddressPhoneError('Enter a valid 10-digit Indian mobile (starts with 6â€“9).');
+      setAddressPhoneError('Enter a valid 10-digit Indian mobile (starts with 6–9).');
     } else setAddressPhoneError('');
   }, [addressForm.phoneNumber, isAuthenticated, showAddressForm]);
 
-  // â”€â”€ Real-time field validation (runs on every keystroke, debounced) â”€â”€â”€â”€â”€
+  // ── Real-time field validation (runs on every keystroke, debounced) ─────
   useEffect(() => {
     if (!showAddressForm) { setFieldErrors({}); return; }
     const t = setTimeout(() => {
@@ -445,7 +445,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => clearTimeout(t);
   }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);
 
-  // â”€â”€ Body class for back-to-top hiding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add('cd-drawer-open-body');
@@ -455,7 +455,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => document.body.classList.remove('cd-drawer-open-body');
   }, [isOpen]);
 
-  // â”€â”€ Close dropdown on outside click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Close dropdown on outside click ────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -468,7 +468,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showAddressDropdown]);
-  // FIX 6 â€” ResizeObserver replaces 3x setTimeout scroll hint hack
+  // FIX 6 — ResizeObserver replaces 3x setTimeout scroll hint hack
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -485,7 +485,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     };
   }, [isOpen, buyNowItem, cartItems.length]);
 
-  // â”€â”€ Computed totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Computed totals ─────────────────────────────────────────────────────
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
   const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
@@ -516,7 +516,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     setFieldErrors({});
   }, [selectedFee?.id, selectedAddress?.id, guestInfo.phone]);
 
-  // â”€â”€ Delivery fee â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Delivery fee ────────────────────────────────────────────────────────
   const handleSelectFee = (fee) => {
     setSelectedFee(fee);
   };
@@ -534,11 +534,11 @@ const CartDrawer = ({ isOpen, onClose }) => {
     setGuestInfo(p => ({ ...p, phone: digits }));
     if (digits.length === 0) setGuestPhoneError('');
     else if (!isValidIndianMobileDigits(digits)) {
-      setGuestPhoneError('Enter a valid 10-digit Indian mobile (starts with 6â€“9).');
+      setGuestPhoneError('Enter a valid 10-digit Indian mobile (starts with 6–9).');
     } else setGuestPhoneError('');
   };
 
-  // â”€â”€ Address form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Address form ────────────────────────────────────────────────────────
   const handleAddrChange = (e) => {
     const { name, value, type, checked } = e.target;
     let next = type === 'checkbox' ? checked : value;
@@ -568,7 +568,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         }));
       }
     } catch {
-      // Non-fatal â€” don't block checkout on serviceability failure
+      // Non-fatal — don't block checkout on serviceability failure
       setPincodeServiceability(null);
     }
   };
@@ -594,7 +594,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       ? addressForm
       : { ...addressForm, fullName: `${guestInfo.firstName} ${guestInfo.lastName}`.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
 
-    // â”€â”€ Comprehensive address validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Comprehensive address validation ──────────────────────────────────
     const addrToValidate = {
       full_name: formData.fullName,
       address: formData.address,
@@ -635,7 +635,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  // â”€â”€ Razorpay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Razorpay ────────────────────────────────────────────────────────────
   const loadRazorpay = () => new Promise(resolve => {
     if (document.getElementById('rzp-script')) return resolve(true);
     const s = document.createElement('script');
@@ -644,7 +644,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     document.body.appendChild(s);
   });
 
-  // â”€â”€ Coupon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Coupon ──────────────────────────────────────────────────────────────
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
     if (!code) return;
@@ -662,7 +662,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (data.success) {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
-        setCouponSuccess(`"${data.coupon.code}" applied â€” â‚¹${parseFloat(data.discountAmount).toFixed(2)} off!`);
+        setCouponSuccess(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(2)} off!`);
         setCouponCode('');
       } else {
         setCouponError(data.message || 'Invalid coupon code');
@@ -687,7 +687,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     quantity: item.quantity,
   }));
 
-  // FIX 8/9 â€” idempotency key in payload; ip_address removed; cookie session
+  // FIX 8/9 — idempotency key in payload; ip_address removed; cookie session
   const buildPrepaidOrderData = (idempotencyKey) => {
     const itemsPayload = buildItemsPayload();
     const base = {
@@ -817,10 +817,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  // OTP removed â€” COD orders go directly to placeCodOrder()
+  // OTP removed — COD orders go directly to placeCodOrder()
 
   const handlePlaceOrder = async () => {
-    // â”€â”€ Comprehensive address validation before placing order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Comprehensive address validation before placing order ──────────────
     const addrValidation = validateShippingAddress(selectedAddress);
     if (!addrValidation.valid) {
       showValidationErrorToast(addrValidation.errors[0]);
@@ -856,14 +856,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
         showOrderPlacedErrorToast('Razorpay key not configured.');
         return;
       }
-      // FIX 11 â€” guard against zero/negative payable amount
+      // FIX 11 — guard against zero/negative payable amount
       if (prepaidPayable <= 0) {
         showOrderPlacedErrorToast('Order amount must be greater than zero.');
         return;
       }
       setIsProcessing(true);
 
-      // GA4: add_shipping_info â€” user confirmed a valid address and delivery method
+      // GA4: add_shipping_info — user confirmed a valid address and delivery method
       gtagTrack('add_shipping_info', {
         currency: 'INR',
         value: prepaidPayable,
@@ -885,7 +885,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         }
         const prepaidIdempotencyKey = generateIdempotencyKey();
 
-        // Step 1: Initiate checkout â€” reserve stock + create Razorpay order (NO DB order yet)
+        // Step 1: Initiate checkout — reserve stock + create Razorpay order (NO DB order yet)
         let checkoutResult;
         try {
           const checkoutData = {
@@ -929,7 +929,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         const rzpOrder = checkoutResult.razorpay_order;
         const reservationId = checkoutResult.reservation_id;
 
-        // GA4: add_payment_info â€” user is about to pay via Razorpay
+        // GA4: add_payment_info — user is about to pay via Razorpay
         gtagTrack('add_payment_info', {
           currency: 'INR',
           value: prepaidPayable,
@@ -957,7 +957,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           },
           theme: { color: '#CE1E36' },
           handler: async (response) => {
-            // Step 3: Payment captured â€” verify + create order in one call
+            // Step 3: Payment captured — verify + create order in one call
             try {
               const result = await updateOrderPayment({
                 razorpayPaymentId: response.razorpay_payment_id,
@@ -972,8 +972,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
               showOrderPlacedSuccessToast(orderNumber);
               setOrderSuccess({ orderNumber });
             } catch (err) {
-              // Payment captured but order creation failed â€” webhook will recover
-              showOrderPlacedErrorToast('Payment received successfully. Your order is being processed â€” you will receive confirmation shortly.');
+              // Payment captured but order creation failed — webhook will recover
+              showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
               clearCart();
               clearBuyNow();
             } finally {
@@ -1016,7 +1016,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   if (!isVisible) return null;
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <>
       <div className={`cd-backdrop ${isOpen ? 'cd-backdrop-active' : ''}`} onClick={onClose} />
@@ -1034,10 +1034,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
           <button className="cd-close-btn" onClick={onClose} aria-label="Close cart"><IconX /></button>
         </div>
 
-        {/* Scrollable body â€” everything in one view */}
+        {/* Scrollable body — everything in one view */}
         <div className="cd-body" ref={bodyRef}>
           {orderSuccess ? (
-            /* â”€â”€ Success â”€â”€ */
+            /* ── Success ── */
             <div className="cd-success">
               <div className="cd-success-icon"><IconSuccess /></div>
               <h3 className="cd-success-title">Order Placed!</h3>
@@ -1047,9 +1047,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
               <button className="cd-btn-ghost" style={{ marginTop: 8 }} onClick={onClose}>Continue Shopping</button>
             </div>
           ) : isMounted && paymentFailed.error ? (
-            /* â”€â”€ Payment Failure Panel (Task 3) â”€â”€ */
+            /* ── Payment Failure Panel (Task 3) ── */
             <div className="cd-success" style={{ textAlign: 'center', padding: '32px 24px' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>âŒ</div>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
               <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#b91c1c' }}>Payment Failed</h3>
               <p style={{ margin: '0 0 20px', fontSize: 14, color: '#6b7280' }}>{paymentFailed.error}</p>
               {paymentFailed.retryCount < 3 ? (
@@ -1059,7 +1059,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     setPaymentFailed(prev => ({ ...prev, retryCount: prev.retryCount + 1, error: null }));
                     setIsProcessing(true);
                     try {
-                      // Call backend retry â€” gets new Razorpay order, extends stock reservation
+                      // Call backend retry — gets new Razorpay order, extends stock reservation
                       const retryResult = await retryCheckout(paymentFailed.reservationId);
                       if (!retryResult?.success || !retryResult?.razorpay_order) {
                         throw new Error(retryResult?.message || 'Retry failed.');
@@ -1109,7 +1109,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             showOrderPlacedSuccessToast(orderNumber);
                             setOrderSuccess({ orderNumber });
                           } catch (err) {
-                            showOrderPlacedErrorToast('Payment received successfully. Your order is being processed â€” you will receive confirmation shortly.');
+                            showOrderPlacedErrorToast('Payment received successfully. Your order is being processed — you will receive confirmation shortly.');
                             clearCart(); clearBuyNow();
                           } finally {
                             setIsProcessing(false);
@@ -1164,7 +1164,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               </button>
             </div>
           ) : activeItems.length === 0 ? (
-            /* â”€â”€ Empty â”€â”€ */
+            /* ── Empty ── */
             <div className="cd-empty">
               <span className="cd-empty-icon"><IconBag /></span>
               <p>Your cart is empty</p>
@@ -1173,7 +1173,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           ) : (
             <div className="cd-single-view">
 
-              {/* â”€â”€ 1. Items â”€â”€ */}
+              {/* ── 1. Items ── */}
               <div className="cd-section-title">Items</div>
               <div className="cd-items-list">
                 {activeItems.map(item => {
@@ -1196,12 +1196,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         {color && <p className="cd-item-meta">{color}</p>}
                         <div className="cd-item-row">
                           <div className="cd-item-prices">
-                            <span className="cd-item-price">â‚¹{price.toFixed(2)}</span>
-                            {mrp > 0 && mrp > price && <span className="cd-item-original-price">â‚¹{mrp.toFixed(2)}</span>}
+                            <span className="cd-item-price">₹{price.toFixed(2)}</span>
+                            {mrp > 0 && mrp > price && <span className="cd-item-original-price">₹{mrp.toFixed(2)}</span>}
                           </div>
                           {!buyNowItem && (
                             <div className="cd-qty">
-                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1} aria-label="Decrease quantity">âˆ’</button>
+                              <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1} aria-label="Decrease quantity">−</button>
                               <span className="cd-qty-val">{item.quantity}</span>
                               <button className="cd-qty-btn" onClick={() => updateQuantity(item.id, 1)} aria-label="Increase quantity">+</button>
                             </div>
@@ -1216,7 +1216,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 })}
               </div>
 
-              {/* â”€â”€ 3. Delivery Details (combined contact + address for guests) â”€â”€ */}
+              {/* ── 3. Delivery Details (combined contact + address for guests) ── */}
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
 
@@ -1418,7 +1418,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 )}
               </div>
 
-              {/* â”€â”€ 5. Payment method â”€â”€ */}
+              {/* ── 5. Payment method ── */}
               {sortedShippingFees.length > 0 && (
                 <div className="cd-sv-section" id="cd-section-delivery">
                   <div className="cd-section-title">How would you like to pay?</div>
@@ -1440,7 +1440,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                               {fee.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
                             </p>
                             {fee.orderType === 'cod' && !isCodBlocked && (
-                              <span className="cd-delivery-popular">â­ Most Popular</span>
+                              <span className="cd-delivery-popular">⭐ Most Popular</span>
                             )}
                             {fee.orderType === 'prepaid' && (
                               <p className="cd-delivery-subdesc">Pay securely via UPI, Credit or Debit Card</p>
@@ -1453,14 +1453,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             )}
                             <p className="cd-delivery-desc">
                               {fee.orderType === 'prepaid'
-                                ? `â‚¹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less Â· Delivery by ${getDeliveryDateStr()}`
+                                ? `₹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less · Delivery by ${getDeliveryDateStr()}`
                                 : `Delivery by ${getDeliveryDateStr()}`}
                             </p>
                           </div>
                           <div className="cd-delivery-fee-wrap">
-                            <span className="cd-delivery-sparkle">âœ¦</span>
+                            <span className="cd-delivery-sparkle">✦</span>
                             <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
-                              {parseFloat(fee.fee || 0) === 0 ? 'FREE' : `â‚¹${parseFloat(fee.fee || 0).toFixed(0)}`}
+                              {parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee || 0).toFixed(0)}`}
                             </span>
                           </div>
                         </label>
@@ -1475,7 +1475,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Scroll hint â€” inside body so it never overlaps the footer */}
+          {/* Scroll hint — inside body so it never overlaps the footer */}
           {showScrollHint && !orderSuccess && activeItems.length > 0 && (
             <div className="cd-scroll-hint" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1485,7 +1485,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* â”€â”€ Fixed bottom area: urgency â†’ CTA â†’ WhatsApp â†’ trust â”€â”€ */}
+        {/* ── Fixed bottom area: urgency → CTA → WhatsApp → trust ── */}
         {!orderSuccess && activeItems.length > 0 && (
           <div className="cd-footer">
             {/* Urgency row */}
@@ -1514,9 +1514,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
               {isProcessing
                 ? 'Processing...'
                 : isPrepaidDelivery
-                  ? `Place Order â€“ â‚¹${prepaidPayable.toFixed(2)}`
+                  ? `Place Order – ₹${prepaidPayable.toFixed(2)}`
                   : isCodDelivery
-                    ? `Place Order â€“ â‚¹${finalTotal.toFixed(2)}`
+                    ? `Place Order – ₹${finalTotal.toFixed(2)}`
                     : 'Place Order'}
             </button>
 
@@ -1533,9 +1533,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
             {/* Trust bar */}
             <div className="cd-trust-bar">
               <span className="cd-trust-item"><IconShield /> 100% Money-Back</span>
-              <span className="cd-trust-sep">Â·</span>
+              <span className="cd-trust-sep">·</span>
               <span className="cd-trust-item"><IconTruckSmall /> Easy Returns</span>
-              <span className="cd-trust-sep">Â·</span>
+              <span className="cd-trust-sep">·</span>
               <span className="cd-trust-item"><IconLock /> Powered by Razorpay</span>
             </div>
           </div>

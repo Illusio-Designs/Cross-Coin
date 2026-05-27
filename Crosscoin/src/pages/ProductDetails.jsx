@@ -344,10 +344,10 @@ export default function ProductDetails() {
   return (
     <SeoWrapper pageName={slug || 'product-details'} seo={productData.rawApi?.seo || null}>
     <div className="pdt-page">
-      {/* â”€â”€ Top Section: Gallery + Info â”€â”€ */}
+      {/* ── Top Section: Gallery + Info ── */}
       <div className="pdt-wrapper">
 
-        {/* Gallery + Fit row â€” left column */}
+        {/* Gallery + Fit row — left column */}
         <div className="pdt-gallery-col">
           <div className="pdt-gallery">
             <div className="pdt-thumbs">
@@ -381,7 +381,7 @@ export default function ProductDetails() {
                 </span>
               </button>
 
-              {/* Feature boxes â€” directly below main image */}
+              {/* Feature boxes — directly below main image */}
               <div className="pdt-fit-row" ref={fitRowRef}>
             <div className="pdt-fit-item">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -449,7 +449,7 @@ export default function ProductDetails() {
           </div>
           <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
 
-          {/* Fomo signals â€” counts seeded by product id so stable per product */}
+          {/* Fomo signals — counts seeded by product id so stable per product */}
           {(() => {
             const seed = productData.id || 1;
             const viewers = 100 + (seed * 37 + seed * seed * 3) % 200;
@@ -626,7 +626,7 @@ export default function ProductDetails() {
         </div>{/* end pdt-info */}
       </div>{/* end pdt-wrapper */}
 
-      {/* â”€â”€ Details Section â”€â”€ */}
+      {/* ── Details Section ── */}
       <div className="pdt-details">
 
         {/* Product Description */}
@@ -664,7 +664,7 @@ export default function ProductDetails() {
         <h2 className="pdt-section-title">Washing Instructions</h2>
         <div className="pdt-wash-box">
           {[
-            { label: 'Gentle wash\n40Â°C', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor" fontFamily="inherit">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg> },
+            { label: 'Gentle wash\n40°C', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor" fontFamily="inherit">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg> },
             { label: 'Do not\nbleach', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 5 L33 30 H3 Z"/><line x1="12" y1="14" x2="24" y2="26"/><line x1="24" y1="14" x2="12" y2="26"/></svg> },
             { label: 'Do not\nwring', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 14 C4 14 8 10 12 14 C16 18 20 10 24 14 C28 18 32 14 32 14"/><path d="M4 22 C4 22 8 18 12 22 C16 26 20 18 24 22 C28 26 32 22 32 22"/><line x1="13" y1="11" x2="23" y2="25"/><line x1="23" y1="11" x2="13" y2="25"/></svg> },
             { label: 'Flat dry in\nshade', icon: <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="10" width="28" height="16" rx="1"/><line x1="8" y1="18" x2="28" y2="18"/></svg> },
@@ -712,7 +712,7 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* â”€â”€ Sticky Bar â”€â”€ */}
+      {/* ── Sticky Bar ── */}
       <div className={`pdt-sticky${showStickyBar ? ' visible' : ''}`}>
         <div className="pdt-sticky-info">
           <img src={galleryImages[0] || productData.images?.[0]} alt={productData.title} className="pdt-sticky-img" />
@@ -727,7 +727,7 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* â”€â”€ Toast â”€â”€ */}
+      {/* ── Toast ── */}
       <div className={`pdt-toast${showToast ? ' show' : ''}`} role="status" aria-live="polite">
         <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
           <polyline points="20 6 9 17 4 12" />
