@@ -22,7 +22,8 @@ router.delete('/admin/:reviewId',   authenticate, isOrderManager, deleteReview);
 router.delete('/admin/images/:imageId', authenticate, isOrderManager, deleteReviewImage);
 
 // User
-router.get('/user(/:userId)?',     authenticate, getUserReviews);
+router.get('/user/:userId',        authenticate, getUserReviews);
+router.get('/user',                authenticate, getUserReviews);
 router.get('/:reviewId',           authenticate, getReview);
 router.put('/:reviewId',           authenticate, updateReview);
 router.delete('/:reviewId',       authenticate, deleteReview);
