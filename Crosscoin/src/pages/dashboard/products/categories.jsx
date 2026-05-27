@@ -5,6 +5,7 @@ import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
 import { categoryService } from "../../../services";
+import { extractErrorMessage, formatErrorForDisplay } from "../../../utils/errorMessages";
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -36,7 +37,8 @@ export default function Categories() {
       const data = await categoryService.getAllCategories();
       setCategories(data);
     } catch (err) {
-      setError(err.message || 'Failed to load categories');
+      const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -64,7 +66,8 @@ export default function Categories() {
       setFormData({ id: data.id, name: data.name || "", description: data.description || "", status: data.status || "active", metaKeywords: data.metaKeywords || "", image: data.image || null, brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [] });
       setIsModalOpen(true);
     } catch (err) {
-      setError(err.message || 'Failed to load category');
+      const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
+      setError(errorMsg);
     }
     finally { setLoading(false); }
   };
@@ -78,7 +81,8 @@ export default function Categories() {
         await categoryService.deleteCategory(id);
         await fetchCategories();
       } catch (err) {
-        setError(err.message || 'Failed to delete category');
+        const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
+        setError(errorMsg);
       }
       finally { setLoading(false); }
     }});
@@ -112,7 +116,8 @@ export default function Categories() {
       await fetchCategories();
       handleModalClose();
     } catch (err) {
-      setError(err.message || 'Failed to save category');
+      const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
+      setError(errorMsg);
     }
     finally { setLoading(false); }
   };
