@@ -1138,16 +1138,26 @@ exports.sendProduct = async (req, res) => {
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
-    // Build retailer ID matching catalogue feed format: "{productId}_{variationId}"
-    let retailerId;
+    const { ProductVariation } = require('../model/productVariationModel.js');
+
+    // Get variation (auto-pick first if not specified)
+    let variation;
     if (variationId) {
-      retailerId = `${productId}_${variationId}`;
+      variation = await ProductVariation.findByPk(variationId);
+      if (!variation || variation.productId !== productId) {
+        return res.status(400).json({ success: false, message: 'Variation not found for this product' });
+      }
     } else {
-      // Auto-pick first variation
-      const { ProductVariation } = require('../model/productVariationModel.js');
-      const firstVar = await ProductVariation.findOne({ where: { productId }, order: [['id', 'ASC']] });
-      if (!firstVar) return res.status(400).json({ success: false, message: 'No variation found for this product' });
-      retailerId = `${productId}_${firstVar.id}`;
+      variation = await ProductVariation.findOne({ where: { productId }, order: [['id', 'ASC']] });
+      if (!variation) return res.status(400).json({ success: false, message: 'No variation found for this product' });
+    }
+
+    // Use whatsapp_retailer_id if synced, otherwise construct it (for backward compatibility)
+    const retailerId = variation.whatsapp_retailer_id || `${productId}_${variation.id}`;
+
+    // Warn if not synced to catalog
+    if (!variation.whatsapp_retailer_id) {
+      logger.warn(`Product ${productId}_${variation.id} not synced to WhatsApp catalog. This may fail if not in catalog.`);
     }
 
     const result = await whatsappService.sendProductCard(conv.customer_phone, retailerId, brandId);
@@ -1182,13 +1192,17 @@ exports.sendCatalogue = async (req, res) => {
 
     let finalRetailerIds = retailerIds;
 
-    // If only productIds provided, resolve each to "{productId}_{firstVariationId}"
+    // If only productIds provided, resolve each to whatsapp_retailer_id or "{productId}_{firstVariationId}"
     if (!finalRetailerIds?.length && productIds?.length) {
       const { ProductVariation } = require('../model/productVariationModel.js');
       finalRetailerIds = [];
       for (const pid of productIds) {
         const v = await ProductVariation.findOne({ where: { productId: pid }, order: [['id', 'ASC']] });
-        if (v) finalRetailerIds.push(`${pid}_${v.id}`);
+        if (v) {
+          // Use synced whatsapp_retailer_id if available, fallback to constructed ID
+          const rId = v.whatsapp_retailer_id || `${pid}_${v.id}`;
+          finalRetailerIds.push(rId);
+        }
       }
     }
 
@@ -1316,5 +1330,16 @@ exports.notifyBackInStock = async (req, res) => {
     res.json({ success: true, notified: sent, total: wishlistItems.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Sync all products to WhatsApp catalog
+exports.syncProductsCatalog = async (req, res) => {
+  try {
+    const { brandId = 1 } = req.body;
+    const result = await whatsappService.syncProductsToCatalog(brandId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
   }
 };

@@ -642,6 +642,92 @@ async function sendCatalogueMessage(phone, retailerIds, opts = {}, brandId = 1) 
   return res.data;
 }
 
+// ─── Sync products to WhatsApp catalog ────────────────────────────────────────
+// Syncs all active products and variations to the WhatsApp Business Catalog
+// Returns { synced: number, skipped: number, errors: array }
+async function syncProductsToCatalog(brandId = 1) {
+  const { token, businessAccountId } = await getCredentials(brandId);
+  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+
+  const { Product } = require('../model/productModel.js');
+  const { ProductVariation } = require('../model/productVariationModel.js');
+  const { ProductImage } = require('../model/productImageModel.js');
+
+  const products = await Product.findAll({
+    where: { status: 'active' },
+    include: [
+      {
+        model: ProductVariation,
+        where: { status: 'active' },
+        required: true,
+        as: 'variations',
+      },
+    ],
+  });
+
+  let synced = 0, skipped = 0;
+  const errors = [];
+
+  for (const product of products) {
+    for (const variation of (product.variations || [])) {
+      try {
+        // Skip if already synced
+        if (variation.whatsapp_retailer_id) {
+          skipped++;
+          continue;
+        }
+
+        // Get product image
+        const image = await ProductImage.findOne({ where: { productId: product.id } });
+        const imageUrl = image?.imageUrl || null;
+
+        // Build retailer ID in format: {productId}_{variationId}
+        const retailerId = `${product.id}_${variation.id}`;
+
+        // Prepare product data for WhatsApp
+        const attributesText = variation.attributes
+          ? Object.entries(variation.attributes)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(' | ')
+          : '';
+
+        const productData = {
+          retailer_id: retailerId,
+          name: product.name,
+          description: product.description || `${product.name} - ${attributesText}`.slice(0, 2000),
+          price: parseInt(variation.price * 100), // WhatsApp uses cents
+          currency: 'INR',
+          category: 'PRODUCTS',
+          image_url: imageUrl,
+          url: `https://crosscoin.in/product/${product.slug}`,
+          availability: variation.stock > 0 ? 'in stock' : 'out of stock',
+        };
+
+        // Add product to catalog via product feed
+        await axios.post(
+          `${GRAPH_API_URL}/${catalogId}/products`,
+          productData,
+          { headers: authHeader(token) }
+        );
+
+        // Update database
+        await variation.update({ whatsapp_retailer_id: retailerId });
+        await product.update({ whatsapp_synced: true });
+
+        synced++;
+        logger.info(`Synced product variation: ${retailerId}`);
+      } catch (err) {
+        const msg = metaError(err);
+        errors.push({ variationId: variation.id, productId: product.id, error: msg });
+        logger.error(`Failed to sync product ${product.id}_${variation.id}: ${msg}`);
+      }
+    }
+  }
+
+  return { synced, skipped, errors, total: synced + skipped + errors.length };
+}
+
 module.exports = {
   formatE164,
   metaError,
@@ -677,6 +763,7 @@ module.exports = {
   // Catalogue & product
   sendProductCard,
   sendCatalogueMessage,
+  syncProductsToCatalog,
   // Media
   getMediaUrl,
   downloadMedia,

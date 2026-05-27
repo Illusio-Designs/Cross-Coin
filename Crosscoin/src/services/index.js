@@ -1933,4 +1933,9 @@ export const whatsappService = {
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
     return `${adminApi.defaults.baseURL}/api/whatsapp/media/${mediaId}?brandId=${brandId}&token=${token}`;
   },
+
+  syncProductsCatalog: async (brandId = 1) => {
+    const response = await adminApi.post('/api/whatsapp/products/sync-catalog', { brandId });
+    return response.data;
+  },
 };
