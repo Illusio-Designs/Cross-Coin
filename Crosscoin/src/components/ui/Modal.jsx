@@ -11,6 +11,7 @@ const Modal = ({
   isOpen = false,
   onClose,
   title,
+  description = null,
   children,
   size = 'md',
   className = '',
@@ -31,12 +32,62 @@ const Modal = ({
       setIsVisible(true);
       previousActiveElement.current = document.activeElement;
       document.body.style.overflow = 'hidden';
-      setTimeout(() => { if (modalRef.current) modalRef.current.focus(); }, 100);
+
+      // Focus management and focus trap
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          // Find first focusable element
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          const firstElement = focusableElements[0];
+          if (firstElement) {
+            firstElement.focus();
+          } else {
+            modalRef.current.focus();
+          }
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
     } else {
       setIsVisible(false);
       document.body.style.overflow = '';
       if (previousActiveElement.current) previousActiveElement.current.focus();
     }
+  }, [isOpen]);
+
+  // Focus trap implementation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleTabKey = (e) => {
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = modalRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+
+      if (!focusableElements?.length) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTabKey);
+    return () => document.removeEventListener('keydown', handleTabKey);
   }, [isOpen]);
 
   useEffect(() => {
@@ -62,13 +113,23 @@ const Modal = ({
   ].filter(Boolean).join(' ');
 
   const content = (
-    <div className={overlayCls} onClick={handleOverlayClick}>
-      <div ref={modalRef} className={boxCls} onClick={(e) => e.stopPropagation()}
+    <div className={overlayCls} onClick={handleOverlayClick} role="presentation">
+      <div
+        ref={modalRef}
+        className={boxCls}
+        onClick={(e) => e.stopPropagation()}
         style={maxHeight ? { maxHeight } : undefined}
-        role="dialog" aria-modal="true" aria-labelledby={title ? 'modal-title' : undefined} tabIndex={-1} {...props}>
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-describedby={description ? 'modal-description' : undefined}
+        tabIndex={-1}
+        {...props}
+      >
         {(title || showCloseButton) && (
           <div className="modal-header">
             {title && <h2 id="modal-title" className="modal-title">{title}</h2>}
+            {description && <p id="modal-description" className="modal-description" style={{ display: 'none' }}>{description}</p>}
             {showCloseButton && (
               <button onClick={() => onClose?.()} className="modal-close-btn" aria-label="Close modal" type="button">
                 <CloseIcon />
