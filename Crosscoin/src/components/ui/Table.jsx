@@ -25,6 +25,9 @@ const Table = ({
   getRowClassName = null,
   ...props
 }) => {
+  if (typeof window !== 'undefined' && data.length > 0) {
+    console.log('[Table Debug]', { columnCount: columns.length, rowCount: data.length, firstRow: data[0], sampleColumns: columns.slice(0, 3).map(c => ({ header: c.header, accessor: c.accessor })) });
+  }
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const handleSort = (columnKey) => {
