@@ -1232,8 +1232,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         await OrderStatusHistory.create({
           order_id: order.id,
           status: newStatus,
-          notes: `Status updated from FShip. FShip status: ${fshipStatus}${updateData.payment_status ? `. Payment status: ${updateData.payment_status}` : ''}`,
-          created_by: 'fship_sync_system'
+          notes: `Status updated from ${providerName}. Provider status: ${providerStatus}${updateData.payment_status ? `. Payment status: ${updateData.payment_status}` : ''}`,
+          created_by: `${providerName}_sync_system`
         }, { transaction });
 
         // Handle payment records for delivered COD orders
