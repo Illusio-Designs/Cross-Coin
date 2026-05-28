@@ -937,48 +937,62 @@ const Orders = () => {
                 </div>{/* end orders-header-container */}
 
                 {/* Table Section */}
-                <div className="sl-table-wrap">
+                <section className="sl-table-wrap" aria-label="Orders table">
                     {loading ? (
-                        <div style={{ padding: '20px' }}>
+                        <div style={{ padding: '20px' }} role="status" aria-label="Loading orders">
                             <TableSkeleton rows={itemsPerPage} columns={8} />
                         </div>
                     ) : orders.length === 0 ? (
-                        <div className="sl-empty">
-                            <div className="sl-empty-icon">
+                        <div className="sl-empty" role="status" aria-label="No orders">
+                            <div className="sl-empty-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>
                             </div>
                             <p>No orders found.</p>
                         </div>
                     ) : (
                         <>
-                            <Table
-                                columns={columns}
-                                data={currentItemsWithSN}
-                                striped={true}
-                                hoverable={true}
-                                getRowStyle={(row) => {
-                                    const borderColor = getRowBorderColor(row.status);
-                                    const isHighlighted = highlightedRows.has(row.id);
-                                    return {
-                                        borderLeft: `2px solid ${borderColor}`,
-                                        backgroundColor: isHighlighted ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
-                                        transition: 'background-color 0.3s ease'
-                                    };
-                                }}
-                            />
+                            <div
+                                role="region"
+                                aria-label="Orders data table"
+                                aria-live="polite"
+                                aria-busy={loading}
+                            >
+                                <Table
+                                    columns={columns}
+                                    data={currentItemsWithSN}
+                                    striped={true}
+                                    hoverable={true}
+                                    getRowStyle={(row) => {
+                                        const borderColor = getRowBorderColor(row.status);
+                                        const isHighlighted = highlightedRows.has(row.id);
+                                        return {
+                                            borderLeft: `2px solid ${borderColor}`,
+                                            backgroundColor: isHighlighted ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
+                                            transition: 'background-color 0.3s ease'
+                                        };
+                                    }}
+                                />
+                            </div>
                             {totalOrders > itemsPerPage && (
-                                <div className="sl-pagination">
+                                <nav className="sl-pagination" aria-label="Orders table pagination">
                                     <Pagination currentPage={currentPage} totalPages={totalPages}
                                         onPageChange={(page) => { setCurrentPage(page); fetchOrders(page); }} />
-                                </div>
+                                </nav>
                             )}
                         </>
                     )}
-                </div>
+                </section>
             </div>
 
             {/* Order Details Modal */}
-            <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Order Details: #${selectedOrder?.order_number}`}>
+            <Modal
+              isOpen={isViewModalOpen}
+              onClose={() => setIsViewModalOpen(false)}
+              title={`Order Details: #${selectedOrder?.order_number}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Order details for order ${selectedOrder?.order_number}`}
+            >
                 {selectedOrder && (
                     <div className="odm-body">
 

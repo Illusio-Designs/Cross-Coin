@@ -36,14 +36,41 @@ import MonitoringDashboard from "./monitoring/index";
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
 
-// Unauthorized placeholder
+// Unauthorized placeholder with accessibility
 function NoAccess() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 12, color: '#6b7280' }}>
-      <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      <p style={{ fontSize: 18, fontWeight: 600, color: '#374151' }}>Access Denied</p>
-      <p style={{ fontSize: 14 }}>You don't have permission to view this page.</p>
-    </div>
+    <section
+      role="region"
+      aria-label="Access denied"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '60vh',
+        gap: 12,
+        color: '#6b7280'
+      }}
+    >
+      <svg
+        width="48"
+        height="48"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      </svg>
+      <h2 style={{ fontSize: 18, fontWeight: 600, color: '#374151', margin: 0 }}>
+        Access Denied
+      </h2>
+      <p style={{ fontSize: 14, margin: 0 }}>
+        You don't have permission to view this page.
+      </p>
+    </section>
   );
 }
 
@@ -127,11 +154,6 @@ function Dashboard() {
   }, []);
 
   const renderContent = () => {
-    // Check access for non-main views
-    if (currentView !== 'main' && !canAccessView(currentView)) {
-      return <NoAccess />;
-    }
-
     switch (currentView) {
       case 'products':        return <Products />;
       case 'categories':      return <Categories />;
@@ -166,25 +188,35 @@ function Dashboard() {
   return (
     <ProtectedRoute>
       <div className="dl">
-        <Sidebar
-          isCollapsed={isCollapsed}
-          onToggleCollapse={() => setIsCollapsed(p => !p)}
-          onViewChange={onViewChange}
-          currentView={currentView}
-          isMobileMenuOpen={isMobileMenuOpen}
-          onMobileMenuToggle={handleMobileMenuToggle}
-        />
-        <DashboardHeader
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={handleToggleFullscreen}
-          currentView={currentView}
-          isMobile={isMobile}
-          onMobileMenuToggle={handleMobileMenuToggle}
-        />
-        <DashboardFooter />
+        <nav aria-label="Dashboard navigation" role="navigation">
+          <Sidebar
+            isCollapsed={isCollapsed}
+            onToggleCollapse={() => setIsCollapsed(p => !p)}
+            onViewChange={onViewChange}
+            currentView={currentView}
+            isMobileMenuOpen={isMobileMenuOpen}
+            onMobileMenuToggle={handleMobileMenuToggle}
+          />
+        </nav>
+        <header role="banner" aria-label="Dashboard header">
+          <DashboardHeader
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={handleToggleFullscreen}
+            currentView={currentView}
+            isMobile={isMobile}
+            onMobileMenuToggle={handleMobileMenuToggle}
+          />
+        </header>
+        <footer role="contentinfo" aria-label="Dashboard footer">
+          <DashboardFooter />
+        </footer>
         <div className="dl-main">
-          <main className="dl-content">
-            {renderContent()}
+          <main className="dl-content" role="main" aria-label="Dashboard main content">
+            {currentView !== 'main' && !canAccessView(currentView) ? (
+              <NoAccess />
+            ) : (
+              renderContent()
+            )}
           </main>
         </div>
       </div>
