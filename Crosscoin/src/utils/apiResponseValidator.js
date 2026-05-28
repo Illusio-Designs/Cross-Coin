@@ -59,13 +59,27 @@ export const validatePaginatedResponse = (response) => {
   try {
     if (!response) return { items: [], total: 0, page: 1, pages: 0 };
 
-    return {
-      items: validateListResponse(response),
+    const items = validateListResponse(response);
+    const result = {
+      items,
       total: Number(response.total || response.count || 0),
       page: Number(response.page || 1),
       pages: Number(response.pages || Math.ceil((response.total || 0) / (response.limit || 10))),
       limit: Number(response.limit || 10)
     };
+
+    if (typeof window !== 'undefined') {
+      console.log('[API Validator]', {
+        responseType: typeof response,
+        responseKeys: Array.isArray(response) ? 'array' : Object.keys(response || {}),
+        itemsFound: items.length,
+        total: result.total,
+        firstItem: items[0],
+        fullResponse: response
+      });
+    }
+
+    return result;
   } catch (err) {
     console.warn('Failed to validate paginated response:', err);
     return { items: [], total: 0, page: 1, pages: 0 };

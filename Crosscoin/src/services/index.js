@@ -326,6 +326,15 @@ export const orderService = {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/orders", config);
+        if (typeof window !== 'undefined') {
+          console.log('[API Orders Raw Response]', {
+            status: response.status,
+            dataType: typeof response.data,
+            dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
+            dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
+            data: response.data
+          });
+        }
         const validated = validatePaginatedResponse(response.data);
         const result = {
           orders: validated.items,
