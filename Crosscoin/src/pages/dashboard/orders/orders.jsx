@@ -96,13 +96,6 @@ const Orders = () => {
             // Ignore if a newer request has been issued
             if (reqId !== requestIdRef.current) return;
             const ordersList = data.orders || data.data || [];
-            console.log('[Orders Debug]', {
-              responseData: data,
-              extractedOrders: ordersList,
-              orderCount: ordersList.length,
-              firstOrder: ordersList[0],
-              dataKeys: data ? Object.keys(data) : []
-            });
             setOrders(ordersList);
             const totalOrdersCount = data.total || 0;
             setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));

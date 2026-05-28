@@ -144,20 +144,26 @@ function CardGrid() {
   if (!stats) return null;
 
   /* ── Derived counts ── */
-  const sd = stats.orders.statusDistribution || {};
+  const orders = stats.orders || {};
+  const revenue = stats.revenue || {};
+  const customers = stats.customers || {};
+  const products = stats.products || {};
+  const reviews = stats.reviews || {};
+  const sd = orders.statusDistribution || {};
   const shippedCount = (sd['shipped'] || 0) + (sd['in transit'] || 0) + (sd['out for delivery'] || 0);
   const confirmedCount = (sd['confirmed'] || 0) + (sd['processing'] || 0);
   const rtoCount = (sd['rto'] || 0) + (sd['rto delivered'] || 0) + (sd['return_initiated'] || 0) + (sd['returned_rto'] || 0);
   const codCount = stats.paymentDistribution?.cod?.count || 0;
   const prepaidCount = stats.paymentDistribution?.prepaid?.count || 0;
-  const pipelineTotal = stats.orders.total || 1;
+  const totalOrders = orders.total || 0;
+  const pipelineTotal = totalOrders || 1;
 
   /* ── Alert items ── */
   const alerts = [];
   if (stats.lowStock?.outOfStockCount > 0) alerts.push(`${stats.lowStock.outOfStockCount} out of stock`);
   if (stats.lowStock?.lowStockCount > 0) alerts.push(`${stats.lowStock.lowStockCount} low stock`);
   if (stats.rtoStats?.rtoRate > 0) alerts.push(`RTO rate: ${stats.rtoStats.rtoRate}%`);
-  if (stats.orders.pending > 0) alerts.push(`${stats.orders.pending} orders pending`);
+  if (orders.pending > 0) alerts.push(`${orders.pending} orders pending`);
 
   return (
     <div className="dashboard-sections">
@@ -189,16 +195,16 @@ function CardGrid() {
 
       {/* ═══ 3. KPI STRIP ═══ */}
       <div className="dc-kpi-strip">
-        <KpiTile label="Total Revenue" value={`₹${fmt(stats.revenue.total)}`} color="#180D3E" />
-        <KpiTile label="Earned" value={`₹${fmt(stats.revenue.earned)}`} color="#059669" />
-        <KpiTile label="Active" value={`₹${fmt(stats.revenue.active)}`} color="#2563eb" />
-        <KpiTile label="Lost (RTO)" value={`₹${fmt(stats.revenue.breakdown?.rto)}`} color="#ea580c" />
-        <KpiTile label="Lost (Cancelled)" value={`₹${fmt(stats.revenue.breakdown?.cancelled)}`} color="#dc2626" />
-        <KpiTile label="Monthly" value={`₹${fmt(stats.revenue.monthly)}`} color="#7c3aed" />
-        <KpiTile label="Avg Order" value={`₹${fmt(stats.revenue.average)}`} color="#0891b2" />
-        <KpiTile label="Customers" value={stats.customers.total} color="#d97706" />
-        <KpiTile label="Products" value={`${stats.products.active}/${stats.products.total}`} color="#6b7280" />
-        <KpiTile label="Reviews" value={`${stats.reviews.approved}/${stats.reviews.total}`} color="#f59e0b" />
+        <KpiTile label="Total Revenue" value={`₹${fmt(revenue.total)}`} color="#180D3E" />
+        <KpiTile label="Earned" value={`₹${fmt(revenue.earned)}`} color="#059669" />
+        <KpiTile label="Active" value={`₹${fmt(revenue.active)}`} color="#2563eb" />
+        <KpiTile label="Lost (RTO)" value={`₹${fmt(revenue.breakdown?.rto)}`} color="#ea580c" />
+        <KpiTile label="Lost (Cancelled)" value={`₹${fmt(revenue.breakdown?.cancelled)}`} color="#dc2626" />
+        <KpiTile label="Monthly" value={`₹${fmt(revenue.monthly)}`} color="#7c3aed" />
+        <KpiTile label="Avg Order" value={`₹${fmt(revenue.average)}`} color="#0891b2" />
+        <KpiTile label="Customers" value={customers.total || 0} color="#d97706" />
+        <KpiTile label="Products" value={`${products.active || 0}/${products.total || 0}`} color="#6b7280" />
+        <KpiTile label="Reviews" value={`${reviews.approved || 0}/${reviews.total || 0}`} color="#f59e0b" />
       </div>
 
       {/* ═══ 4. ORDER PIPELINE + REVENUE DONUT (2-col) ═══ */}
@@ -206,27 +212,27 @@ function CardGrid() {
         <div className="dashboard-section">
           <SectionTitle icon={IC.truck}>Order Pipeline</SectionTitle>
           <div className="dc-pipeline">
-            <PipelineStep label="Pending" count={stats.orders.pending} total={pipelineTotal} color="#f59e0b" />
+            <PipelineStep label="Pending" count={orders.pending || 0} total={pipelineTotal} color="#f59e0b" />
             <PipelineStep label="Confirmed" count={confirmedCount} total={pipelineTotal} color="#3b82f6" />
             <PipelineStep label="Shipped" count={shippedCount} total={pipelineTotal} color="#0891b2" />
-            <PipelineStep label="Delivered" count={stats.orders.completed} total={pipelineTotal} color="#10b981" />
-            <PipelineStep label="Cancelled" count={stats.orders.cancelled} total={pipelineTotal} color="#ef4444" />
+            <PipelineStep label="Delivered" count={orders.completed || 0} total={pipelineTotal} color="#10b981" />
+            <PipelineStep label="Cancelled" count={orders.cancelled || 0} total={pipelineTotal} color="#ef4444" />
             <PipelineStep label="RTO / Returns" count={rtoCount} total={pipelineTotal} color="#64748b" />
           </div>
           <div className="dc-pipe-footer">
-            <span>Total: {stats.orders.total}</span>
-            <span>Last 30 days: {stats.orders.recent}</span>
+            <span>Total: {totalOrders}</span>
+            <span>Last 30 days: {orders.recent || 0}</span>
             <span>COD: {codCount} · Prepaid: {prepaidCount}</span>
           </div>
         </div>
 
-        {stats.revenue?.donutChart?.length > 0 && (
+        {revenue.donutChart?.length > 0 && (
           <div className="dc-donut-wrap-single">
             <DonutChart
-              data={stats.revenue.donutChart}
+              data={revenue.donutChart}
               title="Revenue by Status"
               subtitle="Where the money sits"
-              totalValue={`₹${stats.revenue.total.toLocaleString('en-IN',{minimumFractionDigits:2})}`}
+              totalValue={`₹${(revenue.total || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}`}
               totalLabel="Total Revenue"
               size={160} strokeWidth={22} showLegend={true}
             />
@@ -238,29 +244,29 @@ function CardGrid() {
       <div className="dashboard-section">
         <SectionTitle icon={IC.cart}>Order Overview</SectionTitle>
         <div className="dc-order-grid">
-          <StatCard title="Total Orders" value={stats.orders.total} description={hasDateFilter ? 'Filtered period' : 'All time'} icon={IC.cart} color="primary" />
-          <StatCard title="Pending" value={stats.orders.pending} description="Awaiting processing" icon={IC.clock} color="warning" />
+          <StatCard title="Total Orders" value={totalOrders} description={hasDateFilter ? 'Filtered period' : 'All time'} icon={IC.cart} color="primary" />
+          <StatCard title="Pending" value={orders.pending || 0} description="Awaiting processing" icon={IC.clock} color="warning" />
           <StatCard title="Confirmed" value={confirmedCount} description="Confirmed & processing" icon={IC.check} color="info" />
           <StatCard title="Shipped" value={shippedCount} description="In transit / delivery" icon={IC.truck} color="info" />
-          <StatCard title="Delivered" value={stats.orders.completed} description={`${stats.orders.total > 0 ? Math.round((stats.orders.completed/stats.orders.total)*100) : 0}% success`} icon={IC.check} color="success" />
-          <StatCard title="Cancelled" value={stats.orders.cancelled} description={`${stats.orders.total > 0 ? Math.round((stats.orders.cancelled/stats.orders.total)*100) : 0}% of total`} icon={IC.warn} color="danger" />
-          <StatCard title="RTO / Returns" value={rtoCount} description={`${stats.orders.total > 0 ? Math.round((rtoCount/stats.orders.total)*100) : 0}% RTO rate`} icon={IC.undo} color="danger" />
-          <StatCard title="COD Orders" value={codCount} description={`${stats.orders.total > 0 ? Math.round((codCount/stats.orders.total)*100) : 0}% of total`} icon={IC.card} color="warning" />
-          <StatCard title="Prepaid" value={prepaidCount} description={`${stats.orders.total > 0 ? Math.round((prepaidCount/stats.orders.total)*100) : 0}% of total`} icon={IC.card} color="success" />
-          <StatCard title="Recent" value={stats.orders.recent} description="Last 30 days" icon={IC.recent} color="info" />
+          <StatCard title="Delivered" value={orders.completed || 0} description={`${totalOrders > 0 ? Math.round(((orders.completed || 0)/totalOrders)*100) : 0}% success`} icon={IC.check} color="success" />
+          <StatCard title="Cancelled" value={orders.cancelled || 0} description={`${totalOrders > 0 ? Math.round(((orders.cancelled || 0)/totalOrders)*100) : 0}% of total`} icon={IC.warn} color="danger" />
+          <StatCard title="RTO / Returns" value={rtoCount} description={`${totalOrders > 0 ? Math.round((rtoCount/totalOrders)*100) : 0}% RTO rate`} icon={IC.undo} color="danger" />
+          <StatCard title="COD Orders" value={codCount} description={`${totalOrders > 0 ? Math.round((codCount/totalOrders)*100) : 0}% of total`} icon={IC.card} color="warning" />
+          <StatCard title="Prepaid" value={prepaidCount} description={`${totalOrders > 0 ? Math.round((prepaidCount/totalOrders)*100) : 0}% of total`} icon={IC.card} color="success" />
+          <StatCard title="Recent" value={orders.recent || 0} description="Last 30 days" icon={IC.recent} color="info" />
         </div>
       </div>
 
       {/* ═══ 6. CHARTS ROW (2x2) ═══ */}
       <div className="dc-charts-2x2">
         {stats.paymentDistribution?.chart?.length > 0 && (
-          <DonutChart data={stats.paymentDistribution.chart} title="Payment Methods" subtitle="COD vs Prepaid" totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+          <DonutChart data={stats.paymentDistribution.chart} title="Payment Methods" subtitle="COD vs Prepaid" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
         )}
         {stats.paymentStatusDistribution?.chart?.length > 0 && (
-          <DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses" totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+          <DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
         )}
-        {stats.orders?.statusChart?.length > 0 && (
-          <DonutChart data={stats.orders.statusChart} title="Order Pipeline" subtitle="Current pipeline" totalValue={`${stats.orders.total}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+        {orders.statusChart?.length > 0 && (
+          <DonutChart data={orders.statusChart} title="Order Pipeline" subtitle="Current pipeline" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
         )}
         {stats.rtoStats?.totalRTO > 0 && (
           <div className="dc-rto-mini-card">
@@ -302,10 +308,10 @@ function CardGrid() {
                   <tr key={o.id}>
                     <td className="table-order-number">{o.orderNumber}</td>
                     <td>{o.customerName}</td>
-                    <td className="table-amount">₹{o.amount.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                    <td className="table-amount">₹{(o.amount || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
                     <td><span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span></td>
                     <td><span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g,'-')}`}>{o.status}</span></td>
-                    <td className="table-date">{new Date(o.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+                    <td className="table-date">{o.date ? new Date(o.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -323,8 +329,8 @@ function CardGrid() {
                   <tr key={p.id}>
                     <td className="table-rank">#{i+1}</td>
                     <td className="table-product-name">{p.name}</td>
-                    <td>{p.totalSold} units</td>
-                    <td className="table-revenue">₹{p.totalRevenue.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                    <td>{p.totalSold || 0} units</td>
+                    <td className="table-revenue">₹{(p.totalRevenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -356,7 +362,7 @@ function CardGrid() {
                 <table className="dashboard-table">
                   <thead><tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Orders</th><th>Conv. Rate</th><th>Revenue</th></tr></thead>
                   <tbody>{stats.utmTracking.conversions.slice(0,5).map((c,i)=>(
-                    <tr key={i}><td><span className="utm-badge source">{c.source}</span></td><td><span className="utm-badge medium">{c.medium}</span></td><td>{c.sessions}</td><td>{c.orders}</td><td><span className={`conversion-badge ${c.conversionRate>5?'high':c.conversionRate>2?'medium':'low'}`}>{c.conversionRate}%</span></td><td className="table-revenue">₹{c.revenue.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
+                    <tr key={i}><td><span className="utm-badge source">{c.source}</span></td><td><span className="utm-badge medium">{c.medium}</span></td><td>{c.sessions}</td><td>{c.orders}</td><td><span className={`conversion-badge ${c.conversionRate>5?'high':c.conversionRate>2?'medium':'low'}`}>{c.conversionRate}%</span></td><td className="table-revenue">₹{(c.revenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
                   ))}</tbody>
                 </table>
               </div>
