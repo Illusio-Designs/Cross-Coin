@@ -31,6 +31,7 @@ import AdminReels from "./social/reels";
 import AdminInstagramFeed from "./social/instagram";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
+import MonitoringDashboard from "./monitoring/index";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
@@ -156,6 +157,7 @@ function Dashboard() {
       case 'media-gallery':   return <MediaGallery />;
       case 'analytics':       return <AnalyticsPage />;
       case 'utm-analytics':   return <UTMAnalytics />;
+      case 'monitoring':      return <MonitoringDashboard />;
       case 'staff-users':     return <StaffUsers />;
       default:                return <CardGrid />;
     }
