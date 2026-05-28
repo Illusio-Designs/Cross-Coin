@@ -209,7 +209,7 @@ export default function OrderTracking() {
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </article>
 
                     <section className="ot-card ot-stepper-card" aria-label="Shipment progress">
                         <h2 className="ot-card-title">Shipment Progress</h2>
