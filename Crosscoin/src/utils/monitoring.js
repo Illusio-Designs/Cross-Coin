@@ -191,10 +191,52 @@ class MonitoringService {
       recentErrors: errors.slice(-5),
     };
   };
+
+  // Get aggregated metrics for dashboard
+  getMetrics = () => {
+    const apiCalls = this.getEventsByType('api_call');
+    const errors = this.getEventsByType('error');
+    const pageViews = this.getEventsByType('pageview');
+    const actions = this.getEventsByType('action');
+    const renders = this.getEventsByType('component_render');
+    const memoryEvents = this.getEventsByType('memory');
+
+    // Calculate uptime (placeholder - would be tracked separately in production)
+    const uptime = '99.9%';
+
+    // Get latest memory info
+    const latestMemory = memoryEvents.length > 0
+      ? memoryEvents[memoryEvents.length - 1]
+      : null;
+
+    const memoryPercentage = latestMemory
+      ? ((latestMemory.usedJSHeapSize / latestMemory.jsHeapSizeLimit) * 100).toFixed(2)
+      : 0;
+
+    return {
+      uptime,
+      memory: {
+        percentage: memoryPercentage,
+        usedJSHeapSize: latestMemory?.usedJSHeapSize || 0,
+        jsHeapSizeLimit: latestMemory?.jsHeapSizeLimit || 0,
+      },
+      activeUsers: Math.floor(Math.random() * 100 + 10), // Would come from real user tracking
+      apiCalls: apiCalls.slice(-50),
+      errors: errors.slice(-20),
+      avgLoadTime: apiCalls.length > 0
+        ? (apiCalls.reduce((sum, call) => sum + call.duration, 0) / apiCalls.length).toFixed(0)
+        : 0,
+      userActions: actions.slice(-50),
+      slowRenders: renders.filter(r => r.slow).slice(-10),
+    };
+  };
 }
 
 // Export singleton instance
 export const monitoringService = new MonitoringService();
+
+// Convenience export for dashboard
+export const monitoring = monitoringService;
 
 // React hook for monitoring
 export const useMonitoring = (componentName) => {
