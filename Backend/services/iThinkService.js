@@ -3,6 +3,10 @@ const settingsHelper = require('./settingsHelper');
 
 const ITHINK_STAGING_URL = 'https://pre-alpha.ithinklogistics.com';
 const ITHINK_PRODUCTION_URL = 'https://my.ithinklogistics.com';
+// iThink uses a separate production host for the V3 tracking endpoint
+// (see https://docs.ithinklogistics.com/doc-track-order/3). Calling track.json
+// on my.ithinklogistics.com returns an empty 200 — real data only lives here.
+const ITHINK_TRACKING_PRODUCTION_URL = 'https://api.ithinklogistics.com';
 
 /**
  * iThink Logistics Service
@@ -28,7 +32,10 @@ class IThinkService {
       this.pickupAddressId = await settingsHelper.getSetting(this.brandId, 'ITHINK_PICKUP_ADDRESS_ID');
       this.returnAddressId = await settingsHelper.getSetting(this.brandId, 'ITHINK_RETURN_ADDRESS_ID', this.pickupAddressId);
       this.defaultLogistics = await settingsHelper.getSetting(this.brandId, 'ITHINK_DEFAULT_LOGISTICS', '');
+      this.env = env;
       this.baseURL = env === 'production' ? ITHINK_PRODUCTION_URL : ITHINK_STAGING_URL;
+      // Tracking lives on a separate prod host; staging uses the same host as everything else.
+      this.trackingBaseURL = env === 'production' ? ITHINK_TRACKING_PRODUCTION_URL : ITHINK_STAGING_URL;
 
       console.log('iThink Configuration:', {
         brandId: this.brandId,
@@ -482,8 +489,11 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/order/track.json', payload);
-      console.log('Tracking fetched successfully');
+      // Tracking endpoint lives on a different host than the rest of the API
+      // in production — pass the full URL so axios ignores this.baseURL.
+      const trackingUrl = `${this.trackingBaseURL}/api_v3/order/track.json`;
+      const response = await this.axiosInstance.post(trackingUrl, payload);
+      console.log(`Tracking fetched successfully from ${this.trackingBaseURL}`);
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Track Order');
