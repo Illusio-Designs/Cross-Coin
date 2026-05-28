@@ -65,7 +65,16 @@
       "Bash(grep -E \"\\\\.\\(js|ts\\)$\")",
       "Bash(grep \":0$\")",
       "Bash(dir \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\\\\src\\\\pages\\\\dashboard\" /s /b)",
-      "Bash(node fix-mojibake.js Crosscoin/src Crosscoin/public)"
+      "Bash(node fix-mojibake.js Crosscoin/src Crosscoin/public)",
+      "Bash(node fix-mojibake.js Crosscoin/src Crosscoin/Backend)",
+      "Bash(node fix-mojibake.js src Backend)",
+      "Bash(node fix-mojibake.js src public)",
+      "Bash(node Crosscoin/fix-mojibake.js Backend)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\" -Recurse -Include \"*.jsx\" -Name)",
+      "Bash(Select-Object -First 20)",
+      "Bash(timeout 60 node load-test-node.js)",
+      "Bash(tee load-test-results.txt)",
+      "PowerShell(cd \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\"; $env:NODE_ENV='development'; npm start)"
     ]
   }
 }

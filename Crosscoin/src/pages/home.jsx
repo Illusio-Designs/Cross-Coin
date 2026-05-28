@@ -217,32 +217,49 @@ const Home = () => {
   };
 
   return (
-    <div className="home-page">
-        <HeroSlider slides={slides} />
-        <CouponStrip />
-        <TrustBadges />
-        <SlidingCollection collections={categories} isLoading={loading} />
-        <UnlockedExclusives products={exclusiveProducts} loading={exclusiveProductsLoading} />
-        <div className="shop-by-category">
+    <main className="home-page" role="main">
+        <section aria-label="Featured Promotions">
+          <HeroSlider slides={slides} />
+          <CouponStrip />
+          <TrustBadges />
+        </section>
+        <section aria-label="Shop By Category">
+          <SlidingCollection collections={categories} isLoading={loading} />
+        </section>
+        <section aria-label="Exclusive Offers">
+          <UnlockedExclusives products={exclusiveProducts} loading={exclusiveProductsLoading} />
+        </section>
+        <section className="shop-by-category" aria-label="Latest Products">
           <div className="latest-title">
             <div className="section-header-inline">
               <h2 className="section-header-h2">Latest <strong>Products</strong></h2>
               <p className="section-header-sub">Fresh drops, just in</p>
             </div>
-            <button className="hero-btn" onClick={() => window.location.href = '/Products'}>
+            <button
+              className="hero-btn"
+              onClick={() => window.location.href = '/Products'}
+              aria-label="View all products catalog"
+            >
               View All Products
             </button>
           </div>
           <div className="category-products">
             {latestProductsLoading ? (
-              <div className="products-slider" ref={latestSliderRef}>
+              <div className="products-slider" ref={latestSliderRef} role="status" aria-label="Loading latest products">
                 {Array(8).fill(0).map((_, idx) => (
                   <Skeleton key={`latest-skeleton-${idx}`} type="product" />
                 ))}
               </div>
             ) : (
-              <div className="products-slider latest-products-scroll" ref={latestSliderRef}>
-                {latestProducts.slice(0, 15).map((product) => {
+              <>
+                <div
+                  className="products-slider latest-products-scroll"
+                  ref={latestSliderRef}
+                  role="region"
+                  aria-label="Latest products carousel"
+                  aria-live="polite"
+                >
+                  {latestProducts.slice(0, 15).map((product) => {
                 // Use centralized image selection
                 const imageData = product.images?.[0] || product.image || null;
                 
@@ -304,27 +321,48 @@ const Home = () => {
                     }}
                   />
                 );
-              })}
-              </div>
+                  })}
+                </div>
+                {showLatestArrows && (
+                  <div className="slider-controls" role="group" aria-label="Latest products navigation">
+                    <button
+                      onClick={() => scrollLatestSlider('left')}
+                      aria-label="Scroll latest products left"
+                      className="slider-arrow slider-arrow-left"
+                    >
+                      <IoIosArrowBack />
+                    </button>
+                    <button
+                      onClick={() => scrollLatestSlider('right')}
+                      aria-label="Scroll latest products right"
+                      className="slider-arrow slider-arrow-right"
+                    >
+                      <IoIosArrowForward />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
-        </div>
-        <section className="home-lookbook-section">
+        </section>
+        <section className="home-lookbook-section" aria-label="Lookbook Gallery">
           <div className="home-reviews-header">
             <h2 className="section-header-h2">Shop the <strong>Look</strong></h2>
             <p className="section-header-sub">Tap the hotspots to shop directly from the look</p>
           </div>
           <LookbookShowcase />
         </section>
-        <section className="home-reviews-section">
+        <section className="home-reviews-section" aria-label="Customer Reviews">
           <div className="home-reviews-header">
             <h2 className="section-header-h2">Customer <strong>Reviews</strong></h2>
             <p className="section-header-sub">What our customers are saying</p>
           </div>
           <InfiniteReviewsSlider reviews={reviews} />
         </section>
-        <BlogSection />
-      </div>
+        <section aria-label="Blog Articles">
+          <BlogSection />
+        </section>
+      </main>
     );
 };
 
