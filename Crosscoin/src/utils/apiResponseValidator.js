@@ -13,12 +13,21 @@ export const validateListResponse = (response, itemsKey = 'data') => {
   try {
     if (!response) return [];
 
-    // Try itemsKey first, then common alternatives
+    // Try itemsKey first, then common alternatives (including plural resource names)
     const items = response[itemsKey] ||
       response.items ||
       response.data ||
       response.results ||
       response.orders ||
+      response.products ||
+      response.categories ||
+      response.coupons ||
+      response.payments ||
+      response.reviews ||
+      response.consumers ||
+      response.attributes ||
+      response.blogs ||
+      response.sliders ||
       (Array.isArray(response) ? response : []);
 
     return Array.isArray(items) ? items : [];
