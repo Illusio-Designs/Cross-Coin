@@ -75,7 +75,9 @@
       "Bash(timeout 60 node load-test-node.js)",
       "Bash(tee load-test-results.txt)",
       "PowerShell(cd \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\"; $env:NODE_ENV='development'; npm start)",
-      "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")",
+      "Bash(xargs grep -l \"\\\\.tbl\\\\|\\\\.table\")",
+      "Bash(xargs grep -l \"\\\\.tbl {\")"
     ]
   }
 }
