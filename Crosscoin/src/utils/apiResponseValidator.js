@@ -18,6 +18,7 @@ export const validateListResponse = (response, itemsKey = 'data') => {
       response.items ||
       response.data ||
       response.results ||
+      response.orders ||
       (Array.isArray(response) ? response : []);
 
     return Array.isArray(items) ? items : [];

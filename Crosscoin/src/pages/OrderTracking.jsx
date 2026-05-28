@@ -118,55 +118,78 @@ export default function OrderTracking() {
     const timeline = orderData ? getTimeline(orderData) : [];
 
     return (
-        <div className="ot-page">
-            {/* Search Bar */}
-            <div className="ot-search-bar">
+        <main className="ot-page" role="main">
+            <section className="ot-search-bar" aria-label="Order tracking search">
                 <div className="ot-search-inner">
                     <h1 className="ot-title">Track Your <span>Order</span></h1>
-                    <form onSubmit={handleTrackOrder} className="ot-form">
-                        <div className="ot-method-toggle">
-                            <button
-                                type="button"
-                                className={`ot-toggle-btn ${trackingMethod === 'order_number' ? 'active' : ''}`}
-                                onClick={() => setTrackingMethod('order_number')}
-                            >
-                                Order Number
-                            </button>
-                            <button
-                                type="button"
-                                className={`ot-toggle-btn ${trackingMethod === 'awb' ? 'active' : ''}`}
-                                onClick={() => setTrackingMethod('awb')}
-                            >
-                                AWB Number
-                            </button>
-                        </div>
+                    <form onSubmit={handleTrackOrder} className="ot-form" aria-label="Order tracking form">
+                        <fieldset>
+                            <legend className="sr-only">Tracking method</legend>
+                            <div className="ot-method-toggle" role="group" aria-label="Select tracking method">
+                                <button
+                                    type="button"
+                                    className={`ot-toggle-btn ${trackingMethod === 'order_number' ? 'active' : ''}`}
+                                    onClick={() => setTrackingMethod('order_number')}
+                                    aria-pressed={trackingMethod === 'order_number'}
+                                    aria-label="Track by order number"
+                                >
+                                    Order Number
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`ot-toggle-btn ${trackingMethod === 'awb' ? 'active' : ''}`}
+                                    onClick={() => setTrackingMethod('awb')}
+                                    aria-pressed={trackingMethod === 'awb'}
+                                    aria-label="Track by AWB number"
+                                >
+                                    AWB Number
+                                </button>
+                            </div>
+                        </fieldset>
                         <div className="ot-input-row">
+                            <label htmlFor="tracking-input" className="sr-only">
+                                {trackingMethod === 'order_number' ? 'Order Number' : 'AWB Number'}
+                            </label>
                             <input
+                                id="tracking-input"
                                 type="text"
                                 value={trackingInput}
                                 onChange={(e) => setTrackingInput(e.target.value)}
                                 placeholder={trackingMethod === 'order_number' ? 'e.g. CC-M5KXQR8-A3F1B2' : 'Enter AWB number'}
                                 className="ot-input"
+                                aria-required="true"
+                                aria-invalid={error ? 'true' : 'false'}
+                                aria-describedby={error ? 'tracking-error' : undefined}
                             />
-                            <button type="submit" className="ot-track-btn" disabled={loading}>
+                            <button
+                                type="submit"
+                                className="ot-track-btn"
+                                disabled={loading}
+                                aria-busy={loading}
+                            >
                                 {loading ? 'Tracking...' : 'Track'}
                             </button>
                         </div>
                     </form>
-                    {error && <div className="ot-error">{error}</div>}
+                    {error && (
+                        <div id="tracking-error" className="ot-error" role="alert">
+                            {error}
+                        </div>
+                    )}
                 </div>
-            </div>
+            </section>
 
             {orderData && (
-                <div className="ot-content">
-                    {/* Order Header Card */}
-                    <div className="ot-card ot-header-card">
+                <section className="ot-content" aria-label="Order tracking results">
+                    <article className="ot-card ot-header-card" aria-label="Order summary">
                         <div className="ot-header-info">
                             <div className="ot-header-row">
-                                <span className="ot-order-id">#{orderData.order.order_number}</span>
+                                <span className="ot-order-id">Order #{orderData.order.order_number}</span>
                                 <span
                                     className="ot-status-pill"
                                     style={{ backgroundColor: getStatusColor(orderData.order.status) }}
+                                    role="status"
+                                    aria-label={`Order status: ${getStatusDisplayText(orderData.order.status)}`}
                                 >
                                     {getStatusDisplayText(orderData.order.status)}
                                 </span>
@@ -188,11 +211,10 @@ export default function OrderTracking() {
                         </div>
                     </div>
 
-                    {/* Progress Stepper */}
-                    <div className="ot-card ot-stepper-card">
+                    <section className="ot-card ot-stepper-card" aria-label="Shipment progress">
                         <h2 className="ot-card-title">Shipment Progress</h2>
-                        <div className="ot-stepper">
-                            <div className="ot-stepper-line">
+                        <div className="ot-stepper" role="list" aria-label={`Order progress: step ${activeStep + 1} of ${STEPS.length}`}>
+                            <div className="ot-stepper-line" aria-hidden="true">
                                 <div
                                     className="ot-stepper-fill"
                                     style={{ width: activeStep >= 0 ? `${(activeStep / (STEPS.length - 1)) * 100}%` : '0%' }}
@@ -202,8 +224,13 @@ export default function OrderTracking() {
                                 const isCompleted = i < activeStep;
                                 const isActive = i === activeStep;
                                 return (
-                                    <div key={step.key} className={`ot-step ${isCompleted || isActive ? 'completed' : ''} ${isActive ? 'active' : ''}`}>
-                                        <div className="ot-step-circle">
+                                    <div
+                                        key={step.key}
+                                        className={`ot-step ${isCompleted || isActive ? 'completed' : ''} ${isActive ? 'active' : ''}`}
+                                        role="listitem"
+                                        aria-label={`${step.label}${isCompleted ? ' - completed' : isActive ? ' - current' : ''}`}
+                                    >
+                                        <div className="ot-step-circle" aria-hidden="true">
                                             {isCompleted || isActive
                                                 ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                                 : <span className="ot-step-num">{i + 1}</span>
@@ -214,32 +241,35 @@ export default function OrderTracking() {
                                 );
                             })}
                         </div>
-                    </div>
+                    </section>
 
                     <div className="ot-grid">
-                        {/* Timeline */}
-                        <div className="ot-card ot-timeline-card">
+                        <section className="ot-card ot-timeline-card" aria-label="Tracking timeline">
                             <h2 className="ot-card-title">Tracking Timeline</h2>
                             {timeline.length > 0 ? (
-                                <div className="ot-timeline">
+                                <ol className="ot-timeline" role="list" aria-label="Order tracking events in reverse chronological order">
                                     {timeline.map((event, i) => (
-                                        <div key={i} className={`ot-timeline-item ${i === 0 ? 'latest' : ''}`}>
-                                            <div className="ot-timeline-dot" />
+                                        <li
+                                            key={i}
+                                            className={`ot-timeline-item ${i === 0 ? 'latest' : ''}`}
+                                            role="listitem"
+                                            aria-label={`${getStatusDisplayText(event.status)}${event.time ? ` on ${formatDateTime(event.time)}` : ''}`}
+                                        >
+                                            <div className="ot-timeline-dot" aria-hidden="true" />
                                             <div className="ot-timeline-content">
                                                 <div className="ot-timeline-status">{getStatusDisplayText(event.status)}</div>
                                                 {event.note && <div className="ot-timeline-note">{event.note}</div>}
                                                 {event.time && <div className="ot-timeline-time">{formatDateTime(event.time)}</div>}
                                             </div>
-                                        </div>
+                                        </li>
                                     ))}
-                                </div>
+                                </ol>
                             ) : (
                                 <p className="ot-no-data">No tracking events yet.</p>
                             )}
-                        </div>
+                        </section>
 
-                        {/* Order Items */}
-                        <div className="ot-card ot-items-card">
+                        <section className="ot-card ot-items-card" aria-label="Order items">
                             <h2 className="ot-card-title">Order Items</h2>
                             {orderData.items?.map((item, i) => {
                                 const rawImage = item.product?.image;
@@ -248,16 +278,20 @@ export default function OrderTracking() {
                                     : null;
                                 const attrsDisplay = item.variation?.attributes ? formatAttributesForDisplay(item.variation.attributes) : null;
                                 const noImgPlaceholder = (
-                                    <div className="ot-item-no-img">
+                                    <div className="ot-item-no-img" aria-hidden="true">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                                     </div>
                                 );
                                 return (
-                                    <div key={i} className="ot-item">
+                                    <article
+                                        key={i}
+                                        className="ot-item"
+                                        aria-label={`${item.product?.name || 'Product'}, quantity ${item.quantity}`}
+                                    >
                                         <div className="ot-item-img">
                                             {imageUrl
-                                                ? <img src={imageUrl} alt={item.product?.name}
-                                                    onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="ot-item-no-img"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'; }} />
+                                                ? <img src={imageUrl} alt={`${item.product?.name || 'Product'} image`}
+                                                    onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="ot-item-no-img" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>'; }} />
                                                 : noImgPlaceholder
                                             }
                                         </div>
@@ -274,71 +308,71 @@ export default function OrderTracking() {
                                             </div>
                                             <div className="ot-item-price">₹{item.total_price || (parseFloat(item.price) * item.quantity).toFixed(2)}</div>
                                         </div>
-                                    </div>
+                                    </article>
                                 );
                             })}
-                        </div>
+                        </section>
                     </div>
 
-                    {/* Delivery & Payment Info */}
                     <div className="ot-grid ot-grid-2">
-                        <div className="ot-card">
+                        <section className="ot-card" aria-label="Delivery address">
                             <h2 className="ot-card-title">Delivery Address</h2>
                             {orderData.shipping_address ? (
-                                <div className="ot-address">
+                                <address className="ot-address">
                                     <div className="ot-address-name">{orderData.shipping_address.full_name}</div>
                                     <div className="ot-address-line">{orderData.shipping_address.address}</div>
                                     <div className="ot-address-line">{orderData.shipping_address.city}, {orderData.shipping_address.state} - {orderData.shipping_address.pincode}</div>
                                     <div className="ot-address-line">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                                         {orderData.shipping_address.phone}
                                     </div>
-                                </div>
+                                </address>
                             ) : <p className="ot-no-data">No address available.</p>}
-                        </div>
+                        </section>
 
-                        <div className="ot-card">
+                        <section className="ot-card" aria-label="Payment information">
                             <h2 className="ot-card-title">Payment Info</h2>
-                            <div className="ot-detail-rows">
+                            <dl className="ot-detail-rows">
                                 <div className="ot-detail-row">
-                                    <span>Payment Method</span>
-                                    <span>{orderData.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid'}</span>
+                                    <dt>Payment Method</dt>
+                                    <dd>{orderData.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid'}</dd>
                                 </div>
                                 <div className="ot-detail-row">
-                                    <span>AWB Number</span>
-                                    <span className="ot-awb">{orderData.order.tracking_number || orderData.tracking?.tracking_number || 'Not assigned'}</span>
+                                    <dt>AWB Number</dt>
+                                    <dd className="ot-awb">{orderData.order.tracking_number || orderData.tracking?.tracking_number || 'Not assigned'}</dd>
                                 </div>
                                 <div className="ot-detail-row ot-total-row">
-                                    <span>Total Amount</span>
-                                    <span>₹{orderData.order.final_amount}</span>
+                                    <dt>Total Amount</dt>
+                                    <dd>₹{orderData.order.final_amount}</dd>
                                 </div>
-                            </div>
-                        </div>
+                            </dl>
+                        </section>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="ot-card ot-actions">
+                    <section className="ot-card ot-actions" aria-label="Order actions">
                         {(orderData.tracking?.tracking_url || orderData.order.tracking_url) && (
                             <a
                                 href={orderData.tracking?.tracking_url || orderData.order.tracking_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="ot-btn ot-btn-outline"
+                                aria-label="Track shipment with courier"
                             >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
                                 Track Shipment
                             </a>
                         )}
                         <button
                             className="ot-btn ot-btn-ghost"
                             onClick={() => { setTrackingInput(''); setOrderData(null); setError(''); }}
+                            aria-label="Clear current order and track another order"
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                             Track Another Order
                         </button>
-                    </div>
-                </div>
+                    </section>
+                </section>
             )}
-        </div>
+        </main>
     );
 }
