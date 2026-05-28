@@ -326,15 +326,6 @@ export const orderService = {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/orders", config);
-        if (typeof window !== 'undefined') {
-          console.log('[API Orders Raw Response]', {
-            status: response.status,
-            dataType: typeof response.data,
-            dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
-            dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
-            data: response.data
-          });
-        }
         const validated = validatePaginatedResponse(response.data);
         const result = {
           orders: validated.items,
@@ -774,15 +765,6 @@ export const paymentService = {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/payments", config);
-        if (typeof window !== 'undefined') {
-          console.log('[API Payments Raw Response]', {
-            status: response.status,
-            dataType: typeof response.data,
-            dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
-            dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
-            data: response.data
-          });
-        }
         const validated = validatePaginatedResponse(response.data);
         const result = {
           payments: validated.items,
@@ -1021,15 +1003,6 @@ export const categoryService = {
   getAllCategories: async () => {
     try {
       const response = await adminApi.get("/api/categories");
-      if (typeof window !== 'undefined') {
-        console.log('[API Categories Raw Response]', {
-          status: response.status,
-          dataType: typeof response.data,
-          dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
-          dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
-          data: response.data
-        });
-      }
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1175,15 +1148,6 @@ export const productService = {
         const config = { params };
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/products", config);
-        if (typeof window !== 'undefined') {
-          console.log('[API Products Raw Response]', {
-            status: response.status,
-            dataType: typeof response.data,
-            dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
-            dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
-            data: response.data
-          });
-        }
         const validated = validatePaginatedResponse(response.data);
         const result = {
           products: validated.items,
@@ -1334,15 +1298,6 @@ export const couponService = {
         const config = {};
         if (signal) config.signal = signal;
         const response = await adminApi.get("/api/coupons", config);
-        if (typeof window !== 'undefined') {
-          console.log('[API Coupons Raw Response]', {
-            status: response.status,
-            dataType: typeof response.data,
-            dataKeys: Array.isArray(response.data) ? 'array' : Object.keys(response.data || {}),
-            dataLength: Array.isArray(response.data) ? response.data.length : (response.data?.length || 'N/A'),
-            data: response.data
-          });
-        }
         const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
         const result = { coupons, data: coupons };
         // Cache successful response
@@ -1409,14 +1364,6 @@ export const reviewService = {
         params: { status, page, limit },
         headers,
       });
-      if (typeof window !== 'undefined') {
-        console.log('[API Reviews Raw Response]', {
-          status: response.status,
-          dataType: typeof response.data,
-          dataKeys: response.data ? Object.keys(response.data) : 'null',
-          data: response.data
-        });
-      }
       if (response.data) return response.data;
       throw new Error("Invalid response format from server");
     } catch (error) {

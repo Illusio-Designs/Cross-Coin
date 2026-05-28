@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const orderController = require('../controller/orderController');
+const orderShippingController = require('../controller/orderShippingController');
 const loyaltyService = require('../services/loyaltyService');
 const instagramService = require('../services/instagramService');
 
@@ -24,18 +25,33 @@ function initializeCronJobs() {
     }
   });
 
-  // FShip Status Refresh - Runs every hour at :30 (offset from sync)
-  cron.schedule('30 * * * *', async () => {
-    console.log('\n⏰ [CRON] FShip status refresh started at:', new Date().toISOString());
+  // ── iThink/FShip Status Refresh — Twice Daily at 6 AM & 6 PM ─────────────
+  // Refreshes order status from iThink/FShip for active orders (NOT cancelled/delivered)
+  cron.schedule('0 6,18 * * *', async () => {
+    console.log('\n⏰ [CRON] Order status refresh (iThink) started at:', new Date().toISOString());
     try {
-      const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 100 } };
-      const mockRes = {
-        json: (data) => { console.log('✅ [CRON] FShip status refresh completed:', { total: data.data?.total, updated: data.data?.updated, unchanged: data.data?.unchanged, errors: data.data?.errors }); },
-        status: (code) => ({ json: (data) => { console.error('❌ [CRON] FShip status refresh failed:', data); } })
+      const mockReq = {
+        user: { id: 'system', username: 'cron_job' },
+        query: {
+          limit: 100,
+          status: 'confirmed,processing,booked,pickup initiated,manifested,in transit,shipped,out for delivery,undelivered,rto,exception'
+        }
       };
-      await orderController.bulkRefreshFShipStatus(mockReq, mockRes);
+      const mockRes = {
+        json: (data) => {
+          console.log('✅ [CRON] Status refresh completed:', {
+            total: data.data?.total,
+            updated: data.data?.updated,
+            unchanged: data.data?.unchanged,
+            errors: data.data?.errors,
+            validation_failed: data.data?.validation_failed
+          });
+        },
+        status: (code) => ({ json: (data) => { console.error('❌ [CRON] Status refresh failed:', data); } })
+      };
+      await orderShippingController.bulkRefreshFShipStatus(mockReq, mockRes);
     } catch (error) {
-      console.error('❌ [CRON] FShip status refresh error:', error.message);
+      console.error('❌ [CRON] Status refresh error:', error.message);
     }
   });
 
@@ -382,7 +398,7 @@ function initializeCronJobs() {
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
   console.log('   - FShip Order Sync: Every 2 hours at :05');
-  console.log('   - FShip Status Refresh: Every hour at :30');
+  console.log('   - iThink Status Refresh: Twice daily (6 AM & 6 PM) — auto-excludes cancelled/delivered');
   console.log('   - Loyalty Expiry: Daily at 2 AM');
   console.log('   - Instagram Feed Refresh: Every 6 hours');
   console.log('   - Abandoned Cart Recovery: Every hour at :15');
