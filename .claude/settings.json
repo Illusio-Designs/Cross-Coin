@@ -74,7 +74,8 @@
       "Bash(Select-Object -First 20)",
       "Bash(timeout 60 node load-test-node.js)",
       "Bash(tee load-test-results.txt)",
-      "PowerShell(cd \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\"; $env:NODE_ENV='development'; npm start)"
+      "PowerShell(cd \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\"; $env:NODE_ENV='development'; npm start)",
+      "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")"
     ]
   }
 }
