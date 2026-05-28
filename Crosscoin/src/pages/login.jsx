@@ -106,9 +106,9 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="auth-page">
+    <main className="auth-page" role="main">
       <div className="auth-split">
-        <div className="auth-brand-panel">
+        <section className="auth-brand-panel" aria-label="Brand information">
           <div className="auth-brand-inner">
             <div className="auth-brand-logo">Cross Coin</div>
             <h2 className="auth-brand-headline">Premium Socks.<br />Engineered for Life.</h2>
@@ -124,9 +124,9 @@ export default function Login() {
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="auth-form-panel">
+        <section className="auth-form-panel" aria-label="Login form">
           <div className="auth-form-inner">
             <div className="auth-form-header">
               <h1 className="auth-form-title">{step === "phone" ? "Welcome back" : "Verify OTP"}</h1>
@@ -135,18 +135,19 @@ export default function Login() {
               </p>
             </div>
 
-            <div className="auth-tab-row">
-              <span className="auth-tab active">Sign In</span>
-              <Link href="/register" className="auth-tab">Create Account</Link>
-            </div>
+            <nav className="auth-tab-row" aria-label="Authentication method">
+              <span className="auth-tab active" role="tab" aria-selected="true">Sign In</span>
+              <Link href="/register" className="auth-tab" role="tab" aria-selected="false">Create Account</Link>
+            </nav>
 
             {step === "phone" && (
-              <div className="auth-form">
+              <form className="auth-form" aria-label="Phone number entry">
                 <div className="auth-field">
-                  <label>Mobile Number</label>
+                  <label htmlFor="phone-input">Mobile Number</label>
                   <div className="auth-phone-row">
-                    <span className="auth-phone-prefix">+91</span>
+                    <span className="auth-phone-prefix" aria-hidden="true">+91</span>
                     <input
+                      id="phone-input"
                       type="tel"
                       value={phone}
                       inputMode="numeric"
@@ -156,25 +157,47 @@ export default function Login() {
                       placeholder="10-digit mobile number"
                       disabled={otpSending}
                       autoFocus
+                      aria-required="true"
+                      aria-invalid={error ? "true" : "false"}
+                      aria-describedby={error ? "phone-error" : undefined}
                     />
                   </div>
                 </div>
-                {error && <p className="auth-error">{error}</p>}
-                <button className="auth-submit" onClick={handleSendOtp} disabled={otpSending || digits.length !== 10}>
+                {error && (
+                  <p id="phone-error" className="auth-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <button
+                  className="auth-submit"
+                  onClick={handleSendOtp}
+                  disabled={otpSending || digits.length !== 10}
+                  aria-busy={otpSending}
+                  aria-label={otpSending ? "Sending OTP" : "Send OTP"}
+                >
                   {otpSending ? "Sending OTP..." : "Send OTP"}
                 </button>
-              </div>
+              </form>
             )}
 
             {step === "otp" && (
-              <div className="auth-form">
-                {hint && <p className="auth-hint">{hint}</p>}
+              <form className="auth-form" aria-label="OTP verification">
+                {hint && (
+                  <p className="auth-hint" role="status" aria-live="polite">
+                    {hint}
+                  </p>
+                )}
 
-                {/* 4-box OTP input — same as CartDrawer */}
-                <div style={{ display: "flex", gap: 10, justifyContent: "center", margin: "20px 0" }}>
+                <label htmlFor="otp-digit-0" className="sr-only">One-time password</label>
+                <div
+                  style={{ display: "flex", gap: 10, justifyContent: "center", margin: "20px 0" }}
+                  role="group"
+                  aria-label="OTP input fields"
+                >
                   {otpDigits.map((digit, i) => (
                     <input
                       key={i}
+                      id={`otp-digit-${i}`}
                       ref={otpRefs[i]}
                       type="text"
                       inputMode="numeric"
@@ -195,6 +218,8 @@ export default function Login() {
                         transition: "border-color 0.15s",
                         caretColor: "transparent",
                       }}
+                      aria-label={`Digit ${i + 1} of 4`}
+                      aria-required="true"
                       onChange={e => {
                         const raw = e.target.value.replace(/\D/g, "");
                         if (raw.length > 1) {
@@ -232,28 +257,37 @@ export default function Login() {
                   ))}
                 </div>
 
-                {error && <p className="auth-error">{error}</p>}
+                {error && (
+                  <p className="auth-error" role="alert" aria-live="assertive">
+                    {error}
+                  </p>
+                )}
 
                 <button
                   id="login-otp-verify-btn"
                   className="auth-submit"
                   onClick={handleVerifyOtp}
                   disabled={loading || otpCode.length < 4}
+                  aria-busy={loading}
+                  aria-label={loading ? "Verifying OTP" : "Verify and login"}
                 >
                   {loading ? "Verifying..." : "Verify & Login"}
                 </button>
 
-                <div className="auth-resend-row" style={{ marginTop: 14, textAlign: "center" }}>
+                <section className="auth-resend-row" style={{ marginTop: 14, textAlign: "center" }} aria-label="Resend options">
                   <p style={{ color: "#666", fontSize: 13, margin: 0 }}>
                     Didn&apos;t receive code?{" "}
                     {resendCountdown > 0 ? (
-                      <span style={{ color: "#999" }}>Resend in {resendCountdown}s</span>
+                      <span style={{ color: "#999" }} aria-live="polite" aria-atomic="true">
+                        Resend in {resendCountdown}s
+                      </span>
                     ) : (
                       <button
                         type="button"
                         style={{ background: "none", border: "none", color: "#CE1E36", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 13, textDecoration: "underline" }}
                         onClick={() => { setOtpDigits(["","","",""]); setResendCountdown(0); setError(""); handleSendOtp(); otpRefs[0].current?.focus(); }}
                         disabled={otpSending || loading}
+                        aria-label={otpSending ? "Sending OTP" : "Request OTP again"}
                       >
                         {otpSending ? "Sending..." : "Request again"}
                       </button>
@@ -264,19 +298,20 @@ export default function Login() {
                     style={{ background: "none", border: "none", color: "#180D3E", cursor: "pointer", padding: 0, fontSize: 13, marginTop: 8, textDecoration: "underline" }}
                     onClick={() => { setStep("phone"); setOtpDigits(["","","",""]); setError(""); setHint(""); }}
                     disabled={loading}
+                    aria-label="Change phone number and go back"
                   >
                     Change number
                   </button>
-                </div>
-              </div>
+                </section>
+              </form>
             )}
 
             <p className="auth-switch">
               Don&apos;t have an account? <Link href="/register">Create one free</Link>
             </p>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
