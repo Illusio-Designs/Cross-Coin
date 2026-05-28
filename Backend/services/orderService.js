@@ -163,7 +163,6 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
   const { ProductVariation } = require('../model/productVariationModel.js');
   const { Coupon, CouponUsage } = require('../model/associations.js');
   const loyaltyService = require('./loyaltyService.js');
-  const fshipService = require('./fshipService.js');
   const { sequelize } = require('../config/db.js');
 
   return sequelize.transaction(async (t) => {
@@ -219,11 +218,18 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
 
     await auditLog(order.id, 'cancel', cancelledBy, isAdmin ? 'admin' : 'user', { reason }, t);
 
-    // Cancel in FShip after commit
+    // Cancel at the shipping provider that issued the AWB (after commit).
+    // Use the per-order resolver so iThink orders go to iThink, FShip to FShip.
     if (order.fship_waybill) {
-      setImmediate(() => {
-        fshipService.cancelOrder(order.fship_waybill, reason || 'Order cancelled')
-          .catch(e => logger.warn(`FShip cancel failed for ${order.order_number}:`, e.message));
+      setImmediate(async () => {
+        try {
+          const { resolveProviderForOrder } = require('../controller/orderShippingController.js');
+          const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+          await provider.cancelOrder(order.fship_waybill, reason || 'Order cancelled');
+          logger.debug(`${providerName} cancel sent for ${order.order_number} (AWB ${order.fship_waybill})`);
+        } catch (e) {
+          logger.warn(`Provider cancel failed for ${order.order_number}: ${e.message}`);
+        }
       });
     }
 

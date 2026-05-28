@@ -33,12 +33,36 @@ const orderEmitter = require('../services/orderEvents.js');
  */
 async function resolveProviderForOrder(order) {
   const brandId = order?.brand_id || 1;
-  // Read provider from SHIPPING_PROVIDER setting (default: fship, can be set to ithink)
+
+  // Prefer the provider recorded at sync time. A waybill is only meaningful
+  // on the provider that issued it — querying tracking on a different one
+  // returns "No tracking data found".
+  if (order?.id) {
+    try {
+      const shipment = await OrderShipment.findOne({
+        where: { order_id: order.id },
+        attributes: ['provider'],
+      });
+      if (shipment?.provider) {
+        const service = shippingProviderFactory.getProviderByName(shipment.provider, brandId);
+        logger.debug(`📦 Using provider ${shipment.provider} (from order_shipments) for order ${order.order_number}`);
+        return { service, name: shipment.provider };
+      }
+    } catch (err) {
+      logger.warn(`Could not read shipment provider for order ${order.id}: ${err.message}`);
+    }
+  }
+
+  // Fallback: brand's current SHIPPING_PROVIDER setting (for un-synced orders).
   const name = await shippingProviderFactory.getProviderName(brandId);
   const service = await shippingProviderFactory.getShippingProvider(brandId);
-  logger.debug(`📦 Using provider: ${name} for brand ${brandId}`);
+  logger.debug(`📦 Using provider ${name} (brand default) for brand ${brandId}`);
   return { service, name };
 }
+
+// Exposed so other modules (e.g. orderService.cancelOrder) can route a call
+// to the provider that actually issued the AWB.
+module.exports.resolveProviderForOrder = resolveProviderForOrder;
 
 // ── Courier fallback helper: try Delhivery → Amazon → Xpressbees ────────
 async function autoSelectCourierWithFallback(order, provider, transaction = null) {
@@ -374,7 +398,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
   }
 };
 
-// Get FShip tracking info for an order
+// Get tracking info for an order — uses the provider that issued the AWB.
 module.exports.getFShipTrackingForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
@@ -382,20 +406,21 @@ module.exports.getFShipTrackingForOrder = async (req, res) => {
     if (!order || !order.fship_waybill) {
       return res
         .status(404)
-        .json({ message: "Order or FShip waybill not found" });
+        .json({ message: "Order or waybill not found" });
     }
-    const tracking = await fshipService.getShipmentStatus(order.fship_waybill);
-    res.json({ tracking });
+    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+    const tracking = await provider.getShipmentStatus(order.fship_waybill);
+    res.json({ tracking, provider: providerName });
   } catch (error) {
-    logger.error("Error fetching FShip tracking:", error);
+    logger.error("Error fetching tracking:", error);
     res.status(500).json({
-      message: "Failed to fetch FShip tracking",
+      message: "Failed to fetch tracking",
       error: error.message,
     });
   }
 };
 
-// Get FShip label for an order
+// Get shipping label for an order — uses the provider that issued the AWB.
 module.exports.getFShipLabelForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
@@ -403,14 +428,15 @@ module.exports.getFShipLabelForOrder = async (req, res) => {
     if (!order || !order.fship_waybill) {
       return res
         .status(404)
-        .json({ message: "Order or FShip waybill not found" });
+        .json({ message: "Order or waybill not found" });
     }
-    const labelData = await fshipService.getShippingLabel(order.fship_waybill);
-    res.json({ label_data: labelData });
+    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+    const labelData = await provider.getShippingLabel(order.fship_waybill);
+    res.json({ label_data: labelData, provider: providerName });
   } catch (error) {
-    logger.error("Error fetching FShip label:", error);
+    logger.error("Error fetching label:", error);
     res.status(500).json({
-      message: "Failed to fetch FShip label",
+      message: "Failed to fetch label",
       error: error.message,
     });
   }
@@ -430,7 +456,8 @@ module.exports.getFShipCouriers = async (req, res) => {
   }
 };
 
-// Cancel orders in FShip (bulk)
+// Cancel orders at the shipping provider (bulk). Routes each order to the
+// provider that actually issued its AWB.
 module.exports.cancelOrdersInFShip = async (req, res) => {
   try {
     const { orderIds } = req.body;
@@ -451,17 +478,15 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
         const order = await Order.findByPk(orderId);
         if (!order || !order.fship_waybill) {
           results.failed++;
-          results.errors.push(`Order ${orderId}: No FShip waybill found`);
+          results.errors.push(`Order ${orderId}: No waybill found`);
           continue;
         }
 
-        const cancelResult = await fshipService.cancelOrder(
-          order.fship_waybill,
-          "Bulk cancellation"
-        );
+        const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+        await provider.cancelOrder(order.fship_waybill, "Bulk cancellation");
 
         results.successful++;
-        logger.debug(`Order ${orderId} cancelled in FShip successfully`);
+        logger.debug(`Order ${orderId} cancelled via ${providerName}`);
 
         // Update local order status
         await order.update({ status: "cancelled" });
@@ -470,7 +495,7 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
         await OrderStatusHistory.create({
           order_id: order.id,
           status: "cancelled",
-          notes: "Cancelled via FShip bulk operation",
+          notes: `Cancelled via ${providerName} bulk operation`,
           created_by: "admin",
         });
 
@@ -485,9 +510,9 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
       results,
     });
   } catch (error) {
-    logger.error("Error cancelling orders in FShip:", error);
+    logger.error("Error cancelling orders:", error);
     res.status(500).json({
-      message: "Failed to cancel orders in FShip",
+      message: "Failed to cancel orders",
       error: error.message,
     });
   }
@@ -1093,10 +1118,27 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
     let providerStatus = null;
 
     if (providerName === 'ithink') {
-      // iThink format: { data: { [waybill]: { current_status, current_status_code, ... } } }
-      if (trackingResult && trackingResult.data && trackingResult.data[waybill]) {
-        statusData = trackingResult.data[waybill];
-        providerStatus = statusData.current_status;
+      // iThink V3 format: { status_code: 200, data: { "<AWB>": { current_status, ... } } }
+      // The response key is the AWB string, but iThink occasionally returns it
+      // trimmed/normalised. Try several lookups before giving up.
+      const data = trackingResult?.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const wbStr = String(waybill).trim();
+        statusData =
+          data[waybill] ||
+          data[wbStr] ||
+          data[wbStr.replace(/^0+/, '')] ||  // some couriers strip leading zeros
+          null;
+
+        // Fallback: single-AWB query usually returns exactly one entry, so if
+        // we asked for one waybill and got exactly one back, use that entry
+        // regardless of how it's keyed.
+        if (!statusData) {
+          const entries = Object.values(data).filter(v => v && typeof v === 'object');
+          if (entries.length === 1) statusData = entries[0];
+        }
+
+        if (statusData) providerStatus = statusData.current_status;
       }
     } else {
       // FShip format: { summary: { status, courier_name, ... } }
@@ -1347,10 +1389,25 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
       }
 
     } else {
-      logger.warn(`⚠️ No tracking data found in ${providerName} for waybill: ${waybill}. Response was: ${JSON.stringify(trackingResult)}`);
+      const dataObj = trackingResult?.data;
+      const responseKeys = (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj))
+        ? Object.keys(dataObj)
+        : [];
+      const topStatusCode = trackingResult?.status_code ?? null;
+      const topMessage = trackingResult?.status_message || trackingResult?.message || null;
+      logger.warn(
+        `⚠️ No tracking data in ${providerName} for AWB "${waybill}" ` +
+        `(order ${order.order_number}). status_code=${topStatusCode}, ` +
+        `response keys=[${responseKeys.join(',')}], message=${topMessage || 'none'}. ` +
+        `Full response: ${JSON.stringify(trackingResult)}`
+      );
       return {
         success: false,
-        error: `No tracking data found in ${providerName}`
+        error: `No tracking data in ${providerName} for AWB ${waybill}` +
+          (responseKeys.length > 0 ? ` (response keyed by: ${responseKeys.join(', ')})` : '') +
+          (topMessage ? ` — ${topMessage}` : ''),
+        awb: waybill,
+        response_keys: responseKeys,
       };
     }
 
@@ -1703,12 +1760,21 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
           } else {
             await orderTx.rollback();
             results.errors++;
-            results.errors_list.push({ order_number: order.order_number, error: refreshResult.error });
+            results.errors_list.push({
+              order_number: order.order_number,
+              awb: refreshResult.awb || order.fship_waybill || order.tracking_number || null,
+              error: refreshResult.error,
+              ...(refreshResult.response_keys ? { ithink_response_keys: refreshResult.response_keys } : {}),
+            });
           }
         } catch (err) {
           await orderTx.rollback();
           results.errors++;
-          results.errors_list.push({ order_number: order.order_number, error: err.message });
+          results.errors_list.push({
+            order_number: order.order_number,
+            awb: order.fship_waybill || order.tracking_number || null,
+            error: err.message,
+          });
         }
       });
 
