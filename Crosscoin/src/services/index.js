@@ -4,6 +4,7 @@ import { validateListResponse, validateItemResponse, validatePaginatedResponse, 
 import { rateLimiter } from '../utils/rateLimiter';
 import { retryHandler } from '../utils/retryHandler';
 import { dataCache } from '../utils/dataCache';
+import { monitoring } from '../utils/monitoring';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
@@ -32,6 +33,9 @@ const adminApi = axios.create({
 // Request interceptor - set dynamic timeout based on endpoint
 api.interceptors.request.use(
   (config) => {
+    // Track request start time
+    config.startTime = Date.now();
+
     // Set timeout based on endpoint
     const timeout = getTimeoutForEndpoint(config.url || '');
     config.timeout = timeout;
@@ -54,9 +58,36 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    if (typeof window !== 'undefined' && monitoring) {
+      const startTime = response.config?.startTime || Date.now();
+      const duration = Date.now() - startTime;
+      monitoring.trackAPICall(
+        response.config?.url || 'unknown',
+        duration,
+        response.status
+      );
+    }
     return response;
   },
   (error) => {
+    if (typeof window !== 'undefined' && monitoring) {
+      const startTime = error.config?.startTime || Date.now();
+      const duration = Date.now() - startTime;
+      const status = error.response?.status || 0;
+      monitoring.trackAPICall(
+        error.config?.url || 'unknown',
+        duration,
+        status
+      );
+      if (error.response?.status !== 401) {
+        monitoring.logError(error, {
+          endpoint: error.config?.url,
+          status: error.response?.status,
+          type: 'api_error'
+        });
+      }
+    }
+
     // Handle timeout errors
     if (error.code === "ECONNABORTED") {
       const userMessage = handleTimeoutError(error);
@@ -65,7 +96,7 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      if (typeof window !== "undefined" && 
+      if (typeof window !== "undefined" &&
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.startsWith("/dashboard") &&
           !window.location.pathname.startsWith("/auth/")) {
@@ -80,6 +111,9 @@ api.interceptors.response.use(
 // Shared interceptor setup for adminApi (same logic, no brand header)
 adminApi.interceptors.request.use(
   (config) => {
+    // Track request start time
+    config.startTime = Date.now();
+
     const timeout = getTimeoutForEndpoint(config.url || '');
     config.timeout = timeout;
     const token = localStorage.getItem("token");
@@ -91,8 +125,37 @@ adminApi.interceptors.request.use(
 );
 
 adminApi.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof window !== 'undefined' && monitoring) {
+      const startTime = response.config?.startTime || Date.now();
+      const duration = Date.now() - startTime;
+      monitoring.trackAPICall(
+        response.config?.url || 'unknown',
+        duration,
+        response.status
+      );
+    }
+    return response;
+  },
   (error) => {
+    if (typeof window !== 'undefined' && monitoring) {
+      const startTime = error.config?.startTime || Date.now();
+      const duration = Date.now() - startTime;
+      const status = error.response?.status || 0;
+      monitoring.trackAPICall(
+        error.config?.url || 'unknown',
+        duration,
+        status
+      );
+      if (error.response?.status !== 401) {
+        monitoring.logError(error, {
+          endpoint: error.config?.url,
+          status: error.response?.status,
+          type: 'api_error'
+        });
+      }
+    }
+
     if (error.code === "ECONNABORTED") {
       const userMessage = handleTimeoutError(error);
       return Promise.reject(new Error(userMessage));

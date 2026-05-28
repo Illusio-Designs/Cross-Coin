@@ -15,6 +15,7 @@ import CartDrawer from "../components/cart/CartDrawer";
 import Breadcrumb from "../components/common/Breadcrumb";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import { monitoring } from '../utils/monitoring';
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
@@ -230,9 +231,24 @@ function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
+    // Track page views with router events
+    const handleRouteChange = (url) => {
+      if (typeof window !== 'undefined' && monitoring) {
+        const pageName = url.split('?')[0] || '/';
+        monitoring.logPageView(pageName, { url });
+      }
+    };
+
+    router.events?.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events?.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  useEffect(() => {
     // Scroll progress bar logic with throttling to prevent excessive re-renders
     let ticking = false;
-    
+
     function updateScrollProgress() {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const docHeight =
@@ -243,14 +259,14 @@ function App({ Component, pageProps }) {
       }
       ticking = false;
     }
-    
+
     function requestTick() {
       if (!ticking) {
         window.requestAnimationFrame(updateScrollProgress);
         ticking = true;
       }
     }
-    
+
     window.addEventListener("scroll", requestTick, { passive: true });
     updateScrollProgress();
     return () => window.removeEventListener("scroll", requestTick);
