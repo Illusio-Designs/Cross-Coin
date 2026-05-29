@@ -620,7 +620,10 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/order/label.json', payload);
+      // iThink V3 label endpoint is /api_v3/shipping/label.json
+      // (https://docs.ithinklogistics.com/doc-print-shipment/3). The earlier
+      // /api_v3/order/label.json path is invalid and returns no file_name.
+      const response = await this.axiosInstance.post('/api_v3/shipping/label.json', payload);
       console.log('Label fetched successfully');
       return response.data;
     } catch (error) {
@@ -649,19 +652,33 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/order/label.json', payload);
+      // Correct iThink V3 path is /api_v3/shipping/label.json. Response shape
+      // per the docs: { status, status_code, file_name: "<pdf url>" }.
+      const response = await this.axiosInstance.post('/api_v3/shipping/label.json', payload);
       console.log('Label generated successfully for iThink');
 
-      // Extract PDF URL from response
-      let pdfUrl = response.data?.file_name;
+      // Extract PDF URL from response — try every shape we've seen iThink return.
+      const root = response.data || {};
+      const inner = root.data || {};
+      const pdfUrl =
+        root.file_name || root.label_url || root.labelurl || root.LabelUrl ||
+        inner.file_name || inner.label_url || inner.labelurl || inner.LabelUrl ||
+        null;
 
       if (!pdfUrl) {
-        // Fallback: check alternative response structures
-        if (response.data?.data?.file_name) {
-          pdfUrl = response.data.data.file_name;
-        } else if (response.data?.data?.label_url) {
-          pdfUrl = response.data.data.label_url;
-        }
+        const topStatus = String(root.status || '').toLowerCase();
+        const message =
+          root.message || root.status_message || root.error ||
+          inner.message || inner.error ||
+          `iThink returned no label URL (status: ${topStatus || 'unknown'}). Response: ${JSON.stringify(root).slice(0, 300)}`;
+        console.error('iThink label generation returned no pdf URL — full response:', JSON.stringify(root, null, 2));
+        return {
+          success: false,
+          waybills: Array.isArray(waybills) ? waybills : [waybills],
+          pdfUrl: null,
+          error: message,
+          message,
+        };
       }
 
       return {

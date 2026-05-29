@@ -2233,12 +2233,16 @@ module.exports.generateLabelForOrder = async (req, res) => {
     // Call provider to generate label
     let labelResult = null;
     let labelUrl = null;
+    let labelProviderError = null;
 
     if (providerName === 'ithink' && typeof provider.getLabel === 'function') {
       labelResult = await provider.getLabel({ waybills: [waybill] });
       if (labelResult.success) {
         labelUrl = labelResult.pdfUrl || labelResult.file_name;
         logger.debug(`✅ iThink label generated. URL: ${labelUrl}`);
+      } else {
+        labelProviderError = labelResult.error || labelResult.message || null;
+        logger.warn(`⚠️ iThink label generation failed: ${labelProviderError}`);
       }
     } else if (providerName === 'fship') {
       // Try FShip label endpoint
@@ -2286,14 +2290,17 @@ module.exports.generateLabelForOrder = async (req, res) => {
         }
       });
     } else {
-      logger.warn(`⚠️ Could not generate label for order ${order.order_number}`);
+      logger.warn(`⚠️ Could not generate label for order ${order.order_number}: ${labelProviderError || 'no provider response'}`);
       return res.status(400).json({
         success: false,
-        message: `Could not generate label for order ${order.order_number}. Try syncing the order again or contact support.`,
+        message: labelProviderError
+          ? `Label generation failed for order ${order.order_number}: ${labelProviderError}`
+          : `Could not generate label for order ${order.order_number}. Try syncing the order again or contact support.`,
         data: {
           order_number: order.order_number,
           waybill: waybill,
-          provider: providerName
+          provider: providerName,
+          provider_error: labelProviderError,
         }
       });
     }
