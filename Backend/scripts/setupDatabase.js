@@ -463,6 +463,35 @@ const setupDatabase = async () => {
       console.log("⚠️ order_shipments setup:", shipmentErr.message);
     }
 
+    // Ensure faqs table exists (SEO Phase A — global + per-product/category/page FAQs).
+    // The model is picked up by the auto-loader above, but we mirror the
+    // order_shipments pattern here so legacy databases get the table even
+    // if Sequelize sync misses it for any reason.
+    console.log("Ensuring faqs table...");
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS faqs (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          brand_id INT NOT NULL DEFAULT 1,
+          attached_to_type ENUM('global','product','category','page') NOT NULL DEFAULT 'global',
+          attached_to_id INT NULL,
+          attached_to_slug VARCHAR(120) NULL,
+          question VARCHAR(500) NOT NULL,
+          answer TEXT NOT NULL,
+          display_order INT NOT NULL DEFAULT 0,
+          is_active TINYINT(1) NOT NULL DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_faq_lookup     (brand_id, attached_to_type, is_active, display_order),
+          INDEX idx_faq_attach_id   (attached_to_type, attached_to_id),
+          INDEX idx_faq_attach_slug (attached_to_type, attached_to_slug)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log("✓ faqs table ready");
+    } catch (faqErr) {
+      console.log("⚠️ faqs setup skipped:", faqErr.message);
+    }
+
     // Ensure users.deletedAt column exists (paranoid soft-delete support)
     console.log("Ensuring users.deletedAt column...");
     try {
