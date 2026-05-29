@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { seoAdminService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
+import { PageHeader, Panel, FilterBar } from '../../../components/Dashboard/primitives';
 
 const PAGE_SIZE = 25;
 
@@ -88,30 +89,26 @@ export default function SeoBulkEditor() {
 
   return (
     <div className="dashboard-sections">
-      <div className="dc-topbar">
-        <div className="dc-greeting">
-          <span className="dc-greeting-text">Bulk Product SEO</span>
-          <span className="dc-greeting-sub">Edit meta title, description and keywords for many products at once.</span>
-        </div>
-        <button
-          onClick={saveAll}
-          disabled={saving || dirtyCount === 0}
-          className="cd-btn-primary"
-          style={{ padding: '8px 16px' }}
-        >
-          {saving ? 'Saving…' : dirtyCount === 0 ? 'No changes' : `Save (${dirtyCount} rows)`}
-        </button>
-      </div>
+      <PageHeader
+        title="Bulk Product SEO"
+        subtitle="Edit meta title, description and keywords for many products at once."
+        actions={
+          <button
+            onClick={saveAll}
+            disabled={saving || dirtyCount === 0}
+            className="ds-btn ds-btn--primary"
+          >
+            {saving ? 'Saving…' : dirtyCount === 0 ? 'No changes' : `Save (${dirtyCount} rows)`}
+          </button>
+        }
+      />
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search by name or slug…"
-          style={{ flex: 1, minWidth: 220, padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }}
-        />
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: '#374151' }}>
+      <FilterBar
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        placeholder="Search by name or slug…"
+      >
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: 'var(--ds-color-text)' }}>
           <input
             type="checkbox"
             checked={gapsOnly}
@@ -119,21 +116,21 @@ export default function SeoBulkEditor() {
           />
           Only show products with gaps
         </label>
-      </div>
+      </FilterBar>
 
       <div style={{
-        padding: 10,
-        background: '#fff7ed',
-        border: '1px solid #fed7aa',
-        borderRadius: 6,
-        fontSize: 12,
-        color: '#9a3412',
-        marginBottom: 12,
+        padding: 'var(--ds-space-3)',
+        background: 'var(--ds-color-warn-bg)',
+        border: '1px solid var(--ds-color-warn-bd)',
+        borderRadius: 'var(--ds-radius-sm)',
+        fontSize: 'var(--ds-text-sm)',
+        color: 'var(--ds-color-warn)',
+        marginBottom: 'var(--ds-space-3)',
       }}>
         Leave a field blank to fall back to the auto-fill default (the brand title template, the product description, etc.). Saving here only writes the fields you actually changed.
       </div>
 
-      <div className="dashboard-section" style={{ padding: 0, overflow: 'hidden' }}>
+      <Panel flush style={{ overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
         ) : items.length === 0 ? (
@@ -197,14 +194,14 @@ export default function SeoBulkEditor() {
             </table>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* Pagination */}
       {pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 16 }}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={pageBtn}>← Prev</button>
-          <span style={{ fontSize: 13, color: '#6b7280' }}>Page {page} of {pages}</span>
-          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page >= pages} style={pageBtn}>Next →</button>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 'var(--ds-space-4)' }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="ds-btn ds-btn--sm">← Prev</button>
+          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>Page {page} of {pages}</span>
+          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page >= pages} className="ds-btn ds-btn--sm">Next →</button>
         </div>
       )}
     </div>

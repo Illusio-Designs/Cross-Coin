@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { brandSettingsService, brandService } from '../../../services';
 import Dropdown from '../../../components/ui/Dropdown';
 import { showSuccess, showError } from '../../../utils/toastNotification';
+import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
 // Every SEO-relevant key we want to expose. The category we store in
 // brand_settings is 'seo' so the Brand Settings legacy UI also picks
@@ -155,38 +156,34 @@ export default function GlobalSeoSettings() {
 
   return (
     <div className="dashboard-sections">
-      <div className="dc-topbar">
-        <div className="dc-greeting">
-          <span className="dc-greeting-text">Global SEO Settings</span>
-          <span className="dc-greeting-sub">Defaults applied across every product, category and page on the storefront.</span>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {brands.length > 1 && (
-            <Dropdown
-              value={brandId}
-              onChange={(v) => setBrandId(Number(v))}
-              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-            />
-          )}
-          <button
-            onClick={save}
-            disabled={loading || saving || dirtyKeys.length === 0}
-            className="cd-btn-primary"
-            style={{ padding: '8px 16px' }}
-          >
-            {saving ? 'Saving…' : dirtyKeys.length === 0 ? 'No changes' : `Save (${dirtyKeys.length})`}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Global SEO Settings"
+        subtitle="Defaults applied across every product, category and page on the storefront."
+        actions={
+          <>
+            {brands.length > 1 && (
+              <Dropdown
+                value={brandId}
+                onChange={(v) => setBrandId(Number(v))}
+                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+              />
+            )}
+            <button
+              onClick={save}
+              disabled={loading || saving || dirtyKeys.length === 0}
+              className="ds-btn ds-btn--primary"
+            >
+              {saving ? 'Saving…' : dirtyKeys.length === 0 ? 'No changes' : `Save (${dirtyKeys.length})`}
+            </button>
+          </>
+        }
+      />
 
       {loading ? (
-        <div className="dashboard-section" style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
+        <Panel><div style={{ padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>Loading…</div></Panel>
       ) : (
         FIELDS.map(section => (
-          <div key={section.section} className="dashboard-section" style={{ marginBottom: 16 }}>
-            <h3 style={{ margin: 0, marginBottom: 12, fontSize: 14, color: '#180D3E', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {section.section}
-            </h3>
+          <Panel key={section.section} title={section.section} style={{ marginBottom: 'var(--ds-space-4)' }}>
             {section.keys.map(field => (
               <Field
                 key={field.key}
@@ -196,7 +193,7 @@ export default function GlobalSeoSettings() {
                 dirty={dirtyKeys.includes(field.key)}
               />
             ))}
-          </div>
+          </Panel>
         ))
       )}
     </div>

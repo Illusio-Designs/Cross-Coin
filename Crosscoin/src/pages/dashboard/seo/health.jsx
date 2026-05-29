@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { seoAdminService } from '../../../services';
 import { handleViewChange } from '../../../utils/dashboardRouting';
+import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
 export default function SeoHealth() {
   const [data, setData] = useState(null);
@@ -28,71 +29,87 @@ export default function SeoHealth() {
 
   return (
     <div className="dashboard-sections">
-      <div className="dc-topbar">
-        <div className="dc-greeting">
-          <span className="dc-greeting-text">SEO Health</span>
-          <span className="dc-greeting-sub">Where the catalog still has SEO gaps you should fix before Google Ads.</span>
-        </div>
-        <button
-          onClick={() => handleViewChange('seo-bulk', () => {})}
-          className="cd-btn-primary"
-          style={{ padding: '8px 16px' }}
-        >
-          Open bulk editor →
-        </button>
-      </div>
+      <PageHeader
+        title="SEO Health"
+        subtitle="Where the catalog still has SEO gaps you should fix before Google Ads."
+        actions={
+          <button
+            onClick={() => handleViewChange('seo-bulk', () => {})}
+            className="ds-btn ds-btn--primary"
+          >
+            Open bulk editor →
+          </button>
+        }
+      />
 
       {loading && (
-        <div className="dashboard-section" style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
+        <Panel><div style={{ padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>Loading…</div></Panel>
       )}
       {error && (
-        <div className="dashboard-section" style={{ padding: 16, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b' }}>
-          {error}
-        </div>
+        <Panel><div style={{ color: 'var(--ds-color-danger)', fontSize: 14 }}>{error}</div></Panel>
       )}
 
       {data && (
         <>
-          {/* Products */}
-          <div className="dashboard-section" style={{ marginBottom: 16 }}>
-            <SectionHeader title="Products" subtitle={`${data.products.total} total · ${data.products.withSeoRow} with SEO row`} />
+          <Panel
+            title="Products"
+            subtitle={`${data.products.total} total · ${data.products.withSeoRow} with SEO row`}
+            style={{ marginBottom: 'var(--ds-space-4)' }}
+          >
             <KpiGrid>
               <Stat label="Missing meta title"       count={data.products.missingMetaTitle}       total={data.products.total} />
               <Stat label="Missing meta description" count={data.products.missingMetaDescription} total={data.products.total} />
               <Stat label="Missing OG image"         count={data.products.missingOgImage}         total={data.products.total} />
             </KpiGrid>
-          </div>
+          </Panel>
 
-          {/* Categories */}
-          <div className="dashboard-section" style={{ marginBottom: 16 }}>
-            <SectionHeader title="Categories" subtitle={`${data.categories.total} total`} />
+          <Panel
+            title="Categories"
+            subtitle={`${data.categories.total} total`}
+            style={{ marginBottom: 'var(--ds-space-4)' }}
+          >
             <KpiGrid>
               <Stat label="Missing meta title"       count={data.categories.missingMetaTitle}       total={data.categories.total} />
               <Stat label="Missing meta description" count={data.categories.missingMetaDescription} total={data.categories.total} />
               <Stat label="Missing OG image"         count={data.categories.missingOgImage}         total={data.categories.total} />
               <Stat label="Noindex"                  count={data.categories.noindex}                total={data.categories.total} tone="neutral" />
             </KpiGrid>
-          </div>
+          </Panel>
 
-          {/* FAQs */}
-          <div className="dashboard-section" style={{ marginBottom: 16 }}>
-            <SectionHeader title="FAQs" subtitle={`${data.faqs.active} active / ${data.faqs.total} total`} />
+          <Panel
+            title="FAQs"
+            subtitle={`${data.faqs.active} active / ${data.faqs.total} total`}
+            style={{ marginBottom: 'var(--ds-space-4)' }}
+          >
             {data.faqs.total === 0 && (
-              <div style={{ padding: 16, background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 6, color: '#92400e', fontSize: 13 }}>
+              <div style={{
+                padding: 16,
+                background: 'var(--ds-color-warn-bg)',
+                border: '1px solid var(--ds-color-warn-bd)',
+                borderRadius: 'var(--ds-radius-sm)',
+                color: 'var(--ds-color-warn)',
+                fontSize: 13,
+              }}>
                 No FAQs configured. Adding 3–5 site-wide FAQs (return policy, shipping time, warranty) wins entire rich-result slots on Google mobile and AI shopping.
-                <a href="#" onClick={(e) => { e.preventDefault(); handleViewChange('faqs', () => {}); }} style={{ marginLeft: 8, color: '#180D3E', fontWeight: 600 }}>Add FAQs →</a>
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); handleViewChange('faqs', () => {}); }}
+                  style={{ marginLeft: 8, color: 'var(--ds-color-brand)', fontWeight: 600 }}
+                >Add FAQs →</a>
               </div>
             )}
-          </div>
+          </Panel>
 
-          {/* Sample products with gaps */}
           {data.sampleProductsWithGaps?.length > 0 && (
-            <div className="dashboard-section">
-              <SectionHeader title="Recent products with gaps" subtitle="Most recently updated — fix these first" />
+            <Panel
+              title="Recent products with gaps"
+              subtitle="Most recently updated — fix these first"
+              flush
+            >
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <tr style={{ background: 'var(--ds-color-surface-soft)', borderBottom: '1px solid var(--ds-color-border)' }}>
                       <th style={th}>Product</th>
                       <th style={th}>Slug</th>
                       <th style={th}>Missing</th>
@@ -100,15 +117,17 @@ export default function SeoHealth() {
                   </thead>
                   <tbody>
                     {data.sampleProductsWithGaps.map(p => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--ds-color-border-soft)' }}>
                         <td style={td}>{p.name}</td>
-                        <td style={{ ...td, color: '#6b7280', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{p.slug}</td>
+                        <td style={{ ...td, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono)', fontSize: 12 }}>{p.slug}</td>
                         <td style={td}>
                           {p.gaps.map(g => (
                             <span key={g} style={{
                               display: 'inline-block', marginRight: 6,
                               padding: '1px 6px', borderRadius: 10,
-                              background: '#fef2f2', color: '#991b1b', fontSize: 11, fontWeight: 600,
+                              background: 'var(--ds-color-danger-bg)',
+                              color: 'var(--ds-color-danger)',
+                              fontSize: 11, fontWeight: 600,
                             }}>{g}</span>
                           ))}
                         </td>
@@ -117,19 +136,10 @@ export default function SeoHealth() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Panel>
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function SectionHeader({ title, subtitle }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-      <h3 style={{ margin: 0, fontSize: 14, color: '#180D3E', textTransform: 'uppercase', letterSpacing: 0.5 }}>{title}</h3>
-      <span style={{ fontSize: 12, color: '#6b7280' }}>{subtitle}</span>
     </div>
   );
 }

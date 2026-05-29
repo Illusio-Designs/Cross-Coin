@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { faqService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
+import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
 // Lazy-load the rich-text editor — Quill ships a lot of JS we don't want
 // in the admin shell's initial bundle.
@@ -158,23 +159,23 @@ export default function FaqsManager() {
 
   return (
     <div className="dashboard-sections">
-      <div className="dc-topbar">
-        <div className="dc-greeting">
-          <span className="dc-greeting-text">FAQs</span>
-          <span className="dc-greeting-sub">Manage site-wide and per-product FAQs. Answers emit FAQPage schema on the product page.</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            style={{ padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }}
-          >
-            <option value="all">All scopes</option>
-            {ATTACH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <button onClick={openCreate} className="cd-btn-primary" style={{ padding: '8px 14px' }}>+ New FAQ</button>
-        </div>
-      </div>
+      <PageHeader
+        title="FAQs"
+        subtitle="Manage site-wide and per-product FAQs. Answers emit FAQPage schema on the product page."
+        actions={
+          <>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              style={{ padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-sm)', fontSize: 14, background: 'var(--ds-color-surface)' }}
+            >
+              <option value="all">All scopes</option>
+              {ATTACH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <button onClick={openCreate} className="ds-btn ds-btn--primary">+ New FAQ</button>
+          </>
+        }
+      />
 
       <FaqForm
         form={form}
@@ -185,11 +186,11 @@ export default function FaqsManager() {
         editing={!!editing}
       />
 
-      <div className="dashboard-section">
+      <Panel>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>Loading…</div>
         ) : groups.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>
             No FAQs yet. Use the form above to add your first one.
           </div>
         ) : groups.map(g => (
@@ -232,7 +233,7 @@ export default function FaqsManager() {
             </div>
           </div>
         ))}
-      </div>
+      </Panel>
     </div>
   );
 }
@@ -241,8 +242,8 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
   const showId = form.attached_to_type === 'product' || form.attached_to_type === 'category';
   const showSlug = form.attached_to_type === 'page';
   return (
-    <form onSubmit={save} className="dashboard-section" style={{ padding: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#180D3E', marginBottom: 12 }}>
+    <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)' }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 12 }}>
         {editing ? 'Edit FAQ' : 'New FAQ'}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 10, marginBottom: 10 }}>
