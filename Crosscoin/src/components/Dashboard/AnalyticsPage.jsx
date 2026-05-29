@@ -110,7 +110,18 @@ export default function AnalyticsPage() {
   const [propertyId, setPropertyId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [apiError, setApiError] = useState(null);
   const [dateRange] = useState({ start: 'today', end: 'today' });
+
+  // GA4 Data API expects URLs of the form properties/{id}:runReport.
+  // Users typically paste just the numeric ID in Brand Settings — prefix it
+  // here so either form works (also strips any trailing slash).
+  const ga4Resource = (() => {
+    if (!propertyId) return '';
+    const trimmed = String(propertyId).trim().replace(/\/+$/, '');
+    if (trimmed.startsWith('properties/')) return trimmed;
+    return `properties/${trimmed}`;
+  })();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -138,9 +149,21 @@ export default function AnalyticsPage() {
         if (configured) {
           const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : "";
           fetch(`/api/ga4-token?brandId=${brandId}`, { headers: { Authorization: `Bearer ${authToken}` } })
-            .then(r => r.json())
-            .then(data => { if (data.accessToken) setAccessToken(data.accessToken); })
-            .catch(() => {});
+            .then(async r => {
+              const data = await r.json().catch(() => ({}));
+              if (!r.ok) {
+                throw new Error(data.error || `Token endpoint returned ${r.status}`);
+              }
+              return data;
+            })
+            .then(data => {
+              if (data.accessToken) { setAccessToken(data.accessToken); setApiError(null); }
+              else throw new Error('Token endpoint returned no accessToken');
+            })
+            .catch(err => {
+              console.error('[Analytics token]', err);
+              setApiError(err?.message || 'Could not mint GA4 access token');
+            });
         }
       })
       .catch(() => setGa4Configured(false))
@@ -149,10 +172,10 @@ export default function AnalyticsPage() {
 
   // Fetch realtime active users (every 30s)
   const fetchRealtime = useCallback(async () => {
-    if (!accessToken || !propertyId) return;
+    if (!accessToken || !ga4Resource) return;
     try {
       const res = await fetch(
-        `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runRealtimeReport`,
+        `https://analyticsdata.googleapis.com/v1beta/${ga4Resource}:runRealtimeReport`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -165,7 +188,12 @@ export default function AnalyticsPage() {
           }),
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('[Analytics realtime]', res.status, err);
+        setApiError(err?.error?.message || `GA4 realtime returned ${res.status}`);
+        return;
+      }
       const data = await res.json();
       const rows = data.rows ?? [];
       const total = rows.reduce((acc, r) => acc + parseInt(r.metricValues[0]?.value ?? "0", 10), 0);
@@ -184,16 +212,27 @@ export default function AnalyticsPage() {
         }
       });
       markersRef.current = newMarkers;
-    } catch {}
-  }, [accessToken, propertyId]);
+    } catch (err) {
+      console.error('[Analytics realtime]', err);
+      setApiError(err?.message || 'Failed to fetch realtime users');
+    }
+  }, [accessToken, ga4Resource]);
 
   // Fetch today's full report (every 5 min)
   const fetchGA4Stats = useCallback(async () => {
-    if (!accessToken || !propertyId) return;
+    if (!accessToken || !ga4Resource) return;
     try {
-      const base = `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`;
+      const base = `https://analyticsdata.googleapis.com/v1beta/${ga4Resource}:runReport`;
       const h = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
-      const post = body => fetch(base, { method: "POST", headers: h, body: JSON.stringify(body) }).then(r => r.json());
+      const post = async body => {
+        const r = await fetch(base, { method: "POST", headers: h, body: JSON.stringify(body) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const msg = j?.error?.message || `GA4 returned ${r.status}`;
+          throw new Error(msg);
+        }
+        return j;
+      };
 
       const excludeDashboard = { notExpression: { filter: { fieldName: "pagePath", stringFilter: { matchType: "BEGINS_WITH", value: "/dashboard" } } } };
       const excludeAuth = { notExpression: { filter: { fieldName: "pagePath", stringFilter: { matchType: "BEGINS_WITH", value: "/auth" } } } };
@@ -225,17 +264,21 @@ export default function AnalyticsPage() {
       setSources((srcData.rows || []).map(r => ({ label: r.dimensionValues[0]?.value || "Other", val: parseInt(r.metricValues[0]?.value || "0", 10) })));
       setTopLocations((locData.rows || []).map(r => ({ name: `${r.dimensionValues[0]?.value} · ${r.dimensionValues[1]?.value}`, val: parseInt(r.metricValues[0]?.value || "0", 10) })));
       setLastUpdated(new Date());
-    } catch (err) { console.error("[Analytics]", err); }
-  }, [accessToken, propertyId, dateRange]);
+      setApiError(null);
+    } catch (err) {
+      console.error("[Analytics]", err);
+      setApiError(err?.message || 'Failed to fetch GA4 report');
+    }
+  }, [accessToken, ga4Resource, dateRange]);
 
   useEffect(() => {
-    if (!accessToken || !propertyId) return;
+    if (!accessToken || !ga4Resource) return;
     fetchGA4Stats();
     const firstPing = setTimeout(() => fetchRealtime(), 500);
     const t1 = setInterval(fetchGA4Stats, 5 * 60 * 1000);
     const t2 = setInterval(fetchRealtime, 30 * 1000);
     return () => { clearTimeout(firstPing); clearInterval(t1); clearInterval(t2); };
-  }, [accessToken, propertyId, fetchGA4Stats, fetchRealtime]);
+  }, [accessToken, ga4Resource, fetchGA4Stats, fetchRealtime]);
 
   if (!mounted) return null;
 
@@ -292,17 +335,28 @@ export default function AnalyticsPage() {
       )}
 
       {/* ═══ CONNECTING / LOADING ═══ */}
-      {!settingsLoading && ga4Configured && !accessToken && (
+      {!settingsLoading && ga4Configured && !accessToken && !apiError && (
         <div className="dashboard-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '80px 24px', color: '#6b7280', fontSize: 14 }}>
           <div className="an-spinner" />
           <span>Connecting to Google Analytics…</span>
         </div>
       )}
 
-      {dataLoading && (
+      {dataLoading && !apiError && (
         <div className="dashboard-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '80px 24px', color: '#6b7280', fontSize: 14 }}>
           <div className="an-spinner" />
           <span>Loading analytics data…</span>
+        </div>
+      )}
+
+      {apiError && (
+        <div className="dashboard-section" style={{ padding: '16px 20px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 4 }}>Google Analytics error</div>
+          <div style={{ fontSize: 13, color: '#7f1d1d', wordBreak: 'break-word' }}>{apiError}</div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
+            Common fixes: confirm <code>GA4_PROPERTY_ID</code> is the numeric ID from GA4 Admin → Property Settings,
+            and that the service account email has Viewer access on that GA4 property.
+          </div>
         </div>
       )}
 
