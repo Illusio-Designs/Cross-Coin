@@ -74,6 +74,10 @@ import "../styles/components/FomoBar.css";
 import "../styles/common/Dropdown.css";
 
 // UI Components CSS
+// Design-system tokens + primitives (used by new admin pages and any
+// legacy page migrated to <PageHeader> / <Panel> / <StatTile> etc.)
+import "../styles/dashboard/tokens.css";
+import "../styles/dashboard/primitives.css";
 import "../styles/dashboard/ui-button.css";
 import "../styles/dashboard/ui-input.css";
 import "../styles/dashboard/ui-modal.css";

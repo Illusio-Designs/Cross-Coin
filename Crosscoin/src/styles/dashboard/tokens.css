@@ -1,0 +1,122 @@
+/**
+ * CrossCoin admin design tokens.
+ *
+ * Imported once at the top of _app.jsx. Every dashboard primitive
+ * (PageHeader, Card, StatTile, FilterBar, ResponsiveTable, EmptyState)
+ * reads from these variables — never hard-code hex codes or px values
+ * in the dashboard chrome anymore. Per-page CSS still lives next to
+ * the page, but should consume these tokens for spacing / colour.
+ *
+ * Breakpoints are mobile-first; query helpers are at the bottom.
+ *
+ * Why "ds-" prefix on variables? So a future engineer searching for
+ * "--color-" doesn't pull a mixed bag of legacy + design-system values.
+ * Greppable origin.
+ */
+
+:root {
+  /* ── Color: brand ────────────────────────────────────────────────── */
+  --ds-color-brand:        #180D3E;
+  --ds-color-brand-soft:   #ede9fe;
+  --ds-color-brand-strong: #0f0830;
+  --ds-color-accent:       #CE1E36;
+
+  /* ── Color: status ───────────────────────────────────────────────── */
+  --ds-color-success:      #16a34a;
+  --ds-color-success-bg:   #f0fdf4;
+  --ds-color-success-bd:   #bbf7d0;
+  --ds-color-warn:         #d97706;
+  --ds-color-warn-bg:      #fffbeb;
+  --ds-color-warn-bd:      #fef3c7;
+  --ds-color-danger:       #dc2626;
+  --ds-color-danger-bg:    #fef2f2;
+  --ds-color-danger-bd:    #fecaca;
+  --ds-color-info:         #2563eb;
+  --ds-color-info-bg:      #eff6ff;
+  --ds-color-info-bd:      #bfdbfe;
+
+  /* ── Color: neutral ──────────────────────────────────────────────── */
+  --ds-color-bg:           #f7f7fb;       /* dashboard canvas */
+  --ds-color-surface:      #ffffff;       /* cards */
+  --ds-color-surface-soft: #f9fafb;       /* table header / muted */
+  --ds-color-border:       #e5e7eb;
+  --ds-color-border-soft:  #f3f4f6;
+  --ds-color-text:         #111827;
+  --ds-color-text-muted:   #6b7280;
+  --ds-color-text-faint:   #9ca3af;
+  --ds-color-link:         var(--ds-color-brand);
+
+  /* ── Spacing scale (rems for accessibility) ─────────────────────── */
+  --ds-space-0:  0;
+  --ds-space-1:  4px;
+  --ds-space-2:  8px;
+  --ds-space-3:  12px;
+  --ds-space-4:  16px;
+  --ds-space-5:  20px;
+  --ds-space-6:  24px;
+  --ds-space-8:  32px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+
+  /* ── Radius ──────────────────────────────────────────────────────── */
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 12px;
+  --ds-radius-xl: 16px;
+  --ds-radius-pill: 999px;
+
+  /* ── Shadow ──────────────────────────────────────────────────────── */
+  --ds-shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.04);
+  --ds-shadow-md:  0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
+  --ds-shadow-lg:  0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px rgba(15, 23, 42, 0.08);
+  --ds-shadow-pop: 0 8px 24px rgba(24, 13, 62, 0.18);
+
+  /* ── Typography ──────────────────────────────────────────────────── */
+  --ds-font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ds-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --ds-text-xs: 11px;
+  --ds-text-sm: 12px;
+  --ds-text-md: 14px;
+  --ds-text-lg: 16px;
+  --ds-text-xl: 18px;
+  --ds-text-2xl: 22px;
+  --ds-text-3xl: 28px;
+
+  --ds-weight-regular: 400;
+  --ds-weight-medium:  500;
+  --ds-weight-semi:    600;
+  --ds-weight-bold:    700;
+
+  /* ── Transitions ─────────────────────────────────────────────────── */
+  --ds-trans-fast: 120ms ease;
+  --ds-trans:      200ms ease;
+
+  /* ── Sidebar widths (used by responsive grid layouts) ───────────── */
+  --ds-sidebar-w-expanded:  260px;
+  --ds-sidebar-w-collapsed: 72px;
+}
+
+/* ── Breakpoint reference (use in component CSS via @media) ─────────
+   --bp-sm:  640px;   small phones in landscape
+   --bp-md:  768px;   tablets / phablets — table → cards switch point
+   --bp-lg: 1024px;   small laptops — sidebar always visible
+   --bp-xl: 1280px;   widescreen layouts
+*/
+
+/* ── Generic dashboard reset to match the new chrome ──────────────── */
+.ds-canvas {
+  background: var(--ds-color-bg);
+  min-height: 100vh;
+  font-family: var(--ds-font-sans);
+  color: var(--ds-color-text);
+}
+
+/* ── Utility: visually-hidden but keyboard/screenreader accessible ─ */
+.ds-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
