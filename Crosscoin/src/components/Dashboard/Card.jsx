@@ -4,7 +4,7 @@ import DonutChart from '../common/DonutChart';
 import { useDashboardStats } from '../../hooks/queries/useDashboard';
 import { useAuth } from '../../context/AuthContext';
 import { DateRangePicker } from '../ui';
-import { PageHeader, Panel, StatGrid, StatTile } from './primitives';
+import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from './primitives';
 
 /* ── Icons ── */
 const IC = {
@@ -222,10 +222,9 @@ function CardGrid() {
         <StatTile label="Reviews"          value={`${reviews.approved || 0}/${reviews.total || 0}`} sub="approved / total" tone="warn" />
       </StatGrid>
 
-      {/* ═══ 4. ORDER PIPELINE + REVENUE DONUT (2-col) ═══ */}
+      {/* ═══ 4. ORDER PIPELINE + REVENUE DONUT (2-col on desktop, stacks on mobile) ═══ */}
       <div className="dc-two-col">
-        <div className="dashboard-section">
-          <SectionTitle icon={IC.truck}>Order Pipeline</SectionTitle>
+        <Panel title="Order Pipeline">
           <div className="dc-pipeline">
             <PipelineStep label="Pending" count={orders.pending || 0} total={pipelineTotal} color="#f59e0b" />
             <PipelineStep label="Confirmed" count={confirmedCount} total={pipelineTotal} color="#3b82f6" />
@@ -239,10 +238,10 @@ function CardGrid() {
             <span>Last 30 days: {orders.recent || 0}</span>
             <span>COD: {codCount} · Prepaid: {prepaidCount}</span>
           </div>
-        </div>
+        </Panel>
 
         {revenue.donutChart?.length > 0 && (
-          <div className="dc-donut-wrap-single">
+          <Panel>
             <DonutChart
               data={revenue.donutChart}
               title="Revenue by Status"
@@ -251,7 +250,7 @@ function CardGrid() {
               totalLabel="Total Revenue"
               size={160} strokeWidth={22} showLegend={true}
             />
-          </div>
+          </Panel>
         )}
       </div>
 
@@ -271,85 +270,68 @@ function CardGrid() {
         </StatGrid>
       </Panel>
 
-      {/* ═══ 6. CHARTS ROW (2x2) ═══ */}
+      {/* ═══ 6. CHARTS ROW (2x2 → stacks under 768px) ═══ */}
       <div className="dc-charts-2x2">
         {stats.paymentDistribution?.chart?.length > 0 && (
-          <DonutChart data={stats.paymentDistribution.chart} title="Payment Methods" subtitle="COD vs Prepaid" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+          <Panel><DonutChart data={stats.paymentDistribution.chart} title="Payment Methods" subtitle="COD vs Prepaid" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
         )}
         {stats.paymentStatusDistribution?.chart?.length > 0 && (
-          <DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+          <Panel><DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
         )}
         {orders.statusChart?.length > 0 && (
-          <DonutChart data={orders.statusChart} title="Order Pipeline" subtitle="Current pipeline" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} />
+          <Panel><DonutChart data={orders.statusChart} title="Order Pipeline" subtitle="Current pipeline" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
         )}
         {stats.rtoStats?.totalRTO > 0 && (
-          <div className="dc-rto-mini-card">
-            <div className="dc-rto-mini-header">
-              <span className="dc-rto-mini-icon">{IC.undo}</span>
-              <span className="dc-rto-mini-title">RTO Summary</span>
-            </div>
-            <div className="dc-rto-mini-grid">
-              <div className="dc-rto-mini-item">
-                <span className="dc-rto-mini-val">{stats.rtoStats.totalRTO}</span>
-                <span className="dc-rto-mini-lbl">Total RTO</span>
-              </div>
-              <div className="dc-rto-mini-item">
-                <span className="dc-rto-mini-val">₹{fmt(stats.rtoStats.rtoRevenue)}</span>
-                <span className="dc-rto-mini-lbl">Revenue Lost</span>
-              </div>
-              <div className="dc-rto-mini-item">
-                <span className="dc-rto-mini-val">{stats.rtoStats.rtoRate}%</span>
-                <span className="dc-rto-mini-lbl">RTO Rate</span>
-              </div>
-              <div className="dc-rto-mini-item">
-                <span className="dc-rto-mini-val">₹{fmt(stats.rtoStats.averageRTOValue)}</span>
-                <span className="dc-rto-mini-lbl">Avg RTO Value</span>
-              </div>
-            </div>
-          </div>
+          <Panel title="RTO Summary">
+            <StatGrid>
+              <StatTile label="Total RTO"      value={stats.rtoStats.totalRTO}            tone="warn" />
+              <StatTile label="Revenue Lost"   value={fmt(stats.rtoStats.rtoRevenue)}     prefix="₹" tone="danger" />
+              <StatTile label="RTO Rate"       value={`${stats.rtoStats.rtoRate}%`}       tone="warn" />
+              <StatTile label="Avg RTO Value"  value={fmt(stats.rtoStats.averageRTOValue)} prefix="₹" tone="info" />
+            </StatGrid>
+          </Panel>
         )}
       </div>
 
-      {/* ═══ 7. RECENT ORDERS + TOP PRODUCTS (side by side) ═══ */}
+      {/* ═══ 7. RECENT ORDERS + TOP PRODUCTS (side-by-side on desktop, stacked + as cards on mobile) ═══ */}
       <div className="dc-two-col dc-two-col-tables">
         {stats.recentOrders?.length > 0 && (
-          <div className="dashboard-section">
-            <SectionTitle icon={IC.cart}>Recent Orders</SectionTitle>
-            <div className="dashboard-table-container">
-              <table className="dashboard-table">
-                <thead><tr><th>Order #</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
-                <tbody>{stats.recentOrders.map(o=>(
-                  <tr key={o.id}>
-                    <td className="table-order-number">{o.orderNumber}</td>
-                    <td>{o.customerName}</td>
-                    <td className="table-amount">₹{(o.amount || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
-                    <td><span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span></td>
-                    <td><span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g,'-')}`}>{o.status}</span></td>
-                    <td className="table-date">{o.date ? new Date(o.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          </div>
+          <Panel title="Recent Orders" flush>
+            <ResponsiveTable
+              data={stats.recentOrders}
+              rowKey="id"
+              emptyMessage="No recent orders"
+              columns={[
+                { key: 'orderNumber', label: 'Order #', render: (o) => <span className="table-order-number">{o.orderNumber}</span> },
+                { key: 'customer',    label: 'Customer', render: (o) => o.customerName },
+                { key: 'amount',      label: 'Amount',
+                  render: (o) => <span className="table-amount">₹{(o.amount || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
+                { key: 'payment',     label: 'Payment',
+                  render: (o) => <span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span> },
+                { key: 'status',      label: 'Status',
+                  render: (o) => <span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g,'-')}`}>{o.status}</span> },
+                { key: 'date',        label: 'Date',
+                  render: (o) => <span className="table-date">{o.date ? new Date(o.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</span> },
+              ]}
+            />
+          </Panel>
         )}
 
         {stats.topProducts?.length > 0 && (
-          <div className="dashboard-section">
-            <SectionTitle icon={IC.star}>Top Products</SectionTitle>
-            <div className="dashboard-table-container">
-              <table className="dashboard-table">
-                <thead><tr><th>#</th><th>Product</th><th>Sold</th><th>Revenue</th></tr></thead>
-                <tbody>{stats.topProducts.slice(0, 5).map((p,i)=>(
-                  <tr key={p.id}>
-                    <td className="table-rank">#{i+1}</td>
-                    <td className="table-product-name">{p.name}</td>
-                    <td>{p.totalSold || 0} units</td>
-                    <td className="table-revenue">₹{(p.totalRevenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          </div>
+          <Panel title="Top Products" flush>
+            <ResponsiveTable
+              data={stats.topProducts.slice(0, 5)}
+              rowKey="id"
+              emptyMessage="No products sold yet"
+              columns={[
+                { key: 'rank',    label: '#',       render: (_p, i) => <span className="table-rank">#{i+1}</span> },
+                { key: 'name',    label: 'Product', render: (p) => <span className="table-product-name">{p.name}</span> },
+                { key: 'sold',    label: 'Sold',    render: (p) => `${p.totalSold || 0} units` },
+                { key: 'revenue', label: 'Revenue',
+                  render: (p) => <span className="table-revenue">₹{(p.totalRevenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
+              ]}
+            />
+          </Panel>
         )}
       </div>
 
@@ -359,27 +341,37 @@ function CardGrid() {
           {stats.utmTracking.topSources?.length > 0 && (
             <div className="dashboard-subsection">
               <h3 className="dashboard-subsection-title">Top Traffic Sources</h3>
-              <div className="dashboard-table-container">
-                <table className="dashboard-table">
-                  <thead><tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Sessions</th><th>Registered</th><th>Guests</th></tr></thead>
-                  <tbody>{stats.utmTracking.topSources.slice(0,5).map((s,i)=>(
-                    <tr key={i}><td><span className="utm-badge source">{s.source}</span></td><td><span className="utm-badge medium">{s.medium}</span></td><td><span className="utm-badge campaign">{s.campaign}</span></td><td>{s.sessions}</td><td>{s.registeredUsers}</td><td>{s.guestUsers}</td></tr>
-                  ))}</tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                data={stats.utmTracking.topSources.slice(0, 5)}
+                rowKey={(r) => `${r.source}-${r.medium}-${r.campaign}`}
+                columns={[
+                  { key: 'source',   label: 'Source',     render: (s) => <span className="utm-badge source">{s.source}</span> },
+                  { key: 'medium',   label: 'Medium',     render: (s) => <span className="utm-badge medium">{s.medium}</span> },
+                  { key: 'campaign', label: 'Campaign',   render: (s) => <span className="utm-badge campaign">{s.campaign}</span> },
+                  { key: 'sessions', label: 'Sessions',   render: (s) => s.sessions },
+                  { key: 'reg',      label: 'Registered', render: (s) => s.registeredUsers },
+                  { key: 'guests',   label: 'Guests',     render: (s) => s.guestUsers },
+                ]}
+              />
             </div>
           )}
           {stats.utmTracking.conversions?.length > 0 && (
             <div className="dashboard-subsection">
               <h3 className="dashboard-subsection-title">Conversion Performance</h3>
-              <div className="dashboard-table-container">
-                <table className="dashboard-table">
-                  <thead><tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Orders</th><th>Conv. Rate</th><th>Revenue</th></tr></thead>
-                  <tbody>{stats.utmTracking.conversions.slice(0,5).map((c,i)=>(
-                    <tr key={i}><td><span className="utm-badge source">{c.source}</span></td><td><span className="utm-badge medium">{c.medium}</span></td><td>{c.sessions}</td><td>{c.orders}</td><td><span className={`conversion-badge ${c.conversionRate>5?'high':c.conversionRate>2?'medium':'low'}`}>{c.conversionRate}%</span></td><td className="table-revenue">₹{(c.revenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
-                  ))}</tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                data={stats.utmTracking.conversions.slice(0, 5)}
+                rowKey={(r) => `${r.source}-${r.medium}`}
+                columns={[
+                  { key: 'source',   label: 'Source',    render: (c) => <span className="utm-badge source">{c.source}</span> },
+                  { key: 'medium',   label: 'Medium',    render: (c) => <span className="utm-badge medium">{c.medium}</span> },
+                  { key: 'sessions', label: 'Sessions',  render: (c) => c.sessions },
+                  { key: 'orders',   label: 'Orders',    render: (c) => c.orders },
+                  { key: 'rate',     label: 'Conv. Rate',
+                    render: (c) => <span className={`conversion-badge ${c.conversionRate>5?'high':c.conversionRate>2?'medium':'low'}`}>{c.conversionRate}%</span> },
+                  { key: 'revenue',  label: 'Revenue',
+                    render: (c) => <span className="table-revenue">₹{(c.revenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
+                ]}
+              />
             </div>
           )}
         </CollapsibleSection>
@@ -411,14 +403,18 @@ function CardGrid() {
             )}
           </div>
           {stats.lowStock.products?.length > 0 && (
-            <div className="dashboard-table-container">
-              <table className="dashboard-table">
-                <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Status</th></tr></thead>
-                <tbody>{stats.lowStock.products.slice(0,10).map((p,i)=>(
-                  <tr key={i}><td className="table-product-name">{p.name}</td><td>{p.sku}</td><td><span className={`stock-badge ${p.stock<5?'stock-critical':'stock-low'}`}>{p.stock} units</span></td><td><span className={`status-badge ${p.stock<5?'status-danger':'status-warning'}`}>{p.stock<5?'Critical':'Low'}</span></td></tr>
-                ))}</tbody>
-              </table>
-            </div>
+            <ResponsiveTable
+              data={stats.lowStock.products.slice(0, 10)}
+              rowKey={(_p, i) => i}
+              columns={[
+                { key: 'name',   label: 'Product', render: (p) => <span className="table-product-name">{p.name}</span> },
+                { key: 'sku',    label: 'SKU',     render: (p) => p.sku },
+                { key: 'stock',  label: 'Stock',
+                  render: (p) => <span className={`stock-badge ${p.stock<5?'stock-critical':'stock-low'}`}>{p.stock} units</span> },
+                { key: 'status', label: 'Status',
+                  render: (p) => <span className={`status-badge ${p.stock<5?'status-danger':'status-warning'}`}>{p.stock<5?'Critical':'Low'}</span> },
+              ]}
+            />
           )}
         </CollapsibleSection>
       )}
