@@ -17,7 +17,7 @@ import PaymentChart from '../../../components/Dashboard/PaymentChart';
 import ShippingChart from '../../../components/Dashboard/ShippingChart';
 import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
-import { PageHeader, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
+import { PageHeader, Panel, StatGrid, StatTile, FilterBar } from '../../../components/Dashboard/primitives';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -768,15 +768,15 @@ const Orders = () => {
                         inline
                     />
 
-                    {/* ── Analytics Charts (2-col on desktop) ── */}
+                    {/* ── Analytics Charts: each in its own Panel for consistent chrome ── */}
                     <div className="orders-analytics">
-                        <PaymentChart allOrdersStats={allOrdersStats} />
-                        <PaymentStatusChart allOrdersStats={allOrdersStats} />
-                        <ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} />
+                        <Panel><PaymentChart allOrdersStats={allOrdersStats} /></Panel>
+                        <Panel><PaymentStatusChart allOrdersStats={allOrdersStats} /></Panel>
+                        <Panel><ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} /></Panel>
                     </div>
 
-                    {/* ── Filters + Sort (compact bar) ── */}
-                    <div className="orders-filters-section">
+                    {/* ── Filters + Sort: sticky FilterBar on desktop, wraps on phones ── */}
+                    <FilterBar hideSearch>
                         <div className="orders-filter-wrap">
                             <Select
                                 value={statusFilter}
@@ -887,7 +887,7 @@ const Orders = () => {
                                 {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
                             </button>
                         )}
-                    </div>
+                    </FilterBar>
 
                     {/* ── Export (compact) ── */}
                     <div className="orders-export-section">
