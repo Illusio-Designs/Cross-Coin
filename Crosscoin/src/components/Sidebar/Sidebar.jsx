@@ -64,11 +64,9 @@ const ALL_MENU = [
     submenu: [
       { label: 'Slider',    view: 'slider' },
       { label: 'Blogs',     view: 'blogs' },
+      // Single SEO entry — opens the unified hub (Overview / Pages /
+      // Products / FAQs / Settings / Search Console tabs in one view).
       { label: 'SEO',           view: 'seo' },
-      { label: 'SEO Global',     view: 'seo-global', roles: ['admin'] },
-      { label: 'SEO Health',     view: 'seo-health' },
-      { label: 'Bulk SEO Edit',  view: 'seo-bulk' },
-      { label: 'FAQs',           view: 'faqs' },
       { label: 'Policies',  view: 'policies', roles: ['admin'] },
     ],
   },

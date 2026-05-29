@@ -13,10 +13,15 @@ export const getPageTitle = (view) => {
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',
-    'seo-global': 'SEO Global Settings',
-    'seo-health': 'SEO Health',
-    'seo-bulk': 'Bulk Product SEO',
-    'faqs': 'FAQs',
+    // Legacy deep-link views — all open the unified SEO hub on the
+    // matching tab. Titles describe the tab so the browser title stays
+    // accurate when an admin navigates from a bookmark.
+    'seo-global': 'SEO — Settings',
+    'seo-health': 'SEO — Overview',
+    'seo-bulk':   'SEO — Products',
+    'seo-pages':  'SEO — Pages',
+    'seo-search': 'SEO — Search Console',
+    'faqs':       'SEO — FAQs',
     'policies': 'Policies',
     'brands': 'Brands',
     'brand-settings': 'Brand Settings',
