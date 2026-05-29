@@ -18,6 +18,7 @@ import Payments from "./payments/payments";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
+import FaqsManager from "./seo/faqs";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
@@ -166,6 +167,7 @@ function Dashboard() {
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
       case 'seo':             return <SEO />;
+      case 'faqs':            return <FaqsManager />;
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
       case 'lookbooks':       return <AdminLookbooks />;

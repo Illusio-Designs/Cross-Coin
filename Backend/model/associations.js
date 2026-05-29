@@ -46,6 +46,7 @@ const { ReelProduct } = require("./reelProductModel.js");
 const { InstagramPostProduct } = require("./instagramPostProductModel.js");
 const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
 const { OrderShipment } = require("./orderShipmentModel.js");
+const { Faq } = require("./faqModel.js");
 
 // Export all models
 module.exports = {
@@ -97,6 +98,7 @@ module.exports = {
   WhatsappConversation,
   WhatsappMessage,
   OrderShipment,
+  Faq,
 };
 
 // User Associations

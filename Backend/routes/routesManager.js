@@ -55,6 +55,9 @@ router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
 router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
 router.use('/analytics',          require('../integration/dashboardAnalytics.js'));
 
+// ── FAQs (admin + public) ─────────────────────────────────────────────────
+router.use('/', require('./faqRoutes.js'));
+
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the
 // public site's <Analytics> component can mount gtag / fbq / Clarity with

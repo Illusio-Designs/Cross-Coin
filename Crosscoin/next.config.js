@@ -102,7 +102,15 @@ const nextConfig = {
   // Redirects for old URLs
   async redirects() {
     return [
-      // Add any necessary redirects here
+      // Legacy product URL (/ProductDetails?slug=foo) → clean slug URL.
+      // 301 (permanent: true) consolidates link equity for SEO and tells
+      // Google to drop the query-string version from the index.
+      {
+        source: '/ProductDetails',
+        has: [{ type: 'query', key: 'slug', value: '(?<slug>.+)' }],
+        destination: '/products/:slug',
+        permanent: true,
+      },
     ];
   },
 

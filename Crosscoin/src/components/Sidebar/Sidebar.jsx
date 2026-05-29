@@ -65,6 +65,7 @@ const ALL_MENU = [
       { label: 'Slider',    view: 'slider' },
       { label: 'Blogs',     view: 'blogs' },
       { label: 'SEO',       view: 'seo' },
+      { label: 'FAQs',      view: 'faqs' },
       { label: 'Policies',  view: 'policies', roles: ['admin'] },
     ],
   },

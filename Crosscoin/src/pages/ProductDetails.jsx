@@ -9,12 +9,16 @@ import colorMap from '../components/products/colorMap';
 import SizeChartModal from '../components/products/SizeChartModal';
 import { useBreadcrumb } from '../components/common/Breadcrumb';
 import SeoWrapper from '../console/SeoWrapper';
+import ProductFaqSection from '../components/common/ProductFaqSection';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
-export default function ProductDetails() {
+export default function ProductDetails({ initialProduct = null, initialSlug = null, productFaqs = [], globalFaqs = [] } = {}) {
   const router = useRouter();
-  const slug = router.query?.slug ? decodeURIComponent(router.query.slug) : null;
+  // The slug-based route (/products/[slug]) passes initialSlug as a prop.
+  // The legacy /ProductDetails?slug=X route still reads from the query.
+  const slug = initialSlug
+    || (router.query?.slug ? decodeURIComponent(router.query.slug) : null);
   const { addToCart, buyNow, setIsDrawerOpen } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
 
@@ -57,7 +61,16 @@ export default function ProductDetails() {
       try {
         setLoading(true);
         setError(null);
-        const productResponse = await getPublicProductBySlug(slug);
+        // Reuse the SSR payload when /products/[slug].jsx already fetched
+        // this exact product server-side. Skips a wasteful round-trip and
+        // means the page is interactive on first paint.
+        const useInitial = initialProduct && (
+          initialProduct.slug === slug ||
+          String(initialProduct.id) === slug
+        );
+        const productResponse = useInitial
+          ? { success: true, data: initialProduct }
+          : await getPublicProductBySlug(slug);
 
         if (productResponse?.success && productResponse?.data) {
           const api = productResponse.data;
@@ -697,7 +710,12 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Reviews */}
+        {/* FAQs (product-specific first, then global). Answers are HTML
+            written by the admin in a rich-text editor; DOMPurify sanitises
+            before render to prevent XSS even though it came from a trusted
+            admin endpoint. */}
+        <ProductFaqSection productFaqs={productFaqs} globalFaqs={globalFaqs} />
+
         {/* Reviews */}
         <div className="pdt-reviews">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
