@@ -302,16 +302,40 @@ function CardGrid() {
               rowKey="id"
               emptyMessage="No recent orders"
               columns={[
-                { key: 'orderNumber', label: 'Order #', render: (o) => <span className="table-order-number">{o.orderNumber}</span> },
-                { key: 'customer',    label: 'Customer', render: (o) => o.customerName },
-                { key: 'amount',      label: 'Amount',
-                  render: (o) => <span className="table-amount">₹{(o.amount || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
-                { key: 'payment',     label: 'Payment',
-                  render: (o) => <span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span> },
-                { key: 'status',      label: 'Status',
-                  render: (o) => <span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g,'-')}`}>{o.status}</span> },
-                { key: 'date',        label: 'Date',
-                  render: (o) => <span className="table-date">{o.date ? new Date(o.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</span> },
+                {
+                  key: 'orderNumber',
+                  label: 'Order #',
+                  cellStyle: { fontFamily: 'var(--ds-font-mono)', fontWeight: 600, color: '#7c3aed', fontSize: 12, whiteSpace: 'nowrap' },
+                  render: (o) => o.orderNumber,
+                },
+                {
+                  key: 'customer',
+                  label: 'Customer',
+                  cellStyle: { wordBreak: 'break-word' },
+                  render: (o) => o.customerName || '—',
+                },
+                {
+                  key: 'amount',
+                  label: 'Amount',
+                  cellStyle: { fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (o) => `₹${(o.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                },
+                {
+                  key: 'payment',
+                  label: 'Payment',
+                  render: (o) => <span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span>,
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (o) => <span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g, '-')}`}>{o.status}</span>,
+                },
+                {
+                  key: 'date',
+                  label: 'Date',
+                  cellStyle: { color: 'var(--ds-color-text-muted)', fontSize: 12, whiteSpace: 'nowrap' },
+                  render: (o) => o.date ? new Date(o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—',
+                },
               ]}
             />
           </Panel>
@@ -324,11 +348,46 @@ function CardGrid() {
               rowKey="id"
               emptyMessage="No products sold yet"
               columns={[
-                { key: 'rank',    label: '#',       render: (_p, i) => <span className="table-rank">#{i+1}</span> },
-                { key: 'name',    label: 'Product', render: (p) => <span className="table-product-name">{p.name}</span> },
-                { key: 'sold',    label: 'Sold',    render: (p) => `${p.totalSold || 0} units` },
-                { key: 'revenue', label: 'Revenue',
-                  render: (p) => <span className="table-revenue">₹{(p.totalRevenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
+                {
+                  key: 'rank',
+                  label: '#',
+                  headerStyle: { width: 56 },
+                  cellStyle: { width: 56 },
+                  render: (_p, i) => (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 26, height: 26,
+                      borderRadius: 999,
+                      background: 'var(--ds-color-accent)',
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}>{i + 1}</span>
+                  ),
+                },
+                {
+                  key: 'name',
+                  label: 'Product',
+                  // Long product names should wrap, not be truncated to 200px.
+                  // Old .table-product-name CSS forced ellipsis which clipped
+                  // most real product names.
+                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', wordBreak: 'break-word' },
+                  render: (p) => p.name,
+                },
+                {
+                  key: 'sold',
+                  label: 'Sold',
+                  cellStyle: { fontVariantNumeric: 'tabular-nums' },
+                  render: (p) => `${(p.totalSold || 0).toLocaleString('en-IN')} units`,
+                },
+                {
+                  key: 'revenue',
+                  label: 'Revenue',
+                  cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (p) => `₹${(p.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                },
               ]}
             />
           </Panel>
