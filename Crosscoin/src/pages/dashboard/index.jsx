@@ -22,6 +22,7 @@ import FaqsManager from "./seo/faqs";
 import GlobalSeoSettings from "./seo/global";
 import SeoHealth from "./seo/health";
 import SeoBulkEditor from "./seo/bulk";
+import SeoHub from "./seo/hub";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
@@ -169,11 +170,16 @@ function Dashboard() {
       case 'payments':        return <Payments />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
-      case 'seo':             return <SEO />;
-      case 'seo-global':      return <GlobalSeoSettings />;
-      case 'seo-health':      return <SeoHealth />;
-      case 'seo-bulk':        return <SeoBulkEditor />;
-      case 'faqs':            return <FaqsManager />;
+      // The new unified SEO hub. Legacy seo-* views still work as
+      // direct routes (each renders the same component the hub uses
+      // for its tab content) so old admin bookmarks don't break.
+      case 'seo':             return <SeoHub />;
+      case 'seo-global':      return <SeoHub initialTab="settings" />;
+      case 'seo-health':      return <SeoHub initialTab="overview" />;
+      case 'seo-bulk':        return <SeoHub initialTab="products" />;
+      case 'seo-pages':       return <SeoHub initialTab="pages" />;
+      case 'seo-search':      return <SeoHub initialTab="search" />;
+      case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
       case 'lookbooks':       return <AdminLookbooks />;
