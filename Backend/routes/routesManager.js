@@ -55,6 +55,33 @@ router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
 router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
 router.use('/analytics',          require('../integration/dashboardAnalytics.js'));
 
+// ── Public tracking config ────────────────────────────────────────────────
+// Returns the non-sensitive analytics IDs configured in Brand Settings so the
+// public site's <Analytics> component can mount gtag / fbq / Clarity with
+// the real IDs (instead of a build-time env var that has to be redeployed
+// whenever the admin updates them in the dashboard).
+router.get('/public/tracking-config', async (req, res) => {
+  try {
+    const brandId = parseInt(req.query.brandId, 10) || 1;
+    const settingsHelper = require('../services/settingsHelper');
+    const [ga, fb, clarity] = await Promise.all([
+      settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID'),
+      settingsHelper.getSetting(brandId, 'FB_PIXEL_ID'),
+      settingsHelper.getSetting(brandId, 'CLARITY_ID'),
+    ]);
+    // Cache at the CDN/edge for 5 min — these IDs change rarely.
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return res.json({
+      success: true,
+      ga_measurement_id: ga || null,
+      fb_pixel_id: fb || null,
+      clarity_id: clarity || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ── Serviceability ────────────────────────────────────────────────────────
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
     try {
