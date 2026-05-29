@@ -1202,6 +1202,18 @@ export const productService = {
     }
   },
 
+  // Re-runs the backend's SEO auto-fill helper from scratch and returns the
+  // derived fields (or persists them when persist=true). Used by the "Regenerate
+  // from product data" button on the SEO tab of the product edit modal.
+  regenerateSeo: async (id, persist = false) => {
+    try {
+      const response = await adminApi.post(`/api/products/${id}/seo/regenerate`, { persist });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   deleteProduct: async (id) => {
     try {
       const response = await adminApi.delete(`/api/products/${id}`);

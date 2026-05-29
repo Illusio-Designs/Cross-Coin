@@ -5,6 +5,8 @@ import { ConfirmModal } from '../../../components/common/AlertModal';
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
+import SerpPreview from '../../../components/common/SerpPreview';
+import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 
 export default function SEO() {
   const router = useRouter();
@@ -350,6 +352,7 @@ export default function SEO() {
               onChange={handleInputChange}
               required
             />
+            <SeoLengthMeter value={formData.meta_title || ''} type="title" />
             <Input
               label="Meta Description"
               type="textarea"
@@ -358,6 +361,7 @@ export default function SEO() {
               onChange={handleInputChange}
               required
             />
+            <SeoLengthMeter value={formData.meta_description || ''} type="description" />
             <Input
               label="Meta Keywords"
               type="text"
@@ -375,12 +379,21 @@ export default function SEO() {
                 onChange={handleImageChange}
               />
               {formData.meta_image && (
-                <img 
-                  src={typeof formData.meta_image === 'string' ? formData.meta_image : URL.createObjectURL(formData.meta_image)} 
-                  alt="Meta Preview" 
-                  className="seo-image-preview" 
+                <img
+                  src={typeof formData.meta_image === 'string' ? formData.meta_image : URL.createObjectURL(formData.meta_image)}
+                  alt="Meta Preview"
+                  className="seo-image-preview"
                 />
               )}
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ marginBottom: 12, color: '#180D3E', fontSize: 14 }}>Live Search Preview</h4>
+              <SerpPreview
+                title={formData.meta_title}
+                description={formData.meta_description}
+                url={`https://crosscoin.in/${formData.page_name || ''}`}
+                variant="both"
+              />
             </div>
           </div>
           <div className="modal-footer">
