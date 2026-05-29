@@ -28,21 +28,24 @@ export default function FilterBar({
   search,
   onSearchChange,
   placeholder = 'Search…',
+  hideSearch = false,             // omit the search input for filter-only rows
   children,
   ...rest
 }) {
   return (
     <div className="ds-filterbar" {...rest}>
-      <label className="ds-filterbar__search" aria-label="Search">
-        {SearchIcon}
-        <input
-          type="search"
-          value={search ?? ''}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder={placeholder}
-        />
-      </label>
-      {children && <div className="ds-filterbar__group">{children}</div>}
+      {!hideSearch && (
+        <label className="ds-filterbar__search" aria-label="Search">
+          {SearchIcon}
+          <input
+            type="search"
+            value={search ?? ''}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder={placeholder}
+          />
+        </label>
+      )}
+      {children && <div className="ds-filterbar__group" style={hideSearch ? { flex: 1 } : undefined}>{children}</div>}
     </div>
   );
 }
