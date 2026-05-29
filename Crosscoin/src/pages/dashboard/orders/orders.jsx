@@ -17,6 +17,7 @@ import PaymentChart from '../../../components/Dashboard/PaymentChart';
 import ShippingChart from '../../../components/Dashboard/ShippingChart';
 import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
+import { PageHeader, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -706,79 +707,55 @@ const Orders = () => {
                     </div>
                 )}
                 <div className="orders-header-container">
-                    {/* ── Top Bar: Title + Search + Actions ── */}
-                    <div className="ord-topbar">
-                        <div className="ord-topbar-left">
-                            <h1 className="ord-title">Orders</h1>
-                            <span className="ord-subtitle">{totalOrders} order{totalOrders !== 1 ? 's' : ''} total</span>
-                        </div>
-                        <div className="ord-topbar-right">
-                            <div className="sl-search-wrap">
-                                <span className="sl-search-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                                </span>
-                                <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB..."
-                                    value={filterValue} onChange={handleSearchChange} />
-                            </div>
-                            <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
-                                onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                {syncingAll ? 'Syncing...' : 'Sync Orders'}
-                            </button>
-                            <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
-                                onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
-                                style={{ borderColor: '#2563eb', color: '#2563eb' }}
-                                onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
-                                onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
-                                {refreshingStatus ? 'Refreshing...' : 'Refresh Status'}
-                            </button>
-                            <button className="order-sync-main-btn"
-                                onClick={() => setIsManualOrderOpen(true)}
-                                style={{ borderColor: '#16a34a', color: '#16a34a' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#16a34a'; }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Manual Order
-                            </button>
-                        </div>
-                    </div>
+                    {/* ── Page Header: Title + actions (search + sync buttons) ── */}
+                    <PageHeader
+                        title="Orders"
+                        subtitle={`${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`}
+                        actions={
+                            <>
+                                <div className="sl-search-wrap">
+                                    <span className="sl-search-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                    </span>
+                                    <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB…"
+                                        value={filterValue} onChange={handleSearchChange} />
+                                </div>
+                                <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
+                                    onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    {syncingAll ? 'Syncing…' : 'Sync Orders'}
+                                </button>
+                                <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
+                                    onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
+                                    style={{ borderColor: '#2563eb', color: '#2563eb' }}
+                                    onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
+                                    onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                    {refreshingStatus ? 'Refreshing…' : 'Refresh Status'}
+                                </button>
+                                <button className="order-sync-main-btn"
+                                    onClick={() => setIsManualOrderOpen(true)}
+                                    style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#16a34a'; }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    Manual Order
+                                </button>
+                            </>
+                        }
+                    />
 
-                    {/* ── KPI Strip ── */}
-                    <div className="ord-kpi-strip">
-                        <div className="ord-kpi" style={{ borderLeftColor: '#180D3E' }}>
-                            <span className="ord-kpi-label">Total</span>
-                            <span className="ord-kpi-val">{allOrdersStats.total}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#059669' }}>
-                            <span className="ord-kpi-label">Revenue</span>
-                            <span className="ord-kpi-val" style={{ color: '#059669' }}>₹{parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
-                            <span className="ord-kpi-label">Prepaid</span>
-                            <span className="ord-kpi-val">{allOrdersStats.prepaid}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#f59e0b' }}>
-                            <span className="ord-kpi-label">COD</span>
-                            <span className="ord-kpi-val">{allOrdersStats.cod}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
-                            <span className="ord-kpi-label">Delivered</span>
-                            <span className="ord-kpi-val">{allOrdersStats.deliveredOrders}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#ef4444' }}>
-                            <span className="ord-kpi-label">Cancelled</span>
-                            <span className="ord-kpi-val">{allOrdersStats.cancelledOrders}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#10b981' }}>
-                            <span className="ord-kpi-label">Paid</span>
-                            <span className="ord-kpi-val">{allOrdersStats.paymentStatusPaid}</span>
-                        </div>
-                        <div className="ord-kpi" style={{ borderLeftColor: '#7c3aed' }}>
-                            <span className="ord-kpi-label">Avg Order</span>
-                            <span className="ord-kpi-val">₹{parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)}</span>
-                        </div>
-                    </div>
+                    {/* ── KPI Strip — design-system StatTiles ── */}
+                    <StatGrid style={{ marginBottom: 'var(--ds-space-4)' }}>
+                        <StatTile label="Total"     value={allOrdersStats.total} />
+                        <StatTile label="Revenue"   value={parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })} prefix="₹" tone="good" />
+                        <StatTile label="Prepaid"   value={allOrdersStats.prepaid}          tone="good" />
+                        <StatTile label="COD"       value={allOrdersStats.cod}              tone="warn" />
+                        <StatTile label="Delivered" value={allOrdersStats.deliveredOrders}  tone="good" />
+                        <StatTile label="Cancelled" value={allOrdersStats.cancelledOrders}  tone="danger" />
+                        <StatTile label="Paid"      value={allOrdersStats.paymentStatusPaid} tone="good" />
+                        <StatTile label="Avg Order" value={parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)} prefix="₹" tone="info" />
+                    </StatGrid>
 
                     {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
                     <DateRangePicker
