@@ -156,20 +156,30 @@ export default function AnalyticsPage() {
     return j;
   }, [brandId]);
 
-  // Fetch realtime active users (every 30s)
+  // Fetch realtime active users (every 30s).
+  // Omitting minuteRanges defaults to the last 30 minutes — the same window
+  // GA4's own realtime UI uses. The previous explicit 5-minute window was
+  // narrower than what the user expects and stayed at 0 for low-traffic sites.
   const fetchRealtime = useCallback(async () => {
     if (!ga4Configured) return;
     try {
+      // First call: total active users in the last 30 minutes (no dimensions
+      // so we always get a reliable headline number even when city/country
+      // is "(not set)" for every visitor).
+      const totalData = await callGa4("realtime", {
+        metrics: [{ name: "activeUsers" }],
+      });
+      const total = parseInt(totalData.rows?.[0]?.metricValues?.[0]?.value || "0", 10);
+      setRealtimeUsers(total);
+
+      // Second call: per-location breakdown for the globe markers.
       const data = await callGa4("realtime", {
         dimensions: [{ name: "city" }, { name: "country" }],
         metrics: [{ name: "activeUsers" }],
-        minuteRanges: [{ name: "0-5", startMinutesAgo: 5, endMinutesAgo: 0 }],
         orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
         limit: 10,
       });
       const rows = data.rows ?? [];
-      const total = rows.reduce((acc, r) => acc + parseInt(r.metricValues[0]?.value ?? "0", 10), 0);
-      setRealtimeUsers(total);
 
       const newMarkers = [];
       rows.forEach(row => {
