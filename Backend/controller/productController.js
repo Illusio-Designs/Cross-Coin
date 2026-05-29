@@ -1035,6 +1035,66 @@ module.exports.updateProduct = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/products/:id/seo/regenerate
+ *
+ * Re-runs the buildProductSeoData helper for this product so admins can
+ * "reset to auto-fill" after manually editing SEO fields. The response
+ * returns the freshly-derived fields without persisting them — the admin
+ * decides whether to copy them into the edit form and save.
+ *
+ * If ?persist=true is passed, the new values are also written to the
+ * ProductSEO row in the database.
+ */
+module.exports.regenerateProductSeo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const persist = req.query.persist === 'true' || req.body?.persist === true;
+
+    const product = await Product.findByPk(id, {
+      include: [
+        { model: ProductImage, as: 'ProductImages' },
+        { model: ProductVariation, as: 'ProductVariations' },
+        { model: ProductSEO, as: 'ProductSEO' },
+        { model: Brand, as: 'Brand', required: false },
+      ],
+    });
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Pass empty seo overrides so the helper computes everything from
+    // product fields. If a caller wants to preserve a specific field they
+    // can post it in req.body.seo and we'd merge — kept off here to make
+    // the "reset" semantic obvious.
+    const fields = await buildProductSeoData({
+      product,
+      seo: {},
+      variations: product.ProductVariations || [],
+      images: (product.ProductImages || []).map(i => ({ filename: i.image_url?.replace(/^.*\//, '') || i.filename })),
+      brand: product.Brand,
+    });
+
+    if (persist) {
+      if (product.ProductSEO) {
+        await product.ProductSEO.update(fields);
+      } else {
+        await ProductSEO.create({ product_id: product.id, ...fields });
+      }
+    }
+
+    return res.json({
+      success: true,
+      seo: fields,
+      persisted: persist,
+    });
+  } catch (err) {
+    logger.error('regenerateProductSeo failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Delete product
 module.exports.deleteProduct = async (req, res) => {
   const transaction = await sequelize.transaction();

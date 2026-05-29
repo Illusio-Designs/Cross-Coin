@@ -12,6 +12,9 @@ import ExistingImageSelector from '../../../components/products/ExistingImageSel
 import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
 import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
+import SerpPreview from '../../../components/common/SerpPreview';
+import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
+import { showSuccess, showError } from '../../../utils/toastNotification';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('../../../components/common/QuillEditor'), { 
   ssr: false,
@@ -1251,82 +1254,12 @@ const ProductsPage = () => {
         );
       case 3:
         return (
-          <>
-            <h3>SEO Settings</h3>
-            <Input
-              label="Meta Title"
-              type="text"
-              name="seo.metaTitle"
-              value={formData.seo.metaTitle}
-              onChange={handleInputChange}
-              placeholder="Enter meta title"
-            />
-            <Input
-              label="Meta Description"
-              type="text"
-              name="seo.metaDescription"
-              value={formData.seo.metaDescription}
-              onChange={handleInputChange}
-              placeholder="Enter meta description"
-            />
-            <Input
-              label="Meta Keywords"
-              type="text"
-              name="seo.metaKeywords"
-              value={formData.seo.metaKeywords}
-              onChange={handleInputChange}
-              placeholder="Enter meta keywords (comma-separated)"
-            />
-            <Input
-              label="OG Title"
-              type="text"
-              name="seo.ogTitle"
-              value={formData.seo.ogTitle}
-              onChange={handleInputChange}
-              placeholder="Enter OG title"
-            />
-            <Input
-              label="OG Description"
-              type="text"
-              name="seo.ogDescription"
-              value={formData.seo.ogDescription}
-              onChange={handleInputChange}
-              placeholder="Enter OG description"
-            />
-            <Input
-              label="OG Image"
-              type="file"
-              name="seo.ogImage"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  setFormData(prev => ({
-                    ...prev,
-                    seo: {
-                      ...prev.seo,
-                      ogImage: URL.createObjectURL(file)
-                    }
-                  }));
-                }
-              }}
-            />
-            <Input
-              label="Canonical URL"
-              type="text"
-              name="seo.canonicalUrl"
-              value={formData.seo.canonicalUrl}
-              onChange={handleInputChange}
-              placeholder="Enter canonical URL"
-            />
-            <Input
-              label="Structured Data (JSON-LD)"
-              type="textarea"
-              name="seo.structuredData"
-              value={formData.seo.structuredData}
-              onChange={handleInputChange}
-              placeholder="Enter structured data (JSON-LD)"
-            />
-          </>
+          <ProductSeoStep
+            formData={formData}
+            setFormData={setFormData}
+            handleInputChange={handleInputChange}
+            editingProductId={formData.id}
+          />
         );
     }
   };
@@ -1515,5 +1448,189 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
+
+/**
+ * SEO tab for the product edit modal.
+ *
+ * Fields:
+ *   - All ProductSEO columns (title / description / keywords / og_* / canonical / structured_data)
+ *   - Live SERP preview + length meters for title and description
+ *   - "Regenerate from product data" button: calls the backend helper that
+ *     auto-fills every field from the product's name, brand, description,
+ *     variations, reviews and brand SEO settings. Skips persisting — admin
+ *     reviews the result first.
+ *
+ * Defensive: editingProductId is only available when editing an existing
+ * product (formData.id). The "Regenerate" button is hidden for new products
+ * because there's nothing to regenerate from yet — backend auto-fills on
+ * first save.
+ */
+function ProductSeoStep({ formData, setFormData, handleInputChange, editingProductId }) {
+  const [regenerating, setRegenerating] = useState(false);
+
+  const previewUrl = formData.seo?.canonicalUrl
+    || `https://crosscoin.in/products/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'product'}`;
+
+  const handleRegenerate = async () => {
+    if (!editingProductId) {
+      showError('noProduct', 'Save the product first, then regenerate SEO.');
+      return;
+    }
+    if (!window.confirm('Replace all SEO fields with auto-generated values from the product name, brand, description and variations? Your manual edits will be lost in this form (you can still cancel before saving).')) {
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const res = await productService.regenerateSeo(editingProductId, false);
+      if (res?.success && res.seo) {
+        setFormData(prev => ({
+          ...prev,
+          seo: {
+            ...prev.seo,
+            metaTitle:       res.seo.metaTitle ?? '',
+            metaDescription: res.seo.metaDescription ?? '',
+            metaKeywords:    res.seo.metaKeywords ?? '',
+            ogTitle:         res.seo.ogTitle ?? '',
+            ogDescription:   res.seo.ogDescription ?? '',
+            ogImage:         res.seo.ogImage ?? '',
+            canonicalUrl:    res.seo.canonicalUrl ?? '',
+            structuredData:  res.seo.structuredData ?? '',
+          },
+        }));
+        showSuccess('regenerated', 'SEO fields refreshed from product data. Review then click Save.');
+      }
+    } catch (err) {
+      showError('regenerateFailed', typeof err === 'string' ? err : (err.message || 'Failed to regenerate SEO'));
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h3 style={{ margin: 0 }}>SEO Settings</h3>
+        <button
+          type="button"
+          onClick={handleRegenerate}
+          disabled={regenerating || !editingProductId}
+          title={editingProductId
+            ? 'Re-runs the auto-fill based on the product name, brand, description, variations and reviews'
+            : 'Save the product first'}
+          style={{
+            padding: '6px 12px',
+            background: '#fff',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            cursor: editingProductId ? 'pointer' : 'not-allowed',
+            fontSize: 13,
+            color: '#180D3E',
+            opacity: editingProductId ? 1 : 0.5,
+          }}
+        >
+          {regenerating ? 'Regenerating…' : '↻ Regenerate from product data'}
+        </button>
+      </div>
+
+      <div style={{
+        background: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        fontSize: 13,
+        color: '#374151',
+      }}>
+        Leave any field empty to use the auto-fill default. The defaults come from
+        the product name, brand, description, variations and your global SEO settings.
+        Only fill fields here when you want to override.
+      </div>
+
+      <Input
+        label="Meta Title"
+        type="text"
+        name="seo.metaTitle"
+        value={formData.seo.metaTitle}
+        onChange={handleInputChange}
+        placeholder="Auto: {Product Name} | CrossCoin"
+      />
+      <SeoLengthMeter value={formData.seo.metaTitle || ''} type="title" />
+
+      <Input
+        label="Meta Description"
+        type="textarea"
+        name="seo.metaDescription"
+        value={formData.seo.metaDescription}
+        onChange={handleInputChange}
+        placeholder="Auto: trimmed from product description, 160 char target"
+      />
+      <SeoLengthMeter value={formData.seo.metaDescription || ''} type="description" />
+
+      <Input
+        label="Meta Keywords"
+        type="text"
+        name="seo.metaKeywords"
+        value={formData.seo.metaKeywords}
+        onChange={handleInputChange}
+        placeholder="comma-separated; auto: name, brand, buy online, india"
+      />
+
+      <Input
+        label="OG Title"
+        type="text"
+        name="seo.ogTitle"
+        value={formData.seo.ogTitle}
+        onChange={handleInputChange}
+        placeholder="Auto: same as Meta Title"
+      />
+
+      <Input
+        label="OG Description"
+        type="textarea"
+        name="seo.ogDescription"
+        value={formData.seo.ogDescription}
+        onChange={handleInputChange}
+        placeholder="Auto: same as Meta Description"
+      />
+
+      <Input
+        label="OG Image URL"
+        type="text"
+        name="seo.ogImage"
+        value={formData.seo.ogImage}
+        onChange={handleInputChange}
+        placeholder="Full URL or filename. Auto: first product image (1200×630 ideal)"
+      />
+
+      <Input
+        label="Canonical URL"
+        type="text"
+        name="seo.canonicalUrl"
+        value={formData.seo.canonicalUrl}
+        onChange={handleInputChange}
+        placeholder={`Auto: https://crosscoin.in/products/${formData.slug || '<slug>'}`}
+      />
+
+      <Input
+        label="Structured Data (JSON-LD)"
+        type="textarea"
+        name="seo.structuredData"
+        value={formData.seo.structuredData}
+        onChange={handleInputChange}
+        placeholder="Auto: schema.org/Product with brand, sku, offers, returns, shipping, aggregateRating"
+      />
+
+      <div style={{ marginTop: 24 }}>
+        <h4 style={{ marginBottom: 12, color: '#180D3E' }}>Live Search Preview</h4>
+        <SerpPreview
+          title={formData.seo.metaTitle || `${formData.name || 'Product'} | CrossCoin`}
+          description={formData.seo.metaDescription || formData.description?.slice(0, 160) || ''}
+          url={previewUrl}
+          variant="both"
+        />
+      </div>
+    </>
+  );
+}
 
 

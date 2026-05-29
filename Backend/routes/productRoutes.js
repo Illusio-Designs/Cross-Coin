@@ -3,7 +3,7 @@ const {
     createProduct, getAllProducts, getProduct, updateProduct, deleteProduct,
     getProductsByCategory, searchProducts, getFeaturedProducts,
     getNewArrivals, getBestSellers, getPublicProductBySlug, getAllPublicProducts,
-    getExistingImages, uploadImages, deleteImages
+    getExistingImages, uploadImages, deleteImages, regenerateProductSeo
 } = require('../controller/productController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 const { productUpload } = require('../middleware/uploadMiddleware.js');
@@ -32,6 +32,7 @@ router.delete('/delete-images',     isAuthenticated, isProductManager, deleteIma
 router.post('/',                    isAuthenticated, isProductManager, productUpload.any(), multerErr, createProduct);
 router.put('/:id',                  isAuthenticated, isProductManager, productUpload.any(), multerErr, updateProduct);
 router.delete('/:id',              isAuthenticated, isProductManager, deleteProduct);
+router.post('/:id/seo/regenerate',  isAuthenticated, isProductManager, regenerateProductSeo);
 
 // ── Public by ID (last — parameterized) ───────────────────────────────────
 router.get('/:id', getProduct);
