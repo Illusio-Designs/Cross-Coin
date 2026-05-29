@@ -58,6 +58,9 @@ router.use('/analytics',          require('../integration/dashboardAnalytics.js'
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', require('./faqRoutes.js'));
 
+// ── SEO admin (health summary, bulk product SEO editor) ───────────────────
+router.use('/', require('./seoAdminRoutes.js'));
+
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the
 // public site's <Analytics> component can mount gtag / fbq / Clarity with

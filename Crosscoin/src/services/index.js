@@ -1658,6 +1658,34 @@ export const policyService = {
   },
 };
 
+// SEO admin services — health summary, bulk product SEO editor.
+export const seoAdminService = {
+  health: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/seo/health", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  listProducts: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/seo/products", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  bulkUpdate: async (items) => {
+    try {
+      const response = await adminApi.put("/api/admin/seo/products/bulk", { items });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 // FAQ Services (admin CRUD + public read)
 export const faqService = {
   list: async (params = {}) => {

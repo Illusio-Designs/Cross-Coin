@@ -1095,6 +1095,242 @@ module.exports.regenerateProductSeo = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/admin/seo/health
+ *
+ * Aggregated SEO completeness summary used by the dashboard health page.
+ * Returns counters showing how many records are missing each common SEO
+ * field, so admins can see at a glance where the gaps are.
+ */
+module.exports.getSeoHealthSummary = async (req, res) => {
+  try {
+    const brandId = parseInt(req.query.brand_id, 10) || null;
+    const productWhere = {};
+    if (brandId) productWhere.brand_id = brandId;
+
+    const [
+      totalProducts,
+      productsWithSeo,
+      productsMissingMetaTitle,
+      productsMissingMetaDesc,
+      productsMissingOgImage,
+      productsNoindex,
+      totalCategories,
+      categoriesMissingMetaTitle,
+      categoriesMissingMetaDesc,
+      categoriesMissingOgImage,
+      categoriesNoindex,
+      totalFaqs,
+      activeFaqs,
+    ] = await Promise.all([
+      Product.count({ where: productWhere }),
+      ProductSEO.count(),
+      ProductSEO.count({ where: { [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] } }),
+      ProductSEO.count({ where: { [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] } }),
+      ProductSEO.count({ where: { [Op.or]: [{ ogImage: null }, { ogImage: '' }] } }),
+      // No noindex column on ProductSEO yet — placeholder for future
+      Promise.resolve(0),
+      Category.count(),
+      Category.count({ where: { [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] } }),
+      Category.count({ where: { [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] } }),
+      Category.count({ where: { [Op.or]: [{ ogImage: null }, { ogImage: '' }] } }),
+      Category.count({ where: { seoIndex: false } }),
+      require('../model/faqModel.js').Faq.count(),
+      require('../model/faqModel.js').Faq.count({ where: { is_active: true } }),
+    ]);
+
+    // Sample of products with the worst gaps (no metaTitle or no metaDescription).
+    const sampleGaps = await Product.findAll({
+      where: productWhere,
+      include: [
+        {
+          model: ProductSEO,
+          as: 'ProductSEO',
+          required: false,
+          where: {
+            [Op.or]: [
+              { metaTitle: null }, { metaTitle: '' },
+              { metaDescription: null }, { metaDescription: '' },
+              { ogImage: null }, { ogImage: '' },
+            ],
+          },
+        },
+      ],
+      attributes: ['id', 'name', 'slug'],
+      limit: 15,
+      order: [['updatedAt', 'DESC']],
+    });
+
+    return res.json({
+      success: true,
+      products: {
+        total: totalProducts,
+        withSeoRow: productsWithSeo,
+        missingMetaTitle:        productsMissingMetaTitle,
+        missingMetaDescription:  productsMissingMetaDesc,
+        missingOgImage:          productsMissingOgImage,
+        noindex:                 productsNoindex,
+      },
+      categories: {
+        total: totalCategories,
+        missingMetaTitle:       categoriesMissingMetaTitle,
+        missingMetaDescription: categoriesMissingMetaDesc,
+        missingOgImage:         categoriesMissingOgImage,
+        noindex:                categoriesNoindex,
+      },
+      faqs: {
+        total: totalFaqs,
+        active: activeFaqs,
+      },
+      sampleProductsWithGaps: sampleGaps.map(p => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        gaps: [
+          !p.ProductSEO?.metaTitle && 'metaTitle',
+          !p.ProductSEO?.metaDescription && 'metaDescription',
+          !p.ProductSEO?.ogImage && 'ogImage',
+        ].filter(Boolean),
+      })),
+    });
+  } catch (err) {
+    logger.error('getSeoHealthSummary failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET /api/admin/seo/products
+ *
+ * Lightweight list of products with their key SEO fields, for the bulk
+ * SEO editor table. Supports pagination + search + a "gaps-only" filter
+ * so admins can focus on the records that still need attention.
+ */
+module.exports.listProductSeo = async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || '').toString().trim();
+    const gapsOnly = req.query.gaps_only === 'true';
+    const brandId = parseInt(req.query.brand_id, 10) || null;
+
+    const productWhere = {};
+    if (brandId) productWhere.brand_id = brandId;
+    if (search) {
+      productWhere[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { slug: { [Op.like]: `%${search}%` } },
+      ];
+    }
+
+    const seoInclude = {
+      model: ProductSEO,
+      as: 'ProductSEO',
+      required: false,
+      attributes: ['metaTitle', 'metaDescription', 'metaKeywords', 'ogImage', 'canonicalUrl'],
+    };
+    if (gapsOnly) {
+      seoInclude.where = {
+        [Op.or]: [
+          { metaTitle: null }, { metaTitle: '' },
+          { metaDescription: null }, { metaDescription: '' },
+          { ogImage: null }, { ogImage: '' },
+        ],
+      };
+      seoInclude.required = false;
+    }
+
+    const { rows, count } = await Product.findAndCountAll({
+      where: productWhere,
+      include: [seoInclude],
+      attributes: ['id', 'name', 'slug', 'updatedAt'],
+      order: [['updatedAt', 'DESC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    return res.json({
+      success: true,
+      total: count,
+      page,
+      limit,
+      pages: Math.ceil(count / limit),
+      items: rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        updatedAt: r.updatedAt,
+        seo: r.ProductSEO ? {
+          metaTitle: r.ProductSEO.metaTitle || '',
+          metaDescription: r.ProductSEO.metaDescription || '',
+          metaKeywords: r.ProductSEO.metaKeywords || '',
+          ogImage: r.ProductSEO.ogImage || '',
+          canonicalUrl: r.ProductSEO.canonicalUrl || '',
+        } : { metaTitle: '', metaDescription: '', metaKeywords: '', ogImage: '', canonicalUrl: '' },
+      })),
+    });
+  } catch (err) {
+    logger.error('listProductSeo failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * PUT /api/admin/seo/products/bulk
+ * Body: { items: [{ id, metaTitle?, metaDescription?, metaKeywords?, ogImage?, canonicalUrl? }] }
+ *
+ * Updates only the SEO fields on the supplied products. Each row's
+ * ProductSEO is upserted; the rest of the product record is untouched.
+ */
+module.exports.bulkUpdateProductSeo = async (req, res) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (items.length === 0) {
+      return res.status(400).json({ success: false, message: 'items[] is required' });
+    }
+
+    const updated = [];
+    const errors = [];
+
+    for (const item of items) {
+      const id = parseInt(item.id, 10);
+      if (!Number.isFinite(id)) {
+        errors.push({ id: item.id, error: 'invalid id' });
+        continue;
+      }
+      try {
+        const patch = {};
+        ['metaTitle', 'metaDescription', 'metaKeywords', 'ogImage', 'canonicalUrl']
+          .forEach(k => { if (item[k] !== undefined) patch[k] = item[k] === '' ? null : item[k]; });
+        if (Object.keys(patch).length === 0) continue;
+
+        const existing = await ProductSEO.findOne({ where: { product_id: id } });
+        if (existing) {
+          await existing.update(patch);
+        } else {
+          await ProductSEO.create({ product_id: id, ...patch });
+        }
+        updated.push(id);
+      } catch (rowErr) {
+        errors.push({ id, error: rowErr.message });
+      }
+    }
+
+    return res.json({
+      success: true,
+      updated_count: updated.length,
+      error_count: errors.length,
+      updated,
+      errors,
+    });
+  } catch (err) {
+    logger.error('bulkUpdateProductSeo failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Delete product
 module.exports.deleteProduct = async (req, res) => {
   const transaction = await sequelize.transaction();
