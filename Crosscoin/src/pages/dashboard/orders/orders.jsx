@@ -79,6 +79,10 @@ const Orders = () => {
         const reqId = ++requestIdRef.current;
         setLoading(true);
         setError(null);
+        // Clear the visible rows so the previous page's data doesn't sit on
+        // screen during the fetch — otherwise switching pages briefly shows
+        // the old page's orders before the new ones arrive.
+        setOrders([]);
         try {
             const params = {
                 page, limit: itemsPerPage,
@@ -92,7 +96,10 @@ const Orders = () => {
                 sort: sortBy, order: sortOrder
             };
             Object.keys(params).forEach(key => { if (params[key] === undefined) delete params[key]; });
-            const data = await orderService.getAllOrders(params);
+            // forceRefresh=true bypasses the 3-min /api/orders cache so this
+            // dashboard always shows live data after pagination, sync,
+            // status refresh, cancel, etc.
+            const data = await orderService.getAllOrders(params, null, true);
             // Ignore if a newer request has been issued
             if (reqId !== requestIdRef.current) return;
             const ordersList = data.orders || data.data || [];
@@ -977,7 +984,7 @@ const Orders = () => {
                             {totalOrders > itemsPerPage && (
                                 <nav className="sl-pagination" aria-label="Orders table pagination">
                                     <Pagination currentPage={currentPage} totalPages={totalPages}
-                                        onPageChange={(page) => { setCurrentPage(page); fetchOrders(page); }} />
+                                        onPageChange={(page) => setCurrentPage(page)} />
                                 </nav>
                             )}
                         </>
