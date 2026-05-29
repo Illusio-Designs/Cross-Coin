@@ -463,6 +463,38 @@ const setupDatabase = async () => {
       console.log("⚠️ order_shipments setup:", shipmentErr.message);
     }
 
+    // Ensure categories has the extended SEO columns (Phase C).
+    // The Sequelize auto-loader handles new DBs; this block patches
+    // existing installs where the categories table already has data.
+    console.log("Ensuring categories SEO columns...");
+    try {
+      const [categoriesTable] = await sequelize.query(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'categories'
+      `);
+      if (categoriesTable.length) {
+        const checks = [
+          { col: 'ogImage',        sql: `ALTER TABLE categories ADD COLUMN ogImage VARCHAR(255) NULL` },
+          { col: 'canonicalUrl',   sql: `ALTER TABLE categories ADD COLUMN canonicalUrl VARCHAR(255) NULL` },
+          { col: 'structuredData', sql: `ALTER TABLE categories ADD COLUMN structuredData JSON NULL` },
+          { col: 'seoIndex',       sql: `ALTER TABLE categories ADD COLUMN seoIndex TINYINT(1) NOT NULL DEFAULT 1` },
+        ];
+        for (const { col, sql } of checks) {
+          const [exists] = await sequelize.query(`
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'categories' AND COLUMN_NAME = '${col}'
+          `);
+          if (!exists.length) {
+            await sequelize.query(sql);
+            console.log(`  ✓ Added categories.${col}`);
+          }
+        }
+      }
+      console.log("✓ categories SEO columns ensured");
+    } catch (catSeoErr) {
+      console.log("⚠️ categories SEO column patch skipped:", catSeoErr.message);
+    }
+
     // Ensure faqs table exists (SEO Phase A — global + per-product/category/page FAQs).
     // The model is picked up by the auto-loader above, but we mirror the
     // order_shipments pattern here so legacy databases get the table even

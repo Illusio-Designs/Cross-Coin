@@ -31,7 +31,8 @@ export async function getServerSideProps({ res }) {
   try {
     const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-    // Fetch products
+    // Fetch products → /products/<slug> (clean SEO URL, set up in Phase A).
+    // Falls back to id-based query if a product has no slug yet.
     const prodRes = await fetch(`${API}/api/products/catalog?limit=500`, {
       headers: { 'X-Brand-Name': 'crosscoin' },
     });
@@ -39,9 +40,9 @@ export async function getServerSideProps({ res }) {
       const prodData = await prodRes.json();
       const products = prodData?.products || prodData || [];
       products.forEach(p => {
-        if (p.slug || p.id) {
+        if (p.slug) {
           dynamicRoutes.push({
-            path: `/ProductDetails?id=${p.id}`,
+            path: `/products/${p.slug}`,
             priority: '0.8',
             changefreq: 'weekly',
           });
@@ -49,7 +50,7 @@ export async function getServerSideProps({ res }) {
       });
     }
 
-    // Fetch blogs
+    // Fetch blogs → /blog/<slug> (Phase C).
     const blogRes = await fetch(`${API}/api/blogs/listing?limit=200`, {
       headers: { 'X-Brand-Name': 'crosscoin' },
     });
@@ -57,11 +58,29 @@ export async function getServerSideProps({ res }) {
       const blogData = await blogRes.json();
       const blogs = blogData?.posts || blogData?.blogs || blogData || [];
       blogs.forEach(b => {
-        if (b.slug || b.id) {
+        if (b.slug) {
           dynamicRoutes.push({
-            path: `/blog-details?slug=${b.slug || b.id}`,
+            path: `/blog/${b.slug}`,
             priority: '0.6',
             changefreq: 'monthly',
+          });
+        }
+      });
+    }
+
+    // Fetch categories → /collections/<slug> (Phase C).
+    const catRes = await fetch(`${API}/api/categories/listing`, {
+      headers: { 'X-Brand-Name': 'crosscoin' },
+    });
+    if (catRes.ok) {
+      const catData = await catRes.json();
+      const cats = catData?.categories || catData?.data || catData || [];
+      cats.forEach(c => {
+        if (c.slug && c.seoIndex !== false) {
+          dynamicRoutes.push({
+            path: `/collections/${c.slug}`,
+            priority: '0.7',
+            changefreq: 'weekly',
           });
         }
       });
