@@ -77,7 +77,20 @@
       "PowerShell(cd \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\"; $env:NODE_ENV='development'; npm start)",
       "Bash(grep -E \"\\\\.\\(jsx|tsx\\)$\")",
       "Bash(xargs grep -l \"\\\\.tbl\\\\|\\\\.table\")",
-      "Bash(xargs grep -l \"\\\\.tbl {\")"
+      "Bash(xargs grep -l \"\\\\.tbl {\")",
+      "WebFetch(domain:www.retner.ai)",
+      "Bash(powershell -Command ' *)",
+      "Bash(curl -s 'https://graph.facebook.com/v21.0/947143464322263/message_templates?limit=100&fields=name,status,category,language,components' -H 'Authorization: Bearer EAFeNlOashZAwBRKPi3ZAKd8AJ2oWh6zcQnsF4zM9f5ryjquQAUOkdivY3oosE7cowrqtdEMOfnSYuOZCLX5qZC0Fr3cPyCaYnx6g9ioP2ZCAApV8iQ8dgeKcrVkPGUia0y7cJNbS3yVkrZCzN9TV8yHc8CZBD990fNMnzZCsIf2Tx0wnB2o5CIjXpmyZAwlcghVIFqm9hKSr5ap4CEBHOrKoS4ITNui4nDkxElYTMD8Ue9qvsIS1DCSyw12a8HKoTRj5glENXfiF6oEfS3VRANXGqKN2YlwZDZD')",
+      "Bash(mysql -h localhost -u root -D crosscoin -e ' *)",
+      "Bash(node --check Backend/services/iThinkService.js)",
+      "Bash(node --check Backend/controller/orderShippingController.js)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(curl -s -i \"https://api.crosscoin.in/api/public/tracking-config\")",
+      "Bash(curl -s \"https://api.crosscoin.in/api/public/tracking-config\")",
+      "Bash(node --check Crosscoin/next.config.js)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\" -Recurse -Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\" -Recurse -Directory)",
+      "Bash(xargs grep -l \"sitemap\\\\|/api/sitemap\")"
     ]
   }
 }
