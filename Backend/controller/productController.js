@@ -25,6 +25,7 @@ const ProductService = require("../services/productService.js");
 const cacheManager = require("../services/cacheManager.js");
 const imagekitService = require("../services/imagekitService.js");
 const { logger } = require('../config/logging.js');
+const { buildProductSeoData } = require("../services/productSeoHelper.js");
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
@@ -335,68 +336,17 @@ module.exports.createProduct = async (req, res) => {
       }, { transaction });
     }
 
-    // Create SEO record
+    // Create SEO record — all field defaults (title, description, OG,
+    // canonical, schema.org JSON-LD) come from buildProductSeoData so
+    // admins only have to enter fields when they want to override.
+    const seoFields = await buildProductSeoData({
+      product,
+      seo,
+      variations,
+      images,
+    });
     const seoRecord = await ProductSEO.create(
-      {
-        product_id: product.id,
-        metaTitle: seo.metaTitle || name,
-        metaDescription: seo.metaDescription || description,
-        metaKeywords: seo.metaKeywords || "",
-        ogTitle: seo.ogTitle || name,
-        ogDescription: seo.ogDescription || description,
-        ogImage: (() => {
-          let ogImageUrl = seo.ogImage || null;
-          
-          // If ogImage is provided, ensure it has proper URL format
-          if (ogImageUrl && typeof ogImageUrl === 'string') {
-            // If it's already a full URL, use it as-is
-            if (ogImageUrl.startsWith('http')) {
-              return ogImageUrl;
-            }
-            // If it starts with /uploads/, prepend the API URL
-            else if (ogImageUrl.startsWith('/uploads/')) {
-              const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-              return `${apiUrl}${ogImageUrl}`;
-            }
-            // If it's just a filename, construct the full URL
-            else {
-              const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-              return `${apiUrl}/uploads/products/${ogImageUrl}`;
-            }
-          }
-          
-          // Fallback to first product image if no ogImage provided
-          if (images && images.length > 0) {
-            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-            return `${apiUrl}/uploads/products/${images[0].filename}`;
-          }
-          
-          return null;
-        })(),
-        canonicalUrl:
-          seo.canonicalUrl ||
-          `${process.env.FRONTEND_URL}/products/${product.slug}`,
-        structuredData:
-          seo.structuredData ||
-          JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            name: name,
-            description: description,
-            image: images?.[0]
-              ? `${process.env.API_URL || 'https://api.crosscoin.in'}/uploads/products/${images[0].filename}`
-              : null,
-            offers: {
-              "@type": "Offer",
-              price: variations[0]?.price || 0,
-              priceCurrency: "INR",
-              availability:
-                variations[0]?.stock > 0
-                  ? "https://schema.org/InStock"
-                  : "https://schema.org/OutOfStock",
-            },
-          }),
-      },
+      { product_id: product.id, ...seoFields },
       { transaction }
     );
 
@@ -810,69 +760,14 @@ module.exports.updateProduct = async (req, res) => {
       }
     }
 
-    // Update or create SEO data
-    const seoData = {
-      metaTitle: seo.metaTitle || seo.meta_title || name,
-      metaDescription:
-        seo.metaDescription || seo.meta_description || description,
-      metaKeywords: seo.metaKeywords || seo.meta_keywords || "",
-      ogTitle: seo.ogTitle || seo.og_title || name,
-      ogDescription: seo.ogDescription || seo.og_description || description,
-      ogImage: (() => {
-        let ogImageUrl = seo.ogImage || seo.og_image || null;
-        
-        // If ogImage is provided, ensure it has proper URL format
-        if (ogImageUrl && typeof ogImageUrl === 'string') {
-          // If it's already a full URL, use it as-is
-          if (ogImageUrl.startsWith('http')) {
-            return ogImageUrl;
-          }
-          // If it starts with /uploads/, prepend the API URL
-          else if (ogImageUrl.startsWith('/uploads/')) {
-            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-            return `${apiUrl}${ogImageUrl}`;
-          }
-          // If it's just a filename, construct the full URL
-          else {
-            const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-            return `${apiUrl}/uploads/products/${ogImageUrl}`;
-          }
-        }
-        
-        // Fallback to first product image if no ogImage provided
-        if (images && images.length > 0) {
-          const apiUrl = process.env.API_URL || 'https://api.crosscoin.in';
-          return `${apiUrl}/uploads/products/${images[0].filename}`;
-        }
-        
-        return null;
-      })(),
-      canonicalUrl:
-        seo.canonicalUrl ||
-        seo.canonical_url ||
-        `${process.env.FRONTEND_URL}/products/${product.slug}`,
-      structuredData:
-        seo.structuredData ||
-        seo.structured_data ||
-        JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: name,
-          description: description,
-          image: images?.[0] ? 
-            `${process.env.API_URL || 'https://api.crosscoin.in'}/uploads/products/${images[0].filename}` : 
-            null,
-          offers: {
-            "@type": "Offer",
-            price: variations[0]?.price || 0,
-            priceCurrency: "INR",
-            availability:
-              variations[0]?.stock > 0
-                ? "https://schema.org/InStock"
-                : "https://schema.org/OutOfStock",
-          },
-        }),
-    };
+    // Update or create SEO data — all derivation handled by the helper
+    // so we don't drift from the create path.
+    const seoData = await buildProductSeoData({
+      product,
+      seo,
+      variations,
+      images,
+    });
 
     if (product.ProductSEO) {
       await product.ProductSEO.update(seoData, { transaction });

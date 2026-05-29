@@ -1646,6 +1646,50 @@ export const policyService = {
   },
 };
 
+// FAQ Services (admin CRUD + public read)
+export const faqService = {
+  list: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/faqs", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  create: async (data) => {
+    try {
+      const response = await adminApi.post("/api/admin/faqs", data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  update: async (id, data) => {
+    try {
+      const response = await adminApi.put(`/api/admin/faqs/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  remove: async (id) => {
+    try {
+      const response = await adminApi.delete(`/api/admin/faqs/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  reorder: async (order) => {
+    try {
+      const response = await adminApi.put("/api/admin/faqs/reorder", { order });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 // Dashboard Services
 export const dashboardService = {
   getDashboardStats: async (params = {}) => {

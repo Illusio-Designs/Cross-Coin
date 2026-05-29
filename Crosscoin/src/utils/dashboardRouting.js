@@ -13,6 +13,7 @@ export const getPageTitle = (view) => {
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',
+    'faqs': 'FAQs',
     'policies': 'Policies',
     'brands': 'Brands',
     'brand-settings': 'Brand Settings',
