@@ -28,7 +28,9 @@ export const ROLE_VIEWS = {
   admin: null, // null = all views
   product_manager: [
     'main', 'products', 'categories', 'attributes', 'media-gallery',
-    'brands', 'slider', 'blogs', 'seo', 'faqs', 'lookbooks', 'reels-admin', 'instagram-admin',
+    'brands', 'slider', 'blogs',
+    'seo', 'seo-health', 'seo-bulk', 'faqs',
+    'lookbooks', 'reels-admin', 'instagram-admin',
   ],
   order_manager: [
     'main', 'orders', 'payments', 'coupons', 'shippingFees',
