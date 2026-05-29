@@ -280,7 +280,7 @@ function App({ Component, pageProps }) {
           content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
         />
         <title>Cross Coin</title>
-        <link rel="icon" href="/crosscoin icon.png" />
+        <link rel="icon" href="/crosscoin-icon.png" />
       </Head>
       <UTMTracker />
       <Analytics />

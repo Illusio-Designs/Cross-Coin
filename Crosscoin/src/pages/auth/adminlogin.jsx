@@ -47,7 +47,7 @@ export default function AdminLogin() {
       <div className="al-brand">
         <div className="al-brand-inner">
           <div className="al-brand-logo">
-            <img src="/crosscoin icon.png" alt="CrossCoin" />
+            <img src="/crosscoin-icon.png" alt="CrossCoin" />
             <span>CrossCoin</span>
           </div>
           <h1 className="al-brand-headline">Admin Control<br />Centre</h1>
