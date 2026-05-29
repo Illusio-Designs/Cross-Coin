@@ -1,7 +1,8 @@
 const express = require('express');
 const {
     createCategory, getAllCategories, getCategoryById,
-    updateCategory, deleteCategory, getPublicCategories, getPublicCategoryByName
+    updateCategory, deleteCategory, getPublicCategories,
+    getPublicCategoryByName, getPublicCategoryBySlug,
 } = require('../controller/categoryController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 const { categoryUpload } = require('../middleware/uploadMiddleware.js');
@@ -12,6 +13,7 @@ const router = express.Router();
 // Public
 router.get('/listing',          etagMiddleware, getPublicCategories);
 router.get('/by-name/:name',    getPublicCategoryByName);
+router.get('/by-slug/:slug',    getPublicCategoryBySlug);
 
 // Admin
 router.post('/',                isAuthenticated, isProductManager, categoryUpload.single('image'), createCategory);

@@ -39,12 +39,16 @@ const createCategory = async (req, res) => {
 
         const { 
             name, 
-            description, 
-            status, 
-            parentId, 
-            metaTitle, 
-            metaDescription, 
-            metaKeywords
+            description,
+            status,
+            parentId,
+            metaTitle,
+            metaDescription,
+            metaKeywords,
+            ogImage,
+            canonicalUrl,
+            structuredData,
+            seoIndex,
         } = req.body;
         
         const sanitizedName = sanitize(name);
@@ -115,6 +119,15 @@ const createCategory = async (req, res) => {
             }
         }
 
+        // Parse JSON structured_data if it came in as a string; FormData ships
+        // booleans as the literal strings "true"/"false".
+        let structuredDataValue = null;
+        if (structuredData) {
+            if (typeof structuredData === 'object') structuredDataValue = structuredData;
+            else { try { structuredDataValue = JSON.parse(structuredData); } catch { structuredDataValue = structuredData; } }
+        }
+        const seoIndexValue = (seoIndex === false || seoIndex === 'false') ? false : true;
+
         // Create category with correct field names
         const category = await Category.create({
             name: sanitizedName,
@@ -125,6 +138,10 @@ const createCategory = async (req, res) => {
             metaTitle: metaTitle || sanitizedName,
             metaDescription: metaDescription || sanitizedDescription,
             metaKeywords,
+            ogImage: ogImage || null,
+            canonicalUrl: canonicalUrl || null,
+            structuredData: structuredDataValue,
+            seoIndex: seoIndexValue,
             slug
         });
 
@@ -354,6 +371,20 @@ const updateCategory = async (req, res) => {
             }
         }
 
+        // Coerce form-data booleans/JSON for the new SEO columns so they
+        // round-trip cleanly from the admin form.
+        if (Object.prototype.hasOwnProperty.call(updateData, 'seoIndex')) {
+            updateData.seoIndex = (updateData.seoIndex === false || updateData.seoIndex === 'false') ? false : true;
+        }
+        if (Object.prototype.hasOwnProperty.call(updateData, 'structuredData')) {
+            const raw = updateData.structuredData;
+            if (typeof raw === 'string' && raw.trim()) {
+                try { updateData.structuredData = JSON.parse(raw); } catch { /* leave as string; Sequelize JSON column will accept */ }
+            } else if (!raw) {
+                updateData.structuredData = null;
+            }
+        }
+
         await category.update(updateData);
         
         // Update brand assignments if provided
@@ -546,6 +577,79 @@ const getPublicCategoryByName = async (req, res) => {
     }
 };
 
+// Get Public Category by Slug — same shape as by-name, but matches the
+// slug column so the clean-URL route /collections/[slug] can fetch it
+// without a name lookup (cleaner for SSR + caching).
+const getPublicCategoryBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const category = await Category.findOne({
+            where: { slug: String(slug).trim(), status: 'active' },
+            include: [
+                { model: Category, as: 'parent', attributes: ['id', 'name', 'slug'] },
+                {
+                    model: Product,
+                    as: 'products',
+                    where: { status: 'active' },
+                    required: false,
+                    include: [
+                        { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price', 'comparePrice', 'stock'] },
+                        { model: ProductImage,     as: 'ProductImages',     attributes: ['image_url', 'is_primary'] },
+                        { model: ProductSEO,       as: 'ProductSEO',        attributes: ['meta_title', 'meta_description'] },
+                    ],
+                },
+            ],
+        });
+        if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
+
+        const imageUrl = category.image
+            ? (category.image.startsWith('http')
+                ? category.image
+                : imagekitService.getOptimizedUrl(category.image, 'medium'))
+            : null;
+
+        return res.json({
+            success: true,
+            data: {
+                id: category.id,
+                name: category.name,
+                slug: category.slug,
+                description: category.description,
+                image: imageUrl,
+                parentId: category.parentId,
+                parentName: category.parent?.name || null,
+                parentSlug: category.parent?.slug || null,
+                seo: {
+                    metaTitle:       category.metaTitle || null,
+                    metaDescription: category.metaDescription || null,
+                    metaKeywords:    category.metaKeywords || null,
+                    ogImage:         category.ogImage || imageUrl,
+                    canonicalUrl:    category.canonicalUrl || null,
+                    structuredData:  category.structuredData || null,
+                    seoIndex:        category.seoIndex !== false,
+                },
+                products: (category.products || []).map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    price: p.ProductVariations?.[0]?.price || null,
+                    comparePrice: p.ProductVariations?.[0]?.comparePrice || null,
+                    stock: p.ProductVariations?.[0]?.stock ?? null,
+                    image: p.ProductImages?.find(i => i.is_primary)?.image_url
+                        || p.ProductImages?.[0]?.image_url
+                        || null,
+                    meta_title:       p.ProductSEO?.meta_title || null,
+                    meta_description: p.ProductSEO?.meta_description || null,
+                })),
+                productCount: category.products?.length || 0,
+            },
+        });
+    } catch (error) {
+        logger.error('Get public category by slug error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createCategory,
     getAllCategories,
@@ -554,5 +658,6 @@ module.exports = {
     deleteCategory,
     getPublicCategories,
     getPublicCategoryByName,
+    getPublicCategoryBySlug,
     categoryUpload
 };

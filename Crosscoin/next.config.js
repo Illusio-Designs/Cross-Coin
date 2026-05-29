@@ -111,6 +111,25 @@ const nextConfig = {
         destination: '/products/:slug',
         permanent: true,
       },
+      // Legacy blog detail URL → clean /blog/<slug>.
+      {
+        source: '/blog-details',
+        has: [{ type: 'query', key: 'slug', value: '(?<slug>.+)' }],
+        destination: '/blog/:slug',
+        permanent: true,
+      },
+      // Legacy collection URL filtered via /Products?category=X →
+      // /collections/<slug>. We can only redirect when the query value
+      // already matches a slug-style string (lowercase, hyphens). For
+      // older URLs that have URL-encoded category *names* there's no
+      // safe single redirect — those land on /Products which still
+      // works via its existing filter.
+      {
+        source: '/Products',
+        has: [{ type: 'query', key: 'category', value: '(?<slug>[a-z0-9-]+)' }],
+        destination: '/collections/:slug',
+        permanent: true,
+      },
     ];
   },
 

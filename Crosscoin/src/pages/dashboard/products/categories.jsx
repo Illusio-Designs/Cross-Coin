@@ -7,6 +7,8 @@ import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
 import { categoryService } from "../../../services";
 import { extractErrorMessage, formatErrorForDisplay } from "../../../utils/errorMessages";
 import { validateForm, isFormValid } from "../../../utils/formValidation";
+import SerpPreview from "../../../components/common/SerpPreview";
+import SeoLengthMeter from "../../../components/common/SeoLengthMeter";
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -17,7 +19,12 @@ const IC = {
   category: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
 };
 
-const EMPTY_FORM = { name: "", description: "", status: "active", metaKeywords: "", image: null, brandIds: [1] };
+const EMPTY_FORM = {
+  name: "", description: "", status: "active",
+  metaTitle: "", metaDescription: "", metaKeywords: "",
+  ogImage: "", canonicalUrl: "", structuredData: "", seoIndex: true,
+  image: null, brandIds: [1],
+};
 
 const VALIDATION_SCHEMA = {
   name: [{ type: 'required' }, { type: 'minLength', value: 2 }, { type: 'maxLength', value: 100 }],
@@ -70,7 +77,22 @@ export default function Categories() {
       setLoading(true);
       setError(null);
       const data = await categoryService.getCategoryById(id);
-      setFormData({ id: data.id, name: data.name || "", description: data.description || "", status: data.status || "active", metaKeywords: data.metaKeywords || "", image: data.image || null, brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [] });
+      setFormData({
+        id: data.id,
+        name: data.name || "",
+        description: data.description || "",
+        status: data.status || "active",
+        metaTitle:       data.metaTitle || "",
+        metaDescription: data.metaDescription || "",
+        metaKeywords:    data.metaKeywords || "",
+        ogImage:         data.ogImage || "",
+        canonicalUrl:    data.canonicalUrl || "",
+        structuredData:  data.structuredData ? (typeof data.structuredData === 'string' ? data.structuredData : JSON.stringify(data.structuredData, null, 2)) : "",
+        seoIndex:        data.seoIndex !== false,
+        image: data.image || null,
+        brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [],
+        slug: data.slug || "",
+      });
       setIsModalOpen(true);
     } catch (err) {
       const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
@@ -268,6 +290,60 @@ export default function Categories() {
                 <input className="dm-input" type="text" name="metaKeywords" value={formData.metaKeywords} onChange={handleInputChange} placeholder="keyword1, keyword2" />
               </div>
             </div>
+
+            {/* ── SEO ── */}
+            <div style={{ marginTop: 8, padding: 12, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#180D3E', marginBottom: 8 }}>SEO</div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                Empty fields fall back to the category name and description on the live page.
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-label">Meta Title</label>
+                <input className="dm-input" type="text" name="metaTitle" value={formData.metaTitle} onChange={handleInputChange} placeholder={`Auto: ${formData.name || 'Category Name'} | CrossCoin`} />
+                <SeoLengthMeter value={formData.metaTitle || ''} type="title" />
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-label">Meta Description</label>
+                <textarea className="dm-input dm-textarea" name="metaDescription" value={formData.metaDescription} onChange={handleInputChange} placeholder="Auto: first 160 chars of category description" />
+                <SeoLengthMeter value={formData.metaDescription || ''} type="description" />
+              </div>
+
+              <div className="dm-2col">
+                <div className="dm-field">
+                  <label className="dm-label">OG Image URL</label>
+                  <input className="dm-input" type="text" name="ogImage" value={formData.ogImage} onChange={handleInputChange} placeholder="Auto: category image" />
+                </div>
+                <div className="dm-field">
+                  <label className="dm-label">Canonical URL</label>
+                  <input className="dm-input" type="text" name="canonicalUrl" value={formData.canonicalUrl} onChange={handleInputChange} placeholder={`Auto: https://crosscoin.in/collections/${formData.slug || '<slug>'}`} />
+                </div>
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-label">Structured Data (JSON-LD) — optional override</label>
+                <textarea className="dm-input dm-textarea" name="structuredData" value={formData.structuredData} onChange={handleInputChange} placeholder="Auto: CollectionPage + ItemList of all category products" />
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-checkbox-label" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="checkbox" checked={!!formData.seoIndex} onChange={e => setFormData(prev => ({ ...prev, seoIndex: e.target.checked }))} />
+                  <span>Allow Google to index this category (uncheck for sale-ended or deprecated categories)</span>
+                </label>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>LIVE SEARCH PREVIEW</div>
+                <SerpPreview
+                  title={formData.metaTitle || `${formData.name || 'Category'} | CrossCoin`}
+                  description={formData.metaDescription || (formData.description || '').slice(0, 160)}
+                  url={formData.canonicalUrl || `https://crosscoin.in/collections/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || ''}`}
+                  variant="both"
+                />
+              </div>
+            </div>
+
             <div className="dm-field">
               <BrandAssignment selectedBrands={formData.brandIds || []} onChange={brandIds => setFormData(prev => ({ ...prev, brandIds }))} disabled={loading} />
             </div>

@@ -7,18 +7,22 @@ import { getPublicBlogBySlug } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
 
 
-const BlogDetails = () => {
+const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
   const router = useRouter();
-  const { slug } = router.query;
+  // Same dual-route pattern as ProductDetails — the slug route
+  // /blog/[slug] supplies initialSlug + initialPost as SSR props; the
+  // legacy /blog-details?slug=X still works for any old link.
+  const slug = initialSlug || router.query?.slug;
   const { addToCart } = useCart();
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState(initialPost || null);
+  const [loading, setLoading] = useState(!initialPost);
   const [notFound, setNotFound] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
 
   useEffect(() => {
     if (!slug) return;
+    if (initialPost && (initialPost.slug === slug)) return; // SSR already covered us
     const fetchPost = async () => {
       setLoading(true);
       setNotFound(false);
@@ -32,7 +36,7 @@ const BlogDetails = () => {
       }
     };
     fetchPost();
-  }, [slug]);
+  }, [slug, initialPost]);
 
   useEffect(() => {
     if (!post) return;

@@ -39,6 +39,32 @@ const Category = sequelize.define('Category', {
     metaKeywords: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    // Extended SEO fields (Phase C).
+    // ogImage: image used as social-share preview when this category page
+    // is linked on Facebook / WhatsApp / X. Falls back to category.image
+    // if not set explicitly.
+    ogImage: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    canonicalUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    // structuredData: optional JSON-LD override emitted on the category
+    // landing page. Left null for the default CollectionPage + Breadcrumb
+    // schema the frontend generates from the live product list.
+    structuredData: {
+        type: DataTypes.JSON,
+        allowNull: true
+    },
+    // seoIndex: false to noindex this category (sale ended, deprecated,
+    // staging-only). Defaults to true.
+    seoIndex: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     timestamps: true,
