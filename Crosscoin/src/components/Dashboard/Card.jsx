@@ -4,6 +4,7 @@ import DonutChart from '../common/DonutChart';
 import { useDashboardStats } from '../../hooks/queries/useDashboard';
 import { useAuth } from '../../context/AuthContext';
 import { DateRangePicker } from '../ui';
+import { PageHeader, Panel, StatGrid, StatTile } from './primitives';
 
 /* ── Icons ── */
 const IC = {
@@ -168,44 +169,58 @@ function CardGrid() {
   return (
     <div className="dashboard-sections">
 
-      {/* ═══ 1. GREETING + DATE FILTER ═══ */}
-      <div className="dc-topbar">
-        <div className="dc-greeting">
-          <span className="dc-greeting-text">{getGreeting()}, {user?.username || 'Admin'}</span>
-          <span className="dc-greeting-sub">{hasDateFilter ? 'Showing filtered data' : "Here's your store overview"}</span>
-        </div>
-        <DateRangePicker
-          label=""
-          startDate={dateFilter.start_date || ''}
-          endDate={dateFilter.end_date || ''}
-          onStartChange={val => handleDateChange('start_date', val)}
-          onEndChange={val => handleDateChange('end_date', val)}
-          onClear={clearDateFilter}
-          inline
-        />
-      </div>
+      {/* ═══ 1. PAGE HEADER (greeting + date filter) ═══ */}
+      <PageHeader
+        title={`${getGreeting()}, ${user?.username || 'Admin'}`}
+        subtitle={hasDateFilter ? 'Showing filtered data' : "Here's your store overview"}
+        actions={
+          <DateRangePicker
+            label=""
+            startDate={dateFilter.start_date || ''}
+            endDate={dateFilter.end_date || ''}
+            onStartChange={val => handleDateChange('start_date', val)}
+            onEndChange={val => handleDateChange('end_date', val)}
+            onClear={clearDateFilter}
+            inline
+          />
+        }
+      />
 
       {/* ═══ 2. ALERT BAR ═══ */}
       {alerts.length > 0 && (
-        <div className="dc-alert-bar">
-          <span className="dc-alert-bar-icon">{IC.warn}</span>
-          <span className="dc-alert-bar-text">{alerts.join('  ·  ')}</span>
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px',
+            background: 'var(--ds-color-warn-bg)',
+            border: '1px solid var(--ds-color-warn-bd)',
+            borderRadius: 'var(--ds-radius-md)',
+            color: 'var(--ds-color-warn)',
+            fontSize: 'var(--ds-text-md)',
+            fontWeight: 'var(--ds-weight-semi)',
+            marginBottom: 'var(--ds-space-4)',
+          }}
+        >
+          <span style={{ display: 'inline-flex' }} aria-hidden="true">{IC.warn}</span>
+          <span>{alerts.join('  ·  ')}</span>
         </div>
       )}
 
-      {/* ═══ 3. KPI STRIP ═══ */}
-      <div className="dc-kpi-strip">
-        <KpiTile label="Total Revenue" value={`₹${fmt(revenue.total)}`} color="#180D3E" />
-        <KpiTile label="Earned" value={`₹${fmt(revenue.earned)}`} color="#059669" />
-        <KpiTile label="Active" value={`₹${fmt(revenue.active)}`} color="#2563eb" />
-        <KpiTile label="Lost (RTO)" value={`₹${fmt(revenue.breakdown?.rto)}`} color="#ea580c" />
-        <KpiTile label="Lost (Cancelled)" value={`₹${fmt(revenue.breakdown?.cancelled)}`} color="#dc2626" />
-        <KpiTile label="Monthly" value={`₹${fmt(revenue.monthly)}`} color="#7c3aed" />
-        <KpiTile label="Avg Order" value={`₹${fmt(revenue.average)}`} color="#0891b2" />
-        <KpiTile label="Customers" value={customers.total || 0} color="#d97706" />
-        <KpiTile label="Products" value={`${products.active || 0}/${products.total || 0}`} color="#6b7280" />
-        <KpiTile label="Reviews" value={`${reviews.approved || 0}/${reviews.total || 0}`} color="#f59e0b" />
-      </div>
+      {/* ═══ 3. KPI STRIP — design-system StatTiles ═══ */}
+      <StatGrid style={{ marginBottom: 'var(--ds-space-4)' }}>
+        <StatTile label="Total Revenue"    value={fmt(revenue.total)}             prefix="₹" />
+        <StatTile label="Earned"           value={fmt(revenue.earned)}            prefix="₹" tone="good" />
+        <StatTile label="Active"           value={fmt(revenue.active)}            prefix="₹" tone="info" />
+        <StatTile label="Lost (RTO)"       value={fmt(revenue.breakdown?.rto)}    prefix="₹" tone="warn" />
+        <StatTile label="Lost (Cancelled)" value={fmt(revenue.breakdown?.cancelled)} prefix="₹" tone="danger" />
+        <StatTile label="Monthly"          value={fmt(revenue.monthly)}           prefix="₹" />
+        <StatTile label="Avg Order"        value={fmt(revenue.average)}           prefix="₹" tone="info" />
+        <StatTile label="Customers"        value={customers.total || 0} />
+        <StatTile label="Products"         value={`${products.active || 0}/${products.total || 0}`} sub="active / total" />
+        <StatTile label="Reviews"          value={`${reviews.approved || 0}/${reviews.total || 0}`} sub="approved / total" tone="warn" />
+      </StatGrid>
 
       {/* ═══ 4. ORDER PIPELINE + REVENUE DONUT (2-col) ═══ */}
       <div className="dc-two-col">
@@ -240,22 +255,21 @@ function CardGrid() {
         )}
       </div>
 
-      {/* ═══ 5. ORDER STAT CARDS ═══ */}
-      <div className="dashboard-section">
-        <SectionTitle icon={IC.cart}>Order Overview</SectionTitle>
-        <div className="dc-order-grid">
-          <StatCard title="Total Orders" value={totalOrders} description={hasDateFilter ? 'Filtered period' : 'All time'} icon={IC.cart} color="primary" />
-          <StatCard title="Pending" value={orders.pending || 0} description="Awaiting processing" icon={IC.clock} color="warning" />
-          <StatCard title="Confirmed" value={confirmedCount} description="Confirmed & processing" icon={IC.check} color="info" />
-          <StatCard title="Shipped" value={shippedCount} description="In transit / delivery" icon={IC.truck} color="info" />
-          <StatCard title="Delivered" value={orders.completed || 0} description={`${totalOrders > 0 ? Math.round(((orders.completed || 0)/totalOrders)*100) : 0}% success`} icon={IC.check} color="success" />
-          <StatCard title="Cancelled" value={orders.cancelled || 0} description={`${totalOrders > 0 ? Math.round(((orders.cancelled || 0)/totalOrders)*100) : 0}% of total`} icon={IC.warn} color="danger" />
-          <StatCard title="RTO / Returns" value={rtoCount} description={`${totalOrders > 0 ? Math.round((rtoCount/totalOrders)*100) : 0}% RTO rate`} icon={IC.undo} color="danger" />
-          <StatCard title="COD Orders" value={codCount} description={`${totalOrders > 0 ? Math.round((codCount/totalOrders)*100) : 0}% of total`} icon={IC.card} color="warning" />
-          <StatCard title="Prepaid" value={prepaidCount} description={`${totalOrders > 0 ? Math.round((prepaidCount/totalOrders)*100) : 0}% of total`} icon={IC.card} color="success" />
-          <StatCard title="Recent" value={orders.recent || 0} description="Last 30 days" icon={IC.recent} color="info" />
-        </div>
-      </div>
+      {/* ═══ 5. ORDER STAT CARDS — design-system StatTiles ═══ */}
+      <Panel title="Order Overview" style={{ marginBottom: 'var(--ds-space-4)' }}>
+        <StatGrid>
+          <StatTile label="Total Orders" value={totalOrders} sub={hasDateFilter ? 'Filtered period' : 'All time'} />
+          <StatTile label="Pending"      value={orders.pending || 0}   tone="warn"   sub="Awaiting processing" />
+          <StatTile label="Confirmed"    value={confirmedCount}        tone="info"   sub="Confirmed & processing" />
+          <StatTile label="Shipped"      value={shippedCount}          tone="info"   sub="In transit / delivery" />
+          <StatTile label="Delivered"    value={orders.completed || 0} tone="good"   sub={`${totalOrders > 0 ? Math.round(((orders.completed || 0)/totalOrders)*100) : 0}% success`} />
+          <StatTile label="Cancelled"    value={orders.cancelled || 0} tone="danger" sub={`${totalOrders > 0 ? Math.round(((orders.cancelled || 0)/totalOrders)*100) : 0}% of total`} />
+          <StatTile label="RTO / Returns" value={rtoCount}             tone="danger" sub={`${totalOrders > 0 ? Math.round((rtoCount/totalOrders)*100) : 0}% RTO rate`} />
+          <StatTile label="COD Orders"   value={codCount}              tone="warn"   sub={`${totalOrders > 0 ? Math.round((codCount/totalOrders)*100) : 0}% of total`} />
+          <StatTile label="Prepaid"      value={prepaidCount}          tone="good"   sub={`${totalOrders > 0 ? Math.round((prepaidCount/totalOrders)*100) : 0}% of total`} />
+          <StatTile label="Recent"       value={orders.recent || 0}    tone="info"   sub="Last 30 days" />
+        </StatGrid>
+      </Panel>
 
       {/* ═══ 6. CHARTS ROW (2x2) ═══ */}
       <div className="dc-charts-2x2">
