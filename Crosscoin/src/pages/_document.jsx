@@ -29,7 +29,7 @@ export default function Document() {
         <meta name="theme-color" content="#180D3E" />
 
         {/* Favicon */}
-        <link rel="icon" href="/crosscoin icon.png" />
+        <link rel="icon" href="/crosscoin-icon.png" />
 
         {/* Prevent dark mode */}
         <meta name="color-scheme" content="light" />

@@ -178,7 +178,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
         {/* Header */}
         <div className="sb-header">
           <div className="sb-logo">
-            <img src="/crosscoin icon.png" alt="CrossCoin" />
+            <img src="/crosscoin-icon.png" alt="CrossCoin" />
             {expanded && (
               <div className="sb-logo-text">
                 <span className="sb-logo-name">CrossCoin</span>
