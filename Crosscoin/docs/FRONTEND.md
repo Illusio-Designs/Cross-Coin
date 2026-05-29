@@ -93,8 +93,12 @@ App
 | `NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR` | Prepaid discount amount (default `50`) |
 | `NEXT_PUBLIC_PREPAID_NUDGE_TEXT` | Prepaid nudge banner text |
 | `NEXT_PUBLIC_OTP_VERIFY_SKIP` | Skip OTP in dev (`true`/`false`) |
-| `NEXT_PUBLIC_FB_PIXEL_ID` | Facebook Pixel ID |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics 4 ID |
+
+> **Tracking IDs (FB Pixel, GA4 Measurement ID, Microsoft Clarity) are no
+> longer read from `NEXT_PUBLIC_*` env vars.** They live in the database as
+> brand settings (`FB_PIXEL_ID`, `GA_MEASUREMENT_ID`, `CLARITY_ID`) and are
+> fetched by the public site at runtime via `GET /api/public/tracking-config`,
+> so the admin can change them in the dashboard without a redeploy.
 
 ---
 

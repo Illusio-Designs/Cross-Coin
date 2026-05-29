@@ -74,10 +74,25 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=()' },
-          // CSP header (adjust as needed for your CDN)
+          // CSP header — allow the analytics/marketing trackers we mount in
+          // src/components/common/Analytics.jsx (FB Pixel, GA4, Clarity).
+          // Without these origins the inline init runs but the external
+          // library never loads, so Meta Pixel Helper reports the pixel as
+          // "installed but hasn't fired" and GA receives zero hits.
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.crosscoin.in; frame-ancestors 'none';"
+            value: [
+              "default-src 'self'",
+              // Tracker libraries are served from their own CDNs.
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              // Tracking beacons (1x1 pixels) and FB / GA pixel images.
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              // Beacon endpoints the trackers POST to.
+              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.analytics.google.com",
+              "frame-ancestors 'none'",
+            ].join('; ') + ';'
           },
         ],
       },
