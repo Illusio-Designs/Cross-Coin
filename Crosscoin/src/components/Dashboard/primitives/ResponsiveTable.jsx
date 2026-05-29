@@ -51,7 +51,7 @@ export default function ResponsiveTable({
         <tbody>
           {data.map((row, i) => (
             <tr
-              key={row[rowKey] ?? i}
+              key={typeof rowKey === 'function' ? rowKey(row, i) : (row[rowKey] ?? i)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               style={onRowClick ? { cursor: 'pointer' } : undefined}
             >
