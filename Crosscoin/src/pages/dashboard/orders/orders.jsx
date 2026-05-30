@@ -473,7 +473,11 @@ const Orders = () => {
         return <span className="date-time-cell"><span className="date-part">{date}</span><span className="time-part">{time}</span></span>;
     };
     const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toFixed(2)}`;
-    const calculateOrderSubtotal = (orderItems) => orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+    // Default to empty array when an order has no OrderItems shipped from
+    // the API — otherwise the .reduce throws and the view modal silently
+    // unmounts (looks like the View button "isn't working").
+    const calculateOrderSubtotal = (orderItems = []) =>
+      (orderItems || []).reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
     const calculateOrderTotal = (subtotal, shippingFee, discountAmount) => Math.max(0, subtotal - parseFloat(discountAmount || 0) + parseFloat(shippingFee || 0));
     const getOrderTotal = (order) => {
         if (!order || !order.OrderItems || order.OrderItems.length === 0) return parseFloat(order.final_amount || 0);
@@ -1147,7 +1151,12 @@ const Orders = () => {
                                 <span className="odm-count">{selectedOrder.OrderItems?.length}</span>
                             </div>
                             <div className="odm-items">
-                                {selectedOrder.OrderItems.map(item => {
+                                {(selectedOrder.OrderItems || []).length === 0 && (
+                                    <div style={{ padding: 16, color: '#6b7280', fontSize: 13, textAlign: 'center' }}>
+                                        No items recorded for this order.
+                                    </div>
+                                )}
+                                {(selectedOrder.OrderItems || []).map(item => {
                                     let imageToDisplay = null;
                                     if (item.ProductVariation?.VariationImages?.length > 0) {
                                         imageToDisplay = item.ProductVariation.VariationImages.find(img => img.is_primary) || item.ProductVariation.VariationImages[0];
