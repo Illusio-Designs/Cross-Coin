@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getPublicCoupons } from '../../services/publicApi';
+import { inlineHtml } from '../../utils/sanitizeHtml';
 
 const CouponStrip = () => {
   const [coupons, setCoupons] = useState([]);
@@ -88,7 +89,7 @@ const CouponStrip = () => {
       <div className="coupon-marquee">
         {duplicatedCoupons.map((coupon, index) => (
           <div key={`${coupon.id}-${index}`} className="coupon-offer-item">
-            <span className="coupon-offer-text" dangerouslySetInnerHTML={{ __html: generateCouponDescription(coupon) }} />
+            <span className="coupon-offer-text" {...inlineHtml(generateCouponDescription(coupon))} />
             <button 
               className={`coupon-code-pill ${copiedCode === coupon.code ? 'copied' : ''}`}
               onClick={(e) => handleCopyCode(coupon.code, e)}

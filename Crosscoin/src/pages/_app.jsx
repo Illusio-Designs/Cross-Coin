@@ -16,6 +16,8 @@ import Breadcrumb from "../components/common/Breadcrumb";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { monitoring } from '../utils/monitoring';
+import { installLinkHardening } from '../utils/sanitizeHtml';
+import { installApiInterceptors } from '../utils/apiInterceptors';
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
@@ -232,6 +234,11 @@ function App({ Component, pageProps }) {
     if (typeof window !== 'undefined' && !window.__turbopack_load_page_chunks__) {
       window.__turbopack_load_page_chunks__ = () => {};
     }
+    // Harden external links inside DOMPurify-sanitized content
+    // (adds target=_blank + rel=noopener, lazy-loads images).
+    installLinkHardening();
+    // Wire axios interceptors: timeout, error toast, CSRF token mirror.
+    installApiInterceptors();
   }, []);
 
   useEffect(() => {

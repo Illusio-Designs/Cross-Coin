@@ -4,14 +4,20 @@ import { useCategories } from '../hooks/queries/useProducts';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/common/Loader';
 import SafeImage from '../components/common/SafeImage';
+import ProductFaqSection from '../components/common/ProductFaqSection';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 import { collectionUrl } from '../utils/collectionUrl';
 
 export async function getServerSideProps(ctx) {
-  return { props: { seoData: await fetchPageSeo('categories', ctx) } };
+  const [seoData, faqs] = await Promise.all([
+    fetchPageSeo('categories', ctx),
+    fetchPageFaqs('categories', ctx),
+  ]);
+  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
 }
 
-const Collections = ({ seoData }) => {
+const Collections = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   const { data: categories = [], isLoading, error, refetch } = useCategories();
 
   // Safety guard: Ensure categories is always an array
@@ -102,6 +108,11 @@ const Collections = ({ seoData }) => {
             </div>
           )}
         </div>
+        {(pageFaqs.length > 0 || globalFaqs.length > 0) && (
+          <div className="collections-container" style={{ paddingTop: 0 }}>
+            <ProductFaqSection productFaqs={pageFaqs} globalFaqs={globalFaqs} />
+          </div>
+        )}
       </div>
     </SeoWrapper>
   );

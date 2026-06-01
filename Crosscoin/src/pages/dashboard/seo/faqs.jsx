@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { faqService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
+import { richHtml } from '../../../utils/sanitizeHtml';
 
 // Lazy-load the rich-text editor — Quill ships a lot of JS we don't want
 // in the admin shell's initial bundle.
@@ -219,7 +220,7 @@ export default function FaqsManager() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: '#180D3E', marginBottom: 4 }}>{f.question}</div>
-                      <div style={{ fontSize: 13, color: '#6b7280' }} dangerouslySetInnerHTML={{ __html: f.answer }} />
+                      <div style={{ fontSize: 13, color: '#6b7280' }} {...richHtml(f.answer)} />
                       {!f.is_active && (
                         <div style={{ marginTop: 4, fontSize: 11, color: '#9ca3af' }}>Inactive — not shown on site</div>
                       )}

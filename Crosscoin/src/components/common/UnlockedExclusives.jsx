@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import SafeImage from './SafeImage';
 import { getPublicProductReviews } from '../../services/publicApi';
 import { useCart } from '../../context/CartContext';
+import { richHtml } from '../../utils/sanitizeHtml';
 
 const UnlockedExclusives = ({ products = [], loading = false }) => {
   const { addToCart, buyNow, setIsDrawerOpen } = useCart();
@@ -323,7 +324,7 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                   <div className="tab-panel active">
                     <div
                       className="detail-description"
-                      dangerouslySetInnerHTML={{ __html: product.description || 'No description available.' }}
+                      {...richHtml(product.description || 'No description available.')}
                     />
                     <button className="back-btn" onClick={() => setShowDetail(false)}>← Back to overview</button>
                   </div>

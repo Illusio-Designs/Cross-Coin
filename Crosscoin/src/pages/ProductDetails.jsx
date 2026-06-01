@@ -13,6 +13,7 @@ import ProductFaqSection from '../components/common/ProductFaqSection';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
+import { richHtml } from '../utils/sanitizeHtml';
 export default function ProductDetails({ initialProduct = null, initialSlug = null, productFaqs = [], globalFaqs = [] } = {}) {
   const router = useRouter();
   // The slug-based route (/products/[slug]) passes initialSlug as a prop.
@@ -646,7 +647,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
         {productData.description && (
           <>
             <h2 className="pdt-section-title">Product Description</h2>
-            <div className="pdt-desc-body" dangerouslySetInnerHTML={{ __html: productData.description }} />
+            <div className="pdt-desc-body" {...richHtml(productData.description)} />
           </>
         )}
 

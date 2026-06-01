@@ -7,6 +7,7 @@ import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
+import { inlineHtml } from '../../utils/sanitizeHtml';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
@@ -102,7 +103,7 @@ function PhonePreview({ tpl }) {
         </div>
         <div className="was-ph-msgs">
           <div className="was-ph-bubble">
-            <div className="was-ph-btext" dangerouslySetInnerHTML={{ __html: html }} />
+            <div className="was-ph-btext" {...inlineHtml(html)} />
             {tpl.footer && <div className="was-ph-bfooter">{tpl.footer}</div>}
             <div className="was-ph-bmeta"><span>Just now</span><span style={{color:'#53bdeb'}}>✓✓</span></div>
           </div>
@@ -454,7 +455,7 @@ function MsgContent({ msg, brandId = 1 }) {
     .replace(/_(.*?)_/g, '<em>$1</em>')
     .replace(/~(.*?)~/g, '<s>$1</s>')
     .replace(/\n/g, '<br>');
-  return <span style={{ fontSize:14, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: formatted }} />;
+  return <span style={{ fontSize:14, lineHeight:1.5 }} {...inlineHtml(formatted)} />;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────

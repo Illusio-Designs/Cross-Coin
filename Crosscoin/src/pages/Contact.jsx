@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import SeoWrapper from '../console/SeoWrapper';
+import ProductFaqSection from '../components/common/ProductFaqSection';
 import { showSuccess, showError } from '../utils/toastNotification';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 
 export async function getServerSideProps(ctx) {
-  return { props: { seoData: await fetchPageSeo('contact', ctx) } };
+  const [seoData, faqs] = await Promise.all([
+    fetchPageSeo('contact', ctx),
+    fetchPageFaqs('contact', ctx),
+  ]);
+  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
 }
 
 const contactInfo = [
@@ -80,7 +86,7 @@ const faqs = [
   { q: 'How do I track my order?', a: 'Visit our Order Tracking page and enter your order number or AWB number to get real-time updates.' },
 ];
 
-export default function Contact({ seoData }) {
+export default function Contact({ seoData, pageFaqs = [], globalFaqs = [] }) {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -243,6 +249,12 @@ export default function Contact({ seoData }) {
                 </div>
               ))}
             </div>
+            {/* Admin-managed FAQs (page + global) appear below the hardcoded ones */}
+            {(pageFaqs.length > 0 || globalFaqs.length > 0) && (
+              <div style={{ marginTop: 24 }}>
+                <ProductFaqSection productFaqs={pageFaqs} globalFaqs={globalFaqs} />
+              </div>
+            )}
           </div>
         </section>
 

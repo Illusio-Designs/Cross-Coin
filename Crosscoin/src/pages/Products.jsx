@@ -28,14 +28,20 @@ import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import { showSuccess } from "../utils/toastNotification";
 import { fetchPageSeo } from "../utils/fetchPageSeo";
+import { fetchPageFaqs } from "../utils/fetchPageFaqs";
+import ProductFaqSection from "../components/common/ProductFaqSection";
 
 export async function getServerSideProps(ctx) {
-  return { props: { seoData: await fetchPageSeo('products', ctx) } };
+  const [seoData, faqs] = await Promise.all([
+    fetchPageSeo('products', ctx),
+    fetchPageFaqs('products', ctx),
+  ]);
+  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
 }
 
 // Load page-specific CSS - moved to _app.jsx
 
-const Products = ({ seoData }) => {
+const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   const router = useRouter();
   const { addToCart } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
@@ -1404,6 +1410,11 @@ const Products = ({ seoData }) => {
         minPrice={minPrice}
         maxPrice={maxPrice}
       />
+      {(pageFaqs.length > 0 || globalFaqs.length > 0) && (
+        <section style={{ padding: '0 16px 32px', maxWidth: 1200, margin: '0 auto' }}>
+          <ProductFaqSection productFaqs={pageFaqs} globalFaqs={globalFaqs} />
+        </section>
+      )}
     </SeoWrapper>
   );
 };
