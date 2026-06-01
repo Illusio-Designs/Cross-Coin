@@ -90,7 +90,19 @@
       "Bash(node --check Crosscoin/next.config.js)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Crosscoin\" -Recurse -Name)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\\\\Backend\" -Recurse -Directory)",
-      "Bash(xargs grep -l \"sitemap\\\\|/api/sitemap\")"
+      "Bash(xargs grep -l \"sitemap\\\\|/api/sitemap\")",
+      "Bash(node --check Backend/services/productSeoHelper.js)",
+      "Bash(node --check Backend/controller/productController.js)",
+      "Bash(node --check Backend/controller/faqController.js)",
+      "Bash(node --check Backend/routes/faqRoutes.js)",
+      "Bash(node --check Backend/routes/routesManager.js)",
+      "Bash(node --check Backend/scripts/setupDatabase.js)",
+      "Bash(node --check Backend/routes/seoAdminRoutes.js)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\K N Corporation\\\\Cross-Coin\" -Directory)",
+      "Bash(grep -E \"\\\\.\\(jsx|js|tsx\\)$\")",
+      "Bash(grep -E \"\\\\.\\(jsx|js|tsx|ts\\)$\")",
+      "Bash(grep -v \"^[0-9]*:.*//.*View\")",
+      "Bash(git reset *)"
     ]
   }
 }

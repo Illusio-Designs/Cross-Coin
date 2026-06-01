@@ -1125,7 +1125,7 @@ const Orders = () => {
                                             </div>
                                         )}
 
-                                        {syncErr && (
+                                        {syncErr && typeof syncErr === 'string' && (
                                             <div className="odm-sync-error">
                                                 <div className="odm-sync-error-title">
                                                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
@@ -1237,10 +1237,10 @@ const Orders = () => {
                                         <Button
                                             variant="primary"
                                             onClick={() => generateLabelForOrder(selectedOrder.id)}
-                                            disabled={generatingManifest}
+                                            disabled={generatingLabel.has(selectedOrder.id)}
                                             style={{ flex: 1, fontSize: '12px' }}
                                         >
-                                            {generatingLabel ? 'Downloading...' : '📥 Download Label'}
+                                            {generatingLabel.has(selectedOrder.id) ? 'Downloading...' : '📥 Download Label'}
                                         </Button>
                                         {selectedOrder.fship_label_url && (
                                             <a
