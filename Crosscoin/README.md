@@ -140,7 +140,7 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 | Performance | 6/10 | many useEffects on Products page; CSS bundle not split; no Lighthouse budget |
 | **Accessibility** | **7/10** | focus traps on CartDrawer + ProductFilterDrawer + SizeChartModal ✅; shared Modal already had one; skip-to-main + alt text audit still pending |
 | State management | 6/10 | React Query used on a few pages; most still hand-roll fetches; no optimistic updates |
-| Error handling | 8/10 | `ErrorBoundary` exists; global axios interceptor surfaces categorised error toasts + 30s timeout ✅; Sentry still not wired |
+| Error handling | 9/10 | `ErrorBoundary` rewritten with brand UX, copy-details button, support contacts, `window.__crosscoinErrors` ring buffer for monitor drain ✅; global axios interceptor surfaces categorised error toasts + 30s timeout ✅; Sentry hook-up is one drain call away |
 | Forms & validation | 7/10 | CartDrawer validates everything; no form lib — pure component state |
 | Mobile / responsive | 7/10 | Tailwind + tokens; design system mobile-aware; not all admin pages migrated |
 | **Security** | **9/10** | strong CSP + HSTS; **every** `dangerouslySetInnerHTML` on user-authored content now flows through `utils/sanitizeHtml.js` (rich + inline variants); external links auto-hardened with rel=noopener |
@@ -156,7 +156,7 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 5. ~~Skip-to-main link.~~ **DONE**. ~~Heading order audit on top public pages.~~ **DONE** (home.jsx + Products.jsx now have proper `<h1>`; added `.sr-only` utility for visually-hidden but screen-reader-visible content). Older policy / legacy pages still need a sweep.
 
 **🟡 Medium**
-5. Migrate the remaining admin pages (Customers, Brands, Coupons, Payments, Reviews, Slider, Blogs, Lookbooks, Reels, Brand Settings, Analytics) to the design-system primitives so the dashboard looks consistent end-to-end.
+5. Migrate the remaining admin pages (~~Consumers~~ ✓, Brands, Coupons, Payments, Reviews, Slider, Blogs, Lookbooks, Reels, Brand Settings, Analytics) to the design-system primitives so the dashboard looks consistent end-to-end.
 6. Move all dashboard data fetching to React Query (currently mixed) for cache + retry consistency.
 7. Replace hand-rolled `CartDrawer` validation with `react-hook-form` + Zod — would cut ~150 lines and reduce re-renders.
 8. Memoise the heavy filter computations in `Products.jsx` (33 `useState`/`useEffect` calls suggest excessive re-renders).

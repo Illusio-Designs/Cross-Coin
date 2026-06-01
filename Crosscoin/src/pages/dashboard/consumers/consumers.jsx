@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button, Table, Pagination, Modal } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { userService } from '../../../services';
 
 const IC = {
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   view: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
   users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
 };
 
+const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+
 export default function Consumers() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const itemsPerPage = 10;
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -20,32 +22,38 @@ export default function Consumers() {
   const [selectedConsumer, setSelectedConsumer] = useState(null);
 
   useEffect(() => {
-    const fetchConsumers = async () => {
-      setLoading(true);
-      setError(null);
+    let cancelled = false;
+    (async () => {
+      setLoading(true); setError(null);
       try {
         const data = await userService.getAllUsers();
-        setConsumers(Array.isArray(data) ? data : data?.users || data?.data || []);
+        if (!cancelled) setConsumers(Array.isArray(data) ? data : data?.users || data?.data || []);
       } catch (err) {
-        setError(err.message || "Failed to fetch consumers");
+        if (!cancelled) setError(err.message || "Failed to fetch consumers");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchConsumers();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => { setCurrentPage(1); }, [search]);
 
-  const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+  const allConsumers = (Array.isArray(consumers) ? consumers : []).filter(item => !STAFF_ROLES.includes(item.role));
+  const filteredData = allConsumers.filter(item => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return item.username?.toLowerCase().includes(s) || item.email?.toLowerCase().includes(s);
+  });
 
-  const filteredData = (Array.isArray(consumers) ? consumers : [])
-    .filter(item => !STAFF_ROLES.includes(item.role))
-    .filter(item => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      return item.username?.toLowerCase().includes(s) || item.email?.toLowerCase().includes(s);
-    });
+  // Stats — derived from the unfiltered list so the totals don't jiggle
+  // when the operator types into the search box.
+  const totalConsumers = allConsumers.length;
+  const newThisMonth = (() => {
+    const cutoff = new Date(); cutoff.setDate(1); cutoff.setHours(0, 0, 0, 0);
+    return allConsumers.filter(c => c.createdAt && new Date(c.createdAt) >= cutoff).length;
+  })();
+  const withPhone = allConsumers.filter(c => c.phone).length;
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const start = (currentPage - 1) * itemsPerPage;
@@ -72,63 +80,54 @@ export default function Consumers() {
         <div className="sl-actions">
           <button className="sl-btn-edit" title="View Details" onClick={() => handleView(row.id)}>{IC.view}</button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <>
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.users}</div>
-            <div>
-              <h1 className="sl-page-title">Consumers</h1>
-              <p className="sl-page-sub">{filteredData.length} consumer{filteredData.length !== 1 ? 's' : ''} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search by name or email..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title="Consumers"
+          subtitle={`${totalConsumers} consumer${totalConsumers !== 1 ? 's' : ''} total`}
+        />
 
-        {/* Stat Cards */}
-        <div className="sl-stat-cards">
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Consumers</span>
-              <span className="sl-stat-value">{filteredData.length}</span>
-            </div>
-          </div>
-        </div>
+        <StatGrid>
+          <StatTile label="Total consumers" value={totalConsumers} tone="info" />
+          <StatTile label="New this month" value={newThisMonth} tone="good" sub="signups since 1st" />
+          <StatTile label="With phone on file" value={withPhone} tone="default" sub={`${totalConsumers > 0 ? Math.round(withPhone / totalConsumers * 100) : 0}% of total`} />
+        </StatGrid>
 
-        <div className="sl-table-wrap">
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Search by name or email…"
+          />
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : error ? (
-            <div className="sl-error">{error}</div>
+            <EmptyState
+              title="Couldn't load consumers"
+              message={error}
+            />
           ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.users}</div>
-              <p>{search ? "No consumers match your search" : "No consumers found"}</p>
-            </div>
+            <EmptyState
+              icon={IC.users}
+              title={search ? "No consumers match your search" : "No consumers yet"}
+              message={search ? "Try a different name or email." : "Signups will appear here as customers register."}
+            />
           ) : (
             <>
               <Table columns={columns} data={currentItems} striped hoverable />
               {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Consumer: ${selectedConsumer?.username || ''}`}>
