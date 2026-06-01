@@ -5,6 +5,7 @@
 
 const { sequelize } = require('../config/db.js');
 const crypto = require('crypto');
+const { logger } = require('../config/logging.js');
 
 /**
  * Validate address completeness
@@ -123,7 +124,7 @@ async function calculateAddressQuality(address) {
             }
         }
     } catch (error) {
-        console.error('Error querying historical delivery data:', error);
+        logger.warn('Address quality: historical delivery lookup failed:', error.message);
         // Fallback to default scoring if database query fails
         if (completeness.isComplete && factors.pincodeValid && factors.phoneValid) {
             factors.historicalDeliverySuccess = 100;
