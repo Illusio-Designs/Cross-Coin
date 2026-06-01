@@ -525,6 +525,54 @@ const setupDatabase = async () => {
       console.log("⚠️ seo_metadata column patch skipped:", seoColErr.message);
     }
 
+    // One-time cleanup: re-slug any existing products / categories whose
+    // slugs still contain non-alphanumeric characters from older runs
+    // when slugify didn't have strict:true. Keeps URLs clean:
+    //   'cross-coin(r)-pack-(3)' → 'cross-coin-r-pack-3'  (one round-trip)
+    console.log("Re-slugging legacy product / category slugs...");
+    try {
+      const slugify = require('slugify');
+      const clean = (s) => slugify(s || '', { lower: true, strict: true, trim: true });
+
+      // Products
+      const [badProducts] = await sequelize.query(
+        `SELECT id, name, slug FROM products WHERE slug REGEXP '[^a-z0-9-]' LIMIT 500`
+      );
+      for (const p of badProducts) {
+        const fresh = clean(p.name) || clean(p.slug);
+        if (!fresh || fresh === p.slug) continue;
+        // ensure uniqueness
+        let candidate = fresh;
+        let n = 2;
+        // eslint-disable-next-line no-await-in-loop
+        while ((await sequelize.query(`SELECT id FROM products WHERE slug = ? AND id <> ? LIMIT 1`, { replacements: [candidate, p.id] }))[0].length) {
+          candidate = `${fresh}-${n++}`;
+        }
+        await sequelize.query(`UPDATE products SET slug = ? WHERE id = ?`, { replacements: [candidate, p.id] });
+      }
+      if (badProducts.length) console.log(`  ✓ Reslugged ${badProducts.length} products`);
+
+      // Categories
+      const [badCats] = await sequelize.query(
+        `SELECT id, name, slug FROM categories WHERE slug REGEXP '[^a-z0-9-]' LIMIT 500`
+      );
+      for (const c of badCats) {
+        const fresh = clean(c.name) || clean(c.slug);
+        if (!fresh || fresh === c.slug) continue;
+        let candidate = fresh;
+        let n = 2;
+        // eslint-disable-next-line no-await-in-loop
+        while ((await sequelize.query(`SELECT id FROM categories WHERE slug = ? AND id <> ? LIMIT 1`, { replacements: [candidate, c.id] }))[0].length) {
+          candidate = `${fresh}-${n++}`;
+        }
+        await sequelize.query(`UPDATE categories SET slug = ? WHERE id = ?`, { replacements: [candidate, c.id] });
+      }
+      if (badCats.length) console.log(`  ✓ Reslugged ${badCats.length} categories`);
+      console.log("✓ Slug cleanup done");
+    } catch (slugErr) {
+      console.log("⚠️ Slug cleanup skipped:", slugErr.message);
+    }
+
     // Seed default SEO rows for every known public storefront page so admins
     // don't start with a blank dashboard. Uses INSERT IGNORE on the
     // (page_name, brand_id) unique key — admin edits are never overwritten.

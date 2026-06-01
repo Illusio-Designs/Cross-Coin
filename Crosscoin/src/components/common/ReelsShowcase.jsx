@@ -110,7 +110,7 @@ const ReelsShowcase = () => {
                         Add to Cart
                       </button>
                       {product.slug ? (
-                        <button type="button" onClick={() => router.push(`/ProductDetails?slug=${product.slug}`)}>
+                        <button type="button" onClick={() => router.push(`/products/${product.slug}`)}>
                           View
                         </button>
                       ) : null}

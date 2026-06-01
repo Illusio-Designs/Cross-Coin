@@ -87,7 +87,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
 
   const handleProductClick = useCallback((product) => {
     if (product?.slug) {
-      router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
+      router.push(`/products/${encodeURIComponent(product.slug)}`);
     } else {
       // Fallback to listing page (prevents navigation to non-existent routes).
       router.push('/Products');

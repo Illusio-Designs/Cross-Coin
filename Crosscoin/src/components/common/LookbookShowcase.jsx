@@ -170,7 +170,7 @@ const LookbookShowcase = () => {
             key={cardProduct.id}
             product={cardProduct}
             index={0}
-            onProductClick={() => cardProduct.slug && router.push(`/ProductDetails?slug=${cardProduct.slug}`)}
+            onProductClick={() => cardProduct.slug && router.push(`/products/${cardProduct.slug}`)}
             onAddToCart={(e, prod) => {
               e.stopPropagation();
               addToCart(

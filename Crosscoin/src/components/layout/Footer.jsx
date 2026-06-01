@@ -5,6 +5,7 @@ import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md";
 import SafeImage from "../common/SafeImage";
 import { getPublicCategories } from "../../services/publicApi";
+import { collectionUrl } from "../../utils/collectionUrl";
 
 const Footer = () => {
   const [categories, setCategories] = useState([]);
@@ -51,7 +52,7 @@ const Footer = () => {
           <span className="footer__categories-label">Popular Searches</span>
           <div className="footer__categories-links">
             {categories.map((cat) => (
-              <Link key={cat.id} href={`/Products?category=${encodeURIComponent(cat.name)}`} className="footer__cat-link">
+              <Link key={cat.id} href={collectionUrl(cat)} className="footer__cat-link">
                 {cat.name}
               </Link>
             ))}
