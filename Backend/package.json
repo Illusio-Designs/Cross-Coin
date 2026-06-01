@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node --max-old-space-size=384 index.js",
-    "db:setup": "node scripts/setupDatabase.js"
+    "db:setup": "node scripts/setupDatabase.js",
+    "test": "jest --runInBand --forceExit --detectOpenHandles",
+    "test:smoke": "jest --runInBand --forceExit --detectOpenHandles tests/smoke"
   },
   "keywords": [
     "e-commerce",
@@ -59,6 +61,16 @@
   },
   "devDependencies": {
     "basic-ftp": "^6.0.1",
-    "nodemon": "^3.1.14"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "verbose": true,
+    "testTimeout": 30000
   }
 }

@@ -57,11 +57,19 @@ orderEmitter.on('order.confirmed', async (order) => {
         if (syncResult.success) {
           logger.info(`[Event] FShip sync triggered for ${order.order_number}: ${syncResult.action} — AWB: ${syncResult.waybill || 'N/A'}`);
         } else {
-          logger.warn(`[Event] FShip sync failed for ${order.order_number}: ${syncResult.error} — will retry via cron`);
+          logger.warn(`[Event] FShip sync failed for ${order.order_number}: ${syncResult.error} — enqueueing retry`);
+          try {
+            const { enqueue } = require('./integrationQueue.js');
+            await enqueue('shipping:sync-order', { orderId: order.id, attempt: 1 }, { delay: 30_000 });
+          } catch (qErr) { logger.warn(`[Event] enqueue shipping retry failed: ${qErr.message}`); }
         }
       }
     } catch (syncErr) {
-      logger.warn(`[Event] FShip immediate sync failed for ${order.order_number}: ${syncErr.message} — will retry via cron`);
+      logger.warn(`[Event] FShip immediate sync failed for ${order.order_number}: ${syncErr.message} — enqueueing retry`);
+      try {
+        const { enqueue } = require('./integrationQueue.js');
+        await enqueue('shipping:sync-order', { orderId: order.id, attempt: 1 }, { delay: 30_000 });
+      } catch (qErr) { logger.warn(`[Event] enqueue shipping retry failed: ${qErr.message}`); }
     }
   } catch (e) { logger.error('[Event] order.confirmed error:', e.message); }
 });

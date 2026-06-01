@@ -198,11 +198,19 @@
    */
   module.exports.checkAddressQuality = async (req, res) => {
     try {
-      const { line1, line2 = '', city, state, pincode, phone } = req.body || {};
+      const { line1, line2 = '', landmark = '', city, state, pincode, phone } = req.body || {};
       if (!line1 || !pincode) {
         return res.status(400).json({ success: false, message: 'line1 and pincode are required' });
       }
-      const quality = await calculateAddressQuality({ line1, line2, city, state, pincode, phone });
+      const quality = await calculateAddressQuality({
+        line1,
+        line2: landmark || line2,
+        landmark: landmark || line2,
+        city,
+        state,
+        pincode,
+        phone,
+      });
       const minQuality = parseInt(
         await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MIN_ADDRESS_QUALITY', '60'),
         10,
@@ -504,24 +512,30 @@
       try {
         addressQuality = await calculateAddressQuality({
           line1: shippingAddress.address,
-          line2: '',
+          line2: shippingAddress.landmark || '',
+          landmark: shippingAddress.landmark || '',
           city: shippingAddress.city,
           state: shippingAddress.state,
           pincode: shippingAddress.pincode,
           phone: shippingAddress.phone,
         });
 
+        // Prefer the hash already persisted on shipping_addresses (computed
+        // by the model's beforeSave hook). Falls back to on-the-fly hash if
+        // the row predates the migration and the backfill hasn't run.
+        const hash = shippingAddress.address_hash || getAddressHash({
+          line1: shippingAddress.address,
+          line2: shippingAddress.landmark || '',
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          pincode: shippingAddress.pincode,
+        });
+
         // Upsert the freshly-computed score so future address-quality
         // lookups (and the delivery_success/failure counters updated
         // downstream in orderShippingController) have a row to work on.
         await AddressQualityScore.upsert({
-          address_hash: getAddressHash({
-            line1: shippingAddress.address,
-            line2: '',
-            city: shippingAddress.city,
-            state: shippingAddress.state,
-            pincode: shippingAddress.pincode,
-          }),
+          address_hash: hash,
           pincode: shippingAddress.pincode,
           quality_score: addressQuality.score,
         }, { transaction });

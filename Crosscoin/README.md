@@ -161,6 +161,7 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 8. Memoise the heavy filter computations in `Products.jsx` (33 `useState`/`useEffect` calls suggest excessive re-renders).
 9. CSS consolidation — pick one of Tailwind / hand-written CSS / styled-components. Today it's all three.
 10. Storybook for the 6 primitives + page templates.
+11. **Wire `GET /api/csrf/token` on dashboard load + mirror into `X-CSRF-Token`** so the backend can flip `CSRF_REQUIRED=true`. Token endpoint is already live; this is just an axios interceptor.
 
 **🟢 Low**
 11. Editable hero / about / contact page **body content** via brand settings (Phase 2 of the page-SEO report).

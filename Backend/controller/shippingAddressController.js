@@ -12,6 +12,7 @@ module.exports.createShippingAddress = async (req, res) => {
     const {
       full_name,
       address,
+      landmark,
       city,
       state,
       postal_code,
@@ -21,7 +22,7 @@ module.exports.createShippingAddress = async (req, res) => {
     } = req.body;
     const userId = req.user.id;
 
-    // Validate required fields
+    // Validate required fields (landmark is optional but improves quality score)
     if (
       !address ||
       !city ||
@@ -84,6 +85,7 @@ module.exports.createShippingAddress = async (req, res) => {
         user_id: userId,
         full_name: full_name || `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() || req.user.username || "",
         address,
+        landmark: landmark || null,
         city,
         state,
         pincode: postal_code,
@@ -103,14 +105,16 @@ module.exports.createShippingAddress = async (req, res) => {
       user_id: shippingAddress.user_id,
       full_name: shippingAddress.full_name,
       address: shippingAddress.address,
+      landmark: shippingAddress.landmark,
       city: shippingAddress.city,
       state: shippingAddress.state,
-      postal_code: shippingAddress.pincode, // Transform pincode to postal_code
-      pincode: shippingAddress.pincode, // Keep both for compatibility
+      postal_code: shippingAddress.pincode,
+      pincode: shippingAddress.pincode,
       country: shippingAddress.country,
-      phone_number: shippingAddress.phone, // Getter decrypts automatically
-      phone: shippingAddress.phone, // Getter decrypts automatically
+      phone_number: shippingAddress.phone,
+      phone: shippingAddress.phone,
       is_default: shippingAddress.is_default,
+      address_hash: shippingAddress.address_hash,
       createdAt: shippingAddress.createdAt,
       updatedAt: shippingAddress.updatedAt
     };
@@ -160,14 +164,16 @@ module.exports.getUserShippingAddresses = async (req, res) => {
       user_id: addr.user_id,
       full_name: addr.full_name,
       address: addr.address,
+      landmark: addr.landmark,
       city: addr.city,
       state: addr.state,
-      postal_code: addr.pincode, // Transform pincode to postal_code
-      pincode: addr.pincode, // Keep both for compatibility
+      postal_code: addr.pincode,
+      pincode: addr.pincode,
       country: addr.country,
-      phone_number: addr.phone, // Transform phone to phone_number
-      phone: addr.phone, // Keep both for compatibility
+      phone_number: addr.phone,
+      phone: addr.phone,
       is_default: addr.is_default,
+      address_hash: addr.address_hash,
       createdAt: addr.createdAt,
       updatedAt: addr.updatedAt
     }));
@@ -218,6 +224,7 @@ module.exports.updateShippingAddress = async (req, res) => {
     const userId = req.user.id;
     const {
       address,
+      landmark,
       city,
       state,
       postal_code,
@@ -278,6 +285,7 @@ module.exports.updateShippingAddress = async (req, res) => {
     // Update the address
     const updatePayload = {
       address: address || shippingAddress.address,
+      landmark: landmark !== undefined ? landmark : shippingAddress.landmark,
       city: city || shippingAddress.city,
       state: state || shippingAddress.state,
       pincode: postal_code || shippingAddress.pincode,
@@ -426,7 +434,7 @@ module.exports.setDefaultShippingAddress = async (req, res) => {
 module.exports.createGuestShippingAddress = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { address, city, state, postal_code, country, phone_number, guest_info } = req.body;
+    const { address, landmark, city, state, postal_code, country, phone_number, guest_info } = req.body;
     const { email, firstName, lastName } = guest_info || {};
 
     if (!address || !city || !state || !postal_code || !phone_number || !email || !firstName) {
@@ -475,7 +483,9 @@ module.exports.createGuestShippingAddress = async (req, res) => {
     const shippingAddress = await ShippingAddress.create({
       user_id: user.id,
       full_name: `${firstName} ${lastName || ''}`.trim(),
-      address, city, state,
+      address,
+      landmark: landmark || null,
+      city, state,
       pincode: postal_code,
       country: country || 'India',
       phone: phone_number,

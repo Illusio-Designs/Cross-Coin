@@ -163,7 +163,7 @@ function getAttr(item, key) {
 }
 
 const EMPTY_ADDR = {
-  fullName: '', phoneNumber: '', address: '',
+  fullName: '', phoneNumber: '', address: '', landmark: '',
   city: '', state: '', postalCode: '', country: 'India', isDefault: false,
 };
 
@@ -579,6 +579,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       fullName: addr.full_name || addr.fullName || '',
       phoneNumber: addr.phone_number || addr.phoneNumber || '',
       address: addr.address || '',
+      landmark: addr.landmark || '',
       city: addr.city || '',
       state: addr.state || '',
       postalCode: addr.postal_code || addr.postalCode || '',
@@ -598,6 +599,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     const addrToValidate = {
       full_name: formData.fullName,
       address: formData.address,
+      landmark: formData.landmark,
       city: formData.city,
       state: formData.state,
       postal_code: formData.postalCode,
@@ -622,7 +624,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         setAddresses(fresh || []);
         setSelectedAddress(saved || formData);
       } else {
-        const saved = { id: Date.now(), full_name: formData.fullName, phone_number: formData.phoneNumber, address: formData.address, city: formData.city, state: formData.state, postal_code: formData.postalCode, country: formData.country };
+        const saved = { id: Date.now(), full_name: formData.fullName, phone_number: formData.phoneNumber, address: formData.address, landmark: formData.landmark, city: formData.city, state: formData.state, postal_code: formData.postalCode, country: formData.country };
         setSelectedAddress(saved);
       }
       setShowAddressForm(false);
@@ -1318,7 +1320,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
                           <p className="cd-address-line">{selectedAddress.phone_number}</p>
                         </div>
-                        <button className="cd-address-edit" onClick={() => { setAddressForm({ fullName: selectedAddress.full_name, phoneNumber: selectedAddress.phone_number, address: selectedAddress.address, city: selectedAddress.city, state: selectedAddress.state, postalCode: selectedAddress.postal_code, country: selectedAddress.country, isDefault: false }); setShowAddressForm(true); }} aria-label="Edit"><IconEdit /></button>
+                        <button className="cd-address-edit" onClick={() => { setAddressForm({ fullName: selectedAddress.full_name, phoneNumber: selectedAddress.phone_number, address: selectedAddress.address, landmark: selectedAddress.landmark || '', city: selectedAddress.city, state: selectedAddress.state, postalCode: selectedAddress.postal_code, country: selectedAddress.country, isDefault: false }); setShowAddressForm(true); }} aria-label="Edit"><IconEdit /></button>
                       </div>
                     ) : null}
                     {!showAddressForm && (
@@ -1382,8 +1384,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           )}
                           <div className="cd-form-group cd-form-full">
                             <label className="cd-label">Address *</label>
-                            <input className={`cd-input ${fieldErrors.address ? 'cd-input-error' : ''}`} name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="House/flat no., street, area, landmark" autoComplete="street-address" />
+                            <input className={`cd-input ${fieldErrors.address ? 'cd-input-error' : ''}`} name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="House/flat no., street, area" autoComplete="street-address" />
                             {fieldErrors.address && <p className="cd-field-error" role="alert">{fieldErrors.address}</p>}
+                          </div>
+                          <div className="cd-form-group cd-form-full">
+                            <label className="cd-label">Landmark (optional, improves delivery)</label>
+                            <input className="cd-input" name="landmark" value={addressForm.landmark} onChange={handleAddrChange} placeholder="Near hospital, opposite school, etc." maxLength={255} autoComplete="address-line2" />
                           </div>
                           <div className="cd-form-group">
                             <label className="cd-label">City *</label>

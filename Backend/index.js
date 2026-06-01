@@ -220,6 +220,47 @@ app.get('/api/health/db', async (req, res) => {
     }
 });
 
+// Operator metrics — counts and rates for the in-process integration queue,
+// memory, uptime. Restricted to ADMIN_METRICS_TOKEN header so it's safe to
+// leave on a public host.
+app.get('/api/metrics', async (req, res) => {
+    const requiredToken = process.env.ADMIN_METRICS_TOKEN;
+    if (requiredToken) {
+        const presented = (req.headers['x-metrics-token'] || '').toString();
+        if (presented !== requiredToken) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    try {
+        const integrationQueue = require('./services/integrationQueue.js');
+        const queueStats = await integrationQueue.getStats();
+        const mem = process.memoryUsage();
+        const cpu = process.cpuUsage();
+        const redisService = require('./services/redisService.js');
+
+        res.json({
+            success: true,
+            data: {
+                uptime_seconds: Math.round(process.uptime()),
+                memory: {
+                    heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+                    heap_total_mb: Math.round(mem.heapTotal / 1024 / 1024),
+                    rss_mb: Math.round(mem.rss / 1024 / 1024),
+                    external_mb: Math.round(mem.external / 1024 / 1024),
+                },
+                cpu: {
+                    user_us: cpu.user,
+                    system_us: cpu.system,
+                },
+                integration_queue: queueStats,
+                redis_connected: redisService.isReady(),
+                node_version: process.version,
+                env: process.env.NODE_ENV || 'development',
+            },
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // Redis-only health check
 app.get('/api/health/redis', async (req, res) => {
     try {
@@ -232,6 +273,13 @@ app.get('/api/health/redis', async (req, res) => {
         res.status(503).json({ status: 'error', error: e.message });
     }
 });
+
+// CSRF token endpoint — frontend calls this on dashboard load to get a
+// token to mirror into X-CSRF-Token on subsequent state-changing requests.
+// Enforcement is opt-in via CSRF_REQUIRED=true env var.
+const { csrfTokenHandler } = require('./middleware/csrf.js');
+app.get('/api/csrf/token', csrfTokenHandler);
+app.get('/api/v1/csrf/token', csrfTokenHandler);
 
 // CORS debug endpoint
 app.get('/api/v1/cors-test', (req, res) => {
@@ -366,6 +414,16 @@ const startServer = async () => {
         } catch (err) {
           logger.error('[Worker] Failed to initialize cron jobs:', err.message);
         }
+
+        // ── Integration retry queue workers (Bull on Redis) ───────────────
+        // Wires shipping-sync / payment-reconcile / whatsapp-send retries.
+        // Falls back to inline execution if Redis isn't available.
+        try {
+          const { registerWorkers } = require('./services/integrationQueueWorkers.js');
+          registerWorkers();
+        } catch (err) {
+          logger.warn('[Worker] integration queue workers failed to register: ' + err.message);
+        }
         
         // Start server
         const server = app.listen(PORT, () => {
@@ -386,6 +444,10 @@ const startServer = async () => {
             forceExit.unref();
 
             server.close(async () => {
+                try {
+                    const { close: closeIntegrationQueue } = require('./services/integrationQueue.js');
+                    await closeIntegrationQueue();
+                } catch (e) { logger.warn('Integration queue close error:', e.message); }
                 try {
                     const redisService = require('./services/redisService.js');
                     await redisService.close();

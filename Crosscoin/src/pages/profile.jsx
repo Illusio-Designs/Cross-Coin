@@ -87,7 +87,7 @@ export default function Profile({ seoData }) {
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [addressForm, setAddressForm] = useState({ address: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
+  const [addressForm, setAddressForm] = useState({ address: "", landmark: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
 
   // Password
   const [currentPassword, setCurrentPassword] = useState("");
@@ -160,13 +160,13 @@ export default function Profile({ seoData }) {
 
   const openAddAddress = () => {
     setEditingId(null);
-    setAddressForm({ address: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
+    setAddressForm({ address: "", landmark: "", city: "", state: "", postalCode: "", country: "", phoneNumber: "", isDefault: false });
     setShowAddressModal(true);
   };
 
   const openEditAddress = (addr) => {
     setEditingId(addr.id);
-    setAddressForm({ address: addr.address, city: addr.city, state: addr.state, postalCode: addr.postal_code, country: addr.country, phoneNumber: addr.phone_number, isDefault: addr.is_default });
+    setAddressForm({ address: addr.address, landmark: addr.landmark || "", city: addr.city, state: addr.state, postalCode: addr.postal_code, country: addr.country, phoneNumber: addr.phone_number, isDefault: addr.is_default });
     setShowAddressModal(true);
   };
 
@@ -511,16 +511,17 @@ export default function Profile({ seoData }) {
               </div>
               <form onSubmit={handleAddressSubmit} className="pf-form">
                 {[
-                  { name: "phoneNumber", label: "Phone Number", placeholder: "Enter phone number" },
-                  { name: "address", label: "Address", placeholder: "Street, apartment, etc." },
-                  { name: "city", label: "City", placeholder: "City" },
-                  { name: "state", label: "State", placeholder: "State" },
-                  { name: "postalCode", label: "Postal Code", placeholder: "Postal code" },
-                  { name: "country", label: "Country", placeholder: "Country" },
+                  { name: "phoneNumber", label: "Phone Number", placeholder: "Enter phone number", required: true },
+                  { name: "address", label: "Address", placeholder: "House/flat no., street, area", required: true },
+                  { name: "landmark", label: "Landmark (optional)", placeholder: "Near hospital, opposite school, etc.", required: false },
+                  { name: "city", label: "City", placeholder: "City", required: true },
+                  { name: "state", label: "State", placeholder: "State", required: true },
+                  { name: "postalCode", label: "Postal Code", placeholder: "Postal code", required: true },
+                  { name: "country", label: "Country", placeholder: "Country", required: true },
                 ].map(f => (
                   <div className="pf-form-group" key={f.name}>
                     <label>{f.label}</label>
-                    <input type="text" name={f.name} value={addressForm[f.name]} onChange={e => setAddressForm(p => ({ ...p, [e.target.name]: e.target.value }))} placeholder={f.placeholder} required />
+                    <input type="text" name={f.name} value={addressForm[f.name] || ""} onChange={e => setAddressForm(p => ({ ...p, [e.target.name]: e.target.value }))} placeholder={f.placeholder} required={f.required} />
                   </div>
                 ))}
                 <div className="pf-form-group pf-checkbox-group">
