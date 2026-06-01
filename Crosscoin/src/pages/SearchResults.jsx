@@ -107,6 +107,7 @@ const SearchResults = ({ seoData }) => {
   return (
     <SeoWrapper pageName="search" seoData={seoData}>
       <div className="sr-page products-page">
+        <h1 className="sr-only">{searchQuery ? `Search results for "${searchQuery}"` : 'Search products'}</h1>
         {/* Header bar */}
         <div className="sr-topbar">
           <div className="sr-topbar-inner">
