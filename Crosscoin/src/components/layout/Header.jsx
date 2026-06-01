@@ -151,7 +151,7 @@ const Header = () => {
 
   // Handle search result click
   const handleSearchResultClick = (product) => {
-    router.push(`/ProductDetails?slug=${product.slug}`);
+    router.push(`/products/${product.slug}`);
     setShowSearch(false);
     setSearchQuery("");
     setSearchResults([]);

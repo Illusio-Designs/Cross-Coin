@@ -99,7 +99,7 @@ const InstagramGallery = () => {
                               {product.slug ? (
                                 <button
                                   type="button"
-                                  onClick={() => router.push(`/ProductDetails?slug=${product.slug}`)}
+                                  onClick={() => router.push(`/products/${product.slug}`)}
                                 >
                                   View
                                 </button>

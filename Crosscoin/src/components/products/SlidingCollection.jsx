@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicCategoryByName } from '../../services/publicApi';
 import SafeImage from '../common/SafeImage';
+import { collectionUrl } from '../../utils/collectionUrl';
 
 const shimmerStyle = {
   backgroundColor: '#e5e7eb',
@@ -35,15 +36,14 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
 
     try {
       setLoading(true);
-      // Fetch category data by name
+      // Prefer the category's real slug from the API; fall back to a
+      // client-side slugify of the display name so we always navigate
+      // to a clean URL even if the API call fails or returns no slug.
       const categoryData = await getPublicCategoryByName(collectionName);
-      
-      // Navigate to products page with category filter
-      router.push(`/Products?category=${encodeURIComponent(collectionName)}`);
+      router.push(collectionUrl(categoryData?.slug ? categoryData : collectionName));
     } catch (error) {
       console.error('Error fetching category:', error);
-      // Fallback to basic redirect if API fails
-      router.push(`/Products?category=${encodeURIComponent(collectionName)}`);
+      router.push(collectionUrl(collectionName));
     } finally {
       setLoading(false);
     }

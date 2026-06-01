@@ -203,7 +203,7 @@ const Wishlist = ({ seoData }) => {
                   index={idx}
                   onProductClick={(product) => {
                     if (product.slug) {
-                      router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
+                      router.push(`/products/${encodeURIComponent(product.slug)}`);
                     } else {
                       // No slug => avoid navigating to a route that doesn't exist.
                       router.push('/Products');
@@ -273,7 +273,7 @@ const Wishlist = ({ seoData }) => {
                 index={idx}
                 onProductClick={(product) => {
                   if (product.slug) {
-                    router.push(`/ProductDetails?slug=${encodeURIComponent(product.slug)}`);
+                    router.push(`/products/${encodeURIComponent(product.slug)}`);
                   } else {
                     // No slug => avoid navigating to a route that doesn't exist.
                     router.push('/Products');

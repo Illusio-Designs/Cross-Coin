@@ -212,7 +212,7 @@ const Home = () => {
 
   const handleProductClick = (product) => {
     if (product && product.slug) {
-      router.push(`/ProductDetails?slug=${product.slug}`);
+      router.push(`/products/${product.slug}`);
     }
   };
 

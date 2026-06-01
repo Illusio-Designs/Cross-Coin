@@ -299,7 +299,9 @@ module.exports.createProduct = async (req, res) => {
     }
 
     // Ensure slug uniqueness
-    let baseSlug = slugify(name, { lower: true });
+    // strict drops parentheses, ® / ™, & and every other non-alphanumeric
+    // glyph so URLs stay clean: 'Cross Coin® Pack (3)' → 'cross-coin-pack-3'
+    let baseSlug = slugify(name, { lower: true, strict: true, trim: true });
     let slug = baseSlug;
     let slugSuffix = 2;
     while (await Product.findOne({ where: { slug } })) {
@@ -719,7 +721,9 @@ module.exports.updateProduct = async (req, res) => {
 
     // Update basic product info
     // Ensure slug uniqueness for update
-    let baseSlug = slugify(name, { lower: true });
+    // strict drops parentheses, ® / ™, & and every other non-alphanumeric
+    // glyph so URLs stay clean: 'Cross Coin® Pack (3)' → 'cross-coin-pack-3'
+    let baseSlug = slugify(name, { lower: true, strict: true, trim: true });
     let slug = baseSlug;
     let slugSuffix = 2;
     while (await Product.findOne({ where: { slug, id: { [Op.ne]: product.id } } })) {

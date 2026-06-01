@@ -352,7 +352,7 @@ const Products = ({ seoData }) => {
   }, []);
 
   const handleProductClick = (product) => {
-    router.push(`/ProductDetails?slug=${product.slug}`);
+    router.push(`/products/${product.slug}`);
   };
 
   const handleAddToCart = (e, product, color, size, variationId) => {

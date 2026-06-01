@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Skeleton from '../common/Skeleton';
+import { collectionUrl } from '../../utils/collectionUrl';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
@@ -32,11 +33,15 @@ const HeroSlider = ({ slides = [] }) => {
     }
 
     if (currentSlide?.categoryName) {
-      const categoryName = currentSlide.categoryName;
-      const url = `/Products?category=${encodeURIComponent(categoryName)}`;
-      window.location.href = url;
+      // Prefer the slide's categorySlug when the slider data carries one,
+      // otherwise slugify the display name client-side. Either way we
+      // land on /collections/<slug> (clean URL, no %20 / %C2%AE noise).
+      const slugSource = currentSlide.categorySlug
+        ? { slug: currentSlide.categorySlug }
+        : currentSlide.categoryName;
+      window.location.href = collectionUrl(slugSource);
     } else {
-      window.location.href = '/Products';
+      window.location.href = '/Collections';
     }
   };
 

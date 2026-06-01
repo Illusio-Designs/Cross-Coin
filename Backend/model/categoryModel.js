@@ -78,7 +78,7 @@ const Category = sequelize.define('Category', {
     hooks: {
         beforeValidate: (category) => {
             if (category.name && !category.slug) {
-                category.slug = slugify(category.name, { lower: true });
+                category.slug = slugify(category.name, { lower: true, strict: true, trim: true });
             }
         }
     }

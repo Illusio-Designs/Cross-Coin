@@ -5,6 +5,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/common/Loader';
 import SafeImage from '../components/common/SafeImage';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { collectionUrl } from '../utils/collectionUrl';
 
 export async function getServerSideProps(ctx) {
   return { props: { seoData: await fetchPageSeo('categories', ctx) } };
@@ -69,7 +70,7 @@ const Collections = ({ seoData }) => {
               return (
                 <Link
                   key={cat.id || cat._id || cat.name}
-                  href={`/Products?category=${encodeURIComponent(cat.name)}`}
+                  href={collectionUrl(cat)}
                   className="category-card"
                 >
                   <div className="category-card-image-wrapper">
