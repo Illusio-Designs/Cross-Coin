@@ -185,7 +185,7 @@ deliberately deferred until a test DB seed exists.
 2. ~~Smoke test suite.~~ **DONE** (`tests/smoke/` — 27 tests passing). Next: integration tests against a seeded test DB for the checkout + order-creation paths.
 3. ~~Bull retry queue for integration failures.~~ **DONE** (`services/integrationQueue.js` + workers)
 4. ~~Populate `order_audit_logs` on every order mutation.~~ **DONE** (create / confirm / cancel / shipping change / return / AWB update / payment reconcile)
-5. Backfill `order_audit_logs` for historical orders (one-time script — every existing order should get a `created` row so finance has a starting point).
+5. ~~Backfill `order_audit_logs` for historical orders.~~ **DONE** (one-time script: [`scripts/backfillAuditLogs.js`](scripts/backfillAuditLogs.js)). Run on prod with `node Backend/scripts/backfillAuditLogs.js --dry-run` first to preview impact, then drop `--dry-run` to execute. Idempotent — safe to re-run; skips orders that already have a `created` row.
 
 **🟡 Medium**
 6. ~~Daily payment-reconciliation job.~~ **DONE** (`services/paymentReconciliationService.js` runs 3 AM daily, also queueable per-order)

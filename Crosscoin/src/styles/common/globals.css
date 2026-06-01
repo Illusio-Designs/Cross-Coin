@@ -1,5 +1,29 @@
 /* DM Sans loaded via _document.jsx preload for non-render-blocking delivery */
 
+/* ─── Skip-to-main link ──────────────────────────────────────────────
+   Hidden off-screen until focused (keyboard tab). First focusable
+   element on every page so screen-reader / keyboard users can jump
+   past the nav directly to the page content. */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100000;
+  padding: 12px 20px;
+  background: #180D3E;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  transition: left 0.1s ease;
+}
+.skip-to-main:focus {
+  left: 0;
+  outline: 2px solid #CE1E36;
+  outline-offset: 2px;
+}
+
 :root {
   --theme-color: #180D3E;
   
