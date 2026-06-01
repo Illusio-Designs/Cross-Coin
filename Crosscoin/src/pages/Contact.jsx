@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import SeoWrapper from '../console/SeoWrapper';
 import { showSuccess, showError } from '../utils/toastNotification';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('contact', ctx) } };
+}
 
 const contactInfo = [
   {
@@ -75,7 +80,7 @@ const faqs = [
   { q: 'How do I track my order?', a: 'Visit our Order Tracking page and enter your order number or AWB number to get real-time updates.' },
 ];
 
-export default function Contact() {
+export default function Contact({ seoData }) {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -104,7 +109,7 @@ export default function Contact() {
   };
 
   return (
-    <SeoWrapper pageName="contact">
+    <SeoWrapper pageName="contact" seoData={seoData}>
       <div className="ct-page">
 
         {/* Hero */}

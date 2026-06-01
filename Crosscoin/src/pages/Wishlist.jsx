@@ -8,8 +8,13 @@ import ProductCard from '../components/products/ProductCard';
 import { showSuccess, showError } from '../utils/toastNotification';
 import SeoWrapper from '../console/SeoWrapper';
 import { ConfirmModal } from '../components/common/AlertModal';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
 
-const Wishlist = () => {
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('wishlist', ctx) } };
+}
+
+const Wishlist = ({ seoData }) => {
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
   const router = useRouter();
@@ -73,7 +78,7 @@ const Wishlist = () => {
 
   if (wishlist.length === 0) {
     return (
-      <SeoWrapper pageName="wishlist">
+      <SeoWrapper pageName="wishlist" seoData={seoData}>
         <div className="page-header">
           <div className="ph-top">
             <div>
@@ -103,7 +108,7 @@ const Wishlist = () => {
   }
 
   return (
-    <SeoWrapper pageName="wishlist">
+    <SeoWrapper pageName="wishlist" seoData={seoData}>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <Head>
         <title>My Wishlist | CrossCoin</title>

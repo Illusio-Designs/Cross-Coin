@@ -2,11 +2,16 @@ import React from 'react';
 import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
 import { useCart } from '../context/CartContext';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
 
-const Sitemap = () => {
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('sitemap', ctx) } };
+}
+
+const Sitemap = ({ seoData }) => {
   const { setIsDrawerOpen } = useCart();
   return (
-    <SeoWrapper pageName="sitemap">
+    <SeoWrapper pageName="sitemap" seoData={seoData}>
       <div className="sitemap-page">
         {/* PAGE TITLE */}
         <div className="page-title">

@@ -130,6 +130,15 @@ const nextConfig = {
         destination: '/collections/:slug',
         permanent: true,
       },
+      // Legacy policy URL /policy?name=privacy-policy → /policy/privacy-policy.
+      // Backend still matches the slug against the title for either form,
+      // but the slug URL is what we want indexed.
+      {
+        source: '/policy',
+        has: [{ type: 'query', key: 'name', value: '(?<slug>[a-z0-9-]+)' }],
+        destination: '/policy/:slug',
+        permanent: true,
+      },
     ];
   },
 

@@ -27,10 +27,15 @@ import { gtagTrack } from "../utils/gtagTrack";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import { showSuccess } from "../utils/toastNotification";
+import { fetchPageSeo } from "../utils/fetchPageSeo";
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('products', ctx) } };
+}
 
 // Load page-specific CSS - moved to _app.jsx
 
-const Products = () => {
+const Products = ({ seoData }) => {
   const router = useRouter();
   const { addToCart } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
@@ -789,7 +794,7 @@ const Products = () => {
   // Don't render until component is mounted (prevents hydration mismatch)
   if (!isMounted) {
     return (
-      <SeoWrapper pageName="products">
+      <SeoWrapper pageName="products" seoData={seoData}>
         <div className="products-page">
           <div className="products-header">
             <div className="section-header-inline">
@@ -812,7 +817,7 @@ const Products = () => {
   }
 
   return (
-    <SeoWrapper pageName="products">
+    <SeoWrapper pageName="products" seoData={seoData}>
       <div className="products-page">
         <div className="products-header">
           <div className="section-header-inline">

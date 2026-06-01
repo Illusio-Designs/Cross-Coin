@@ -8,10 +8,8 @@ const STATIC_ROUTES = [
   { path: '/About',             priority: '0.6', changefreq: 'monthly' },
   { path: '/Contact',           priority: '0.6', changefreq: 'monthly' },
   { path: '/OrderTracking',     priority: '0.5', changefreq: 'monthly' },
-  { path: '/policy?name=privacy-policy',           priority: '0.4', changefreq: 'yearly' },
-  { path: '/policy?name=terms-and-conditions',     priority: '0.4', changefreq: 'yearly' },
-  { path: '/policy?name=shipping-policy',          priority: '0.4', changefreq: 'yearly' },
-  { path: '/policy?name=cancellation-and-refund',  priority: '0.4', changefreq: 'yearly' },
+  // Policies are emitted dynamically below from the live policy list so a
+  // new policy in the admin shows up in the sitemap without a code change.
 ];
 
 function generateSitemapXml(urls) {
@@ -63,6 +61,26 @@ export async function getServerSideProps({ res }) {
             path: `/blog/${b.slug}`,
             priority: '0.6',
             changefreq: 'monthly',
+          });
+        }
+      });
+    }
+
+    // Fetch policies → /policy/<slug> (clean slug; backend matches the
+    // slug against the title for the public read endpoint).
+    const polRes = await fetch(`${API}/api/policies`, {
+      headers: { 'X-Brand-Name': 'crosscoin' },
+    });
+    if (polRes.ok) {
+      const polData = await polRes.json();
+      const policies = Array.isArray(polData) ? polData : (polData?.policies || polData?.data || []);
+      policies.forEach(p => {
+        const slug = String(p.title || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (slug) {
+          dynamicRoutes.push({
+            path: `/policy/${slug}`,
+            priority: '0.4',
+            changefreq: 'yearly',
           });
         }
       });
