@@ -61,13 +61,14 @@ async function calculateAddressQuality(address) {
         pincodeValid: false,
         phoneValid: false,
         addressComplete: false,
+        landmarkProvided: false,
         historicalDeliverySuccess: 0
     };
 
-    // Check pincode validity (30 points)
+    // Check pincode validity (25 points)
     if (validatePincode(address.pincode)) {
         factors.pincodeValid = true;
-        score += 30;
+        score += 25;
     }
 
     // Check phone validity (20 points)
@@ -76,11 +77,19 @@ async function calculateAddressQuality(address) {
         score += 20;
     }
 
-    // Check address completeness (30 points)
+    // Check address completeness (25 points)
     const completeness = validateAddressCompleteness(address);
     if (completeness.isComplete) {
         factors.addressComplete = true;
-        score += 30;
+        score += 25;
+    }
+
+    // Landmark presence (10 points) — significantly improves last-mile
+    // delivery success rate in India per courier feedback.
+    const landmark = String(address.landmark || address.line2 || '').trim();
+    if (landmark.length >= 3) {
+        factors.landmarkProvided = true;
+        score += 10;
     }
 
     // Historical delivery success (20 points)
@@ -156,14 +165,17 @@ async function calculateAddressQuality(address) {
  * @returns {string} - SHA256 hash of address
  */
 function getAddressHash(address) {
+    // Match the ShippingAddress model's beforeSave hook EXACTLY so that
+    // shipping_addresses.address_hash and address_quality_scores.address_hash
+    // are interchangeable join keys. Field order + casing must stay in sync.
     const addressString = [
-        address.line1 || '',
-        address.line2 || '',
-        address.city || '',
-        address.state || '',
-        address.pincode || ''
-    ].join('|').toLowerCase().trim();
-    
+        String(address.line1 || address.address || '').trim(),
+        String(address.line2 || address.landmark || '').trim(),
+        String(address.city || '').trim(),
+        String(address.state || '').trim(),
+        String(address.pincode || '').trim()
+    ].join('|').toLowerCase();
+
     return crypto.createHash('sha256').update(addressString).digest('hex');
 }
 

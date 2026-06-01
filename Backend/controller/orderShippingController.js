@@ -1321,9 +1321,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
                   ? await ShippingAddress.findOne({ where: { id: _qualityOrder.shipping_address_id } })
                   : null);
             if (!addr || !addr.address || !addr.pincode) return;
-            const hash = getAddressHash({
+            // Prefer the persisted hash on shipping_addresses; fall back to
+            // recompute for legacy rows that pre-date the migration.
+            const hash = addr.address_hash || getAddressHash({
               line1: addr.address,
-              line2: '',
+              line2: addr.landmark || '',
               city:  addr.city,
               state: addr.state,
               pincode: addr.pincode,

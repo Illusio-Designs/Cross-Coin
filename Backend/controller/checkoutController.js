@@ -236,6 +236,7 @@ exports.initiateCheckout = async (req, res) => {
     const addrValidation = validateShippingAddress({
       full_name: shippingAddress.full_name,
       address: shippingAddress.address,
+      landmark: shippingAddress.landmark,
       city: shippingAddress.city,
       state: shippingAddress.state,
       pincode: shippingAddress.pincode,

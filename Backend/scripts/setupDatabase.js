@@ -2501,6 +2501,65 @@ const addCodAddressConfirmedColumns = async () => {
   } catch (e) {
     console.log("⚠️ users.source_brand_id fix skipped:", e.message);
   }
+
+  // Ensure shipping_addresses.landmark + address_hash columns
+  console.log("Ensuring shipping_addresses landmark + address_hash columns...");
+  try {
+    const [landmarkCol] = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses' AND COLUMN_NAME = 'landmark'
+    `);
+    if (!landmarkCol.length) {
+      await sequelize.query(`ALTER TABLE shipping_addresses ADD COLUMN landmark VARCHAR(255) NULL AFTER address`);
+      console.log("✓ shipping_addresses.landmark column added");
+    } else {
+      console.log("✓ shipping_addresses.landmark already exists");
+    }
+
+    const [hashCol] = await sequelize.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses' AND COLUMN_NAME = 'address_hash'
+    `);
+    if (!hashCol.length) {
+      await sequelize.query(`ALTER TABLE shipping_addresses ADD COLUMN address_hash VARCHAR(64) NULL`);
+      console.log("✓ shipping_addresses.address_hash column added");
+    } else {
+      console.log("✓ shipping_addresses.address_hash already exists");
+    }
+
+    // Add index for fast joins to address_quality_scores
+    const [hashIdx] = await sequelize.query(`
+      SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses' AND INDEX_NAME = 'idx_shipping_address_hash'
+    `);
+    if (!hashIdx.length) {
+      await sequelize.query(`CREATE INDEX idx_shipping_address_hash ON shipping_addresses(address_hash)`);
+      console.log("✓ idx_shipping_address_hash created");
+    }
+
+    // Backfill address_hash for any existing rows (MySQL SHA2 matches Node's crypto.sha256
+    // hex digest exactly, and the field order matches the model's beforeSave hook)
+    const [nullHashCount] = await sequelize.query(`SELECT COUNT(*) as cnt FROM shipping_addresses WHERE address_hash IS NULL OR address_hash = ''`);
+    if (nullHashCount[0].cnt > 0) {
+      await sequelize.query(`
+        UPDATE shipping_addresses
+        SET address_hash = SHA2(
+          CONCAT_WS('|',
+            LOWER(TRIM(IFNULL(address, ''))),
+            LOWER(TRIM(IFNULL(landmark, ''))),
+            LOWER(TRIM(IFNULL(city, ''))),
+            LOWER(TRIM(IFNULL(state, ''))),
+            LOWER(TRIM(IFNULL(pincode, '')))
+          ),
+          256
+        )
+        WHERE address_hash IS NULL OR address_hash = ''
+      `);
+      console.log(`✓ Backfilled address_hash for ${nullHashCount[0].cnt} existing rows`);
+    }
+  } catch (e) {
+    console.log("⚠️ shipping_addresses landmark/hash patch skipped:", e.message);
+  }
 };
 
 module.exports = { setupDatabase, findAvailablePort, createPerformanceIndexes };

@@ -174,7 +174,8 @@ export const createShippingAddress = async (addressData) => {
   try {
     const token = localStorage.getItem("token");
     const payload = {
-      address: addressData.address, city: addressData.city, state: addressData.state,
+      address: addressData.address, landmark: addressData.landmark || null,
+      city: addressData.city, state: addressData.state,
       postal_code: addressData.postalCode, country: addressData.country,
       phone_number: addressData.phoneNumber, is_default: addressData.isDefault,
     };
@@ -199,7 +200,8 @@ export const updateShippingAddress = async (id, addressData) => {
   try {
     const token = localStorage.getItem("token");
     const payload = {
-      address: addressData.address, city: addressData.city, state: addressData.state,
+      address: addressData.address, landmark: addressData.landmark || null,
+      city: addressData.city, state: addressData.state,
       postal_code: addressData.postalCode, country: addressData.country,
       phone_number: addressData.phoneNumber, is_default: addressData.isDefault,
     };
@@ -233,7 +235,8 @@ export const setDefaultShippingAddress = async (id) => {
 export const createGuestShippingAddress = async (addressData, guestInfo) => {
   try {
     const payload = {
-      address: addressData.address, city: addressData.city, state: addressData.state,
+      address: addressData.address, landmark: addressData.landmark || null,
+      city: addressData.city, state: addressData.state,
       postal_code: addressData.postalCode, country: addressData.country,
       phone_number: addressData.phoneNumber,
       guest_info: { email: guestInfo.email, firstName: guestInfo.firstName, lastName: guestInfo.lastName },

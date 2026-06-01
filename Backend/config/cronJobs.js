@@ -66,6 +66,21 @@ function initializeCronJobs() {
     }
   });
 
+  // Payment reconciliation — daily at 3 AM
+  // For every Razorpay payment marked pending/failed in the last 48h, ask
+  // Razorpay what really happened and reconcile our local row. Catches
+  // dropped webhooks and signature-rejection races.
+  cron.schedule('0 3 * * *', async () => {
+    console.log('\n⏰ [CRON] Payment reconciliation started at:', new Date().toISOString());
+    try {
+      const { reconcileRecentPayments } = require('../services/paymentReconciliationService.js');
+      const summary = await reconcileRecentPayments({ sinceHours: 48, limit: 500 });
+      console.log('✅ [CRON] Payment reconciliation completed:', summary);
+    } catch (error) {
+      console.error('❌ [CRON] Payment reconciliation error:', error.message);
+    }
+  });
+
   // Instagram feed refresh - every 6 hours
   cron.schedule('0 */6 * * *', async () => {
     console.log('\n⏰ [CRON] Instagram feed refresh started at:', new Date().toISOString());
