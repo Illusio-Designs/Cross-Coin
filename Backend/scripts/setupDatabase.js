@@ -383,6 +383,47 @@ const setupDatabase = async () => {
       );
     }
 
+    // Pre-sync fix: ensure shipping_addresses.landmark + address_hash exist
+    // BEFORE sequelize.sync runs. Sequelize used to try to add an index on
+    // address_hash before this column existed (the index has since been
+    // removed from the model, but we still patch the columns here so any
+    // future sync-time changes can rely on them).
+    console.log("Ensuring shipping_addresses landmark + address_hash columns pre-sync...");
+    try {
+      const [saTable] = await sequelize.query(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses'
+      `);
+      if (saTable.length) {
+        const [landmarkCol] = await sequelize.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses' AND COLUMN_NAME = 'landmark'
+        `);
+        if (!landmarkCol.length) {
+          await sequelize.query(`ALTER TABLE shipping_addresses ADD COLUMN landmark VARCHAR(255) NULL AFTER address`);
+          console.log("✓ shipping_addresses.landmark column added (pre-sync)");
+        }
+
+        const [hashCol] = await sequelize.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipping_addresses' AND COLUMN_NAME = 'address_hash'
+        `);
+        if (!hashCol.length) {
+          await sequelize.query(`ALTER TABLE shipping_addresses ADD COLUMN address_hash VARCHAR(64) NULL`);
+          console.log("✓ shipping_addresses.address_hash column added (pre-sync)");
+        }
+      }
+      // Drop the legacy Sequelize-auto-generated index if a previous boot got
+      // far enough to create it but then crashed — we'll recreate cleanly
+      // with our own name below.
+      try {
+        await sequelize.query(`ALTER TABLE shipping_addresses DROP INDEX shipping_addresses_address_hash`);
+      } catch (e) { /* index didn't exist — fine */ }
+      console.log("✓ shipping_addresses landmark/hash columns ensured pre-sync");
+    } catch (saPreSyncError) {
+      console.log("⚠️ Pre-sync shipping_addresses landmark/hash fix skipped:", saPreSyncError.message);
+    }
+
     // Sync all tables at once (this creates all tables and relationships)
     // Use force: false and alter: false to prevent constraint issues
     console.log("Syncing all tables...");
