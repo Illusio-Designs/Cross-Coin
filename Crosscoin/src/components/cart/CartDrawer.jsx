@@ -1277,6 +1277,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                                   <div className="cd-address-body">
                                     <p className="cd-address-name">{addr.full_name || addr.fullName} {(addr.isDefault || addr.is_default) && <span className="cd-default-tag">Default</span>}</p>
                                     <p className="cd-address-line">{addr.address}</p>
+                                    {addr.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {addr.landmark}</p>}
                                     <p className="cd-address-line">{addr.city}, {addr.state} {addr.postal_code}</p>
                                     <p className="cd-address-line">{addr.phone_number}</p>
                                   </div>
@@ -1294,6 +1295,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                               <div className="cd-address-body">
                                 <p className="cd-address-name">{selectedAddress.full_name || selectedAddress.fullName} {(selectedAddress.isDefault || selectedAddress.is_default) && <span className="cd-default-tag">Default</span>}</p>
                                 <p className="cd-address-line">{selectedAddress.address}</p>
+                                {selectedAddress.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {selectedAddress.landmark}</p>}
                                 <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
                                 <p className="cd-address-line">{selectedAddress.phone_number}</p>
                               </div>
@@ -1309,6 +1311,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         <div className="cd-address-body">
                           <p className="cd-address-name">{addresses[0].full_name || addresses[0].fullName} {(addresses[0].isDefault || addresses[0].is_default) && <span className="cd-default-tag">Default</span>}</p>
                           <p className="cd-address-line">{addresses[0].address}</p>
+                          {addresses[0].landmark && <p className="cd-address-line cd-address-landmark">Landmark: {addresses[0].landmark}</p>}
                           <p className="cd-address-line">{addresses[0].city}, {addresses[0].state} {addresses[0].postal_code}</p>
                           <p className="cd-address-line">{addresses[0].phone_number}</p>
                         </div>
@@ -1321,6 +1324,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         <div className="cd-address-body">
                           <p className="cd-address-name">{selectedAddress.full_name}</p>
                           <p className="cd-address-line">{selectedAddress.address}</p>
+                          {selectedAddress.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {selectedAddress.landmark}</p>}
                           <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
                           <p className="cd-address-line">{selectedAddress.phone_number}</p>
                         </div>

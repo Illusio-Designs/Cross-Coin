@@ -405,6 +405,7 @@ export default function Profile({ seoData }) {
                           {addr.is_default && <span className="pf-addr-default">Default</span>}
                           {addr.full_name && <div className="pf-addr-text" style={{fontWeight:600}}>{addr.full_name}</div>}
                           {(addr.address || addr.street) && <div className="pf-addr-text">{addr.address || addr.street}</div>}
+                          {addr.landmark && <div className="pf-addr-text" style={{color:'#6b7280'}}>Landmark: {addr.landmark}</div>}
                           <div className="pf-addr-text">
                             {[addr.city, addr.state].filter(Boolean).join(", ")}
                             {(addr.postal_code || addr.pincode) ? ` — ${addr.postal_code || addr.pincode}` : ""}

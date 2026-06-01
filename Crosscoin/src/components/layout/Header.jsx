@@ -220,6 +220,11 @@ const Header = () => {
   }, [handleScroll]);
 
   return (
+    <>
+      {/* Skip-to-main link — first focusable element so keyboard /
+          screen-reader users can jump past the nav. Styled to be hidden
+          off-screen until focused (see common/skip-link.css). */}
+      <a href="#main-content" className="skip-to-main">Skip to main content</a>
     <header className={`header ${isSticky ? "header--sticky" : ""} ${!isHeaderVisible ? "header--hidden" : ""}`}>
       {/* Desktop Header */}
       <div className="header__top header__desktop">
@@ -551,6 +556,7 @@ const Header = () => {
         ></div>
       )}
     </header>
+    </>
   );
 };
 
