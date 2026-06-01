@@ -7,6 +7,7 @@ import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from '../../components/Dashboard/primitives';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -87,25 +88,27 @@ export function BrandManager() {
     <>
     <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
-      {/* Page Header */}
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">{IC.brand}</div>
-          <div>
-            <h1 className="sl-page-title">Brands</h1>
-            <p className="sl-page-sub">{brands.length} brand{brands.length !== 1 ? 's' : ''} total</p>
-          </div>
-        </div>
-        <div className="sl-header-right">
-          <div className="sl-search-wrap">
-            <span className="sl-search-icon">{IC.search}</span>
-            <input type="text" className="sl-search-input" placeholder="Search brands..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-          </div>
-          <button className="sl-add-btn" onClick={() => setShowForm(true)}>
-            <span className="sl-add-btn-icon">{IC.add}</span>Add Brand
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Brands"
+        subtitle={`${brands.length} brand${brands.length !== 1 ? 's' : ''} total`}
+        actions={
+          <Button variant="primary" onClick={() => setShowForm(true)}>+ Add Brand</Button>
+        }
+      />
+
+      <StatGrid>
+        <StatTile label="Total brands" value={brands.length} tone="info" />
+        <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} tone="good" />
+        <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} tone="warn" />
+      </StatGrid>
+
+      <Panel style={{ marginBottom: 16 }}>
+        <FilterBar
+          search={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder="Search brands by name, slug, or domain…"
+        />
+      </Panel>
 
       {/* Add/Edit Modal */}
       <Modal isOpen={showForm} onClose={resetForm} title={editingBrand ? 'Edit Brand' : 'Add New Brand'}>
@@ -179,12 +182,14 @@ export function BrandManager() {
 
       {/* Brands Grid */}
       {loading ? (
-        <div className="sl-loader-wrap"><Loader /></div>
+        <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
       ) : filteredBrands.length === 0 ? (
-        <div className="sl-empty">
-          <div className="sl-empty-icon">{IC.brand}</div>
-          <p>{searchQuery ? "No brands match your search" : "No brands yet"}</p>
-        </div>
+        <EmptyState
+          icon={IC.brand}
+          title={searchQuery ? "No brands match your search" : "No brands yet"}
+          message={searchQuery ? "Try a different search term." : "Add your first brand to start selling under it."}
+          action={!searchQuery && <Button variant="primary" onClick={() => setShowForm(true)}>+ Add Brand</Button>}
+        />
       ) : (
         <div className="brand-cards-grid">
           {filteredBrands.map(brand => (

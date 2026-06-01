@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { couponService } from "../../../services";
@@ -129,83 +130,60 @@ export default function Coupons() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.coupon}</div>
-            <div>
-              <h1 className="sl-page-title">Coupons</h1>
-              <p className="sl-page-sub">{coupons.length} coupon{coupons.length !== 1 ? 's' : ''} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search coupons..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>Add Coupon
-            </button>
+        <PageHeader
+          title="Coupons"
+          subtitle={`${coupons.length} coupon${coupons.length !== 1 ? 's' : ''} total`}
+          actions={
+            <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
+              + Add Coupon
+            </Button>
+          }
+        />
+
+        <StatGrid>
+          <StatTile label="Total coupons" value={coupons.length} tone="info" />
+          <StatTile label="Active" value={activeCount} tone="good" />
+          <StatTile label="Expired" value={expiredCount} tone="danger" sub="past end date" />
+        </StatGrid>
+
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Search by code or description…"
+          >
             <Select
               options={[{ value: '', label: 'All Status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
               value={statusFilter}
               onChange={setStatusFilter}
               placeholder="All Status"
             />
-          </div>
-        </div>
+          </FilterBar>
 
-        {/* Stat Cards */}
-        <div className="sl-stat-cards">
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Coupons</span>
-              <span className="sl-stat-value">{coupons.length}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Active</span>
-              <span className="sl-stat-value">{activeCount}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--red">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Expired</span>
-              <span className="sl-stat-value">{expiredCount}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="sl-table-wrap">
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : error ? (
-            <div className="sl-error">{error}</div>
+            <EmptyState title="Couldn't load coupons" message={error} />
           ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.coupon}</div>
-              <p>{search ? "No coupons match your search" : "No coupons yet"}</p>
-            </div>
+            <EmptyState
+              icon={IC.coupon}
+              title={search || statusFilter ? "No coupons match" : "No coupons yet"}
+              message={search || statusFilter ? "Try a different search or status filter." : "Create your first coupon to start running promotions."}
+              action={!search && !statusFilter && (
+                <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>+ Add Coupon</Button>
+              )}
+            />
           ) : (
             <>
               <Table columns={columns} data={currentItems} striped hoverable />
               {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Coupon" : "Add Coupon"} closeOnOverlayClick={false}>
