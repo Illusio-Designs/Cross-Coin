@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { trackOrderByAWB, trackOrderByOrderNumber } from '../services/publicApi';
 import { formatAttributesForDisplay } from '../utils/productAttributeFormatter';
 import { getStatusColor, getStatusDisplayText } from '../utils/statusUtils';
+import SeoWrapper from '../console/SeoWrapper';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('order-tracking', ctx) } };
+}
 
 const STEPS = [
     { key: 'placed', label: 'Order Placed' },
@@ -82,7 +88,7 @@ function getTimeline(orderData) {
     return [];
 }
 
-export default function OrderTracking() {
+export default function OrderTracking({ seoData }) {
     const [trackingInput, setTrackingInput] = useState('');
     const [trackingMethod, setTrackingMethod] = useState('order_number');
     const [orderData, setOrderData] = useState(null);
@@ -118,6 +124,7 @@ export default function OrderTracking() {
     const timeline = orderData ? getTimeline(orderData) : [];
 
     return (
+        <SeoWrapper pageName="order-tracking" seoData={seoData}>
         <main className="ot-page" role="main">
             <section className="ot-search-bar" aria-label="Order tracking search">
                 <div className="ot-search-inner">
@@ -374,5 +381,6 @@ export default function OrderTracking() {
                 </section>
             )}
         </main>
+        </SeoWrapper>
     );
 }

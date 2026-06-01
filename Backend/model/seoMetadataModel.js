@@ -35,6 +35,19 @@ const SeoMetadata = sequelize.define('SEOMetadata', {
         type: DataTypes.STRING(255),
         allowNull: true
     },
+    // JSON-LD blob the SeoWrapper emits as <script type="application/ld+json">
+    // on the page. Optional — when empty the wrapper falls back to a default
+    // Organization/WebSite schema for home and skips entirely for other pages.
+    structured_data: {
+        type: DataTypes.JSON,
+        allowNull: true
+    },
+    // Per-page robots directive (e.g. 'noindex, follow' for Wishlist/Profile
+    // /OrderTracking/ThankYou). Defaults to 'index, follow' when null.
+    robots: {
+        type: DataTypes.STRING(64),
+        allowNull: true
+    },
     brand_id: {
         type: DataTypes.INTEGER,
         allowNull: true,

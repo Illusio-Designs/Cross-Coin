@@ -4,6 +4,12 @@ import { getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
 import { gtagTrack } from "../utils/gtagTrack";
+import SeoWrapper from "../console/SeoWrapper";
+import { fetchPageSeo } from "../utils/fetchPageSeo";
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('thank-you', ctx) } };
+}
 
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -34,7 +40,7 @@ const IconMail = () => (
   </svg>
 );
 
-export default function ThankYou() {
+export default function ThankYou({ seoData }) {
   const router = useRouter();
   const { order_number } = router.query;
   const { isAuthenticated } = useAuth();
@@ -109,6 +115,7 @@ export default function ThankYou() {
   }, [router.isReady, order_number, isAuthenticated]);
 
   return (
+    <SeoWrapper pageName="thank-you" seoData={seoData}>
     <div className="ty-page">
       <div className="ty-card">
         <div className="ty-icon-wrap">
@@ -143,5 +150,6 @@ export default function ThankYou() {
         </div>
       </div>
     </div>
+    </SeoWrapper>
   );
 }

@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('blog', ctx) } };
+}
 
 const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '') : '';
 
-const BlogPage = () => {
+const BlogPage = ({ seoData }) => {
   const router = useRouter();
   const [posts, setPosts] = useState([]);
   const [tags, setTags] = useState([]);
@@ -79,7 +84,7 @@ const BlogPage = () => {
   const categories = ['all', ...Array.from(new Set(posts.map(p => p.BlogCategory?.slug).filter(Boolean)))];
 
   return (
-    <SeoWrapper pageName="blog">
+    <SeoWrapper pageName="blog" seoData={seoData}>
       <div className="blog-page">
         {/* Header */}
         <div className="blog-page-header">

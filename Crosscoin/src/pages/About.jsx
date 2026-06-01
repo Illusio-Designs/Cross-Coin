@@ -1,6 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('about', ctx) } };
+}
 
 const stats = [
   { value: '50K+', label: 'Happy Customers' },
@@ -94,9 +99,9 @@ const whyUs = [
   },
 ];
 
-export default function About() {
+export default function About({ seoData }) {
   return (
-    <SeoWrapper pageName="about">
+    <SeoWrapper pageName="about" seoData={seoData}>
       <div className="ab-page">
 
         {/* Hero */}

@@ -7,6 +7,11 @@ import Loader from '../components/common/Loader';
 import { Pagination } from '../components/ui';
 import SeoWrapper from '../console/SeoWrapper';
 import { usePagination } from '../hooks/usePagination';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('search', ctx) } };
+}
 
 function debounce(fn, wait) {
   let t;
@@ -20,7 +25,7 @@ const SORT_OPTIONS = [
   { value: 'price:desc', label: 'Price: High to Low' },
 ];
 
-const SearchResults = () => {
+const SearchResults = ({ seoData }) => {
   const router = useRouter();
   const { addToCart } = useCart();
   const { query, sort } = router.query;
@@ -100,7 +105,7 @@ const SearchResults = () => {
   const paginated = sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <SeoWrapper pageName="search">
+    <SeoWrapper pageName="search" seoData={seoData}>
       <div className="sr-page products-page">
         {/* Header bar */}
         <div className="sr-topbar">

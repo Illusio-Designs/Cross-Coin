@@ -3,22 +3,27 @@ import { useRouter } from "next/router";
 import { getPublicPolicyByName } from "@/services/publicApi";
 import DOMPurify from "dompurify";
 
-export default function Policy() {
+export default function Policy({ initialPolicy = null, initialSlug = null } = {}) {
   const router = useRouter();
-  const { name } = router.query;
-  const [policy, setPolicy] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Same dual-route pattern as ProductDetails / BlogDetails:
+  // /policy/[slug] passes initialSlug + initialPolicy from SSR;
+  // legacy /policy?name=X still works for any old link.
+  const name = initialSlug || router.query?.name;
+  const [policy, setPolicy] = useState(initialPolicy || null);
+  const [loading, setLoading] = useState(!initialPolicy);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!name) { setLoading(false); setPolicy(null); return; }
+    // Skip the client refetch when SSR already gave us the data.
+    if (initialPolicy && initialSlug === name) return;
     setLoading(true);
     setError(null);
     getPublicPolicyByName(name)
       .then(data => setPolicy(data))
       .catch(err => setError(err.message || "Failed to load policy"))
       .finally(() => setLoading(false));
-  }, [name]);
+  }, [name, initialPolicy, initialSlug]);
 
   return (
     <div className="pol-page">

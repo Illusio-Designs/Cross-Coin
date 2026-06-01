@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import SafeImage from "../components/common/SafeImage";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
+import { fetchPageSeo } from "../utils/fetchPageSeo";
+
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('profile', ctx) } };
+}
 import {
   updateUserProfile,
   updateUserPassword,
@@ -63,7 +68,7 @@ function getStatusLabel(status) {
   return status.split(/[_\s]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-export default function Profile() {
+export default function Profile({ seoData }) {
   const [activeTab, setActiveTab] = useState(0);
   const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
@@ -224,7 +229,7 @@ export default function Profile() {
   // Show loader while auth is being checked (or before client mount to avoid hydration mismatch)
   if (!hasMounted || authLoading) {
     return (
-      <SeoWrapper pageName="profile">
+      <SeoWrapper pageName="profile" seoData={seoData}>
         <div className="pf-page">
           <div className="pf-fullpage-loader">
             <div className="pf-spinner" />
@@ -239,7 +244,7 @@ export default function Profile() {
   if (!isAuthenticated) return null;
 
   return (
-    <SeoWrapper pageName="profile">
+    <SeoWrapper pageName="profile" seoData={seoData}>
       <div className="pf-page">
         {/* Hero */}
         <div className="pf-hero">

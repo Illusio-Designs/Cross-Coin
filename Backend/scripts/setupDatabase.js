@@ -495,6 +495,106 @@ const setupDatabase = async () => {
       console.log("⚠️ categories SEO column patch skipped:", catSeoErr.message);
     }
 
+    // Ensure seo_metadata has the new structured_data + robots columns.
+    // Older installs only had meta_title/description/keywords/image/canonical;
+    // these two were added to support JSON-LD per page and per-page robots
+    // directives (e.g. noindex on Wishlist / Profile / OrderTracking).
+    console.log("Ensuring seo_metadata extended columns...");
+    try {
+      const [seoTbl] = await sequelize.query(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seo_metadata'
+      `);
+      if (seoTbl.length) {
+        for (const { col, sql } of [
+          { col: 'structured_data', sql: `ALTER TABLE seo_metadata ADD COLUMN structured_data JSON NULL` },
+          { col: 'robots',          sql: `ALTER TABLE seo_metadata ADD COLUMN robots VARCHAR(64) NULL` },
+        ]) {
+          const [exists] = await sequelize.query(`
+            SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seo_metadata' AND COLUMN_NAME = '${col}'
+          `);
+          if (!exists.length) {
+            await sequelize.query(sql);
+            console.log(`  ✓ Added seo_metadata.${col}`);
+          }
+        }
+      }
+      console.log("✓ seo_metadata extended columns ensured");
+    } catch (seoColErr) {
+      console.log("⚠️ seo_metadata column patch skipped:", seoColErr.message);
+    }
+
+    // Seed default SEO rows for every known public storefront page so admins
+    // don't start with a blank dashboard. Uses INSERT IGNORE on the
+    // (page_name, brand_id) unique key — admin edits are never overwritten.
+    console.log("Seeding default SEO metadata rows...");
+    try {
+      const SEO_DEFAULTS = [
+        // page_name | slug | title | description | optional canonical (relative path)
+        ['home',           '/',                'CrossCoin — Premium Online Shopping in India',  'Shop premium products at CrossCoin. Free shipping, easy returns and secure payments.',                                      '/'],
+        ['about',          '/About',           'About CrossCoin — Our Story',                   "Learn about CrossCoin, our mission and the team behind India's trusted online store.",                                       '/About'],
+        ['contact',        '/Contact',         "Contact CrossCoin — We're Here to Help",        'Get in touch with CrossCoin support. Email, phone and WhatsApp for orders, returns and product queries.',                  '/Contact'],
+        ['categories',     '/Collections',     'Shop by Collection — CrossCoin',                'Browse curated collections at CrossCoin. Find premium products across every category.',                                     '/Collections'],
+        ['products',       '/Products',        'All Products — CrossCoin',                      'Browse the full catalog at CrossCoin. Filter by category, price and brand to find what you need.',                          '/Products'],
+        ['blog',           '/blog',            'CrossCoin Journal — Buying Guides & News',      'Read product guides, buying tips and brand news from CrossCoin.',                                                          '/blog'],
+        ['blog-details',   '/blog-details',    'Article — CrossCoin Journal',                   'Read this article on CrossCoin.',                                                                                          null],
+        ['wishlist',       '/Wishlist',        'Your Wishlist — CrossCoin',                     "Items you've saved on CrossCoin.",                                                                                          '/Wishlist'],
+        ['search',         '/SearchResults',   'Search Results — CrossCoin',                    'Search results on CrossCoin.',                                                                                             null],
+        ['profile',        '/profile',         'My Account — CrossCoin',                        'Manage your orders, addresses and preferences.',                                                                           '/profile'],
+        ['instagram',      '/Instagram',       'Shop the Look — CrossCoin Instagram',           'Browse our Instagram feed and shop the looks directly.',                                                                   '/Instagram'],
+        ['order-tracking', '/OrderTracking',   'Track Your Order — CrossCoin',                  'Track your CrossCoin order by order number or AWB.',                                                                       '/OrderTracking'],
+        ['thank-you',      '/ThankYou',        'Thank You — CrossCoin',                         'Thanks for your order!',                                                                                                   null],
+      ];
+
+      // Pages that should never be indexed (login-walled / personalized /
+      // post-conversion / parameterized search).
+      const NOINDEX = new Set(['wishlist', 'search', 'profile', 'order-tracking', 'thank-you']);
+
+      // Detect what site URL to use as base for absolute canonicals.
+      const siteUrl = (process.env.FRONTEND_URL || 'https://crosscoin.in').replace(/\/+$/, '');
+
+      for (const [pageName, slug, title, description, canonical] of SEO_DEFAULTS) {
+        const canonicalUrl = canonical ? `${siteUrl}${canonical}` : null;
+        const robots = NOINDEX.has(pageName) ? 'noindex, follow' : 'index, follow, max-image-preview:large';
+        await sequelize.query(
+          `INSERT IGNORE INTO seo_metadata
+             (page_name, slug, meta_title, meta_description, canonical_url, robots, brand_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+          { replacements: [pageName, slug, title, description, canonicalUrl, robots] }
+        );
+      }
+
+      // Auto-seed one SEO row per existing policy (page_name = policy-<title-slug>).
+      const [polRows] = await sequelize.query(
+        `SELECT id, title FROM policies WHERE brand_id IS NULL OR brand_id = 1`
+      );
+      for (const p of polRows) {
+        const slug = String(p.title || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        if (!slug) continue;
+        const pageName = `policy-${slug}`;
+        const canonicalUrl = `${siteUrl}/policy/${slug}`;
+        await sequelize.query(
+          `INSERT IGNORE INTO seo_metadata
+             (page_name, slug, meta_title, meta_description, canonical_url, robots, brand_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'index, follow', 1, NOW(), NOW())`,
+          {
+            replacements: [
+              pageName,
+              `/policy/${slug}`,
+              `${p.title} — CrossCoin`,
+              `${p.title} for CrossCoin. Please review carefully.`,
+              canonicalUrl,
+            ],
+          }
+        );
+      }
+
+      console.log(`✓ Seeded ${SEO_DEFAULTS.length} static page SEO rows + ${polRows.length} policy rows (INSERT IGNORE)`);
+    } catch (seedErr) {
+      console.log("⚠️ Default SEO seeding skipped:", seedErr.message);
+    }
+
     // Ensure faqs table exists (SEO Phase A — global + per-product/category/page FAQs).
     // The model is picked up by the auto-loader above, but we mirror the
     // order_shipments pattern here so legacy databases get the table even

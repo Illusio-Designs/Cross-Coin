@@ -4,8 +4,13 @@ import { useCategories } from '../hooks/queries/useProducts';
 import SeoWrapper from '../console/SeoWrapper';
 import Loader from '../components/common/Loader';
 import SafeImage from '../components/common/SafeImage';
+import { fetchPageSeo } from '../utils/fetchPageSeo';
 
-const Collections = () => {
+export async function getServerSideProps(ctx) {
+  return { props: { seoData: await fetchPageSeo('categories', ctx) } };
+}
+
+const Collections = ({ seoData }) => {
   const { data: categories = [], isLoading, error, refetch } = useCategories();
 
   // Safety guard: Ensure categories is always an array
@@ -13,7 +18,7 @@ const Collections = () => {
 
   if (isLoading) {
     return (
-      <SeoWrapper pageName="categories">
+      <SeoWrapper pageName="categories" seoData={seoData}>
         <div className="collections-container">
           <div className="collections-header">
             <div className="section-header-inline">
@@ -31,7 +36,7 @@ const Collections = () => {
 
   if (error) {
     return (
-      <SeoWrapper pageName="categories">
+      <SeoWrapper pageName="categories" seoData={seoData}>
         <div className="collections-container">
           <div className="collections-header">
             <div className="section-header-inline">
@@ -49,7 +54,7 @@ const Collections = () => {
   }
 
   return (
-    <SeoWrapper pageName="categories">
+    <SeoWrapper pageName="categories" seoData={seoData}>
       <div className="collections-container">
         <div className="collections-header">
           <div className="section-header-inline">
