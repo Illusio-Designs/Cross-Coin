@@ -5,7 +5,7 @@ const {
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, confirmOrder,
     getOrderStats, updateAwbNumber, initiateReturn,
-    adminCreateManualOrder,
+    adminCreateManualOrder, checkAddressQuality,
 } = require('../controller/orderController.js');
 const {
     cancelOrdersInFShip,
@@ -26,6 +26,7 @@ const {
 } = require('../controller/orderRTOController.js');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
+const { verifyWebhookSignature } = require('../middleware/webhookSignature.js');
 
 const router = express.Router();
 
@@ -67,7 +68,14 @@ router.put('/:id/rto',                   isAuthenticated, isOrderManager, markOr
 router.post('/guest-checkout',          validateBody(schemas.checkout), createGuestOrder);
 router.get('/track/awb',                trackOrderByAWB);
 router.get('/track/:order_number',      trackOrderByOrderNumber);
-router.post('/fship/webhook',           handleFShipWebhook);
+// Pre-checkout: client sends a typed address and gets back the COD
+// recommendation BEFORE picking a payment method (so we don't bail
+// the user out at submit time).
+router.post('/check-address-quality',   checkAddressQuality);
+// FShip webhook — signature-verified when FSHIP_WEBHOOK_SECRET is set;
+// otherwise logs a warning and accepts (transitional). Same pattern is
+// used for WhatsApp in whatsappRoutes.js.
+router.post('/fship/webhook',           verifyWebhookSignature('fship'),  handleFShipWebhook);
 
 // ── Authenticated user ────────────────────────────────────────────────────
 router.post('/',                        isAuthenticated, createOrder);

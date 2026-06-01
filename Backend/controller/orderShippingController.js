@@ -23,6 +23,9 @@ const shippingValidationService = require('../services/shippingValidationService
 const shippingProviderFactory = require('../services/shippingProviderFactory.js');
 const loyaltyService = require('../services/loyaltyService.js');
 const orderEmitter = require('../services/orderEvents.js');
+const { getAddressHash } = require('../services/addressQualityService.js');
+const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
+const { auditLog: orderAuditLog } = require('../services/orderService.js');
 
 /**
  * Pick the right shipping service for an order.
@@ -1285,6 +1288,55 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         }
 
         logger.debug(`✅ Order ${order.order_number} status updated: ${order.status} → ${newStatus}`);
+
+        // Audit trail: record every shipping-driven status transition.
+        try {
+          await orderAuditLog(
+            order.id,
+            'shipping_status_change',
+            null,
+            `${providerName || 'shipping'}_sync`,
+            {
+              from: order.status,
+              to: newStatus,
+              provider: providerName,
+              provider_status: providerStatus,
+            },
+            transaction,
+          );
+        } catch (auditErr) {
+          logger.warn(`Audit log skipped for ${order.order_number}: ${auditErr.message}`);
+        }
+
+        // Update address-quality success / failure counters on terminal states.
+        // Runs after the transaction commits so it can't fail the status update.
+        // Uses raw SQL UPDATE on the unique address_hash so we don't have to
+        // round-trip through a SELECT first.
+        const _qualityOrder = order;
+        const _qualityNewStatus = newStatus;
+        setImmediate(async () => {
+          try {
+            const addr = _qualityOrder.ShippingAddress
+              || (_qualityOrder.shipping_address_id
+                  ? await ShippingAddress.findOne({ where: { id: _qualityOrder.shipping_address_id } })
+                  : null);
+            if (!addr || !addr.address || !addr.pincode) return;
+            const hash = getAddressHash({
+              line1: addr.address,
+              line2: '',
+              city:  addr.city,
+              state: addr.state,
+              pincode: addr.pincode,
+            });
+            if (_qualityNewStatus === 'delivered') {
+              await AddressQualityScore.increment('delivery_success_count', { where: { address_hash: hash } });
+            } else if (['undelivered', 'rto', 'rto delivered', 'returned_rto'].includes(_qualityNewStatus)) {
+              await AddressQualityScore.increment('delivery_failure_count', { where: { address_hash: hash } });
+            }
+          } catch (qErr) {
+            logger.warn(`Address quality counter update skipped for ${_qualityOrder.order_number}: ${qErr.message}`);
+          }
+        });
 
         // Notify customer via WhatsApp (fire-and-forget, runs after transaction commits)
         const _notifyPhone = order.shipping_address_id;

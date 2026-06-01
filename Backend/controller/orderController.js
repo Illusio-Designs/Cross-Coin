@@ -25,6 +25,8 @@
   const { sendFacebookEvent } = require("../integration/facebookPixel.js");
   const { sendGAEvent } = require("../integration/googleAnalytics.js");
   const settingsHelper = require("../services/settingsHelper");
+  const { calculateAddressQuality, getAddressHash } = require("../services/addressQualityService.js");
+  const { AddressQualityScore } = require("../model/addressQualityScoreModel.js");
 
   // ── Dual-write helper: sync shipment data to order_shipments table ──────
   async function upsertShipment(orderId, data, transaction = null) {
@@ -181,6 +183,42 @@
       width: finalWidth,
       height: finalHeight
     };
+  };
+
+  /**
+   * POST /api/orders/check-address-quality
+   *
+   * Public endpoint used by the checkout drawer to find out — BEFORE
+   * the user picks a payment method — whether the address they typed
+   * is COD-eligible. Returns the same { score, factors, recommendation }
+   * shape addressQualityService produces, plus a boolean cod_allowed
+   * that mirrors the threshold we'll enforce in createOrder.
+   *
+   * Body: { line1, line2?, city, state, pincode, phone }
+   */
+  module.exports.checkAddressQuality = async (req, res) => {
+    try {
+      const { line1, line2 = '', city, state, pincode, phone } = req.body || {};
+      if (!line1 || !pincode) {
+        return res.status(400).json({ success: false, message: 'line1 and pincode are required' });
+      }
+      const quality = await calculateAddressQuality({ line1, line2, city, state, pincode, phone });
+      const minQuality = parseInt(
+        await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MIN_ADDRESS_QUALITY', '60'),
+        10,
+      );
+      return res.json({
+        success: true,
+        score: quality.score,
+        factors: quality.factors,
+        recommendation: quality.recommendation,
+        cod_allowed: Number.isFinite(minQuality) ? quality.score >= minQuality : true,
+        cod_min_quality: minQuality,
+      });
+    } catch (err) {
+      logger.error('checkAddressQuality failed:', err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
   };
 
   // Create a new order
@@ -457,6 +495,41 @@
       if (rtoCount >= 1) rtoRiskScore += 20;
       if (String(shippingAddress.address || '').trim().length < 30) rtoRiskScore += 10;
 
+      // ── Address quality scoring (separate from per-user RTO history) ─────
+      // Reads / writes address_quality_scores table via the existing
+      // service in services/addressQualityService.js. Score is a 0-100
+      // signal driven by pincode validity, phone validity, completeness
+      // and historical delivery success at this exact address.
+      let addressQuality = null;
+      try {
+        addressQuality = await calculateAddressQuality({
+          line1: shippingAddress.address,
+          line2: '',
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          pincode: shippingAddress.pincode,
+          phone: shippingAddress.phone,
+        });
+
+        // Upsert the freshly-computed score so future address-quality
+        // lookups (and the delivery_success/failure counters updated
+        // downstream in orderShippingController) have a row to work on.
+        await AddressQualityScore.upsert({
+          address_hash: getAddressHash({
+            line1: shippingAddress.address,
+            line2: '',
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            pincode: shippingAddress.pincode,
+          }),
+          pincode: shippingAddress.pincode,
+          quality_score: addressQuality.score,
+        }, { transaction });
+      } catch (qErr) {
+        // Quality scoring is advisory — never block the order on a DB hiccup.
+        logger.warn(`Address quality calc skipped for order: ${qErr.message}`);
+      }
+
       if (payment_type === 'cod') {
         const codMax = parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MAX_ORDER_VALUE', '1500'));
         if (finalAmount > codMax) {
@@ -466,6 +539,25 @@
         if (rtoCount >= 2) {
           await transaction.rollback();
           return res.status(400).json({ message: "COD is not available for your account. Please pay online." });
+        }
+        // New: block COD when the calculated address quality score is below
+        // the configured threshold (default 60 — matches the recommendation
+        // tiers documented in addressQualityService). Admins can soften this
+        // by setting COD_MIN_ADDRESS_QUALITY=0 in brand_settings while
+        // tuning the heuristic.
+        if (addressQuality) {
+          const minQuality = parseInt(
+            await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MIN_ADDRESS_QUALITY', '60'),
+            10,
+          );
+          if (Number.isFinite(minQuality) && addressQuality.score < minQuality) {
+            await transaction.rollback();
+            return res.status(400).json({
+              success: false,
+              message: `COD isn't available for this address (quality score ${addressQuality.score}/100). Please choose prepaid.`,
+              addressQuality,
+            });
+          }
         }
       }
       // Handle UTM tracking
@@ -526,6 +618,24 @@
         { transaction }
       );
       logger.debug("createOrder: Order created with ID:", order.id);
+
+      // Audit trail: record the order creation event with the inputs
+      // that drove eligibility decisions (RTO score, address quality,
+      // payment type). The auditLog helper lives in services/orderService.js.
+      try {
+        const { auditLog } = require('../services/orderService.js');
+        await auditLog(order.id, 'create', userId || null, userId ? 'user' : 'guest', {
+          payment_type,
+          final_amount: finalAmount,
+          rto_risk_score: rtoRiskScore,
+          address_quality_score: addressQuality?.score ?? null,
+          item_count: validatedItems.length,
+          coupon_id: coupon_id || null,
+          utm_tracking_id: utmTrackingId,
+        }, transaction);
+      } catch (auditErr) {
+        logger.warn(`Audit log skipped for new order ${order.order_number}: ${auditErr.message}`);
+      }
 
       // BATCH INSERT: Create all order items in a single bulk operation
       logger.debug("createOrder: Batch inserting", validatedItems.length, "order items...");
@@ -1963,6 +2073,12 @@
         notes: reason || 'Return initiated by customer',
       });
 
+      // Audit trail.
+      try {
+        const { auditLog } = require('../services/orderService.js');
+        await auditLog(order.id, 'return_initiated', userId, 'user', { reason: reason || null });
+      } catch (e) { logger.warn(`Audit log skipped for return ${order.order_number}: ${e.message}`); }
+
       res.json({ success: true, message: "Return initiated successfully.", order });
     } catch (error) {
       logger.error("Error initiating return:", error);
@@ -2137,6 +2253,15 @@
       });
 
       logger.debug(`✅ AWB updated for order ${order.order_number}: ${awbNumber.trim()}`);
+
+      // Audit trail.
+      try {
+        const { auditLog } = require('../services/orderService.js');
+        await auditLog(order.id, 'awb_update', req.user?.id || null, 'admin', {
+          awb: awbNumber.trim(),
+          courier_name: courierName?.trim() || null,
+        });
+      } catch (e) { logger.warn(`Audit log skipped for AWB update on ${order.order_number}: ${e.message}`); }
 
       res.status(200).json({
         success: true,

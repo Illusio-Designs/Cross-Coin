@@ -2,10 +2,17 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controller/whatsappController.js');
 const { isAuthenticated, isAdmin, isWhatsappManager } = require('../middleware/authMiddleware.js');
+const { verifyWebhookSignature } = require('../middleware/webhookSignature.js');
 
 // ── Webhook (no auth — Meta calls these) ─────────────────────────────────────
+// GET is the verification handshake (token-based) — no HMAC.
+// POST is the event delivery — HMAC-SHA256 verified against
+// WHATSAPP_WEBHOOK_SECRET (set this to the App Secret you registered
+// on Meta's developer portal under Webhook → "Verify Token" + "App
+// Secret"). Until the secret is in env, requests are still accepted
+// with a warning so webhook delivery isn't broken during setup.
 router.get('/webhook', ctrl.verifyWebhook);
-router.post('/webhook', ctrl.receiveWebhook);
+router.post('/webhook', verifyWebhookSignature('whatsapp'), ctrl.receiveWebhook);
 
 // ── Customer contact (public — website chat widget) ───────────────────────────
 router.post('/customer/contact', ctrl.customerContact);
