@@ -5,6 +5,7 @@ import BlogSection from '../components/blog/BlogSection';
 import ProductCard from '../components/products/ProductCard';
 import { getPublicBlogBySlug } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
+import { richHtml } from '../utils/sanitizeHtml';
 
 
 const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
@@ -202,7 +203,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
                 {sec.content && (
                   <div
                     className="article-section-content ql-content"
-                    dangerouslySetInnerHTML={{ __html: sec.content }}
+                    {...richHtml(sec.content)}
                   />
                 )}
               </div>

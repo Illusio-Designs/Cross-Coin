@@ -1,10 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
 import SeoWrapper from '../console/SeoWrapper';
+import ProductFaqSection from '../components/common/ProductFaqSection';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 
 export async function getServerSideProps(ctx) {
-  return { props: { seoData: await fetchPageSeo('about', ctx) } };
+  const [seoData, faqs] = await Promise.all([
+    fetchPageSeo('about', ctx),
+    fetchPageFaqs('about', ctx),
+  ]);
+  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
 }
 
 const stats = [
@@ -99,7 +105,7 @@ const whyUs = [
   },
 ];
 
-export default function About({ seoData }) {
+export default function About({ seoData, pageFaqs = [], globalFaqs = [] }) {
   return (
     <SeoWrapper pageName="about" seoData={seoData}>
       <div className="ab-page">
@@ -216,6 +222,13 @@ export default function About({ seoData }) {
             </div>
           </div>
         </section>
+
+        {/* FAQs (page + global) */}
+        {(pageFaqs.length > 0 || globalFaqs.length > 0) && (
+          <section className="ab-container" style={{ paddingTop: 0 }}>
+            <ProductFaqSection productFaqs={pageFaqs} globalFaqs={globalFaqs} />
+          </section>
+        )}
 
         {/* CTA */}
         <section className="ab-cta">

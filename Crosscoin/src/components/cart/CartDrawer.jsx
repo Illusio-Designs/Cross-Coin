@@ -25,6 +25,7 @@ import {
 } from '../../utils/toast';
 import { fbqTrack } from '../../utils/fbqTrack';
 import { gtagTrack } from '../../utils/gtagTrack';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
@@ -1018,11 +1019,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   if (!isVisible) return null;
 
+  // Focus trap is active whenever the drawer is open. Escape closes it.
+  const trapRef = useFocusTrap(isOpen, { onEscape: onClose });
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <>
       <div className={`cd-backdrop ${isOpen ? 'cd-backdrop-active' : ''}`} onClick={onClose} />
-      <div className={`cd-drawer ${isOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
+      <div ref={trapRef} className={`cd-drawer ${isOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
 
         {/* Header */}
         <div className="cd-header">

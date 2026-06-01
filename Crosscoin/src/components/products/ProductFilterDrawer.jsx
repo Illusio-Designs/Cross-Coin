@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import colorMap from './colorMap';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const ProductFilterDrawer = ({ 
   isOpen, 
@@ -99,6 +100,7 @@ const ProductFilterDrawer = ({
     row?.classList.toggle('open');
   };
 
+  const trapRef = useFocusTrap(isOpen, { onEscape: onClose });
 
   return (
     <>
@@ -109,7 +111,7 @@ const ProductFilterDrawer = ({
       />
 
       {/* Filter Drawer */}
-      <div className={`filter-drawer ${isOpen ? 'open' : ''}`}>
+      <div ref={trapRef} className={`filter-drawer ${isOpen ? 'open' : ''}`} role="dialog" aria-modal="true" aria-label="Filter products">
         {/* Header */}
         <div className="filter-drawer-header">
           <h2 className="filter-drawer-title">Filters</h2>

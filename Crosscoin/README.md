@@ -2,7 +2,7 @@
 
 Next.js app powering both the public storefront at `crosscoin.in` and the admin dashboard at `/dashboard/*`.
 
-> **Production readiness: 65 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 78 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -131,28 +131,29 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 
 ## Production Readiness
 
-**65 / 100** — strong primitives + SEO foundations, weak hardening on the user-facing edges.
+**78 / 100** — hardening pass complete; remaining gaps are polish + scale.
 
 | Area | Score | What hurts |
 |---|---|---|
 | Architecture | 7/10 | 100+ CSS files; large `Products.jsx`; mixed legacy / DS components |
-| SEO | 6/10 | 13 storefront pages now SSR'd ✅; sitemap clean ✅; FAQs render on product pages but not on static pages yet; no rich review snippets |
+| SEO | 8/10 | 13 storefront pages SSR'd ✅; sitemap clean ✅; admin-managed page FAQs now render on Home/About/Contact/Products/Collections ✅ |
 | Performance | 6/10 | many useEffects on Products page; CSS bundle not split; no Lighthouse budget |
-| **Accessibility** | **5/10** | no focus trap on `CartDrawer` / size charts; no skip-to-main; inconsistent alt text |
+| **Accessibility** | **7/10** | focus traps on CartDrawer + ProductFilterDrawer + SizeChartModal ✅; shared Modal already had one; skip-to-main + alt text audit still pending |
 | State management | 6/10 | React Query used on a few pages; most still hand-roll fetches; no optimistic updates |
-| Error handling | 6/10 | `ErrorBoundary` exists but Sentry not wired; some `catch {}` swallows; no global timeout/retry |
+| Error handling | 8/10 | `ErrorBoundary` exists; global axios interceptor surfaces categorised error toasts + 30s timeout ✅; Sentry still not wired |
 | Forms & validation | 7/10 | CartDrawer validates everything; no form lib — pure component state |
 | Mobile / responsive | 7/10 | Tailwind + tokens; design system mobile-aware; not all admin pages migrated |
-| **Security** | **7/10** | strong CSP + HSTS; `dangerouslySetInnerHTML` used in 9+ places — most should run through DOMPurify |
+| **Security** | **9/10** | strong CSP + HSTS; **every** `dangerouslySetInnerHTML` on user-authored content now flows through `utils/sanitizeHtml.js` (rich + inline variants); external links auto-hardened with rel=noopener |
 | Admin dashboard UX | 6/10 | 6 primitives shipped; ~10 pages migrated; rest still on legacy CSS |
 
-### Pending (not deployment) — by severity
+### Pending — by severity
 
 **🔴 High** (do these before turning on Google Ads at scale)
-1. **Sanitize every `dangerouslySetInnerHTML`** with DOMPurify — currently `ProductFaqSection`, `ProductDetails`, `UnlockedExclusives` and a few admin pages render untrusted HTML directly. XSS exposure.
-2. **Focus trap on modals** (`CartDrawer`, `Modal`, `ProductFilterDrawer`, size charts). Keyboard / screen-reader users currently get stuck. Real risk; accessibility lawsuits in India are picking up.
-3. **Surface API errors to users** — several services use `catch { /* silent */ }` or just `console.error`. Add a global toast on network failure + a request-timeout interceptor on axios.
-4. **Render page FAQs on static pages** — backend supports `attached_to_type: 'page'` but no static page calls `ProductFaqSection`. Page FAQs you write in the admin currently don't appear on the storefront.
+1. ~~Sanitize every `dangerouslySetInnerHTML`.~~ **DONE** ([`utils/sanitizeHtml.js`](src/utils/sanitizeHtml.js) — `richHtml()` + `inlineHtml()` wrappers applied across blog details, ProductDetails, UnlockedExclusives, CouponStrip, dashboard FAQs + WhatsApp preview)
+2. ~~Focus trap on modals.~~ **DONE** ([`hooks/useFocusTrap.js`](src/hooks/useFocusTrap.js) applied to CartDrawer / ProductFilterDrawer / SizeChartModal; shared `components/ui/Modal.jsx` already had one)
+3. ~~Surface API errors to users.~~ **DONE** ([`utils/apiInterceptors.js`](src/utils/apiInterceptors.js) — global axios interceptor with 30s timeout, error categorisation, react-toastify, plus CSRF token mirror)
+4. ~~Render page FAQs on static pages.~~ **DONE** (Home, About, Contact, Products, Collections now SSR-fetch page + global FAQs via `utils/fetchPageFaqs.js`)
+5. **Skip-to-main link + heading order audit** — fastest accessibility wins left. Add `<a href="#main">Skip to main content</a>` as the first focusable element in `Header.jsx`.
 
 **🟡 Medium**
 5. Migrate the remaining admin pages (Customers, Brands, Coupons, Payments, Reviews, Slider, Blogs, Lookbooks, Reels, Brand Settings, Analytics) to the design-system primitives so the dashboard looks consistent end-to-end.
