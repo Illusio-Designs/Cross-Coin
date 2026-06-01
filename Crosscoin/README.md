@@ -153,7 +153,7 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 2. ~~Focus trap on modals.~~ **DONE** ([`hooks/useFocusTrap.js`](src/hooks/useFocusTrap.js) applied to CartDrawer / ProductFilterDrawer / SizeChartModal; shared `components/ui/Modal.jsx` already had one)
 3. ~~Surface API errors to users.~~ **DONE** ([`utils/apiInterceptors.js`](src/utils/apiInterceptors.js) — global axios interceptor with 30s timeout, error categorisation, react-toastify, plus CSRF token mirror)
 4. ~~Render page FAQs on static pages.~~ **DONE** (Home, About, Contact, Products, Collections now SSR-fetch page + global FAQs via `utils/fetchPageFaqs.js`)
-5. ~~Skip-to-main link.~~ **DONE** (first focusable element in `Header.jsx`, styled in `globals.css`, targets the existing `main#main-content` in `_app.jsx`). Heading order audit still pending across older pages.
+5. ~~Skip-to-main link.~~ **DONE**. ~~Heading order audit on top public pages.~~ **DONE** (home.jsx + Products.jsx now have proper `<h1>`; added `.sr-only` utility for visually-hidden but screen-reader-visible content). Older policy / legacy pages still need a sweep.
 
 **🟡 Medium**
 5. Migrate the remaining admin pages (Customers, Brands, Coupons, Payments, Reviews, Slider, Blogs, Lookbooks, Reels, Brand Settings, Analytics) to the design-system primitives so the dashboard looks consistent end-to-end.

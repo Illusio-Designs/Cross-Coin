@@ -218,6 +218,7 @@ const Home = () => {
 
   return (
     <main className="home-page" role="main">
+        <h1 className="sr-only">CrossCoin — Premium Performance Socks for Every Adventure</h1>
         <section aria-label="Featured Promotions">
           <HeroSlider slides={slides} />
           <CouponStrip />
