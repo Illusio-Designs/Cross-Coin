@@ -106,10 +106,14 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
     timestamps: true,
     charset: 'utf8mb4',
     collate: 'utf8mb4_general_ci',
+    // NOTE: index on address_hash is created via raw SQL in
+    // scripts/setupDatabase.js AFTER the column is patched in for
+    // legacy DBs. Declaring it here causes Sequelize's sync({alter:true})
+    // to try to add the index before the column exists, which crashes
+    // boot on any DB created before this column was introduced.
     indexes: [
         { fields: ['user_id'] },
-        { fields: ['guest_user_id'] },
-        { fields: ['address_hash'] }
+        { fields: ['guest_user_id'] }
     ],
     hooks: {
         beforeSave: (instance) => {
