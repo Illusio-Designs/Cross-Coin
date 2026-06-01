@@ -190,7 +190,7 @@ deliberately deferred until a test DB seed exists.
 **🟡 Medium**
 6. ~~Daily payment-reconciliation job.~~ **DONE** (`services/paymentReconciliationService.js` runs 3 AM daily, also queueable per-order)
 7. ~~Standard response envelope helper.~~ **DONE** (`utils/apiResponse.js`). Migrate remaining legacy responses to use it.
-8. ~~Request validation middleware (Joi or Zod).~~ **DONE** ([`middleware/validate.js`](middleware/validate.js) — Zod-backed `validate`, `validateBody`, `validateQuery`, `validateParams` helpers plus reusable atomic schemas for Indian phone / pincode / email / password). Applied to `/api/shipping-addresses` create/update/guest. Apply incrementally to remaining routes.
+8. ~~Request validation middleware (Joi or Zod).~~ **DONE** ([`middleware/validate.js`](middleware/validate.js) — Zod-backed `validate`, `validateBody`, `validateQuery`, `validateParams` helpers plus reusable atomic schemas for Indian phone / pincode / email / password). Applied to: `/api/shipping-addresses` create/update/guest, `/api/orders/check-address-quality`, `/api/orders/:id/return`, `/api/orders/:id/awb`, `/api/orders/track/awb`. Apply incrementally to remaining routes.
 9. Move cron from `node-cron` to Bull queues (persistence + dashboard + idempotency).
 10. ~~`/api/metrics` endpoint with memory + queue stats.~~ **DONE**. ~~Slow-query log.~~ **DONE** (Sequelize `benchmark: true` + `slowQueryLogger` in [`config/db.js`](config/db.js) — anything over `SLOW_QUERY_MS` (default 500ms) gets logged with the SQL).
 11. ~~CSRF infrastructure on state-changing routes.~~ **DONE** (opt-in via `CSRF_REQUIRED=true`). Enable enforcement once the frontend reads `GET /api/csrf/token` on dashboard load and mirrors into `X-CSRF-Token`.
