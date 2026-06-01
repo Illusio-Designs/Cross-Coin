@@ -804,7 +804,7 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
         <div className="products-page">
           <div className="products-header">
             <div className="section-header-inline">
-              <h2 className="section-title">Our <strong>Products</strong></h2>
+              <h1 className="section-title">Our <strong>Products</strong></h1>
               <p className="section-subtitle">Browse our full collection</p>
             </div>
           </div>
@@ -827,13 +827,13 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
       <div className="products-page">
         <div className="products-header">
           <div className="section-header-inline">
-            <h2 className="section-title">
+            <h1 className="section-title">
               {Array.isArray(selectedCategory) && selectedCategory.length > 0
                 ? <>Products - <strong>{getCategoryNameById(selectedCategory[0])}</strong></>
                 : getCategoryNameFromUrl()
                 ? <>Products - <strong>{getCategoryNameFromUrl()}</strong></>
                 : <>Our <strong>Products</strong></>}
-            </h2>
+            </h1>
             <p className="section-subtitle">Browse our full collection</p>
           </div>
           <div className="products-controls">

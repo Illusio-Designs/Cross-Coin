@@ -2,6 +2,23 @@ const { Sequelize } = require('sequelize');
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Slow-query threshold (ms). Anything above this gets logged WITH the
+// SQL so an operator can spot N+1s, missing indexes, table-scans, etc.
+// Override per-env: SLOW_QUERY_MS=200 npm start
+const SLOW_QUERY_MS = Number.parseInt(process.env.SLOW_QUERY_MS || '500', 10);
+
+// Sequelize calls our custom `logging` function with the formatted SQL
+// AND an options bag (which includes the benchmark elapsed time only
+// when benchmark:true). We log nothing for fast queries.
+function slowQueryLogger(sql, timing) {
+    if (typeof timing !== 'number' || timing < SLOW_QUERY_MS) return;
+    try {
+        const { logger } = require('./logging.js');
+        const truncated = sql.length > 500 ? sql.slice(0, 500) + ' …(truncated)' : sql;
+        logger.warn(`[slow-query ${timing}ms] ${truncated}`);
+    } catch { /* never let logging itself throw */ }
+}
+
 const sequelize = new Sequelize(
     process.env.DB_DATABASE,
     process.env.DB_USER,
@@ -9,7 +26,10 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST,
         dialect: 'mysql',
-        logging: false, // never log SQL — saves memory and I/O
+        // benchmark:true makes the 2nd arg to `logging` the elapsed ms.
+        // We still suppress fast queries to save I/O.
+        benchmark: true,
+        logging: slowQueryLogger,
         dialectOptions: { charset: 'utf8mb4' },
         pool: {
             max: 15,     // increased — cron jobs + API requests need headroom

@@ -1,5 +1,21 @@
 /* DM Sans loaded via _document.jsx preload for non-render-blocking delivery */
 
+/* ─── Visually-hidden utility ────────────────────────────────────────
+   Renders content for screen-readers while keeping it off-screen for
+   sighted users. Use on h1s where the design has no visible page
+   title, or on form labels that would clutter the layout. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─── Skip-to-main link ──────────────────────────────────────────────
    Hidden off-screen until focused (keyboard tab). First focusable
    element on every page so screen-reader / keyboard users can jump
