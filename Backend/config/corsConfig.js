@@ -85,7 +85,14 @@ const staticAllowedOrigins = [
     'https://www.knitwink.com',
     'http://knitwink.com',
     'http://www.knitwink.com',
-    
+
+    // Velmique domain
+    'https://velmique.co.in',
+    'https://www.velmique.co.in',
+    'http://velmique.co.in',
+    'http://www.velmique.co.in',
+
+
     // Environment variables
     process.env.API_URL,
     process.env.BACKEND_URL,

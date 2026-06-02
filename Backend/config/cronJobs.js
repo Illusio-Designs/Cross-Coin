@@ -19,7 +19,7 @@ function initializeCronJobs() {
         json: (data) => { console.log('✅ [CRON] FShip sync completed:', { total: data.data?.total, synced: data.data?.synced, updated: data.data?.updated, skipped: data.data?.skipped, errors: data.data?.errors }); },
         status: (code) => ({ json: (data) => { console.error('❌ [CRON] FShip sync failed:', data); } })
       };
-      await orderController.syncOrdersWithFShip(mockReq, mockRes);
+      await orderShippingController.syncOrdersWithFShip(mockReq, mockRes);
     } catch (error) {
       console.error('❌ [CRON] FShip sync error:', error.message);
     }
