@@ -5,7 +5,9 @@ import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
 import { categoryService } from "../../../services";
+import { brandService } from "../../../services";
 import { extractErrorMessage, formatErrorForDisplay } from "../../../utils/errorMessages";
+import { showSuccess, showError } from "../../../utils/toastNotification";
 import { validateForm, isFormValid } from "../../../utils/formValidation";
 import SerpPreview from "../../../components/common/SerpPreview";
 import SeoLengthMeter from "../../../components/common/SeoLengthMeter";
@@ -28,7 +30,9 @@ const EMPTY_FORM = {
 
 const VALIDATION_SCHEMA = {
   name: [{ type: 'required' }, { type: 'minLength', value: 2 }, { type: 'maxLength', value: 100 }],
-  description: [{ type: 'required' }, { type: 'minLength', value: 5 }, { type: 'maxLength', value: 500 }],
+  // Description is stored as TEXT in the DB (effectively unlimited),
+  // so the frontend just requires it to be present — no length cap.
+  description: [{ type: 'required' }],
 };
 
 export default function Categories() {
@@ -43,23 +47,38 @@ export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
+  // Brand filter — '' means "All brands". When set, the categoryService
+  // sends X-Brand-Name so the listing is scoped server-side.
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandSlug, setSelectedBrandSlug] = useState('');
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await categoryService.getAllCategories();
-      setCategories(data);
+      const data = await categoryService.getAllCategories(selectedBrandSlug);
+      setCategories(Array.isArray(data) ? data : (data?.categories || data?.data || []));
     } catch (err) {
       const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedBrandSlug]);
 
-  useEffect(() => { fetchCategories(); }, []);
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+  useEffect(() => { setCurrentPage(1); }, [search, selectedBrandSlug]);
+
+  // Fetch brands once for the filter dropdown
+  useEffect(() => {
+    let alive = true;
+    brandService.getAllBrands(false).then((res) => {
+      if (!alive) return;
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setBrands(list);
+    }).catch(() => { /* dropdown stays empty */ });
+    return () => { alive = false; };
+  }, []);
 
   const filteredData = categories.filter(item => {
     if (statusFilter && item.status !== statusFilter) return false;
@@ -137,6 +156,20 @@ export default function Categories() {
     setFormErrors(errors);
 
     if (!isFormValid(errors)) {
+      // Tell the user WHY the button "did nothing" — the form scrolls
+      // far below the required fields so the inline red errors are
+      // often off-screen when they click Update.
+      const firstField = Object.keys(errors)[0];
+      const firstMsg = errors[firstField];
+      showError(firstMsg || 'Please complete the required fields.');
+      // Bring the first invalid field into view + focus it.
+      if (typeof document !== 'undefined') {
+        const el = document.querySelector(`[name="${firstField}"]`);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+        }
+      }
       return;
     }
 
@@ -154,13 +187,21 @@ export default function Categories() {
           fd.append(key, formData[key]);
         }
       });
-      if (formData.id) await categoryService.updateCategory(formData.id, fd);
-      else await categoryService.createCategory(fd);
+      if (formData.id) {
+        await categoryService.updateCategory(formData.id, fd);
+        showSuccess('Category updated');
+      } else {
+        await categoryService.createCategory(fd);
+        showSuccess('Category created');
+      }
       await fetchCategories();
       handleModalClose();
     } catch (err) {
       const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
       setError(errorMsg);
+      // Inline `setError` renders above the table — invisible while the
+      // modal is open. Show a toast so the failure isn't silent.
+      showError(errorMsg || 'Could not save the category.');
     }
     finally { setLoading(false); }
   };
@@ -207,15 +248,32 @@ export default function Categories() {
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search categories..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <div style={{ minWidth: 180 }}>
+              <Select
+                options={[
+                  { value: '', label: 'All Brands' },
+                  ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
+                ]}
+                value={selectedBrandSlug}
+                onChange={setSelectedBrandSlug}
+                placeholder="All Brands"
+              />
+            </div>
+            <div style={{ minWidth: 160 }}>
+              <Select
+                options={[
+                  { value: '', label: 'All Status' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="All Status"
+              />
+            </div>
             <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Category
             </button>
-            <Select
-              options={[{ value: '', label: 'All Status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              placeholder="All Status"
-            />
           </div>
         </div>
 
