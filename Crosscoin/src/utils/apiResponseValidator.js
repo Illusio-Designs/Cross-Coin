@@ -69,12 +69,19 @@ export const validatePaginatedResponse = (response) => {
     if (!response) return { items: [], total: 0, page: 1, pages: 0 };
 
     const items = validateListResponse(response);
+    // Some endpoints (e.g. the admin products list) return totalProducts /
+    // totalPages / currentPage instead of total / pages / page. Read both
+    // shapes so callers see the right counts and pagination renders.
+    const total = Number(
+      response.total ?? response.totalProducts ?? response.totalItems ?? response.count ?? 0
+    );
+    const limit = Number(response.limit ?? response.perPage ?? 10);
     const result = {
       items,
-      total: Number(response.total || response.count || 0),
-      page: Number(response.page || 1),
-      pages: Number(response.pages || Math.ceil((response.total || 0) / (response.limit || 10))),
-      limit: Number(response.limit || 10)
+      total,
+      page: Number(response.page ?? response.currentPage ?? 1),
+      pages: Number(response.pages ?? response.totalPages ?? Math.ceil(total / limit)),
+      limit,
     };
 
     return result;

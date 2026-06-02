@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Input, Modal, Table, Pagination, Select } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { TableSkeleton } from "../../../components/common/SkeletonLoader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { productService } from "../../../services";
 import { categoryService } from "../../../services";
 import { attributeService } from "../../../services";
+import { brandService } from "../../../services";
 import { debounce } from 'lodash';
 import AttributeSelector from '../../../components/products/AttributeSelector';
 import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
@@ -41,6 +42,10 @@ const ProductsPage = () => {
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  // Brand filter — empty string means "All brands". When a slug is set,
+  // the productService sends X-Brand-Name so the listing is scoped server-side.
+  const [brands, setBrands] = useState([]);
+  const [selectedBrandSlug, setSelectedBrandSlug] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [showExistingImageSelector, setShowExistingImageSelector] = useState(false);
   const [showVariationImageSelector, setShowVariationImageSelector] = useState(false);
@@ -139,10 +144,26 @@ const ProductsPage = () => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await productService.getAllProducts(currentPage, itemsPerPage, filterValue);
+      const response = await productService.getAllProducts(
+        currentPage,
+        itemsPerPage,
+        filterValue,
+        null,            // signal
+        false,           // forceRefresh
+        selectedBrandSlug  // brandSlug — '' means all brands
+      );
       if (response && response.products) {
         setProducts(response.products);
-        setTotalProducts(response.totalProducts);
+        // productService.getAllProducts returns the count under `total`
+        // (mapped from validatePaginatedResponse.total). Fall back to a
+        // few likely shapes so future service tweaks don't silently
+        // hide the pagination bar again.
+        setTotalProducts(
+          response.total ??
+          response.totalProducts ??
+          response.pagination?.total ??
+          0
+        );
       } else {
         setError('Invalid response format');
       }
@@ -151,7 +172,23 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, filterValue]);
+  }, [currentPage, itemsPerPage, filterValue, selectedBrandSlug]);
+
+  // Fetch brands once for the filter dropdown. Includes only active brands.
+  useEffect(() => {
+    let alive = true;
+    brandService.getAllBrands(false).then((res) => {
+      if (!alive) return;
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setBrands(list);
+    }).catch(() => { /* dropdown stays empty */ });
+    return () => { alive = false; };
+  }, []);
+
+  // Reset to first page when brand filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBrandSlug]);
 
   // Initial data fetch for products
   useEffect(() => {
@@ -1291,6 +1328,17 @@ const ProductsPage = () => {
             </span>
             <input type="text" className="sl-search-input" placeholder="Search products..."
               onChange={handleSearchChange} defaultValue={filterValue} />
+          </div>
+          <div style={{ minWidth: 180 }}>
+            <Select
+              options={[
+                { value: '', label: 'All Brands' },
+                ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
+              ]}
+              value={selectedBrandSlug}
+              onChange={setSelectedBrandSlug}
+              placeholder="All Brands"
+            />
           </div>
           <button className="sl-add-btn" onClick={handleAddNew}>
             <span className="sl-add-btn-icon">

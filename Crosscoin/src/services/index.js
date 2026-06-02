@@ -1000,9 +1000,16 @@ export const userService = {
 
 // Category Services
 export const categoryService = {
-  getAllCategories: async () => {
+  // brandSlug is optional. When provided, the X-Brand-Name header is sent
+  // per-request and the backend scopes the listing to that brand via its
+  // optional brand middleware. With no slug the admin sees all brands.
+  getAllCategories: async (brandSlug = '') => {
     try {
-      const response = await adminApi.get("/api/categories");
+      const config = {};
+      if (brandSlug) {
+        config.headers = { 'X-Brand-Name': brandSlug };
+      }
+      const response = await adminApi.get("/api/categories", config);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1130,8 +1137,10 @@ export const productService = {
     }
   },
 
-  getAllProducts: async (page = 1, limit = 10, search = "", signal = null, forceRefresh = false) => {
-    const cacheParams = { page, limit, search: search || '' };
+  getAllProducts: async (page = 1, limit = 10, search = "", signal = null, forceRefresh = false, brandSlug = '') => {
+    // Bake brandSlug into the cache key so flipping brand filters never
+    // returns stale "all-brand" data (and vice versa).
+    const cacheParams = { page, limit, search: search || '', brand: brandSlug || '' };
 
     // Check cache first (unless force refresh)
     if (!forceRefresh) {
@@ -1147,6 +1156,12 @@ export const productService = {
         }
         const config = { params };
         if (signal) config.signal = signal;
+        // Per-request brand header — adminApi has none by default so the
+        // admin sees every brand's products. Setting this scopes the list
+        // to one brand via the backend's optional brand middleware.
+        if (brandSlug) {
+          config.headers = { ...(config.headers || {}), 'X-Brand-Name': brandSlug };
+        }
         const response = await adminApi.get("/api/products", config);
         const validated = validatePaginatedResponse(response.data);
         const result = {
