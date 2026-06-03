@@ -1,3 +1,23 @@
+  /**
+   * ┌────────────────────────────────────────────────────────────────┐
+   * │ DOMAIN MAP — this file is being split incrementally.           │
+   * │                                                                │
+   * │ Functions here are grouped by domain in controller/orders/:    │
+   * │   create.*    : createOrder, createGuestOrder,                 │
+   * │                 adminCreateManualOrder, checkAddressQuality    │
+   * │   tracking.*  : trackOrderByAWB, trackOrderByOrderNumber,      │
+   * │                 getOrder, getUserOrders                        │
+   * │   lifecycle.* : confirmOrder, updateOrderStatus, cancelOrder,  │
+   * │                 adminCancelOrder, initiateReturn,              │
+   * │                 updateAwbNumber                                │
+   * │   admin.*     : getAllOrders, getOrderStats                    │
+   * │                                                                │
+   * │ Route files can import from controller/orders/<domain> today;  │
+   * │ they'll get the right function. When you touch one, MOVE it    │
+   * │ out of this file and point the shim at the new home.           │
+   * └────────────────────────────────────────────────────────────────┘
+   */
+
   const { Order } = require("../model/orderModel.js");
   const { OrderItem } = require("../model/orderItemModel.js");
   const { OrderStatusHistory } = require("../model/orderStatusHistoryModel.js");
@@ -185,49 +205,10 @@
     };
   };
 
-  /**
-   * POST /api/orders/check-address-quality
-   *
-   * Public endpoint used by the checkout drawer to find out — BEFORE
-   * the user picks a payment method — whether the address they typed
-   * is COD-eligible. Returns the same { score, factors, recommendation }
-   * shape addressQualityService produces, plus a boolean cod_allowed
-   * that mirrors the threshold we'll enforce in createOrder.
-   *
-   * Body: { line1, line2?, city, state, pincode, phone }
-   */
-  module.exports.checkAddressQuality = async (req, res) => {
-    try {
-      const { line1, line2 = '', landmark = '', city, state, pincode, phone } = req.body || {};
-      if (!line1 || !pincode) {
-        return res.status(400).json({ success: false, message: 'line1 and pincode are required' });
-      }
-      const quality = await calculateAddressQuality({
-        line1,
-        line2: landmark || line2,
-        landmark: landmark || line2,
-        city,
-        state,
-        pincode,
-        phone,
-      });
-      const minQuality = parseInt(
-        await settingsHelper.getSetting(req.brand?.id || 1, 'COD_MIN_ADDRESS_QUALITY', '60'),
-        10,
-      );
-      return res.json({
-        success: true,
-        score: quality.score,
-        factors: quality.factors,
-        recommendation: quality.recommendation,
-        cod_allowed: Number.isFinite(minQuality) ? quality.score >= minQuality : true,
-        cod_min_quality: minQuality,
-      });
-    } catch (err) {
-      logger.error('checkAddressQuality failed:', err.message);
-      return res.status(500).json({ success: false, message: err.message });
-    }
-  };
+  // checkAddressQuality has been MIGRATED to controller/orders/createController.js.
+  // The export is re-shimmed at the bottom of this file for backwards
+  // compatibility — any existing `require('./orderController').checkAddressQuality`
+  // still works.
 
   // Create a new order
   module.exports.createOrder = async (req, res) => {
@@ -2465,3 +2446,9 @@
       });
     }
   };
+
+
+  // Backward-compatibility re-shim for functions migrated OUT of this file.
+  // When a function moves to controller/orders/<domain>Controller.js, add a
+  // line here so existing `require("./orderController").<fn>` keeps working.
+  module.exports.checkAddressQuality = require("./orders/createController.js").checkAddressQuality;

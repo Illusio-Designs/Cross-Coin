@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button, Table, Pagination, Modal } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { userService } from '../../../services';
+import { queryKeys } from '../../../lib/queryClient';
 
 const IC = {
   view: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
@@ -15,27 +17,18 @@ export default function Consumers() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [consumers, setConsumers] = useState([]);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedConsumer, setSelectedConsumer] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true); setError(null);
-      try {
-        const data = await userService.getAllUsers();
-        if (!cancelled) setConsumers(Array.isArray(data) ? data : data?.users || data?.data || []);
-      } catch (err) {
-        if (!cancelled) setError(err.message || "Failed to fetch consumers");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // ── React Query: consumers list ──────────────────────────────────
+  const { data: consumers = [], isLoading: loading, error } = useQuery({
+    queryKey: queryKeys.consumersAdmin,
+    queryFn: async () => {
+      const data = await userService.getAllUsers();
+      return Array.isArray(data) ? data : data?.users || data?.data || [];
+    },
+    staleTime: 60 * 1000,  // 1 min — consumer list doesn't change frequently
+  });
 
   useEffect(() => { setCurrentPage(1); }, [search]);
 
@@ -109,7 +102,7 @@ export default function Consumers() {
           ) : error ? (
             <EmptyState
               title="Couldn't load consumers"
-              message={error}
+              message={error?.message || String(error)}
             />
           ) : filteredData.length === 0 ? (
             <EmptyState

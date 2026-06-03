@@ -25,9 +25,29 @@ export const useBreadcrumb = () => {
   return context;
 };
 
+// Turn a URL segment like "cross-coinr-performance-ankle-socks" into a
+// human-readable label "Cross Coin® Performance Ankle Socks" — best
+// effort, used only when the page hasn't supplied a customBreadcrumbs.
+function humaniseSegment(seg) {
+  try {
+    const decoded = decodeURIComponent(seg);
+    return decoded
+      .replace(/-/g, ' ')
+      .replace(/\br\b/g, '®')                  // "cross coin r" → "cross coin ®"
+      .replace(/\b\w/g, (m) => m.toUpperCase());
+  } catch {
+    return seg;
+  }
+}
+
 const Breadcrumb = () => {
   const router = useRouter();
-  const { pathname, query } = router;
+  const { query } = router;
+  // asPath is the ACTUAL URL the user sees (e.g. "/collections/cross-coin-r");
+  // pathname is the route template ("/collections/[slug]") and would leak the
+  // literal "[slug]" placeholder if used directly. Strip query string + hash.
+  const url = (router.asPath || router.pathname || '').split('?')[0].split('#')[0];
+  const pathname = router.pathname;
   const { customBreadcrumbs } = useBreadcrumb();
 
   // Define breadcrumb labels for each route
@@ -61,28 +81,28 @@ const Breadcrumb = () => {
       return customBreadcrumbs;
     }
 
-    const paths = pathname.split("/").filter((path) => path);
-    
-    let breadcrumbs = [
-      { label: "Home", path: "/" }
-    ];
+    // Walk the ACTUAL URL (asPath) so the user sees the resolved slug, not the
+    // route template's literal "[slug]" placeholder.
+    const urlPaths = url.split('/').filter(Boolean);
 
-    let currentPath = "";
-    paths.forEach((path, index) => {
-      currentPath += `/${path}`;
-      let label = breadcrumbLabels[currentPath] || path.charAt(0).toUpperCase() + path.slice(1);
-      
-      // Handle query parameters for dynamic labels
-      if (currentPath === "/Products" && query.category) {
+    let breadcrumbs = [{ label: 'Home', path: '/' }];
+    let currentPath = '';
+    urlPaths.forEach((seg, index) => {
+      currentPath += `/${seg}`;
+      let label = breadcrumbLabels[currentPath];
+      if (!label) {
+        // No static label — humanise the URL segment instead of falling
+        // through to the literal "[slug]" placeholder.
+        label = humaniseSegment(seg);
+      }
+      if (currentPath === '/Products' && query.category) {
         label = decodeURIComponent(query.category);
       }
-      
-      // Don't add duplicate Home
-      if (currentPath !== "/") {
+      if (currentPath !== '/') {
         breadcrumbs.push({
           label,
           path: currentPath,
-          isLast: index === paths.length - 1
+          isLast: index === urlPaths.length - 1,
         });
       }
     });
@@ -92,8 +112,11 @@ const Breadcrumb = () => {
 
   const breadcrumbs = generateBreadcrumbs();
 
-  // Don't show breadcrumb on home page
-  if (pathname === "/" || pathname === "/home" || pathname === "/index") {
+  // Don't show breadcrumb on home page (either the route template or the URL).
+  if (
+    pathname === "/" || pathname === "/home" || pathname === "/index" ||
+    url === "/" || url === "/home" || url === "/index"
+  ) {
     return null;
   }
 

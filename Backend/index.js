@@ -281,6 +281,16 @@ const { csrfTokenHandler } = require('./middleware/csrf.js');
 app.get('/api/csrf/token', csrfTokenHandler);
 app.get('/api/v1/csrf/token', csrfTokenHandler);
 
+// OpenAPI spec + Swagger UI. Gated by ADMIN_METRICS_TOKEN when set.
+// Skipped if the optional swagger packages aren't installed.
+try {
+    const { mountSwagger } = require('./config/openapi.js');
+    mountSwagger(app);
+    logger.info('✓ OpenAPI docs at /api/docs');
+} catch (err) {
+    logger.warn('OpenAPI mount skipped: ' + err.message);
+}
+
 // Client-side error sink — receives drained entries from the storefront
 // errorReporter (ErrorBoundary catches + unhandled rejections + window
 // errors). Logs at WARN so they end up in logs/app.log alongside other

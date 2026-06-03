@@ -2409,3 +2409,24 @@ module.exports.downloadOrderLabel = async (req, res) => {
     });
   }
 };
+
+// ─── Provider-agnostic aliases ─────────────────────────────────────────────
+// Despite the FShip-prefixed names, every function below already routes
+// through services/shippingProviderFactory.js and dispatches to iThink
+// (live) or FShip per the per-brand SHIPPING_PROVIDER setting. These
+// aliases give callers a clean, provider-agnostic name to import. When
+// you next touch one of the FShip-named functions, rename it AND update
+// the alias to point at the new name — keep the legacy export for
+// backwards compatibility.
+module.exports.syncShipments              = module.exports.syncOrdersWithFShip;
+module.exports.refreshShipmentStatuses    = module.exports.bulkRefreshFShipStatus;
+module.exports.cancelShipments            = module.exports.cancelOrdersInFShip;
+module.exports.handleShippingWebhook      = module.exports.handleFShipWebhook;
+module.exports.syncSingleShipment         = module.exports.syncSingleOrderWithFShip;
+module.exports.getShippingCouriers        = module.exports.getFShipCouriers;
+module.exports.getShipmentTracking        = module.exports.getFShipTrackingForOrder;
+module.exports.getShipmentLabel           = module.exports.getFShipLabelForOrder;
+module.exports.validateOrderForShippingProvider = module.exports.validateOrderForFShip;
+module.exports.createShipmentForOrder     = module.exports.createOrderInFShip;
+module.exports.updateOrderStatusFromShippingProvider = module.exports.updateOrderStatusFromFShip;
+module.exports.prepareShipmentPayload     = module.exports.prepareFShipOrderData;

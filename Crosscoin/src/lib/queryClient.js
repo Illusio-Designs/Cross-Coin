@@ -31,4 +31,6 @@ export const queryKeys = {
   shippingFee:      (type) => ['shippingFee', type],
   categoriesAdmin:  ['categoriesAdmin'],
   couponsAdmin:     ['couponsAdmin'],
+  consumersAdmin:   ['consumersAdmin'],
+  brandsAdmin:      ['brandsAdmin'],
 };

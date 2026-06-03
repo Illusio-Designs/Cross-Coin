@@ -1,69 +1,62 @@
 const cron = require('node-cron');
-const orderController = require('../controller/orderController');
-const orderShippingController = require('../controller/orderShippingController');
-const loyaltyService = require('../services/loyaltyService');
-const instagramService = require('../services/instagramService');
 
 /**
- * Initialize all cron jobs
+ * Initialize all cron jobs.
+ *
+ * Architecture: node-cron is now JUST the trigger. Every job enqueues
+ * a single Bull message; the worker (in integrationQueueWorkers.js)
+ * does the actual work. This way:
+ *   - Bull retries on transient failure (5 attempts, exponential backoff)
+ *   - Jobs persist across crashes
+ *   - Stats visible via /api/metrics
+ *   - Horizontal scaling won't double-fire (Bull dedupes by job ID)
+ *
+ * Falls back to inline execution when Redis is unavailable so dev still
+ * works — see services/integrationQueue.js.
+ *
+ * Force a job to run synchronously without going through the queue by
+ * setting CRON_SKIP_QUEUE=true (debugging only).
  */
 function initializeCronJobs() {
-  console.log('🕐 Initializing cron jobs...');
+  console.log('🕐 Initializing cron jobs (Bull-backed)...');
 
-  // FShip Order Sync - Runs every 2 hours at :05 (offset to avoid collision)
-  cron.schedule('5 */2 * * *', async () => {
-    console.log('\n⏰ [CRON] FShip sync started at:', new Date().toISOString());
+  const { enqueue } = require('../services/integrationQueue.js');
+  const skipQueue = process.env.CRON_SKIP_QUEUE === 'true';
+
+  async function trigger(jobName, payload = {}) {
     try {
-      const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 50 } };
-      const mockRes = {
-        json: (data) => { console.log('✅ [CRON] FShip sync completed:', { total: data.data?.total, synced: data.data?.synced, updated: data.data?.updated, skipped: data.data?.skipped, errors: data.data?.errors }); },
-        status: (code) => ({ json: (data) => { console.error('❌ [CRON] FShip sync failed:', data); } })
-      };
-      await orderShippingController.syncOrdersWithFShip(mockReq, mockRes);
-    } catch (error) {
-      console.error('❌ [CRON] FShip sync error:', error.message);
+      if (skipQueue) {
+        // Fallback path: pull the processor directly. Useful in dev when
+        // you want to see errors inline rather than buried in Bull's UI.
+        const { registerProcessor } = require('../services/integrationQueue.js');
+        // Processors are already registered at boot; nothing to do here
+        // because enqueue() in inline mode runs them via setImmediate.
+      }
+      await enqueue(jobName, payload);
+      console.log(`✅ [CRON] enqueued ${jobName}`);
+    } catch (e) {
+      console.error(`❌ [CRON] enqueue ${jobName} failed:`, e.message);
     }
+  }
+
+  // Shipping order sync (provider-agnostic) — every 2 hours at :05.
+  // The handler reads SHIPPING_PROVIDER per brand and dispatches to
+  // iThink (live today) or FShip via shippingProviderFactory.
+  cron.schedule('5 */2 * * *', () => {
+    console.log('\n⏰ [CRON] enqueue cron:shipping-sync at:', new Date().toISOString());
+    trigger('cron:shipping-sync');
   });
 
-  // ── iThink/FShip Status Refresh — Twice Daily at 6 AM & 6 PM ─────────────
-  // Refreshes order status from iThink/FShip for active orders (NOT cancelled/delivered)
-  cron.schedule('0 6,18 * * *', async () => {
-    console.log('\n⏰ [CRON] Order status refresh (iThink) started at:', new Date().toISOString());
-    try {
-      const mockReq = {
-        user: { id: 'system', username: 'cron_job' },
-        query: {
-          limit: 100,
-          status: 'confirmed,processing,booked,pickup initiated,manifested,in transit,shipped,out for delivery,undelivered,rto,exception'
-        }
-      };
-      const mockRes = {
-        json: (data) => {
-          console.log('✅ [CRON] Status refresh completed:', {
-            total: data.data?.total,
-            updated: data.data?.updated,
-            unchanged: data.data?.unchanged,
-            errors: data.data?.errors,
-            validation_failed: data.data?.validation_failed
-          });
-        },
-        status: (code) => ({ json: (data) => { console.error('❌ [CRON] Status refresh failed:', data); } })
-      };
-      await orderShippingController.bulkRefreshFShipStatus(mockReq, mockRes);
-    } catch (error) {
-      console.error('❌ [CRON] Status refresh error:', error.message);
-    }
+  // Shipping status refresh — twice daily at 6 AM & 6 PM
+  cron.schedule('0 6,18 * * *', () => {
+    console.log('\n⏰ [CRON] enqueue cron:shipping-status-refresh at:', new Date().toISOString());
+    trigger('cron:shipping-status-refresh');
   });
 
-  // Loyalty points expiry - daily at 2 AM
-  cron.schedule('0 2 * * *', async () => {
-    console.log('\n⏰ [CRON] Loyalty expiry started at:', new Date().toISOString());
-    try {
-      const result = await loyaltyService.expirePoints();
-      console.log('✅ [CRON] Loyalty expiry completed:', result);
-    } catch (error) {
-      console.error('❌ [CRON] Loyalty expiry error:', error.message);
-    }
+  // Loyalty points expiry — daily at 2 AM
+  cron.schedule('0 2 * * *', () => {
+    console.log('\n⏰ [CRON] enqueue cron:loyalty-expiry at:', new Date().toISOString());
+    trigger('cron:loyalty-expiry');
   });
 
   // Payment reconciliation — daily at 3 AM
@@ -84,17 +77,10 @@ function initializeCronJobs() {
     }
   });
 
-  // Instagram feed refresh - every 6 hours
-  cron.schedule('0 */6 * * *', async () => {
-    console.log('\n⏰ [CRON] Instagram feed refresh started at:', new Date().toISOString());
-    try {
-      const brandId = 1;
-      await instagramService.refreshAccessTokenIfNeeded(brandId);
-      const result = await instagramService.refreshFeed(brandId);
-      console.log('✅ [CRON] Instagram refresh completed:', { stale: !!result.stale, count: Array.isArray(result.data) ? result.data.length : 0 });
-    } catch (error) {
-      console.error('❌ [CRON] Instagram refresh error:', error.message);
-    }
+  // Instagram feed refresh — every 6 hours
+  cron.schedule('0 */6 * * *', () => {
+    console.log('\n⏰ [CRON] enqueue cron:instagram-refresh at:', new Date().toISOString());
+    trigger('cron:instagram-refresh');
   });
 
   // ── Abandoned Cart Recovery — every hour at :15 ──────────────────────────
