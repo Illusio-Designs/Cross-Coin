@@ -1017,10 +1017,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
     showValidationErrorToast('Please select a delivery method.');
   };
 
-  if (!isVisible) return null;
-
   // Focus trap is active whenever the drawer is open. Escape closes it.
+  // Hook must run on every render (before any early return) to satisfy
+  // the Rules of Hooks — otherwise the hook order changes between
+  // visible / hidden renders and React bails the build.
   const trapRef = useFocusTrap(isOpen, { onEscape: onClose });
+
+  if (!isVisible) return null;
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
