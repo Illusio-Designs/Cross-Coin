@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Input, Select } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { sliderService, categoryService, brandService } from "../../../services";
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
@@ -235,56 +236,42 @@ export default function Slider() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
+        <PageHeader
+          title="Slider Management"
+          subtitle={`${sliders.length} slider${sliders.length !== 1 ? 's' : ''} total`}
+          actions={
+            <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>+ Add Slider</Button>
+          }
+        />
 
-        {/* Page Header */}
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.slides}</div>
-            <div>
-              <h1 className="sl-page-title">Slider Management</h1>
-              <p className="sl-page-sub">{sliders.length} slider{sliders.length !== 1 ? 's' : ''} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input
-                type="text"
-                className="sl-search-input"
-                placeholder="Search sliders..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>
-              Add Slider
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="sl-table-wrap">
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Search sliders…"
+          />
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : error ? (
-            <div className="sl-error">{error}</div>
+            <EmptyState title="Couldn't load sliders" message={error} />
           ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.slides}</div>
-              <p>{search ? "No sliders match your search" : "No sliders yet — add your first one"}</p>
-            </div>
+            <EmptyState
+              icon={IC.slides}
+              title={search ? "No sliders match your search" : "No sliders yet"}
+              message={search ? "Try a different search term." : "Add your first hero slider to start customizing the homepage."}
+              action={!search && <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>+ Add Slider</Button>}
+            />
           ) : (
             <>
               <Table columns={columns} data={currentItems} striped hoverable />
               {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* Modal */}

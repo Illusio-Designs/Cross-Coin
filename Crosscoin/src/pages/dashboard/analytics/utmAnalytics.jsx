@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Pagination, DateRangePicker } from '../../../components/ui';
+import { PageHeader, Panel, StatTile, StatGrid, EmptyState } from '../../../components/Dashboard/primitives';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);
@@ -180,21 +181,12 @@ const UTMAnalytics = () => {
 
   return (
     <div className="dashboard-page">
-      {/* Header Section */}
-      <div className="orders-header-container">
-        {/* Top Row: Title */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-          gap: '20px',
-          flexWrap: 'wrap'
-        }}>
-          <h1 className="seo-title" style={{ margin: 0 }}>UTM Analytics</h1>
-        </div>
+      <PageHeader
+        title="UTM Analytics"
+        subtitle="Campaign attribution + conversion tracking"
+      />
 
-        {/* Date Range Filter */}
+      <Panel style={{ marginBottom: 12 }}>
         <DateRangePicker
           label="Date Range"
           startDate={dateRange.startDate}
@@ -203,61 +195,27 @@ const UTMAnalytics = () => {
           onEndChange={(val) => setDateRange(prev => ({ ...prev, endDate: val }))}
           onApply={fetchUTMData}
         />
-
-        {/* Error Message */}
         {error && (
-          <div className="error-container" style={{ 
-            padding: '12px', 
-            background: '#fee2e2', 
-            color: '#dc2626', 
-            borderRadius: '8px',
-            marginTop: '12px'
-          }}>
+          <div role="alert" style={{ padding: 12, background: '#fee2e2', color: '#dc2626', borderRadius: 8, marginTop: 12 }}>
             <p style={{ margin: 0 }}>{error}</p>
           </div>
         )}
+      </Panel>
 
-        {/* Stats Cards - Always show */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon visits">📊</div>
-            <div className="stat-content">
-              <h3>Total Visits</h3>
-              <p className="stat-value">{stats.totalVisits}</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon orders">🛒</div>
-            <div className="stat-content">
-              <h3>Total Orders</h3>
-              <p className="stat-value">{stats.totalOrders}</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon conversion">📈</div>
-            <div className="stat-content">
-              <h3>Conversion Rate</h3>
-              <p className="stat-value">{stats.conversionRate}%</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon revenue">💰</div>
-            <div className="stat-content">
-              <h3>Total Revenue</h3>
-              <p className="stat-value">₹{stats.totalRevenue}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatGrid>
+        <StatTile label="Total Visits" value={stats.totalVisits} tone="info" />
+        <StatTile label="Total Orders" value={stats.totalOrders} tone="good" />
+        <StatTile label="Conversion Rate" value={`${stats.conversionRate}%`} tone="default" />
+        <StatTile label="Total Revenue" value={`₹${stats.totalRevenue}`} tone="default" />
+      </StatGrid>
 
-      {/* Campaign Performance Table */}
-      <div className="utm-table-container">
-        <h2>Campaign Performance</h2>
+      <Panel>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: '#180D3E' }}>Campaign Performance</h2>
         {utmData.length === 0 ? (
-          <div className="no-data">
-            <p>No UTM data available{dateRange.startDate && dateRange.endDate ? ' for the selected date range' : ''}.</p>
-            <p className="hint">Try adjusting the date range or check if UTM tracking is working correctly.</p>
-          </div>
+          <EmptyState
+            title="No UTM data"
+            message={`No campaign data available${dateRange.startDate && dateRange.endDate ? ' for the selected date range' : ''}. Try adjusting the dates or verify UTM tracking is firing on the storefront.`}
+          />
         ) : (
           <>
             <table className="utm-table">
@@ -311,7 +269,7 @@ const UTMAnalytics = () => {
             )}
           </>
         )}
-      </div>
+      </Panel>
     </div>
   );
 };
