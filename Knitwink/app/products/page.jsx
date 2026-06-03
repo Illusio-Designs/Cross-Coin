@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { SlidersHorizontal, X, ChevronDown } from 'lucide-react'
-import { getPublicProducts, mapProduct } from '@/lib/api/products'
-import { getPublicCategories, getCategoryByName } from '@/lib/api/categories'
+import { getPublicProducts } from '@/lib/api/products'
+import { getPublicCategories } from '@/lib/api/categories'
 import { ProductCard } from '@/components/collection/ProductCard'
 import SeoWrapper from '@/components/SeoWrapper'
 
@@ -61,11 +61,13 @@ export default function ProductsPage() {
       ? categories.find(c => String(c.id) === selectedCategoryIds[0])
       : null
 
+    // Always go through /api/products/catalog so the product rows have
+    // ProductVariations populated — that's what mapProduct reads colors
+    // and variants from. The /api/categories/by-name endpoint returns
+    // sparse product rows (no variations), which made swatches disappear
+    // and the cart fall through to color: 'Default' on the filtered page.
     const fetchPromise = exactlyOne
-      ? getCategoryByName(exactlyOne.name).then(cat => {
-          const rows = cat?.products || []
-          return rows.map(mapProduct).filter(Boolean)
-        })
+      ? getPublicProducts({ category: exactlyOne.id, limit: 200 }).then(r => r.products || [])
       : getPublicProducts({ limit: 200 }).then(r => r.products || [])
 
     fetchPromise
