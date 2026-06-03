@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select, DateRangePicker } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -121,77 +122,36 @@ export default function Payments() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.payments}</div>
-            <div>
-              <h1 className="sl-page-title">Payments</h1>
-              <p className="sl-page-sub">{payments.length} payment{payments.length !== 1 ? 's' : ''} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search by order, customer, transaction..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title="Payments"
+          subtitle={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`}
+        />
 
-        {/* Stat Cards */}
-        <div className="sl-stat-cards">
-          <div className="sl-stat-card" style={{ gridColumn: '1 / -1', padding: '12px 16px' }}>
-            <DateRangePicker
-              label="Stats Date Range"
-              inline
-              startDate={statsStartDate}
-              endDate={statsEndDate}
-              onStartChange={setStatsStartDate}
-              onEndChange={setStatsEndDate}
-              onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
-            />
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Payments</span>
-              <span className="sl-stat-value">{filteredData.length}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Successful</span>
-              <span className="sl-stat-value">{successCount}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--yellow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Pending</span>
-              <span className="sl-stat-value">{pendingCount}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--red">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Revenue</span>
-              <span className="sl-stat-value">₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-            </div>
-          </div>
-        </div>
+        <Panel style={{ marginBottom: 12 }}>
+          <DateRangePicker
+            label="Stats Date Range"
+            inline
+            startDate={statsStartDate}
+            endDate={statsEndDate}
+            onStartChange={setStatsStartDate}
+            onEndChange={setStatsEndDate}
+            onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+          />
+        </Panel>
 
-        {/* Filters */}
-        <div className="pay-filters">
-          <div className="pay-filter-group">
-            <span className="pay-filter-label">{IC.filter} Status</span>
+        <StatGrid>
+          <StatTile label="Total payments" value={filteredData.length} tone="info" />
+          <StatTile label="Successful" value={successCount} tone="good" />
+          <StatTile label="Pending" value={pendingCount} tone="warn" />
+          <StatTile label="Total revenue" value={`₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} tone="default" sub="from filtered set" />
+        </StatGrid>
+
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Search by order, customer, transaction…"
+          >
             <Select
               options={[
                 { value: '', label: 'All Status' },
@@ -204,9 +164,6 @@ export default function Payments() {
               onChange={setStatusFilter}
               placeholder="All Status"
             />
-          </div>
-          <div className="pay-filter-group">
-            <span className="pay-filter-label">Method</span>
             <Select
               options={[
                 { value: '', label: 'All Methods' },
@@ -221,31 +178,30 @@ export default function Payments() {
               onChange={setMethodFilter}
               placeholder="All Methods"
             />
-          </div>
-          {(statusFilter || methodFilter) && (
-            <button className="pay-clear-btn" onClick={() => { setStatusFilter(''); setMethodFilter(''); }}>Clear Filters</button>
-          )}
-        </div>
+            {(statusFilter || methodFilter) && (
+              <button className="pay-clear-btn" onClick={() => { setStatusFilter(''); setMethodFilter(''); }}>Clear</button>
+            )}
+          </FilterBar>
 
-        <div className="sl-table-wrap">
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.payments}</div>
-              <p>{search ? "No payments match your search" : "No payments found"}</p>
-            </div>
+            <EmptyState
+              icon={IC.payments}
+              title={search ? "No payments match your search" : "No payments found"}
+              message={search ? "Try a different search term or clear filters." : "Payments will appear here as customers check out."}
+            />
           ) : (
             <>
               <Table columns={columns} data={currentItems} striped hoverable />
               {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Payment Details">

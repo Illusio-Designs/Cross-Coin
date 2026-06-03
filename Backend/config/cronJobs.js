@@ -74,7 +74,10 @@ function initializeCronJobs() {
     console.log('\n⏰ [CRON] Payment reconciliation started at:', new Date().toISOString());
     try {
       const { reconcileRecentPayments } = require('../services/paymentReconciliationService.js');
-      const summary = await reconcileRecentPayments({ sinceHours: 48, limit: 500 });
+      // Queue mode if Bull is wired; falls back to inline if Redis is down.
+      // RECON_USE_QUEUE=false lets an operator force inline if needed.
+      const useQueue = process.env.RECON_USE_QUEUE !== 'false';
+      const summary = await reconcileRecentPayments({ sinceHours: 48, limit: 500, useQueue });
       console.log('✅ [CRON] Payment reconciliation completed:', summary);
     } catch (error) {
       console.error('❌ [CRON] Payment reconciliation error:', error.message);

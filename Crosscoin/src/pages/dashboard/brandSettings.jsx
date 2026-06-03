@@ -7,6 +7,7 @@ import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
+import { PageHeader, EmptyState } from '../../components/Dashboard/primitives';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -99,27 +100,21 @@ export function BrandSettingsManager() {
     <>
     <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
-      {/* Page Header */}
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">{IC.settings}</div>
-          <div>
-            <h1 className="sl-page-title">Brand Settings</h1>
-            <p className="sl-page-sub">{filteredSettings.length} setting{filteredSettings.length !== 1 ? 's' : ''}</p>
+      <PageHeader
+        title="Brand Settings"
+        subtitle={`${filteredSettings.length} setting${filteredSettings.length !== 1 ? 's' : ''}`}
+        actions={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Dropdown
+              value={selectedBrandId || ''}
+              onChange={val => setSelectedBrandId(Number(val))}
+              options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+              className="bset-brand-select"
+            />
+            <Button variant="primary" onClick={() => setShowAddForm(true)} disabled={!selectedBrandId}>+ Add Setting</Button>
           </div>
-        </div>
-        <div className="sl-header-right">
-          <Dropdown
-            value={selectedBrandId || ''}
-            onChange={val => setSelectedBrandId(Number(val))}
-            options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-            className="bset-brand-select"
-          />
-          <button className="sl-add-btn" onClick={() => setShowAddForm(true)} disabled={!selectedBrandId}>
-            <span className="sl-add-btn-icon">{IC.add}</span>Add Setting
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Add Setting Modal */}
       <Modal isOpen={showAddForm} onClose={() => { setShowAddForm(false); setNewKey(''); setNewValue(''); setNewCategory('general'); setNewDescription(''); }} title="Add New Setting">
@@ -167,12 +162,14 @@ export function BrandSettingsManager() {
 
       {/* Settings Grid */}
       {loading ? (
-        <div className="sl-loader-wrap"><Loader /></div>
+        <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
       ) : filteredSettings.length === 0 ? (
-        <div className="sl-empty">
-          <div className="sl-empty-icon">{IC.settings}</div>
-          <p>No settings in this category</p>
-        </div>
+        <EmptyState
+          icon={IC.settings}
+          title="No settings in this category"
+          message="Add your first setting to override defaults for this brand."
+          action={<Button variant="primary" onClick={() => setShowAddForm(true)} disabled={!selectedBrandId}>+ Add Setting</Button>}
+        />
       ) : (
         <div className="bset-settings-grid">
           {filteredSettings.map(setting => (
