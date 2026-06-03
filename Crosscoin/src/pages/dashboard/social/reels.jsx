@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { reelService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
 import { Button, Modal, Table, Input, Select } from "../../../components/ui";
+import { PageHeader, Panel, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 
@@ -90,33 +91,30 @@ export default function AdminReels() {
     <div className="dashboard-page">
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
 
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-            </svg>
+      <PageHeader
+        title="Reels"
+        subtitle="Create reels and assign products."
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="secondary" onClick={() => setAssignOpen(true)}>Assign Products</Button>
+            <Button variant="primary" onClick={() => setIsModalOpen(true)}>+ Add Reel</Button>
           </div>
-          <div>
-            <h1 className="sl-page-title">Reels</h1>
-            <p className="sl-page-sub">Create reels and assign products.</p>
-          </div>
-        </div>
-        <div className="sl-header-right">
-          <button className="sl-add-btn" onClick={() => setAssignOpen(true)}>
-            <span className="sl-add-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>
-            Assign Products
-          </button>
-          <button className="sl-add-btn" onClick={() => setIsModalOpen(true)}>
-            <span className="sl-add-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-            Add Reel
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      {loading ? <div className="sl-loader-wrap"><Loader /></div> : (
-        <Table columns={columns} data={reels} emptyMessage="No reels yet" />
-      )}
+      <Panel>
+        {loading ? (
+          <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
+        ) : reels.length === 0 ? (
+          <EmptyState
+            title="No reels yet"
+            message="Create your first reel to feature shoppable short-form video on the storefront."
+            action={<Button variant="primary" onClick={() => setIsModalOpen(true)}>+ Add Reel</Button>}
+          />
+        ) : (
+          <Table columns={columns} data={reels} striped hoverable />
+        )}
+      </Panel>
 
       {/* Create Reel Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Reel">

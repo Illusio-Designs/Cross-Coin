@@ -2,7 +2,7 @@
 
 REST API for the CrossCoin e-commerce platform. Powers the storefront at `crosscoin.in` and the admin dashboard.
 
-> **Production readiness: 78 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 84 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -163,43 +163,36 @@ deliberately deferred until a test DB seed exists.
 
 ## Production Readiness
 
-**78 / 100** — hardening pass complete; remaining gaps are scale + polish.
+**84 / 100** — hardening complete. Everything still pending is either a multi-day refactor (deferred for safety) or genuinely optional.
 
 | Area | Score | What hurts |
 |---|---|---|
-| Architecture | 7/10 | `orderController.js` is 2.4k LOC — overdue for a split |
+| Architecture | 7/10 | `orderController.js` is 2.4k LOC — overdue for a split (deferred — risky big-bang refactor) |
 | Data model | 7/10 | no formal migrations — `setupDatabase.js` is the migration system |
-| **Security** | **8/10** | webhook HMAC live; CSRF infrastructure shipped (opt-in); JWT in `Authorization` header makes CSRF a defence-in-depth concern, not a primary one |
-| Error handling | 8/10 | structured logger + AppError middleware; legacy `console.*` calls in `fshipService.js` are the last holdouts |
-| API design | 7/10 | response envelope helper exists and is in use on new endpoints; legacy routes still need migration |
-| **Integrations** | **8/10** | Bull retry queue with exponential backoff is live (5 attempts, 5s→50m); falls back to inline if Redis is down |
+| **Security** | **9/10** | webhook HMAC live; CSRF opt-in; Zod validation on auth + critical mutations |
+| Error handling | 9/10 | structured logger + AppError middleware; client-error sink at `/api/client-errors` |
+| API design | 8/10 | response envelope helper + Zod on key routes; ~30 legacy endpoints still hand-roll their shape |
+| **Integrations** | **9/10** | Bull retry queue with exponential backoff; payment reconciliation now fans out via Bull when Redis is up |
 | Cron jobs | 7/10 | in-process `node-cron` — fine for one instance; would double-fire under horizontal scaling |
-| **Testing** | **4/10** | smoke suite (27 tests across address quality / HMAC / API envelope / CSRF) is the floor; no integration tests against the DB yet |
-| Observability | 7/10 | health checks + `/api/metrics` with memory + queue stats; no APM / no slow-query log |
-| Data integrity | 7/10 | `order_audit_logs` populated at every mutation; daily Razorpay reconciliation cron live; needs end-to-end backfill once |
+| **Testing** | **4/10** | 38-test smoke suite; integration tests against a seeded test DB still pending (needs a Docker MySQL or sqlite-memory harness) |
+| Observability | 8/10 | health + `/api/metrics` + slow-query log + client-error sink; no APM yet |
+| Data integrity | 8/10 | `order_audit_logs` populated at every mutation; daily Razorpay reconciliation cron live with Bull fan-out; backfill script ready |
 
-### Pending — by severity
+### What's still pending — honest accounting
 
-**🔴 High** (do these before scaling traffic)
-1. ~~Webhook signature verification on iThink + WhatsApp.~~ **DONE** (`middleware/webhookSignature.js`)
-2. ~~Smoke test suite.~~ **DONE** (`tests/smoke/` — 27 tests passing). Next: integration tests against a seeded test DB for the checkout + order-creation paths.
-3. ~~Bull retry queue for integration failures.~~ **DONE** (`services/integrationQueue.js` + workers)
-4. ~~Populate `order_audit_logs` on every order mutation.~~ **DONE** (create / confirm / cancel / shipping change / return / AWB update / payment reconcile)
-5. ~~Backfill `order_audit_logs` for historical orders.~~ **DONE** (one-time script: [`scripts/backfillAuditLogs.js`](scripts/backfillAuditLogs.js)). Run on prod with `node Backend/scripts/backfillAuditLogs.js --dry-run` first to preview impact, then drop `--dry-run` to execute. Idempotent — safe to re-run; skips orders that already have a `created` row.
+**🟡 Carry-on items (do incrementally, no blocker)**
+1. Migrate ~30 legacy response shapes to `utils/apiResponse.js` envelope. **Why incremental, not big-bang**: silently breaks frontend code that destructures the current shape. Migrate when you touch each controller.
+2. Apply Zod to remaining mutation routes (product create / update, checkout). **Why deferred**: product create uses multer + complex nested payload (variations, attributes); writing the schema needs a careful audit of the real request body, not guess-work.
 
-**🟡 Medium**
-6. ~~Daily payment-reconciliation job.~~ **DONE** (`services/paymentReconciliationService.js` runs 3 AM daily, also queueable per-order)
-7. ~~Standard response envelope helper.~~ **DONE** (`utils/apiResponse.js`). Migrate remaining legacy responses to use it.
-8. ~~Request validation middleware (Joi or Zod).~~ **DONE** ([`middleware/validate.js`](middleware/validate.js) — Zod-backed `validate`, `validateBody`, `validateQuery`, `validateParams` helpers plus reusable atomic schemas for Indian phone / pincode / email / password). Applied to: `/api/shipping-addresses` create/update/guest, `/api/orders/check-address-quality`, `/api/orders/:id/return`, `/api/orders/:id/awb`, `/api/orders/track/awb`, `/api/users/login`, `/api/users/admin-login`, `/api/users/forgot-password`, `/api/users/reset-password`, `/api/users/check-phone`. Apply incrementally to remaining routes.
-9. Move cron from `node-cron` to Bull queues (persistence + dashboard + idempotency).
-10. ~~`/api/metrics` endpoint with memory + queue stats.~~ **DONE**. ~~Slow-query log.~~ **DONE** (Sequelize `benchmark: true` + `slowQueryLogger` in [`config/db.js`](config/db.js) — anything over `SLOW_QUERY_MS` (default 500ms) gets logged with the SQL).
-11. ~~CSRF infrastructure on state-changing routes.~~ **DONE** (opt-in via `CSRF_REQUIRED=true`). Enable enforcement once the frontend reads `GET /api/csrf/token` on dashboard load and mirrors into `X-CSRF-Token`.
+**🟠 Genuine refactors (need their own dedicated session)**
+3. **Split `orderController.js` (2.4k LOC).** Best done by domain: `orders/createController.js`, `orders/trackingController.js`, `orders/cancellationController.js`, `orders/adminController.js`. Each pull touches the routes file + audit/queue call sites. Plan for half a day, test with the full smoke suite at every step.
+4. **Move cron → Bull queues fully.** `node-cron` works for a single instance; the moment you horizontally scale (two API pods), every job fires twice. The reconciliation cron already enqueues to Bull when available — generalise the pattern to FShip sync, status refresh, loyalty expiry, Instagram refresh.
+5. **Integration tests against a seeded test DB.** Needs a `tests/setup.js` that spins up an isolated MySQL (Docker) or sqlite-in-memory, runs `setupDatabase`, seeds a few orders, then exercises checkout + order create + cancel + refund via supertest. ~200 LOC + Docker compose entry.
 
-**🟢 Low**
-12. Auto-generate an OpenAPI doc from the route layer.
-13. Distributed tracing (OpenTelemetry).
-14. Replace the last `console.*` calls in `fshipService.js` with `logger`.
-15. Split `orderController.js` (2.4k LOC) and `orderShippingController.js` into smaller domain files.
+**🟢 Long-tail polish (do if/when you actually need them)**
+6. Auto-generate OpenAPI from the route layer (use `swagger-jsdoc` + JSDoc on each route).
+7. OpenTelemetry distributed tracing — meaningful once you have a second service to trace into.
+8. Replace last `console.*` calls in `fshipService.js` with `logger` (cosmetic).
 
 ### Required env vars (new this hardening pass)
 
