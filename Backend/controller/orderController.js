@@ -1,3 +1,23 @@
+  /**
+   * ┌────────────────────────────────────────────────────────────────┐
+   * │ DOMAIN MAP — this file is being split incrementally.           │
+   * │                                                                │
+   * │ Functions here are grouped by domain in controller/orders/:    │
+   * │   create.*    : createOrder, createGuestOrder,                 │
+   * │                 adminCreateManualOrder, checkAddressQuality    │
+   * │   tracking.*  : trackOrderByAWB, trackOrderByOrderNumber,      │
+   * │                 getOrder, getUserOrders                        │
+   * │   lifecycle.* : confirmOrder, updateOrderStatus, cancelOrder,  │
+   * │                 adminCancelOrder, initiateReturn,              │
+   * │                 updateAwbNumber                                │
+   * │   admin.*     : getAllOrders, getOrderStats                    │
+   * │                                                                │
+   * │ Route files can import from controller/orders/<domain> today;  │
+   * │ they'll get the right function. When you touch one, MOVE it    │
+   * │ out of this file and point the shim at the new home.           │
+   * └────────────────────────────────────────────────────────────────┘
+   */
+
   const { Order } = require("../model/orderModel.js");
   const { OrderItem } = require("../model/orderItemModel.js");
   const { OrderStatusHistory } = require("../model/orderStatusHistoryModel.js");

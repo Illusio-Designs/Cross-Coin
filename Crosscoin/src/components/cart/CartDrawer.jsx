@@ -63,6 +63,10 @@ function generateIdempotencyKey() {
 }
 
 // FIX 3 — comprehensive address validation (mirrors backend shippingValidationService)
+// The shared Zod schema in utils/addressSchema.js covers the same checks
+// (and more) and is the recommended choice for NEW address forms. This
+// legacy version is intentionally kept to avoid changing validation
+// behaviour on the live checkout path.
 function validateShippingAddress(addr) {
   if (!addr) return { valid: false, errors: ['Address is empty'], warnings: [] };
   const errors = [];

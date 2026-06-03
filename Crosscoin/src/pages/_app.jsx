@@ -19,6 +19,7 @@ import { monitoring } from '../utils/monitoring';
 import { installLinkHardening } from '../utils/sanitizeHtml';
 import { installApiInterceptors } from '../utils/apiInterceptors';
 import { installErrorReporter } from '../utils/errorReporter';
+import { tryInitSentry } from '../utils/sentryAdapter';
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
@@ -240,9 +241,10 @@ function App({ Component, pageProps }) {
     installLinkHardening();
     // Wire axios interceptors: timeout, error toast, CSRF token mirror.
     installApiInterceptors();
-    // Drain render errors + unhandled rejections to logger / Sentry.
-    // Pass a custom sink as the arg here when wiring Sentry — see file header.
-    installErrorReporter();
+    // Drain render errors + unhandled rejections. If @sentry/nextjs is
+    // installed AND NEXT_PUBLIC_SENTRY_DSN is set, errors go to Sentry;
+    // otherwise they fall through to /api/client-errors.
+    installErrorReporter(tryInitSentry() || undefined);
   }, []);
 
   useEffect(() => {

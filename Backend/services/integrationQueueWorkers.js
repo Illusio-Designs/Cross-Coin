@@ -74,6 +74,61 @@ function registerWorkers() {
     return await fn(phone, params || {}, brandId || 1);
   });
 
+  // ── cron:fship-sync ───────────────────────────────────────────────
+  // Triggered by the 2-hourly cron. Runs the bulk sync controller. Bull
+  // gives us automatic retries on transient FShip outages instead of
+  // losing the run until the next 2-hour tick.
+  registerProcessor('cron:fship-sync', 1, async () => {
+    const orderShippingController = require('../controller/orderShippingController.js');
+    const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 50 } };
+    let result = null;
+    const mockRes = {
+      json: (data) => { result = data; },
+      status: () => ({ json: () => {} }),
+    };
+    await orderShippingController.syncOrdersWithFShip(mockReq, mockRes);
+    logger.info(`[queue] cron:fship-sync done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
+    return result || { ok: true };
+  });
+
+  // ── cron:fship-status-refresh ─────────────────────────────────────
+  registerProcessor('cron:fship-status-refresh', 1, async () => {
+    const orderShippingController = require('../controller/orderShippingController.js');
+    const mockReq = {
+      user: { id: 'system', username: 'cron_job' },
+      query: {
+        limit: 100,
+        status: 'confirmed,processing,booked,pickup initiated,manifested,in transit,shipped,out for delivery,undelivered,rto,exception',
+      },
+    };
+    let result = null;
+    const mockRes = {
+      json: (data) => { result = data; },
+      status: () => ({ json: () => {} }),
+    };
+    await orderShippingController.bulkRefreshFShipStatus(mockReq, mockRes);
+    logger.info(`[queue] cron:fship-status-refresh done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
+    return result || { ok: true };
+  });
+
+  // ── cron:loyalty-expiry ───────────────────────────────────────────
+  registerProcessor('cron:loyalty-expiry', 1, async () => {
+    const loyaltyService = require('./loyaltyService.js');
+    const result = await loyaltyService.expirePoints();
+    logger.info(`[queue] cron:loyalty-expiry done: ${JSON.stringify(result || {}).slice(0, 200)}`);
+    return result;
+  });
+
+  // ── cron:instagram-refresh ────────────────────────────────────────
+  registerProcessor('cron:instagram-refresh', 1, async () => {
+    const instagramService = require('./instagramService.js');
+    const brandId = 1;
+    await instagramService.refreshAccessTokenIfNeeded(brandId);
+    const result = await instagramService.refreshFeed(brandId);
+    logger.info(`[queue] cron:instagram-refresh done: stale=${!!result.stale} count=${Array.isArray(result.data) ? result.data.length : 0}`);
+    return { stale: !!result.stale, count: Array.isArray(result.data) ? result.data.length : 0 };
+  });
+
   logger.info('[integrationQueue] all workers registered');
 }
 
