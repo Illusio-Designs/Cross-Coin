@@ -1625,44 +1625,84 @@ module.exports.getPublicProductBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    // Decode the URL-encoded slug to handle special characters like %28 and %29
+    // Decode the URL-encoded slug to handle %28/%29 (parens).
     const decodedSlug = decodeURIComponent(slug);
 
-    const product = await Product.findOne({
-      where: { 
-        slug: decodedSlug,
-        status: "active" // Only show active products to public
+    // Reusable include block — same shape for the exact + sanitized + LIKE lookups.
+    const includeBlock = [
+      { model: Category },
+      {
+        model: ProductVariation,
+        as: "ProductVariations",
+        include: [{ model: ProductImage, as: "VariationImages" }],
       },
-      include: [
-        { model: Category },
-        {
-          model: ProductVariation,
-          as: "ProductVariations",
-          include: [{ model: ProductImage, as: "VariationImages" }],
-        },
-        { model: ProductImage, as: "ProductImages" },
-        { model: ProductSEO, as: "ProductSEO" },
-        {
-          model: Review,
-          as: "reviews",
-          where: { status: "approved" },
-          required: false,
-          include: [
-            {
-              model: User,
-              as: "User",
-              attributes: ["id", "username", "profileImage"],
-            },
-            {
-              model: ReviewImage,
-              as: "ReviewImages",
-            },
-          ],
-          order: [["createdAt", "DESC"]],
-          limit: 10,
-        },
-      ],
+      { model: ProductImage, as: "ProductImages" },
+      { model: ProductSEO, as: "ProductSEO" },
+      {
+        model: Review,
+        as: "reviews",
+        where: { status: "approved" },
+        required: false,
+        include: [
+          {
+            model: User,
+            as: "User",
+            attributes: ["id", "username", "profileImage"],
+          },
+          {
+            model: ReviewImage,
+            as: "ReviewImages",
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+        limit: 10,
+      },
+    ];
+
+    // Pass 1: exact match (covers the canonical clean-slug URLs).
+    let product = await Product.findOne({
+      where: { slug: decodedSlug, status: "active" },
+      include: includeBlock,
     });
+
+    // Pass 2: tolerate legacy URLs that still contain parens or other
+    // non-strict characters (e.g. "cross-coin(r)-7-day-pack-(pack-of-7)").
+    // We re-slugify with strict:true and look that up. If found, return it
+    // AND include a `canonicalSlug` in the response so the frontend can
+    // replaceState the URL to the clean form (search engines see a 200,
+    // not a 404, and update their index on the next crawl).
+    let canonicalSlug = null;
+    if (!product) {
+      const sanitized = slugify(decodedSlug, { lower: true, strict: true, trim: true });
+      if (sanitized && sanitized !== decodedSlug) {
+        product = await Product.findOne({
+          where: { slug: sanitized, status: "active" },
+          include: includeBlock,
+        });
+        if (product) {
+          canonicalSlug = sanitized;
+          logger.info(`[by-slug] resolved legacy slug "${decodedSlug}" → "${sanitized}"`);
+        }
+      }
+    }
+
+    // Pass 3: last-resort LIKE search on the loose slug — handles rows
+    // that pre-date the slug cleanup. Only fires when the previous
+    // passes missed AND the slug looks dirty (has parens or upper-case).
+    if (!product && /[()A-Z]/.test(decodedSlug)) {
+      const looseKey = decodedSlug.replace(/[()]/g, '').toLowerCase();
+      product = await Product.findOne({
+        where: {
+          status: "active",
+          slug: { [Op.like]: `${looseKey.slice(0, 60)}%` },
+        },
+        include: includeBlock,
+      });
+      if (product) {
+        canonicalSlug = product.slug;
+        logger.info(`[by-slug] LIKE-matched legacy slug "${decodedSlug}" → "${product.slug}"`);
+      }
+    }
 
     if (!product) {
       return res.status(404).json({
@@ -1744,10 +1784,18 @@ module.exports.getPublicProductBySlug = async (req, res) => {
       formattedProduct.reviews = [];
     }
 
-    res.json({
+    // Include canonicalSlug when the caller hit a legacy URL — the
+    // frontend can detect it and history.replaceState to the clean URL,
+    // and SSR can surface it in <link rel="canonical">.
+    const responseBody = {
       success: true,
       data: formattedProduct,
-    });
+    };
+    if (canonicalSlug && canonicalSlug !== decodedSlug) {
+      responseBody.canonicalSlug = canonicalSlug;
+      responseBody.data.canonicalSlug = canonicalSlug;
+    }
+    res.json(responseBody);
   } catch (error) {
     logger.error("Error getting public product:", error);
     res.status(500).json({

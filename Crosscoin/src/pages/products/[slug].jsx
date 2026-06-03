@@ -43,6 +43,16 @@ export async function getServerSideProps({ params, res }) {
     return { notFound: true };
   }
 
+  // SEO win: if the requested slug is a legacy form (e.g. contains parens),
+  // the API returns the canonical (clean) slug. Redirect 301 to the clean
+  // URL so search engines reindex and users see the tidy form.
+  const canonicalSlug = productResp.canonicalSlug || productResp.data?.canonicalSlug;
+  if (canonicalSlug && canonicalSlug !== slug) {
+    return {
+      redirect: { destination: `/products/${canonicalSlug}`, permanent: true },
+    };
+  }
+
   // Fetch product-specific FAQs too (separate call so we can cache them
   // independently). Global FAQs are merged below the product ones.
   const productFaqResp = await fetchJson(
