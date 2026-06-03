@@ -2,7 +2,7 @@
 
 REST API for the CrossCoin e-commerce platform. Powers the storefront at `crosscoin.in` and the admin dashboard.
 
-> **Production readiness: 84 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 90 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -163,36 +163,35 @@ deliberately deferred until a test DB seed exists.
 
 ## Production Readiness
 
-**84 / 100** — hardening complete. Everything still pending is either a multi-day refactor (deferred for safety) or genuinely optional.
+**90 / 100** — every previously-deferred refactor now has at least a scaffold or partial completion shipped. What remains is either inherently incremental or genuinely optional.
 
 | Area | Score | What hurts |
 |---|---|---|
-| Architecture | 7/10 | `orderController.js` is 2.4k LOC — overdue for a split (deferred — risky big-bang refactor) |
+| Architecture | 8/10 | `orderController.js` still 2.4k LOC, but domain-grouped facade in [`controller/orders/`](controller/orders/) lets routes import from per-domain files. Functions get migrated out as you touch them. |
 | Data model | 7/10 | no formal migrations — `setupDatabase.js` is the migration system |
-| **Security** | **9/10** | webhook HMAC live; CSRF opt-in; Zod validation on auth + critical mutations |
+| **Security** | **9/10** | webhook HMAC; CSRF opt-in; Zod validation on auth + product + checkout + addresses + coupons + orders |
 | Error handling | 9/10 | structured logger + AppError middleware; client-error sink at `/api/client-errors` |
-| API design | 8/10 | response envelope helper + Zod on key routes; ~30 legacy endpoints still hand-roll their shape |
-| **Integrations** | **9/10** | Bull retry queue with exponential backoff; payment reconciliation now fans out via Bull when Redis is up |
-| Cron jobs | 7/10 | in-process `node-cron` — fine for one instance; would double-fire under horizontal scaling |
-| **Testing** | **4/10** | 38-test smoke suite; integration tests against a seeded test DB still pending (needs a Docker MySQL or sqlite-memory harness) |
-| Observability | 8/10 | health + `/api/metrics` + slow-query log + client-error sink; no APM yet |
-| Data integrity | 8/10 | `order_audit_logs` populated at every mutation; daily Razorpay reconciliation cron live with Bull fan-out; backfill script ready |
+| API design | 8/10 | response envelope helper + Zod on key routes; OpenAPI spec at `/api/docs` |
+| **Integrations** | **9/10** | Bull retry queue + fan-out; all crons now enqueue Bull jobs (workers do the work) |
+| Cron jobs | 9/10 | `node-cron` is just the trigger; every job goes through Bull (retries + persistence + dedup). Inline fallback when Redis is down. |
+| **Testing** | **6/10** | 38-test smoke suite + 3-test integration suite (sqlite::memory harness). Add more integration tests per-domain as you touch them. |
+| Observability | 9/10 | health + `/api/metrics` + slow-query log + client-error sink + OpenAPI spec at `/api/docs` |
+| Data integrity | 8/10 | audit logs everywhere; daily Razorpay reconciliation cron fans out via Bull; backfill script ready |
 
 ### What's still pending — honest accounting
 
 **🟡 Carry-on items (do incrementally, no blocker)**
-1. Migrate ~30 legacy response shapes to `utils/apiResponse.js` envelope. **Why incremental, not big-bang**: silently breaks frontend code that destructures the current shape. Migrate when you touch each controller.
-2. Apply Zod to remaining mutation routes (product create / update, checkout). **Why deferred**: product create uses multer + complex nested payload (variations, attributes); writing the schema needs a careful audit of the real request body, not guess-work.
+1. Migrate ~30 legacy response shapes to `utils/apiResponse.js` envelope. **Still incremental**: silently breaks frontend code that destructures the current shape. Migrate per-controller as you touch them.
+2. Extend Zod schemas as you encounter new edge cases. The atomic primitives in [`middleware/validate.js`](middleware/validate.js) cover the basics; product/checkout schemas use `.passthrough()` and validate the bare minimum — tighten them as you understand the real payload shape better.
+3. Migrate functions OUT of `controller/orderController.js` into the domain shim files when you touch them. The domain map at the top of the file documents which file each function belongs in.
 
-**🟠 Genuine refactors (need their own dedicated session)**
-3. **Split `orderController.js` (2.4k LOC).** Best done by domain: `orders/createController.js`, `orders/trackingController.js`, `orders/cancellationController.js`, `orders/adminController.js`. Each pull touches the routes file + audit/queue call sites. Plan for half a day, test with the full smoke suite at every step.
-4. **Move cron → Bull queues fully.** `node-cron` works for a single instance; the moment you horizontally scale (two API pods), every job fires twice. The reconciliation cron already enqueues to Bull when available — generalise the pattern to FShip sync, status refresh, loyalty expiry, Instagram refresh.
-5. **Integration tests against a seeded test DB.** Needs a `tests/setup.js` that spins up an isolated MySQL (Docker) or sqlite-in-memory, runs `setupDatabase`, seeds a few orders, then exercises checkout + order create + cancel + refund via supertest. ~200 LOC + Docker compose entry.
+**🟠 What's actually left — and why it's not urgent**
+4. **Document remaining routes in OpenAPI.** Five example routes are documented in [`config/openapi-routes.js`](config/openapi-routes.js); copy the pattern for the rest. Live at `/api/docs` after server start.
+5. **Integration tests for the checkout flow.** Harness is in place ([`tests/integration/_setup.js`](tests/integration/_setup.js) — sqlite::memory + auto-loaded models). Address quality persistence test is the template; checkout test would need Razorpay/iThink mocks.
 
 **🟢 Long-tail polish (do if/when you actually need them)**
-6. Auto-generate OpenAPI from the route layer (use `swagger-jsdoc` + JSDoc on each route).
-7. OpenTelemetry distributed tracing — meaningful once you have a second service to trace into.
-8. Replace last `console.*` calls in `fshipService.js` with `logger` (cosmetic).
+6. OpenTelemetry distributed tracing — meaningful once you have a second service to trace into.
+7. Replace last `console.*` calls in `fshipService.js` with `logger` (cosmetic).
 
 ### Required env vars (new this hardening pass)
 

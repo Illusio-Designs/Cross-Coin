@@ -75,8 +75,14 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   const itemsPerPage = 20;
   const [totalProducts, setTotalProducts] = useState(0);
   
-  // Safety guard: Ensure products is always an array
-  const safeProducts = Array.isArray(products) ? products : [];
+  // Safety guard: Ensure products is always an array.
+  // Memoised so that downstream useMemos (filteredProducts, computeDynamicFilters)
+  // get a stable identity when `products` hasn't changed — avoids a cascade
+  // of re-computations on every Products.jsx render.
+  const safeProducts = useMemo(
+    () => (Array.isArray(products) ? products : []),
+    [products],
+  );
 
   // ── React Query: categories (1 hour stale) ──
   const { data: categories = [] } = useQuery({
@@ -500,13 +506,15 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
     };
   };
 
-  // Get category name by ID for display
-  const getCategoryNameById = (categoryId) => {
+  // Get category name by ID for display. useCallback so the function
+  // identity is stable across renders and any memoised consumer
+  // doesn't invalidate just because the parent re-rendered.
+  const getCategoryNameById = useCallback((categoryId) => {
     const category = categories.find(
       (cat) => cat.id.toString() === categoryId.toString()
     );
     return category ? category.name : categoryId;
-  };
+  }, [categories]);
 
   // Get category name from URL for display (fallback)
   const getCategoryNameFromUrl = () => {
