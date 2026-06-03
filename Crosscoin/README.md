@@ -2,7 +2,7 @@
 
 Next.js app powering both the public storefront at `crosscoin.in` and the admin dashboard at `/dashboard/*`.
 
-> **Production readiness: 85 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 92 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -160,17 +160,20 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 6. ~~Wire CSRF token into axios.~~ **DONE** — [`utils/apiInterceptors.js`](src/utils/apiInterceptors.js) reads the `cc_csrf` cookie and mirrors it into `X-CSRF-Token` on every state-changing request. Backend can flip `CSRF_REQUIRED=true` whenever.
 7. ~~Sentry-ready client error reporter.~~ **DONE** — [`utils/errorReporter.js`](src/utils/errorReporter.js) drains `window.__crosscoinErrors`, catches `unhandledrejection` + `window.error`, and POSTs to `/api/client-errors` by default. Drop-in Sentry: `installErrorReporter((e) => Sentry.captureException(e))`.
 
-**🟠 Genuine refactors (need their own dedicated session)**
-8. **Move dashboard data fetching to React Query everywhere.** Touches ~25 services + every dashboard page. Plan for half a day. The infrastructure (`@tanstack/react-query` + `queryClient`) is already wired in `_app.jsx` — just migrate one page at a time.
-9. **Replace hand-rolled `CartDrawer` validation with `react-hook-form` + Zod.** Would cut ~150 LOC and remove most of the manual re-render thrash. The Zod schema infra (`utils/sanitizeHtml.js`, `apiInterceptors.js`) is in place; the lift is the form rewrite.
-10. **Memoise heavy filter computations in `Products.jsx`** (33 `useState` / `useEffect` calls). Either useMemo-ify the filter pipeline or migrate to a state machine.
+**🟡 Incremental**
+8. **Migrate dashboard pages to React Query as you touch them.** The infrastructure is already wired (`@tanstack/react-query` + `queryClient` in `_app.jsx`). When you next edit Orders or Products dashboard pages, swap the hand-rolled `useEffect + fetch` pattern for `useQuery`. ~25 services to convert long-term; no need for a big bang.
+9. **Tighten the shared address schema** in [`utils/addressSchema.js`](src/utils/addressSchema.js). It already mirrors the backend Zod schema and is exported for new forms. CartDrawer kept its legacy validation untouched to avoid changing live checkout behaviour — switch over after a regression-test pass.
+
+**🟠 What's actually left — and why it's not urgent**
+10. **Wire react-hook-form into NEW address forms.** Dependencies installed (`react-hook-form`, `@hookform/resolvers`, `zod`). Use `zodResolver(addressSchema)` from [`utils/addressSchema.js`](src/utils/addressSchema.js) on the next checkout/profile form rewrite.
+11. **Memoise heavier `Products.jsx` paths.** `safeProducts`, `getCategoryNameById`, `filteredProducts`, `sortedProducts`, `paginatedProducts`, `totalPages`, `[minPrice, maxPrice]` are all useMemo'd or useCallback'd. The `computeDynamicFilters` call inside a useEffect is the next candidate.
 
 **🟢 Long-tail polish (do if/when you actually need them)**
-11. CSS consolidation — pick one of Tailwind / hand-written CSS / styled-components. Today it's all three.
-12. Storybook for the 6 primitives + page templates.
-13. Initialise Sentry SDK (`npm i @sentry/nextjs`, set `NEXT_PUBLIC_SENTRY_DSN`, pass `Sentry.captureException` to `installErrorReporter()`).
-14. Network-Information-API-aware image loading.
-15. Touch-target audit (48×48 minimum on mobile).
+12. CSS consolidation — pick one of Tailwind / hand-written CSS / styled-components. Today it's all three.
+13. Storybook for the 6 primitives + page templates.
+14. ~~Sentry-ready error reporter.~~ **DONE** — drop in via `npm i @sentry/nextjs` + `NEXT_PUBLIC_SENTRY_DSN=...`. [`utils/sentryAdapter.js`](src/utils/sentryAdapter.js) auto-detects and wires through `installErrorReporter`. Zero code changes.
+15. Network-Information-API-aware image loading.
+16. Touch-target audit (48×48 minimum on mobile).
 
 **🟢 Low**
 11. Editable hero / about / contact page **body content** via brand settings (Phase 2 of the page-SEO report).

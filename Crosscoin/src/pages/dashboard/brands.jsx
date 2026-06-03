@@ -1,6 +1,7 @@
 // When accessed directly as a Next.js page, redirect to dashboard shell
 export { default } from './index';
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService } from '../../services';
 import { Modal, Button } from '../../components/ui';
@@ -8,6 +9,7 @@ import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from '../../components/Dashboard/primitives';
+import { queryKeys } from '../../lib/queryClient';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -22,24 +24,26 @@ const IC = {
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 
 export function BrandManager() {
-  const [brands, setBrands] = useState([]);
+  const queryClient = useQueryClient();
   const [confirmState, setConfirmState] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  useEffect(() => { fetchBrands(); }, []);
-
-  const fetchBrands = async () => {
-    setLoading(true);
-    try {
+  // ── React Query: brands list ──────────────────────────────────────
+  const { data: brands = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.brandsAdmin,
+    queryFn: async () => {
       const response = await brandService.getAllBrands(true);
-      if (response.success) setBrands(response.data);
-    } catch { showError('loadingFailed'); }
-    finally { setLoading(false); }
-  };
+      return response.success ? response.data : [];
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Invalidate after mutations instead of manual re-fetch.
+  const refetchBrands = () => queryClient.invalidateQueries({ queryKey: queryKeys.brandsAdmin });
+  const fetchBrands = refetchBrands;  // legacy callers
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

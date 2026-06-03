@@ -17,8 +17,10 @@
 
 import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import ProductCard from '../../components/products/ProductCard';
 import ProductFaqSection from '../../components/common/ProductFaqSection';
+import { useBreadcrumb } from '../../components/common/Breadcrumb';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in';
@@ -71,6 +73,21 @@ function safeJson(value) {
 }
 
 export default function CollectionSlugPage({ slug, category, globalFaqs }) {
+  // Set the breadcrumb to the precise category name so the dynamic
+  // [slug] segment becomes "Cross Coin® Professional Performance Ankle Socks"
+  // instead of the literal placeholder.
+  const { setCustomBreadcrumbs } = useBreadcrumb();
+  useEffect(() => {
+    if (category?.name) {
+      setCustomBreadcrumbs([
+        { label: 'Home', path: '/' },
+        { label: 'Collections', path: '/collections' },
+        { label: category.name, path: `/collections/${slug}`, isLast: true },
+      ]);
+    }
+    return () => setCustomBreadcrumbs(null);
+  }, [category?.name, slug, setCustomBreadcrumbs]);
+
   const seo = category.seo || {};
   const title = seo.metaTitle || `${category.name} | CrossCoin`;
   const description = truncate(

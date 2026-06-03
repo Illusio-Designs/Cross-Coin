@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { couponService } from "../../../services";
+import { queryKeys } from '../../../lib/queryClient';
 
 const IC = {
   add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
@@ -16,6 +18,7 @@ const IC = {
 const EMPTY_FORM = { code: "", description: "", type: "percentage", value: "", minPurchase: "", maxDiscount: "", usageLimit: "", usageCount: "", perUserLimit: "", status: "active", applicableCategories: [], applicableProducts: [], startDate: "", endDate: "", paymentModeRestriction: "all", firstOrderOnly: false, tieredDiscounts: [], quantityBasedDiscounts: [] };
 
 export default function Coupons() {
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,25 +26,27 @@ export default function Coupons() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [coupons, setCoupons] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
-
   const [statusFilter, setStatusFilter] = useState("");
 
-  const fetchCoupons = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // ── React Query: coupons list ────────────────────────────────────
+  const { data: coupons = [], isLoading: queryLoading } = useQuery({
+    queryKey: queryKeys.couponsAdmin,
+    queryFn: async () => {
       const data = await couponService.getAllCoupons();
-      setCoupons(Array.isArray(data?.coupons) ? data.coupons : []);
-    } catch (err) {
-      setError(err.message || "Failed to fetch coupons");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return Array.isArray(data?.coupons) ? data.coupons : [];
+    },
+    staleTime: 30 * 1000,
+  });
+  // Combined loading: React Query OR an in-flight mutation (we still
+  // call setLoading() during save / delete).
+  const isLoading = loading || queryLoading;
 
-  useEffect(() => { fetchCoupons(); }, []);
+  // Mutations still use a manual loading flag (kept for the form UX).
+  // After they finish we invalidate the query to refetch.
+  const refetchCoupons = () => queryClient.invalidateQueries({ queryKey: queryKeys.couponsAdmin });
+  const fetchCoupons = refetchCoupons;  // legacy callers
+
   useEffect(() => { setCurrentPage(1); }, [search]);
 
   const filteredData = coupons.filter(item => {
@@ -160,7 +165,7 @@ export default function Coupons() {
             />
           </FilterBar>
 
-          {loading ? (
+          {isLoading ? (
             <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : error ? (
             <EmptyState title="Couldn't load coupons" message={error} />
