@@ -11,6 +11,7 @@ import SearchOverlay from '@/components/layout/SearchOverlay';
 import CookieBanner from '@/components/ui/CookieBanner';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import ScrollProgress from '@/components/ui/ScrollProgress';
+import WhatsAppChat from '@/components/ui/WhatsAppChat';
 
 /* Fonts loaded via next/font — Next inlines them at build time, self-hosts
    them, and emits font-display: optional / swap behaviour so the browser
@@ -115,6 +116,7 @@ export default function RootLayout({ children }) {
             <SearchOverlay />
             <CookieBanner />
             <ScrollToTop />
+            <WhatsAppChat />
             <ToastContainer
               position="top-right"
               autoClose={2500}
