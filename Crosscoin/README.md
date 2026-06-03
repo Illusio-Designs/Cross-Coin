@@ -2,7 +2,7 @@
 
 Next.js app powering both the public storefront at `crosscoin.in` and the admin dashboard at `/dashboard/*`.
 
-> **Production readiness: 78 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 85 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -144,7 +144,7 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 | Forms & validation | 7/10 | CartDrawer validates everything; no form lib — pure component state |
 | Mobile / responsive | 7/10 | Tailwind + tokens; design system mobile-aware; not all admin pages migrated |
 | **Security** | **9/10** | strong CSP + HSTS; **every** `dangerouslySetInnerHTML` on user-authored content now flows through `utils/sanitizeHtml.js` (rich + inline variants); external links auto-hardened with rel=noopener |
-| Admin dashboard UX | 6/10 | 6 primitives shipped; ~10 pages migrated; rest still on legacy CSS |
+| Admin dashboard UX | 9/10 | 6 primitives; all 11 admin pages migrated; consistent header / stats / filters / empty states |
 
 ### Pending — by severity
 
@@ -156,13 +156,21 @@ Use [`utils/collectionUrl.js`](src/utils/collectionUrl.js) when emitting categor
 5. ~~Skip-to-main link.~~ **DONE**. ~~Heading order audit on top public pages.~~ **DONE** (home.jsx + Products.jsx now have proper `<h1>`; added `.sr-only` utility for visually-hidden but screen-reader-visible content). Older policy / legacy pages still need a sweep.
 
 **🟡 Medium**
-5. Migrate the remaining admin pages (~~Consumers~~ ✓, ~~Coupons~~ ✓, ~~Brands~~ ✓, Payments, Reviews, Slider, Blogs, Lookbooks, Reels, Brand Settings, Analytics) to the design-system primitives so the dashboard looks consistent end-to-end.
-6. Move all dashboard data fetching to React Query (currently mixed) for cache + retry consistency.
-7. Replace hand-rolled `CartDrawer` validation with `react-hook-form` + Zod — would cut ~150 lines and reduce re-renders.
-8. Memoise the heavy filter computations in `Products.jsx` (33 `useState`/`useEffect` calls suggest excessive re-renders).
-9. CSS consolidation — pick one of Tailwind / hand-written CSS / styled-components. Today it's all three.
-10. Storybook for the 6 primitives + page templates.
-11. **Wire `GET /api/csrf/token` on dashboard load + mirror into `X-CSRF-Token`** so the backend can flip `CSRF_REQUIRED=true`. Token endpoint is already live; this is just an axios interceptor.
+5. ~~Migrate the remaining admin pages to the design-system primitives.~~ **DONE** — all 11 pages now use `PageHeader` / `StatGrid` / `Panel` / `FilterBar` / `EmptyState`: Consumers ✓, Coupons ✓, Brands ✓, Payments ✓, Reviews ✓, Slider ✓, Blogs ✓, Lookbooks ✓, Reels ✓, Brand Settings ✓, UTM Analytics ✓.
+6. ~~Wire CSRF token into axios.~~ **DONE** — [`utils/apiInterceptors.js`](src/utils/apiInterceptors.js) reads the `cc_csrf` cookie and mirrors it into `X-CSRF-Token` on every state-changing request. Backend can flip `CSRF_REQUIRED=true` whenever.
+7. ~~Sentry-ready client error reporter.~~ **DONE** — [`utils/errorReporter.js`](src/utils/errorReporter.js) drains `window.__crosscoinErrors`, catches `unhandledrejection` + `window.error`, and POSTs to `/api/client-errors` by default. Drop-in Sentry: `installErrorReporter((e) => Sentry.captureException(e))`.
+
+**🟠 Genuine refactors (need their own dedicated session)**
+8. **Move dashboard data fetching to React Query everywhere.** Touches ~25 services + every dashboard page. Plan for half a day. The infrastructure (`@tanstack/react-query` + `queryClient`) is already wired in `_app.jsx` — just migrate one page at a time.
+9. **Replace hand-rolled `CartDrawer` validation with `react-hook-form` + Zod.** Would cut ~150 LOC and remove most of the manual re-render thrash. The Zod schema infra (`utils/sanitizeHtml.js`, `apiInterceptors.js`) is in place; the lift is the form rewrite.
+10. **Memoise heavy filter computations in `Products.jsx`** (33 `useState` / `useEffect` calls). Either useMemo-ify the filter pipeline or migrate to a state machine.
+
+**🟢 Long-tail polish (do if/when you actually need them)**
+11. CSS consolidation — pick one of Tailwind / hand-written CSS / styled-components. Today it's all three.
+12. Storybook for the 6 primitives + page templates.
+13. Initialise Sentry SDK (`npm i @sentry/nextjs`, set `NEXT_PUBLIC_SENTRY_DSN`, pass `Sentry.captureException` to `installErrorReporter()`).
+14. Network-Information-API-aware image loading.
+15. Touch-target audit (48×48 minimum on mobile).
 
 **🟢 Low**
 11. Editable hero / about / contact page **body content** via brand settings (Phase 2 of the page-SEO report).

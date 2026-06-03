@@ -3,6 +3,7 @@ export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../components/ui";
+import { PageHeader, Panel, FilterBar, EmptyState } from "../../components/Dashboard/primitives";
 import Loader from "../../components/common/Loader";
 import { blogService, productService } from "../../services";
 import BrandAssignment from '../../components/Dashboard/BrandAssignment';
@@ -344,24 +345,15 @@ export function Blogs() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.blog}</div>
-            <div>
-              <h1 className="sl-page-title">Blog Management</h1>
-              <p className="sl-page-sub">{posts.length} post{posts.length !== 1 ? 's' : ''} · {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder={`Search ${tab.toLowerCase()}...`} value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <button className="sl-add-btn" onClick={tab === 'Posts' ? openNewPost : () => { setCatForm(EMPTY_CAT); setCatModal(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>Add {tab === 'Posts' ? 'Post' : 'Category'}
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="Blog Management"
+          subtitle={`${posts.length} post${posts.length !== 1 ? 's' : ''} · ${categories.length} categor${categories.length !== 1 ? 'ies' : 'y'}`}
+          actions={
+            <Button variant="primary" onClick={tab === 'Posts' ? openNewPost : () => { setCatForm(EMPTY_CAT); setCatModal(true); }}>
+              + Add {tab === 'Posts' ? 'Post' : 'Category'}
+            </Button>
+          }
+        />
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
           {TABS.map(t => (
@@ -371,25 +363,31 @@ export function Blogs() {
           ))}
         </div>
 
-        <div className="sl-table-wrap">
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder={`Search ${tab.toLowerCase()}…`}
+          />
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : pageItems.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.blog}</div>
-              <p>{search ? `No ${tab.toLowerCase()} match your search` : `No ${tab.toLowerCase()} yet`}</p>
-            </div>
+            <EmptyState
+              icon={IC.blog}
+              title={search ? `No ${tab.toLowerCase()} match` : `No ${tab.toLowerCase()} yet`}
+              message={search ? "Try a different search term." : `Add your first ${tab.toLowerCase().slice(0, -1)} to get started.`}
+            />
           ) : (
             <>
               <Table columns={tab === 'Posts' ? postColumns : catColumns} data={pageItems} striped hoverable />
               {activeList.length > ITEMS_PER_PAGE && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
 

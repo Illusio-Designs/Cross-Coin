@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { lookbookService } from "../../../services";
 import { showError, showSuccess } from "../../../utils/toastNotification";
 import { Button, Modal, Table, Input, Select } from "../../../components/ui";
+import { PageHeader, Panel, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 
@@ -141,32 +142,25 @@ export default function AdminLookbooks() {
     <div className="dashboard-page">
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
 
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="sl-page-title">Lookbooks</h1>
-            <p className="sl-page-sub">Create lookbooks, upload images, and add product hotspots.</p>
-          </div>
-        </div>
-        <div className="sl-header-right">
-          <button className="sl-add-btn" onClick={openAdd}>
-            <span className="sl-add-btn-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </span>
-            Add Lookbook
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Lookbooks"
+        subtitle="Create lookbooks, upload images, and add product hotspots."
+        actions={<Button variant="primary" onClick={openAdd}>+ Add Lookbook</Button>}
+      />
 
-      {loading ? <div className="sl-loader-wrap"><Loader /></div> : (
-        <Table columns={columns} data={lookbooks} emptyMessage="No lookbooks yet" />
-      )}
+      <Panel>
+        {loading ? (
+          <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
+        ) : lookbooks.length === 0 ? (
+          <EmptyState
+            title="No lookbooks yet"
+            message="Build your first lookbook to feature shoppable outfit shots."
+            action={<Button variant="primary" onClick={openAdd}>+ Add Lookbook</Button>}
+          />
+        ) : (
+          <Table columns={columns} data={lookbooks} striped hoverable />
+        )}
+      </Panel>
 
       <Modal isOpen={isOpen} onClose={closeModal} title={isEditing ? "Edit Lookbook" : "Add Lookbook"}>
 

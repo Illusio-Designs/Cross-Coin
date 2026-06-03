@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { reviewService, brandService } from "../../../services";
@@ -193,15 +194,24 @@ export default function Reviews() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.reviews}</div>
-            <div>
-              <h1 className="sl-page-title">Reviews{selectedBrandName ? ` — ${selectedBrandName}` : ''}</h1>
-              <p className="sl-page-sub">{totalReviews} review{totalReviews !== 1 ? 's' : ''}{brandFilter ? ' for this brand' : ' total'}</p>
-            </div>
-          </div>
-          <div className="sl-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <PageHeader
+          title={`Reviews${selectedBrandName ? ` — ${selectedBrandName}` : ''}`}
+          subtitle={`${totalReviews} review${totalReviews !== 1 ? 's' : ''}${brandFilter ? ' for this brand' : ' total'}`}
+        />
+
+        <StatGrid>
+          <StatTile label="Total" value={totalReviews} tone="info" />
+          <StatTile label="Approved" value={statusCounts.approved} tone="good" />
+          <StatTile label="Pending" value={statusCounts.pending} tone="warn" />
+          <StatTile label="Avg. rating" value={`${avgRating} / 5`} tone="default" />
+        </StatGrid>
+
+        <Panel>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            placeholder="Search reviews…"
+          >
             <Select options={brandOptions} value={brandFilter} onChange={setBrandFilter} placeholder="All Brands" />
             <Select
               options={[
@@ -214,61 +224,29 @@ export default function Reviews() {
               onChange={setStatusFilter}
               placeholder="All Status"
             />
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search reviews..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-          </div>
-        </div>
+          </FilterBar>
 
-        <div className="sl-stat-cards">
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            </div>
-            <div className="sl-stat-body"><span className="sl-stat-label">Total</span><span className="sl-stat-value">{totalReviews}</span></div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
-            <div className="sl-stat-body"><span className="sl-stat-label">Approved</span><span className="sl-stat-value">{statusCounts.approved}</span></div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--yellow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div className="sl-stat-body"><span className="sl-stat-label">Pending</span><span className="sl-stat-value">{statusCounts.pending}</span></div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--purple">
-              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <div className="sl-stat-body"><span className="sl-stat-label">Avg. Rating</span><span className="sl-stat-value">{avgRating} / 5</span></div>
-          </div>
-        </div>
-
-        <div className="sl-table-wrap">
           {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
+            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : error ? (
-            <div className="sl-error">{error}</div>
+            <EmptyState title="Couldn't load reviews" message={error} />
           ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.reviews}</div>
-              <p>{search ? "No reviews match your search" : brandFilter ? "No reviews for this brand" : "No reviews yet"}</p>
-            </div>
+            <EmptyState
+              icon={IC.reviews}
+              title={search ? "No reviews match" : brandFilter ? "No reviews for this brand" : "No reviews yet"}
+              message={search ? "Try a different search term." : "Reviews will appear here as customers submit them."}
+            />
           ) : (
             <>
               <Table columns={columns} data={currentItemsWithSN} striped hoverable />
               {totalReviews > itemsPerPage && (
-                <div className="sl-pagination">
+                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Moderate Review" closeOnOverlayClick={false}>

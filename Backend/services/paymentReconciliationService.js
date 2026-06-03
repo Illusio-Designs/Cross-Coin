@@ -99,7 +99,21 @@ async function reconcileOrderPayment(orderId) {
   return { success: true, corrected: true, from: localStatus, to: desiredLocal };
 }
 
-async function reconcileRecentPayments({ sinceHours = 48, limit = 500 } = {}) {
+/**
+ * Daily reconciliation entry point.
+ *
+ * Two modes:
+ *   inline (default) — call reconcileOrderPayment() inline for each
+ *     candidate, returning a summary. Used when Bull is unavailable.
+ *   queued — enqueue each candidate as a `payment:reconcile-order`
+ *     job and return without waiting. Lets Bull spread the load,
+ *     retry on transient Razorpay errors, and surface progress in
+ *     the integration queue stats.
+ *
+ * Set { useQueue: true } to opt into queue mode. The cron job picks
+ * this up automatically when the env says Bull is healthy.
+ */
+async function reconcileRecentPayments({ sinceHours = 48, limit = 500, useQueue = false } = {}) {
   const since = new Date(Date.now() - sinceHours * 3600 * 1000);
   const candidates = await Payment.findAll({
     where: {
@@ -112,7 +126,29 @@ async function reconcileRecentPayments({ sinceHours = 48, limit = 500 } = {}) {
     order: [['createdAt', 'DESC']],
   });
 
-  const summary = { checked: 0, corrected: 0, errors: 0, skipped: 0 };
+  if (useQueue) {
+    const { enqueue, getStats } = require('./integrationQueue.js');
+    const stats = await getStats();
+    if (stats.available) {
+      // Fan-out: one job per candidate. Stagger by 100ms each so we
+      // don't hammer Razorpay's rate limit if a large backfill runs.
+      let enqueued = 0;
+      for (let i = 0; i < candidates.length; i++) {
+        try {
+          await enqueue('payment:reconcile-order', { orderId: candidates[i].order_id }, { delay: i * 100 });
+          enqueued++;
+        } catch (e) {
+          logger.warn(`[reconcile] enqueue failed for order ${candidates[i].order_id}: ${e.message}`);
+        }
+      }
+      logger.info(`[reconcile] enqueued ${enqueued}/${candidates.length} reconciliation jobs to Bull`);
+      return { enqueued, total: candidates.length, mode: 'queue' };
+    }
+    // Bull isn't actually up — fall through to inline.
+    logger.warn('[reconcile] queue mode requested but Bull unavailable — falling back to inline');
+  }
+
+  const summary = { checked: 0, corrected: 0, errors: 0, skipped: 0, mode: 'inline' };
   for (const p of candidates) {
     summary.checked++;
     try {

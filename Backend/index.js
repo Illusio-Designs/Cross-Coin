@@ -281,6 +281,21 @@ const { csrfTokenHandler } = require('./middleware/csrf.js');
 app.get('/api/csrf/token', csrfTokenHandler);
 app.get('/api/v1/csrf/token', csrfTokenHandler);
 
+// Client-side error sink — receives drained entries from the storefront
+// errorReporter (ErrorBoundary catches + unhandled rejections + window
+// errors). Logs at WARN so they end up in logs/app.log alongside other
+// operational signals. No DB write — keep it cheap; if volume grows,
+// swap the body of the handler for a Sentry call.
+app.post('/api/client-errors', (req, res) => {
+    try {
+        const e = req.body || {};
+        const ua = (e.ua || '').toString().slice(0, 200);
+        const msg = (e.message || 'unknown').toString().slice(0, 500);
+        logger.warn(`[client-error:${e.kind || 'unknown'}] ${msg} | ${e.href || ''} | ${ua}`);
+    } catch { /* never throw from a logging endpoint */ }
+    res.status(204).end();
+});
+
 // CORS debug endpoint
 app.get('/api/v1/cors-test', (req, res) => {
     res.json({
