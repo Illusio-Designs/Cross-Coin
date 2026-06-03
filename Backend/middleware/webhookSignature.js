@@ -27,13 +27,46 @@ const { logger } = require('../config/logging.js');
 
 const SOURCES = {
   whatsapp: { header: 'x-hub-signature-256', envKey: 'WHATSAPP_WEBHOOK_SECRET', algo: 'sha256', prefix: 'sha256=' },
+  // Per-provider entries (use one of these if the route is provider-specific).
   fship:    { header: 'x-fship-signature',   envKey: 'FSHIP_WEBHOOK_SECRET',    algo: 'sha256', prefix: '' },
   ithink:   { header: 'x-ithink-signature',  envKey: 'ITHINK_WEBHOOK_SECRET',   algo: 'sha256', prefix: '' },
+  // Provider-agnostic alias — accepts whichever signature header matches
+  // the secret currently in env. Useful when a brand toggles
+  // SHIPPING_PROVIDER and the inbound webhook header changes accordingly.
+  // Resolution order: ithink → fship.
+  shipping: { multi: ['ithink', 'fship'] },
 };
 
 function verifyWebhookSignature(source) {
   const cfg = SOURCES[source];
   if (!cfg) throw new Error(`Unknown webhook source: ${source}`);
+
+  // Provider-agnostic alias — try each underlying source in order; pass
+  // through if any matches. Falls open if none of them are configured
+  // (same transitional behaviour as the per-provider middleware).
+  if (cfg.multi) {
+    const mws = cfg.multi.map((sub) => verifyWebhookSignature(sub));
+    return function multiSourceWebhookSignatureMiddleware(req, res, next) {
+      let calledNext = false;
+      let rejected = null;
+      const passThroughNext = () => { calledNext = true; };
+      for (const mw of mws) {
+        // Each per-provider mw either calls next() (accept) or writes a 401.
+        // We use a stub res that captures rejections so we can try the next.
+        let localRejected = false;
+        const stubRes = {
+          status() { localRejected = true; return this; },
+          json() { return this; },
+        };
+        mw(req, stubRes, passThroughNext);
+        if (calledNext) return next();
+        rejected = localRejected;
+      }
+      // None accepted → reject.
+      logger.warn(`[webhookSignature:${source}] no configured provider accepted the request`);
+      return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
+    };
+  }
 
   return function webhookSignatureMiddleware(req, res, next) {
     const secret = process.env[cfg.envKey];
