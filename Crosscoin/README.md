@@ -2,7 +2,7 @@
 
 Next.js app powering both the public storefront at `crosscoin.in` and the admin dashboard at `/dashboard/*`.
 
-> **Production readiness: 89 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 92 / 100.** See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 

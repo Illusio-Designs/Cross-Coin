@@ -74,11 +74,13 @@ function registerWorkers() {
     return await fn(phone, params || {}, brandId || 1);
   });
 
-  // ── cron:fship-sync ───────────────────────────────────────────────
-  // Triggered by the 2-hourly cron. Runs the bulk sync controller. Bull
-  // gives us automatic retries on transient FShip outages instead of
-  // losing the run until the next 2-hour tick.
-  registerProcessor('cron:fship-sync', 1, async () => {
+  // ── cron:shipping-sync ────────────────────────────────────────────
+  // Provider-agnostic: runs the bulk sync controller, which itself goes
+  // through shippingProviderFactory to pick iThink/FShip per brand.
+  // Bull gives us automatic retries on transient provider outages.
+  // Both 'cron:shipping-sync' and the legacy 'cron:fship-sync' name
+  // resolve to the same handler.
+  const shippingSyncHandler = async () => {
     const orderShippingController = require('../controller/orderShippingController.js');
     const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 50 } };
     let result = null;
@@ -87,12 +89,14 @@ function registerWorkers() {
       status: () => ({ json: () => {} }),
     };
     await orderShippingController.syncOrdersWithFShip(mockReq, mockRes);
-    logger.info(`[queue] cron:fship-sync done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
+    logger.info(`[queue] cron:shipping-sync done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
     return result || { ok: true };
-  });
+  };
+  registerProcessor('cron:shipping-sync', 1, shippingSyncHandler);
+  registerProcessor('cron:fship-sync', 1, shippingSyncHandler);  // back-compat
 
-  // ── cron:fship-status-refresh ─────────────────────────────────────
-  registerProcessor('cron:fship-status-refresh', 1, async () => {
+  // ── cron:shipping-status-refresh ─────────────────────────────────
+  const shippingStatusRefreshHandler = async () => {
     const orderShippingController = require('../controller/orderShippingController.js');
     const mockReq = {
       user: { id: 'system', username: 'cron_job' },
@@ -107,9 +111,11 @@ function registerWorkers() {
       status: () => ({ json: () => {} }),
     };
     await orderShippingController.bulkRefreshFShipStatus(mockReq, mockRes);
-    logger.info(`[queue] cron:fship-status-refresh done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
+    logger.info(`[queue] cron:shipping-status-refresh done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
     return result || { ok: true };
-  });
+  };
+  registerProcessor('cron:shipping-status-refresh', 1, shippingStatusRefreshHandler);
+  registerProcessor('cron:fship-status-refresh', 1, shippingStatusRefreshHandler);  // back-compat
 
   // ── cron:loyalty-expiry ───────────────────────────────────────────
   registerProcessor('cron:loyalty-expiry', 1, async () => {

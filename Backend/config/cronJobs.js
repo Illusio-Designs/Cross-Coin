@@ -39,16 +39,18 @@ function initializeCronJobs() {
     }
   }
 
-  // FShip Order Sync — every 2 hours at :05
+  // Shipping order sync (provider-agnostic) — every 2 hours at :05.
+  // The handler reads SHIPPING_PROVIDER per brand and dispatches to
+  // iThink (live today) or FShip via shippingProviderFactory.
   cron.schedule('5 */2 * * *', () => {
-    console.log('\n⏰ [CRON] enqueue cron:fship-sync at:', new Date().toISOString());
-    trigger('cron:fship-sync');
+    console.log('\n⏰ [CRON] enqueue cron:shipping-sync at:', new Date().toISOString());
+    trigger('cron:shipping-sync');
   });
 
-  // iThink/FShip Status Refresh — twice daily at 6 AM & 6 PM
+  // Shipping status refresh — twice daily at 6 AM & 6 PM
   cron.schedule('0 6,18 * * *', () => {
-    console.log('\n⏰ [CRON] enqueue cron:fship-status-refresh at:', new Date().toISOString());
-    trigger('cron:fship-status-refresh');
+    console.log('\n⏰ [CRON] enqueue cron:shipping-status-refresh at:', new Date().toISOString());
+    trigger('cron:shipping-status-refresh');
   });
 
   // Loyalty points expiry — daily at 2 AM

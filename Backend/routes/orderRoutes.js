@@ -5,8 +5,10 @@ const {
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, confirmOrder,
     getOrderStats, updateAwbNumber, initiateReturn,
-    adminCreateManualOrder, checkAddressQuality,
+    adminCreateManualOrder,
 } = require('../controller/orderController.js');
+// checkAddressQuality has been migrated to the domain-grouped file.
+const { checkAddressQuality } = require('../controller/orders/createController.js');
 const {
     cancelOrdersInFShip,
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
@@ -59,6 +61,14 @@ const trackByAwbSchema = z.object({
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
 router.get('/stats',                     isAuthenticated, isOrderManager, getOrderStats);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
+// ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
+// The /shipping/* paths are the canonical names. The /fship/* paths are
+// kept as aliases so existing dashboard JS keeps working.
+router.post('/shipping/sync',           isAuthenticated, isOrderManager, syncOrdersWithFShip);
+router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
+router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInFShip);
+router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getFShipCouriers);
+// Legacy aliases (deprecated — use /shipping/*).
 router.post('/fship/sync',              isAuthenticated, isOrderManager, syncOrdersWithFShip);
 router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
@@ -72,7 +82,8 @@ router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabe
 router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDownloadLabels);
 router.post('/labels/:orderId/downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
 router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
-router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
+router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
+router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSingleOrderWithFShip);  // legacy alias
 router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
@@ -97,10 +108,12 @@ router.get('/track/:order_number',      trackOrderByOrderNumber);
 // recommendation BEFORE picking a payment method (so we don't bail
 // the user out at submit time).
 router.post('/check-address-quality',   zValidateBody(checkAddressQualitySchema), checkAddressQuality);
-// FShip webhook — signature-verified when FSHIP_WEBHOOK_SECRET is set;
-// otherwise logs a warning and accepts (transitional). Same pattern is
-// used for WhatsApp in whatsappRoutes.js.
-router.post('/fship/webhook',           verifyWebhookSignature('fship'),  handleFShipWebhook);
+// Shipping webhook (provider-agnostic). Uses the 'shipping' source which
+// tries iThink + FShip secrets in order and accepts whichever matches —
+// so the brand can toggle SHIPPING_PROVIDER without re-routing webhooks.
+// Both /shipping/webhook and /fship/webhook (legacy) hit the same handler.
+router.post('/shipping/webhook',        verifyWebhookSignature('shipping'), handleFShipWebhook);
+router.post('/fship/webhook',           verifyWebhookSignature('fship'),    handleFShipWebhook);  // legacy alias
 
 // ── Authenticated user ────────────────────────────────────────────────────
 router.post('/',                        isAuthenticated, createOrder);
