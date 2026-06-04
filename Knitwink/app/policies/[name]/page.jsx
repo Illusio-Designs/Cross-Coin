@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getPolicyByName } from '@/lib/api/policies'
 import SeoWrapper from '@/components/SeoWrapper'
+import { richHtml } from '@/lib/sanitizeHtml'
 
 function formatTitle(name) {
   return (name || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -62,7 +63,7 @@ export default function PolicyPage() {
           {policy?.content && (
             <div
               className="policy-content"
-              dangerouslySetInnerHTML={{ __html: policy.content }}
+              {...richHtml(policy.content)}
             />
           )}
         </div>

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import {
   getUserAddresses,
   createShippingAddress,
@@ -724,10 +725,14 @@ export function CartDrawer() {
 
   if (!isVisible) return null;
 
+  // Trap focus inside the drawer while it's open. Restores focus to
+  // the trigger button (header bag icon) on close. Escape closes.
+  const trapRef = useFocusTrap(drawerOpen, { onEscape: closeDrawer });
+
   return (
     <>
       <div className={`cd-backdrop ${drawerOpen ? 'cd-backdrop-active' : ''}`} onClick={closeDrawer} />
-      <div className={`cd-drawer ${drawerOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
+      <div ref={trapRef} className={`cd-drawer ${drawerOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
 
         {/* Header */}
         <div className="cd-header">

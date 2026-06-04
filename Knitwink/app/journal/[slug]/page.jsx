@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, Clock, User, Share2 } from 'lucide-react'
 import { getPost, getPosts } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
 import SeoWrapper from '@/components/SeoWrapper'
+import { richHtml } from '@/lib/sanitizeHtml'
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }
@@ -68,8 +69,42 @@ export default function BlogPostPage() {
     }
   }
 
+  // JSON-LD: BlogPosting + BreadcrumbList. Google reads JSON-LD even
+  // when emitted by client components (the modern crawler runs JS).
+  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
+  const postingLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    image: post.coverImage ? [post.coverImage] : undefined,
+    datePublished: post.publishedAt || post.createdAt,
+    dateModified: post.updatedAt || post.publishedAt || post.createdAt,
+    author: post.author?.name
+      ? { '@type': 'Person', name: post.author.name }
+      : { '@type': 'Organization', name: 'Knitwink' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Knitwink',
+      logo: { '@type': 'ImageObject', url: `${siteUrl}/knitwinklogo.webp` },
+    },
+    description: post.excerpt || '',
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${siteUrl}/journal/${slug}` },
+  }
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Journal', item: `${siteUrl}/journal` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `${siteUrl}/journal/${slug}` },
+    ],
+  }
+
   return (
     <SeoWrapper pageName={slug || 'blog-details'} seoData={post?.seo || null}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(postingLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+
       {/* Cover image — full width, tall */}
       {post.coverImage && (
         <section className="bg-gray-50">
@@ -110,7 +145,7 @@ export default function BlogPostPage() {
             {/* Body */}
             <div
               className="mt-8 blog-content"
-              dangerouslySetInnerHTML={{ __html: post.body || `<p>${post.excerpt}</p>` }}
+              {...richHtml(post.body || `<p>${post.excerpt || ''}</p>`)}
             />
           </div>
 
