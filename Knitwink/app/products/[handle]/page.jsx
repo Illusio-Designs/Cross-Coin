@@ -44,8 +44,44 @@ export default function ProductPage() {
     <div className="px-5 py-20 text-center text-gray-500">Product not found.</div>
   )
 
+  // JSON-LD: Product schema + BreadcrumbList so Google can render the
+  // page as a rich result. Self-generated content from our DB; not user
+  // HTML, so it intentionally bypasses DOMPurify.
+  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
+  const productLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description,
+    image: (product.images || []).map((i) => i?.image_url || i).filter(Boolean).slice(0, 6),
+    sku: product.sku || product.id,
+    brand: { '@type': 'Brand', name: 'Knitwink' },
+    offers: {
+      '@type': 'Offer',
+      url: `${siteUrl}/products/${handle}`,
+      priceCurrency: 'INR',
+      price: product.price ?? product.variations?.[0]?.price ?? 0,
+      availability: product.inStock !== false
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+    },
+  }
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Collections', item: `${siteUrl}/collections` },
+      { '@type': 'ListItem', position: 3, name: product.name, item: `${siteUrl}/products/${handle}` },
+    ],
+  }
+
   return (
     <SeoWrapper pageName={handle || 'product-details'} seoData={product?.seo || null}>
+      {/* Structured data for rich search results. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+
       {/* Gallery + Info */}
       <div className="px-4 pt-40 pb-8 sm:pt-36 lg:px-8 lg:pt-30">
         <ProductPageClient product={product} />
