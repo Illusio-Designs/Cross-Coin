@@ -38,7 +38,10 @@ function buildErrorMessage(err) {
   if (err?.status == null) {
     return "Can't reach the server. Check your internet connection.";
   }
-  const apiMessage = err?.message;
+  // Use the API-provided message ONLY when it's real — the placeholder
+  // "An error occurred" is the fallback for empty bodies and should
+  // fall through to the per-status copy instead.
+  const apiMessage = err?.message && err.message !== 'An error occurred' ? err.message : null;
   const s = err.status;
   if (s === 401) return apiMessage || 'Please sign in to continue.';
   if (s === 403) return apiMessage || "You don't have permission for that action.";

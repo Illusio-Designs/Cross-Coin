@@ -8,9 +8,20 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getProduct } from '@/lib/api/products'
 import { ProductPageClient } from '@/components/product/ProductPageClient'
-import { FeatureHighlight } from '@/components/product/FeatureHighlight'
-import { CrossSell } from '@/components/product/CrossSell'
-import { ReviewsSection } from '@/components/product/ReviewsSection'
+import dynamic from 'next/dynamic'
+// Below-the-fold sections: code-split so the gallery + ATC render
+// first. The skeletons keep the page from jumping when each chunk
+// arrives. ssr:false on CrossSell because it relies on cart state.
+const FeatureHighlight = dynamic(() => import('@/components/product/FeatureHighlight').then(m => m.FeatureHighlight), {
+  loading: () => <div className="h-96 w-full animate-pulse bg-gray-50" />,
+})
+const ReviewsSection = dynamic(() => import('@/components/product/ReviewsSection').then(m => m.ReviewsSection), {
+  loading: () => <div className="my-12 h-80 w-full animate-pulse rounded-2xl bg-gray-50" />,
+})
+const CrossSell = dynamic(() => import('@/components/product/CrossSell').then(m => m.CrossSell), {
+  loading: () => <div className="my-12 h-72 w-full animate-pulse rounded-2xl bg-gray-50" />,
+  ssr: false,
+})
 import SeoWrapper from '@/components/SeoWrapper'
 
 function ProductSkeleton() {
