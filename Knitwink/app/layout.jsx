@@ -14,6 +14,8 @@ import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import ClientProviders from '@/components/layout/ClientProviders';
+import Analytics from '@/components/layout/Analytics';
 import { SITE_NAME } from '@/lib/constants';
 
 const inter = Inter({
@@ -55,6 +57,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
       <head>
+        {/* Self-generated bootstrap snippet for MSG91 OTP — NOT user-
+            authored content, so it intentionally bypasses DOMPurify.
+            Don't sanitise this; it would mangle the JavaScript. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -81,6 +86,11 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
+        {/* First focusable element — lets keyboard / screen-reader users
+            skip past the nav directly to the page content. Styled in
+            globals.css to be hidden until focused. */}
+        <a href="#main" className="skip-to-main">Skip to main content</a>
+        <ClientProviders>
         <AuthProvider>
         <CartProvider>
         <WishlistHydrator />
@@ -89,15 +99,17 @@ export default function RootLayout({ children }) {
         <Breadcrumb />
         <MobileMenu />
         <CartDrawer />
-        <main className="flex-1 pb-1">
+        <main id="main" className="flex-1 pb-1">
           {children}
         </main>
         <Footer />
         <BackToTop />
         <WhatsAppChat />
         <ToastContainer />
+        <Analytics />
         </CartProvider>
         </AuthProvider>
+        </ClientProviders>
       </body>
     </html>);
 

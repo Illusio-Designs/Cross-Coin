@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -8,6 +9,7 @@ import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
 import { updateProfile, changePassword } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
+import { queryKeys } from '@/lib/queryClient'
 import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
 const TABS = ['My Orders', 'Addresses', 'Account Details', 'Reset Password']
@@ -57,16 +59,27 @@ function getBrandStyle(brandName) {
 
 export default function AccountPage() {
   const { user, loading, logout, fetchUser } = useAuth()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState(0)
 
   // Orders
-  const [orders, setOrders] = useState([])
-  const [loadingOrders, setLoadingOrders] = useState(false)
+  // React Query: orders + addresses replace the manual useEffect+useState pattern.
+  // Refetch via queryClient.invalidateQueries(queryKeys.orders) after cancel/etc.
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: queryKeys.orders,
+    queryFn: async () => (await getUserOrders({ limit: 20 }))?.orders || [],
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  })
   const [orderActionId, setOrderActionId] = useState(null)
 
   // Addresses
-  const [addresses, setAddresses] = useState([])
-  const [loadingAddresses, setLoadingAddresses] = useState(false)
+  const { data: addresses = [], isLoading: loadingAddresses } = useQuery({
+    queryKey: queryKeys.shippingAddresses,
+    queryFn: getAddresses,
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  })
   const [showAddrModal, setShowAddrModal] = useState(false)
   const [editingAddr, setEditingAddr] = useState(null)
   const [addrForm, setAddrForm] = useState({ full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false })
@@ -85,22 +98,9 @@ export default function AccountPage() {
     if (user) { setUsername(user.username || ''); setEmail(user.email || '') }
   }, [user])
 
-  useEffect(() => {
-    if (!user) return
-    if (activeTab === 0) {
-      setLoadingOrders(true)
-      getUserOrders({ limit: 20 }).then(d => setOrders(d?.orders || [])).catch(() => {}).finally(() => setLoadingOrders(false))
-    }
-    if (activeTab === 1) {
-      setLoadingAddresses(true)
-      getAddresses().then(setAddresses).catch(() => {}).finally(() => setLoadingAddresses(false))
-    }
-  }, [activeTab, user])
-
-  // Load addresses for stats
-  useEffect(() => {
-    if (user) getAddresses().then(setAddresses).catch(() => {})
-  }, [user])
+  // (orders + addresses are now React Query-driven; both queries are
+  // enabled as soon as `user` exists, so the manual useEffects that
+  // used to live here are no longer needed.)
 
   const handleLogout = async () => { await logout(); window.location.replace('/') }
 
@@ -115,29 +115,29 @@ export default function AccountPage() {
     setAddrForm({ full_name: a.full_name || '', phone: a.phone_number || a.phone || '', address: a.address || '', city: a.city || '', state: a.state || '', pincode: a.postal_code || a.pincode || '', country: a.country || 'India', is_default: a.is_default || false })
     setShowAddrModal(true)
   }
+  // After every mutation, invalidate the address query — React Query
+  // refetches and keeps the cache consistent across any component that
+  // reads from queryKeys.shippingAddresses.
+  const refetchAddresses = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.shippingAddresses })
+
   const handleAddrSubmit = async (e) => {
     e.preventDefault()
     try {
-      if (editingAddr) {
-        await updateAddress(editingAddr.id, addrForm)
-        const updated = await getAddresses()
-        setAddresses(updated)
-      } else {
-        await createAddress(addrForm)
-        const updated = await getAddresses()
-        setAddresses(updated)
-      }
+      if (editingAddr) await updateAddress(editingAddr.id, addrForm)
+      else              await createAddress(addrForm)
+      refetchAddresses()
       setShowAddrModal(false)
     } catch (err) { alert(err.message) }
   }
   const handleDeleteAddr = async (id) => {
     if (!confirm('Delete this address?')) return
     await deleteAddress(id).catch(() => {})
-    setAddresses(prev => prev.filter(a => a.id !== id))
+    refetchAddresses()
   }
   const handleSetDefault = async (id) => {
     await setDefaultAddress(id).catch(() => {})
-    setAddresses(prev => prev.map(a => ({ ...a, is_default: a.id === id })))
+    refetchAddresses()
   }
 
   // Profile update
@@ -277,7 +277,7 @@ export default function AccountPage() {
                                 setOrderActionId(order.id)
                                 try {
                                   await cancelOrder(order.id, 'Cancelled by customer')
-                                  setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o))
+                                  queryClient.invalidateQueries({ queryKey: queryKeys.orders })
                                 } catch (e) { alert(e.message) }
                                 finally { setOrderActionId(null) }
                               }}>
