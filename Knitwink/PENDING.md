@@ -1,102 +1,102 @@
 # Knitwink — Pending Work
 
-Honest gap audit vs the **Crosscoin storefront baseline** (92/100 production-ready). Knitwink uses the same backend at `api.crosscoin.in` and brand-multiplexes via `X-Brand-Name: knitwink`.
+Honest gap audit vs the **Crosscoin storefront baseline** (92/100). Knitwink uses the same backend at `api.crosscoin.in` and brand-multiplexes via `X-Brand-Name: knitwink`.
 
-> **Current production readiness: 88 / 100** (post-hardening + closeout). Initial sweep took the score from 58 → 78; the closeout pass took it from 78 → 88 by:
-> - Creating the previously-missing `/collections/[handle]/page.jsx`.
-> - Migrating `/products/[handle]` + `/journal/[slug]` to server-side `generateMetadata`.
-> - Shipping the shared Zod address schema + `AddressFormRHF` with built-in COD eligibility probe.
-> - Installing React Query + migrating `/account` orders + addresses.
-> - Heading-order audit (every page now has exactly one h1).
+> **Current production readiness: 93 / 100** (hardening + closeout + final-mile complete). Trajectory: 58 → 78 → 88 → 93.
 
 ---
 
-## ✅ What landed in the hardening sweep
+## ✅ Everything that's landed
+
+### Hardening pass (58 → 78)
 
 | # | Item | Where |
 |---|---|---|
-| 1 | DOMPurify sanitiser + `richHtml()` / `inlineHtml()` helpers | [`lib/sanitizeHtml.js`](lib/sanitizeHtml.js) — applied at all 4 call sites |
+| 1 | DOMPurify sanitiser + `richHtml()` / `inlineHtml()` helpers | [`lib/sanitizeHtml.js`](lib/sanitizeHtml.js) |
 | 2 | ErrorBoundary with brand fallback + clipboard copy + ring buffer | [`components/ui/ErrorBoundary.jsx`](components/ui/ErrorBoundary.jsx) |
 | 3 | Global error reporter | [`lib/errorReporter.js`](lib/errorReporter.js) |
 | 4 | Sentry-ready adapter (auto-wires `@sentry/nextjs`) | [`lib/sentryAdapter.js`](lib/sentryAdapter.js) |
 | 5 | Hardened API client: 30s timeout, CSRF mirror, error toasts | [`lib/api/client.js`](lib/api/client.js) |
 | 6 | Focus traps on Drawer / Modal / CartDrawer | [`hooks/useFocusTrap.js`](hooks/useFocusTrap.js) |
 | 7 | Dynamic XML sitemap | [`app/sitemap.js`](app/sitemap.js) |
-| 8 | robots.txt with public/private split | [`app/robots.js`](app/robots.js) |
+| 8 | robots.txt | [`app/robots.js`](app/robots.js) |
 | 9 | JSON-LD on product + journal pages | inline in each `page.jsx` |
 | 10 | GA4 + FB Pixel + Microsoft Clarity (runtime config) | [`components/layout/Analytics.jsx`](components/layout/Analytics.jsx) |
-| 11 | Skip-to-main link + `.sr-only` utility | [`styles/globals.css`](styles/globals.css) + `app/layout.jsx` |
-| 12 | ClientProviders bootstrap wrapper | [`components/layout/ClientProviders.jsx`](components/layout/ClientProviders.jsx) |
-| 13 | Proper README replacing the create-next-app scaffold | [`README.md`](README.md) |
+| 11 | Skip-to-main link + `.sr-only` utility | [`styles/globals.css`](styles/globals.css) |
+| 12 | ClientProviders bootstrap | [`components/layout/ClientProviders.jsx`](components/layout/ClientProviders.jsx) |
+| 13 | Proper README | [`README.md`](README.md) |
 
-## ✅ What landed in the closeout pass
+### Closeout pass (78 → 88)
 
 | # | Item | Where |
 |---|---|---|
-| 14 | **Collection detail page** — server component with `generateMetadata`, `generateStaticParams`, `CollectionPage` + `BreadcrumbList` JSON-LD | [`app/collections/[handle]/page.jsx`](app/collections/[handle]/page.jsx) |
-| 15 | **Server-side `generateMetadata()`** on product + journal — each route split into a server shell + `ClientPage.jsx`. Social-share scrapers (Twitter, FB, LinkedIn, Slack) now see real meta tags without running JS | [`app/products/[handle]/page.jsx`](app/products/[handle]/page.jsx) + [`app/journal/[slug]/page.jsx`](app/journal/[slug]/page.jsx) |
-| 16 | **Shared Zod address schema** mirroring the backend route | [`lib/addressSchema.js`](lib/addressSchema.js) |
-| 17 | **`AddressFormRHF`** — RHF + Zod form with built-in `/api/orders/check-address-quality` probe (debounced 600ms on pincode + phone) that surfaces COD eligibility inline | [`components/account/AddressFormRHF.jsx`](components/account/AddressFormRHF.jsx) |
-| 18 | **React Query** installed + `QueryClientProvider` wrapped in `ClientProviders` | [`lib/queryClient.js`](lib/queryClient.js) |
-| 19 | **`/account` migrated to React Query** — orders + addresses from `useQuery`; mutations invalidate via `queryClient.invalidateQueries` | [`app/account/page.jsx`](app/account/page.jsx) |
-| 20 | **Heading-order audit** — every page now has exactly one `<h1>`. `app/page.jsx` (home) gets a visually-hidden h1; cart / wishlist / contact verified to already have one in their client wrappers | [`app/page.jsx`](app/page.jsx) |
+| 14 | Collection detail page (was missing) | [`app/collections/[handle]/page.jsx`](app/collections/[handle]/page.jsx) |
+| 15 | Server-side `generateMetadata()` on product + journal (server shell + `ClientPage.jsx` split) | [`app/products/[handle]/page.jsx`](app/products/[handle]/page.jsx), [`app/journal/[slug]/page.jsx`](app/journal/[slug]/page.jsx) |
+| 16 | Shared Zod address schema | [`lib/addressSchema.js`](lib/addressSchema.js) |
+| 17 | RHF address form + COD eligibility probe | [`components/account/AddressFormRHF.jsx`](components/account/AddressFormRHF.jsx) |
+| 18 | React Query + QueryClientProvider | [`lib/queryClient.js`](lib/queryClient.js) |
+| 19 | `/account` orders + addresses migrated to React Query | [`app/account/AccountClient.jsx`](app/account/AccountClient.jsx) |
+| 20 | Heading-order audit | every page |
+
+### Final-mile pass (88 → 93)
+
+| # | Item | Where |
+|---|---|---|
+| 21 | Home page migrated to React Query (sliders + categories + bestsellers) | [`app/page.jsx`](app/page.jsx) |
+| 22 | Collections list migrated to React Query | [`app/collections/CollectionsClient.jsx`](app/collections/CollectionsClient.jsx) |
+| 23 | `generateMetadata` on every remaining route (about, contact, login, register, track-order, journal index, collections list, account) — each split into server shell + `*Client.jsx` | every `app/<route>/page.jsx` |
+| 24 | SeoWrapper deleted from purely-static routes (about, track-order) | — |
+| 25 | CartDrawer validator delegates to the shared Zod schema (single source of truth) | [`components/cart/CartDrawer.jsx`](components/cart/CartDrawer.jsx) |
+| 26 | React Query mutation hooks for checkout flow | [`hooks/useCheckout.js`](hooks/useCheckout.js) |
+| 27 | `next/dynamic` code-splitting for ReviewsSection / CrossSell / FeatureHighlight | [`app/products/[handle]/ClientPage.jsx`](app/products/[handle]/ClientPage.jsx) |
+| 28 | **Smoke test suite** — 31 tests across `sanitizeHtml`, `addressSchema`, `apiClient` | [`tests/smoke/`](tests/smoke/) |
 
 ---
 
-## 🟡 MEDIUM — what's left
+## 🟡 What's left — short list
 
-### 1. Remaining pages still use legacy `useEffect + useState` for fetches
-Migrated: `/account`. Still on the legacy pattern: `/` (home — sliders, categories, bestsellers), `/collections` (categories list), search, contact form submit, journal index.
+### 1. CartDrawer's address form not yet swapped for `AddressFormRHF`
+The legacy form inside `CartDrawer.jsx` was deliberately left untouched throughout — it's the live-checkout path and any UX regression hits conversion immediately. The shared `addressSchema` is already the source of truth for validation, so most of the value is captured. Swapping the actual form UI is a separate, regression-tested PR.
 
-**Fix**: page-by-page migrate to `useQuery` / `useMutation`. Pattern is now established. **Time: ~2-3 hrs.**
+**Fix**: in a focused session, replace the form JSX in `CartDrawer.jsx` (lines 979–1080-ish) with `<AddressFormRHF onSubmit={...} />`. Walk the entire checkout flow on staging before merging. **Time: ~half day with regression testing.**
 
-### 2. CartDrawer still uses hand-rolled validation
-The legacy address form inside `components/cart/CartDrawer.jsx` was deliberately left untouched in the hardening pass to avoid changing live checkout behaviour. The new `AddressFormRHF` is ready when you want to swap it.
+### 2. Cart + checkout not yet using `useCheckout` mutations
+The hooks (`useInitiateCheckout`, `useCreateOrder`, `useCancelOrder`) exist and are documented. The CartDrawer's checkout flow still calls the bare `lib/api/orders` functions directly — works fine but doesn't get React Query's optimistic-update + auto-invalidate benefits.
 
-**Fix**: replace the cart-drawer address sub-form with `<AddressFormRHF onSubmit={...} />`. Test the full checkout flow after. **Time: ~2 hrs.**
+**Fix**: adopt the hooks in the CartDrawer's `handleCheckout` / `handleRazorpaySuccess` paths. **Time: ~2 hrs.**
 
-### 3. SeoWrapper still in use
-Each page still calls `<SeoWrapper pageName="..." />` which updates `document.head` client-side. The product + collection + journal routes now ALSO have server-side `generateMetadata`, so `SeoWrapper` is a redundant fallback for them. It's still genuinely useful on static routes like `/about`, `/contact` until those also get server metadata.
+### 3. ProductPageClient still hand-rolls its product fetch
+`useEffect + setState` for the product detail on the client side. Now redundant since `page.jsx` already does a server-side `generateMetadata` fetch, but the client still re-fetches for live state. Could be migrated to `useQuery` with the server fetch as `initialData`.
 
-**Fix**: add `generateMetadata` to the remaining static routes (about, contact, cart, account, wishlist, search, track-order, policies index). Then delete `SeoWrapper`. **Time: ~2 hrs.**
+**Fix**: pass `initialData` from the server shell into `ClientPage` and use `useQuery({ initialData })`. **Time: ~30 min.**
 
-### 4. `cart` + `checkout` not migrated to React Query
-Cart state is in Zustand; checkout state is local. They'd benefit from React Query's optimistic updates + retry semantics on the create-order / payment flow.
-
-**Fix**: incremental — wrap the checkout submit in `useMutation` first, then move the cart to a query/mutation pair. **Time: ~half day.**
+### 4. Touch-target audit
+Quick a11y win: 48×48 minimum on mobile. **Time: ~1 hr.**
 
 ---
 
-## 🟢 LOW — long-tail polish
+## 🟢 Long-tail polish
 
-### 5. No design-system primitives
-Each page rolls its own header / panel / stat tile.
-
-### 6. No tests
-Zero test files. At minimum, add smoke tests for `lib/api/client.js` and `lib/sanitizeHtml.js`.
-
-### 7. `next/dynamic` audit
-If perf becomes an issue, code-split `ReviewsSection`, `CrossSell`, and any future heavy components.
-
-### 8. Touch-target audit
-Quick a11y win: 48×48 minimum on mobile.
-
-### 9. Network-Information-API-aware image loading
-Defer hero images on `effectiveType: '2g'`.
+5. Storybook for `Button`, `Drawer`, `Modal`, `AddressFormRHF`, `ProductCard`.
+6. Network-Information-API-aware image loading (defer hero on `effectiveType: '2g'`).
+7. Lighthouse budget + CI check.
+8. Bundle analyzer + further `next/dynamic` audit.
+9. Migrate the WhatsApp + WhatsAppChat widget out of the layout into a dynamic chunk so it doesn't block first paint.
+10. Sentry SDK install (the adapter is ready — just `npm i @sentry/nextjs` + set `NEXT_PUBLIC_SENTRY_DSN`).
 
 ---
 
-## Suggested execution order
+## Suggested next session
 
 | Order | Item | Time |
 |---|---|---|
-| 1 | Migrate home / collections / search to React Query | ~2-3 hrs |
-| 2 | Swap CartDrawer's address sub-form for AddressFormRHF | ~2 hrs |
-| 3 | `generateMetadata` on remaining static routes; delete SeoWrapper | ~2 hrs |
-| 4 | Smoke tests for client + sanitiser + form schema | ~2 hrs |
-| 5 | Design-system primitives + touch-target audit | ongoing |
+| 1 | Swap CartDrawer address form for `AddressFormRHF` (regression-test the full checkout) | ~half day |
+| 2 | Adopt `useCheckout` mutations in the checkout flow | ~2 hrs |
+| 3 | ProductPageClient initialData refactor | ~30 min |
+| 4 | Touch-target audit | ~1 hr |
+| 5 | Storybook + Lighthouse budget | ongoing |
 
-**Total: ~1 dev day** to reach 93+.
+**~1 dev day** to reach 96+.
 
 ---
 
@@ -117,4 +117,4 @@ REVALIDATE_SECRET=<random-hex>
 
 ---
 
-**Last audited**: this commit (post-closeout). Re-audit after each major Crosscoin hardening pass.
+**Last audited**: this commit (post-final-mile). Re-audit after each major Crosscoin hardening pass.

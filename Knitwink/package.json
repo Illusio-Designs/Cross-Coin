@@ -6,7 +6,35 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest --forceExit",
+    "test:smoke": "jest --forceExit tests/smoke"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "transform": {
+      "^.+\\.(js|jsx)$": [
+        "babel-jest",
+        {
+          "presets": [
+            "@babel/preset-env",
+            [
+              "@babel/preset-react",
+              {
+                "runtime": "automatic"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "transformIgnorePatterns": ["/node_modules/(?!(zod|@hookform)/)"]
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -29,18 +57,23 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
-    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
     "@babel/preset-typescript": "^7.28.5",
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^30.0.0",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
+    "babel-jest": "^30.4.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "husky": "^9.1.7",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",

@@ -58,39 +58,15 @@ function generateIdempotencyKey() {
   return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+// Delegates to the shared Zod schema in lib/addressSchema.js — single
+// source of truth between this form, the AddressFormRHF component, and
+// the backend Zod schema on /api/shipping-addresses. Local wrapper kept
+// so this file's call sites don't need to change.
 function validateShippingAddress(addr) {
   if (!addr) return { valid: false, errors: ['Address is empty'] };
-  const errors = [];
-  const name = String(addr.full_name || addr.fullName || '').trim();
-  if (!name) errors.push('Customer name is required');
-  else if (name.length < 2) errors.push('Name is too short');
-  else if (/^\d+$/.test(name)) errors.push('Name cannot be only numbers');
-
-  const addrLine = String(addr.address || '').trim();
-  if (!addrLine) errors.push('Street address is required');
-  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters)');
-  const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i];
-  if (junk.some(p => p.test(addrLine))) errors.push('Please enter a real address');
-
-  const city = String(addr.city || '').trim();
-  if (!city) errors.push('City is required');
-  else if (city.length < 2) errors.push('City name is too short');
-
-  const state = String(addr.state || '').trim();
-  if (!state) errors.push('State is required');
-
-  const pin = String(addr.postal_code || addr.postalCode || addr.pincode || '').trim();
-  if (!pin) errors.push('PIN code is required');
-  else if (!/^\d{6}$/.test(pin)) errors.push('PIN code must be exactly 6 digits');
-
-  const phone = String(addr.phone_number || addr.phoneNumber || addr.phone || '').replace(/\D/g, '');
-  if (!phone || phone.length < 10) {
-    errors.push('Valid 10-digit mobile number is required');
-  } else {
-    let ten = phone.length > 10 ? phone.slice(-10) : phone;
-    if (!/^[6-9]\d{9}$/.test(ten)) errors.push('Phone must be a valid Indian mobile (starts with 6-9)');
-  }
-  return { valid: errors.length === 0, errors };
+  const { validateAddress } = require('@/lib/addressSchema');
+  const result = validateAddress(addr);
+  return { valid: result.valid, errors: result.errors };
 }
 
 function isValidEmail(v) {
