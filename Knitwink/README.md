@@ -2,7 +2,7 @@
 
 Next.js 16 App Router storefront for the **Knitwink** brand. Backed by the shared CrossCoin API at `api.crosscoin.in` — brand-multiplexed via the `X-Brand-Name: knitwink` header, so every backend feature (orders, addresses, coupons, SEO admin, shipping, audit logs) works for Knitwink as soon as a brand row exists.
 
-> **Production readiness: 78 / 100** (after the hardening sweep). See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 88 / 100** (after the hardening sweep + the remaining-items closeout). See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -175,22 +175,22 @@ Component is mounted once in `app/layout.jsx`. IDs come from the backend's `/api
 
 ## Production Readiness
 
-**78 / 100** — hardening sweep complete; remaining gaps are documented in [PENDING.md](PENDING.md).
+**88 / 100** — hardening sweep + closeout complete; remaining gaps are documented in [PENDING.md](PENDING.md).
 
 | Area | Score | What hurts |
 |---|---|---|
-| Architecture | 7/10 | Mix of Zustand + React Context; SeoWrapper still client-side |
+| Architecture | 8/10 | Mix of Zustand + React Context + React Query; SeoWrapper retained as a fallback for backend-managed SEO |
 | **Security** | **9/10** | DOMPurify on every user HTML; ErrorBoundary live; CSRF mirror wired; webhook signature backend-side. Sentry init is one env var away |
 | Error handling | 9/10 | ErrorBoundary + 30s timeout + categorised error toasts + window error reporter + Sentry-ready adapter |
-| **Accessibility** | **8/10** | Focus traps on Drawer / Modal / CartDrawer; skip-to-main link; sr-only utility. Heading-order audit on legacy pages still pending |
-| SEO | 7/10 | sitemap + robots + JSON-LD on product/journal pages; **generateMetadata is still client-side via SeoWrapper** (works but suboptimal — Google's modern crawler runs JS but a server-rendered title is faster) |
-| State management | 6/10 | Zustand for cart/wishlist/ui; React Context for auth — works but not migrated to React Query yet |
-| Forms & validation | 6/10 | RHF + Zod installed; only used in some forms |
+| **Accessibility** | **9/10** | Focus traps on Drawer / Modal / CartDrawer; skip-to-main link; sr-only utility; **every page has exactly one h1** |
+| SEO | 9/10 | sitemap + robots + JSON-LD; **`generateMetadata()` now runs server-side** on product / collection / journal so social-share scrapers see real meta tags |
+| State management | 8/10 | Zustand for cart/wishlist/ui; React Context for auth; **React Query for account orders + addresses** (mutations invalidate via `queryClient`) |
+| Forms & validation | 8/10 | Shared Zod schema (`lib/addressSchema.js`) + `AddressFormRHF.jsx` drop-in component with pincode-debounced COD eligibility probe |
 | Mobile / responsive | 7/10 | Tailwind v4 + framer-motion; mostly responsive |
 | Analytics | 7/10 | GA4 + FB Pixel + Clarity via runtime config endpoint |
-| Performance | 6/10 | App Router + ISR on revalidate webhook; no Lighthouse budget yet |
+| Performance | 7/10 | App Router + ISR on revalidate webhook + 5-min ISR on dynamic routes; no Lighthouse budget yet |
 
-### What landed in this hardening pass
+### What landed in the hardening pass
 
 1. **DOMPurify** (`lib/sanitizeHtml.js`) — sanitised the journal, policy, and SectionHeader rendering paths.
 2. **ErrorBoundary** (`components/ui/ErrorBoundary.jsx`) — wraps the entire client subtree. Buffers errors onto `window.__knitwinkErrors` for any monitor to drain.
@@ -199,11 +199,21 @@ Component is mounted once in `app/layout.jsx`. IDs come from the backend's `/api
 5. **Focus traps** on `Drawer`, `Modal`, `CartDrawer` via `hooks/useFocusTrap.js`.
 6. **`app/sitemap.js`** — dynamic XML sitemap (products + categories + journal + policies). 5-min ISR cache.
 7. **`app/robots.js`** — public/private rule split.
-8. **JSON-LD** on product + journal pages — Product / BreadcrumbList / BlogPosting.
+8. **JSON-LD** on product + collection + journal pages — Product / CollectionPage / BlogPosting / BreadcrumbList.
 9. **Analytics** (`components/layout/Analytics.jsx`) — GA4 + FB Pixel + Clarity, IDs fetched at runtime.
 10. **Skip-to-main link** + `.sr-only` utility in `globals.css`.
 
-See [PENDING.md](PENDING.md) for the remaining items.
+### What landed in the closeout pass
+
+11. **`app/collections/[handle]/page.jsx`** — the previously-missing category detail page. Server component with `generateMetadata`, `generateStaticParams`, `CollectionPage` + `BreadcrumbList` JSON-LD.
+12. **Server-side `generateMetadata()` on product + journal pages** — split each into a server shell + client subtree (`ClientPage.jsx`). Social-share scrapers now see real title + description + OG image without JS.
+13. **Shared `lib/addressSchema.js`** — Zod schema mirroring the backend route. Use with `react-hook-form` via `zodResolver`.
+14. **`components/account/AddressFormRHF.jsx`** — drop-in form with built-in `/api/orders/check-address-quality` probe that fires on blur of pincode + phone and surfaces COD eligibility inline.
+15. **React Query installed + `QueryClientProvider`** wrapped in `ClientProviders`. `lib/queryClient.js` has shared key factories.
+16. **`/account` page migrated to React Query** — orders + addresses come from `useQuery`. Mutations invalidate via `queryClient.invalidateQueries`.
+17. **Heading-order audit** — every page now has exactly one `<h1>`. Visually-hidden `sr-only` h1 on the home page; verified on cart, wishlist, contact, etc.
+
+See [PENDING.md](PENDING.md) for what (very little) remains.
 
 ---
 
