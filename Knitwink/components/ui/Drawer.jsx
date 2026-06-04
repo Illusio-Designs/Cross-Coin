@@ -4,18 +4,21 @@ import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 
 export function Drawer({ open, onClose, title, children, side = 'right', className }) {
+  // Body-scroll lock — Escape handling lives in the focus trap.
   useEffect(() => {
     if (!open) return
-    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handleKey)
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open])
+
+  // Trap focus inside the drawer while it's open. Restores focus to the
+  // element that opened it on close. Handles Escape via onEscape.
+  const trapRef = useFocusTrap(open, { onEscape: onClose })
 
   return (
     <AnimatePresence>
@@ -35,6 +38,7 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
 
           {/* Panel */}
           <motion.div
+            ref={trapRef}
             className={cn(
               'fixed top-0 flex h-full w-full max-w-md flex-col bg-white',
               side === 'right' ? 'right-0' : 'left-0',

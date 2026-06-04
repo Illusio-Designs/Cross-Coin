@@ -26,6 +26,10 @@ export default function HomePage() {
 
   return (
     <SeoWrapper pageName="home">
+      {/* Visually-hidden h1 — every page needs exactly one h1 for axe-core
+          and screen readers. The hero design has no visible heading, so
+          we use the sr-only utility from globals.css. */}
+      <h1 className="sr-only">Knitwink — natural-fibre knitwear, made to last</h1>
       <HeroBanner slides={slides} />
       <CategoryCards categories={categories} />
       <ExclusiveSection products={bestsellers.slice(0, 3)} />
