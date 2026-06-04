@@ -2,7 +2,12 @@
 
 Honest gap audit vs the **Crosscoin storefront baseline** (92/100 production-ready). Knitwink uses the same backend at `api.crosscoin.in` and brand-multiplexes via `X-Brand-Name: knitwink`.
 
-> **Current production readiness: 78 / 100** (post-hardening, up from 58). All previously-flagged HIGH-severity items have shipped. The remaining work is per-route SEO polish, design-system migration, and incremental React Query rollout.
+> **Current production readiness: 88 / 100** (post-hardening + closeout). Initial sweep took the score from 58 → 78; the closeout pass took it from 78 → 88 by:
+> - Creating the previously-missing `/collections/[handle]/page.jsx`.
+> - Migrating `/products/[handle]` + `/journal/[slug]` to server-side `generateMetadata`.
+> - Shipping the shared Zod address schema + `AddressFormRHF` with built-in COD eligibility probe.
+> - Installing React Query + migrating `/account` orders + addresses.
+> - Heading-order audit (every page now has exactly one h1).
 
 ---
 
@@ -10,93 +15,74 @@ Honest gap audit vs the **Crosscoin storefront baseline** (92/100 production-rea
 
 | # | Item | Where |
 |---|---|---|
-| 1 | DOMPurify sanitiser + `richHtml()` + `inlineHtml()` helpers | [`lib/sanitizeHtml.js`](lib/sanitizeHtml.js) — applied at all 4 call sites (journal, policies, SectionHeader; layout MSG91 script is self-generated → intentionally bypasses) |
-| 2 | ErrorBoundary with brand-consistent fallback + clipboard copy + ring buffer | [`components/ui/ErrorBoundary.jsx`](components/ui/ErrorBoundary.jsx) |
-| 3 | Global error reporter (window error + unhandled rejection + ErrorBoundary drain) | [`lib/errorReporter.js`](lib/errorReporter.js) |
-| 4 | Sentry-ready adapter (auto-wires `@sentry/nextjs` when installed + DSN set) | [`lib/sentryAdapter.js`](lib/sentryAdapter.js) |
-| 5 | Hardened API client: 30s timeout, CSRF mirror, categorised error toasts | [`lib/api/client.js`](lib/api/client.js) |
-| 6 | Focus traps on `Drawer`, `Modal`, `CartDrawer` | [`hooks/useFocusTrap.js`](hooks/useFocusTrap.js) |
-| 7 | Dynamic XML sitemap (products + categories + journal + policies) | [`app/sitemap.js`](app/sitemap.js) |
-| 8 | `robots.txt` with public/private rule split | [`app/robots.js`](app/robots.js) |
-| 9 | JSON-LD on product + journal pages (Product / BlogPosting / BreadcrumbList) | inline in each `page.jsx` |
-| 10 | Runtime-config analytics: GA4 + FB Pixel + Microsoft Clarity | [`components/layout/Analytics.jsx`](components/layout/Analytics.jsx) |
+| 1 | DOMPurify sanitiser + `richHtml()` / `inlineHtml()` helpers | [`lib/sanitizeHtml.js`](lib/sanitizeHtml.js) — applied at all 4 call sites |
+| 2 | ErrorBoundary with brand fallback + clipboard copy + ring buffer | [`components/ui/ErrorBoundary.jsx`](components/ui/ErrorBoundary.jsx) |
+| 3 | Global error reporter | [`lib/errorReporter.js`](lib/errorReporter.js) |
+| 4 | Sentry-ready adapter (auto-wires `@sentry/nextjs`) | [`lib/sentryAdapter.js`](lib/sentryAdapter.js) |
+| 5 | Hardened API client: 30s timeout, CSRF mirror, error toasts | [`lib/api/client.js`](lib/api/client.js) |
+| 6 | Focus traps on Drawer / Modal / CartDrawer | [`hooks/useFocusTrap.js`](hooks/useFocusTrap.js) |
+| 7 | Dynamic XML sitemap | [`app/sitemap.js`](app/sitemap.js) |
+| 8 | robots.txt with public/private split | [`app/robots.js`](app/robots.js) |
+| 9 | JSON-LD on product + journal pages | inline in each `page.jsx` |
+| 10 | GA4 + FB Pixel + Microsoft Clarity (runtime config) | [`components/layout/Analytics.jsx`](components/layout/Analytics.jsx) |
 | 11 | Skip-to-main link + `.sr-only` utility | [`styles/globals.css`](styles/globals.css) + `app/layout.jsx` |
-| 12 | ClientProviders wrapper that wires everything above into the root | [`components/layout/ClientProviders.jsx`](components/layout/ClientProviders.jsx) |
+| 12 | ClientProviders bootstrap wrapper | [`components/layout/ClientProviders.jsx`](components/layout/ClientProviders.jsx) |
 | 13 | Proper README replacing the create-next-app scaffold | [`README.md`](README.md) |
 
----
+## ✅ What landed in the closeout pass
 
-## 🔴 Remaining HIGH severity
-
-### 1. Missing `app/collections/[handle]/page.jsx`
-The folder only contains `loading.jsx` — there is no actual page component, so visiting `/collections/<handle>` 404s. This is a **broken feature**, not a hardening issue.
-
-**Fix**: create the page component following the Crosscoin collection page pattern — fetch category by handle from `/api/categories/by-slug/<handle>`, render the product grid, emit `CollectionPage` JSON-LD, and add a `BreadcrumbList`. **Time: ~2 hrs.**
-
----
-
-## 🟡 MEDIUM (do before scaling traffic)
-
-### 2. `generateMetadata()` on dynamic pages (product / collection / journal)
-The current `SeoWrapper` injects title + meta + OG tags from a `useEffect` (client-side). Modern Google does run JS, so this works — but server-rendered metadata is faster on social-share crawlers (Twitter, Facebook, Slack previews) that don't run JS at all.
-
-**Fix**: split each dynamic page into a **server component shell** that exports `generateMetadata({ params })` + a thin client component for the interactive parts. Pattern:
-```jsx
-// app/products/[handle]/page.jsx (server)
-export async function generateMetadata({ params }) {
-  const product = await fetch(`${API_URL}/api/products/by-slug/${params.handle}`).then(r => r.json())
-  return { title: product.name, description: product.description, ... }
-}
-export default function ProductPage({ params }) {
-  return <ProductClient handle={params.handle} />
-}
-```
-**Time: ~3 hrs across product / collection / journal.**
-
-### 3. Address quality / COD eligibility check at checkout
-Backend exposes `POST /api/orders/check-address-quality` — Knitwink doesn't call it. Customers with bad addresses get bounced at order-create time instead of at address-entry time.
-
-**Fix**: in the address form, debounce a call on `onBlur` of the pincode + phone. Surface the recommendation (`prepaid` / `either` / `cod-not-allowed`) inline. **Time: ~30 min.**
-
-### 4. Shared Zod address schema + react-hook-form rewrite of the address form
-The deps are installed; no form uses them yet. Crosscoin has [`utils/addressSchema.js`](../Crosscoin/src/utils/addressSchema.js) and [`AddressFormRHF.jsx`](../Crosscoin/src/components/common/AddressFormRHF.jsx) ready to copy.
-
-**Fix**: drop both files into `lib/` and `components/account/`. **Time: ~1 hr.**
-
-### 5. Migrate dashboard data fetching to React Query
-Infrastructure isn't wired yet. App Router's server components can use direct `fetch` and cache via `next: { revalidate }`, so the win is on **client mutations** (cart, wishlist, account profile updates).
-
-**Fix**:
-```bash
-npm install @tanstack/react-query
-```
-Then wrap the root in a `<QueryClientProvider>` (must be in `ClientProviders.jsx`). Migrate one page at a time, starting with `/account` and `/wishlist`. **Time: ~half day.**
-
-### 6. Heading-order audit on legacy pages
-Quick axe-core scan would surface any pages missing an `<h1>` or jumping levels (h1 → h3).
-
-**Fix**: run `axe-core` against the dev server, fix any flagged pages. Crosscoin already added `sr-only` h1s where the design has no visible title. **Time: ~1 hr.**
+| # | Item | Where |
+|---|---|---|
+| 14 | **Collection detail page** — server component with `generateMetadata`, `generateStaticParams`, `CollectionPage` + `BreadcrumbList` JSON-LD | [`app/collections/[handle]/page.jsx`](app/collections/[handle]/page.jsx) |
+| 15 | **Server-side `generateMetadata()`** on product + journal — each route split into a server shell + `ClientPage.jsx`. Social-share scrapers (Twitter, FB, LinkedIn, Slack) now see real meta tags without running JS | [`app/products/[handle]/page.jsx`](app/products/[handle]/page.jsx) + [`app/journal/[slug]/page.jsx`](app/journal/[slug]/page.jsx) |
+| 16 | **Shared Zod address schema** mirroring the backend route | [`lib/addressSchema.js`](lib/addressSchema.js) |
+| 17 | **`AddressFormRHF`** — RHF + Zod form with built-in `/api/orders/check-address-quality` probe (debounced 600ms on pincode + phone) that surfaces COD eligibility inline | [`components/account/AddressFormRHF.jsx`](components/account/AddressFormRHF.jsx) |
+| 18 | **React Query** installed + `QueryClientProvider` wrapped in `ClientProviders` | [`lib/queryClient.js`](lib/queryClient.js) |
+| 19 | **`/account` migrated to React Query** — orders + addresses from `useQuery`; mutations invalidate via `queryClient.invalidateQueries` | [`app/account/page.jsx`](app/account/page.jsx) |
+| 20 | **Heading-order audit** — every page now has exactly one `<h1>`. `app/page.jsx` (home) gets a visually-hidden h1; cart / wishlist / contact verified to already have one in their client wrappers | [`app/page.jsx`](app/page.jsx) |
 
 ---
 
-## 🟢 LOW (long-tail polish)
+## 🟡 MEDIUM — what's left
 
-### 7. No design-system primitives
-Each page rolls its own headers / panels / stat tiles. Crosscoin has 6 reusable primitives at [`components/Dashboard/primitives/`](../Crosscoin/src/components/Dashboard/primitives). Not critical for a public storefront but pays dividends on the account / admin side.
+### 1. Remaining pages still use legacy `useEffect + useState` for fetches
+Migrated: `/account`. Still on the legacy pattern: `/` (home — sliders, categories, bestsellers), `/collections` (categories list), search, contact form submit, journal index.
 
-### 8. No tests
-Zero test files. At minimum, add smoke tests for `lib/api/client.js` (timeout, CSRF mirror, error categorisation), `lib/sanitizeHtml.js`, and the cart store reducer.
+**Fix**: page-by-page migrate to `useQuery` / `useMutation`. Pattern is now established. **Time: ~2-3 hrs.**
 
-**Fix**: install Jest + jsdom, mirror Crosscoin's `tests/smoke/` structure. **Time: ~2 hrs setup + ongoing.**
+### 2. CartDrawer still uses hand-rolled validation
+The legacy address form inside `components/cart/CartDrawer.jsx` was deliberately left untouched in the hardening pass to avoid changing live checkout behaviour. The new `AddressFormRHF` is ready when you want to swap it.
 
-### 9. No OpenAPI consumption
-Backend exposes `/api/docs` (Swagger UI + JSON). Frontend code could auto-type API responses from the spec. Optional but nice.
+**Fix**: replace the cart-drawer address sub-form with `<AddressFormRHF onSubmit={...} />`. Test the full checkout flow after. **Time: ~2 hrs.**
 
-### 10. No `next/dynamic` audit for heavy components
-If perf becomes an issue, code-split the `ReviewsSection`, `CrossSell`, and any future 3D / video components.
+### 3. SeoWrapper still in use
+Each page still calls `<SeoWrapper pageName="..." />` which updates `document.head` client-side. The product + collection + journal routes now ALSO have server-side `generateMetadata`, so `SeoWrapper` is a redundant fallback for them. It's still genuinely useful on static routes like `/about`, `/contact` until those also get server metadata.
 
-### 11. SeoWrapper is still client-side
-Once `generateMetadata` is in place on every dynamic route (item #2), `SeoWrapper` can be removed. Until then it's a fallback for backend-managed `/api/seo?page_name=...` content.
+**Fix**: add `generateMetadata` to the remaining static routes (about, contact, cart, account, wishlist, search, track-order, policies index). Then delete `SeoWrapper`. **Time: ~2 hrs.**
+
+### 4. `cart` + `checkout` not migrated to React Query
+Cart state is in Zustand; checkout state is local. They'd benefit from React Query's optimistic updates + retry semantics on the create-order / payment flow.
+
+**Fix**: incremental — wrap the checkout submit in `useMutation` first, then move the cart to a query/mutation pair. **Time: ~half day.**
+
+---
+
+## 🟢 LOW — long-tail polish
+
+### 5. No design-system primitives
+Each page rolls its own header / panel / stat tile.
+
+### 6. No tests
+Zero test files. At minimum, add smoke tests for `lib/api/client.js` and `lib/sanitizeHtml.js`.
+
+### 7. `next/dynamic` audit
+If perf becomes an issue, code-split `ReviewsSection`, `CrossSell`, and any future heavy components.
+
+### 8. Touch-target audit
+Quick a11y win: 48×48 minimum on mobile.
+
+### 9. Network-Information-API-aware image loading
+Defer hero images on `effectiveType: '2g'`.
 
 ---
 
@@ -104,25 +90,13 @@ Once `generateMetadata` is in place on every dynamic route (item #2), `SeoWrappe
 
 | Order | Item | Time |
 |---|---|---|
-| 1 | **Create `app/collections/[handle]/page.jsx`** (broken feature) | ~2 hrs |
-| 2 | `generateMetadata` migration on product / collection / journal | ~3 hrs |
-| 3 | Address quality check + RHF address form + shared schema | ~1.5 hrs |
-| 4 | React Query install + migrate account/wishlist | ~half day |
-| 5 | Heading-order audit | ~1 hr |
-| 6 | Smoke tests + (eventually) design-system migration | ongoing |
+| 1 | Migrate home / collections / search to React Query | ~2-3 hrs |
+| 2 | Swap CartDrawer's address sub-form for AddressFormRHF | ~2 hrs |
+| 3 | `generateMetadata` on remaining static routes; delete SeoWrapper | ~2 hrs |
+| 4 | Smoke tests for client + sanitiser + form schema | ~2 hrs |
+| 5 | Design-system primitives + touch-target audit | ongoing |
 
-**Total: ~1-2 dev days** to reach 88+ readiness.
-
----
-
-## What to copy from Crosscoin (still relevant)
-
-| Crosscoin file | Knitwink drop-in target |
-|---|---|
-| `Crosscoin/src/utils/addressSchema.js` | `lib/addressSchema.js` |
-| `Crosscoin/src/components/common/AddressFormRHF.jsx` | `components/account/AddressForm.jsx` |
-| `Crosscoin/src/pages/collections/[slug].jsx` (logic) | reference for `app/collections/[handle]/page.jsx` |
-| `Crosscoin/Backend/tests/smoke/api-response.test.js` (pattern) | use for `lib/api/client.test.js` once tests are wired |
+**Total: ~1 dev day** to reach 93+.
 
 ---
 
@@ -143,4 +117,4 @@ REVALIDATE_SECRET=<random-hex>
 
 ---
 
-**Last audited**: this commit (post-hardening). Re-audit after each major Crosscoin hardening pass.
+**Last audited**: this commit (post-closeout). Re-audit after each major Crosscoin hardening pass.
