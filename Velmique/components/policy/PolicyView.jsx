@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/layout/PageHeader';
 import { getPolicyByName } from '@/lib/api/policies';
+import { richHtml } from '@/lib/sanitizeHtml';
 
 /* Renders a policy fetched from the public Policies API.
    - When the API returns a title, we use it whole (no fallbackAccent append).
@@ -62,7 +63,7 @@ export default function PolicyView({
           {status === 'ready' && (
             <div
               className="policy-content text-[var(--ink-soft)] font-body"
-              dangerouslySetInnerHTML={{ __html: html }}
+              {...richHtml(html)}
             />
           )}
 
