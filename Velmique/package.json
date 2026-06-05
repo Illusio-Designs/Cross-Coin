@@ -7,18 +7,27 @@
     "dev": "rimraf .next && next dev",
     "dev:fast": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "analyze": "cross-env ANALYZE=true next build",
+    "lhci": "lhci autorun",
+    "test": "jest"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "@tanstack/react-query": "^5.101.0",
     "framer-motion": "^11",
+    "isomorphic-dompurify": "^3.15.0",
+    "js-cookie": "^3.0.8",
     "lucide-react": "^0.383.0",
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
+    "react-hook-form": "^7.77.0",
     "react-toastify": "^11.1.0",
-    "three": "^0.169.0"
+    "three": "^0.169.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -29,5 +38,28 @@
     "rimraf": "^5.0.10",
     "tailwindcss": "^3",
     "typescript": "^5"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "transform": {
+      "^.+\\.(js|jsx)$": [
+        "babel-jest",
+        {
+          "presets": [
+            "@babel/preset-env",
+            ["@babel/preset-react", { "runtime": "automatic" }]
+          ]
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(zod|@hookform)/)"
+    ]
   }
 }
