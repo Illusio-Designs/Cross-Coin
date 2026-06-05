@@ -6,20 +6,61 @@ import { createPortal } from 'react-dom';
 const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
 const WA_MESSAGE = 'Hi! I need help with Knitwink.';
 
+/**
+ * Floating WhatsApp chat button.
+ *
+ * Lazy-mounted to keep first paint fast:
+ *   - Wait for requestIdleCallback (or 2.5s setTimeout fallback) before
+ *     showing the FAB, so the LCP element renders without competition.
+ *   - Skip entirely on save-data / 2g connections (the user is on a
+ *     tight bandwidth budget; a chat widget can wait for them to
+ *     explicitly tap the contact link).
+ *   - First user scroll triggers an early mount so the widget is in
+ *     place before they ever look for support.
+ */
 export function WhatsAppChat() {
   const [greetVisible, setGreetVisible] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
   const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;
 
   useEffect(() => {
-    setMounted(true);
-    const onScroll = () => setScrolled(window.scrollY > 200);
+    // Skip entirely on save-data / 2g — see lib/netinfo.js.
+    let prefersReducedData = false;
+    try {
+      // eslint-disable-next-line global-require
+      const { prefersReducedData: fn } = require('@/lib/netinfo');
+      prefersReducedData = fn();
+    } catch { /* ignore — defer always renders */ }
+    if (prefersReducedData) return;
+
+    // Mount once the browser is idle, or after 2.5s as a fallback.
+    let cancelled = false;
+    const mount = () => { if (!cancelled) setShouldRender(true); };
+    let idleId, timeoutId;
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(mount, { timeout: 2500 });
+    } else {
+      timeoutId = setTimeout(mount, 2500);
+    }
+
+    const onScroll = () => {
+      setScrolled(window.scrollY > 200);
+      if (!cancelled) setShouldRender(true);   // first scroll → mount early
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+
+    return () => {
+      cancelled = true;
+      if (idleId && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
-  if (!mounted) return null;
+  if (!shouldRender) return null;
 
   const showGreet = greetVisible && !scrolled;
 
@@ -34,7 +75,7 @@ export function WhatsAppChat() {
             👋 Hi! Need help? Chat with us
           </span>
           <button
-            className="wachat-greet-close"
+            className="wachat-greet-close no-touch-min"
             onClick={() => setGreetVisible(false)}
             aria-label="Close"
           >
