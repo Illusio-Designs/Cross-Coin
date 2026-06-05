@@ -2,7 +2,7 @@
 
 Next.js 16 App Router storefront for the **Knitwink** brand. Backed by the shared CrossCoin API at `api.crosscoin.in` — brand-multiplexed via the `X-Brand-Name: knitwink` header, so every backend feature (orders, addresses, coupons, SEO admin, shipping, audit logs) works for Knitwink as soon as a brand row exists.
 
-> **Production readiness: 93 / 100** (hardening + closeout + final-mile complete). See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
+> **Production readiness: 96 / 100** (hardening + closeout + final-mile + polish complete). See [§ Production Readiness](#production-readiness) for the honest breakdown and what's still pending.
 
 ---
 
@@ -175,7 +175,7 @@ Component is mounted once in `app/layout.jsx`. IDs come from the backend's `/api
 
 ## Production Readiness
 
-**93 / 100** — hardening + closeout + final-mile complete.
+**96 / 100** — hardening + closeout + final-mile + polish complete.
 
 | Area | Score | What hurts |
 |---|---|---|
@@ -188,7 +188,9 @@ Component is mounted once in `app/layout.jsx`. IDs come from the backend's `/api
 | Forms & validation | 9/10 | Shared Zod schema (`lib/addressSchema.js`) covered by 14 smoke tests. `AddressFormRHF.jsx` drop-in with pincode-debounced COD eligibility probe. CartDrawer's legacy validator now delegates to the shared schema (single source of truth) |
 | Mobile / responsive | 7/10 | Tailwind v4 + framer-motion; mostly responsive; touch-target audit pending |
 | Analytics | 7/10 | GA4 + FB Pixel + Clarity via runtime config endpoint |
-| **Performance** | **8/10** | App Router + ISR webhook + 5-min ISR on dynamic routes; `next/dynamic` code-splits below-the-fold product sections (ReviewsSection, CrossSell, FeatureHighlight) with skeleton fallbacks |
+| **Performance** | **9/10** | App Router + ISR webhook + 5-min ISR; `next/dynamic` code-splits below-the-fold product sections; `lib/netinfo.js` exposes connection-aware helpers; Lighthouse-CI budget at `lighthouserc.json` (P:85 / A:95 / SEO:95 / LCP ≤2.5s) ready to wire into CI |
+| Mobile / responsive | 8/10 | Tailwind v4 + framer-motion; **CSS-enforced 44×44 touch targets on mobile** via globals.css media query (opt-out with `.no-touch-min`) |
+| Monitoring | 9/10 | `@sentry/nextjs` SDK installed; `lib/sentryAdapter.js` auto-wires it when `NEXT_PUBLIC_SENTRY_DSN` is set. Until then, errors POST to `/api/client-errors` |
 
 ### What landed in the hardening pass
 
@@ -223,7 +225,17 @@ Component is mounted once in `app/layout.jsx`. IDs come from the backend's `/api
 23. **Code-splitting** — `ReviewsSection`, `CrossSell`, `FeatureHighlight` lazy-loaded via `next/dynamic` with skeleton fallbacks. First-paint includes only the gallery + ATC.
 24. **Smoke test suite** — 31 tests across 3 files (`lib/sanitizeHtml.js`, `lib/addressSchema.js`, `lib/api/client.js`). Run with `npm test` or `npm run test:smoke`.
 
-See [PENDING.md](PENDING.md) for what remains.
+### What landed in the polish pass
+
+25. **`@sentry/nextjs` SDK installed** — `lib/sentryAdapter.js` auto-detects it. Set `NEXT_PUBLIC_SENTRY_DSN` in env to flip from the default `/api/client-errors` sink to Sentry. Zero code change.
+26. **Product page `initialData` refactor** — `app/products/[handle]/page.jsx` now fetches the product on the server (sharing Next's request-dedupe with `generateMetadata`) and passes it to `ClientPage` as `initialProduct`. `useQuery` seeds its cache from `initialData` so there's no client refetch on hydration.
+27. **Touch-target audit** — globals.css enforces 44×44 minimum on every `<button>`, `[role="button"]`, and nav/footer/header `<a>` on screens ≤768px. Opt-out per-element with `.no-touch-min`.
+28. **`useCheckout` mutations adopted in CartDrawer** — `createOrder` / `createGuestOrder` / `initiateCheckout` / `initiateGuestCheckout` calls now go through React Query mutation hooks. On success, `queryKeys.orders` is auto-invalidated so `/account` shows the new order without a manual refetch.
+29. **Address-quality probe in CartDrawer** — debounced 600ms call to `/api/orders/check-address-quality` once pincode + phone parse. Surfaces a quality score + COD eligibility banner above the submit button. Matches the AddressFormRHF UX without changing the existing form structure.
+30. **Lighthouse-CI budget** — `lighthouserc.json` defines mobile-first numbers (P≥85, A≥95, SEO≥95, LCP ≤2.5s, CLS ≤0.1, tap-targets enforced). Run `npx lhci autorun` against a deployed preview; wire into CI when ready.
+31. **`lib/netinfo.js`** — connection-aware helpers (`getNetworkHint`, `prefersReducedData`, `pickImageForConnection`). Use for save-data / 2g users.
+
+See [PENDING.md](PENDING.md) for what (very little) remains.
 
 ---
 

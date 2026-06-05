@@ -10,15 +10,20 @@ import {
   createShippingAddress,
   updateShippingAddress,
   getShippingFees,
-  createOrder,
-  createGuestOrder,
-  initiateCheckout,
-  initiateGuestCheckout,
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
 } from '@/lib/api/orders';
+// Order creation + checkout go through the React Query mutation
+// hooks so that successful orders auto-invalidate queryKeys.orders —
+// /account picks up the new order with no manual refetch.
+import {
+  useInitiateCheckout,
+  useInitiateGuestCheckout,
+  useCreateOrder,
+  useCreateGuestOrder,
+} from '@/hooks/useCheckout';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -150,6 +155,58 @@ export function CartDrawer() {
   const [isVisible, setIsVisible] = useState(false);
   const [urgencySeconds, setUrgencySeconds] = useState(10 * 60);
 
+  // ── Address-quality probe ─────────────────────────────────────────
+  // Debounced 600ms. Fires when both pincode + phone parse. Result is
+  // displayed as a banner above the submit button.
+  useEffect(() => {
+    if (!showAddressForm) { setAddressQuality(null); return; }
+    const pin = String(addressForm.postalCode || '').trim();
+    const phone = String(addressForm.phoneNumber || guestInfo.phone || '').trim();
+    if (!/^\d{6}$/.test(pin)) return;
+    if (!/^\d{10}$/.test(phone)) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+        const r = await fetch(`${API_URL}/api/orders/check-address-quality`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink' },
+          body: JSON.stringify({
+            line1: addressForm.address || 'placeholder',
+            landmark: '',
+            city: addressForm.city || '',
+            state: addressForm.state || '',
+            pincode: pin,
+            phone,
+          }),
+        });
+        if (!r.ok) return;
+        const json = await r.json();
+        const data = json?.data || json;
+        if (!cancelled) setAddressQuality({
+          score: data?.score,
+          cod_allowed: data?.cod_allowed,
+          recommendation: data?.recommendation,
+        });
+      } catch { if (!cancelled) setAddressQuality(null); }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [showAddressForm, addressForm.postalCode, addressForm.phoneNumber, addressForm.address, addressForm.city, addressForm.state, guestInfo.phone]);
+
+  // ── Mutation hooks for the checkout flow ──────────────────────────
+  // mutateAsync returns the resolved value and re-throws on failure,
+  // so swapping `await createOrder(d)` → `await createOrderMutation(d)`
+  // is a behavior-preserving change. The win: on success the hook
+  // invalidates queryKeys.orders so /account refreshes automatically.
+  const initiateCheckoutMutation = useInitiateCheckout();
+  const initiateGuestCheckoutMutation = useInitiateGuestCheckout();
+  const createOrderMutation = useCreateOrder();
+  const createGuestOrderMutation = useCreateGuestOrder();
+  const initiateCheckout = (data) => initiateCheckoutMutation.mutateAsync(data);
+  const initiateGuestCheckout = (data) => initiateGuestCheckoutMutation.mutateAsync(data);
+  const createOrder = (data) => createOrderMutation.mutateAsync(data);
+  const createGuestOrder = (data) => createGuestOrderMutation.mutateAsync(data);
+
   useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
@@ -179,6 +236,11 @@ export function CartDrawer() {
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [pincodeServiceability, setPincodeServiceability] = useState(null);
+  // Address-quality probe — debounced /api/orders/check-address-quality
+  // call once pincode + phone are populated. Complements the pincode
+  // serviceability check above by adding a 0-100 quality score and
+  // recommendation. Same probe lives in components/account/AddressFormRHF.jsx.
+  const [addressQuality, setAddressQuality] = useState(null);
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1018,6 +1080,26 @@ export function CartDrawer() {
                             </div>
                           )}
                         </div>
+                        {addressQuality && (
+                          <div
+                            role="status"
+                            aria-live="polite"
+                            style={{
+                              margin: '8px 0 12px',
+                              padding: '10px 12px',
+                              borderRadius: 8,
+                              fontSize: 13,
+                              background: addressQuality.cod_allowed === false ? '#fef3c7' : '#ecfdf5',
+                              color: addressQuality.cod_allowed === false ? '#92400e' : '#065f46',
+                              border: `1px solid ${addressQuality.cod_allowed === false ? '#fcd34d' : '#a7f3d0'}`,
+                            }}
+                          >
+                            <strong>Address quality: {addressQuality.score}/100.</strong>{' '}
+                            {addressQuality.cod_allowed === false
+                              ? 'COD is not available — please pick a prepaid option.'
+                              : 'COD is available for this address.'}
+                          </div>
+                        )}
                         <div className="cd-form-actions">
                           <button type="submit" className="cd-btn-primary" disabled={addressSaving || Object.keys(fieldErrors).length > 0}>
                             {addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}

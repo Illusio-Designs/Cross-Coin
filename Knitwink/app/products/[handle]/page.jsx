@@ -6,9 +6,9 @@
  * description + OG image without running JS. The interactive UI
  * (gallery, cart, wishlist) lives in ClientPage.jsx.
  *
- * The fetch here is cheap because it goes through Next's request-
- * dedupe — ClientPage.jsx's getProduct() call on the same handle
- * during the same request is deduped to a single backend round-trip.
+ * The product fetched here is passed to ClientPage as `initialProduct`
+ * — ClientPage seeds React Query's cache with it via `initialData` so
+ * the browser doesn't refetch the same payload on hydration.
  */
 
 import ClientPage from './ClientPage';
@@ -18,10 +18,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com';
 
 export const revalidate = 300;   // ISR cache for the server-rendered shell
 
+async function fetchProduct(handle) {
+  try { return await getProduct(handle); } catch { return null; }
+}
+
 export async function generateMetadata({ params }) {
   const { handle } = await params;
-  let product = null;
-  try { product = await getProduct(handle); } catch { /* 404 handled below */ }
+  const product = await fetchProduct(handle);
 
   if (!product) {
     return { title: 'Product not found', robots: { index: false, follow: true } };
@@ -49,7 +52,13 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default function ProductRoute() {
-  // ClientPage handles all interactive state; server work is just metadata.
-  return <ClientPage />;
+export default async function ProductRoute({ params }) {
+  const { handle } = await params;
+  // Server-side fetch — Next dedupes this with generateMetadata's call,
+  // so we pay for one backend round-trip total. The payload is then
+  // streamed into ClientPage as `initialProduct` so React Query's
+  // useQuery seeds its cache from this value (no client refetch on
+  // hydration).
+  const initialProduct = await fetchProduct(handle);
+  return <ClientPage initialHandle={handle} initialProduct={initialProduct} />;
 }
