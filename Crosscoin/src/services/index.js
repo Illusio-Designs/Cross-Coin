@@ -1461,31 +1461,32 @@ export const reviewService = {
 };
 
 // SEO Services — adminApi by default sends NO brand header, but the backend
-// schema requires brand_id NOT NULL on writes. We tag every SEO write with
-// X-Brand-Name: crosscoin so the backend resolves brand_id to crosscoin (id=1)
-// instead of trying to insert NULL and failing.
-const SEO_BRAND_HEADER = { 'X-Brand-Name': 'crosscoin' };
+// schema requires brand_id NOT NULL on writes. We tag every SEO request with
+// X-Brand-Name: <brandSlug> so the backend resolves brand_id and scopes the
+// page metadata to that brand. The slug comes from the brand selector in the
+// SEO hub; it defaults to 'crosscoin' (brand id 1) when none is supplied.
+const seoBrandHeader = (brandSlug = 'crosscoin') => ({ 'X-Brand-Name': brandSlug || 'crosscoin' });
 
 export const seoService = {
-  getAllSEOData: async () => {
+  getAllSEOData: async (brandSlug) => {
     try {
-      const response = await adminApi.get("/api/seo/all", { headers: SEO_BRAND_HEADER });
+      const response = await adminApi.get("/api/seo/all", { headers: seoBrandHeader(brandSlug) });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
     }
   },
 
-  getSEOData: async (pageName) => {
+  getSEOData: async (pageName, brandSlug) => {
     try {
-      const response = await adminApi.get(`/api/seo?page_name=${pageName}`, { headers: SEO_BRAND_HEADER });
+      const response = await adminApi.get(`/api/seo?page_name=${pageName}`, { headers: seoBrandHeader(brandSlug) });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
     }
   },
 
-  createSEOData: async (formData) => {
+  createSEOData: async (formData, brandSlug) => {
     try {
       const data = new FormData();
       data.append("page_name", formData.get("page_name"));
@@ -1501,7 +1502,7 @@ export const seoService = {
       }
 
       const response = await adminApi.post("/api/seo/create", data, {
-        headers: { "Content-Type": "multipart/form-data", ...SEO_BRAND_HEADER },
+        headers: { "Content-Type": "multipart/form-data", ...seoBrandHeader(brandSlug) },
       });
       return response.data;
     } catch (error) {
@@ -1509,10 +1510,10 @@ export const seoService = {
     }
   },
 
-  updateSEOData: async (formData) => {
+  updateSEOData: async (formData, brandSlug) => {
     try {
       const response = await adminApi.put("/api/seo/update", formData, {
-        headers: { "Content-Type": "multipart/form-data", ...SEO_BRAND_HEADER },
+        headers: { "Content-Type": "multipart/form-data", ...seoBrandHeader(brandSlug) },
       });
       return response.data;
     } catch (error) {
@@ -1520,9 +1521,9 @@ export const seoService = {
     }
   },
 
-  deleteSEOData: async (pageName) => {
+  deleteSEOData: async (pageName, brandSlug) => {
     try {
-      const response = await adminApi.delete(`/api/seo/${pageName}`, { headers: SEO_BRAND_HEADER });
+      const response = await adminApi.delete(`/api/seo/${pageName}`, { headers: seoBrandHeader(brandSlug) });
       return response.data;
     } catch (error) {
       throw handleApiError(error);

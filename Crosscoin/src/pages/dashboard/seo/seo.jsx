@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import SerpPreview from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 
-export default function SEO() {
+export default function SEO({ brandSlug = 'crosscoin' } = {}) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -61,7 +61,7 @@ export default function SEO() {
     try {
       setLoading(true);
       setError(null);
-      const response = await seoService.getAllSEOData();
+      const response = await seoService.getAllSEOData(brandSlug);
       // Check if response is an array or has a data property
       const data = Array.isArray(response) ? response : (response.data || []);
       setSeoData(data);
@@ -75,7 +75,7 @@ export default function SEO() {
 
   useEffect(() => {
     fetchSEOData();
-  }, []);
+  }, [brandSlug]);
 
   const statusBadge = (status) => {
     let badgeClass = "badge ";
@@ -151,7 +151,7 @@ export default function SEO() {
     try {
       setLoading(true);
       setError(null);
-      const response = await seoService.getSEOData(pageName);
+      const response = await seoService.getSEOData(pageName, brandSlug);
       // Handle both direct data and nested data property
       const data = response.data || response;
       setFormData({
@@ -175,7 +175,7 @@ export default function SEO() {
       setConfirmState(null);
       try {
         setLoading(true);
-        await seoService.deleteSEOData(pageName);
+        await seoService.deleteSEOData(pageName, brandSlug);
         await fetchSEOData();
       } catch (err) {
         setError(err.message || "Failed to delete SEO data");
@@ -252,12 +252,12 @@ export default function SEO() {
       // If we're editing an existing entry and the page name has changed
       if (formData.original_page_name && formData.original_page_name !== formData.page_name) {
         // First delete the old entry
-        await seoService.deleteSEOData(formData.original_page_name);
+        await seoService.deleteSEOData(formData.original_page_name, brandSlug);
         // Then create a new entry with the new page name
-        await seoService.createSEOData(formDataToSend);
+        await seoService.createSEOData(formDataToSend, brandSlug);
       } else {
         // Normal update
-        await seoService.updateSEOData(formDataToSend);
+        await seoService.updateSEOData(formDataToSend, brandSlug);
       }
       
       await fetchSEOData();

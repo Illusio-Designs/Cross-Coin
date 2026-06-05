@@ -11,8 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { brandSettingsService, brandService } from '../../../services';
-import Dropdown from '../../../components/ui/Dropdown';
+import { brandSettingsService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
@@ -81,19 +80,11 @@ const FIELDS = [
   },
 ];
 
-export default function GlobalSeoSettings() {
-  const [brandId, setBrandId] = useState(1);
-  const [brands, setBrands] = useState([]);
+export default function GlobalSeoSettings({ brandId = 1 } = {}) {
   const [values, setValues] = useState({});
   const [originals, setOriginals] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    brandService.getAllBrands(true).then(r => {
-      if (r?.success && Array.isArray(r.data)) setBrands(r.data);
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!brandId) return;
@@ -160,22 +151,13 @@ export default function GlobalSeoSettings() {
         title="Global SEO Settings"
         subtitle="Defaults applied across every product, category and page on the storefront."
         actions={
-          <>
-            {brands.length > 1 && (
-              <Dropdown
-                value={brandId}
-                onChange={(v) => setBrandId(Number(v))}
-                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-              />
-            )}
-            <button
-              onClick={save}
-              disabled={loading || saving || dirtyKeys.length === 0}
-              className="ds-btn ds-btn--primary"
-            >
-              {saving ? 'Saving…' : dirtyKeys.length === 0 ? 'No changes' : `Save (${dirtyKeys.length})`}
-            </button>
-          </>
+          <button
+            onClick={save}
+            disabled={loading || saving || dirtyKeys.length === 0}
+            className="ds-btn ds-btn--primary"
+          >
+            {saving ? 'Saving…' : dirtyKeys.length === 0 ? 'No changes' : `Save (${dirtyKeys.length})`}
+          </button>
         }
       />
 

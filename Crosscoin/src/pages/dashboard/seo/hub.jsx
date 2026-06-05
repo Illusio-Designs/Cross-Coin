@@ -11,13 +11,15 @@
  * directly via the legacy /dashboard/seo-* URLs.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SeoHealth         from './health';
 import GlobalSeoSettings from './global';
 import SeoBulkEditor     from './bulk';
 import SEO               from './seo';
 import FaqsManager       from './faqs';
 import SearchConsoleTab  from './search-console';
+import Dropdown          from '../../../components/ui/Dropdown';
+import { brandService }  from '../../../services';
 
 const TABS = [
   { id: 'overview',  label: 'Overview',        Component: SeoHealth },
@@ -30,10 +32,53 @@ const TABS = [
 
 export default function SeoHub({ initialTab = 'overview' } = {}) {
   const [active, setActive] = useState(initialTab);
+
+  // Shared brand selector for the whole SEO section. Every tab receives the
+  // selected brandId (numeric, used by brand_id-param endpoints) and brandSlug
+  // (used by the X-Brand-Name header on the Pages endpoints), so switching
+  // brand here re-scopes Overview, Pages, FAQs and Settings in one place.
+  const [brands, setBrands] = useState([]);
+  const [brandId, setBrandId] = useState(1);
+
+  useEffect(() => {
+    brandService.getAllBrands(true)
+      .then(r => {
+        if (r?.success && Array.isArray(r.data) && r.data.length) {
+          setBrands(r.data);
+          setBrandId(prev => (r.data.some(b => b.id === prev) ? prev : r.data[0].id));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const brandSlug = brands.find(b => b.id === brandId)?.slug || 'crosscoin';
   const Current = (TABS.find(t => t.id === active) || TABS[0]).Component;
 
   return (
     <div>
+      {/* Header row: section title sits with the tabs; the brand selector
+          (shown only when there's more than one brand) scopes every tab. */}
+      {brands.length > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 'var(--ds-space-3)',
+          }}
+        >
+          <span style={{ fontSize: 'var(--ds-text-sm)', color: 'var(--ds-color-text-muted)', fontWeight: 'var(--ds-weight-medium)' }}>
+            Brand
+          </span>
+          <Dropdown
+            value={brandId}
+            onChange={(v) => setBrandId(Number(v))}
+            options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
+          />
+        </div>
+      )}
+
       {/* Tab nav — scrolls horizontally on small screens so all six fit. */}
       <nav
         aria-label="SEO sections"
@@ -75,7 +120,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
         })}
       </nav>
 
-      <Current />
+      <Current brandId={brandId} brandSlug={brandSlug} />
     </div>
   );
 }

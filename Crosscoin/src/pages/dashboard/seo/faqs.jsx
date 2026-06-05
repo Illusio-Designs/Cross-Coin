@@ -40,7 +40,7 @@ const emptyForm = {
   is_active: true,
 };
 
-export default function FaqsManager() {
+export default function FaqsManager({ brandId = 1 } = {}) {
   const [items, setItems] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,8 @@ export default function FaqsManager() {
   const reload = async () => {
     setLoading(true);
     try {
-      const params = filterType === 'all' ? {} : { type: filterType };
+      const params = { brand_id: brandId };
+      if (filterType !== 'all') params.type = filterType;
       const res = await faqService.list(params);
       setItems(res.faqs || []);
     } catch (err) {
@@ -61,7 +62,7 @@ export default function FaqsManager() {
     }
   };
 
-  useEffect(() => { reload(); }, [filterType]);
+  useEffect(() => { reload(); }, [filterType, brandId]);
 
   const groups = useMemo(() => {
     const buckets = {};
@@ -101,6 +102,7 @@ export default function FaqsManager() {
     setSaving(true);
     try {
       const payload = {
+        brand_id: brandId,
         attached_to_type: form.attached_to_type,
         attached_to_id: form.attached_to_id || null,
         attached_to_slug: form.attached_to_slug || null,

@@ -2,8 +2,8 @@
  * SEO Health — at-a-glance gap analysis.
  *
  * Shows admins how many products / categories are missing each common
- * SEO field, so they know where to focus. Clicking through to "Fix in
- * bulk editor" takes them to the bulk SEO editor pre-filtered.
+ * SEO field, so they know where to focus. Counts are scoped to the brand
+ * selected in the SEO hub header (brandId prop).
  *
  * Data comes from GET /api/admin/seo/health (productController.js).
  */
@@ -13,33 +13,27 @@ import { seoAdminService } from '../../../services';
 import { handleViewChange } from '../../../utils/dashboardRouting';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
-export default function SeoHealth() {
+export default function SeoHealth({ brandId } = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    seoAdminService.health()
+    setLoading(true);
+    setError(null);
+    seoAdminService.health(brandId ? { brand_id: brandId } : {})
       .then(r => { if (!cancelled) setData(r); })
       .catch(err => { if (!cancelled) setError(typeof err === 'string' ? err : err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [brandId]);
 
   return (
     <div className="dashboard-sections">
       <PageHeader
         title="SEO Health"
         subtitle="Where the catalog still has SEO gaps you should fix before Google Ads."
-        actions={
-          <button
-            onClick={() => handleViewChange('seo-bulk', () => {})}
-            className="ds-btn ds-btn--primary"
-          >
-            Open bulk editor →
-          </button>
-        }
       />
 
       {loading && (
