@@ -1,11 +1,13 @@
 'use client'
 
 // Client subtree of /products/[handle]. The route file (page.jsx) is a
-// server component that handles generateMetadata + JSON-LD; this file
-// owns all the interactive state (gallery, qty, cart, wishlist).
+// server component that handles generateMetadata + JSON-LD AND passes
+// the server-fetched product as initialProduct. This file seeds React
+// Query's cache from initialProduct so there's no extra round-trip on
+// hydration. Subsequent navigations to the same slug hit the cache.
 
-import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { getProduct } from '@/lib/api/products'
 import { ProductPageClient } from '@/components/product/ProductPageClient'
 import dynamic from 'next/dynamic'
@@ -40,19 +42,22 @@ function ProductSkeleton() {
   )
 }
 
-export default function ProductDetailClient() {
-  const { handle } = useParams()
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
+export default function ProductDetailClient({ initialHandle, initialProduct } = {}) {
+  // initialHandle comes from the server shell on first load. On client-
+  // side navigations (Link / router.push), useParams gives us the URL
+  // segment instead.
+  const params = useParams()
+  const handle = initialHandle || params?.handle
 
-  useEffect(() => {
-    if (!handle) return
-    setLoading(true)
-    getProduct(handle)
-      .then(setProduct)
-      .catch(() => setProduct(null))
-      .finally(() => setLoading(false))
-  }, [handle])
+  // useQuery seeded with the server-fetched payload — no client refetch
+  // on initial hydration. Stale-while-revalidate kicks in only when the
+  // entry ages past the queryClient's default staleTime (5 min).
+  const { data: product, isLoading: loading } = useQuery({
+    queryKey: ['product', handle],
+    queryFn: () => getProduct(handle),
+    enabled: !!handle,
+    initialData: initialProduct ?? undefined,
+  })
 
   if (loading) return <ProductSkeleton />
   if (!product) return (
