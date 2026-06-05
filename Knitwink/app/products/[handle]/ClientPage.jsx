@@ -42,7 +42,7 @@ function ProductSkeleton() {
   )
 }
 
-export default function ProductDetailClient({ initialHandle, initialProduct } = {}) {
+export default function ProductDetailClient({ initialHandle, initialProduct, initialBestsellers } = {}) {
   // initialHandle comes from the server shell on first load. On client-
   // side navigations (Link / router.push), useParams gives us the URL
   // segment instead.
@@ -181,7 +181,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct } = 
       <ReviewsSection productId={product.id} productName={product.name} />
 
       {/* Cross-sell */}
-        <CrossSell currentHandle={product.handle} />
+        <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
     </SeoWrapper>
   )
 }

@@ -12,7 +12,7 @@
  */
 
 import ClientPage from './ClientPage';
-import { getProduct } from '@/lib/api/products';
+import { getProduct, getBestsellers } from '@/lib/api/products';
 
 const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com';
 
@@ -54,11 +54,18 @@ export async function generateMetadata({ params }) {
 
 export default async function ProductRoute({ params }) {
   const { handle } = await params;
-  // Server-side fetch — Next dedupes this with generateMetadata's call,
-  // so we pay for one backend round-trip total. The payload is then
-  // streamed into ClientPage as `initialProduct` so React Query's
-  // useQuery seeds its cache from this value (no client refetch on
-  // hydration).
-  const initialProduct = await fetchProduct(handle);
-  return <ClientPage initialHandle={handle} initialProduct={initialProduct} />;
+  // Server-side fetches in parallel. The product call is deduped with
+  // generateMetadata's call via Next's request cache. Bestsellers are
+  // a separate endpoint with 5-min ISR.
+  const [initialProduct, initialBestsellers] = await Promise.all([
+    fetchProduct(handle),
+    getBestsellers().catch(() => []),
+  ]);
+  return (
+    <ClientPage
+      initialHandle={handle}
+      initialProduct={initialProduct}
+      initialBestsellers={initialBestsellers}
+    />
+  );
 }
