@@ -10,6 +10,7 @@ const colorMap = {
   cream: '#FFFDD0', khaki: '#F0E68C', plum: '#DDA0DD', wine: '#722F37',
   charcoal: '#36454F', sand: '#C2B280', stone: '#837060',
   lemon: '#FFF44F', rose: '#FF66B2',
+  'sage green': '#9CAF88', 'heather grey': '#B6B6B6', 'heather gray': '#B6B6B6',
   'pastel pink': '#FFD1DC', 'pastel blue': '#AEC6CF', 'pastel green': '#77DD77',
   'pastel yellow': '#FFFACD', 'pastel purple': '#B39EB5', 'pastel orange': '#FFDAB9',
   'pastel red': '#FF6961', 'pastel teal': '#99FFCC', 'pastel lavender': '#E3E4FA',
