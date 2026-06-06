@@ -24,6 +24,7 @@ import {
   toastCouponApplied, toastCouponError,
   toastAddressAdded, toastAddressUpdated, toastAddressError,
 } from '@/lib/toast';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -128,17 +129,16 @@ export default function CartDrawer() {
     return () => clearTimeout(t);
   }, [cartOpen]);
 
-  // ── Body lock + ESC ────────────────────────────────────────────────────
+  // Body lock — Escape + focus-trap are now handled by useFocusTrap below.
   useEffect(() => {
     if (cartOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
-    const onKey = (e) => { if (e.key === 'Escape') setCartOpen(false); };
-    if (cartOpen) document.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [cartOpen, setCartOpen]);
+    return () => { document.body.style.overflow = ''; };
+  }, [cartOpen]);
+
+  // Trap focus inside the drawer panel; Escape closes the drawer and
+  // restores focus to whatever opened it.
+  const trapRef = useFocusTrap(cartOpen, { onEscape: () => setCartOpen(false) });
 
   // ── Outside-click close for address dropdown ───────────────────────────
   useEffect(() => {
@@ -550,7 +550,12 @@ export default function CartDrawer() {
       />
 
       {/* Drawer */}
-      <aside className={`fixed right-0 top-0 h-full w-full max-w-md z-[90] bg-[#FBF7EC] border-l border-[#E0D4B8] transition-transform duration-400 ease-out flex flex-col ${cartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <aside
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping bag"
+        className={`fixed right-0 top-0 h-full w-full max-w-md z-[90] bg-[#FBF7EC] border-l border-[#E0D4B8] transition-transform duration-400 ease-out flex flex-col ${cartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0D4B8] bg-white">

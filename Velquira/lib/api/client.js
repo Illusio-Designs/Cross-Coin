@@ -19,6 +19,15 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 
+function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  // Prefer cookie (future-state). Fall back to legacy localStorage location
+  // used by lib/api/auth.js until the cookies migration lands.
+  const cookie = Cookies.get('auth_token');
+  if (cookie) return cookie;
+  try { return localStorage.getItem('token'); } catch { return null; }
+}
+
 function isStateChanging(method) {
   return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(method || '').toUpperCase());
 }
@@ -42,7 +51,7 @@ function buildErrorMessage(err) {
 
 async function apiFetch(path, init = {}) {
   const method = init.method || 'GET';
-  const token = typeof window !== 'undefined' ? Cookies.get('auth_token') : undefined;
+  const token = getAuthToken();
   const csrf = typeof window !== 'undefined' ? Cookies.get('cc_csrf') : undefined;
 
   const userTimeout = init.timeoutMs;

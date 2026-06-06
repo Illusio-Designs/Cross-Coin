@@ -1,55 +1,47 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
-const BRAND = 'velquira'
-
-function headers(token) {
-  const h = { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }
-  if (token) h.Authorization = `Bearer ${token}`
-  return h
-}
-
-function getToken() {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('token')
-}
+import { apiClient } from '@/lib/api/client'
 
 // Get user's orders
 export async function getUserOrders(params = {}) {
-  const token = getToken()
   const qp = new URLSearchParams()
   if (params.status) qp.append('status', params.status)
   if (params.page) qp.append('page', params.page)
   if (params.limit) qp.append('limit', params.limit)
-  const res = await fetch(`${API_URL}/api/orders/my-orders?${qp.toString()}`, { headers: headers(token) })
-  if (!res.ok) throw new Error('Failed to fetch orders')
-  return res.json()
+  return apiClient.get(`/api/orders/my-orders?${qp.toString()}`)
 }
 
 // Create order (logged-in user)
 export async function createOrder(orderData) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/orders`, {
-    method: 'POST',
-    headers: headers(token),
-    body: JSON.stringify(orderData),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Order creation failed')
-  return data
+  return apiClient.post('/api/orders', orderData)
 }
 
-// Create guest order
+/**
+ * Guest order — the backend may stamp a freshly minted user token on the
+ * response header (`x-auth-token`) so the guest is silently signed in.
+ * apiClient doesn't surface raw response headers, so we use raw fetch
+ * for this specific call to capture the header. All hardening (timeout,
+ * brand header, auth) is replicated inline.
+ */
 export async function createGuestOrder(orderData) {
-  const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(orderData),
-  })
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
+  const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velquira'
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), 30_000)
+  let res
+  try {
+    res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+      body: JSON.stringify(orderData),
+      signal: ac.signal,
+    })
+  } finally { clearTimeout(timer) }
   const data = await res.json()
-  // Store auto-created user token
   const newToken = res.headers.get('x-auth-token')
-  if (newToken) {
-    localStorage.setItem('token', newToken)
-    window.dispatchEvent(new Event('storage'))
+  if (newToken && typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('token', newToken)
+      window.dispatchEvent(new Event('storage'))
+    } catch { /* ignore */ }
   }
   if (!res.ok) throw new Error(data.message || 'Order creation failed')
   return data
@@ -57,104 +49,52 @@ export async function createGuestOrder(orderData) {
 
 // Track order by order number (public)
 export async function trackOrder(orderNumber) {
-  const res = await fetch(`${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`, {
-    headers: { 'X-Brand-Name': BRAND },
-  })
-  if (!res.ok) throw new Error('Order not found')
-  return res.json()
+  return apiClient.get(`/api/orders/track/${encodeURIComponent(orderNumber)}`)
 }
 
 // Cancel order
 export async function cancelOrder(orderId, reason = '') {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/orders/${orderId}/cancel`, {
-    method: 'PUT',
-    headers: headers(token),
-    body: JSON.stringify({ reason }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Cancellation failed')
-  return data
+  return apiClient.put(`/api/orders/${orderId}/cancel`, { reason })
 }
 
 // Initiate checkout (prepaid, logged-in)
 export async function initiateCheckout(checkoutData) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/checkout/initiate`, {
-    method: 'POST',
-    headers: headers(token),
-    body: JSON.stringify(checkoutData),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Checkout failed')
-  return data
+  return apiClient.post('/api/checkout/initiate', checkoutData)
 }
 
 // Initiate guest checkout (prepaid, no auth)
 export async function initiateGuestCheckout(checkoutData) {
-  const res = await fetch(`${API_URL}/api/checkout/guest/initiate`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(checkoutData),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Checkout failed')
-  return data
+  return apiClient.post('/api/checkout/guest/initiate', checkoutData)
 }
 
 // Create Razorpay order
 export async function createRazorpayOrder({ amount, currency = 'INR', receipt, isGuest = false }) {
   const endpoint = isGuest ? '/api/payments/guest/razorpay/order' : '/api/payments/razorpay/order'
-  const token = getToken()
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    method: 'POST',
-    headers: isGuest ? headers() : headers(token),
-    body: JSON.stringify({ amount, currency, receipt }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Payment order failed')
+  const data = await apiClient.post(endpoint, { amount, currency, receipt })
   return data.order
 }
 
 // Verify Razorpay payment
 export async function verifyPayment({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }) {
-  const res = await fetch(`${API_URL}/api/payments/razorpay/verify`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Payment verification failed')
-  return data
+  return apiClient.post('/api/payments/razorpay/verify', { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id })
 }
 
 // Get shipping fees
 export async function getShippingFees() {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/shipping-fees`, {
-    headers: token ? headers(token) : { 'X-Brand-Name': BRAND },
-  })
-  if (!res.ok) return []
-  return res.json()
+  try { return await apiClient.get('/api/shipping-fees', { suppressErrorToast: true }) }
+  catch { return [] }
 }
 
 // Shipping addresses
 export async function getUserAddresses() {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/shipping-addresses`, { headers: headers(token) })
-  if (!res.ok) return []
-  const data = await res.json()
-  return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
+  try {
+    const data = await apiClient.get('/api/shipping-addresses', { suppressErrorToast: true })
+    return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
+  } catch { return [] }
 }
 
 export async function createAddress(data) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/shipping-addresses`, {
-    method: 'POST',
-    headers: headers(token),
-    body: JSON.stringify(data),
-  })
-  return res.json()
+  return apiClient.post('/api/shipping-addresses', data)
 }
 
 function normaliseAddr(data) {
@@ -170,69 +110,36 @@ function normaliseAddr(data) {
   }
 }
 
-// Create shipping address (camelCase format used by CartDrawer)
 export async function createShippingAddress(data) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/shipping-addresses`, {
-    method: 'POST',
-    headers: headers(token),
-    body: JSON.stringify(normaliseAddr(data)),
-  })
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to create address')
-  return result
+  return apiClient.post('/api/shipping-addresses', normaliseAddr(data))
 }
 
-// Update shipping address (camelCase format used by CartDrawer)
 export async function updateShippingAddress(id, data) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/shipping-addresses/${id}`, {
-    method: 'PUT',
-    headers: headers(token),
-    body: JSON.stringify(normaliseAddr(data)),
-  })
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to update address')
-  return result
+  return apiClient.put(`/api/shipping-addresses/${id}`, normaliseAddr(data))
 }
 
-// Retry checkout — extends stock reservation & gets new Razorpay order
+// Retry checkout — extends stock reservation & gets a new Razorpay order
 export async function retryCheckout(reservationId) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/checkout/retry`, {
-    method: 'POST',
-    headers: headers(token),
-    body: JSON.stringify({ reservation_id: reservationId }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Retry failed')
-  return data
+  return apiClient.post('/api/checkout/retry', { reservation_id: reservationId })
 }
 
 // Check if a pincode is serviceable
 export async function checkPincodeServiceability(pincode) {
-  const res = await fetch(`${API_URL}/api/serviceability/${pincode}`, {
-    headers: { 'X-Brand-Name': BRAND },
-  })
-  if (!res.ok) return { serviceable: true, cod_allowed: true }
-  const data = await res.json()
-  return {
-    serviceable: data.serviceable !== false,
-    cod_allowed: data.cod_allowed !== false || data.cod_available !== false,
-    estimated_delivery_days: data.estimated_delivery_days || 5,
+  try {
+    const data = await apiClient.get(`/api/serviceability/${pincode}`, { suppressErrorToast: true })
+    return {
+      serviceable: data.serviceable !== false,
+      cod_allowed: data.cod_allowed !== false || data.cod_available !== false,
+      estimated_delivery_days: data.estimated_delivery_days || 5,
+    }
+  } catch {
+    return { serviceable: true, cod_allowed: true }
   }
 }
 
 // Validate a coupon code
 export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }) {
-  const res = await fetch(`${API_URL}/api/coupons/validate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-    body: JSON.stringify({ code, cartTotal, paymentMode, cartItems }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Invalid coupon')
-  return data
+  return apiClient.post('/api/coupons/validate', { code, cartTotal, paymentMode, cartItems })
 }
 
 // Alias for CartDrawer compatibility
@@ -240,11 +147,4 @@ export { verifyPayment as updateOrderPayment }
 
 // Aliases for backward compatibility
 export const getOrders = getUserOrders
-export const getOrder = async (id) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  const res = await fetch(`${API_URL}/api/orders/${id}`, {
-    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-  })
-  if (!res.ok) throw new Error('Order not found')
-  return res.json()
-}
+export const getOrder = (id) => apiClient.get(`/api/orders/${id}`)
