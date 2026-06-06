@@ -1,34 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getBestsellers } from '@/lib/api/products'
 import { ProductCard } from '@/components/collection/ProductCard'
 
-export function CrossSell({ currentHandle, relatedProducts, crossSellProducts }) {
-  const [products, setProducts] = useState(() => {
-    /* Prefer explicitly supplied related/cross-sell data when available
-       (preserves the existing data wiring). */
-    const seed = crossSellProducts || relatedProducts
-    return Array.isArray(seed) ? seed : []
+/**
+ * Curated pairings under the product detail.
+ *
+ * Accepts `initialBestsellers` from the server shell so the first
+ * render has no network round-trip. After hydration, useQuery seeds
+ * the cache via `initialData`; subsequent navigations to other
+ * product pages reuse the cached set (5-min stale time inherited
+ * from the shared queryClient).
+ *
+ * Honors the legacy `relatedProducts` / `crossSellProducts` props as
+ * a fallback so admin-curated picks still win when supplied.
+ */
+export function CrossSell({ currentHandle, relatedProducts, crossSellProducts, initialBestsellers }) {
+  const curated = crossSellProducts || relatedProducts
+  const hasCurated = Array.isArray(curated) && curated.length > 0
+
+  const { data: all = [] } = useQuery({
+    queryKey: ['bestsellers'],
+    queryFn: () => getBestsellers().catch(() => []),
+    initialData: Array.isArray(initialBestsellers) ? initialBestsellers : undefined,
+    enabled: !hasCurated,
   })
 
-  useEffect(() => {
-    // If we already have curated picks, do nothing; otherwise pull bestsellers.
-    if (products.length > 0) return
-    let active = true
-    getBestsellers()
-      .then((all) => {
-        if (!active) return
-        const filtered = (all || []).filter((p) => p.handle !== currentHandle)
-        setProducts(filtered)
-      })
-      .catch(() => {})
-    return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentHandle])
+  const products = hasCurated
+    ? curated
+    : (all || []).filter((p) => p.handle !== currentHandle)
 
   if (!products.length) return null
-
   const picks = products.slice(0, 3)
 
   return (

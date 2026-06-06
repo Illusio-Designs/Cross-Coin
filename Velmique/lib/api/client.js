@@ -20,19 +20,11 @@
 
 import Cookies from 'js-cookie';
 import { showError as toastError } from '@/lib/toast';
+import { getAuthToken } from '@/lib/authToken';
 
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velmique';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
-
-function getAuthToken() {
-  if (typeof window === 'undefined') return null;
-  // Prefer cookie when available (future-state).
-  const cookie = Cookies.get('auth_token');
-  if (cookie) return cookie;
-  // Fall back to legacy localStorage location used across lib/api/*.
-  try { return localStorage.getItem('token'); } catch { return null; }
-}
 
 function isStateChanging(method) {
   return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(method || '').toUpperCase());

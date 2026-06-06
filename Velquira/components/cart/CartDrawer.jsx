@@ -26,6 +26,7 @@ import {
 } from '@/lib/toast';
 import '@/styles/CartDrawer.css';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { addressSchema } from '@/lib/addressSchema';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
@@ -58,39 +59,48 @@ function generateIdempotencyKey() {
   return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+// Validate a shipping address using the shared Zod schema. A payload
+// that passes here passes the backend's shippingAddressBase. Returns
+// the raw issues so the caller can map them onto fieldErrors keyed by
+// path (no more brittle keyword-matching).
 function validateShippingAddress(addr) {
-  if (!addr) return { valid: false, errors: ['Address is empty'] };
-  const errors = [];
-  const name = String(addr.full_name || addr.fullName || '').trim();
-  if (!name) errors.push('Customer name is required');
-  else if (name.length < 2) errors.push('Name is too short');
-  else if (/^\d+$/.test(name)) errors.push('Name cannot be only numbers');
+  if (!addr) return { valid: false, errors: ['Address is empty'], issues: [] };
+  const candidate = {
+    fullName: addr.full_name || addr.fullName || '',
+    phoneNumber: addr.phone_number || addr.phoneNumber || addr.phone || '',
+    address: addr.address || '',
+    landmark: addr.landmark || '',
+    city: addr.city || '',
+    state: addr.state || '',
+    postalCode: addr.postal_code || addr.postalCode || addr.pincode || '',
+    country: addr.country || 'India',
+    isDefault: addr.is_default ?? addr.isDefault ?? false,
+  };
+  const result = addressSchema.safeParse(candidate);
+  if (result.success) return { valid: true, errors: [], issues: [] };
+  return {
+    valid: false,
+    errors: result.error.issues.map((i) => i.message),
+    issues: result.error.issues,
+  };
+}
 
-  const addrLine = String(addr.address || '').trim();
-  if (!addrLine) errors.push('Street address is required');
-  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters)');
-  const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i];
-  if (junk.some(p => p.test(addrLine))) errors.push('Please enter a real address');
-
-  const city = String(addr.city || '').trim();
-  if (!city) errors.push('City is required');
-  else if (city.length < 2) errors.push('City name is too short');
-
-  const state = String(addr.state || '').trim();
-  if (!state) errors.push('State is required');
-
-  const pin = String(addr.postal_code || addr.postalCode || addr.pincode || '').trim();
-  if (!pin) errors.push('PIN code is required');
-  else if (!/^\d{6}$/.test(pin)) errors.push('PIN code must be exactly 6 digits');
-
-  const phone = String(addr.phone_number || addr.phoneNumber || addr.phone || '').replace(/\D/g, '');
-  if (!phone || phone.length < 10) {
-    errors.push('Valid 10-digit mobile number is required');
-  } else {
-    let ten = phone.length > 10 ? phone.slice(-10) : phone;
-    if (!/^[6-9]\d{9}$/.test(ten)) errors.push('Phone must be a valid Indian mobile (starts with 6-9)');
+// Map Zod issues to the CartDrawer's fieldErrors shape — keyed by the
+// drawer's input names (name / phone / address / city / state /
+// pincode), not by the schema path. Single place that does this
+// translation so the per-input code stays simple.
+function issuesToFieldErrors(issues) {
+  const out = {};
+  const pathToKey = {
+    fullName: 'name', phoneNumber: 'phone', address: 'address',
+    city: 'city', state: 'state', postalCode: 'pincode',
+  };
+  for (const issue of issues || []) {
+    const path = issue.path?.[0];
+    const key = pathToKey[path];
+    if (key && !out[key]) out[key] = issue.message;
   }
-  return { valid: errors.length === 0, errors };
+  return out;
 }
 
 function isValidEmail(v) {
@@ -307,7 +317,9 @@ export function CartDrawer() {
     else setAddressPhoneError('');
   }, [addressForm.phoneNumber, isAuthenticated, showAddressForm]);
 
-  // Real-time field validation
+  // Real-time field validation — driven by the shared Zod schema so the
+  // CartDrawer accepts exactly what the backend accepts. Issues are
+  // mapped onto the drawer's fieldErrors keys via issue.path.
   useEffect(() => {
     if (!showAddressForm) { setFieldErrors({}); return; }
     const t = setTimeout(() => {
@@ -315,17 +327,7 @@ export function CartDrawer() {
         ? { full_name: addressForm.fullName, address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: addressForm.phoneNumber }
         : { full_name: guestInfo.fullName.trim(), address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: guestInfo.phone };
       const result = validateShippingAddress(formToValidate);
-      const errs = {};
-      for (const err of result.errors) {
-        const lower = err.toLowerCase();
-        if (lower.includes('name') && !errs.name) errs.name = err;
-        else if ((lower.includes('address') || lower.includes('street')) && !errs.address) errs.address = err;
-        else if (lower.includes('city') && !errs.city) errs.city = err;
-        else if (lower.includes('state') && !errs.state) errs.state = err;
-        else if ((lower.includes('pin') || lower.includes('postal')) && !errs.pincode) errs.pincode = err;
-        else if (lower.includes('phone') || lower.includes('mobile')) errs.phone = err;
-      }
-      setFieldErrors(errs);
+      setFieldErrors(issuesToFieldErrors(result.issues));
     }, 400);
     return () => clearTimeout(t);
   }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);

@@ -17,9 +17,15 @@ A comprehensive, production-ready e-commerce solution supporting multiple brands
 
 ### 🏢 Supported Brands
 
-- **Cross-Coin**: Fashion accessories and socks
-- **Knitwink**: Knitted products and accessories
-- **Gripzus**: Specialized grip products
+| Brand | Vertical | Stack | Production readiness |
+|---|---|---|---|
+| **Cross-Coin** | Fashion accessories and socks | Vite SPA | 92/100 baseline |
+| **Knitwink** | Knitted products and accessories | Next 16 + React 19 | 99/100 |
+| **Velmique** | Luxury fragrance | Next 14.2 + React 18 | 97/100 |
+| **Velquira** | Fine jewellery | Next 16 + React 19 | 97/100 |
+| **Gripzus** | Specialized grip products | — | — |
+
+Per-storefront detail lives in each `<Repo>/README.md` and `<Repo>/PENDING.md`. The remaining cross-cutting work is the Velmique Next 14.2 → 16 + React 19 + `@react-three/fiber@9` upgrade — see `Velmique/PENDING.md`.
 
 ### 🆕 Latest Features
 

@@ -73,13 +73,17 @@ function buildCols(reviews) {
  * Right: three slow-scrolling columns of cream review cards. On mobile
  * a single horizontal marquee replaces the columns.
  */
-export function ReviewsSection({ productId = null, productName = null, fetchFn = null }) {
-  const [reviews, setReviews] = useState([])
-  const [stats, setStats] = useState({ average: 4.8, total: 50000 })
+export function ReviewsSection({ productId = null, productName = null, fetchFn = null, initialReviews = null, initialStats = null }) {
+  // Server-shell can pass `initialReviews` + `initialStats` to skip
+  // the client round-trip on first paint.
+  const [reviews, setReviews] = useState(Array.isArray(initialReviews) ? initialReviews : [])
+  const [stats, setStats] = useState(initialStats || { average: 4.8, total: 50000 })
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     if (!fetchFn) return
+    // Already seeded by server — don't refetch.
+    if (Array.isArray(initialReviews) && initialReviews.length > 0) return
     fetchFn()
       .then((data) => {
         const list = data?.reviews ?? data ?? []
@@ -89,7 +93,7 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
         }
       })
       .catch(() => {})
-  }, [fetchFn])
+  }, [fetchFn, initialReviews])
 
   const display = reviews
   const hasReviews = display.length > 0

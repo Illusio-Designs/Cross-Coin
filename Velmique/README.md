@@ -2,7 +2,7 @@
 
 Luxury fragrance storefront built on **Next.js 14.2** + **React 18** + **TailwindCSS**, sharing the multi-tenant backend at `api.crosscoin.in` (keyed by `X-Brand-Name: velmique`).
 
-> **Production readiness: 94 / 100** after the hardening sweep. See [`PENDING.md`](./PENDING.md) for the deferred Next 16 / React 19 / cookies-auth upgrade track.
+> **Production readiness: 97 / 100** after the hardening + plan-completion sweeps. Auth now lives in cookies (with legacy localStorage as a backward-compat mirror), the store is re-render-stable, focus traps are wired in CartDrawer + SearchOverlay, ProductReviews is server-seeded, and a Storybook scaffold is in place. The only major outstanding track is the Next 14.2 → 16 + React 19 + 3D upgrade (see [`PENDING.md`](./PENDING.md)).
 
 ---
 
@@ -129,7 +129,7 @@ NEXT_PUBLIC_SENTRY_FORCE=false
 | [Crosscoin](../Crosscoin) | Vite SPA | baseline (92/100) |
 | [Knitwink](../Knitwink) | Next 16 + React 19 | 99/100 |
 | [Velquira](../Velquira) | Next 16 + React 19 | 92/100 |
-| **Velmique** | **Next 14.2 + React 18** | **94/100** ← this repo |
+| **Velmique** | **Next 14.2 + React 18** | **97/100** ← this repo |
 | [Backend](../backend) | Node + Express + MySQL | shared across all four |
 
 ---

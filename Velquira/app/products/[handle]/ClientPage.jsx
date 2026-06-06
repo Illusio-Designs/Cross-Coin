@@ -27,7 +27,7 @@ function ProductSkeleton() {
   )
 }
 
-export default function ProductPage({ initialProduct = null }) {
+export default function ProductPage({ initialProduct = null, initialBestsellers = [], initialReviews = null, initialStats = null }) {
   const { handle } = useParams()
   const [product, setProduct] = useState(initialProduct)
   const [loading, setLoading] = useState(!initialProduct)
@@ -82,13 +82,13 @@ export default function ProductPage({ initialProduct = null }) {
               </p>
               <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
             </div>
-            <ReviewsSection productId={product.id} productName={product.name} />
+            <ReviewsSection productId={product.id} productName={product.name} initialReviews={initialReviews} initialStats={initialStats} />
           </section>
         </Reveal>
 
         {/* Complete the Set */}
         <Reveal>
-          <CrossSell currentHandle={product.handle} />
+          <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
         </Reveal>
       </main>
     </SeoWrapper>

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { toastLogoutSuccess } from '@/lib/toast'
+import { getAuthToken, clearAuthToken } from '@/lib/authToken'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
@@ -15,7 +16,7 @@ export function AuthProvider({ children }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      const token = getAuthToken()
       if (!token) { setUser(null); setLoading(false); return }
 
       const res = await fetch(`${API_URL}/api/users/me`, {
@@ -32,7 +33,7 @@ export function AuthProvider({ children }) {
         const data = await res.json()
         setUser(data)
       } else {
-        localStorage.removeItem('token')
+        clearAuthToken()
         setUser(null)
       }
     } catch (err) {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const onStorage = () => {
-      const token = localStorage.getItem('token')
+      const token = getAuthToken()
       if (token && !user) { checkedRef.current = false; fetchUser() }
       if (!token && user) { setUser(null); setLoading(false) }
     }
@@ -61,14 +62,14 @@ export function AuthProvider({ children }) {
   }, [user, fetchUser])
 
   const logout = useCallback(async () => {
-    const token = localStorage.getItem('token')
+    const token = getAuthToken()
     if (token) {
       fetch(`${API_URL}/api/users/logout`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'X-Brand-Name': BRAND },
       }).catch(() => {})
     }
-    localStorage.removeItem('token')
+    clearAuthToken()
     setUser(null)
     toastLogoutSuccess()
   }, [])

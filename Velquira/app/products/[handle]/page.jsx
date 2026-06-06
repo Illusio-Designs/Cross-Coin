@@ -1,4 +1,6 @@
 import ClientPage from './ClientPage';
+import { getBestsellers } from '@/lib/api/products';
+import { getProductReviews } from '@/lib/api/reviews';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velquira.com';
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -35,7 +37,18 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { handle } = await params;
-  const product = await fetchProduct(handle);
+  // Parallel fetch: product (deduped with generateMetadata via Next's
+  // request cache) + bestsellers for CrossSell + product reviews for
+  // ReviewsSection — saves two client round-trips on first paint.
+  const [product, initialBestsellers] = await Promise.all([
+    fetchProduct(handle),
+    getBestsellers().catch(() => []),
+  ]);
+  const initialReviewsPayload = product?.id
+    ? await getProductReviews(product.id).catch(() => null)
+    : null;
+  const initialReviews = initialReviewsPayload?.reviews ?? (Array.isArray(initialReviewsPayload) ? initialReviewsPayload : null);
+  const initialStats = initialReviewsPayload?.stats ?? null;
 
   const jsonLd = product ? {
     '@context': 'https://schema.org',
@@ -59,7 +72,12 @@ export default async function Page({ params }) {
       {jsonLd && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
-      <ClientPage initialProduct={product} />
+      <ClientPage
+        initialProduct={product}
+        initialBestsellers={initialBestsellers}
+        initialReviews={initialReviews}
+        initialStats={initialStats}
+      />
     </>
   );
 }

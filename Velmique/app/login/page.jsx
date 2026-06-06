@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { setAuthToken } from '@/lib/authToken'
 import { toastLoginSuccess, toastLoginError, toastOtpSent, toastOtpError } from '@/lib/toast'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
@@ -134,7 +135,7 @@ export default function LoginPage() {
       }
       if (!data.token) throw new Error('No token received')
 
-      localStorage.setItem('token', data.token)
+      setAuthToken(data.token)
       await fetchUser()
       toastLoginSuccess()
       window.location.replace('/account')

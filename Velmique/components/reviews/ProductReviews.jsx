@@ -31,15 +31,26 @@ function fmtDate(s) {
   } catch { return ''; }
 }
 
-export default function ProductReviews({ productId, productName }) {
-  const [data,    setData]    = useState({ reviews: [], stats: null, total: 0 });
-  const [loading, setLoading] = useState(true);
+export default function ProductReviews({ productId, productName, initialReviewsPayload = null }) {
+  // Server shell can pass `initialReviewsPayload` (the raw response from
+  // getProductReviews). When present, the first paint already has data
+  // and we skip the client round-trip.
+  const seeded = initialReviewsPayload
+    ? {
+        reviews: initialReviewsPayload.reviews || [],
+        stats:   initialReviewsPayload.stats   || null,
+        total:   initialReviewsPayload.pagination?.total || (initialReviewsPayload.reviews?.length ?? 0),
+      }
+    : { reviews: [], stats: null, total: 0 };
+  const [data,    setData]    = useState(seeded);
+  const [loading, setLoading] = useState(!initialReviewsPayload);
   const [showAll, setShowAll] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
     if (!productId) return;
+    if (initialReviewsPayload) return; // server-seeded
     setLoading(true);
     getProductReviews(productId, { limit: 30 }).then(res => {
       if (!alive) return;
@@ -51,7 +62,7 @@ export default function ProductReviews({ productId, productName }) {
       setLoading(false);
     });
     return () => { alive = false; };
-  }, [productId]);
+  }, [productId, initialReviewsPayload]);
 
   const stats = data.stats;
   const avg = stats?.average ? Number(stats.average) : 0;

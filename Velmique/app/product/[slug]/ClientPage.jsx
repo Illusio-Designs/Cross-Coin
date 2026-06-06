@@ -13,7 +13,7 @@ import ProductReviews from '@/components/reviews/ProductReviews';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
-export default function ProductPage({ initialProduct = null }) {
+export default function ProductPage({ initialProduct = null, initialReviewsPayload = null }) {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug;
@@ -446,7 +446,7 @@ export default function ProductPage({ initialProduct = null }) {
               <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
                 What customers say
               </h2>
-              <ProductReviews productId={product.id} productName={product.name} />
+              <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
             </div>
           </section>
         </div>

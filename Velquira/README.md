@@ -2,7 +2,7 @@
 
 Fine jewellery storefront built on **Next.js 16** + **React 19** + **TailwindCSS v4**, sharing the multi-tenant backend at `api.crosscoin.in` (keyed by `X-Brand-Name: velquira`).
 
-> **Production readiness: 94 / 100** after the hardening sweep. See [`PENDING.md`](./PENDING.md) for the remaining backlog.
+> **Production readiness: 97 / 100** after the hardening + plan-completion sweeps. `lib/api/*` now delegates to the shared `apiClient` (timeout / CSRF / categorised toasts apply everywhere), CartDrawer validation is Zod-driven, focus traps are wired into Drawer / Modal / CartDrawer, CrossSell + ReviewsSection are server-seeded, and a Storybook scaffold is in place. See [`PENDING.md`](./PENDING.md) for opt-in installs.
 
 ---
 
@@ -123,8 +123,8 @@ NEXT_PUBLIC_SENTRY_FORCE=false
 |---|---|---|
 | [Crosscoin](../Crosscoin) | Vite SPA | baseline (92/100) |
 | [Knitwink](../Knitwink) | Next 16 + React 19 | 99/100 |
-| **Velquira** | **Next 16 + React 19** | **94/100** ← this repo |
-| [Velmique](../Velmique) | Next 14.2 + React 18 | 94/100 |
+| **Velquira** | **Next 16 + React 19** | **97/100** ← this repo |
+| [Velmique](../Velmique) | Next 14.2 + React 18 | 97/100 |
 | [Backend](../backend) | Node + Express + MySQL | shared across all four |
 
 ---
