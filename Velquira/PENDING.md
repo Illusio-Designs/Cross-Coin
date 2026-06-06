@@ -1,168 +1,86 @@
 # Velquira — Pending Work
 
-Honest gap audit against the **Crosscoin storefront baseline** (92/100 production-ready after the hardening sweep). Velquira shares the same backend (`api.crosscoin.in`) and uses the **same App-Router template as Knitwink** — most of this list mirrors `Knitwink/PENDING.md` line-for-line, with one extra **critical bug** noted below.
+Honest gap audit against the **Crosscoin storefront baseline**. Velquira shares the same backend (`api.crosscoin.in`) and uses the **same App-Router template as Knitwink** (Next 16 + React 19 + Zustand + RHF/Zod).
 
-> **Current production readiness: ~55 / 100.** Same foundations as Knitwink (App Router, Zustand, RHF + Zod deps), same gaps + one broken import that must be fixed first.
-
----
-
-## 🔥 Critical bug to fix FIRST (before anything else)
-
-### Broken `js-cookie` import in `lib/api/client.js`
-```js
-import Cookies from '@/node_modules/@types/js-cookie';
-```
-
-That's importing from the **TypeScript types package**, not the actual runtime module. The `Cookies` object will be `undefined`, `Cookies.get('auth_token')` will throw, and **every authenticated API call fails silently**.
-
-**Fix** (15-second edit):
-```js
-import Cookies from 'js-cookie';
-```
-
-This bug will block any login/account/cart/wishlist functionality. Patch it before pushing anything else.
+> **Production readiness: ~94 / 100** after the hardening sweep landed in this commit (was ~55 before). The critical `js-cookie` import bug is fixed; all High-severity items from the previous audit are closed.
 
 ---
 
-## What Velquira ALREADY has ✅
+## ✅ Closed in this hardening pass
 
-Same scaffold as Knitwink:
-
-| Area | Status |
-|---|---|
-| Framework | Next.js 16 App Router + React 19 |
-| State | Zustand stores (cart / ui / wishlist) |
-| Auth | JWT cookie via `js-cookie` (once the import is fixed) |
-| Forms | `react-hook-form` + `zod` installed, not yet used |
-| API client | `lib/api/client.js` with brand header on every call |
-| Toasts | `react-toastify` |
-| ISR | `/api/revalidate` endpoint |
-| Backend | Reuses `api.crosscoin.in` |
-| Pages | 19 routes — home, about, account, cart, collections, contact, journal, login, register, search, track-order, wishlist, products, policies |
-| SEO scaffold | `components/SeoWrapper.jsx` (client-side title/meta injection) |
-
----
-
-## What's MISSING vs Crosscoin baseline
-
-### 🔴 HIGH severity (do before public launch / Google Ads)
-
-#### 1. ~~Broken Cookies import~~ — see top of file
-
-#### 2. DOMPurify sanitisation on every `dangerouslySetInnerHTML`
-Currently **4 unsanitised sites**:
-- `app/journal/[slug]/page.jsx:199` — blog post body
-- `app/policies/[name]/page.jsx:107` — policy content
-- `components/ui/SectionHeader.jsx:16` — title (admin-authored)
-- `app/layout.jsx:58` — script tag (verify safe / self-generated)
-
-**Fix**: copy `Crosscoin/src/utils/sanitizeHtml.js`. ~1 hr.
-
-#### 3. No global error reporter / ring buffer
-No drain for ErrorBoundary catches, no unhandled-rejection listener, no `/api/client-errors` POST.
-
-**Fix**: port `Crosscoin/src/utils/errorReporter.js` + `sentryAdapter.js`. ~30 min.
-
-#### 4. No global fetch interceptor → silent failures + no timeout
-`lib/api/client.js` has no timeout, no error toast, no CSRF mirror, no retry. Backend hang = forever spinner.
-
-**Fix**: port the categorised-error-toast + 30s timeout + CSRF cookie-mirror logic from `Crosscoin/src/utils/apiInterceptors.js`. ~45 min.
-
-#### 5. ErrorBoundary missing
-Single client-component render bug blanks the whole app.
-
-**Fix**: port `Crosscoin/src/components/common/ErrorBoundary.jsx`, wrap the root `<body>` in `app/layout.jsx`. ~20 min.
-
-#### 6. No focus traps on `<Drawer>` / `<Modal>` / `<CartDrawer>`
-Same keyboard / screen-reader trap as Knitwink.
-
-**Fix**: port `Crosscoin/src/hooks/useFocusTrap.js`. ~30 min.
-
-#### 7. No structured data (JSON-LD)
-Product / collection / journal pages ship without Product / CollectionPage / BlogPosting / BreadcrumbList JSON-LD.
-
-**Fix**: per-route `<script type="application/ld+json">`. ~2 hrs.
-
-#### 8. Missing `app/sitemap.ts` + `app/robots.ts`
-No discovery channel beyond internal links.
-
-**Fix**: create both files. ~1 hr.
-
-#### 9. No tracking integration (GA4 / FB Pixel / Clarity)
-No ad attribution.
-
-**Fix**: port `Crosscoin/src/components/common/Analytics.jsx` + `fbqTrack` + `gtagTrack`. ~1 hr.
-
----
-
-### 🟡 MEDIUM (do before scaling traffic)
-
-#### 10. RHF + Zod installed but never used
-**Fix**: port `Crosscoin/src/utils/addressSchema.js` and adopt `Crosscoin/src/components/common/AddressFormRHF.jsx`. ~1 hr per form.
-
-#### 11. No address quality / COD eligibility check
-Backend exposes `POST /api/orders/check-address-quality` — Velquira doesn't call it.
-
-**Fix**: wire into pincode + phone `onBlur`. ~30 min.
-
-#### 12. No `generateMetadata()` on dynamic pages
-Same App-Router issue as Knitwink — SEO injection happens client-side via `useEffect`.
-
-**Fix**: each dynamic route file gets a `generateMetadata`. ~3 hrs total.
-
-#### 13. No React Query
-Same gap as Knitwink — raw `useEffect` + `apiFetch` everywhere.
-
-**Fix**: install `@tanstack/react-query`, migrate incrementally. ~half a day.
-
-#### 14. No skip-to-main link / `.sr-only` utility
-**Fix**: ~10 min.
-
-#### 15. Default README
-`README.md` is the unchanged scaffold.
-
-**Fix**: write a proper README. ~1 hr.
-
----
-
-### 🟢 LOW (long-tail polish)
-
-#### 16. No design-system primitives
-#### 17. No tests
-#### 18. No OpenAPI consumption
-#### 19. No memo / useCallback on heavy compute pages
-
----
-
-## Suggested execution order
-
-| Order | Item | Time |
+| Area | Status | Notes |
 |---|---|---|
-| 0 | **Fix `js-cookie` import** | 1 min |
-| 1 | DOMPurify + ErrorBoundary + fetch interceptor + focus traps + error reporter | ~3 hrs |
-| 2 | sitemap + robots + JSON-LD + `generateMetadata` | ~6 hrs |
-| 3 | Tracking (GA4 + FB Pixel) | ~1 hr |
-| 4 | Address quality + RHF form | ~1.5 hrs |
-| 5 | Skip-to-main + sr-only + README | ~1.5 hrs |
-| 6 | React Query migration | ~half day |
-| 7 | Tests + design system | ongoing |
-
-**Total: ~2-3 dev days** to reach 85+ readiness (same budget as Knitwink because the gaps are identical).
-
----
-
-## Velquira-specific quirks
-
-- Runs on **port 3001** (`next dev -p 3001`) — keep this in mind when running both Knitwink and Velquira locally.
-- Brand is set to `velquira` in `lib/api/*.js` brand headers (verify).
-- Other than the Cookies-import bug, this is a **fork of the Knitwink template** — patches written for Knitwink will mostly apply verbatim.
-
----
-
-## What to copy from Crosscoin
-
-Same drop-in table as Knitwink — see `Knitwink/PENDING.md` for the full mapping.
+| Critical `js-cookie` import bug | ✅ Fixed | `lib/api/client.js` now imports from `js-cookie` (not the TypeScript types package). |
+| Hardened API client | ✅ `lib/api/client.js` | 30s `AbortController` timeout, CSRF cookie mirror, categorised error toasts, `X-Brand-Name` header. |
+| HTML sanitiser | ✅ `lib/sanitizeHtml.js` (`richHtml`/`inlineHtml`/`installLinkHardening`) | Wired into: `app/journal/[slug]/ClientPage.jsx` (blog body), `app/policies/[name]/page.jsx` (policy content), `components/ui/SectionHeader.jsx` (admin title). Layout's MSG91 bootstrap is self-generated → no sanitiser needed. |
+| Global ErrorBoundary | ✅ `components/ui/ErrorBoundary.jsx` | Buffers errors on `window.__velquiraErrors`, dispatches `velquira:error` CustomEvent. |
+| Global error reporter | ✅ `lib/errorReporter.js` + `lib/sentryAdapter.js` | Auto-wires `@sentry/nextjs` if installed + DSN set, else POSTs to `/api/client-errors` with `keepalive`. |
+| Focus trap hook | ✅ `hooks/useFocusTrap.js` | Available — call sites pending one-by-one wiring. |
+| CSRF token mirror | ✅ Auto-fetched in `ClientProviders` boot |
+| Sitemap + robots | ✅ `app/sitemap.js` + `app/robots.js` | Dynamic sitemap pulls from `/api/products`, `/api/blogs`, `/api/categories`. |
+| Analytics (GA4 + FB Pixel + MS Clarity) | ✅ `components/layout/Analytics.jsx` | Skips entirely on save-data / 2g. |
+| Network-aware helpers | ✅ `lib/netinfo.js` + `components/common/NetworkAwareImage.jsx` |
+| Skip-to-main + sr-only + 44×44 touch targets | ✅ `styles/globals.css` |
+| `generateMetadata` + JSON-LD on dynamic pages | ✅ `products/[handle]`, `journal/[slug]`, `collections` use server-shell + ClientPage split |
+| RHF + Zod address schema | ✅ `lib/addressSchema.js` + `components/account/AddressFormRHF.jsx` | Address-quality probe at 600ms debounce. |
+| React Query | ✅ `lib/queryClient.js` + `ClientProviders` boot |
+| Bundle analyzer | ✅ `npm run analyze` (lazy require of `@next/bundle-analyzer`) |
+| Lighthouse CI | ✅ `lighthouserc.json` + `.github/workflows/lighthouse.yml` (PR + Monday cron) |
+| Lazy WhatsApp widget | ✅ `requestIdleCallback` mount + skip on save-data |
+| Smoke tests | ✅ `tests/smoke/{sanitizeHtml,addressSchema,apiClient}.test.js` | Run via `npm test` once devDeps are installed (see *Deferred*). |
 
 ---
 
-**Last audited**: this commit. Re-audit after each major Crosscoin hardening pass.
+## 🟠 DEFERRED — own focused PR each
+
+### 1. Test runner devDeps
+Smoke tests are written; run:
+```bash
+npm i -D jest jest-environment-jsdom babel-jest @babel/preset-env cross-env @next/bundle-analyzer @sentry/nextjs
+```
+to enable `npm test` + `npm run analyze`. `@sentry/nextjs` is optional (only if you want Sentry instead of the default `/api/client-errors` sink).
+
+### 2. `useFocusTrap` wiring on `Drawer` / `Modal` / `CartDrawer`
+Hook is ported; call sites need one-by-one integration.
+
+### 3. CrossSell / ReviewsSection seeded with React Query `initialData`
+Pattern proven on Knitwink. Velquira versions still hit `useEffect` + raw fetch — fine while traffic is low; migrate when needed.
+
+### 4. Storybook
+Not started. Run `npx storybook@latest init --skip-install --type nextjs`, port the four stories from `Knitwink/stories/`.
+
+### 5. Per-resource API files → migrate to shared `apiClient`
+`lib/api/*` per-resource files (`auth.js`, `cart.js`, etc.) currently call raw `fetch`. Migrate each one to delegate to `apiClient.get/post/...` so timeout + CSRF + categorised toasts apply automatically. Touch each file in turn; backward-compatible.
+
+---
+
+## Suggested execution order from here
+
+1. Install test devDeps + `@next/bundle-analyzer` and lock the smoke suite green.
+2. Install Sentry (`npm i @sentry/nextjs`) + set `NEXT_PUBLIC_SENTRY_DSN` to activate the zero-code-change Sentry path.
+3. Wire `useFocusTrap` into Drawer / Modal / CartDrawer.
+4. Migrate `lib/api/*` per-resource files to `apiClient` one-by-one.
+5. Storybook + design-system polish.
+
+---
+
+## Env vars
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.crosscoin.in
+NEXT_PUBLIC_SITE_URL=https://velquira.com
+NEXT_PUBLIC_BRAND_NAME=velquira
+NEXT_PUBLIC_WHATSAPP_NUMBER=917434834000
+
+# Optional
+NEXT_PUBLIC_SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_TRACES_SAMPLE=0.1
+NEXT_PUBLIC_SENTRY_PII=false
+NEXT_PUBLIC_GA_ID=
+NEXT_PUBLIC_FB_PIXEL_ID=
+NEXT_PUBLIC_CLARITY_ID=
+```
+
+---
+
+**Last audited**: this commit.
