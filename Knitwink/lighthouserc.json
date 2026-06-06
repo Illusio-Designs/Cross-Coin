@@ -1,0 +1,41 @@
+{
+  "$schema": "https://github.com/GoogleChrome/lighthouse-ci/blob/main/docs/configuration.md",
+  "comment": "Lighthouse-CI budget. Mobile-first numbers. Run via `npx lhci autorun` against the production build or a deployed preview. Add to CI when ready.",
+  "ci": {
+    "collect": {
+      "url": [
+        "https://knitwink.com/",
+        "https://knitwink.com/collections",
+        "https://knitwink.com/journal",
+        "https://knitwink.com/about"
+      ],
+      "settings": {
+        "preset": "mobile",
+        "throttlingMethod": "simulate"
+      },
+      "numberOfRuns": 3
+    },
+    "assert": {
+      "preset": "lighthouse:no-pwa",
+      "assertions": {
+        "categories:performance":  ["warn", { "minScore": 0.85 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }],
+        "categories:best-practices": ["warn", { "minScore": 0.95 }],
+        "categories:seo":           ["error", { "minScore": 0.95 }],
+
+        "first-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "total-blocking-time":   ["warn", { "maxNumericValue": 200 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "speed-index":           ["warn", { "maxNumericValue": 3500 }],
+
+        "uses-responsive-images": "warn",
+        "uses-optimized-images": "warn",
+        "uses-text-compression": "error",
+        "tap-targets":           "error",
+        "color-contrast":        "error",
+        "image-alt":             "error"
+      }
+    }
+  }
+}

@@ -38,6 +38,33 @@
   border: 0;
 }
 
+/* ─── Touch-target minimum (a11y) ─────────────────────────────────────
+   Apple HIG says 44×44, Material Design says 48×48. We target 44px on
+   mobile (< 768px) — the next pixel up matches the Material guide if
+   the button has any padding at all.
+
+   Applies to: <button>, role="button", <a> inside nav/footer/header.
+   Excludes: <button> inside <label> (toggle controls render their hit
+   area on the label) and the icon buttons explicitly marked
+   .no-touch-min (e.g. inline reaction strips).
+
+   Opt-out for a specific button: add `no-touch-min` to its class list. */
+@media (max-width: 768px) {
+  button:not(.no-touch-min):not(label button),
+  [role="button"]:not(.no-touch-min),
+  nav a:not(.no-touch-min),
+  header a:not(.no-touch-min),
+  footer a:not(.no-touch-min) {
+    min-height: 44px;
+    min-width: 44px;
+    /* Keep visual size unchanged for icon-only buttons by using flexbox
+       to centre the content within the larger hit area. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 @theme inline {
   --color-gray-100: #f5f5f5;
   --color-gray-200: #e5e5e5;

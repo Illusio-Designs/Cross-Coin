@@ -43,4 +43,17 @@ const nextConfig = {
     ];
   },
 }
-module.exports = nextConfig
+
+// Bundle analyzer — run `npm run analyze` to inspect output.
+if (process.env.ANALYZE === 'true') {
+  try {
+    // eslint-disable-next-line global-require
+    const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });
+    module.exports = withBundleAnalyzer(nextConfig);
+  } catch {
+    // @next/bundle-analyzer not installed — fall back silently
+    module.exports = nextConfig;
+  }
+} else {
+  module.exports = nextConfig;
+}

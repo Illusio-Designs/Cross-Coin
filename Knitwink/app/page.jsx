@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { HeroBanner } from '@/components/home/HeroBanner'
 import { CategoryCards } from '@/components/home/CategoryCards'
 import { TrustStrip } from '@/components/home/TrustStrip'
@@ -12,17 +12,24 @@ import { getBestsellers } from '@/lib/api/products'
 import { getPublicSliders } from '@/lib/api/sliders'
 import { getPublicCategories } from '@/lib/api/categories'
 import SeoWrapper from '@/components/SeoWrapper'
+import { queryKeys } from '@/lib/queryClient'
 
 export default function HomePage() {
-  const [slides, setSlides] = useState([])
-  const [categories, setCategories] = useState([])
-  const [bestsellers, setBestsellers] = useState([])
-
-  useEffect(() => {
-    getPublicSliders().then(setSlides).catch(() => {})
-    getPublicCategories().then(setCategories).catch(() => {})
-    getBestsellers().then(setBestsellers).catch(() => {})
-  }, [])
+  // React Query: home-page lists. All three are cacheable for 5 minutes
+  // by default. The .catch keeps the page rendering even if one of the
+  // backend calls fails (e.g. sliders missing on a fresh deploy).
+  const { data: slides = [] } = useQuery({
+    queryKey: queryKeys.sliders,
+    queryFn: () => getPublicSliders().catch(() => []),
+  })
+  const { data: categories = [] } = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: () => getPublicCategories().catch(() => []),
+  })
+  const { data: bestsellers = [] } = useQuery({
+    queryKey: ['bestsellers'],
+    queryFn: () => getBestsellers().catch(() => []),
+  })
 
   return (
     <SeoWrapper pageName="home">

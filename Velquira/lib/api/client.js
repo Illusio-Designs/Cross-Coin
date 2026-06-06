@@ -1,50 +1,122 @@
-import Cookies from '@/node_modules/@types/js-cookie';
+/**
+ * Shared API client for Velquira.
+ *
+ *   - 30s timeout via AbortController
+ *   - X-Brand-Name: velquira on every request
+ *   - X-CSRF-Token mirror from cc_csrf cookie on state-changing methods
+ *   - Categorised error toast on failure (opt-out per-call)
+ *
+ * The previous version of this file imported `Cookies` from
+ * `@/node_modules/@types/js-cookie` (the TypeScript types package),
+ * which produced `undefined` at runtime and silently broke every
+ * authed request. That's fixed here — see PENDING.md for history.
+ */
 
+import Cookies from 'js-cookie';
+import { showError as toastError } from '@/lib/toast';
 
-const getBaseUrl = () =>
-typeof window === 'undefined' ?
-process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in' :
-process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
+const DEFAULT_TIMEOUT_MS = 30_000;
+const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 
-async function apiFetch(path, init) {
-  const token = typeof window !== 'undefined' ? Cookies.get('auth_token') : undefined;
+function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  // Prefer cookie (future-state). Fall back to legacy localStorage location
+  // used by lib/api/auth.js until the cookies migration lands.
+  const cookie = Cookies.get('auth_token');
+  if (cookie) return cookie;
+  try { return localStorage.getItem('token'); } catch { return null; }
+}
+
+function isStateChanging(method) {
+  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(method || '').toUpperCase());
+}
+
+function buildErrorMessage(err) {
+  if (err?.code === 'TIMEOUT' || /aborted/i.test(err?.message || '')) {
+    return 'The server took too long to respond. Please check your connection and try again.';
+  }
+  if (err?.status == null) return "Can't reach the server. Check your internet connection.";
+  const apiMessage = err?.message && err.message !== 'An error occurred' ? err.message : null;
+  const s = err.status;
+  if (s === 401) return apiMessage || 'Please sign in to continue.';
+  if (s === 403) return apiMessage || "You don't have permission for that action.";
+  if (s === 404) return apiMessage || "We couldn't find that resource.";
+  if (s === 409) return apiMessage || 'Conflict — please refresh and try again.';
+  if (s === 422 || s === 400) return apiMessage || 'Some details look invalid. Please review and retry.';
+  if (s === 429) return apiMessage || 'Too many requests — please slow down.';
+  if (s >= 500) return apiMessage || 'Our server hit a bump. Please try again in a moment.';
+  return apiMessage || 'Something went wrong. Please try again.';
+}
+
+async function apiFetch(path, init = {}) {
+  const method = init.method || 'GET';
+  const token = getAuthToken();
+  const csrf = typeof window !== 'undefined' ? Cookies.get('cc_csrf') : undefined;
+
+  const userTimeout = init.timeoutMs;
+  const timeoutMs = Number.isFinite(userTimeout) ? userTimeout : DEFAULT_TIMEOUT_MS;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
 
   const headers = {
     'Content-Type': 'application/json',
+    'X-Brand-Name': BRAND,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(init?.headers ?? {})
+    ...(csrf && isStateChanging(method) ? { 'X-CSRF-Token': csrf } : {}),
+    ...(init.headers ?? {}),
   };
 
-  const res = await fetch(`${getBaseUrl()}${path}`, { ...init, headers });
+  let res;
+  try {
+    res = await fetch(`${getBaseUrl()}${path}`, {
+      ...init,
+      headers,
+      signal: init.signal || ac.signal,
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    const err = { message: e?.message || 'Network error', code: ac.signal.aborted ? 'TIMEOUT' : 'NETWORK', status: null };
+    if (!init.suppressErrorToast && !init.silentError && typeof window !== 'undefined') {
+      try { toastError(buildErrorMessage(err)); } catch { /* ignore */ }
+    }
+    throw err;
+  }
+  clearTimeout(timer);
 
   if (!res.ok) {
-    const error = {
-      message: 'An error occurred',
-      status: res.status
-    };
+    const err = { message: 'An error occurred', status: res.status };
     try {
       const body = await res.json();
-      error.message = body.message ?? error.message;
-      error.code = body.code;
-    } catch {
+      err.message = body.message ?? body.error?.message ?? err.message;
+      err.code = body.code ?? body.error?.code;
+      err.details = body.error?.details;
+    } catch { /* body wasn't JSON */ }
 
+    if (!init.suppressErrorToast && !init.silentError && typeof window !== 'undefined') {
+      try { toastError(buildErrorMessage(err)); } catch { /* ignore */ }
+    }
+    throw err;
+  }
 
-      // ignore parse errors
-    }throw error;}
-
+  if (res.status === 204) return null;
   return res.json();
 }
 
 export const apiClient = {
-  get: (path, init) =>
-  apiFetch(path, { ...init, method: 'GET' }),
-
-  post: (path, body, init) =>
-  apiFetch(path, { ...init, method: 'POST', body: JSON.stringify(body) }),
-
-  patch: (path, body, init) =>
-  apiFetch(path, { ...init, method: 'PATCH', body: JSON.stringify(body) }),
-
-  delete: (path, init) =>
-  apiFetch(path, { ...init, method: 'DELETE' })
+  get:    (path, init) => apiFetch(path, { ...init, method: 'GET' }),
+  post:   (path, body, init) => apiFetch(path, { ...init, method: 'POST',   body: JSON.stringify(body) }),
+  put:    (path, body, init) => apiFetch(path, { ...init, method: 'PUT',    body: JSON.stringify(body) }),
+  patch:  (path, body, init) => apiFetch(path, { ...init, method: 'PATCH',  body: JSON.stringify(body) }),
+  delete: (path, init) => apiFetch(path, { ...init, method: 'DELETE' }),
 };
+
+export async function fetchCsrfToken() {
+  if (typeof window === 'undefined') return;
+  try {
+    await fetch(`${getBaseUrl()}/api/csrf/token`, {
+      headers: { 'X-Brand-Name': BRAND },
+      credentials: 'include',
+    });
+  } catch { /* CSRF is opt-in on the backend */ }
+}

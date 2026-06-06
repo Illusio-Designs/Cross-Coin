@@ -2,6 +2,7 @@
 
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
+import { prefersReducedData } from '@/lib/netinfo';
 
 /**
  * Storefront analytics + ad tracking — runtime configuration.
@@ -30,6 +31,12 @@ export default function Analytics() {
   const [cfg, setCfg] = useState(null);
 
   useEffect(() => {
+    // Respect the user's bandwidth budget: skip third-party analytics
+    // on save-data / 2g. The trade-off — losing some pageview signal
+    // from low-bandwidth users — is worth keeping the page snappy for
+    // them. Analytics still fire on every other connection.
+    if (prefersReducedData()) return;
+
     let cancelled = false;
     (async () => {
       try {

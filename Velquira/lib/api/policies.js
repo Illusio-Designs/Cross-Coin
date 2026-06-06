@@ -1,7 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
+import { apiClient } from '@/lib/api/client'
 
 export async function getPolicyByName(name) {
-  const res = await fetch(`${API_URL}/api/policies/name/${name}`)
-  if (!res.ok) throw new Error('Failed to fetch policy')
-  return res.json()
+  return apiClient.get(`/api/policies/name/${name}`, { suppressErrorToast: true })
 }

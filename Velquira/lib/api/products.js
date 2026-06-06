@@ -1,8 +1,6 @@
 
 import { getColorHex } from '@/lib/colorMap';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
-const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velquira';
+import { apiClient } from '@/lib/api/client';
 
 function cleanUrl(url) {
   if (!url) return '';
@@ -12,13 +10,9 @@ function cleanUrl(url) {
   return url;
 }
 
-async function brandFetch(path) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'X-Brand-Name': BRAND_NAME },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-  return res.json();
-}
+// Suppress toasts on public-catalog reads — the catch sites already
+// downgrade to empty arrays gracefully, so a toast would be noise.
+const brandFetch = (path) => apiClient.get(path, { suppressErrorToast: true });
 
 // Map backend product to Velquira Product type
 export function mapProduct(p) {

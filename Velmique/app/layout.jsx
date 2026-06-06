@@ -4,6 +4,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { StoreProvider } from '@/lib/store';
 import { AuthProvider } from '@/context/AuthContext';
+import ClientProviders from '@/components/layout/ClientProviders';
+import Analytics from '@/components/layout/Analytics';
 import HeaderShell from '@/components/layout/HeaderShell';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
@@ -106,32 +108,36 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={jost.className}>
-        <AuthProvider>
-          <StoreProvider>
-            <ScrollProgress />
-            <HeaderShell />
-            <main>{children}</main>
-            <Footer />
-            <CartDrawer />
-            <SearchOverlay />
-            <CookieBanner />
-            <ScrollToTop />
-            <WhatsAppChat />
-            <ToastContainer
-              position="top-right"
-              autoClose={2500}
-              hideProgressBar
-              newestOnTop
-              closeOnClick
-              pauseOnFocusLoss={false}
-              pauseOnHover={false}
-              draggable={false}
-              theme="light"
-              limit={3}
-              toastClassName="velmique-toast"
-            />
-          </StoreProvider>
-        </AuthProvider>
+        <a href="#main" className="skip-to-main">Skip to main content</a>
+        <ClientProviders>
+          <AuthProvider>
+            <StoreProvider>
+              <ScrollProgress />
+              <HeaderShell />
+              <main id="main">{children}</main>
+              <Footer />
+              <CartDrawer />
+              <SearchOverlay />
+              <CookieBanner />
+              <ScrollToTop />
+              <WhatsAppChat />
+              <Analytics />
+              <ToastContainer
+                position="top-right"
+                autoClose={2500}
+                hideProgressBar
+                newestOnTop
+                closeOnClick
+                pauseOnFocusLoss={false}
+                pauseOnHover={false}
+                draggable={false}
+                theme="light"
+                limit={3}
+                toastClassName="velmique-toast"
+              />
+            </StoreProvider>
+          </AuthProvider>
+        </ClientProviders>
       </body>
     </html>
   );

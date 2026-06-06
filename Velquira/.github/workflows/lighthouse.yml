@@ -1,0 +1,36 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    paths:
+      - 'Velquira/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Velquira
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: Velquira/package-lock.json
+      - name: Install
+        run: npm ci || npm install
+      - name: Build
+        run: npm run build
+      - name: Lighthouse CI
+        env:
+          PREVIEW_URL: ${{ secrets.PREVIEW_URL }}
+        run: |
+          if [ -n "$PREVIEW_URL" ]; then
+            npx lhci autorun --collect.url=$PREVIEW_URL --upload.target=temporary-public-storage
+          else
+            npx lhci autorun
+          fi
