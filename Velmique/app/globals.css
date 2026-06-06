@@ -6,6 +6,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   Accessibility primitives
+   ------------------------------------------------------------------ */
+
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 12px 18px;
+  background: #1A1612;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+}
+.skip-to-main:focus { left: 0; outline: 3px solid #C9A84C; outline-offset: 2px; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Touch-target floor — anything interactive must be at least 44×44
+   on coarse-pointer devices unless explicitly opted out. */
+@media (hover: none) and (pointer: coarse) {
+  a:not(.no-touch-min),
+  button:not(.no-touch-min),
+  [role="button"]:not(.no-touch-min),
+  input[type="checkbox"]:not(.no-touch-min),
+  input[type="radio"]:not(.no-touch-min) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 :root {
   /* Cream + Gold palette — Velmique editorial */
   --bg: #FBF7EC;              /* main bg — warm cream */

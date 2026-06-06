@@ -1109,8 +1109,25 @@ module.exports.regenerateProductSeo = async (req, res) => {
 module.exports.getSeoHealthSummary = async (req, res) => {
   try {
     const brandId = parseInt(req.query.brand_id, 10) || null;
+    const { Faq } = require('../model/faqModel.js');
+
     const productWhere = {};
     if (brandId) productWhere.brand_id = brandId;
+
+    // Brand-scope the counts off the product/category brand relationships.
+    // ProductSEO has no brand_id of its own, so it joins through its Product
+    // (which carries brand_id). Categories link to brands many-to-many via
+    // the CategoryBrand join, reached through the `Brands` association.
+    const productSeoInclude = brandId
+      ? [{ model: Product, as: 'Product', attributes: [], required: true, where: { brand_id: brandId } }]
+      : [];
+    const categoryBrandInclude = brandId
+      ? [{ model: Brand, as: 'Brands', attributes: [], through: { attributes: [] }, required: true, where: { id: brandId } }]
+      : [];
+    const faqWhere = brandId ? { brand_id: brandId } : {};
+
+    const seoCount = (where) => ProductSEO.count({ where, include: productSeoInclude });
+    const catCount = (where) => Category.count({ where, include: categoryBrandInclude, distinct: true });
 
     const [
       totalProducts,
@@ -1128,19 +1145,19 @@ module.exports.getSeoHealthSummary = async (req, res) => {
       activeFaqs,
     ] = await Promise.all([
       Product.count({ where: productWhere }),
-      ProductSEO.count(),
-      ProductSEO.count({ where: { [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] } }),
-      ProductSEO.count({ where: { [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] } }),
-      ProductSEO.count({ where: { [Op.or]: [{ ogImage: null }, { ogImage: '' }] } }),
+      seoCount(undefined),
+      seoCount({ [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] }),
+      seoCount({ [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] }),
+      seoCount({ [Op.or]: [{ ogImage: null }, { ogImage: '' }] }),
       // No noindex column on ProductSEO yet — placeholder for future
       Promise.resolve(0),
-      Category.count(),
-      Category.count({ where: { [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] } }),
-      Category.count({ where: { [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] } }),
-      Category.count({ where: { [Op.or]: [{ ogImage: null }, { ogImage: '' }] } }),
-      Category.count({ where: { seoIndex: false } }),
-      require('../model/faqModel.js').Faq.count(),
-      require('../model/faqModel.js').Faq.count({ where: { is_active: true } }),
+      catCount(undefined),
+      catCount({ [Op.or]: [{ metaTitle: null }, { metaTitle: '' }] }),
+      catCount({ [Op.or]: [{ metaDescription: null }, { metaDescription: '' }] }),
+      catCount({ [Op.or]: [{ ogImage: null }, { ogImage: '' }] }),
+      catCount({ seoIndex: false }),
+      Faq.count({ where: faqWhere }),
+      Faq.count({ where: { ...faqWhere, is_active: true } }),
     ]);
 
     // Sample of products with the worst gaps (no metaTitle or no metaDescription).

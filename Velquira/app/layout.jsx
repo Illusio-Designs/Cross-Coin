@@ -13,6 +13,8 @@ import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import ClientProviders from '@/components/layout/ClientProviders';
+import Analytics from '@/components/layout/Analytics';
 import { SITE_NAME } from '@/lib/constants';
 
 const inter = Inter({
@@ -80,22 +82,26 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
-        <AuthProvider>
-        <CartProvider>
-        <WishlistHydrator />
-        <Navbar />
-        <Breadcrumb />
-        <MobileMenu />
-        <CartDrawer />
-        <main className="flex-1 pb-1">
-          {children}
-        </main>
-        <Footer />
-        <BackToTop />
-        <WhatsAppChat />
-        <ToastContainer />
-        </CartProvider>
-        </AuthProvider>
+        <a href="#main" className="skip-to-main">Skip to main content</a>
+        <ClientProviders>
+          <AuthProvider>
+          <CartProvider>
+          <WishlistHydrator />
+          <Navbar />
+          <Breadcrumb />
+          <MobileMenu />
+          <CartDrawer />
+          <main id="main" className="flex-1 pb-1">
+            {children}
+          </main>
+          <Footer />
+          <BackToTop />
+          <WhatsAppChat />
+          <Analytics />
+          <ToastContainer />
+          </CartProvider>
+          </AuthProvider>
+        </ClientProviders>
       </body>
     </html>);
 

@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { getPublicProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import ProductCard from '@/components/shop/ProductCard';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 export default function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useStore();
@@ -15,6 +16,12 @@ export default function SearchOverlay() {
   const [popular, setPopular]     = useState([]);
   const fetchedRef = useRef(false);
   const inputRef = useRef(null);
+  // Trap focus inside the overlay panel while open; restores focus to
+  // the search trigger on close. Esc handler is centralised here too.
+  const trapRef = useFocusTrap(searchOpen, {
+    onEscape: () => setSearchOpen(false),
+    initialFocusRef: inputRef,
+  });
 
   // Hydrate the "Browse Collections" chips from live categories.
   useEffect(() => {
@@ -98,11 +105,8 @@ export default function SearchOverlay() {
     }
   }, [searchOpen]);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setSearchOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [setSearchOpen]);
+  // Escape is now handled by useFocusTrap above; no separate window-level
+  // listener needed.
 
   if (!searchOpen) return null;
 
@@ -112,7 +116,12 @@ export default function SearchOverlay() {
   const closeOnNav = () => setSearchOpen(false);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[var(--bg)] flex flex-col">
+    <div
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search Velmique"
+      className="fixed inset-0 z-[100] bg-[var(--bg)] flex flex-col">
       {/* Header — title left, close button right (sticky at top) */}
       <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-[var(--border)] bg-[var(--bg)]">
         <span className="font-serif italic text-xl text-[var(--ink)]">

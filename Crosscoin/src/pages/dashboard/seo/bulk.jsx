@@ -23,7 +23,7 @@ import { PageHeader, Panel, FilterBar } from '../../../components/Dashboard/prim
 
 const PAGE_SIZE = 25;
 
-export default function SeoBulkEditor() {
+export default function SeoBulkEditor({ brandId = 1 } = {}) {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [items, setItems] = useState([]);
@@ -48,6 +48,7 @@ export default function SeoBulkEditor() {
         limit: PAGE_SIZE,
         search: debouncedSearch || undefined,
         gaps_only: gapsOnly || undefined,
+        brand_id: brandId,
       });
       setItems(res.items || []);
       setPages(res.pages || 1);
@@ -56,7 +57,7 @@ export default function SeoBulkEditor() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, gapsOnly]);
+  }, [page, debouncedSearch, gapsOnly, brandId]);
 
   useEffect(() => { load(); }, [load]);
 

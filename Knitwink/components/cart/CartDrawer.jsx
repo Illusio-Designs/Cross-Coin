@@ -1,24 +1,32 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { addressSchema } from '@/lib/addressSchema';
 import {
   getUserAddresses,
   createShippingAddress,
   updateShippingAddress,
   getShippingFees,
-  createOrder,
-  createGuestOrder,
-  initiateCheckout,
-  initiateGuestCheckout,
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
 } from '@/lib/api/orders';
+// Order creation + checkout go through the React Query mutation
+// hooks so that successful orders auto-invalidate queryKeys.orders —
+// /account picks up the new order with no manual refetch.
+import {
+  useInitiateCheckout,
+  useInitiateGuestCheckout,
+  useCreateOrder,
+  useCreateGuestOrder,
+} from '@/hooks/useCheckout';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -58,39 +66,15 @@ function generateIdempotencyKey() {
   return 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 }
 
+// Delegates to the shared Zod schema in lib/addressSchema.js — single
+// source of truth between this form, the AddressFormRHF component, and
+// the backend Zod schema on /api/shipping-addresses. Local wrapper kept
+// so this file's call sites don't need to change.
 function validateShippingAddress(addr) {
   if (!addr) return { valid: false, errors: ['Address is empty'] };
-  const errors = [];
-  const name = String(addr.full_name || addr.fullName || '').trim();
-  if (!name) errors.push('Customer name is required');
-  else if (name.length < 2) errors.push('Name is too short');
-  else if (/^\d+$/.test(name)) errors.push('Name cannot be only numbers');
-
-  const addrLine = String(addr.address || '').trim();
-  if (!addrLine) errors.push('Street address is required');
-  else if (addrLine.length < 10) errors.push('Address is too short (min 10 characters)');
-  const junk = [/^test/i, /^asdf/i, /^xxx/i, /^abc$/i, /^na$/i, /^n\/a$/i];
-  if (junk.some(p => p.test(addrLine))) errors.push('Please enter a real address');
-
-  const city = String(addr.city || '').trim();
-  if (!city) errors.push('City is required');
-  else if (city.length < 2) errors.push('City name is too short');
-
-  const state = String(addr.state || '').trim();
-  if (!state) errors.push('State is required');
-
-  const pin = String(addr.postal_code || addr.postalCode || addr.pincode || '').trim();
-  if (!pin) errors.push('PIN code is required');
-  else if (!/^\d{6}$/.test(pin)) errors.push('PIN code must be exactly 6 digits');
-
-  const phone = String(addr.phone_number || addr.phoneNumber || addr.phone || '').replace(/\D/g, '');
-  if (!phone || phone.length < 10) {
-    errors.push('Valid 10-digit mobile number is required');
-  } else {
-    let ten = phone.length > 10 ? phone.slice(-10) : phone;
-    if (!/^[6-9]\d{9}$/.test(ten)) errors.push('Phone must be a valid Indian mobile (starts with 6-9)');
-  }
-  return { valid: errors.length === 0, errors };
+  const { validateAddress } = require('@/lib/addressSchema');
+  const result = validateAddress(addr);
+  return { valid: result.valid, errors: result.errors };
 }
 
 function isValidEmail(v) {
@@ -174,6 +158,115 @@ export function CartDrawer() {
   const [isVisible, setIsVisible] = useState(false);
   const [urgencySeconds, setUrgencySeconds] = useState(10 * 60);
 
+  // ── Address-quality probe ─────────────────────────────────────────
+  // Debounced 600ms. Fires when both pincode + phone parse. Result is
+  // displayed as a banner above the submit button.
+  useEffect(() => {
+    if (!showAddressForm) { setAddressQuality(null); return; }
+    const pin = String(addressForm.postalCode || '').trim();
+    const phone = String(addressForm.phoneNumber || guestInfo.phone || '').trim();
+    if (!/^\d{6}$/.test(pin)) return;
+    if (!/^\d{10}$/.test(phone)) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+        const r = await fetch(`${API_URL}/api/orders/check-address-quality`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink' },
+          body: JSON.stringify({
+            line1: addressForm.address || 'placeholder',
+            landmark: '',
+            city: addressForm.city || '',
+            state: addressForm.state || '',
+            pincode: pin,
+            phone,
+          }),
+        });
+        if (!r.ok) return;
+        const json = await r.json();
+        const data = json?.data || json;
+        if (!cancelled) setAddressQuality({
+          score: data?.score,
+          cod_allowed: data?.cod_allowed,
+          recommendation: data?.recommendation,
+        });
+      } catch { if (!cancelled) setAddressQuality(null); }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [showAddressForm, addressForm.postalCode, addressForm.phoneNumber, addressForm.address, addressForm.city, addressForm.state, guestInfo.phone]);
+
+  // ── react-hook-form layer over the existing address form ──────────
+  // The inputs stay controlled by `addressForm` state (so existing
+  // handleAddrChange / pincode-blur / phone-format logic keeps working).
+  // RHF runs on top to give us:
+  //   1. Field-level Zod validation that updates as the user types.
+  //   2. Inline error messages under each input via `addressRhf.formState.errors`.
+  //   3. A single `addressRhf.trigger()` we can call in handleSaveAddress
+  //      instead of the bespoke `validateShippingAddress(formData)` flow.
+  // We KEEP the legacy validateShippingAddress as the actual submit guard
+  // for now — RHF is a layer of UX polish, not a replacement.
+  const addressRhf = useForm({
+    resolver: zodResolver(addressSchema),
+    defaultValues: addressForm,
+    mode: 'onChange',
+  });
+  // Sync the controlled state INTO RHF whenever it changes, so RHF's
+  // errors stay accurate. Keep `touchedFields` across resets so the
+  // "only show errors for touched fields" UX continues to work as the
+  // user types (every keystroke triggers a reset).
+  useEffect(() => {
+    addressRhf.reset(addressForm, { keepErrors: false, keepTouched: true });
+    addressRhf.trigger();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressForm.fullName, addressForm.phoneNumber, addressForm.address, addressForm.city, addressForm.state, addressForm.postalCode, addressForm.country]);
+
+  // Mark a field as touched when its corresponding input fires onBlur.
+  // The existing inputs already use onChange={handleAddrChange} which
+  // mutates addressForm; we don't intercept onBlur so RHF's default
+  // touch tracking is bypassed. This helper bridges the gap.
+  const touchField = (rhfName) => addressRhf.setValue(rhfName, addressRhf.getValues(rhfName), { shouldTouch: true, shouldValidate: true });
+
+  // Project RHF's errors into the legacy { name, address, city, state,
+  // pincode, phone } shape so the existing inline-error JSX renders
+  // without changes.
+  //
+  // Surface an error for a field once the user has typed something into
+  // it (the value is non-empty) — keeps a freshly opened empty form
+  // from lighting up red. Save handler still calls trigger() to flag
+  // missing required fields at submit time.
+  //
+  // Only emit keys with truthy values so `Object.keys(fieldErrors).length`
+  // remains a valid "form has errors" check (used to disable submit).
+  const fieldErrors = useMemo(() => {
+    if (!showAddressForm) return {};
+    const e = addressRhf.formState.errors;
+    const v = (k) => String(addressForm[k] || '').trim().length > 0;
+    const out = {};
+    if (v('fullName')    && e.fullName?.message)    out.name    = e.fullName.message;
+    if (v('address')     && e.address?.message)     out.address = e.address.message;
+    if (v('city')        && e.city?.message)        out.city    = e.city.message;
+    if (v('state')       && e.state?.message)       out.state   = e.state.message;
+    if (v('postalCode')  && e.postalCode?.message)  out.pincode = e.postalCode.message;
+    if (v('phoneNumber') && e.phoneNumber?.message) out.phone   = e.phoneNumber.message;
+    return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddressForm, addressRhf.formState.errors, addressForm]);
+
+  // ── Mutation hooks for the checkout flow ──────────────────────────
+  // mutateAsync returns the resolved value and re-throws on failure,
+  // so swapping `await createOrder(d)` → `await createOrderMutation(d)`
+  // is a behavior-preserving change. The win: on success the hook
+  // invalidates queryKeys.orders so /account refreshes automatically.
+  const initiateCheckoutMutation = useInitiateCheckout();
+  const initiateGuestCheckoutMutation = useInitiateGuestCheckout();
+  const createOrderMutation = useCreateOrder();
+  const createGuestOrderMutation = useCreateGuestOrder();
+  const initiateCheckout = (data) => initiateCheckoutMutation.mutateAsync(data);
+  const initiateGuestCheckout = (data) => initiateGuestCheckoutMutation.mutateAsync(data);
+  const createOrder = (data) => createOrderMutation.mutateAsync(data);
+  const createGuestOrder = (data) => createGuestOrderMutation.mutateAsync(data);
+
   useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
@@ -196,13 +289,22 @@ export function CartDrawer() {
   const [addressForm, setAddressForm] = useState(EMPTY_ADDR);
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressSaving, setAddressSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
+  // fieldErrors is now DERIVED from RHF — see the addressRhf block
+  // below. We keep the same { name, address, city, state, pincode,
+  // phone } shape so the existing JSX (cd-input-error class + inline
+  // <p className="cd-field-error">) doesn't need to change.
+  const setFieldErrors = () => {};  // no-op shim for legacy reset call sites
   const [addressPhoneError, setAddressPhoneError] = useState('');
 
   // Shipping
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [pincodeServiceability, setPincodeServiceability] = useState(null);
+  // Address-quality probe — debounced /api/orders/check-address-quality
+  // call once pincode + phone are populated. Complements the pincode
+  // serviceability check above by adding a 0-100 quality score and
+  // recommendation. Same probe lives in components/account/AddressFormRHF.jsx.
+  const [addressQuality, setAddressQuality] = useState(null);
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -311,28 +413,12 @@ export function CartDrawer() {
     else setAddressPhoneError('');
   }, [addressForm.phoneNumber, isAuthenticated, showAddressForm]);
 
-  // Real-time field validation
-  useEffect(() => {
-    if (!showAddressForm) { setFieldErrors({}); return; }
-    const t = setTimeout(() => {
-      const formToValidate = isAuthenticated
-        ? { full_name: addressForm.fullName, address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: addressForm.phoneNumber }
-        : { full_name: guestInfo.fullName.trim(), address: addressForm.address, city: addressForm.city, state: addressForm.state, postal_code: addressForm.postalCode, phone_number: guestInfo.phone };
-      const result = validateShippingAddress(formToValidate);
-      const errs = {};
-      for (const err of result.errors) {
-        const lower = err.toLowerCase();
-        if (lower.includes('name') && !errs.name) errs.name = err;
-        else if ((lower.includes('address') || lower.includes('street')) && !errs.address) errs.address = err;
-        else if (lower.includes('city') && !errs.city) errs.city = err;
-        else if (lower.includes('state') && !errs.state) errs.state = err;
-        else if ((lower.includes('pin') || lower.includes('postal')) && !errs.pincode) errs.pincode = err;
-        else if (lower.includes('phone') || lower.includes('mobile')) errs.phone = err;
-      }
-      setFieldErrors(errs);
-    }, 400);
-    return () => clearTimeout(t);
-  }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);
+  // Real-time field validation — now sourced directly from RHF instead
+  // of the legacy keyword-matching heuristic. Each input still drives
+  // its own state for the existing pincode-blur autofill + phone-format
+  // logic; RHF only owns the validation + error mapping.
+  // (The addressRhf instance + addressForm → reset() sync is set up
+  // further down where the other form helpers live.)
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -1042,6 +1128,26 @@ export function CartDrawer() {
                             </div>
                           )}
                         </div>
+                        {addressQuality && (
+                          <div
+                            role="status"
+                            aria-live="polite"
+                            style={{
+                              margin: '8px 0 12px',
+                              padding: '10px 12px',
+                              borderRadius: 8,
+                              fontSize: 13,
+                              background: addressQuality.cod_allowed === false ? '#fef3c7' : '#ecfdf5',
+                              color: addressQuality.cod_allowed === false ? '#92400e' : '#065f46',
+                              border: `1px solid ${addressQuality.cod_allowed === false ? '#fcd34d' : '#a7f3d0'}`,
+                            }}
+                          >
+                            <strong>Address quality: {addressQuality.score}/100.</strong>{' '}
+                            {addressQuality.cod_allowed === false
+                              ? 'COD is not available — please pick a prepaid option.'
+                              : 'COD is available for this address.'}
+                          </div>
+                        )}
                         <div className="cd-form-actions">
                           <button type="submit" className="cd-btn-primary" disabled={addressSaving || Object.keys(fieldErrors).length > 0}>
                             {addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}

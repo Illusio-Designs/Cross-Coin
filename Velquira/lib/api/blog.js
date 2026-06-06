@@ -1,5 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
-const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velquira'
+import { apiClient } from '@/lib/api/client'
 
 function parseSections(raw) {
   if (!raw) return []
@@ -9,10 +8,8 @@ function parseSections(raw) {
 
 function mapPost(p) {
   const sections = parseSections(p.sections)
-  // Build plain-text excerpt from first section content (strip HTML tags)
   const firstContent = sections[0]?.content || ''
   const excerpt = firstContent.replace(/<[^>]+>/g, '').substring(0, 160).trim() + (firstContent.length > 160 ? '...' : '')
-  // Build HTML body from all sections
   const body = sections.map((s) => `${s.heading ? `<h2>${s.heading}</h2>` : ''}${s.content || ''}`).join('')
   const wordCount = sections.reduce((a, s) => a + (s.content?.replace(/<[^>]+>/g, '').split(/\s+/).length || 0), 0)
 
@@ -31,22 +28,14 @@ function mapPost(p) {
   }
 }
 
-async function apiFetch(path) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'X-Brand-Name': BRAND_NAME },
-  })
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`)
-  return res.json()
-}
-
 export async function getPosts() {
-  const data = await apiFetch('/api/blogs/listing')
+  const data = await apiClient.get('/api/blogs/listing', { suppressErrorToast: true })
   const posts = data?.data || data?.posts || data || []
   return Array.isArray(posts) ? posts.map(mapPost) : []
 }
 
 export async function getPost(slug) {
-  const data = await apiFetch(`/api/blogs/by-slug/${slug}`)
+  const data = await apiClient.get(`/api/blogs/by-slug/${slug}`, { suppressErrorToast: true })
   const post = data?.data || data
   return mapPost(post)
 }

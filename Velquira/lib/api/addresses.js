@@ -1,16 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
-const BRAND = 'velquira'
-
-function h() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  return { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND, ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-}
+import { apiClient } from '@/lib/api/client'
 
 export async function getAddresses() {
-  const res = await fetch(`${API_URL}/api/shipping-addresses`, { headers: h() })
-  if (!res.ok) return []
-  const data = await res.json()
-  return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
+  try {
+    const data = await apiClient.get('/api/shipping-addresses', { suppressErrorToast: true })
+    return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
+  } catch { return [] }
 }
 
 function normalise(data) {
@@ -27,27 +21,17 @@ function normalise(data) {
 }
 
 export async function createAddress(data) {
-  const res = await fetch(`${API_URL}/api/shipping-addresses`, { method: 'POST', headers: h(), body: JSON.stringify(normalise(data)) })
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to create address')
-  return result
+  return apiClient.post('/api/shipping-addresses', normalise(data))
 }
 
 export async function updateAddress(id, data) {
-  const res = await fetch(`${API_URL}/api/shipping-addresses/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(normalise(data)) })
-  const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to update address')
-  return result
+  return apiClient.put(`/api/shipping-addresses/${id}`, normalise(data))
 }
 
 export async function deleteAddress(id) {
-  const res = await fetch(`${API_URL}/api/shipping-addresses/${id}`, { method: 'DELETE', headers: h() })
-  if (!res.ok) throw new Error('Failed to delete address')
-  return res.json()
+  return apiClient.delete(`/api/shipping-addresses/${id}`)
 }
 
 export async function setDefaultAddress(id) {
-  const res = await fetch(`${API_URL}/api/shipping-addresses/${id}/default`, { method: 'PUT', headers: h() })
-  if (!res.ok) throw new Error('Failed to set default')
-  return res.json()
+  return apiClient.put(`/api/shipping-addresses/${id}/default`)
 }

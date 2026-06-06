@@ -17,10 +17,7 @@ const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
 
 const GUEST_TOKEN_KEY = 'velmique:guestToken';
 
-function getAuthToken() {
-  if (typeof window === 'undefined') return null;
-  try { return localStorage.getItem('token'); } catch { return null; }
-}
+import { getAuthToken } from '@/lib/authToken';
 
 function getOrCreateGuestToken() {
   if (typeof window === 'undefined') return '';

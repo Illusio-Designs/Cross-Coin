@@ -1,0 +1,64 @@
+name: Lighthouse CI
+
+# Runs Lighthouse against the production build (or a Vercel preview URL
+# when PREVIEW_URL is set as a repo secret). Budget lives in
+# lighthouserc.json — see the assertions block there for the thresholds.
+#
+# Manual trigger via the Actions tab is supported via workflow_dispatch.
+# Schedule lets it run weekly to catch slow regressions.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Knitwink/**'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Knitwink
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: Knitwink/package-lock.json
+
+      - name: Install deps
+        run: npm ci --no-audit --no-fund
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.crosscoin.in
+          NEXT_PUBLIC_BRAND_NAME: knitwink
+          NEXT_PUBLIC_FRONTEND_URL: https://knitwink.com
+
+      - name: Run Lighthouse CI
+        # Use the deployed preview when available — falls back to the
+        # production URL set in lighthouserc.json.
+        env:
+          LHCI_PREVIEW_URL: ${{ secrets.PREVIEW_URL }}
+        run: |
+          npm install -g @lhci/cli@0.13.x
+          if [ -n "$LHCI_PREVIEW_URL" ]; then
+            echo "Auditing preview: $LHCI_PREVIEW_URL"
+            lhci collect --url="$LHCI_PREVIEW_URL"
+            lhci assert
+          else
+            echo "No PREVIEW_URL secret; auditing prod URLs in lighthouserc.json"
+            lhci autorun
+          fi
+
+      - name: Upload Lighthouse HTML reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: Knitwink/.lighthouseci/

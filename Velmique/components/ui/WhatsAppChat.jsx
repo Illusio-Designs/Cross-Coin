@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { prefersReducedData } from '@/lib/netinfo';
 
 const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
 const WA_MESSAGE = 'Hi! I need help with Velmique.';
 
 /**
- * WhatsApp floating chat — same as the other brand storefronts.
- * Fixed FAB bottom-right with a greet bubble that fades out after the
- * user scrolls. Portals to document.body so it sits above every layer.
+ * WhatsApp floating chat.
+ * Fixed FAB bottom-right with a greet bubble that fades after first
+ * scroll. Lazy-mounts via requestIdleCallback so it never blocks the
+ * critical path; skips entirely on save-data / 2g.
  */
 export default function WhatsAppChat() {
   const [greetVisible, setGreetVisible] = useState(true);
@@ -18,11 +20,26 @@ export default function WhatsAppChat() {
   const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;
 
   useEffect(() => {
-    setMounted(true);
+    if (typeof window === 'undefined') return;
+    if (prefersReducedData()) return; // skip entirely on save-data
+    const mountFn = () => setMounted(true);
+    const idle = window.requestIdleCallback;
+    const id = idle ? idle(mountFn, { timeout: 2500 }) : setTimeout(mountFn, 2500);
+    const onFirstScroll = () => { mountFn(); window.removeEventListener('scroll', onFirstScroll); };
+    window.addEventListener('scroll', onFirstScroll, { passive: true, once: true });
+    return () => {
+      if (idle && window.cancelIdleCallback) window.cancelIdleCallback(id);
+      else clearTimeout(id);
+      window.removeEventListener('scroll', onFirstScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return undefined;
     const onScroll = () => setScrolled(window.scrollY > 200);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [mounted]);
 
   if (!mounted) return null;
 

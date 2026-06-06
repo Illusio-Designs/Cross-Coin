@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { getPolicyByName } from '@/lib/api/policies'
 import SeoWrapper from '@/components/SeoWrapper'
 import { Reveal } from '@/components/ui/Reveal'
+import { richHtml } from '@/lib/sanitizeHtml'
 
 function formatTitle(name) {
   return (name || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -104,7 +105,7 @@ export default function PolicyPage() {
                     [&_strong]:text-brand-black [&_strong]:font-medium
                     [&_em]:font-display [&_em]:italic
                   "
-                  dangerouslySetInnerHTML={{ __html: policy.content }}
+                  {...richHtml(policy.content)}
                 />
               </Reveal>
             )}
