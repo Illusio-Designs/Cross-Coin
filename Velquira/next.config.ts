@@ -1,5 +1,19 @@
 import type { NextConfig } from 'next'
 
+// Bundle analyzer — `npm run analyze` flips ANALYZE=true and wraps
+// the config. Loaded lazily so production builds without the
+// package installed still work.
+const withBundleAnalyzer = (cfg: NextConfig): NextConfig => {
+  if (process.env.ANALYZE !== 'true') return cfg
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const analyzer = require('@next/bundle-analyzer')({ enabled: true })
+    return analyzer(cfg)
+  } catch {
+    return cfg
+  }
+}
+
 const nextConfig: NextConfig = {
   // Single-process page-data collection. The multi-worker collector
   // races with the editor / AV file-watcher on Windows and throws
@@ -31,4 +45,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)

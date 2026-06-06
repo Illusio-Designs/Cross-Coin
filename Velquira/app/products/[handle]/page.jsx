@@ -1,96 +1,65 @@
-'use client'
+import ClientPage from './ClientPage';
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { getProduct } from '@/lib/api/products'
-import { ProductPageClient } from '@/components/product/ProductPageClient'
-import { FeatureHighlight } from '@/components/product/FeatureHighlight'
-import { CrossSell } from '@/components/product/CrossSell'
-import { ReviewsSection } from '@/components/product/ReviewsSection'
-import SeoWrapper from '@/components/SeoWrapper'
-import { Reveal } from '@/components/ui/Reveal'
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velquira.com';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
 
-function ProductSkeleton() {
-  return (
-    <div className="bg-ivory px-5 pt-36 pb-10 lg:px-8">
-      <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-12">
-        <div className="aspect-square w-full animate-pulse bg-cream lg:col-span-7" />
-        <div className="flex flex-col gap-4 py-6 lg:col-span-5">
-          <div className="h-3 w-24 animate-pulse bg-cream" />
-          <div className="h-8 w-3/4 animate-pulse bg-cream" />
-          <div className="h-6 w-28 animate-pulse bg-cream" />
-          <div className="h-12 w-full animate-pulse bg-cream" />
-        </div>
-      </div>
-    </div>
-  )
+async function fetchProduct(handle) {
+  try {
+    const r = await fetch(`${API}/api/products/${encodeURIComponent(handle)}`, {
+      headers: { 'X-Brand-Name': BRAND },
+      next: { revalidate: 600 },
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.data || j?.product || j;
+  } catch { return null; }
 }
 
-export default function ProductPage() {
-  const { handle } = useParams()
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
+export async function generateMetadata({ params }) {
+  const { handle } = await params;
+  const p = await fetchProduct(handle);
+  if (!p) return { title: 'Product — Velquira', description: 'Discover Velquira jewellery.' };
+  const title = `${p.name || p.title} — Velquira`;
+  const description = (p.shortDescription || p.description || '').replace(/<[^>]*>/g, '').slice(0, 160);
+  const image = p.image || p.images?.[0] || `${SITE}/og.jpg`;
+  const url = `${SITE}/products/${handle}`;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, images: [{ url: image }], type: 'website' },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
+  };
+}
 
-  useEffect(() => {
-    if (!handle) return
-    setLoading(true)
-    getProduct(handle)
-      .then(setProduct)
-      .catch(() => setProduct(null))
-      .finally(() => setLoading(false))
-  }, [handle])
+export default async function Page({ params }) {
+  const { handle } = await params;
+  const product = await fetchProduct(handle);
 
-  if (loading) return <ProductSkeleton />
-  if (!product) return (
-    <div className="bg-ivory px-5 py-32 text-center">
-      <p className="font-display text-3xl text-brand-black/75">Piece not found.</p>
-      <Link
-        href="/collections/all"
-        className="mt-6 inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.28em] text-gold hover:text-gold-deep"
-      >
-        Return to the Collection
-      </Link>
-    </div>
-  )
+  const jsonLd = product ? {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name || product.title,
+    description: (product.shortDescription || product.description || '').replace(/<[^>]*>/g, '').slice(0, 500),
+    image: product.image || product.images?.[0],
+    sku: product.sku || product.id,
+    brand: { '@type': 'Brand', name: 'Velquira' },
+    offers: {
+      '@type': 'Offer',
+      url: `${SITE}/products/${handle}`,
+      priceCurrency: 'INR',
+      price: Number(product.salePrice || product.price || 0),
+      availability: (product.inStock ?? true) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+  } : null;
 
   return (
-    <SeoWrapper pageName={handle || 'product-details'} seoData={product?.seo || null}>
-      <main className="bg-ivory">
-        {/* Hero spread (12-col, gallery + info) — breadcrumb comes from root layout */}
-        <section className="px-4 pt-10 pb-20 lg:px-8">
-          <ProductPageClient product={product} />
-        </section>
-
-        {/* The Maker's Hand */}
-        <Reveal>
-          <FeatureHighlight />
-        </Reveal>
-
-        {/* Reviews — A Legacy of Trust */}
-        <Reveal>
-          <section className="bg-white">
-            <div className="mx-auto flex max-w-[1320px] flex-col items-center px-4 pt-20 text-center md:pt-28 lg:px-8">
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                Testimonials
-              </p>
-              <h2 className="mt-4 max-w-2xl font-display text-4xl font-normal leading-tight tracking-tight text-brand-black md:text-5xl">
-                A Legacy of Trust
-              </h2>
-              <p className="mt-4 max-w-md text-[14px] leading-relaxed text-brand-black/60">
-                Notes from the people who carry this piece.
-              </p>
-              <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
-            </div>
-            <ReviewsSection productId={product.id} productName={product.name} />
-          </section>
-        </Reveal>
-
-        {/* Complete the Set */}
-        <Reveal>
-          <CrossSell currentHandle={product.handle} />
-        </Reveal>
-      </main>
-    </SeoWrapper>
-  )
+    <>
+      {jsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      )}
+      <ClientPage initialProduct={product} />
+    </>
+  );
 }
