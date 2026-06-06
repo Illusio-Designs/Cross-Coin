@@ -25,6 +25,7 @@ import {
   showWarning,
 } from '@/lib/toast';
 import '@/styles/CartDrawer.css';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
@@ -244,13 +245,9 @@ export function CartDrawer() {
     return () => document.body.classList.remove('cd-drawer-open-body');
   }, [drawerOpen]);
 
-  // ── Escape key ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') closeDrawer(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [drawerOpen, closeDrawer]);
+  // Focus trap + Escape — handled by useFocusTrap. Restores focus to the
+  // element that opened the drawer on close.
+  const trapRef = useFocusTrap(drawerOpen, { onEscape: closeDrawer });
 
   // ── Shipping fees ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -727,7 +724,7 @@ export function CartDrawer() {
   return (
     <>
       <div className={`cd-backdrop ${drawerOpen ? 'cd-backdrop-active' : ''}`} onClick={closeDrawer} />
-      <div className={`cd-drawer ${drawerOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
+      <div ref={trapRef} className={`cd-drawer ${drawerOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
 
         {/* Header */}
         <div className="cd-header">

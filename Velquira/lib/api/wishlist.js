@@ -8,93 +8,58 @@
      POST   /:productId/move-to-cart    -> move single item to cart (auth-only)
 
    Identity:
-     - Signed-in users send Authorization: Bearer <token>
-     - Guests send X-Guest-Token: <token> (auto-generated, persisted in localStorage)
+     - Signed-in users: Authorization: Bearer <token> (apiClient handles this)
+     - Guests: X-Guest-Token: <token> (auto-generated, persisted in localStorage)
+*/
 
-   Same backend the Velmique frontend talks to — only the brand header
-   and guest-token storage key differ. */
+import { apiClient } from '@/lib/api/client'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
-const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velquira';
-
-const GUEST_TOKEN_KEY = 'velquira:guestToken';
-
-function getAuthToken() {
-  if (typeof window === 'undefined') return null;
-  try { return localStorage.getItem('token'); } catch { return null; }
-}
+const GUEST_TOKEN_KEY = 'velquira:guestToken'
 
 function getOrCreateGuestToken() {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === 'undefined') return ''
   try {
-    let t = localStorage.getItem(GUEST_TOKEN_KEY);
+    let t = localStorage.getItem(GUEST_TOKEN_KEY)
     if (!t) {
       t = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
-        : `g_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem(GUEST_TOKEN_KEY, t);
+        : `g_${Date.now()}_${Math.random().toString(36).slice(2)}`
+      localStorage.setItem(GUEST_TOKEN_KEY, t)
     }
-    return t;
+    return t
   } catch {
-    return `g_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    return `g_${Date.now()}_${Math.random().toString(36).slice(2)}`
   }
 }
 
-function headers() {
-  const h = {
-    'Content-Type': 'application/json',
-    'X-Brand-Name': BRAND_NAME,
-    'X-Guest-Token': getOrCreateGuestToken(),
-  };
-  const auth = getAuthToken();
-  if (auth) h.Authorization = `Bearer ${auth}`;
-  return h;
+function guestHeaders() {
+  return { 'X-Guest-Token': getOrCreateGuestToken() }
 }
 
-async function request(path, init = {}) {
-  const res = await fetch(`${API_URL}/api/wishlist${path}`, {
-    ...init,
-    headers: { ...headers(), ...(init.headers || {}) },
-  });
-  let body = null;
-  try { body = await res.json(); } catch {}
-  if (!res.ok) {
-    const err = new Error(body?.message || `Wishlist request failed (${res.status})`);
-    err.status = res.status;
-    throw err;
-  }
-  return body;
-}
-
-const IK_ENDPOINT = process.env.NEXT_PUBLIC_IMAGEKIT_URL ?? 'https://ik.imagekit.io/wp2oatzmf';
+const IK_ENDPOINT = process.env.NEXT_PUBLIC_IMAGEKIT_URL ?? 'https://ik.imagekit.io/wp2oatzmf'
 
 function resolveImageUrl(raw) {
-  if (!raw || typeof raw !== 'string') return '';
-  let url = raw;
+  if (!raw || typeof raw !== 'string') return ''
+  let url = raw
   if (url.includes('https://') && url.indexOf('https://') !== url.lastIndexOf('https://')) {
-    url = url.substring(url.lastIndexOf('https://'));
+    url = url.substring(url.lastIndexOf('https://'))
   }
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
-/* Normalise a backend wishlist row into the shape the Velquira UI uses.
-   Velquira's WishlistPageClient renders product.images, product.variants,
-   product.colors, product.handle — so we expose those keys (variants and
-   colors as empty arrays — the page falls back to the cached version
-   when those are present). */
 function normalize(row) {
-  if (!row) return null;
-  const p = row.Product || row.product || row;
-  if (!p) return null;
-  const variation = p.ProductVariations?.[0] || p.variations?.[0];
-  const price = Number(variation?.price ?? p.price ?? 0);
+  if (!row) return null
+  const p = row.Product || row.product || row
+  if (!p) return null
+  const variation = p.ProductVariations?.[0] || p.variations?.[0]
+  const price = Number(variation?.price ?? p.price ?? 0)
 
   const firstImg =
     p.ProductImages?.[0] ||
     p.images?.[0] ||
     variation?.VariationImages?.[0] ||
-    null;
+    null
 
   const rawImage =
     (typeof firstImg === 'string' ? firstImg : null) ||
@@ -103,7 +68,7 @@ function normalize(row) {
     firstImg?.url ||
     firstImg?.medium ||
     p.image ||
-    '';
+    ''
 
   return {
     id: String(p.id),
@@ -113,27 +78,29 @@ function normalize(row) {
     images: [{ url: resolveImageUrl(rawImage), alt: p.name || '' }],
     variants: [],
     colors: [],
-  };
+  }
 }
 
 export async function getWishlist() {
-  const data = await request('');
-  const items = data?.wishlist || data?.items || [];
-  return Array.isArray(items) ? items.map(normalize).filter(Boolean) : [];
+  try {
+    const data = await apiClient.get('/api/wishlist', { headers: guestHeaders(), suppressErrorToast: true })
+    const items = data?.wishlist || data?.items || []
+    return Array.isArray(items) ? items.map(normalize).filter(Boolean) : []
+  } catch { return [] }
 }
 
 export async function addToWishlist(productId) {
-  return request(`/${productId}`, { method: 'POST' });
+  return apiClient.post(`/api/wishlist/${productId}`, {}, { headers: guestHeaders() })
 }
 
 export async function removeFromWishlist(productId) {
-  return request(`/${productId}`, { method: 'DELETE' });
+  return apiClient.delete(`/api/wishlist/${productId}`, { headers: guestHeaders() })
 }
 
 export async function clearWishlist() {
-  return request('', { method: 'DELETE' });
+  return apiClient.delete('/api/wishlist', { headers: guestHeaders() })
 }
 
 export async function moveWishlistItemToCart(productId) {
-  return request(`/${productId}/move-to-cart`, { method: 'POST' });
+  return apiClient.post(`/api/wishlist/${productId}/move-to-cart`, {}, { headers: guestHeaders() })
 }
