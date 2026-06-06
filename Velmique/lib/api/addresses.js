@@ -1,9 +1,7 @@
+import { getAuthToken as getToken } from '@/lib/authToken'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
-
-function getToken() {
-  return typeof window !== 'undefined' ? localStorage.getItem('token') : null
-}
 
 function authHeaders() {
   const token = getToken()

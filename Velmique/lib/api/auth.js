@@ -1,3 +1,5 @@
+import { setAuthToken, getAuthToken, clearAuthToken } from '@/lib/authToken'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique'
 
@@ -7,10 +9,7 @@ function headers(token) {
   return h
 }
 
-function getToken() {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('token')
-}
+const getToken = getAuthToken
 
 export async function register({ username, email, password, phone }) {
   const res = await fetch(`${API_URL}/api/users/register`, {
@@ -31,7 +30,7 @@ export async function loginWithOtp({ phone, access_token }) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || 'Login failed')
-  if (data.token) localStorage.setItem('token', data.token)
+  if (data.token) setAuthToken(data.token)
   return data
 }
 
@@ -78,7 +77,7 @@ export async function changePassword({ currentPassword, newPassword }) {
 export async function logout() {
   const token = getToken()
   await fetch(`${API_URL}/api/users/logout`, { method: 'POST', headers: headers(token) }).catch(() => {})
-  localStorage.removeItem('token')
+  clearAuthToken()
 }
 
 export const login = loginWithOtp

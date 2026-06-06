@@ -1,12 +1,10 @@
 /* Velmique orders / checkout / payments client.
    Same endpoints + payload shapes as Knitwink — brand=velmique. */
 
+import { getAuthToken as getToken, setAuthToken } from '@/lib/authToken';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
-
-function getToken() {
-  return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-}
 
 function authHeaders() {
   const token = getToken();
@@ -56,7 +54,7 @@ export async function createGuestOrder(orderData) {
   // response header — store it so subsequent requests run as that user.
   const newToken = res.headers.get('x-auth-token');
   if (newToken) {
-    try { localStorage.setItem('token', newToken); } catch {}
+    setAuthToken(newToken);
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
   }
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
