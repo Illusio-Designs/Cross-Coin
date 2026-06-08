@@ -1,0 +1,15 @@
+{
+  "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
+    "NEXT_PUBLIC_BRAND_NAME": "velmique",
+    "NEXT_PUBLIC_SITE_NAME": "Velmique"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
+      "NEXT_PUBLIC_BRAND_NAME": "velmique",
+      "NEXT_PUBLIC_SITE_NAME": "Velmique"
+    }
+  }
+}
