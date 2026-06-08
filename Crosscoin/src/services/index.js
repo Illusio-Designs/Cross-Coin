@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getTimeoutForEndpoint, handleTimeoutError } from '../config/apiConfig';
+import { getTimeoutForEndpoint, handleTimeoutError, API_TIMEOUTS } from '../config/apiConfig';
 import { validateListResponse, validateItemResponse, validatePaginatedResponse, getErrorMessage } from '../utils/apiResponseValidator';
 import { rateLimiter } from '../utils/rateLimiter';
 import { retryHandler } from '../utils/retryHandler';
@@ -36,8 +36,22 @@ api.interceptors.request.use(
     // Track request start time
     config.startTime = Date.now();
 
-    // Set timeout based on endpoint
-    const timeout = getTimeoutForEndpoint(config.url || '');
+    // Pick a timeout. getTimeoutForEndpoint matches "/products" into the
+    // 10s "quick" bucket — fine for catalog GETs, fatal for product
+    // CREATE/UPDATE which runs a multi-step transaction and FormData
+    // image upload. Two carve-outs:
+    //   - Writes (POST/PUT/PATCH/DELETE) get 15s default minimum.
+    //   - FormData uploads get the 60s file-operation bucket.
+    const method = (config.method || 'get').toLowerCase();
+    const isWrite = ['post', 'put', 'patch', 'delete'].includes(method);
+    const isUpload = config.data instanceof FormData;
+
+    let timeout = getTimeoutForEndpoint(config.url || '');
+    if (isUpload) {
+      timeout = Math.max(timeout, API_TIMEOUTS.fileOperation);
+    } else if (isWrite) {
+      timeout = Math.max(timeout, API_TIMEOUTS.default);
+    }
     config.timeout = timeout;
 
     const token = localStorage.getItem("token");
@@ -114,8 +128,25 @@ adminApi.interceptors.request.use(
     // Track request start time
     config.startTime = Date.now();
 
-    const timeout = getTimeoutForEndpoint(config.url || '');
+    // Same write/upload-aware timeout as the public api interceptor.
+    // Without this, the admin's POST /api/products (create) and
+    // PUT /api/products/:id (edit) fall into the 10s "quick" bucket
+    // because the URL contains "/products", and the request gets
+    // aborted at exactly 10.01s — visible in the network tab as
+    // (cancelled). createProduct + updateProduct both ship FormData
+    // image uploads, so they need the file-operation 60s window.
+    const method = (config.method || 'get').toLowerCase();
+    const isWrite = ['post', 'put', 'patch', 'delete'].includes(method);
+    const isUpload = config.data instanceof FormData;
+
+    let timeout = getTimeoutForEndpoint(config.url || '');
+    if (isUpload) {
+      timeout = Math.max(timeout, API_TIMEOUTS.fileOperation);
+    } else if (isWrite) {
+      timeout = Math.max(timeout, API_TIMEOUTS.default);
+    }
     config.timeout = timeout;
+
     const token = localStorage.getItem("token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
     if (config.data instanceof FormData) config.headers["Content-Type"] = "multipart/form-data";
