@@ -55,7 +55,7 @@ export function ProductInfo({ product, onColorChange }) {
      the right SKU. We re-resolve on every click in case the user changes
      the colour while the item is already saved (we patch the stored row). */
   const buildWishlistEntry = () => {
-    const variant = product.variants?.find((v) => v.color === activeColor.name) || product.variants?.[0]
+    const variant = activeVariant
     const colorImages = product.colorImages?.[activeColor.name] || []
     const imageUrl = colorImages[0]?.url || product.images?.[0]?.url || ''
     return {
@@ -65,7 +65,7 @@ export function ProductInfo({ product, onColorChange }) {
       selectedColorHex: activeColor.hex,
       selectedVariantId: variant?.id ?? null,
       selectedImageUrl: imageUrl,
-      price: product.price,
+      price: variant?.price ?? product.price,
     }
   }
 
@@ -100,6 +100,19 @@ export function ProductInfo({ product, onColorChange }) {
   const viewing = useMemo(() => seedNum(product.id + 'v', 80, 220), [product.id])
   const sold = useMemo(() => seedNum(product.id + 's', 800, 3200), [product.id])
 
+  /* Resolve the variant matching the currently selected colour so the
+     price + SKU + compareAtPrice all reflect that variation, not the
+     product-level defaults (which only mirror the first variation). */
+  const activeVariant = useMemo(
+    () =>
+      product.variants?.find((v) => v.color === activeColor.name) ||
+      product.variants?.[0],
+    [product.variants, activeColor.name]
+  )
+  const activePrice = activeVariant?.price ?? product.price
+  const activeCompareAtPrice = activeVariant?.comparePrice ?? product.compareAtPrice
+  const activeSku = activeVariant?.sku || product.sku
+
   const handleColorSelect = (color) => {
     setActiveColor(color)
     onColorChange?.(color)
@@ -107,7 +120,7 @@ export function ProductInfo({ product, onColorChange }) {
   }
 
   const handleAddToCart = () => {
-    const variant = product.variants.find(v => v.color === activeColor.name) || product.variants[0]
+    const variant = activeVariant
     const varImages = product.colorImages?.[activeColor.name] || []
     const imageUrl = varImages[0]?.url || product.images[0]?.url || ''
     addItem({
@@ -117,7 +130,7 @@ export function ProductInfo({ product, onColorChange }) {
       name: product.name,
       color: activeColor.name,
       size: 'Free Size',
-      price: product.price,
+      price: activePrice,
       quantity: qty,
       imageUrl,
       handle: product.handle,
@@ -131,8 +144,8 @@ export function ProductInfo({ product, onColorChange }) {
     openDrawer()
   }
 
-  const discount = product.compareAtPrice
-    ? Math.round((1 - product.price / product.compareAtPrice) * 100)
+  const discount = activeCompareAtPrice
+    ? Math.round((1 - activePrice / activeCompareAtPrice) * 100)
     : 0
 
   return (
@@ -186,10 +199,10 @@ export function ProductInfo({ product, onColorChange }) {
           ) : (
             <span className="text-xs text-gray-400">No reviews yet</span>
           )}
-          {product.sku && (
+          {activeSku && (
             <>
               <span className="text-gray-200">|</span>
-              <span className="text-[10px] text-gray-400">SKU: {product.sku}</span>
+              <span className="text-[10px] text-gray-400">SKU: {activeSku}</span>
             </>
           )}
         </div>
@@ -199,10 +212,10 @@ export function ProductInfo({ product, onColorChange }) {
 
         {/* Price */}
         <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-bold text-brand-black">{formatPrice(product.price)}</span>
-          {product.compareAtPrice && (
+          <span className="text-2xl font-bold text-brand-black">{formatPrice(activePrice)}</span>
+          {activeCompareAtPrice && (
             <>
-              <span className="text-sm text-gray-400 line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span className="text-sm text-gray-400 line-through">{formatPrice(activeCompareAtPrice)}</span>
               <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-500">
                 {discount}% OFF
               </span>
@@ -325,7 +338,7 @@ export function ProductInfo({ product, onColorChange }) {
         visible={!atcVisible}
         productName={product.name}
         color={activeColor.name}
-        price={product.price}
+        price={activePrice}
         imageUrl={
           (product.colorImages?.[activeColor.name]?.[0]?.url) ||
           (product.images?.[0]?.url) ||

@@ -122,6 +122,8 @@ export function mapProduct(p) {
       color: varIdToColor[v.id] || '',
       stock: Number(v.stock || 0),
       sku: v.sku || '',
+      price: Number(v.price ?? p.price ?? 0),
+      comparePrice: v.comparePrice != null ? Number(v.comparePrice) : undefined,
     })),
     colors: colors.length > 0 ? colors : [{ name: '', hex: '#d1d5db', imageIndex: 0 }],
     genders: Array.from(genders),
