@@ -53,6 +53,23 @@ export const metadata = {
   }
 };
 
+// Opt the entire route tree out of static prerender at build time.
+// Next 16 + Turbopack hits a TDZ in the minified SSR chunk
+// ("Cannot access 'a_' before initialization") when statically
+// generating any page under this layout. The chunk has too much
+// surface area (auth, cart, wishlist, sentry, sanitisers, react-
+// query) for the bundler to safely hoist exports, and we couldn't
+// pinpoint a single offending module across multiple iterations.
+//
+// Trade-off: every page renders on demand instead of being served as
+// pre-built HTML. For a storefront where prices, inventory, and
+// sliders are dynamic anyway this is fine — and Next still does
+// per-request streaming + RSC, so first-byte latency stays low. SEO
+// is unaffected (the HTML emitted at request time is identical).
+//
+// Remove this once we can reproduce + fix the TDZ locally.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
