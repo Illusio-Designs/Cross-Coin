@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
-// Render on demand. The layout chain pulls a heavy client-provider
-// stack (React Query, Sentry adapter, sanitizers) and Next 16 +
-// Turbopack hit a TDZ in the minified SSR chunk when trying to
-// statically prerender this page at build time. Forcing dynamic
-// pushes the render to request-time where the module graph is fully
-// initialized. 404s are not perf-critical anyway.
+// Belt-and-suspenders safety net. The underlying TDZ that caused this
+// page (and /about) to fail static prerender was fixed by switching
+// the QueryClient to a lazy factory and externalising
+// isomorphic-dompurify + @sentry/nextjs via next.config's
+// serverExternalPackages. Even if the bundler regresses, 404s aren't
+// perf-critical so opting out of static prerender is harmless.
 export const dynamic = 'force-dynamic';
 
 export default function NotFound() {
