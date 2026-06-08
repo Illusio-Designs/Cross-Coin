@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingBag, Heart, Search, User, Menu, X } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useAuth } from '@/context/AuthContext';
@@ -50,12 +51,16 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Logo — centered */}
-            <Link href="/" className="flex-shrink-0 mx-6 group">
-              <span className={`font-serif tracking-[0.12em] transition-all duration-500 gold-text ${scrolled ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'}`}>
-                VELMIQUE
-              </span>
-              <span className="block h-px w-0 group-hover:w-full bg-[var(--gold)] transition-all duration-500 mx-auto" />
+            {/* Logo — centered, no hover effect */}
+            <Link href="/" className="flex-shrink-0 mx-6" aria-label="Velmique home">
+              <Image
+                src="/logo.png"
+                alt="Velmique"
+                width={220}
+                height={64}
+                priority
+                className={`w-auto object-contain transition-all duration-500 ${scrolled ? 'h-8 md:h-10' : 'h-10 md:h-12'}`}
+              />
             </Link>
 
             {/* Right nav */}
@@ -118,7 +123,15 @@ export default function Navbar() {
         <div className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
         <div className={`absolute right-0 top-0 h-full w-80 bg-[var(--bg)] border-l border-[var(--border)] transition-transform duration-400 ${mobileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
-            <span className="font-serif text-xl gold-text tracking-[0.12em]">VELMIQUE</span>
+            <Link href="/" onClick={() => setMobileOpen(false)} aria-label="Velmique home">
+              <Image
+                src="/logo.png"
+                alt="Velmique"
+                width={180}
+                height={48}
+                className="h-8 w-auto object-contain"
+              />
+            </Link>
             <button onClick={() => setMobileOpen(false)}><X size={20} className="text-[var(--ink-soft)]" /></button>
           </div>
           <div className="py-4 overflow-y-auto h-full pb-24">
