@@ -1,5 +1,4 @@
 import { Skeleton } from '@/components/ui/Skeleton';
-import { ProductGridSkeleton } from '@/components/collection/ProductGrid';
 
 export default function CollectionLoading() {
   return (
@@ -22,9 +21,17 @@ export default function CollectionLoading() {
         <Skeleton className="h-5 w-32" />
       </div>
 
-      {/* Grid skeleton */}
-      <div className="py-8">
-        <ProductGridSkeleton />
+      {/* Grid skeleton — inlined since components/collection/ProductGrid
+          doesn't exist. Mirrors ProductCard footprint: square image bed +
+          two caption lines. */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 py-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-3">
+            <Skeleton className="aspect-square w-full rounded-xl" />
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        ))}
       </div>
     </div>);
 
