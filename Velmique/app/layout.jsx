@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Playfair_Display, Cormorant_Garamond, Jost, Anton } from 'next/font/google';
 import './globals.css';
 import 'react-toastify/dist/ReactToastify.css';
@@ -121,7 +122,12 @@ export default function RootLayout({ children }) {
               <CookieBanner />
               <ScrollToTop />
               <WhatsAppChat />
-              <Analytics />
+              {/* Analytics calls useSearchParams() for route-change tracking;
+                  it must live inside a Suspense boundary or Next 14 bails
+                  static prerendering on every page. */}
+              <Suspense fallback={null}>
+                <Analytics />
+              </Suspense>
               <ToastContainer
                 position="top-right"
                 autoClose={2500}
