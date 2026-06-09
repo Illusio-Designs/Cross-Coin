@@ -1,35 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { installErrorReporter } from '@/lib/errorReporter';
-import { tryInitSentry } from '@/lib/sentryAdapter';
-import { installLinkHardening } from '@/lib/sanitizeHtml';
-import { fetchCsrfToken } from '@/lib/api/client';
 import { queryClient } from '@/lib/queryClient';
 
 /**
- * Client-side bootstrap wrapper.
+ * Client-side bootstrap wrapper — minimal version.
  *
- * Mounted once near the root of `app/layout.jsx`. Wires:
- *   - ErrorBoundary around every client subtree
- *   - React Query provider for client-side data fetching
- *   - DOMPurify link-hardening hook (external <a> → target=_blank + rel=noopener)
- *   - Global error reporter → Sentry if SDK installed + DSN set, else
- *     POST to /api/client-errors
- *   - One-shot CSRF cookie bootstrap so subsequent state-changing
- *     requests already carry X-CSRF-Token
+ * Sentry / sanitiser link-hardening / error reporter / CSRF bootstrap
+ * have been temporarily removed while we diagnose a runtime TDZ
+ * ("Cannot access 'e1' before initialization") in the production
+ * client chunk. Those features will come back once the cycle is
+ * identified.
  *
  * Idempotent — safe to remount during HMR.
  */
 export default function ClientProviders({ children }) {
-  useEffect(() => {
-    installLinkHardening();
-    installErrorReporter(tryInitSentry() || undefined);
-    fetchCsrfToken();
-  }, []);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
