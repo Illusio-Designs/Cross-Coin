@@ -84,15 +84,24 @@ function Lightbox({ images, startIndex, productName, onClose }) {
           ))}
         </div>
 
-        {/* Scrollable images — full width */}
+        {/* Scrollable images.
+            Layout:
+              - mobile: always 1 column (images would be unreadable otherwise)
+              - tablet+: 2 columns when the product has > 4 images, otherwise
+                stays 1 column so a 2-image gallery doesn't look weirdly sparse.
+            max-w-5xl keeps the grid centered on very wide screens. */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="flex flex-col items-center gap-2 px-4 py-6 md:px-10">
+          <div
+            className={`mx-auto grid w-full max-w-5xl gap-3 px-4 py-6 md:px-8 ${
+              images.length > 4 ? 'md:grid-cols-2' : 'grid-cols-1'
+            }`}
+          >
             {images.map((img, i) => (
               <div
                 key={i}
                 ref={(el) => { imgRefs.current[i] = el }}
                 data-index={i}
-                className="w-full max-w-2xl"
+                className="overflow-hidden rounded-lg bg-white"
               >
                 <img
                   src={img.url}
