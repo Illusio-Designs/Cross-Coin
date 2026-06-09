@@ -3,6 +3,8 @@ import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
 import '@/styles/globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
+import { AuthProvider } from '@/context/AuthContext';
+import { CartProvider } from '@/context/CartContext';
 import ClientProviders from '@/components/layout/ClientProviders';
 import { SITE_NAME } from '@/lib/constants';
 
@@ -49,16 +51,20 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
-        {/* DIAGNOSTIC: layout stripped to bare minimum to isolate TDZ.
-            All providers, nav, drawers, footer, hydrators temporarily
-            removed. If this build renders the homepage cleanly, the
-            cause is in one of the removed components. If it still
-            crashes, the cause is in app/page.jsx itself. */}
+        {/* DIAGNOSTIC step 2: providers (Auth, Cart) restored — needed
+            because home-page components call useCart(). All visual
+            layout components (nav, drawers, footer, hydrators) are
+            still removed. If the homepage now renders cleanly, the
+            cause is in one of those stripped components. */}
         <ClientProviders>
-          <main id="main" className="flex-1 pb-1">
-            {children}
-          </main>
-          <ToastContainer />
+          <AuthProvider>
+            <CartProvider>
+              <main id="main" className="flex-1 pb-1">
+                {children}
+              </main>
+              <ToastContainer />
+            </CartProvider>
+          </AuthProvider>
         </ClientProviders>
       </body>
     </html>);
