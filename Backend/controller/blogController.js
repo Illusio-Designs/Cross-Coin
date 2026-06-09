@@ -194,9 +194,11 @@ const deleteCategory = async (req, res) => {
 
 const createPost = async (req, res) => {
   const t = await sequelize.transaction();
+  let committed = false;
   try {
     const {
       title, author_name, status = 'draft', brand_ids,
+      blog_category_id,
       tags = [], sections, seo, featured_products = []
     } = req.body;
 
@@ -232,8 +234,17 @@ const createPost = async (req, res) => {
     }
 
     // Create post
+    const now = new Date();
     const post = await BlogPost.create(
-      { title, slug, author_name, status, published_at, sections: parsedSections },
+      {
+        title, slug, author_name, status, published_at,
+        sections: parsedSections,
+        // blog_category_id was being silently dropped before — accept it here
+        // so newly-created posts honour the category the admin picked.
+        blog_category_id: blog_category_id || null,
+        created_at: now,
+        updated_at: now,
+      },
       { transaction: t }
     );
 
@@ -289,11 +300,24 @@ const createPost = async (req, res) => {
     }
 
     await t.commit();
+    committed = true;
 
-    const fullPost = await BlogPost.findByPk(post.id, { include: fullPostInclude() });
-    return res.status(201).json({ success: true, data: await formatPostImage(fullPost) });
+    // The post is already saved by this point; if shaping the response
+    // fails (bad image url, missing FeaturedProduct, etc.), don't pretend
+    // the publish itself failed — return the bare row instead.
+    try {
+      const fullPost = await BlogPost.findByPk(post.id, { include: fullPostInclude() });
+      return res.status(201).json({ success: true, data: await formatPostImage(fullPost) });
+    } catch (shapeErr) {
+      logger.warn('createPost: post saved but response formatting failed', shapeErr);
+      return res.status(201).json({
+        success: true,
+        data: post.toJSON ? post.toJSON() : post,
+        warning: 'Post saved but response details unavailable',
+      });
+    }
   } catch (error) {
-    await t.rollback();
+    if (!committed) await t.rollback();
     logger.error('createPost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
@@ -358,6 +382,7 @@ const getPostByIdAdmin = async (req, res) => {
 
 const updatePost = async (req, res) => {
   const t = await sequelize.transaction();
+  let committed = false;
   try {
     const { id } = req.params;
     const post = await BlogPost.findByPk(id, { transaction: t });
@@ -412,6 +437,11 @@ const updatePost = async (req, res) => {
       }
       // Retain existing published_at on all other status changes
     }
+
+    // BlogPost has `timestamps: false` but a manual updated_at column, so
+    // Sequelize won't refresh it for us. Bump it on every update so the
+    // admin list can show meaningful "last modified" times.
+    updateData.updated_at = new Date();
 
     await post.update(updateData, { transaction: t });
 
@@ -478,11 +508,25 @@ const updatePost = async (req, res) => {
     }
 
     await t.commit();
+    committed = true;
 
-    const fullPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
-    return res.status(200).json({ success: true, data: await formatPostImage(fullPost) });
+    // Don't let a follow-up read or response-shaping error make a successful
+    // update look like a failure to the admin UI — that was the root cause
+    // of admins seeing "Save failed" toasts while the post was actually
+    // published in the database.
+    try {
+      const fullPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
+      return res.status(200).json({ success: true, data: await formatPostImage(fullPost) });
+    } catch (shapeErr) {
+      logger.warn('updatePost: post updated but response formatting failed', shapeErr);
+      return res.status(200).json({
+        success: true,
+        data: { id: Number(id) },
+        warning: 'Post updated but response details unavailable',
+      });
+    }
   } catch (error) {
-    await t.rollback();
+    if (!committed) await t.rollback();
     logger.error('updatePost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
