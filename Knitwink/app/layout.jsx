@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileMenu } from '@/components/layout/MobileMenu';
+import { CartDrawer } from '@/components/cart/CartDrawer';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -64,6 +65,7 @@ export default function RootLayout({ children }) {
               <Navbar />
               <Breadcrumb />
               <MobileMenu />
+              <CartDrawer />
               <main id="main" className="flex-1 pb-1">
                 {children}
               </main>
