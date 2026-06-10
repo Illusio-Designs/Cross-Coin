@@ -17,16 +17,17 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  // Switched away from useCheckout's React Query mutation wrappers.
+  // The mutation hooks were dragging react-query module-level state
+  // into the layout's chunk graph and triggering a TDZ in the
+  // client bundle. Direct imports of the plain async functions
+  // achieve the same thing — we lose the auto-invalidate of
+  // queryKeys.orders, but /account refetches on mount anyway.
+  initiateCheckout,
+  initiateGuestCheckout,
+  createOrder,
+  createGuestOrder,
 } from '@/lib/api/orders';
-// Order creation + checkout go through the React Query mutation
-// hooks so that successful orders auto-invalidate queryKeys.orders —
-// /account picks up the new order with no manual refetch.
-import {
-  useInitiateCheckout,
-  useInitiateGuestCheckout,
-  useCreateOrder,
-  useCreateGuestOrder,
-} from '@/hooks/useCheckout';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -252,19 +253,11 @@ export function CartDrawer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddressForm, addressRhf.formState.errors, addressForm]);
 
-  // ── Mutation hooks for the checkout flow ──────────────────────────
-  // mutateAsync returns the resolved value and re-throws on failure,
-  // so swapping `await createOrder(d)` → `await createOrderMutation(d)`
-  // is a behavior-preserving change. The win: on success the hook
-  // invalidates queryKeys.orders so /account refreshes automatically.
-  const initiateCheckoutMutation = useInitiateCheckout();
-  const initiateGuestCheckoutMutation = useInitiateGuestCheckout();
-  const createOrderMutation = useCreateOrder();
-  const createGuestOrderMutation = useCreateGuestOrder();
-  const initiateCheckout = (data) => initiateCheckoutMutation.mutateAsync(data);
-  const initiateGuestCheckout = (data) => initiateGuestCheckoutMutation.mutateAsync(data);
-  const createOrder = (data) => createOrderMutation.mutateAsync(data);
-  const createGuestOrder = (data) => createGuestOrderMutation.mutateAsync(data);
+  // initiateCheckout / initiateGuestCheckout / createOrder /
+  // createGuestOrder are now imported directly from lib/api/orders
+  // (above) instead of going through the React Query mutation
+  // wrappers in hooks/useCheckout. Same behaviour for callers —
+  // they're still async functions that resolve or throw the same way.
 
   useEffect(() => { setIsMounted(true); }, []);
 
