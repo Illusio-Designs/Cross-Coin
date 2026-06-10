@@ -3,11 +3,25 @@ import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
 import '@/styles/globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
+import dynamic from 'next/dynamic';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileMenu } from '@/components/layout/MobileMenu';
-import { CartDrawer } from '@/components/cart/CartDrawer';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
+
+/* CartDrawer is dynamically imported on the client only. Static
+   import into the layout chunk reproducibly triggered a TDZ
+   ("Cannot access 'eg'/'ed' before initialization") in the
+   minified client bundle — caused by CartDrawer's heavy import
+   chain (react-hook-form, zod resolver, react-query, multiple
+   api helpers) all landing in the layout's chunk and forming a
+   circular dependency that Turbopack couldn't safely hoist.
+   Dynamic import puts CartDrawer in its own chunk, loaded only
+   on the client at first render, which breaks the cycle. */
+const CartDrawer = dynamic(
+  () => import('@/components/cart/CartDrawer').then((m) => ({ default: m.CartDrawer })),
+  { ssr: false }
+);
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import ClientProviders from '@/components/layout/ClientProviders';
