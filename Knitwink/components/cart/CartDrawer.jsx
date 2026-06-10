@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { addressSchema } from '@/lib/addressSchema';
+import { addressSchema, validateAddress } from '@/lib/addressSchema';
 import {
   getUserAddresses,
   createShippingAddress,
@@ -72,7 +72,6 @@ function generateIdempotencyKey() {
 // so this file's call sites don't need to change.
 function validateShippingAddress(addr) {
   if (!addr) return { valid: false, errors: ['Address is empty'] };
-  const { validateAddress } = require('@/lib/addressSchema');
   const result = validateAddress(addr);
   return { valid: result.valid, errors: result.errors };
 }
