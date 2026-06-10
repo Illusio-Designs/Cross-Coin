@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { prefersReducedData } from '@/lib/netinfo';
 
 const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
 const WA_MESSAGE = 'Hi! I need help with Knitwink.';
@@ -26,13 +27,7 @@ export function WhatsAppChat() {
 
   useEffect(() => {
     // Skip entirely on save-data / 2g — see lib/netinfo.js.
-    let prefersReducedData = false;
-    try {
-      // eslint-disable-next-line global-require
-      const { prefersReducedData: fn } = require('@/lib/netinfo');
-      prefersReducedData = fn();
-    } catch { /* ignore — defer always renders */ }
-    if (prefersReducedData) return;
+    if (prefersReducedData()) return;
 
     // Mount once the browser is idle, or after 2.5s as a fallback.
     let cancelled = false;
