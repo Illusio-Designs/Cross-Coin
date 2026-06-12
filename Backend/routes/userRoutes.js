@@ -13,17 +13,26 @@ const { validateBody: zValidateBody, z, schemas: zSchemas } = require('../middle
 const router = express.Router();
 
 // ── Zod schemas for auth endpoints ─────────────────────────────────
-// Login accepts EITHER email OR username + password. We pick the most
-// permissive option to avoid breaking existing clients while still
-// catching obvious garbage (empty body, password missing).
-const loginSchema = z.object({
-  email: z.string().trim().min(1).optional(),
-  username: z.string().trim().min(1).optional(),
-  password: z.string().min(1, 'Password is required').max(256),
-}).refine((v) => v.email || v.username, {
-  message: 'Email or username is required',
-  path: ['email'],
-});
+// Three valid login shapes: (email + password), (username + password),
+// or (phone + access_token) for MSG91 OTP flow that storefronts use.
+// The login controller already branches on all three; the schema just
+// needs to let them through. Using z.union over a single object with
+// every field optional so each path's missing fields surface a clear
+// error instead of a vague "password required".
+const loginSchema = z.union([
+  z.object({
+    email: z.string().trim().min(1),
+    password: z.string().min(1, 'Password is required').max(256),
+  }),
+  z.object({
+    username: z.string().trim().min(1),
+    password: z.string().min(1, 'Password is required').max(256),
+  }),
+  z.object({
+    phone: z.string().trim().min(10, 'Valid 10-digit phone number is required'),
+    access_token: z.string().min(1, 'OTP verification token is required'),
+  }),
+]);
 
 const adminLoginSchema = z.object({
   email: zSchemas.email,
