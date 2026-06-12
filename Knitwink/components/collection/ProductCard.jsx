@@ -21,6 +21,11 @@ export function ProductCard({ product }) {
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
+  // Two independent flags — the primary image and the hover image
+  // load on their own schedule. Each one keeps a shimmer overlay
+  // until next/image fires its loading callback.
+  const [primaryLoaded, setPrimaryLoaded] = useState(false);
+  const [hoverLoaded, setHoverLoaded] = useState(false);
   const { addItem } = useCart();
   const wishlisted = useWishlistStore((s) => s.hasItem(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -77,6 +82,13 @@ export function ProductCard({ product }) {
       
       {/* Image */}
       <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
+        {/* Skeleton shimmer — sits behind the image and animates while
+            it loads. The relevant flag (primaryLoaded / hoverLoaded)
+            is set when next/image fires onLoad, at which point the
+            shimmer fades out. */}
+        {!(hovered ? hoverLoaded : primaryLoaded) && (
+          <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
+        )}
         <AnimatePresence initial={false}>
           <motion.div
             key={hovered ? 'h' : 'p'}
@@ -85,14 +97,15 @@ export function ProductCard({ product }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}>
-            
+
             <Image
               src={hovered ? hoverImage.url : primaryImage.url}
               alt={hovered ? hoverImage.alt : primaryImage.alt}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain object-center" />
-            
+              className="object-contain object-center"
+              onLoad={() => (hovered ? setHoverLoaded(true) : setPrimaryLoaded(true))} />
+
           </motion.div>
         </AnimatePresence>
 
