@@ -5,20 +5,23 @@
  */
 
 export const API_TIMEOUTS = {
-  // Standard API calls - 15 seconds
-  default: 15000,
+  // Standard API calls - 30 seconds
+  // Bumped from 15s after the dashboard /products?page=1&limit=10
+  // list call kept getting cancelled on cold backend boots.
+  default: 30000,
 
-  // Quick operations (search, filters, etc.) - 10 seconds
-  quick: 10000,
+  // Quick operations (search, filters, etc.) - 20 seconds
+  // Bumped from 10s for the same reason.
+  quick: 20000,
 
-  // Long-running operations (checkout, payment processing) - 30 seconds
-  longRunning: 30000,
+  // Long-running operations (checkout, payment processing) - 60 seconds
+  longRunning: 60000,
 
-  // File uploads/downloads - 60 seconds
-  fileOperation: 60000,
+  // File uploads/downloads - 120 seconds
+  fileOperation: 120000,
 
-  // Batch operations - 45 seconds
-  batch: 45000,
+  // Batch operations - 60 seconds
+  batch: 60000,
 
   // Export operations - 120 seconds
   export: 120000,
@@ -52,11 +55,12 @@ export const getTimeoutForEndpoint = (endpoint) => {
     return API_TIMEOUTS.batch;
   }
 
-  // Quick operations
-  if (endpoint.includes('/search') || 
-      endpoint.includes('/filter') ||
-      endpoint.includes('/categories') ||
-      endpoint.includes('/products')) {
+  // Quick operations — only narrow sub-paths now. The bare /products
+  // and /categories list reads used to fall in here and got cancelled
+  // at 10s on cold backend boots; they belong in the default bucket
+  // so the read has more time to finish.
+  if (endpoint.includes('/search') ||
+      endpoint.includes('/filter')) {
     return API_TIMEOUTS.quick;
   }
 
