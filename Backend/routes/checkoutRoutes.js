@@ -20,8 +20,10 @@ const checkoutItemSchema = z.object({
   quantity: z.coerce.number().int().positive(),
 }).passthrough();
 
-const initiateSchema = z.object({
-  shipping_address_id: z.coerce.number().int().positive(),
+// shared base; the authenticated /initiate endpoint extends this with
+// a required shipping_address_id, the guest endpoint allows either an
+// id or an inline shipping_address object.
+const initiateBaseSchema = z.object({
   items: z.array(checkoutItemSchema).min(1, 'At least one item is required'),
   payment_type: z.enum(['prepaid', 'razorpay']).optional(),
   coupon_id: z.coerce.number().int().positive().optional().nullable(),
@@ -29,6 +31,10 @@ const initiateSchema = z.object({
   utm_session_id: z.string().trim().max(200).optional(),
   idempotency_key: z.string().trim().max(200).optional(),
 }).passthrough();
+
+const initiateSchema = initiateBaseSchema.merge(z.object({
+  shipping_address_id: z.coerce.number().int().positive(),
+}));
 
 const retrySchema = z.object({
   order_id: z.coerce.number().int().positive().optional(),
@@ -38,14 +44,34 @@ const retrySchema = z.object({
   path: ['order_id'],
 });
 
-const guestInitiateSchema = initiateSchema.merge(z.object({
+// Guests don't have saved shipping addresses, so they POST an inline
+// `shipping_address` object that the controller turns into a row
+// before continuing. The shipping_address_id is therefore optional
+// here; the .refine() at the end ensures at least one of the two
+// shapes is present so we still reject empty/malformed bodies.
+const guestShippingAddressSchema = z.object({
+  fullName: z.string().trim().min(1).max(200),
+  address: z.string().trim().min(1).max(500),
+  city: z.string().trim().min(1).max(100),
+  state: z.string().trim().min(1).max(100),
+  pincode: z.string().trim().min(4).max(10),
+  phone: z.string().trim().min(10).max(20).optional(),
+  country: z.string().trim().max(100).optional(),
+}).passthrough();
+
+const guestInitiateSchema = initiateBaseSchema.merge(z.object({
   guest_info: z.object({
     email: zSchemas.email,
     firstName: z.string().trim().min(1).max(100),
     lastName: z.string().trim().max(100).optional(),
     phone: zSchemas.indianPhone,
   }),
-})).passthrough();
+  shipping_address_id: z.coerce.number().int().positive().optional(),
+  shipping_address: guestShippingAddressSchema.optional(),
+})).passthrough().refine(
+  (v) => v.shipping_address_id || v.shipping_address,
+  { message: 'shipping_address_id or shipping_address is required', path: ['shipping_address'] }
+);
 
 const otpSendSchema = z.object({
   phone: zSchemas.indianPhone,

@@ -589,12 +589,13 @@ export function CartDrawer() {
     const nameParts = (guestInfo.fullName || '').trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
-    // Backend /api/checkout/guest/initiate expects guest_info as a
-    // nested object — not flat phone/email/firstName/lastName fields.
-    // The previous flat shape made the schema reject the request with
-    // "guest_info: Required" + "shipping_address_id: Expected number,
-    // received nan" (the missing optional field coerced to NaN).
-    // Matching the same shape buildCodOrderData uses for guests.
+    // The Backend guest endpoint is inconsistent between its two layers:
+    // the zod route schema requires guest_info as a NESTED object, while
+    // the controller destructures phone/email/firstName/lastName FLAT off
+    // req.body. Sending both shapes satisfies whichever the request hits
+    // (the schema is .passthrough(), so the extra flat keys are ignored
+    // by validation). shipping_address_id is omitted on purpose — guests
+    // have none; the controller creates it from shipping_address.
     return {
       guest_info: {
         email: guestInfo.email,
@@ -602,6 +603,11 @@ export function CartDrawer() {
         lastName,
         phone: guestInfo.phone,
       },
+      // Flat mirror of guest_info for the controller's destructure
+      email: guestInfo.email,
+      firstName,
+      lastName,
+      phone: guestInfo.phone,
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address: selectedAddress.address,
