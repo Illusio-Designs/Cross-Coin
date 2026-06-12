@@ -19,6 +19,13 @@ export function ProductInfo({ product, onColorChange }) {
   const [activeColor, setActiveColor] = useState(
     product.colors[0] ?? { name: 'Default', hex: '#f2f0eb', imageIndex: 0 }
   )
+  /* Which pack size the customer is currently browsing. A plain single
+     colour counts as "Pack of 1"; a multi-colour combo is "Pack of N"
+     (N = number of colours in the pack). Default to whatever the initially
+     active colour belongs to. */
+  const [activePack, setActivePack] = useState(
+    product.colors[0]?.packColors?.length || 1
+  )
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
@@ -117,6 +124,35 @@ export function ProductInfo({ product, onColorChange }) {
     setActiveColor(color)
     onColorChange?.(color)
     onActiveColorChanged(color)
+  }
+
+  /* Group every colour variation by its pack size so the UI can show a
+     compact "Pack of 1 / Pack of 3 / Pack of 6" tab row instead of dumping
+     every combo into one long, messy grid. Returns sorted entries:
+     [ [1, [...singles]], [3, [...combos]], [6, [...combos]] ]. */
+  const packGroups = useMemo(() => {
+    const groups = new Map()
+    product.colors.forEach((c) => {
+      if (!c.name) return
+      const size = c.packColors?.length || 1
+      if (!groups.has(size)) groups.set(size, [])
+      groups.get(size).push(c)
+    })
+    return [...groups.entries()].sort((a, b) => a[0] - b[0])
+  }, [product.colors])
+
+  /* The colour options belonging to the pack size the customer picked. */
+  const visibleColorOptions = useMemo(
+    () => packGroups.find(([size]) => size === activePack)?.[1] ?? [],
+    [packGroups, activePack]
+  )
+
+  /* Switching pack size moves the selection to the first option of that
+     pack so price/SKU/images stay in sync with a valid variation. */
+  const handlePackSelect = (size) => {
+    setActivePack(size)
+    const first = packGroups.find(([s]) => s === size)?.[1]?.[0]
+    if (first) handleColorSelect(first)
   }
 
   const handleAddToCart = () => {
@@ -242,14 +278,48 @@ export function ProductInfo({ product, onColorChange }) {
         {/* Divider */}
         <hr className="my-4 border-gray-100" />
 
-        {/* Color selector */}
-        {product.colors.length > 0 && product.colors[0].name && (
+        {/* Pack size selector — one tab per available pack size so a product
+            with dozens of combos reads as a clean "Pack of 1 / 3 / 6" choice
+            instead of one long grid. Only shown when there's more than one
+            size to pick from. */}
+        {packGroups.length > 1 && (
+          <div className="mb-5">
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-brand-black">
+              Pack Size <span className="normal-case font-normal text-gray-600">— Pack of {activePack}</span>
+            </p>
+            <div role="radiogroup" aria-label="Select pack size" className="flex flex-wrap gap-2">
+              {packGroups.map(([size, opts]) => (
+                <button
+                  key={size}
+                  role="radio"
+                  aria-checked={activePack === size}
+                  onClick={() => handlePackSelect(size)}
+                  className={cn(
+                    'rounded-xl border-2 px-4 py-2 text-xs font-semibold transition-all',
+                    activePack === size
+                      ? 'border-brand-black bg-brand-black text-white'
+                      : 'border-gray-200 text-brand-black hover:border-gray-400'
+                  )}
+                >
+                  Pack of {size}
+                  <span className={cn('ml-1.5 text-[10px] font-normal', activePack === size ? 'text-white/70' : 'text-gray-400')}>
+                    ({opts.length})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Colour / combination selector — scoped to the chosen pack size */}
+        {visibleColorOptions.length > 0 && (
           <div>
             <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-brand-black">
-              Color <span className="normal-case font-normal text-gray-600">— {activeColor.name}</span>
+              {activePack > 1 ? 'Combination' : 'Color'}{' '}
+              <span className="normal-case font-normal text-gray-600">— {activeColor.name}</span>
             </p>
             <div role="radiogroup" aria-label="Select color" className="flex flex-wrap gap-2">
-              {product.colors.map((color) =>
+              {visibleColorOptions.map((color) =>
                 color.packColors ? (
                   <button
                     key={color.name}
@@ -258,16 +328,13 @@ export function ProductInfo({ product, onColorChange }) {
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border-2 px-2.5 py-2 transition-all',
+                      'flex items-center gap-1 rounded-xl border-2 px-2.5 py-2.5 transition-all',
                       activeColor.name === color.name ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
                     )}
                   >
-                    <div className="flex gap-1">
-                      {color.packColors.map((pc) => (
-                        <span key={pc.name} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />
-                      ))}
-                    </div>
-                    <span className="text-[9px] font-semibold text-gray-500">Pack of {color.packColors.length}</span>
+                    {color.packColors.map((pc, i) => (
+                      <span key={`${pc.name}-${i}`} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />
+                    ))}
                   </button>
                 ) : (
                   <button

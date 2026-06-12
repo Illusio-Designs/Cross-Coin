@@ -73,13 +73,22 @@ export function ProductCard({ product }) {
   const primaryImage = product.images[0];
   const hoverImage = product.images[1] ?? primaryImage;
 
-  // Flatten multi-color packs into individual swatches so a "Pack of 5"
-  // shows all 5 colours instead of just the pack's representative dot.
-  const swatches = product.colors.flatMap((c) =>
-    c.packColors?.length
-      ? c.packColors.map((pc) => ({ name: pc.name, hex: pc.hex }))
-      : [{ name: c.name, hex: c.hex }]
-  );
+  // Only show the individual base colours (the "Pack of 1" swatches). Every
+  // pack is just a bundle of these same single colours, so flattening each
+  // pack into its members would explode the dot count (+99) and repeat the
+  // same handful of colours over and over. If a product is sold only in
+  // multi-packs, fall back to the unique colours found across its packs.
+  const singleColors = product.colors.filter((c) => c.name && !c.packColors);
+  const swatches = (
+    singleColors.length
+      ? singleColors
+      : Array.from(
+          product.colors
+            .flatMap((c) => c.packColors ?? [])
+            .reduce((m, pc) => (m.has(pc.name) ? m : m.set(pc.name, pc)), new Map())
+            .values()
+        )
+  ).map((c) => ({ name: c.name, hex: c.hex }));
   const overflow = swatches.length - MAX_DOTS;
   const visibleColors = expanded ? swatches : swatches.slice(0, MAX_DOTS);
 
