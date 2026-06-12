@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -167,7 +167,12 @@ export function CartDrawer() {
     removeFromCart: removeItem,
     updateQuantity: updateQty,
   } = useCartContext();
-  const closeDrawer = () => setIsDrawerOpen(false);
+  // Stable closeDrawer reference — useFocusTrap takes onEscape as a
+  // dependency. If we recreated this function on every render the
+  // focus trap effect would re-run on every keystroke and steal
+  // focus from whatever input the user was typing in (which
+  // manifested as the cursor disappearing after each letter).
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), [setIsDrawerOpen]);
   const { user, isAuthenticated } = useAuth();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -329,6 +334,15 @@ export function CartDrawer() {
         else if ((lower.includes('pin') || lower.includes('postal')) && !errs.pincode) errs.pincode = err;
         else if (lower.includes('phone') || lower.includes('mobile')) errs.phone = err;
       }
+      // Email is a required field for guests but validateShippingAddress
+      // doesn't cover it (the backend address table has no email column).
+      // Validate inline so the Save button reflects the real state and
+      // the user sees an error message under the input.
+      if (!isAuthenticated) {
+        const e = String(guestInfo.email || '').trim();
+        if (!e) errs.email = 'Email is required';
+        else if (!isValidEmail(e)) errs.email = 'Please enter a valid email address';
+      }
       setFieldErrors(errs);
     }, 400);
     return () => clearTimeout(t);
@@ -438,6 +452,17 @@ export function CartDrawer() {
     };
     const validation = validateShippingAddress(addrToValidate);
     if (!validation.valid) { showError(validation.errors[0]); return; }
+
+    // Email is required for guest checkout but isn't part of
+    // validateShippingAddress (address has no email column). Check
+    // here so a missing/invalid email is caught at Save time, not
+    // surfaced later at Place Order with a confusing "valid email
+    // and 10-digit phone" toast after the address looked fine.
+    if (!isAuthenticated) {
+      const guestEmail = String(guestInfo.email || '').trim();
+      if (!guestEmail) { showError('Please enter your email.'); return; }
+      if (!isValidEmail(guestEmail)) { showError('Please enter a valid email address.'); return; }
+    }
 
     setAddressSaving(true);
     try {
@@ -564,12 +589,19 @@ export function CartDrawer() {
     const nameParts = (guestInfo.fullName || '').trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
+    // Backend /api/checkout/guest/initiate expects guest_info as a
+    // nested object — not flat phone/email/firstName/lastName fields.
+    // The previous flat shape made the schema reject the request with
+    // "guest_info: Required" + "shipping_address_id: Expected number,
+    // received nan" (the missing optional field coerced to NaN).
+    // Matching the same shape buildCodOrderData uses for guests.
     return {
-      ...base,
-      phone: guestInfo.phone || selectedAddress.phone_number || selectedAddress.phoneNumber,
-      email: guestInfo.email,
-      firstName,
-      lastName,
+      guest_info: {
+        email: guestInfo.email,
+        firstName,
+        lastName,
+        phone: guestInfo.phone,
+      },
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address: selectedAddress.address,
@@ -579,6 +611,7 @@ export function CartDrawer() {
         phone: selectedAddress.phone_number || selectedAddress.phoneNumber || guestInfo.phone,
         country: selectedAddress.country || 'India',
       },
+      ...base,
       session_id: getOrCreateGuestSessionId(),
     };
   };
@@ -990,6 +1023,7 @@ export function CartDrawer() {
                               <div className="cd-form-group">
                                 <label className="cd-label">Email *</label>
                                 <input className={`cd-input ${fieldErrors.email ? 'cd-input-error' : ''}`} type="email" inputMode="email" value={guestInfo.email} onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))} placeholder="name@example.com" autoComplete="email" />
+                                {fieldErrors.email && <p className="cd-field-error">{fieldErrors.email}</p>}
                               </div>
                               <div className="cd-form-group">
                                 <label className="cd-label">Phone *</label>
