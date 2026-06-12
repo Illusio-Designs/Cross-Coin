@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { getPublicCategories } from '@/lib/api/categories'
@@ -12,6 +13,40 @@ function cleanImg(url) {
     return url.substring(url.lastIndexOf('https://'))
   }
   return url
+}
+
+// Per-card shimmer — each card tracks its own image-loaded state so
+// one slow image doesn't gate the others.
+function CollectionCard({ c, img }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <Link
+      href={`/products?category=${encodeURIComponent(c.name.trim())}`}
+      className="group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[300px] lg:min-h-[380px] bg-gray-200"
+    >
+      {img && !loaded && (
+        <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
+      )}
+      {img
+        ? <img
+            src={img}
+            alt={c.name}
+            onLoad={() => setLoaded(true)}
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        : <div className="absolute inset-0 bg-gray-200" />
+      }
+      <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/45" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4">
+        <span className="rounded-full border border-white/60 bg-white/20 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white text-center backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-2 sm:px-4 sm:text-[11px]">
+          {c.name.trim()}
+        </span>
+        <span className="translate-y-3 rounded-full bg-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-black opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:px-6 sm:py-2 sm:text-[11px]">
+          Shop Now
+        </span>
+      </div>
+    </Link>
+  )
 }
 
 // Client subtree — see app/collections/page.jsx for the server shell.
@@ -51,30 +86,9 @@ export default function CollectionsClient() {
           <p className="py-20 text-center text-sm text-gray-400">No collections yet.</p>
         ) : (
           <div className="mx-auto grid max-w-site grid-cols-2 gap-4 lg:grid-cols-4">
-            {categories.map(c => {
-              const img = cleanImg(c.image)
-              return (
-                <Link
-                  key={c.id}
-                  href={`/products?category=${encodeURIComponent(c.name.trim())}`}
-                  className="group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[300px] lg:min-h-[380px]"
-                >
-                  {img
-                    ? <img src={img} alt={c.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    : <div className="absolute inset-0 bg-gray-200" />
-                  }
-                  <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/45" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4">
-                    <span className="rounded-full border border-white/60 bg-white/20 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white text-center backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-2 sm:px-4 sm:text-[11px]">
-                      {c.name.trim()}
-                    </span>
-                    <span className="translate-y-3 rounded-full bg-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-black opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:px-6 sm:py-2 sm:text-[11px]">
-                      Shop Now
-                    </span>
-                  </div>
-                </Link>
-              )
-            })}
+            {categories.map(c => (
+              <CollectionCard key={c.id} c={c} img={cleanImg(c.image)} />
+            ))}
           </div>
         )}
       </div>

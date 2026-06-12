@@ -118,6 +118,26 @@ function Lightbox({ images, startIndex, productName, onClose }) {
   )
 }
 
+/* Image with a pulsing gray skeleton until it loads.
+   Used by the inline gallery — the lightbox renders much larger so it
+   gets its own shimmer inline below. */
+function ShimmerImage({ src, alt, className }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={`${className} ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+      />
+    </>
+  )
+}
+
 export function ProductGallery({ images, colorImages, activeColorName, productName }) {
   const resolvedImages =
     activeColorName && colorImages?.[activeColorName]?.length
@@ -146,11 +166,12 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
     <div className="flex flex-col gap-2">
       {/* Main large image — custom + cursor */}
       <div
-        className="group relative overflow-hidden rounded-2xl bg-gray-50"
+        key={main?.url}
+        className="group relative overflow-hidden rounded-2xl bg-gray-50 min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
         style={{ cursor: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\'%3E%3Ccircle cx=\'24\' cy=\'24\' r=\'22\' fill=\'white\' stroke=\'%230a0a0a\' stroke-width=\'0.8\'/%3E%3Cline x1=\'24\' y1=\'15\' x2=\'24\' y2=\'33\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3Cline x1=\'15\' y1=\'24\' x2=\'33\' y2=\'24\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3C/svg%3E") 24 24, pointer' }}
         onClick={() => openLightbox(selected)}
       >
-        <img
+        <ShimmerImage
           src={main?.url}
           alt={main?.alt || productName}
           className="w-full object-contain min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
@@ -165,11 +186,11 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
             return (
               <div
                 key={i}
-                className="overflow-hidden rounded-xl bg-gray-50"
+                className="relative aspect-square overflow-hidden rounded-xl bg-gray-50"
                 style={{ cursor: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\'%3E%3Ccircle cx=\'24\' cy=\'24\' r=\'22\' fill=\'white\' stroke=\'%230a0a0a\' stroke-width=\'0.8\'/%3E%3Cline x1=\'24\' y1=\'15\' x2=\'24\' y2=\'33\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3Cline x1=\'15\' y1=\'24\' x2=\'33\' y2=\'24\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3C/svg%3E") 24 24, pointer' }}
                 onClick={() => openLightbox(realIndex)}
               >
-                <img
+                <ShimmerImage
                   src={img.url}
                   alt={img.alt || `${productName} ${i + 2}`}
                   className="aspect-square w-full object-contain"
