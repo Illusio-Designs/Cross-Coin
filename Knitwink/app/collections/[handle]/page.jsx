@@ -15,6 +15,7 @@ import { notFound } from 'next/navigation';
 import { getCategoryByName, getPublicCategories } from '@/lib/api/categories';
 import { mapProduct } from '@/lib/api/products';
 import { ProductCard } from '@/components/collection/ProductCard';
+import { ShimmerImg } from '@/components/ui/ShimmerImg';
 
 const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com';
 
@@ -104,10 +105,10 @@ export default async function CollectionPage({ params }) {
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black min-h-[200px] sm:min-h-[260px] md:min-h-[320px]">
         {category.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ShimmerImg
             src={category.image}
             alt={category.name}
+            shimmerClassName="bg-gray-800"
             className="absolute inset-0 h-full w-full object-cover opacity-60"
           />
         )}

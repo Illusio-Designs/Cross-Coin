@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 function cleanImg(url) {
   if (!url) return ''
@@ -36,7 +37,11 @@ export function CategoryCards({ categories = [] }) {
             className="group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[320px] lg:min-h-[400px]"
           >
             {img
-              ? <img src={img} alt={c.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              ? <ShimmerImg
+                  src={img}
+                  alt={c.name}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
               : <div className="absolute inset-0 bg-gray-200" />
             }
             <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/45" />

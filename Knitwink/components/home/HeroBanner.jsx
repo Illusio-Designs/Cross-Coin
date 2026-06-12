@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 const SLIDE_DURATION = 5000
 
@@ -59,8 +60,12 @@ export function HeroBanner({ slides = [] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeInOut' }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={slide.image} alt={slide.title || 'Banner'} className="absolute inset-0 h-full w-full object-cover object-center" />
+            <ShimmerImg
+              src={slide.image}
+              alt={slide.title || 'Banner'}
+              shimmerClassName="bg-gray-800"
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
           </motion.div>
         </AnimatePresence>
 

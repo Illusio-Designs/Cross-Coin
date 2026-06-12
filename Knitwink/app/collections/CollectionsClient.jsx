@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { getPublicCategories } from '@/lib/api/categories'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 import SeoWrapper from '@/components/SeoWrapper'
 import { queryKeys } from '@/lib/queryClient'
 
@@ -69,9 +70,10 @@ export default function CollectionsClient() {
     <SeoWrapper pageName="categories">
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black min-h-[240px] sm:min-h-[300px] md:min-h-[380px]">
-        <img
+        <ShimmerImg
           src="/collection hero.jpg"
           alt="Collections"
+          shimmerClassName="bg-gray-800"
           className="absolute inset-0 h-full w-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 to-transparent" />
