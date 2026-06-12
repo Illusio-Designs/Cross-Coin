@@ -723,11 +723,13 @@ export function CartDrawer() {
     showError('Please select a delivery method.');
   };
 
-  if (!isVisible) return null;
-
   // Trap focus inside the drawer while it's open. Restores focus to
   // the trigger button (header bag icon) on close. Escape closes.
+  // Must be called BEFORE the `!isVisible` early return so the hook
+  // count stays consistent across renders (Rules of Hooks).
   const trapRef = useFocusTrap(drawerOpen, { onEscape: closeDrawer });
+
+  if (!isVisible) return null;
 
   return (
     <>
