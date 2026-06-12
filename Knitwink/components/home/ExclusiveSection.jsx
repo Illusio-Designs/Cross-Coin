@@ -67,6 +67,29 @@ export function ExclusiveSection({ products = [] }) {
       : product.images || []
   const displayImage = colorImages[activeThumb]?.url || colorImages[0]?.url || ''
 
+  /* Group this product's colours by pack size so the picker reads as a
+     compact "Pack of 1 / 3 / 6" choice instead of one long mixed row.
+     Each option keeps its original index so clicking still drives the
+     existing index-based colour/image selection. */
+  const packGroups = (() => {
+    const groups = new Map()
+    ;(product.colors || []).forEach((c, idx) => {
+      if (!c.name) return
+      const size = c.packColors?.length || 1
+      if (!groups.has(size)) groups.set(size, [])
+      groups.get(size).push({ ...c, _index: idx })
+    })
+    return [...groups.entries()].sort((a, b) => a[0] - b[0])
+  })()
+  // Active pack size is derived from the selected colour, so it's always
+  // in sync (no extra state to reset when the product switches).
+  const activePack = product.colors?.[activeColor]?.packColors?.length || 1
+  const visibleColorOptions = packGroups.find(([s]) => s === activePack)?.[1] ?? []
+  const handlePackSelect = (size) => {
+    const first = packGroups.find(([s]) => s === size)?.[1]?.[0]
+    if (first) selectColor(first._index)
+  }
+
   const handleAdd = () => {
     const variant = product.variants?.find(v => v.color === colorName) || product.variants?.[0]
     addItem({
@@ -166,31 +189,53 @@ export function ExclusiveSection({ products = [] }) {
             )}
           </div>
 
-          {/* Color selector */}
+          {/* Pack size + colour/combo selector */}
           {product.colors?.length > 0 && product.colors[0].name && (
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-400">
-                Color — <span className="normal-case font-normal text-brand-black">{product.colors[activeColor]?.name}</span>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {product.colors.map((c, i) => (
-                  c.packColors ? (
-                    <button key={c.name} title={c.name} onClick={() => selectColor(i)}
-                      className={cn('flex flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all', i === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
-                    >
-                      <div className="flex gap-1">
-                        {c.packColors.map((pc) => <span key={pc.name} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />)}
-                      </div>
-                      <span className="text-[9px] font-semibold text-gray-400">Pack of {c.packColors.length}</span>
-                    </button>
-                  ) : (
-                    <button key={c.name} title={c.name} onClick={() => selectColor(i)}
-                      className={cn('h-7 w-7 rounded-full border-2 transition-all', i === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
-                      style={{ backgroundColor: c.hex }}
-                    />
-                  )
-                ))}
-              </div>
+            <div className="space-y-4">
+              {/* Pack size tabs — only when more than one pack size exists */}
+              {packGroups.length > 1 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-400">
+                    Pack Size — <span className="normal-case font-normal text-brand-black">Pack of {activePack}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {packGroups.map(([size, opts]) => (
+                      <button key={size} onClick={() => handlePackSelect(size)}
+                        className={cn('rounded-xl border-2 px-3.5 py-1.5 text-xs font-semibold transition-all',
+                          activePack === size ? 'border-brand-black bg-brand-black text-white' : 'border-gray-200 text-brand-black hover:border-gray-400')}
+                      >
+                        Pack of {size}
+                        <span className={cn('ml-1 text-[10px] font-normal', activePack === size ? 'text-white/70' : 'text-gray-400')}>({opts.length})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Colour / combination options for the selected pack size */}
+              {visibleColorOptions.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-widest text-gray-400">
+                    {activePack > 1 ? 'Combination' : 'Color'} — <span className="normal-case font-normal text-brand-black">{product.colors[activeColor]?.name}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleColorOptions.map((c) => (
+                      c.packColors ? (
+                        <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
+                          className={cn('flex items-center gap-1 rounded-xl border-2 p-2 transition-all', c._index === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
+                        >
+                          {c.packColors.map((pc, i) => <span key={`${pc.name}-${i}`} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />)}
+                        </button>
+                      ) : (
+                        <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
+                          className={cn('h-7 w-7 rounded-full border-2 transition-all', c._index === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
