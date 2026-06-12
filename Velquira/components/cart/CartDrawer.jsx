@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartContext } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -177,7 +177,11 @@ export function CartDrawer() {
     removeFromCart: removeItem,
     updateQuantity: updateQty,
   } = useCartContext();
-  const closeDrawer = () => setIsDrawerOpen(false);
+  // Stable closeDrawer — useFocusTrap depends on onEscape; a fresh
+  // arrow function each render would re-run the trap effect and
+  // steal focus from inputs (cursor disappeared after every keystroke
+  // in the guest address form).
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), [setIsDrawerOpen]);
   const { user, isAuthenticated } = useAuth();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -562,12 +566,17 @@ export function CartDrawer() {
     const nameParts = (guestInfo.fullName || '').trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
+    // Backend /api/checkout/guest/initiate expects guest_info as a
+    // nested object — same shape buildCodOrderData uses. Flat
+    // phone/email/firstName/lastName fields trip a
+    // "guest_info: Required" + "shipping_address_id: nan" error.
     return {
-      ...base,
-      phone: guestInfo.phone || selectedAddress.phone_number || selectedAddress.phoneNumber,
-      email: guestInfo.email,
-      firstName,
-      lastName,
+      guest_info: {
+        email: guestInfo.email,
+        firstName,
+        lastName,
+        phone: guestInfo.phone,
+      },
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address: selectedAddress.address,
@@ -577,6 +586,7 @@ export function CartDrawer() {
         phone: selectedAddress.phone_number || selectedAddress.phoneNumber || guestInfo.phone,
         country: selectedAddress.country || 'India',
       },
+      ...base,
       session_id: getOrCreateGuestSessionId(),
     };
   };

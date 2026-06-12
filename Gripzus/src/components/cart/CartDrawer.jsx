@@ -350,9 +350,15 @@ export default function CartDrawer() {
         result = await initiateCheckout({ shipping_address_id: selectedAddress.id, ...base });
       } else {
         const { firstName, lastName } = guestParts();
+        // Backend /api/checkout/guest/initiate expects guest_info as
+        // a nested object — same shape placeCod above already uses.
+        // The previous flat email/phone/firstName/lastName tripped a
+        // "guest_info: Required" validation error.
         result = await initiateGuestCheckout({
-          ...base, email: guestInfo.email, phone: guestInfo.phone, firstName, lastName,
-          shipping_address: shippingAddressPayload(), session_id: getOrCreateGuestSessionId(),
+          guest_info: { email: guestInfo.email, firstName, lastName, phone: guestInfo.phone },
+          shipping_address: shippingAddressPayload(),
+          ...base,
+          session_id: getOrCreateGuestSessionId(),
         });
       }
       if (!result?.success || !result?.razorpay_order) throw new Error(result?.message || 'Checkout failed.');
