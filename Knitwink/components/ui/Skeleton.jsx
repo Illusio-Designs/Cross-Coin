@@ -5,9 +5,13 @@ import { cn } from '@/lib/utils';
 
 
 export function Skeleton({ className }) {
+  // bg-gray-200 instead of gray-100 — gray-100 is so close to white
+  // that the pulse animation is barely visible on a white page
+  // background. gray-200 still reads as a subtle skeleton but is
+  // unambiguously gray.
   return (
     <div
-      className={cn('animate-pulse rounded-md bg-gray-100', className)}
+      className={cn('animate-pulse rounded-md bg-gray-200', className)}
       aria-hidden="true" />);
 
 

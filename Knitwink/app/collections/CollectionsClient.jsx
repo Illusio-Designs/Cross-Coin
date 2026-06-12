@@ -90,7 +90,7 @@ export default function CollectionsClient() {
         {loading ? (
           <div className="mx-auto grid max-w-site grid-cols-2 gap-4 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-gray-100" />
+              <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-gray-200" />
             ))}
           </div>
         ) : categories.length === 0 ? (
