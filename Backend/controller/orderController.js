@@ -593,7 +593,7 @@
       // Create order
       const order = await Order.create(
         {
-          order_number: await generateUniqueOrderNumber(transaction),
+          order_number: await generateUniqueOrderNumber(transaction, req.brand ? req.brand.id : 1),
           user_id: userId,
           shipping_address_id: shipping_address_id,
           total_amount: subTotal,
@@ -1194,7 +1194,7 @@
       // ── Create order ────────────────────────────────────────────────────
       const orderStatus = (payment_status === 'paid' && payment_type !== 'cod') ? 'confirmed' : 'awaiting_confirmation';
       const order = await Order.create({
-        order_number: await generateUniqueOrderNumber(transaction),
+        order_number: await generateUniqueOrderNumber(transaction, brandId),
         user_id: user.id,
         shipping_address_id: addr.id,
         total_amount: subTotal,
