@@ -326,11 +326,11 @@ export default function ProductsPage() {
         {loading ? (
           <div className="mx-auto grid max-w-site grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i}>
-                <div className="aspect-square animate-pulse rounded-2xl bg-gray-100" />
+              <div key={i} className="flex flex-col gap-3">
+                <div className="aspect-square animate-pulse rounded-2xl bg-gray-200" />
                 <div className="mt-3 space-y-2">
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-gray-100" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-gray-200" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
                 </div>
               </div>
             ))}

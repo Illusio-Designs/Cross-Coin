@@ -30,12 +30,32 @@ function ProductSkeleton() {
   return (
     <div className="bg-white px-5 pt-4 pb-10 lg:px-8">
       <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <div className="aspect-square w-full animate-pulse rounded-2xl bg-gray-100" />
-        <div className="flex flex-col gap-4 py-6">
-          <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
-          <div className="h-8 w-3/4 animate-pulse rounded bg-gray-100" />
-          <div className="h-6 w-28 animate-pulse rounded bg-gray-100" />
-          <div className="h-12 w-full animate-pulse rounded-full bg-gray-100" />
+        {/* Gallery skeleton — square hero + thumbnail grid */}
+        <div className="flex flex-col gap-2">
+          <div className="aspect-square w-full animate-pulse rounded-2xl bg-gray-200" />
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="aspect-square w-full animate-pulse rounded-xl bg-gray-200" />
+            ))}
+          </div>
+        </div>
+        {/* Info card skeleton — collection badge, title, rating row,
+            price, color dots, add-to-cart button */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="h-4 w-24 animate-pulse rounded-full bg-gray-200" />
+          <div className="h-8 w-3/4 animate-pulse rounded bg-gray-200" />
+          <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
+          <div className="flex gap-2 pt-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
+            ))}
+          </div>
+          <div className="h-10 w-28 animate-pulse rounded-full bg-gray-200" />
+          <div className="mt-3 flex gap-2">
+            <div className="h-12 flex-1 animate-pulse rounded-full bg-gray-200" />
+            <div className="h-12 flex-1 animate-pulse rounded-full bg-gray-200" />
+          </div>
         </div>
       </div>
     </div>
