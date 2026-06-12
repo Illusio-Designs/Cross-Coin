@@ -16,6 +16,7 @@ const { logger } = require('../config/logging.js');
 const { sequelize } = require('../config/db.js');
 const { Transaction, Op } = require('sequelize');
 const { Order } = require('../model/orderModel.js');
+const Brand = require('../model/brandModel.js');
 const { OrderItem } = require('../model/orderItemModel.js');
 const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
 const { Payment } = require('../model/paymentModel.js');
@@ -27,16 +28,49 @@ const orderEmitter = require('./orderEvents.js');
 const crypto = require('crypto');
 const { setImmediate } = require('timers');
 
-// ── Order number generator (same logic as orderController) ────────────────
-function generateOrderNumber() {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
-  return `CC-${timestamp}-${random}`;
+// ── Order number generator (single source of truth — orderController imports this) ──
+// Brand slug → order-number prefix. Add a line here when a new brand goes
+// live. Slugs are the lowercase X-Brand-Name values (see brandMiddleware).
+// Anything not listed — or an order with no brand context — falls back to
+// DEFAULT_ORDER_PREFIX, so Crosscoin and legacy orders keep the "CC-" format.
+const BRAND_ORDER_PREFIXES = {
+  crosscoin: 'CC',
+  knitwink: 'KW',
+  velmique: 'VM',
+  velquira: 'VQ',
+  gripzus: 'GZ',
+};
+const DEFAULT_ORDER_PREFIX = 'CC';
+
+// brandId → prefix cache so we resolve the slug from the DB at most once
+// per brand instead of on every order.
+const _brandPrefixCache = new Map();
+
+async function resolveOrderPrefix(brandId) {
+  if (!brandId) return DEFAULT_ORDER_PREFIX;
+  if (_brandPrefixCache.has(brandId)) return _brandPrefixCache.get(brandId);
+  let prefix = DEFAULT_ORDER_PREFIX;
+  try {
+    const brand = await Brand.findByPk(brandId, { attributes: ['slug'] });
+    const slug = brand?.slug?.toLowerCase();
+    if (slug && BRAND_ORDER_PREFIXES[slug]) prefix = BRAND_ORDER_PREFIXES[slug];
+  } catch (err) {
+    logger.warn(`resolveOrderPrefix: defaulting prefix for brand ${brandId}: ${err.message}`);
+  }
+  _brandPrefixCache.set(brandId, prefix);
+  return prefix;
 }
 
-async function generateUniqueOrderNumber(transaction) {
+function generateOrderNumber(prefix = DEFAULT_ORDER_PREFIX) {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `${prefix}-${timestamp}-${random}`;
+}
+
+async function generateUniqueOrderNumber(transaction, brandId) {
+  const prefix = await resolveOrderPrefix(brandId);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const orderNumber = generateOrderNumber();
+    const orderNumber = generateOrderNumber(prefix);
     const existing = await Order.findOne({
       where: { order_number: orderNumber },
       ...(transaction ? { transaction } : {}),
@@ -46,7 +80,7 @@ async function generateUniqueOrderNumber(transaction) {
   // Fallback: timestamp-based to guarantee uniqueness
   const ts = Date.now();
   const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `CC-${ts}-${rand}`;
+  return `${prefix}-${ts}-${rand}`;
 }
 
 /**
@@ -120,7 +154,7 @@ async function createOrderFromSession({
 
     // ── Create order ──────────────────────────────────────────────────────
     const order = await Order.create({
-      order_number: await generateUniqueOrderNumber(t),
+      order_number: await generateUniqueOrderNumber(t, session.brand_id || 1),
       user_id: session.user_id,
       guest_user_id: session.guest_user_id || null,
       total_amount: session.totals.subtotal,

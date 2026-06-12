@@ -464,10 +464,35 @@ exports.retryCheckout = async (req, res) => {
 
 exports.initiateGuestCheckout = async (req, res) => {
   try {
-    const { phone, email, firstName, lastName, ...checkoutData } = req.body;
+    // Accept the guest identity in two shapes for backward compat:
+    //
+    //   1. Nested:  { guest_info: { email, firstName, lastName, phone }, ... }
+    //   2. Flat:    { email, firstName, lastName, phone, ... }
+    //
+    // The current guest schema requires the nested form; older clients
+    // sent flat fields, and we don't want to break those during the
+    // rollout window. Fields read from guest_info take precedence
+    // (since that's the documented shape going forward).
+    const gi = req.body.guest_info || {};
+    const phone     = gi.phone     ?? req.body.phone;
+    const email     = gi.email     ?? req.body.email;
+    const firstName = gi.firstName ?? req.body.firstName;
+    const lastName  = gi.lastName  ?? req.body.lastName ?? '';
+
     if (!phone || !email || !firstName) {
-      return res.status(400).json({ success: false, message: 'Phone, email, and first name are required for guest checkout.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Phone, email, and first name are required for guest checkout.',
+      });
     }
+
+    // Build checkoutData by stripping the guest identity (in BOTH shapes)
+    // from the body — what's left is the actual checkout payload that
+    // gets forwarded to initiateCheckout.
+    const {
+      guest_info: _gi, phone: _p, email: _e, firstName: _fn, lastName: _ln,
+      ...checkoutData
+    } = req.body;
 
     const normalizedPhone = String(phone).replace(/\D/g, '').slice(-10);
     const { Op } = require('sequelize');
