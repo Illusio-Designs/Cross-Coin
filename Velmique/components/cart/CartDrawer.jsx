@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -137,8 +137,13 @@ export default function CartDrawer() {
   }, [cartOpen]);
 
   // Trap focus inside the drawer panel; Escape closes the drawer and
-  // restores focus to whatever opened it.
-  const trapRef = useFocusTrap(cartOpen, { onEscape: () => setCartOpen(false) });
+  // restores focus to whatever opened it. onEscape MUST be a stable
+  // reference — a fresh arrow function on every render would make
+  // useFocusTrap's effect re-run each time and steal focus from the
+  // input being typed in (cursor visibly disappeared after each
+  // keystroke in the guest address form).
+  const handleEscapeCloseDrawer = useCallback(() => setCartOpen(false), [setCartOpen]);
+  const trapRef = useFocusTrap(cartOpen, { onEscape: handleEscapeCloseDrawer });
 
   // ── Outside-click close for address dropdown ───────────────────────────
   useEffect(() => {
@@ -402,12 +407,18 @@ export default function CartDrawer() {
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     const parts = (guestInfo.fullName || '').trim().split(/\s+/);
+    // Backend /api/checkout/guest/initiate expects guest_info as a
+    // nested object — same shape the COD path already uses. The
+    // previous flat phone/email/firstName/lastName fields tripped a
+    // "guest_info: Required" + "shipping_address_id: Expected
+    // number, received nan" validation error.
     return {
-      ...base,
-      phone: guestInfo.phone,
-      email: guestInfo.email,
-      firstName: parts[0] || '',
-      lastName:  parts.slice(1).join(' ') || '',
+      guest_info: {
+        email: guestInfo.email,
+        firstName: parts[0] || '',
+        lastName: parts.slice(1).join(' ') || '',
+        phone: guestInfo.phone,
+      },
       shipping_address: {
         fullName: selectedAddress.full_name || selectedAddress.fullName,
         address:  selectedAddress.address,
@@ -417,6 +428,7 @@ export default function CartDrawer() {
         phone:    selectedAddress.phone_number || selectedAddress.phoneNumber || guestInfo.phone,
         country:  selectedAddress.country || 'India',
       },
+      ...base,
       session_id: getOrCreateGuestSessionId(),
     };
   };
