@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { getPublicCategories } from '@/lib/api/categories'
@@ -16,9 +16,18 @@ function cleanImg(url) {
 }
 
 // Per-card shimmer — each card tracks its own image-loaded state so
-// one slow image doesn't gate the others.
+// one slow image doesn't gate the others. The "min delay" trick
+// keeps the shimmer visible for at least 400ms even when the image
+// is already in the browser cache and onLoad fires instantly.
 function CollectionCard({ c, img }) {
   const [loaded, setLoaded] = useState(false)
+  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now())
+  const handleLoad = () => {
+    const elapsed = Date.now() - mountedAtRef.current
+    const remaining = Math.max(0, 400 - elapsed)
+    if (remaining === 0) setLoaded(true)
+    else setTimeout(() => setLoaded(true), remaining)
+  }
   return (
     <Link
       href={`/products?category=${encodeURIComponent(c.name.trim())}`}
@@ -31,7 +40,7 @@ function CollectionCard({ c, img }) {
         ? <img
             src={img}
             alt={c.name}
-            onLoad={() => setLoaded(true)}
+            onLoad={handleLoad}
             className={`absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
           />
         : <div className="absolute inset-0 bg-gray-200" />

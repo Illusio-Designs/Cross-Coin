@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Heart } from 'lucide-react';
@@ -23,9 +23,19 @@ export function ProductCard({ product }) {
   const [addedFeedback, setAddedFeedback] = useState(false);
   // Two independent flags — the primary image and the hover image
   // load on their own schedule. Each one keeps a shimmer overlay
-  // until next/image fires its loading callback.
+  // until next/image fires its loading callback AND a minimum
+  // display time has elapsed (otherwise cached images load in <50ms
+  // and the shimmer flashes by too fast to notice).
   const [primaryLoaded, setPrimaryLoaded] = useState(false);
   const [hoverLoaded, setHoverLoaded] = useState(false);
+  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now());
+  const SHIMMER_MIN_MS = 400;
+  const flipWithMinDelay = (setter) => {
+    const elapsed = Date.now() - mountedAtRef.current;
+    const remaining = Math.max(0, SHIMMER_MIN_MS - elapsed);
+    if (remaining === 0) setter(true);
+    else setTimeout(() => setter(true), remaining);
+  };
   const { addItem } = useCart();
   const wishlisted = useWishlistStore((s) => s.hasItem(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -104,7 +114,7 @@ export function ProductCard({ product }) {
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-contain object-center"
-              onLoad={() => (hovered ? setHoverLoaded(true) : setPrimaryLoaded(true))} />
+              onLoad={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)} />
 
           </motion.div>
         </AnimatePresence>

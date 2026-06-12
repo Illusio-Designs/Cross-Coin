@@ -119,10 +119,18 @@ function Lightbox({ images, startIndex, productName, onClose }) {
 }
 
 /* Image with a pulsing gray skeleton until it loads.
-   Used by the inline gallery — the lightbox renders much larger so it
-   gets its own shimmer inline below. */
+   Forces the shimmer to stay visible for at least 400ms — cached
+   images otherwise load in <50ms and the shimmer flashes by too
+   fast to see. */
 function ShimmerImage({ src, alt, className }) {
   const [loaded, setLoaded] = useState(false)
+  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now())
+  const handleLoad = () => {
+    const elapsed = Date.now() - mountedAtRef.current
+    const remaining = Math.max(0, 400 - elapsed)
+    if (remaining === 0) setLoaded(true)
+    else setTimeout(() => setLoaded(true), remaining)
+  }
   return (
     <>
       {!loaded && (
@@ -131,7 +139,7 @@ function ShimmerImage({ src, alt, className }) {
       <img
         src={src}
         alt={alt}
-        onLoad={() => setLoaded(true)}
+        onLoad={handleLoad}
         className={`${className} ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
       />
     </>
