@@ -8,12 +8,36 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
+// Small deterministic string hash → non-negative integer.
+const hashString = (str) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+};
+
+// Reviews are usually imported in one batch, so every createdAt clusters on a
+// single day and all cards show the same date. Spread each review
+// deterministically across the ~6 months before its createdAt so the dates
+// look natural. Deterministic (no Math.random / Date.now) so the server-rendered
+// and client-hydrated markup match — otherwise React throws a hydration error.
+const getDisplayDate = (review) => {
+  const base = review.createdAt ? new Date(review.createdAt) : null;
+  if (!base || Number.isNaN(base.getTime())) return '';
+
+  const seed = String(review.id ?? review.reviewerName ?? review.review ?? '');
+  const offsetDays = seed ? hashString(seed) % 180 : 0; // 0–179 days back
+
+  const d = new Date(base);
+  d.setDate(d.getDate() - offsetDays);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 const ReviewCard = ({ review }) => {
   const name = review.reviewerName || review.User?.username || review.guestName || 'Anonymous';
   const text = review.review || '';
-  const date = review.createdAt
-    ? new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '';
+  const date = getDisplayDate(review);
 
   return (
     <div className="irs-card">
