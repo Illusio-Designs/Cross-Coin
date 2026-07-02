@@ -14,9 +14,17 @@ export default function Policy({ initialPolicy = null, initialSlug = null } = {}
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // On client-side navigation between policies (e.g. footer links) the
+    // component stays mounted and only its props change, so sync the fresh SSR
+    // policy into state. Without this the URL + breadcrumb update but the page
+    // keeps showing the previously loaded policy.
+    if (initialPolicy && initialSlug === name) {
+      setPolicy(initialPolicy);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     if (!name) { setLoading(false); setPolicy(null); return; }
-    // Skip the client refetch when SSR already gave us the data.
-    if (initialPolicy && initialSlug === name) return;
     setLoading(true);
     setError(null);
     getPublicPolicyByName(name)
