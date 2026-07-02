@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { getBlogImageSrc } from '../utils/imageUtils';
 
 const LIMIT = 12;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -180,7 +181,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
               >
                 <div className="bc-img-wrap">
                   {post.hero_image
-                    ? <img src={post.hero_image} alt={post.title} loading="lazy" />
+                    ? <img src={getBlogImageSrc(post.hero_image, { w: 800, h: 450, q: 70 })} alt={post.title} loading="lazy" />
                     : <div style={{ background: '#f3f4f6', width: '100%', height: '100%', minHeight: 180 }} />
                   }
                   <div className="bc-badge">

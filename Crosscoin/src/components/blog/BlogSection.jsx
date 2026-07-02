@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getPublicBlogs } from '../../services/publicApi';
+import { getBlogImageSrc } from '../../utils/imageUtils';
 
 const stripHtml = (html) => {
   if (!html) return '';
@@ -46,7 +47,7 @@ const BlogSection = () => {
             >
               <div className="bc-img-wrap">
                 {post.hero_image
-                  ? <img src={post.hero_image} alt={post.title} loading="lazy" />
+                  ? <img src={getBlogImageSrc(post.hero_image, { w: 800, h: 450, q: 70 })} alt={post.title} loading="lazy" />
                   : <div style={{ background: '#f3f4f6', width: '100%', height: '100%', minHeight: 180 }} />
                 }
                 <div className="bc-badge">

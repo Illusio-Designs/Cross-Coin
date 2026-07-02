@@ -55,6 +55,22 @@ export function preloadImage(src) {
   });
 }
 
+// Build an ImageKit-optimised URL for blog images (hero + card thumbnails).
+// Requests an exact size as WebP/AVIF (f-auto) so images are sharp and light.
+// Only rewrites ImageKit URLs — any existing transform is replaced; non-ImageKit
+// sources (e.g. api.crosscoin.in /uploads) pass through unchanged.
+export function getBlogImageSrc(url, { w, h, q = 80 } = {}) {
+  if (!url || typeof url !== "string") return url || null;
+  if (!url.includes("ik.imagekit.io")) return url;
+  const base = url.split("?")[0];
+  const parts = [];
+  if (w) parts.push(`w-${w}`);
+  if (h) parts.push(`h-${h}`);
+  if (q) parts.push(`q-${q}`);
+  parts.push("f-auto");
+  return `${base}?tr=${parts.join(",")}`;
+}
+
 // Get optimized image URL with size parameters and error handling
 export function getOptimizedImageSrc(
   imageData,
