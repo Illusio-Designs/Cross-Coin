@@ -39,6 +39,14 @@ async function fetchPolicy(slug) {
 export async function getServerSideProps(ctx) {
   const slug = ctx.params?.slug;
   if (!slug) return { notFound: true };
+
+  // Canonicalize the URL: the legacy /policy?name=<slug> redirect forwards its
+  // query to the destination, producing /policy/<slug>?name=<slug>. Strip that
+  // leftover ?name= with a 301 so the final URL is exactly /policy/<slug>.
+  if (ctx.query?.name) {
+    return { redirect: { destination: `/policy/${slug}`, permanent: true } };
+  }
+
   const [policy, seoData] = await Promise.all([
     fetchPolicy(slug),
     fetchPageSeo(`policy-${slug}`, ctx),

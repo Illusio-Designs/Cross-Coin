@@ -139,9 +139,9 @@ export default function Register() {
 
               <p className="auth-terms">
                 By creating an account you agree to our{" "}
-                <Link href="/policy?name=terms-and-conditions">Terms of Service</Link>{" "}
+                <Link href="/policy/terms-and-conditions">Terms of Service</Link>{" "}
                 and{" "}
-                <Link href="/policy?name=privacy-policy">Privacy Policy</Link>.
+                <Link href="/policy/privacy-policy">Privacy Policy</Link>.
               </p>
             </form>
 
