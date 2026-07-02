@@ -287,6 +287,14 @@ const Header = () => {
             </li>
             <li>
               <Link
+                href="/blog"
+                className={activePage === "/blog" ? "active" : ""}
+              >
+                Journal
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/About"
                 className={activePage === "/About" ? "active" : ""}
               >
@@ -515,6 +523,15 @@ const Header = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Collections
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/blog"
+                className={activePage === "/blog" ? "active" : ""}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Journal
               </Link>
             </li>
             <li>
