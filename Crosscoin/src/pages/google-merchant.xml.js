@@ -11,12 +11,16 @@
  * own-brand apparel.
  */
 
-const BASE_URL = 'https://www.crosscoin.in';
+// Brand is read from env so the feed is scoped to THIS brand only (the catalog
+// API filters by the X-Brand-Name header) and stays correct if this route is
+// reused in a sibling brand project. Defaults are CrossCoin's.
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const IMAGEKIT = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
 
 // Store defaults. Change these if the catalogue expands beyond socks.
-const DEFAULT_BRAND = 'Cross Coin';
+const DEFAULT_BRAND = process.env.NEXT_PUBLIC_SITE_NAME || 'Cross Coin';
 const GOOGLE_CATEGORY = 'Apparel & Accessories > Clothing > Underwear & Socks > Socks';
 const DEFAULT_GENDER = 'unisex';
 const DEFAULT_AGE_GROUP = 'adult';
@@ -55,7 +59,7 @@ async function fetchAllProducts() {
     let data;
     try {
       const r = await fetch(`${API_URL}/api/products/catalog?page=${page}&limit=${limit}`, {
-        headers: { 'X-Brand-Name': 'crosscoin' },
+        headers: { 'X-Brand-Name': BRAND },
       });
       if (!r.ok) break;
       data = await r.json();
@@ -131,9 +135,9 @@ function buildFeed(items) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>Cross Coin</title>
+    <title>${xmlEscape(DEFAULT_BRAND)}</title>
     <link>${BASE_URL}</link>
-    <description>Cross Coin product feed for Google Shopping</description>
+    <description>${xmlEscape(DEFAULT_BRAND)} product feed for Google Shopping</description>
 ${items.join('\n')}
   </channel>
 </rss>`;
