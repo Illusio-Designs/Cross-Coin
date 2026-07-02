@@ -199,7 +199,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
         <div className="article-layout">
           <article className="article-body" id="articleBody">
 
-            {/* Sections — render HTML content from ReactQuill */}
+            {/* Sections — render HTML content from the rich text editor */}
             {sections.map((sec, i) => (
               <div key={i} id={`section-${i}`} className="article-section">
                 {sec.heading && <h2 className="article-section-heading">{sec.heading}</h2>}

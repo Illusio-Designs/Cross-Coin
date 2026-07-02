@@ -17,7 +17,7 @@ import SerpPreview from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import dynamic from 'next/dynamic';
-const ReactQuill = dynamic(() => import('../../../components/common/QuillEditor'), { 
+const Editor = dynamic(() => import('../../../components/common/Editor'), { 
   ssr: false,
   loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
 });
@@ -983,7 +983,7 @@ const ProductsPage = () => {
             />
             <div className="dm-field">
               <label className="dm-label">Description</label>
-              <ReactQuill
+              <Editor
                 value={formData.description}
                 onChange={val => setFormData(prev => ({ ...prev, description: val }))}
                 placeholder="Write product description..."

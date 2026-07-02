@@ -7,7 +7,7 @@ import { richHtml } from '../../../utils/sanitizeHtml';
 
 // Lazy-load the rich-text editor — Quill ships a lot of JS we don't want
 // in the admin shell's initial bundle.
-const ReactQuill = dynamic(() => import('../../../components/common/QuillEditor'), {
+const Editor = dynamic(() => import('../../../components/common/Editor'), {
   ssr: false,
   loading: () => <div style={{ height: 180, border: '1px solid #e5e7eb', borderRadius: 6 }} />,
 });
@@ -309,7 +309,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
       <div style={{ marginTop: 10 }}>
         <Field label="Answer">
           <div style={{ background: '#fff' }}>
-            <ReactQuill
+            <Editor
               theme="snow"
               value={form.answer}
               onChange={(html) => setForm({ ...form, answer: html })}

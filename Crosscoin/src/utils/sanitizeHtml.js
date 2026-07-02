@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify';
 
 /**
  * Shared HTML sanitizer for any content authored via admin rich-text
- * editors (ReactQuill) that gets rendered with dangerouslySetInnerHTML.
+ * rich text editor that gets rendered with dangerouslySetInnerHTML.
  *
  * Use this everywhere you display:
  *   - product descriptions

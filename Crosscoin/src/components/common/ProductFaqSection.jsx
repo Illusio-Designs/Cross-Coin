@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 /**
  * Renders product + global FAQs as an accordion.
  * - Product FAQs come first, then global. Empty arrays render nothing.
- * - Answers are HTML (ReactQuill output from admin) → sanitised by DOMPurify
+ * - Answers are HTML (rich text editor output from admin) → sanitised by DOMPurify
  *   before being rendered, even though the source is trusted (defence in
  *   depth in case a compromised admin account injects script tags).
  * - DOMPurify only works in the browser; during SSR we render the plain
