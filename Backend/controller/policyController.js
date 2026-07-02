@@ -67,9 +67,12 @@ exports.deletePolicy = async (req, res) => {
 // frontend slug rule so an exact match is reliable.
 const slugifyTitle = (s) => String(s || '')
   .toLowerCase()
+  .replace(/&/g, ' and ')       // "Terms & Conditions" -> "terms and conditions"
   .trim()
   .replace(/\s+/g, '-')
-  .replace(/[^a-z0-9-]/g, '');
+  .replace(/[^a-z0-9-]/g, '')
+  .replace(/-+/g, '-')          // collapse any doubled hyphens
+  .replace(/^-|-$/g, '');
 
 exports.getPublicPolicyByName = async (req, res) => {
   try {

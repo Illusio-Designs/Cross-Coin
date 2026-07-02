@@ -75,7 +75,16 @@ export async function getServerSideProps({ res }) {
       const polData = await polRes.json();
       const policies = Array.isArray(polData) ? polData : (polData?.policies || polData?.data || []);
       policies.forEach(p => {
-        const slug = String(p.title || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        // Same slug rule as the backend policy matcher and footer links so a
+        // title like "Terms & Conditions" maps to /policy/terms-and-conditions.
+        const slug = String(p.title || '')
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
         if (slug) {
           dynamicRoutes.push({
             path: `/policy/${slug}`,
