@@ -119,6 +119,7 @@ import "../styles/pages/Lookbook.css";
 import "../styles/pages/Reels.css";
 
 import Analytics from "../components/common/Analytics";
+import Msg91Loader from "../components/common/Msg91Loader";
 import UTMTracker from "../components/common/UTMTracker";
 import WhatsAppChat from "../components/common/WhatsAppChat";
 import PhonePopupModal from "../components/common/PhonePopupModal";
@@ -303,6 +304,7 @@ function App({ Component, pageProps }) {
       <Analytics />
       {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
         <>
+          <Msg91Loader />
           <SpeedInsights />
           <VercelAnalytics />
         </>

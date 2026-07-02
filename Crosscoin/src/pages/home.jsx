@@ -29,15 +29,19 @@ const BlogSection = dynamic(() => import("../components/blog/BlogSection"), {
   ssr: false
 });
 
-const Home = () => {
+const Home = ({ initialData = {} }) => {
   const router = useRouter();
   const { addToCart } = useCart();
-  const [slides, setSlides] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState([]);
+  // Seed above-the-fold state from the server-rendered props so the hero,
+  // categories, and latest products are painted from the initial HTML instead
+  // of after a client-side fetch. Falls back to empty arrays (client fetch) if
+  // the SSR fetch returned nothing.
+  const [slides, setSlides] = useState(initialData.slides || []);
+  const [loading, setLoading] = useState(!(initialData.categories?.length));
+  const [categories, setCategories] = useState(initialData.categories || []);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [currentCategoryProducts, setCurrentCategoryProducts] = useState([]);
-  const [latestProducts, setLatestProducts] = useState([]);
+  const [latestProducts, setLatestProducts] = useState(initialData.latestProducts || []);
   const [latestProductsLoading, setLatestProductsLoading] = useState(false);
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
   const [exclusiveProductsLoading, setExclusiveProductsLoading] = useState(true);
@@ -74,101 +78,67 @@ const Home = () => {
   useEffect(() => {
     if (apiCalledRef.current) return; // Prevent multiple calls
     apiCalledRef.current = true;
-    
-    // ✅ PARALLELIZED: All 4 API calls run simultaneously
+
+    // The hero slides, categories, and latest products are already seeded from
+    // getServerSideProps, so only fetch the pieces the server didn't provide
+    // (a rare fallback if an upstream call failed) plus the below-the-fold data
+    // (exclusive products + reviews) that isn't part of the initial paint.
+    const needSliders = !(slides && slides.length > 0);
+    const needCategories = !(categories && categories.length > 0);
+    const needLatest = !(latestProducts && latestProducts.length > 0);
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
     const fetchAllData = async () => {
       try {
-        setLoading(true);
-        setLatestProductsLoading(true);
+        if (needCategories) setLoading(true);
+        if (needLatest) setLatestProductsLoading(true);
         setExclusiveProductsLoading(true);
 
-        // Execute all 4 API calls in parallel using Promise.all()
         const [slidersData, categoriesData, latestData, exclusiveData, reviewsData] = await Promise.all([
-          // 1. Fetch sliders
-          (async () => {
-            try {
-              return await getPublicSliders();
-            } catch (error) {
-              return [];
-            }
-          })(),
+          // 1. Sliders (only if SSR didn't provide them)
+          needSliders
+            ? getPublicSliders().catch(() => [])
+            : Promise.resolve(slides),
 
-          // 2. Fetch categories
-          (async () => {
-            try {
-              const data = await getPublicCategories();
-              if (Array.isArray(data)) {
-                return data;
-              } else if (data && Array.isArray(data.categories)) {
-                return data.categories;
-              }
-              return [];
-            } catch (error) {
-              return [];
-            }
-          })(),
+          // 2. Categories (only if SSR didn't provide them)
+          needCategories
+            ? getPublicCategories()
+                .then((data) =>
+                  Array.isArray(data) ? data : (data && Array.isArray(data.categories) ? data.categories : [])
+                )
+                .catch(() => [])
+            : Promise.resolve(categories),
 
-          // 3. Fetch latest products
-          (async () => {
-            try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/catalog?limit=15&sort=newest`,
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-Brand-Name': 'crosscoin'
-                  }
-                }
-              );
-              const data = await response.json();
-              return (data.success && data.data.products) ? data.data.products : [];
-            } catch (error) {
-              return [];
-            }
-          })(),
+          // 3. Latest products (only if SSR didn't provide them)
+          needLatest
+            ? fetch(`${API_BASE}/api/products/catalog?limit=15&sort=newest`, {
+                headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+              })
+                .then((r) => r.json())
+                .then((data) => (data.success && data.data.products ? data.data.products : []))
+                .catch(() => [])
+            : Promise.resolve(latestProducts),
 
-          // 4. Fetch exclusive/featured products
-          (async () => {
-            try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/products/catalog?sort=featured&limit=100`,
-                {
-                  cache: 'no-store',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-Brand-Name': 'crosscoin'
-                  }
-                }
-              );
-              const data = await response.json();
-              return (data.success && data.data.products) ? data.data.products : [];
-            } catch (error) {
-              return [];
-            }
-          })(),
+          // 4. Exclusive/featured products (below the fold). Pull a sensible
+          //    strip-sized batch instead of 100 full payloads, and drop the
+          //    cache:'no-store' so the browser/CDN can reuse the response.
+          fetch(`${API_BASE}/api/products/catalog?sort=featured&limit=24`, {
+            headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+          })
+            .then((r) => r.json())
+            .then((data) => (data.success && data.data.products ? data.data.products : []))
+            .catch(() => []),
 
-          // 5. Fetch reviews
-          (async () => {
-            try {
-              return await getAllPublicReviews({ limit: 30, sort: 'highest' });
-            } catch (error) {
-              return [];
-            }
-          })()
+          // 5. Reviews (below the fold)
+          getAllPublicReviews({ limit: 30, sort: 'highest' }).catch(() => []),
         ]);
 
-        // Set all data at once
-        setSlides(slidersData);
-        setCategories(categoriesData);
-        setLatestProducts(latestData);
+        if (needSliders) setSlides(slidersData);
+        if (needCategories) setCategories(categoriesData);
+        if (needLatest) setLatestProducts(latestData);
         setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData?.reviews || reviewsData?.data || []));
-
-        // Process exclusive products
-        if (exclusiveData && exclusiveData.length > 0) {
-          setExclusiveProducts(exclusiveData);
-        } else {
-          setExclusiveProducts([]);
-        }
+        setExclusiveProducts(exclusiveData && exclusiveData.length > 0 ? exclusiveData : []);
 
         setLoading(false);
         setLatestProductsLoading(false);
