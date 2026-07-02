@@ -1,27 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 
+const LIMIT = 12;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
+async function fetchJson(url) {
+  try {
+    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getServerSideProps(ctx) {
-  return { props: { seoData: await fetchPageSeo('blog', ctx) } };
+  // Fetch the first page of posts + tags on the server so the blog grid ships
+  // in the initial HTML instead of after a client-side useEffect. The edge
+  // cache header set by fetchPageSeo keeps repeat requests cheap.
+  const [seoData, postsJson, tagsJson] = await Promise.all([
+    fetchPageSeo('blog', ctx),
+    fetchJson(`${API_URL}/api/blogs/listing?page=1&limit=${LIMIT}`),
+    fetchJson(`${API_URL}/api/blogs/tags`),
+  ]);
+
+  const initialPosts = postsJson?.data || [];
+  const initialTags = tagsJson?.data || [];
+
+  return {
+    props: {
+      seoData,
+      initialPosts,
+      initialTags,
+      initialHasMore: initialPosts.length === LIMIT,
+    },
+  };
 }
 
 const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '') : '';
 
-const BlogPage = ({ seoData }) => {
+const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore = false }) => {
   const router = useRouter();
-  const [posts, setPosts] = useState([]);
-  const [tags, setTags] = useState([]);
+  const [posts, setPosts] = useState(initialPosts);
+  const [tags, setTags] = useState(initialTags);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeTag, setActiveTag] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialPosts.length === 0);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const LIMIT = 12;
+  const [hasMore, setHasMore] = useState(initialHasMore);
+
+  // The first page + tags are seeded from getServerSideProps, so only run the
+  // client fetch as a fallback when the server didn't provide them.
+  const seededRef = useRef(initialPosts.length > 0);
 
   useEffect(() => {
+    if (seededRef.current) return;
     const fetchData = async () => {
       setLoading(true);
       try {

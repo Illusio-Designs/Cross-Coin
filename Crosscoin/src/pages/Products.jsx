@@ -31,17 +31,69 @@ import { fetchPageSeo } from "../utils/fetchPageSeo";
 import { fetchPageFaqs } from "../utils/fetchPageFaqs";
 import ProductFaqSection from "../components/common/ProductFaqSection";
 
+const PRODUCTS_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
+async function fetchProductsJson(url) {
+  try {
+    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getServerSideProps(ctx) {
-  const [seoData, faqs] = await Promise.all([
+  // Server-render the default product listing + categories so the grid ships in
+  // the initial HTML instead of after a client fetch waterfall. When a category
+  // filter is in the URL we skip the product prefetch — that path needs the
+  // category-name matching that runs client-side — and let the client fetch it.
+  const hasCategory = !!ctx.query?.category;
+
+  const [seoData, faqs, productsJson, categoriesJson] = await Promise.all([
     fetchPageSeo('products', ctx),
     fetchPageFaqs('products', ctx),
+    hasCategory
+      ? Promise.resolve(null)
+      : fetchProductsJson(`${PRODUCTS_API_URL}/api/products/catalog?page=1&limit=100`),
+    fetchProductsJson(`${PRODUCTS_API_URL}/api/categories/listing`),
   ]);
-  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
+
+  const rawProducts = (productsJson?.success && productsJson?.data?.products)
+    ? productsJson.data.products
+    : [];
+  const initialProducts = rawProducts.map((p) => ({
+    ...p,
+    price: p.price || p.variations?.[0]?.price || 0,
+    comparePrice: p.comparePrice || p.variations?.[0]?.comparePrice || 0,
+  }));
+  const initialTotal = productsJson?.data?.total || productsJson?.data?.totalProducts || 0;
+  const initialCategories = categoriesJson?.categories
+    || (Array.isArray(categoriesJson) ? categoriesJson : [])
+    || [];
+
+  return {
+    props: {
+      seoData,
+      pageFaqs: faqs.pageFaqs,
+      globalFaqs: faqs.globalFaqs,
+      initialProducts,
+      initialTotal,
+      initialCategories,
+    },
+  };
 }
 
 // Load page-specific CSS - moved to _app.jsx
 
-const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
+const Products = ({
+  seoData,
+  pageFaqs = [],
+  globalFaqs = [],
+  initialProducts = [],
+  initialTotal = 0,
+  initialCategories = [],
+}) => {
   const router = useRouter();
   const { addToCart } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
@@ -67,13 +119,14 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   const [selectedMaterial, setSelectedMaterial] = useState([]);
   const [selectedBadge, setSelectedBadge] = useState([]);
 
-  // Data State - CRITICAL: Initialize with empty array to prevent undefined errors
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Data State - seeded from getServerSideProps so the grid renders from the
+  // initial HTML (no client fetch waterfall on the default, no-category view).
+  const [products, setProducts] = useState(initialProducts);
+  const [loading, setLoading] = useState(initialProducts.length === 0);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(initialTotal);
   
   // Safety guard: Ensure products is always an array.
   // Memoised so that downstream useMemos (filteredProducts, computeDynamicFilters)
@@ -85,6 +138,8 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   );
 
   // ── React Query: categories (1 hour stale) ──
+  // Seed from the SSR-provided categories so there's no client fetch on first
+  // load; React Query still revalidates in the background after staleTime.
   const { data: categories = [] } = useQuery({
     queryKey: queryKeys.categories,
     queryFn: async () => {
@@ -92,6 +147,7 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
       return Array.isArray(data) ? data : [];
     },
     staleTime: 60 * 60 * 1000,
+    initialData: initialCategories.length > 0 ? initialCategories : undefined,
   });
 
   // Dynamic Filter Options - Initialize with safe defaults
@@ -115,6 +171,9 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
   const isLoadingRef = useRef(false);
   const initialLoadRef = useRef(true);
   const productsLoadedRef = useRef(false);
+  // True when getServerSideProps already provided the default listing, so the
+  // first no-category run of the load effect can skip the redundant client fetch.
+  const ssrSeededRef = useRef(initialProducts.length > 0);
 
   // Main data fetching function - optimized to prevent multiple calls
   const fetchProductsData = useCallback(
@@ -251,7 +310,14 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
       // No category param — fetch all products
       setSelectedCategory([]);
       setCustomBreadcrumbs(null);
-      fetchProductsData();
+      if (ssrSeededRef.current) {
+        // Default listing already came from SSR; consume the flag so later
+        // navigations still refetch, but skip the redundant first fetch.
+        ssrSeededRef.current = false;
+        productsLoadedRef.current = true;
+      } else {
+        fetchProductsData();
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.category, categories.length]);
@@ -805,8 +871,11 @@ const Products = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
     (Array.isArray(selectedMaterial) && selectedMaterial.length > 0) ||
     (Array.isArray(priceRange) && priceRange.length === 2 && (priceRange[0] !== minPrice || priceRange[1] !== maxPrice));
 
-  // Don't render until component is mounted (prevents hydration mismatch)
-  if (!isMounted) {
+  // Pre-mount skeleton — only when there's no data to show yet. When products
+  // were seeded by SSR we render the real grid on the server AND on the first
+  // client paint (both with isMobile=false and the same seeded products), so
+  // hydration stays consistent; isMobile-dependent bits adjust after mount.
+  if (!isMounted && (!Array.isArray(products) || products.length === 0)) {
     return (
       <SeoWrapper pageName="products" seoData={seoData}>
         <div className="products-page">
