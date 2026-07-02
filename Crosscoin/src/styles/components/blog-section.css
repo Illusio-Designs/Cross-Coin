@@ -53,7 +53,11 @@
 /* ── IMAGE ── */
 .bc-img-wrap {
   position: relative;
-  height: 200px;
+  /* Match the 16:9 card thumbnail delivered from ImageKit (w-800,h-450) so the
+     image fills the box with no vertical cropping at any column width. A fixed
+     height caused a slight top/bottom cut on wider cards. */
+  width: 100%;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
 }
 

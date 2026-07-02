@@ -516,7 +516,7 @@
   line-height: 1.25;
 }
 
-/* ReactQuill rendered HTML */
+/* Rich text editor rendered HTML */
 .ql-content p {
   font-size: 16px;
   color: var(--bd-gray-dark);

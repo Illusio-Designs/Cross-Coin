@@ -10,7 +10,7 @@ import BrandAssignment from '../../components/Dashboard/BrandAssignment';
 import { showSuccess, showError } from "../../utils/toastNotification";
 import { ConfirmModal } from '../../components/common/AlertModal';
 
-const ReactQuill = dynamic(() => import("../../components/common/QuillEditor"), { ssr: false });
+const Editor = dynamic(() => import("../../components/common/Editor"), { ssr: false });
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
@@ -78,7 +78,7 @@ function SectionsEditor({ value, onChange }) {
           <div className="dm-field" style={{ marginTop: 10 }}>
             <label className="dm-label">Content</label>
             <div className="dm-quill-wrap">
-              <ReactQuill
+              <Editor
                 value={sec.content || ''}
                 onChange={val => updateSection(i, 'content', val)}
                 placeholder="Write section content..."
