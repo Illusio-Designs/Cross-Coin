@@ -4,10 +4,14 @@ import { collectionUrl } from '../../utils/collectionUrl';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialise from the slides prop directly (not a client-only effect) so that
+  // when slides are provided by SSR the hero image renders in the initial HTML
+  // — the LCP element — instead of a skeleton that only resolves after hydration.
+  // Server and client compute the same value, so hydration stays consistent.
+  const [isLoading, setIsLoading] = useState(!(slides && slides.length > 0));
 
   useEffect(() => {
-    // If slides are provided and not empty, stop loading
+    // If slides arrive later (client-side fallback fetch), stop loading.
     if (slides && slides.length > 0) {
       setIsLoading(false);
     }
