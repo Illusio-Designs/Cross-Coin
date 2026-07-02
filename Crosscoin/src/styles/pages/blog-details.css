@@ -121,11 +121,11 @@
 .article-hero {
   position: relative;
   width: 100%;
-  /* Hero images are 1920x720 (8:3). Match that ratio so the whole image is
-     shown edge-to-edge with no top/bottom cropping, scaling with the width.
-     Capped at the image's native height on very wide screens. */
-  aspect-ratio: 1920 / 720;
-  max-height: 720px;
+  /* Hero images are 1920x1020 on ImageKit. Match that ratio so the whole image
+     shows edge-to-edge with no cropping, scaling with the width and capped at
+     the native 1020px height on very wide screens. */
+  aspect-ratio: 1920 / 1020;
+  max-height: 1020px;
   overflow: hidden;
   background: #0e0e12;
 }

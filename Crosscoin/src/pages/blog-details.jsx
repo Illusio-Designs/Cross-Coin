@@ -131,7 +131,13 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
 
   // Tags key from API is "Tags" not "BlogTags"
   const tags = (post.Tags || post.BlogTags || []).map(t => `#${t.name}`);
-  const heroUrl = post.hero_image || null;
+  // Blog hero images are 1920x1020 on ImageKit. Request that exact size with
+  // WebP/AVIF (f-auto) at q-82 so the hero is sharp, light, and correctly
+  // proportioned. Any transform already on the stored URL is replaced.
+  const rawHero = post.hero_image || null;
+  const heroUrl = rawHero && rawHero.includes('ik.imagekit.io')
+    ? `${rawHero.split('?')[0]}?tr=w-1920,h-1020,q-82,f-auto`
+    : rawHero;
   const featuredProducts = post.FeaturedProducts || [];
 
   return (
