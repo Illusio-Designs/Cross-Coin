@@ -162,15 +162,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
 
         {/* Hero */}
         <div className="article-hero">
-          {heroUrl && (
-            <>
-              {/* Blurred fill so the frame is never empty, with the full image
-                  shown sharp on top (object-fit: contain) — handles portrait,
-                  landscape, and composite creatives without awkward cropping. */}
-              <img className="article-hero-bg" src={heroUrl} alt="" aria-hidden="true" />
-              <img className="article-hero-photo" src={heroUrl} alt={post.title} />
-            </>
-          )}
+          {heroUrl && <img src={heroUrl} alt={post.title} />}
           <div className="article-hero-overlay" />
           <div className="article-hero-content">
             {post.BlogCategory && <div className="article-cat-tag">{post.BlogCategory.name}</div>}
