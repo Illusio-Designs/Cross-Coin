@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getPublicPolicyByName } from "@/services/publicApi";
-import DOMPurify from "dompurify";
+import { richHtml } from "@/utils/sanitizeHtml";
 
 export default function Policy({ initialPolicy = null, initialSlug = null } = {}) {
   const router = useRouter();
@@ -64,10 +64,7 @@ export default function Policy({ initialPolicy = null, initialSlug = null } = {}
         )}
 
         {policy && (
-          <div
-            className="pol-content"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(policy.content) }}
-          />
+          <div className="pol-content" {...richHtml(policy.content)} />
         )}
       </div>
     </div>

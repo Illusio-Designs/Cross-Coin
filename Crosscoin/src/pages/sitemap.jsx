@@ -106,7 +106,7 @@ const Sitemap = ({ seoData }) => {
                 <Link href="/About" className="cat-heading">Resources</Link>
                 <ul className="cat-links">
                   <li><Link href="/About">Size Guide</Link></li>
-                  <li><Link href="/policy?name=shipping-policy">Care Instructions</Link></li>
+                  <li><Link href="/policy/shipping-policy">Care Instructions</Link></li>
                   <li><Link href="/About">Fabric Guide</Link></li>
                   <li><Link href="/blog">Style Tips</Link></li>
                 </ul>
@@ -146,8 +146,8 @@ const Sitemap = ({ seoData }) => {
                 <ul className="cat-links">
                   <li><Link href="/OrderTracking">Track Order</Link></li>
                   <li><Link href="/profile">Order History</Link></li>
-                  <li><Link href="/policy?name=cancellation-and-refund">Returns</Link></li>
-                  <li><Link href="/policy?name=cancellation-and-refund">Refunds</Link></li>
+                  <li><Link href="/policy/cancellation-and-refund">Returns</Link></li>
+                  <li><Link href="/policy/cancellation-and-refund">Refunds</Link></li>
                 </ul>
               </div>
 
@@ -155,8 +155,8 @@ const Sitemap = ({ seoData }) => {
                 <button className="cat-heading sitemap-btn-link" onClick={() => setIsDrawerOpen(true)}>Checkout</button>
                 <ul className="cat-links">
                   <li><button className="sitemap-btn-link" onClick={() => setIsDrawerOpen(true)}>Checkout</button></li>
-                  <li><Link href="/policy?name=terms-and-conditions">Payment Methods</Link></li>
-                  <li><Link href="/policy?name=shipping-policy">Shipping Info</Link></li>
+                  <li><Link href="/policy/terms-and-conditions">Payment Methods</Link></li>
+                  <li><Link href="/policy/shipping-policy">Shipping Info</Link></li>
                   <li><Link href="/OrderTracking">Delivery Tracking</Link></li>
                 </ul>
               </div>
@@ -193,10 +193,10 @@ const Sitemap = ({ seoData }) => {
               <div className="cat-col">
                 <Link href="/policy" className="cat-heading">Policies</Link>
                 <ul className="cat-links">
-                  <li><Link href="/policy?name=privacy-policy">Privacy Policy</Link></li>
-                  <li><Link href="/policy?name=terms-and-conditions">Terms of Service</Link></li>
-                  <li><Link href="/policy?name=cancellation-and-refund">Return Policy</Link></li>
-                  <li><Link href="/policy?name=shipping-policy">Shipping Policy</Link></li>
+                  <li><Link href="/policy/privacy-policy">Privacy Policy</Link></li>
+                  <li><Link href="/policy/terms-and-conditions">Terms of Service</Link></li>
+                  <li><Link href="/policy/cancellation-and-refund">Return Policy</Link></li>
+                  <li><Link href="/policy/shipping-policy">Shipping Policy</Link></li>
                 </ul>
               </div>
 
