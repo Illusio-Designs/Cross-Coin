@@ -62,24 +62,40 @@ exports.deletePolicy = async (req, res) => {
   }
 };
 
+// Turn a title into a URL slug the same way the storefront does
+// (e.g. "Privacy Policy" -> "privacy-policy"). Kept in sync with the
+// frontend slug rule so an exact match is reliable.
+const slugifyTitle = (s) => String(s || '')
+  .toLowerCase()
+  .trim()
+  .replace(/\s+/g, '-')
+  .replace(/[^a-z0-9-]/g, '');
+
 exports.getPublicPolicyByName = async (req, res) => {
   try {
-    const { name } = req.params;
-    const searchTitle = name.replace(/-/g, ' ').trim().toLowerCase();
-    const where = {
-      [Op.and]: [
-        Policy.sequelize.where(
-          Policy.sequelize.fn('LOWER', Policy.sequelize.col('title')),
-          { [Op.like]: `%${searchTitle}%` }
-        )
-      ]
-    };
-    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+    const reqSlug = String(req.params.name || '').toLowerCase().trim();
 
-    const policy = await Policy.findOne({ where });
+    const where = {};
+    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+    const policies = await Policy.findAll({ where });
+
+    // Prefer an EXACT slug match. The old behaviour matched titles with a
+    // LIKE '%...%' substring, so /policy/privacy-policy and
+    // /policy/terms-and-conditions could resolve to the wrong policy (or the
+    // same one) — that's what made the two pages show each other's content.
+    let policy = policies.find((p) => slugifyTitle(p.title) === reqSlug);
+
+    // Forgiving fallback only when nothing matched exactly, so genuinely odd
+    // titles/legacy links still resolve instead of 404-ing.
+    if (!policy) {
+      const searchTitle = reqSlug.replace(/-/g, ' ');
+      policy = policies.find((p) => String(p.title || '').toLowerCase().includes(searchTitle));
+    }
+
     if (!policy) return res.status(404).json({ error: 'Policy not found' });
     res.json(policy);
   } catch (err) {
+    logger.error('Get public policy by name error:', err);
     res.status(500).json({ error: err.message });
   }
 };
