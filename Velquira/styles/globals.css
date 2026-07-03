@@ -84,6 +84,13 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   body {
@@ -146,6 +153,58 @@
     font-weight: 300;
     letter-spacing: -0.02em;
     line-height: 0.95;
+  }
+
+  /* ── Maison header — jewellery atelier navigation ───────────────────── */
+  .vq-maison-header {
+    background: #fbf6ea;
+  }
+
+  .vq-nav-rule-top,
+  .vq-nav-rule-bottom {
+    pointer-events: none;
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(191, 139, 46, 0.45) 20%,
+      rgba(191, 139, 46, 0.65) 50%,
+      rgba(191, 139, 46, 0.45) 80%,
+      transparent 100%
+    );
+  }
+  .vq-nav-rule-top { top: 0; }
+  .vq-nav-rule-bottom { bottom: 0; }
+
+  .vq-maison-link {
+    font-variant-numeric: lining-nums;
+  }
+
+  .vq-nav-icon span:not(.sr-only) {
+    transition: transform 0.35s cubic-bezier(0.22, 0.65, 0.3, 1);
+  }
+  .vq-nav-icon:hover span:not(.sr-only) {
+    transform: translateY(-1px);
+  }
+
+  /* Section eyebrow — shared across pages */
+  .vq-eyebrow {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: #bf8b2e;
+  }
+
+  /* Gold section divider */
+  .vq-section-rule {
+    display: block;
+    height: 1px;
+    width: 4rem;
+    background: linear-gradient(90deg, #bf8b2e, transparent);
   }
 
   /* Custom Velquira scrollbar — WebKit (Chrome, Safari, Edge) */

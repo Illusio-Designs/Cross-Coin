@@ -1,27 +1,30 @@
 import { inlineHtml } from '@/lib/sanitizeHtml'
+import { cn } from '@/lib/utils'
 
 /**
- * Velquira section header — editorial, premium jewellery.
- * eyebrow: small uppercase champagne label above
- * title: large serif heading (can include <strong> for emphasis)
- * center: boolean — centered or left-aligned
- * rule: boolean — optional thin champagne rule under the title
- *
- * Title is admin-authorable; sanitised via inlineHtml (formatting
- * tags only — no block elements, no anchors, no images).
+ * SectionHeader — editorial jewellery section titles.
+ * Supports eyebrow, serif display title, optional gold rule.
  */
-export function SectionHeader({ eyebrow, title, center = false, rule = false }) {
+export function SectionHeader({ eyebrow, title, center = false, rule = false, dark = false, className }) {
   return (
-    <div className={`mb-10 ${center ? 'text-center' : ''}`}>
+    <div className={cn('mb-10', center && 'text-center', className)}>
       {eyebrow && (
-        <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-sage">{eyebrow}</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-gold">{eyebrow}</p>
       )}
       <h2
-        className="mt-3 font-display text-3xl font-normal leading-tight text-brand-black lg:text-4xl"
+        className={cn(
+          'vq-display mt-4 text-3xl md:text-4xl lg:text-[2.75rem]',
+          dark ? 'text-white' : 'text-brand-black'
+        )}
         {...inlineHtml(title)}
       />
       {rule && (
-        <div className={`mt-5 h-px w-16 bg-sage/50 ${center ? 'mx-auto' : ''}`} />
+        <div
+          className={cn(
+            'mt-6 h-px w-16 bg-gradient-to-r from-gold/70 to-transparent',
+            center && 'mx-auto'
+          )}
+        />
       )}
     </div>
   )

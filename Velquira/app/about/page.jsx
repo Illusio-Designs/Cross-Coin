@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import SeoWrapper from '@/components/SeoWrapper'
+import { PageHero } from '@/components/layout/PageHero'
 import { Reveal } from '@/components/ui/Reveal'
 
 const PROMISES = [
@@ -14,34 +15,18 @@ const PROMISES = [
 export default function AboutPage() {
   return (
     <SeoWrapper pageName="about">
-      {/* 1. Hero / opening statement */}
+      <PageHero
+        variant="obsidian"
+        eyebrow="The Velquira House"
+        title="Light, set"
+        titleAccent="by hand."
+        description="A quiet atelier in Bandra, working in solid 18k gold and certified stones — shaping jewellery slowly, the way it was always meant to be made."
+      />
+
       <section className="bg-ivory">
-        <div className="mx-auto max-w-site px-4 pt-28 pb-20 text-center sm:px-6 sm:pt-32 md:px-10 md:pt-40 md:pb-28">
+        <div className="mx-auto max-w-site px-4 py-16 sm:px-6 md:px-10 md:py-20">
           <Reveal>
-            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-              The Velquira House
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.08}>
-            <h1 className="mx-auto mt-7 max-w-4xl font-display text-5xl font-normal leading-[1.02] text-brand-black md:text-7xl">
-              Light, set by hand.
-            </h1>
-          </Reveal>
-
-          <Reveal delay={0.18}>
-            <p className="mx-auto mt-8 max-w-xl font-display italic text-[17px] leading-relaxed text-brand-black/70 md:text-[19px]">
-              A quiet atelier in Bandra, working in solid 18k gold and certified stones —
-              shaping jewellery slowly, the way it was always meant to be made.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.28}>
-            <div className="mx-auto mt-10 h-px w-12 bg-gold/60" />
-          </Reveal>
-
-          <Reveal delay={0.36}>
-            <div className="mx-auto mt-14 w-full max-w-5xl overflow-hidden bg-cream md:mt-20">
+            <div className="mx-auto w-full max-w-5xl overflow-hidden border border-gold/20 bg-white p-2">
               <div className="aspect-[3/2] w-full overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1600"

@@ -1,15 +1,18 @@
+'use client'
 
-import { getBestsellers } from '@/lib/api/products';
-import { CartPageClient } from './CartPageClient';
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCart } from '@/hooks/useCart'
 
-export const metadata = {
-  title: 'Your Cart',
-  description: 'Review your cart and proceed to checkout.'
-};
+/** /cart opens the bag drawer and returns home — no standalone cart page. */
+export default function CartRedirectPage() {
+  const router = useRouter()
+  const { openDrawer } = useCart()
 
-export default async function CartPage() {
-  // Fetch upsell suggestions — bestsellers make a good default
-  const upsellProducts = await getBestsellers().catch(() => []);
+  useEffect(() => {
+    openDrawer()
+    router.replace('/')
+  }, [openDrawer, router])
 
-  return <CartPageClient upsellProducts={upsellProducts.slice(0, 3)} />;
+  return null
 }

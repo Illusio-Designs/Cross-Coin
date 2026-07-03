@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getPosts } from '@/lib/api/blog'
+import { PageHero } from '@/components/layout/PageHero'
 import SeoWrapper from '@/components/SeoWrapper'
 import { Reveal } from '@/components/ui/Reveal'
 import { BlogCard } from '@/components/home/BlogCard'
@@ -20,31 +21,14 @@ export default function JournalPage() {
   return (
     <SeoWrapper pageName="blog">
       <main className="relative bg-ivory">
-        {/* Editorial page header */}
-        <section className="px-6 pt-24 pb-14 text-center md:pt-32 md:pb-16">
-          <div className="mx-auto max-w-2xl">
-            <Reveal>
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                Lustre
-              </p>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <h1 className="mt-4 font-display text-4xl font-normal leading-[1.05] text-brand-black md:text-5xl">
-                From the Journal
-              </h1>
-            </Reveal>
-            <Reveal delay={0.18}>
-              <p className="mx-auto mt-5 max-w-lg text-sm leading-relaxed text-brand-black/60">
-                Studies on craft, character and the stories behind our pieces.
-              </p>
-            </Reveal>
-            <Reveal delay={0.26}>
-              <div className="mx-auto mt-7 h-px w-12 bg-gold/60" aria-hidden />
-            </Reveal>
-          </div>
-        </section>
+        <PageHero
+          variant="editorial"
+          eyebrow="Lustre"
+          title="From the"
+          titleAccent="Journal"
+          description="Studies on craft, character and the stories behind our pieces."
+        />
 
-        {/* Entries grid */}
         <section className="px-6 pb-28 md:px-12 lg:px-20">
           {loading ? (
             <div className="mx-auto grid max-w-6xl grid-cols-1 gap-x-6 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
