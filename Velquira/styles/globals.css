@@ -37,8 +37,8 @@
 }
 
 @theme inline {
-  /* Velquira — palette tuned to the logo: rich amber gold on a warm
-     cream ground with deep cocoa ink. Warm-tinted neutrals. */
+  /* Velquira — Obsidian & Aurum: deep cocoa ink, warm ivory grounds,
+     saturated amber gold accents. Warm-tinted neutrals throughout. */
   --color-gray-100: #f4ead4;
   --color-gray-200: #e8dab8;
   --color-gray-300: #d6c397;
@@ -69,6 +69,7 @@
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), Georgia, serif;
+  --font-editorial: var(--font-cormorant), Georgia, serif;
   --font-logo: var(--font-dancing), cursive;
 
   --max-width-site: 1440px;
@@ -91,6 +92,60 @@
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: #bf8b2e #ecdfc1;
+  }
+
+  /* Diamond lattice — subtle atelier motif on ivory sections */
+  .vq-lattice {
+    background-image:
+      linear-gradient(135deg, rgba(191, 139, 46, 0.06) 25%, transparent 25%),
+      linear-gradient(225deg, rgba(191, 139, 46, 0.06) 25%, transparent 25%),
+      linear-gradient(45deg, rgba(191, 139, 46, 0.06) 25%, transparent 25%),
+      linear-gradient(315deg, rgba(191, 139, 46, 0.06) 25%, transparent 25%);
+    background-size: 28px 28px;
+    background-position: 0 0, 14px 0, 14px -14px, 0 14px;
+  }
+
+  /* Film grain — tactile depth over photography */
+  .vq-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  /* Frosted glass nav — floats over hero imagery */
+  .vq-glass-nav {
+    background: rgba(255, 253, 246, 0.72);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+  .vq-glass-nav-dark {
+    background: rgba(28, 23, 12, 0.55);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+
+  /* Gold frame — editorial product spotlight */
+  .vq-gold-frame {
+    position: relative;
+  }
+  .vq-gold-frame::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border: 1px solid rgba(191, 139, 46, 0.35);
+    pointer-events: none;
+    transition: inset 600ms cubic-bezier(0.22, 0.65, 0.3, 1);
+  }
+  .vq-gold-frame:hover::before {
+    inset: -6px;
+    border-color: rgba(191, 139, 46, 0.65);
+  }
+
+  /* Editorial display — oversized split headlines */
+  .vq-display {
+    font-family: var(--font-editorial), Georgia, serif;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
   }
 
   /* Custom Velquira scrollbar — WebKit (Chrome, Safari, Edge) */
@@ -270,27 +325,21 @@
   .vq-lift { transition: none !important; }
 }
 
-/* ── Global section box design ──────────────────────────────────────────── */
+/* ── Homepage sections — full-bleed editorial rhythm ───────────────────── */
 main section {
-  margin-left: 0.75rem;
-  margin-right: 0.75rem;
-  margin-top: 0.625rem;
-  border-radius: 1.25rem;
-  overflow: clip; /* clips content but does NOT create stacking context */
   position: relative;
-  z-index: 0; /* ensure sections stay below fixed elements */
+  z-index: 0;
 }
 
-/* Last section gets bottom margin so it doesn't touch the footer */
-main section:last-of-type {
-  margin-bottom: 0.75rem;
-}
-
-/* Nested sections reset */
 main section section {
   margin: 0;
-  border-radius: 0;
   overflow: visible;
+}
+
+/* Hero + dark bands bleed edge-to-edge; ivory sections get lattice */
+main > section:not(.vq-bleed) {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 /* ── Review column scroll animations ────────────────────────────────────── */

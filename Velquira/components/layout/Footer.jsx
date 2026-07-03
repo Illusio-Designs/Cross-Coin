@@ -71,7 +71,11 @@ export function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="bg-brand-black text-white">
+    <footer className="relative bg-brand-black text-white">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent"
+      />
       {/* Top band — newsletter line */}
       <section className="border-b border-white/10 px-6 py-8 md:px-10 lg:px-16">
         <div className="mx-auto flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-10">

@@ -26,12 +26,9 @@ function usePrefersReducedMotion() {
 }
 
 /**
- * HeroBanner — quiet full-bleed slider.
- *
- * One image fills the viewport. Tiny editorial copy sits in the
- * bottom-left over a soft warm gradient. Thin dash pagination at the
- * bottom-center. Slides crossfade slowly. No ornaments, no counter,
- * no rotated wordmarks — just photograph + refined type.
+ * HeroBanner — cinematic editorial hero.
+ * Full-bleed photography, oversized split display type, gold vertical
+ * rule, and a quiet bottom caption column. Navbar floats over this band.
  */
 export function HeroBanner({ slides = [] }) {
   const reducedMotion = usePrefersReducedMotion()
@@ -47,7 +44,7 @@ export function HeroBanner({ slides = [] }) {
         buttonText: 'Discover the edit',
         image: FALLBACK_IMAGE,
         ctaHref: '/collections',
-        categoryName: 'Velquira',
+        categoryName: 'Velquira Atelier',
       },
     ]
   }, [slides])
@@ -80,23 +77,24 @@ export function HeroBanner({ slides = [] }) {
       ? `/products?category=${encodeURIComponent(slide.categoryName)}`
       : '/collections')
 
-  const eyebrow = slide.categoryName || 'Velquira'
+  const titleParts = (slide.title || 'Where Light Becomes Heirloom').split(/\s+(?=\S+$)/)
+  const titleLead = titleParts.length > 1 ? titleParts.slice(0, -1).join(' ') : slide.title
+  const titleAccent = titleParts.length > 1 ? titleParts[titleParts.length - 1] : null
 
-  const imageInitial = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.05 }
+  const imageInitial = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.08 }
   const imageAnimate = reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }
-  const imageExit    = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.02 }
+  const imageExit = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.03 }
 
   return (
     <section
       aria-roledescription="carousel"
       aria-label="Velquira fine jewellery editorial"
-      className="relative isolate overflow-hidden bg-brand-black text-white min-h-[78vh] md:min-h-[88vh]"
+      className="vq-bleed relative isolate min-h-[92vh] overflow-hidden bg-brand-black text-white md:min-h-[96vh]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      {/* Image — slow Ken Burns crossfade */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={slide.id ?? safe}
@@ -104,7 +102,7 @@ export function HeroBanner({ slides = [] }) {
           initial={imageInitial}
           animate={imageAnimate}
           exit={imageExit}
-          transition={{ duration: 1.1, ease: EASE }}
+          transition={{ duration: 1.4, ease: EASE }}
         >
           <Image
             src={slide.image || FALLBACK_IMAGE}
@@ -112,82 +110,88 @@ export function HeroBanner({ slides = [] }) {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-center"
+            className="object-cover object-[center_20%]"
           />
         </motion.div>
       </AnimatePresence>
 
-      {/* Warm gradient — legibility for bottom-left copy */}
+      {/* Layered vignettes — spotlight on piece */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-black/65 via-brand-black/15 to-transparent"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_45%,transparent_0%,rgba(28,23,12,0.55)_100%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-black/80 via-brand-black/25 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-black/70 via-transparent to-brand-black/30"
       />
 
-      {/* Editorial copy — bottom-left */}
-      <div className="absolute inset-x-0 bottom-0 z-10">
-        <div className="mx-auto max-w-[1480px] px-6 pb-20 md:px-12 md:pb-24 lg:px-20 lg:pb-28">
+      {/* Vertical gold rule — signature motif */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[8%] top-[18%] hidden h-[52%] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent md:block lg:left-[12%]"
+      />
+
+      {/* Oversized split headline */}
+      <div className="relative z-10 flex min-h-[92vh] flex-col justify-end md:min-h-[96vh] md:justify-center">
+        <div className="mx-auto w-full max-w-[1480px] px-6 pb-24 md:px-12 md:pb-0 lg:px-20">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`txt-${safe}`}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.9, ease: EASE, delay: 0.15 }}
-              className="max-w-2xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: EASE }}
+              className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16"
             >
-              {/* Eyebrow */}
-              <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-gold">
-                {eyebrow}
-              </p>
-
-              {/* Title */}
-              {slide.title && (
-                <h1
-                  className="mt-5 font-display text-4xl font-normal leading-[1.04] tracking-tight text-white md:text-5xl lg:text-6xl"
-                  style={{ textWrap: 'balance' }}
-                >
-                  {slide.title}
-                </h1>
-              )}
-
-              {/* Description */}
-              {slide.description && (
-                <p className="mt-5 max-w-md text-[14px] leading-relaxed text-white/75 md:text-[15px]">
-                  {slide.description}
+              <div className="lg:col-span-7">
+                <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-gold">
+                  {slide.categoryName || 'Velquira Atelier'}
                 </p>
-              )}
 
-              {/* CTA — refined gold link */}
-              <Link
-                href={buttonHref}
-                className="group/cta mt-8 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors duration-200 hover:text-gold-light"
-              >
-                <span className="relative pb-1.5">
+                <h1 className="vq-display mt-6 text-[clamp(2.75rem,8vw,5.5rem)] text-white">
+                  {titleLead && (
+                    <span className="block">{titleLead}</span>
+                  )}
+                  {titleAccent && (
+                    <span className="mt-1 block italic text-gold-light">{titleAccent}</span>
+                  )}
+                  {!titleAccent && slide.title && (
+                    <span className="block">{slide.title}</span>
+                  )}
+                </h1>
+              </div>
+
+              <div className="flex flex-col justify-end lg:col-span-5 lg:pb-4">
+                {slide.description && (
+                  <p className="max-w-sm text-[14px] leading-[1.8] text-white/72 md:text-[15px]">
+                    {slide.description}
+                  </p>
+                )}
+
+                <Link
+                  href={buttonHref}
+                  className="group/cta mt-8 inline-flex items-center gap-3 self-start rounded-full border border-gold/50 bg-gold/10 px-6 py-3.5 text-[10px] font-medium uppercase tracking-[0.28em] text-gold backdrop-blur-sm transition-all duration-300 hover:border-gold hover:bg-gold hover:text-brand-black"
+                >
                   {slide.buttonText || 'Discover the edit'}
-                  <span
-                    aria-hidden
-                    className="absolute bottom-0 left-0 h-px w-full origin-left bg-gold transition-transform duration-500 ease-out group-hover/cta:scale-x-110"
+                  <ArrowRight
+                    size={13}
+                    strokeWidth={1.7}
+                    className="transition-transform duration-300 group-hover/cta:translate-x-1"
                   />
-                </span>
-                <ArrowRight
-                  size={13}
-                  strokeWidth={1.7}
-                  className="transition-transform duration-300 ease-out group-hover/cta:translate-x-1.5"
-                />
-              </Link>
+                </Link>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Pagination — thin dashes, bottom-center */}
       {list.length > 1 && (
-        <div className="absolute inset-x-0 bottom-7 z-20 flex justify-center md:bottom-10">
-          <div
-            role="tablist"
-            aria-label="Slide navigation"
-            className="flex items-center gap-3"
-          >
+        <div className="absolute inset-x-0 bottom-8 z-20 flex justify-center md:bottom-12">
+          <div role="tablist" aria-label="Slide navigation" className="flex items-center gap-4">
             {list.map((_, i) => {
               const active = i === safe
               return (
@@ -198,13 +202,11 @@ export function HeroBanner({ slides = [] }) {
                   aria-selected={active}
                   aria-label={`Go to slide ${i + 1}`}
                   onClick={() => goTo(i)}
-                  className="group/dash relative h-4 w-7 cursor-pointer focus-visible:outline-none"
+                  className="group/dash relative h-5 w-8 cursor-pointer focus-visible:outline-none"
                 >
                   <span
-                    className={`pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 transition-all duration-500 ease-out ${
-                      active
-                        ? 'bg-gold'
-                        : 'bg-white/35 group-hover/dash:bg-white/70'
+                    className={`pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 transition-all duration-500 ${
+                      active ? 'bg-gold' : 'bg-white/30 group-hover/dash:bg-white/65'
                     }`}
                   />
                 </button>

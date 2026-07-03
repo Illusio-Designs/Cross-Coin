@@ -1,15 +1,18 @@
 
-import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
+import { Suspense } from 'react';
+import { Inter, Playfair_Display, Dancing_Script, Cormorant_Garamond } from 'next/font/google';
 import '@/styles/globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { MobileMenu } from '@/components/layout/MobileMenu';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
 import { WhatsAppChat } from '@/components/ui/WhatsAppChat';
 import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
+import { GrainOverlay } from '@/components/ui/GrainOverlay';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -35,12 +38,20 @@ const dancingScript = Dancing_Script({
   display: 'swap'
 });
 
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-cormorant',
+  display: 'swap'
+});
+
 export const metadata = {
   title: {
     default: SITE_NAME,
     template: `%s | ${SITE_NAME}`
   },
-  description: 'Natural materials. Thoughtful design. A better footprint.',
+  description: 'Fine jewellery handcrafted in our atelier — hallmarked 18k gold and certified diamonds, made to become heirlooms.',
   icons: {
     icon: '/Velquirafavicon.jpeg',
     shortcut: '/Velquirafavicon.jpeg',
@@ -54,7 +65,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} ${cormorant.variable} h-full antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -81,12 +92,14 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
+      <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-ivory font-sans text-brand-black">
+        <GrainOverlay />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
           <AuthProvider>
           <CartProvider>
           <WishlistHydrator />
+          <AnnouncementBar />
           <Navbar />
           <Breadcrumb />
           <MobileMenu />
@@ -97,7 +110,9 @@ export default function RootLayout({ children }) {
           <Footer />
           <BackToTop />
           <WhatsAppChat />
-          <Analytics />
+          <Suspense fallback={null}>
+            <Analytics />
+          </Suspense>
           <ToastContainer />
           </CartProvider>
           </AuthProvider>
