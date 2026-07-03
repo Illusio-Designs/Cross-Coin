@@ -9,7 +9,7 @@ export const ROUTES = {
   collections: '/collections',
   products: '/products',
   product: (handle) => `/products/${handle}`,
-  cart: '/cart',
+  cart: '/cart', // opens drawer via redirect — no standalone page
   account: '/account',
   orders: '/account/orders',
   order: (id) => `/account/orders/${id}`,

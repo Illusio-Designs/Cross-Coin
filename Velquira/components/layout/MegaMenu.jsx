@@ -1,19 +1,17 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { AnimatePresence, motion } from 'framer-motion';
-import { JEWELLERY_CATEGORIES } from '@/lib/constants';
+import Link from 'next/link'
+import { AnimatePresence, motion } from 'framer-motion'
+import { JEWELLERY_CATEGORIES } from '@/lib/constants'
 
-// Short editorial descriptors for each jewellery category.
 const CATEGORY_NOTES = {
   Rings: 'Solitaires, bands & statement pieces',
   Necklaces: 'Pendants, chains & layering edits',
   Earrings: 'Studs, hoops & drop silhouettes',
   Bracelets: 'Tennis, bangles & cuffs',
   Bridal: 'Engagement & wedding heirlooms',
-};
+}
 
-// Two-up featured image strip (Unsplash IDs preserved from previous component).
 const FEATURED = [
   {
     href: '/products?category=Bridal',
@@ -29,7 +27,7 @@ const FEATURED = [
     title: '18k Gold Atelier',
     caption: 'Hand-finished pieces from the workshop.',
   },
-];
+]
 
 export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
   return (
@@ -37,35 +35,28 @@ export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
       {activeMenu === 'products' && (
         <motion.div
           key="mega"
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2, ease: [0.22, 0.65, 0.3, 1] }}
-          className="absolute left-0 right-0 top-full z-40 overflow-hidden border-b border-gold/25 bg-cream shadow-[0_22px_60px_rgba(58,46,26,0.14)]"
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.28, ease: [0.22, 0.65, 0.3, 1] }}
+          className="absolute left-0 right-0 top-full z-40 border-t border-gold/25 bg-[#faf5eb] shadow-[0_24px_64px_rgba(58,46,26,0.12)]"
         >
-          {/* very subtle gold sweep overlay */}
-          <span className="vq-shine" aria-hidden />
-
-          <div className="relative mx-auto grid max-w-[1480px] grid-cols-[1.05fr_auto_1.35fr] gap-0 px-6 py-12 md:px-10">
-
-            {/* LEFT — editorial category column */}
-            <div className="pr-10">
-              <p className="mb-7 text-[10px] font-medium uppercase tracking-[0.32em] text-gold">
-                The Collection
-              </p>
-              <ul className="vq-stagger flex flex-col gap-4">
+          <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-0 px-6 py-10 md:grid-cols-[1.1fr_auto_1.3fr] md:px-12 md:py-12">
+            <div className="md:pr-10">
+              <p className="text-[9px] font-medium uppercase tracking-[0.4em] text-gold">The Collection</p>
+              <ul className="mt-6 flex flex-col gap-3">
                 {categories.map((cat, i) => (
-                  <li key={cat.href} className="vq-fade-up">
-                    <Link href={cat.href} className="group flex items-baseline gap-4">
-                      <span className="font-display text-[11px] uppercase tracking-[0.3em] text-gold/70 transition-colors group-hover:text-gold-deep">
+                  <li key={cat.href}>
+                    <Link href={cat.href} className="group flex items-baseline gap-4 py-1">
+                      <span className="font-sans text-[10px] tabular-nums tracking-[0.2em] text-gold/60">
                         {String(i + 1).padStart(2, '0')}
                       </span>
                       <span className="flex flex-col">
-                        <span className="font-display text-[30px] leading-[1.1] text-brand-black transition-colors duration-300 group-hover:text-gold-deep">
+                        <span className="font-display text-[26px] leading-tight text-brand-black transition-colors duration-300 group-hover:text-gold-deep md:text-[28px]">
                           {cat.label}
                         </span>
                         {CATEGORY_NOTES[cat.label] && (
-                          <span className="mt-0.5 text-[11px] tracking-wide text-brand-black/55">
+                          <span className="mt-0.5 font-sans text-[11px] text-brand-black/50">
                             {CATEGORY_NOTES[cat.label]}
                           </span>
                         )}
@@ -76,36 +67,26 @@ export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
               </ul>
             </div>
 
-            {/* CENTER — thin gold vertical rule */}
-            <div
-              className="self-stretch w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent"
-              aria-hidden
-            />
+            <div className="hidden self-stretch w-px bg-gradient-to-b from-transparent via-gold/45 to-transparent md:block" aria-hidden />
 
-            {/* RIGHT — 2-up featured image strip */}
-            <div className="grid grid-cols-2 gap-5 pl-10">
+            <div className="mt-8 grid grid-cols-2 gap-4 md:mt-0 md:pl-10">
               {FEATURED.map((f) => (
                 <Link
                   key={f.href}
                   href={f.href}
-                  className="vq-lift group relative block aspect-[3/4] overflow-hidden rounded-sm bg-brand-black/5"
+                  className="group relative aspect-[3/4] overflow-hidden bg-brand-black/5"
                 >
                   <img
                     src={f.image}
                     alt={f.title}
                     className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-black/75 via-brand-black/10 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-5">
-                    <p className="text-[9.5px] font-medium uppercase tracking-[0.32em] text-gold-light">
-                      {f.eyebrow}
-                    </p>
-                    <p className="mt-1 font-display text-[20px] leading-tight text-white">
-                      {f.title}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-snug text-white/75">
-                      {f.caption}
-                    </p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 via-brand-black/15 to-transparent" />
+                  <div className="absolute inset-2 border border-gold/0 transition-colors duration-500 group-hover:border-gold/40" aria-hidden />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <p className="text-[9px] uppercase tracking-[0.34em] text-gold-light">{f.eyebrow}</p>
+                    <p className="mt-1 font-display text-lg text-white">{f.title}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-white/70">{f.caption}</p>
                   </div>
                 </Link>
               ))}
@@ -114,5 +95,5 @@ export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
         </motion.div>
       )}
     </AnimatePresence>
-  );
+  )
 }

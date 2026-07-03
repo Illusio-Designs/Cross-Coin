@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Instagram, Facebook, ChevronDown, CheckCircle } from 'lucide-react'
+import { PageHero } from '@/components/layout/PageHero'
 import { Reveal } from '@/components/ui/Reveal'
 
 function WhatsAppIcon({ size = 16 }) {
@@ -51,38 +52,16 @@ export function ContactPageClient() {
 
   return (
     <>
-      {/* Editorial header */}
-      <section className="bg-ivory">
-        <header className="mx-auto max-w-site px-6 pt-32 pb-16 text-center md:pt-40 md:pb-20">
-          <Reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-gold">In Conversation</p>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <span className="h-px w-10 bg-gold/40" aria-hidden />
-              <span className="vq-diamond" aria-hidden />
-              <span className="h-px w-10 bg-gold/40" aria-hidden />
-            </div>
-          </Reveal>
-          <Reveal delay={0.14}>
-            <h1 className="mt-6 font-display text-4xl font-normal leading-tight text-brand-black md:text-5xl lg:text-6xl">
-              Contact the Atelier
-            </h1>
-          </Reveal>
-          <Reveal delay={0.22}>
-            <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-brand-black/70 md:text-base">
-              For commissions, care queries, or simply to say hello — our
-              clients are always welcome.
-            </p>
-          </Reveal>
-          <Reveal delay={0.32}>
-            <div className="mx-auto mt-10 h-px w-24 bg-gold/60 vq-rule" />
-          </Reveal>
-        </header>
-      </section>
+      <PageHero
+        variant="split"
+        align="left"
+        eyebrow="In Conversation"
+        title="Contact the"
+        titleAccent="Atelier"
+        description="For commissions, care queries, or simply to say hello — our clients are always welcome."
+      />
 
-      {/* Info + Form */}
-      <section className="bg-ivory">
+      <section className="bg-ivory vq-lattice">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-4 pb-20 sm:px-6 md:px-10 lg:grid-cols-2 lg:gap-16 lg:pb-24">
 
           {/* LEFT */}

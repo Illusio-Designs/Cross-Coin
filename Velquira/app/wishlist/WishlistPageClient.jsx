@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { ProductCard } from '@/components/collection/ProductCard';
+import { PageHero } from '@/components/layout/PageHero'
 import { Reveal } from '@/components/ui/Reveal';
 
 export function WishlistPageClient() {
@@ -10,35 +11,21 @@ export function WishlistPageClient() {
   const hydrated = useWishlistStore((s) => s.hydrated);
 
   return (
-    <main className="min-h-screen bg-ivory">
-      {/* Refined page header */}
-      <section className="px-4 pt-36 pb-10 text-center sm:px-6 md:px-10">
-        <Reveal>
-          <span className="vq-diamond mx-auto block" aria-hidden />
-        </Reveal>
-        <Reveal delay={0.08}>
-          <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Your Saved Pieces</p>
-        </Reveal>
-        <Reveal delay={0.16}>
-          <h1 className="mt-3 font-display text-4xl font-normal leading-tight text-brand-black md:text-5xl">
-            The Wishlist
-          </h1>
-        </Reveal>
-        <Reveal delay={0.24}>
-          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-brand-black/55">
-            {hydrated
-              ? items.length === 0
-                ? 'Save what speaks to you. Return whenever the moment is right.'
-                : `${items.length} piece${items.length === 1 ? '' : 's'} you are dreaming of.`
-              : 'Gathering your saved pieces…'}
-          </p>
-        </Reveal>
-        <Reveal delay={0.32}>
-          <div className="mx-auto mt-6 h-px w-12 bg-gold vq-rule" />
-        </Reveal>
-      </section>
+    <main className="min-h-screen bg-ivory vq-lattice">
+      <PageHero
+        variant="cream"
+        eyebrow="Your Saved Pieces"
+        title="The"
+        titleAccent="Wishlist"
+        description={
+          hydrated
+            ? items.length === 0
+              ? 'Save what speaks to you. Return whenever the moment is right.'
+              : `${items.length} piece${items.length === 1 ? '' : 's'} you are dreaming of.`
+            : 'Gathering your saved pieces…'
+        }
+      />
 
-      {/* Content */}
       <section className="px-4 pb-24 sm:px-6 md:px-10">
         {hydrated && items.length === 0 ? (
           <Reveal delay={0.12}>

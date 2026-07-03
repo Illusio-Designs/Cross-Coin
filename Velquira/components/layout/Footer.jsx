@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { Instagram, Facebook, Mail, Phone, MapPin } from 'lucide-react'
+import { Instagram, Facebook, Mail, Phone, MapPin, Clock } from 'lucide-react'
+import { VelquiraLogo } from '@/components/brand/VelquiraLogo'
 import { ROUTES } from '@/lib/constants'
+import { SITE_TAGLINE } from '@/lib/brand'
 import { NewsletterSignup } from './NewsletterSignup'
 
-// WhatsApp SVG icon (lucide doesn't include one)
 function WhatsAppIcon({ size = 14 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -13,52 +14,49 @@ function WhatsAppIcon({ size = 14 }) {
   )
 }
 
-const SHOP_LINKS = [
-  { label: 'Rings',     href: '/products?category=Rings' },
+const SHOP = [
+  { label: 'Rings', href: '/products?category=Rings' },
   { label: 'Necklaces', href: '/products?category=Necklaces' },
-  { label: 'Earrings',  href: '/products?category=Earrings' },
+  { label: 'Earrings', href: '/products?category=Earrings' },
   { label: 'Bracelets', href: '/products?category=Bracelets' },
-  { label: 'Bridal',    href: '/products?category=Bridal' },
+  { label: 'Bridal', href: '/products?category=Bridal' },
+  { label: 'All Pieces', href: ROUTES.products },
 ]
 
-const ABOUT_LINKS = [
-  { label: 'About',   href: ROUTES.about },
-  { label: 'Lustre',  href: ROUTES.journal },
+const HOUSE = [
+  { label: 'The Atelier', href: ROUTES.about },
+  { label: 'Lustre Journal', href: ROUTES.journal },
+  { label: 'Collections', href: ROUTES.collections },
   { label: 'Contact', href: ROUTES.contact },
 ]
 
-const CARE_LINKS = [
-  { label: 'Track Order',           href: ROUTES.trackOrder },
-  { label: 'Shipping Policy',       href: '/policies/shipping-policy' },
-  { label: 'Cancellation & Refund', href: '/policies/cancellation-and-refund' },
-  { label: 'Privacy',               href: '/policies/privacy-policy' },
-  { label: 'Terms',                 href: '/policies/terms-and-conditions' },
+const CARE = [
+  { label: 'Track Order', href: ROUTES.trackOrder },
+  { label: 'Shipping', href: '/policies/shipping-policy' },
+  { label: 'Returns', href: '/policies/cancellation-and-refund' },
+  { label: 'Privacy', href: '/policies/privacy-policy' },
+  { label: 'Terms', href: '/policies/terms-and-conditions' },
 ]
 
 const SOCIALS = [
-  { Icon: Instagram,    href: 'https://instagram.com/velquira', label: 'Instagram' },
-  { Icon: Facebook,     href: 'https://facebook.com/velquira',  label: 'Facebook' },
-  { Icon: WhatsAppIcon, href: 'https://wa.me/919999999999',     label: 'WhatsApp' },
+  { Icon: Instagram, href: 'https://instagram.com/velquira', label: 'Instagram' },
+  { Icon: Facebook, href: 'https://facebook.com/velquira', label: 'Facebook' },
+  { Icon: WhatsAppIcon, href: 'https://wa.me/919999999999', label: 'WhatsApp' },
 ]
 
-function LinkColumn({ heading, links }) {
+function FooterColumn({ title, links }) {
   return (
     <div>
-      <p className="mb-5 text-[10px] font-medium uppercase tracking-[0.32em] text-gold">
-        {heading}
-      </p>
-      <ul className="flex flex-col gap-3">
+      <p className="mb-6 text-[9px] font-medium uppercase tracking-[0.38em] text-gold">{title}</p>
+      <ul className="flex flex-col gap-3.5">
         {links.map((l) => (
           <li key={l.href}>
             <Link
               href={l.href}
-              className="group inline-flex items-center text-[13px] text-white/65 transition-colors duration-300 hover:text-gold-light"
+              className="group inline-flex items-center text-[13px] text-white/55 transition-colors hover:text-gold-light"
             >
-              <span
-                aria-hidden
-                className="mr-0 inline-block h-px w-0 bg-gold transition-all duration-300 ease-out group-hover:mr-2 group-hover:w-3"
-              />
-              <span>{l.label}</span>
+              <span className="mr-0 h-px w-0 bg-gold transition-all duration-300 group-hover:mr-2.5 group-hover:w-4" />
+              {l.label}
             </Link>
           </li>
         ))}
@@ -71,94 +69,102 @@ export function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="relative bg-brand-black text-white">
+    <footer className="relative overflow-hidden bg-brand-black text-white">
+      {/* Watermark */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent"
+        className="pointer-events-none absolute -right-16 bottom-0 select-none font-display text-[22rem] font-light leading-none text-white/[0.02]"
+      >
+        V
+      </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent"
       />
-      {/* Top band — newsletter line */}
-      <section className="border-b border-white/10 px-6 py-8 md:px-10 lg:px-16">
-        <div className="mx-auto flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-10">
-          <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-gold">
-            Letter from the atelier
-          </p>
-          <div className="w-full md:max-w-md">
-            <NewsletterSignup />
+
+      {/* Newsletter — full-width gold inset card */}
+      <section className="border-b border-white/[0.06] px-6 py-14 md:px-12 lg:px-20">
+        <div className="mx-auto max-w-[1480px]">
+          <div className="relative overflow-hidden rounded-sm border border-gold/25 bg-gradient-to-br from-white/[0.06] to-transparent p-8 md:p-12">
+            <span className="vq-shine opacity-20" aria-hidden />
+            <div className="relative grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-16">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-gold">Private List</p>
+                <h2 className="vq-display mt-4 text-3xl text-white md:text-4xl">
+                  Letters from
+                  <span className="block italic text-gold-light">the atelier.</span>
+                </h2>
+                <p className="mt-4 max-w-md text-sm leading-relaxed text-white/50">
+                  Early access to edits, atelier notes, and invitations — never more than twice a month.
+                </p>
+              </div>
+              <NewsletterSignup />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Main band — 5 columns on desktop */}
-      <section className="px-6 py-14 md:px-10 md:py-16 lg:px-16">
-        <div className="mx-auto max-w-[1280px]">
-          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
-
-            {/* Col 1 — Brand block */}
-            <div className="sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-3">
-                <span className="vq-diamond" aria-hidden="true" />
-                <span className="vq-wordmark text-3xl font-medium uppercase leading-none">
-                  Velquira
-                </span>
-              </div>
-              <p className="mt-5 max-w-[260px] font-display text-[15px] italic leading-relaxed text-white/65">
-                Fine jewellery, handcrafted to be worn for generations.
-              </p>
-              <div className="mt-6 flex items-center gap-3">
-                {SOCIALS.map(({ Icon, href, label }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    className="group flex h-9 w-9 items-center justify-center rounded-full border border-gold/40 text-white/70 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold hover:bg-gold hover:text-brand-black"
-                  >
-                    <Icon size={14} />
-                  </a>
-                ))}
-              </div>
+      {/* Main grid */}
+      <section className="px-6 py-16 md:px-12 md:py-20 lg:px-20">
+        <div className="mx-auto grid max-w-[1480px] gap-12 lg:grid-cols-12 lg:gap-10">
+          {/* Brand column */}
+          <div className="lg:col-span-4">
+            <VelquiraLogo size="lg" variant="light" showWordmark />
+            <p className="mt-2 text-[9px] uppercase tracking-[0.38em] text-white/35">{SITE_TAGLINE}</p>
+            <p className="mt-6 max-w-xs font-display text-lg italic leading-relaxed text-white/55">
+              Handcrafted fine jewellery — hallmarked gold and certified stones, made to become heirlooms.
+            </p>
+            <div className="mt-8 flex gap-3">
+              {SOCIALS.map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/30 text-white/60 transition-all hover:-translate-y-0.5 hover:border-gold hover:bg-gold hover:text-brand-black"
+                >
+                  <Icon size={15} />
+                </a>
+              ))}
             </div>
+          </div>
 
-            {/* Col 2 — Shop */}
-            <LinkColumn heading="Shop" links={SHOP_LINKS} />
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-5">
+            <FooterColumn title="Shop" links={SHOP} />
+            <FooterColumn title="House" links={HOUSE} />
+            <FooterColumn title="Care" links={CARE} />
+          </div>
 
-            {/* Col 3 — About */}
-            <LinkColumn heading="About" links={ABOUT_LINKS} />
-
-            {/* Col 4 — Care */}
-            <LinkColumn heading="Care" links={CARE_LINKS} />
-
-            {/* Col 5 — Contact */}
-            <div>
-              <p className="mb-5 text-[10px] font-medium uppercase tracking-[0.32em] text-gold">
-                Contact
-              </p>
-              <ul className="flex flex-col gap-3.5">
-                <li>
-                  <a
-                    href="mailto:hello@velquira.in"
-                    className="group flex items-start gap-2.5 text-[13px] text-white/65 transition-colors duration-300 hover:text-gold-light"
-                  >
-                    <Mail size={13} className="mt-0.5 shrink-0 text-gold/70 transition-colors group-hover:text-gold" />
-                    <span>hello@velquira.in</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="tel:+919999999999"
-                    className="group flex items-center gap-2.5 text-[13px] text-white/65 transition-colors duration-300 hover:text-gold-light"
-                  >
-                    <Phone size={13} className="shrink-0 text-gold/70 transition-colors group-hover:text-gold" />
-                    <span>+91 99999 99999</span>
-                  </a>
-                </li>
-                <li className="flex items-start gap-2.5 text-[13px] leading-relaxed text-white/65">
-                  <MapPin size={13} className="mt-0.5 shrink-0 text-gold/70" />
+          {/* Atelier card */}
+          <div className="lg:col-span-3">
+            <div className="h-full border border-gold/20 bg-white/[0.03] p-6 backdrop-blur-sm">
+              <p className="text-[9px] font-medium uppercase tracking-[0.38em] text-gold">Visit</p>
+              <ul className="mt-5 flex flex-col gap-4 text-[13px] text-white/60">
+                <li className="flex gap-3">
+                  <MapPin size={14} className="mt-0.5 shrink-0 text-gold/80" />
                   <span>
-                    Bandra West,<br />
+                    Bandra West
+                    <br />
                     Mumbai 400050, India
                   </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Clock size={14} className="shrink-0 text-gold/80" />
+                  <span>By appointment · Mon–Sat</span>
+                </li>
+                <li>
+                  <a href="mailto:hello@velquira.in" className="flex items-center gap-3 transition-colors hover:text-gold-light">
+                    <Mail size={14} className="shrink-0 text-gold/80" />
+                    hello@velquira.in
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+919999999999" className="flex items-center gap-3 transition-colors hover:text-gold-light">
+                    <Phone size={14} className="shrink-0 text-gold/80" />
+                    +91 99999 99999
+                  </a>
                 </li>
               </ul>
             </div>
@@ -166,19 +172,17 @@ export function Footer() {
         </div>
       </section>
 
-      {/* Bottom band — copyright strip */}
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[1280px] flex-col items-center justify-between gap-2 px-6 py-4 text-[10px] md:flex-row md:px-10 md:py-3 lg:px-16">
-          <p className="uppercase tracking-[0.25em] text-white/45">
-            © {year} Velquira — Fine Jewellery
-          </p>
-          <p className="uppercase tracking-[0.25em] text-white/40">
+      {/* Bottom strip */}
+      <div className="border-t border-white/[0.06]">
+        <div className="mx-auto flex max-w-[1480px] flex-col items-center justify-between gap-3 px-6 py-5 text-[9px] uppercase tracking-[0.32em] text-white/35 md:flex-row md:px-12 lg:px-20">
+          <p>© {year} Velquira · 19.0544° N, 72.8406° E</p>
+          <p>
             Crafted by{' '}
             <a
               href="https://illusiodesigns.agency/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gold-light/80 transition-colors hover:text-gold"
+              className="text-gold/70 transition-colors hover:text-gold"
             >
               Illusio Designs
             </a>

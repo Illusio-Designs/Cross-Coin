@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { X, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { getPublicProducts, mapProduct } from '@/lib/api/products'
 import { getPublicCategories, getCategoryByName } from '@/lib/api/categories'
+import { PageHero } from '@/components/layout/PageHero'
 import { ProductCard } from '@/components/collection/ProductCard'
 import SeoWrapper from '@/components/SeoWrapper'
 import { Reveal } from '@/components/ui/Reveal'
@@ -195,32 +196,18 @@ export default function ProductsPage() {
   return (
     <SeoWrapper pageName="products">
       <main className="bg-ivory">
-        {/* Editorial page header */}
-        <section className="px-4 pt-20 pb-12 text-center md:pt-28 md:pb-16 lg:px-8">
-          <div className="mx-auto max-w-2xl">
-            <Reveal>
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                Products
-              </p>
-            </Reveal>
-            <Reveal delay={0.08}>
-              <h1 className="mt-4 font-display text-4xl font-normal leading-[1.05] tracking-tight text-brand-black md:text-6xl">
-                {headingTitle}
-              </h1>
-            </Reveal>
-            <Reveal delay={0.16}>
-              <p className="mx-auto mt-4 max-w-md text-[14px] leading-relaxed text-brand-black/60">
-                {introCopy}
-              </p>
-            </Reveal>
-            <Reveal delay={0.24}>
-              <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
-            </Reveal>
-          </div>
-        </section>
+        <PageHero
+          variant="minimal"
+          align="left"
+          eyebrow="Products"
+          title={headingTitle}
+          description={introCopy}
+        >
+          <p className="mt-4 text-[11px] uppercase tracking-[0.3em] text-gold">{countLabel}</p>
+        </PageHero>
 
         {/* Controls bar — sticky hairline gold rules */}
-        <div className="sticky top-[64px] z-30 border-y border-gold/20 bg-ivory/95 backdrop-blur-sm">
+        <div className="sticky top-[112px] z-30 border-y border-gold/20 bg-ivory/95 backdrop-blur-sm">
           <div className="mx-auto flex h-14 max-w-[1320px] items-center justify-between gap-4 px-4 md:px-8">
             <button
               onClick={() => setFiltersOpen(true)}

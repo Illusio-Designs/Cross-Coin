@@ -6,7 +6,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { MobileMenu } from '@/components/layout/MobileMenu';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { BackToTop } from '@/components/ui/BackToTop';
@@ -53,8 +52,8 @@ export const metadata = {
   },
   description: 'Fine jewellery handcrafted in our atelier — hallmarked 18k gold and certified diamonds, made to become heirlooms.',
   icons: {
-    icon: '/Velquirafavicon.jpeg',
-    shortcut: '/Velquirafavicon.jpeg',
+    icon: '/velquira-logo.svg',
+    shortcut: '/velquira-logo.svg',
     apple: '/Velquirafavicon.jpeg'
   },
   openGraph: {
@@ -65,7 +64,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} ${cormorant.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} ${cormorant.variable} h-full scroll-smooth antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -99,7 +98,6 @@ export default function RootLayout({ children }) {
           <AuthProvider>
           <CartProvider>
           <WishlistHydrator />
-          <AnnouncementBar />
           <Navbar />
           <Breadcrumb />
           <MobileMenu />
