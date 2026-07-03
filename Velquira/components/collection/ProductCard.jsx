@@ -17,7 +17,7 @@ import { toastAddedToCart } from '@/lib/toast';
  * wishlist heart, a single name-and-price row, and an add-to-bag CTA.
  * Gold hairline border, warm-cream image bed, serif typography.
  */
-export function ProductCard({ product }) {
+export function ProductCard({ product, variant = 'light' }) {
   const [hovered, setHovered] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
   const { addItem } = useCart();
@@ -63,15 +63,20 @@ export function ProductCard({ product }) {
 
   const slug = product.handle ?? product.slug ?? String(product.id);
 
+  const isDark = variant === 'dark';
+  const cardCls = isDark
+    ? 'group flex flex-col rounded-2xl border border-gold/25 bg-white/[0.04] p-3 backdrop-blur-sm transition-[border-color,box-shadow,background] duration-300 hover:border-gold/55 hover:bg-white/[0.07] hover:shadow-[0_22px_45px_-26px_rgba(191,139,46,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold'
+    : 'group flex flex-col rounded-2xl border border-gold/20 bg-white p-3 transition-[border-color,box-shadow] duration-300 hover:border-gold/55 hover:shadow-[0_22px_45px_-26px_rgba(143,102,32,0.30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-ivory';
+
   return (
     <Link
       href={`/products/${slug}`}
-      className="group flex flex-col rounded-2xl border border-gold/20 bg-white p-3 transition-[border-color,box-shadow] duration-300 hover:border-gold/55 hover:shadow-[0_22px_45px_-26px_rgba(143,102,32,0.30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-ivory"
+      className={cardCls}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-cream">
+      <div className={`relative aspect-square overflow-hidden rounded-xl ${isDark ? 'bg-white/5' : 'bg-cream'}`}>
         <AnimatePresence initial={false}>
           <motion.div
             key={hovered ? 'h' : 'p'}
@@ -129,15 +134,15 @@ export function ProductCard({ product }) {
 
         {/* Name + price — single row */}
         <div className="mt-1.5 flex items-baseline justify-between gap-3">
-          <p className="min-w-0 truncate font-display text-[15px] leading-tight text-brand-black">
+          <p className={`min-w-0 truncate font-display text-[15px] leading-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
             {product.name}
           </p>
           <div className="flex shrink-0 items-baseline gap-1.5">
-            <p className="font-display text-[15px] font-medium text-brand-black">
+            <p className={`font-display text-[15px] font-medium ${isDark ? 'text-white' : 'text-brand-black'}`}>
               {formatPrice(product.price)}
             </p>
             {product.compareAtPrice && (
-              <p className="text-[12px] text-brand-black/35 line-through">
+              <p className={`text-[12px] line-through ${isDark ? 'text-white/35' : 'text-brand-black/35'}`}>
                 {formatPrice(product.compareAtPrice)}
               </p>
             )}
@@ -151,7 +156,9 @@ export function ProductCard({ product }) {
           className={`mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors duration-200 ${
             addedFeedback
               ? 'border-gold bg-gold text-brand-black'
-              : 'border-gold/40 text-brand-black hover:border-brand-black hover:bg-brand-black hover:text-white'
+              : isDark
+                ? 'border-gold/45 text-white hover:border-gold hover:bg-gold hover:text-brand-black'
+                : 'border-gold/40 text-brand-black hover:border-brand-black hover:bg-brand-black hover:text-white'
           }`}
         >
           <ShoppingBag size={12} strokeWidth={1.6} />

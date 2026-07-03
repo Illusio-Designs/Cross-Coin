@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { HeroBanner } from '@/components/home/HeroBanner'
 import { CategoryCards } from '@/components/home/CategoryCards'
 import { ExclusiveSection } from '@/components/home/ExclusiveSection'
+import { AtelierManifesto } from '@/components/home/AtelierManifesto'
 import { BestsellerRow } from '@/components/home/BestsellerRow'
+import { TrustStrip } from '@/components/home/TrustStrip'
 import { ReviewBand } from '@/components/home/ReviewBand'
 import { BlogStrip } from '@/components/home/BlogStrip'
 import { Reveal } from '@/components/ui/Reveal'
@@ -12,11 +14,6 @@ import { getBestsellers } from '@/lib/api/products'
 import { getPublicSliders } from '@/lib/api/sliders'
 import { getPublicCategories } from '@/lib/api/categories'
 import SeoWrapper from '@/components/SeoWrapper'
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Velquira — homepage.
-   Photography and whitespace do the work. Restraint, not ornament.
-   ──────────────────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
   const [slides, setSlides] = useState([])
@@ -42,7 +39,15 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal>
+        <AtelierManifesto />
+      </Reveal>
+
+      <Reveal>
         <BestsellerRow products={bestsellers} />
+      </Reveal>
+
+      <Reveal>
+        <TrustStrip />
       </Reveal>
 
       <Reveal>
