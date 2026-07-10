@@ -90,7 +90,7 @@ export function ContactPageClient() {
               </a>
 
               <a
-                href="tel:+919999999999"
+                href="tel:+919712891700"
                 className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 transition-colors hover:border-brand-black"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-black">
@@ -98,7 +98,7 @@ export function ContactPageClient() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Phone</p>
-                  <p className="mt-0.5 text-sm font-medium text-brand-black">+91 99999 99999</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">+91 97128 91700</p>
                 </div>
               </a>
 
@@ -125,7 +125,7 @@ export function ContactPageClient() {
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
                   <Facebook size={16} />
                 </a>
-                <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
+                <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
                   <WhatsAppIcon size={16} />
                 </a>

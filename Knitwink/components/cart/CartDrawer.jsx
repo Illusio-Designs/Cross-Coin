@@ -1177,7 +1177,7 @@ export function CartDrawer() {
             </button>
 
             {/* WhatsApp help */}
-            <a href="https://wa.me/91?text=Hi%2C+I+need+help+with+my+Knitwink+order" target="_blank" rel="noopener noreferrer" className="cd-whatsapp-help">
+            <a href="https://wa.me/919712891700?text=Hi%2C+I+need+help+with+my+Knitwink+order" target="_blank" rel="noopener noreferrer" className="cd-whatsapp-help">
               <IconWhatsApp /> Need help? Chat on WhatsApp
             </a>
 
