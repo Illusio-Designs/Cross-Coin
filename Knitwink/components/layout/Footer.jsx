@@ -54,7 +54,7 @@ export function Footer() {
               {[
                 { icon: Instagram,    href: 'https://instagram.com/knitwink', label: 'Instagram' },
                 { icon: Facebook,     href: 'https://facebook.com/knitwink',  label: 'Facebook' },
-                { icon: WhatsAppIcon, href: 'https://wa.me/919999999999',     label: 'WhatsApp' },
+                { icon: WhatsAppIcon, href: 'https://wa.me/919712891700',     label: 'WhatsApp' },
               ].map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}
@@ -114,9 +114,9 @@ export function Footer() {
               <Mail size={13} className="mt-0.5 shrink-0 text-white/30" />
               support@knitwink.com
             </a>
-            <a href="tel:+919999999999" className="flex items-center gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
+            <a href="tel:+919712891700" className="flex items-center gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
               <Phone size={13} className="shrink-0 text-white/30" />
-              +91 99999 99999
+              +91 97128 91700
             </a>
             <div className="flex items-start gap-2.5 text-sm text-white/55">
               <MapPin size={13} className="mt-0.5 shrink-0 text-white/30" />

@@ -31,7 +31,7 @@ export default function ContactPage() {
             <div className="space-y-6">
               {[
                 { icon: Mail, label: 'Email', value: 'hello@velmique.in', href: 'mailto:hello@velmique.in' },
-                { icon: Phone, label: 'Phone / WhatsApp', value: '+91 98201 43210', href: 'tel:+919820143210' },
+                { icon: Phone, label: 'Phone / WhatsApp', value: '+91 97128 91700', href: 'tel:+919712891700' },
                 { icon: MapPin, label: 'Atelier', value: '14 Pali Hill, Bandra West, Mumbai 400050', href: 'https://maps.google.com/?q=Pali+Hill+Bandra+West+Mumbai' },
               ].map(item => (
                 <div key={item.label} className="flex items-start gap-4">

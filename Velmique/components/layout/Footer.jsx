@@ -14,7 +14,7 @@ function WhatsAppIcon({ size = 14 }) {
 const SOCIAL_LINKS = [
   { Icon: Instagram,    href: 'https://instagram.com/', label: 'Instagram' },
   { Icon: Facebook,     href: 'https://facebook.com/',  label: 'Facebook'  },
-  { Icon: WhatsAppIcon, href: 'https://wa.me/91',       label: 'WhatsApp'  },
+  { Icon: WhatsAppIcon, href: 'https://wa.me/919712891700',       label: 'WhatsApp'  },
 ];
 
 export default function Footer() {
@@ -133,8 +133,8 @@ export default function Footer() {
                 <a href="mailto:hello@velmique.in" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
                   <Mail size={12} /> hello@velmique.in
                 </a>
-                <a href="tel:+919820143210" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
-                  <Phone size={12} /> +91 98201 43210
+                <a href="tel:+919712891700" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
+                  <Phone size={12} /> +91 97128 91700
                 </a>
               </div>
             </div>

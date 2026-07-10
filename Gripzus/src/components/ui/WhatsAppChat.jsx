@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 /* Floating WhatsApp chat button — sticky bottom-right, with a small
    greeting bubble that dismisses and hides on scroll. */
 
-const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
+const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919712891700';
 const WA_MESSAGE = 'Hi! I need help with Gripzus.';
 
 export default function WhatsAppChat() {

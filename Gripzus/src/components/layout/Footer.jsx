@@ -22,7 +22,7 @@ const HOUSE_LINKS = [
 const SOCIALS = [
   { label: 'Instagram', href: 'https://instagram.com/gripzus' },
   { label: 'Facebook',  href: 'https://facebook.com/gripzus'  },
-  { label: 'WhatsApp',  href: 'https://wa.me/919999999999'    },
+  { label: 'WhatsApp',  href: 'https://wa.me/919712891700'    },
 ];
 
 function MailIcon()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M3 7l9 6 9-6" /></svg>; }
@@ -99,8 +99,8 @@ export default function Footer() {
                   </a>
                 </li>
                 <li>
-                  <a href="tel:+919999999999" className="flex items-center gap-2.5 text-sm text-paper/70 hover:text-paper transition-colors">
-                    <span className="shrink-0 text-paper/40"><PhoneIcon /></span><span>+91 99999 99999</span>
+                  <a href="tel:+919712891700" className="flex items-center gap-2.5 text-sm text-paper/70 hover:text-paper transition-colors">
+                    <span className="shrink-0 text-paper/40"><PhoneIcon /></span><span>+91 97128 91700</span>
                   </a>
                 </li>
                 <li className="flex items-start gap-2.5 text-sm text-paper/55">

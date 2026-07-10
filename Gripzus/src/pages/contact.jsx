@@ -27,8 +27,8 @@ export default function ContactPage() {
             <div className="border-t border-line">
               {[
                 { n: '01', eyebrow: 'Email',    title: 'support@gripzus.com', note: 'Orders, returns, partnerships.', href: 'mailto:support@gripzus.com' },
-                { n: '02', eyebrow: 'Phone',    title: '+91 99999 99999',      note: 'Mon–Sat, 10am–7pm IST.',        href: 'tel:+919999999999' },
-                { n: '03', eyebrow: 'WhatsApp', title: 'Chat with us',          note: 'Fastest for size + order help.', href: 'https://wa.me/919999999999' },
+                { n: '02', eyebrow: 'Phone',    title: '+91 97128 91700',      note: 'Mon–Sat, 10am–7pm IST.',        href: 'tel:+919712891700' },
+                { n: '03', eyebrow: 'WhatsApp', title: 'Chat with us',          note: 'Fastest for size + order help.', href: 'https://wa.me/919712891700' },
                 { n: '04', eyebrow: 'Atelier',  title: 'Ahmedabad, Gujarat',    note: 'Visits by appointment only.',    href: 'https://maps.google.com' },
               ].map((c) => (
                 <a key={c.n} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="group flex gap-5 py-6 border-b border-line">
