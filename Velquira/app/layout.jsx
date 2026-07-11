@@ -54,7 +54,7 @@ export const metadata = {
   icons: {
     icon: '/velquira-logo.svg',
     shortcut: '/velquira-logo.svg',
-    apple: '/Velquirafavicon.jpeg'
+    apple: '/apple-icon.png'
   },
   openGraph: {
     siteName: SITE_NAME,
