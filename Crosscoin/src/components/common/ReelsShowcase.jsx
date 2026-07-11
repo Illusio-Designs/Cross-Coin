@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicReels, incrementReelView } from "../../services/publicApi";
+import Skeleton from "./Skeleton";
 import { ikTransform } from "../../utils/imageUtils";
 
 const ReelsShowcase = () => {
@@ -74,7 +75,7 @@ const ReelsShowcase = () => {
     await addToCart(payload, null, null, 1, null, payload.images);
   };
 
-  if (loading) return <div className="reels-loading">Loading reels...</div>;
+  if (loading) return <div className="reels-loading"><Skeleton height={360} style={{ borderRadius: 12 }} /></div>;
   if (error) return <div className="reels-error">{error}</div>;
 
   return (

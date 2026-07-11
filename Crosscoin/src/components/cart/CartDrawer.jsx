@@ -3,6 +3,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/router';
 import SafeImage from '../common/SafeImage';
+import Skeleton from '../common/Skeleton';
 import {
   getUserShippingAddresses,
   createShippingAddress,
@@ -1153,7 +1154,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   }}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? 'Loading...' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
+                  {isProcessing ? 'Please wait…' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
                 </button>
               ) : (
                 <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>Maximum retries reached. Please start a new order.</p>
@@ -1233,7 +1234,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
 
-                {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
+                {addressLoading ? <div className="cd-loading" style={{ display: 'grid', gap: 10 }}>{[0,1].map(i => <Skeleton key={i} height={72} style={{ borderRadius: 10 }} />)}</div> : (
                   <>
                     {isAuthenticated && addresses.length === 0 && !showAddressForm && (
                       <p className="cd-address-empty-hint">Add a delivery address below to place your order.</p>

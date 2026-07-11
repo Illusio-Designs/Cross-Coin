@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { getPublicProductReviews, getAllPublicReviews } from '../../services/publicApi';
+import Skeleton from './Skeleton';
 
 const Testimonials = () => {
   const sliderRef = useRef(null);
@@ -127,8 +128,10 @@ const Testimonials = () => {
           <h2>Customer <strong>Satisfaction</strong></h2>
           <p>What our customers are saying</p>
         </div>
-        <div className="testimonials-container">
-          <div className="loading">Loading testimonials...</div>
+        <div className="testimonials-container" style={{ display: 'flex', gap: 16 }}>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} height={160} style={{ flex: 1, borderRadius: 12 }} />
+          ))}
         </div>
       </section>
     );

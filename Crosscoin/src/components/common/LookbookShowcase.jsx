@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicLookbooks, getPublicProductBySlug } from "../../services/publicApi";
 import ProductCard from "../products/ProductCard";
+import Skeleton from "./Skeleton";
 import { ikTransform } from "../../utils/imageUtils";
 
 const LookbookShowcase = () => {
@@ -59,7 +60,7 @@ const LookbookShowcase = () => {
     loadHotspotProduct(hs);
   };
 
-  if (loading) return <div className="lb-loading">Loading lookbooks...</div>;
+  if (loading) return <div className="lb-loading"><Skeleton height={420} style={{ borderRadius: 12 }} /></div>;
   if (error)   return <div className="lb-error">{error}</div>;
   if (!lookbooks.length) return <div className="lb-error">No lookbooks found.</div>;
 
@@ -158,7 +159,7 @@ const LookbookShowcase = () => {
       {/* Col 3 — Real ProductCard */}
       <div className="lb-product-panel">
         {productLoading ? (
-          <div className="lb-panel-hint"><p>Loading product...</p></div>
+          <div className="lb-panel-hint"><Skeleton type="text" width="70%" height="16px" /></div>
         ) : !cardProduct ? (
           <div className="lb-panel-hint">
             <svg width="40" height="40" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24">
