@@ -15,11 +15,11 @@ export default function Hero({ features = [] }) {
         </div>
 
         <div className="hero-visual">
-          {/* Swap for a real lifestyle image (public/hero.webp or an ImageKit URL) */}
-          <img
-            src="https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?auto=format&fit=crop&w=1200&q=70"
-            alt="Person moving through the city in Morbix socks"
-          />
+          {/* Branded placeholder — drop a real lifestyle photo at public/hero.webp
+              and replace this block with <img src="/hero.webp" alt="…" />. */}
+          <div className="hero-visual-ph" aria-hidden>
+            <Icon name="Footprints" size={120} />
+          </div>
           <div className="hero-features">
             {features.map((f) => (
               <div className="hero-feature" key={f.title}>

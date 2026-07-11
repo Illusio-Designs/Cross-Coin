@@ -6,6 +6,7 @@ import {
   ArrowRight01Icon, ArrowUpRight01Icon, UserCircleIcon, ShoppingBag03Icon,
   StarIcon, CallIcon, Mail01Icon, Location01Icon, Clock01Icon, SentIcon,
   InstagramIcon, YoutubeIcon, FacebookIcon,
+  Menu01Icon, Cancel01Icon, FilterHorizontalIcon, ArrowDown01Icon, ArrowUpDownIcon,
 } from '@hugeicons/core-free-icons';
 
 // HugeIcons (free set = stroke-rounded style). One place maps the app's
@@ -20,6 +21,8 @@ const MAP = {
   User: UserCircleIcon, ShoppingBag: ShoppingBag03Icon, Star: StarIcon,
   Phone: CallIcon, Mail: Mail01Icon, MapPin: Location01Icon, Clock: Clock01Icon,
   Send: SentIcon, Instagram: InstagramIcon, Youtube: YoutubeIcon, Facebook: FacebookIcon,
+  Menu: Menu01Icon, X: Cancel01Icon, Filter: FilterHorizontalIcon,
+  ChevronDown: ArrowDown01Icon, Sort: ArrowUpDownIcon,
 };
 
 /** <Icon name="Truck" size={18} /> — renders the matching HugeIcons (rounded). */
