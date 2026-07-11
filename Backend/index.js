@@ -81,12 +81,32 @@ const mediumLimiter = rateLimit({
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
-// General: all other API routes (120 req / min)
+// Public, cached, read-only GET endpoints. The storefront renders server-side
+// on Vercel, so every SSR call reaches this API from a small pool of Vercel IPs
+// — with IP-based limiting that whole stream looks like one client and can trip
+// the general limiter, 429-ing the storefront under load. These endpoints are
+// idempotent and already edge/Redis-cached, so rate-limiting them buys little
+// abuse protection; we skip them (GET only) to keep the storefront reliable.
+// Writes (POST/PUT/DELETE) to the same paths, and every sensitive/auth endpoint,
+// still go through the limiter.
+const PUBLIC_READ_PREFIXES = [
+  '/api/sliders', '/api/categories', '/api/products', '/api/seo',
+  '/api/public', '/api/blogs', '/api/reviews', '/api/lookbooks',
+  '/api/reels', '/api/instagram', '/api/policies', '/api/faqs',
+];
+const isPublicReadGet = (req) => {
+  if ((req.method || 'GET').toUpperCase() !== 'GET') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return PUBLIC_READ_PREFIXES.some((p) => path.startsWith(p));
+};
+
+// General: all other API routes (120 req / min), skipping public cached reads.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isPublicReadGet,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
