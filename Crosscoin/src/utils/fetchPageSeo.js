@@ -24,10 +24,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
 export async function fetchPageSeo(pageName, ctx = null) {
   if (!pageName) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
   try {
     const res = await fetch(
       `${API_URL}/api/seo?page_name=${encodeURIComponent(pageName)}`,
-      { headers: { 'X-Brand-Name': 'crosscoin' } },
+      { headers: { 'X-Brand-Name': 'crosscoin' }, signal: controller.signal },
     );
     if (!res.ok) return null;
     const json = await res.json();
@@ -38,5 +40,7 @@ export async function fetchPageSeo(pageName, ctx = null) {
     return json?.data || json || null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

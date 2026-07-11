@@ -7,13 +7,19 @@ import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-async function fetchJson(url) {
+async function fetchJson(url, timeoutMs = 3000) {
+  // Cap how long SSR waits on the API. If a call is slow, abort and render the
+  // page now (the client hydrates/fills the rest) instead of holding TTFB.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
+    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' }, signal: controller.signal });
     if (!r.ok) return null;
     return await r.json();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
