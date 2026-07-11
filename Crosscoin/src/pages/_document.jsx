@@ -4,23 +4,44 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* Preconnect — only the 2 most critical image/API origins */}
+        {/* Preconnect — critical image/API + font origins */}
         <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
-        {/* DNS prefetch for fonts and 3rd parties — non-blocking */}
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        {/* DNS prefetch for 3rd-party trackers — non-blocking */}
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
         <link rel="dns-prefetch" href="https://verify.msg91.com" />
 
-        {/* DM Sans font — non-render-blocking */}
+        {/* DM Sans font — loaded asynchronously so it never blocks first paint.
+            The stylesheet is preloaded, then attached via a tiny inline script
+            (link.rel='stylesheet' added from JS does not block the parser).
+            <noscript> keeps it working without JS. font-display:swap means text
+            paints immediately in the fallback and swaps in DM Sans when ready.
+            Kept as the literal 'DM Sans' family so existing CSS is untouched. */}
         <link
-          rel="stylesheet"
+          rel="preload"
+          as="style"
           href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var l=document.createElement('link');l.rel='stylesheet';" +
+              "l.href='https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap';" +
+              "document.head.appendChild(l);})();",
+          }}
+        />
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800&display=swap"
+          />
+        </noscript>
         
         {/* Prevent zoom on form inputs on iOS */}
         <meta name="format-detection" content="telephone=no" />
