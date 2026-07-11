@@ -53,10 +53,6 @@ export const metadata = {
   }
 };
 
-// Route segment config — forces dynamic rendering of every route
-// under this layout. CartDrawerMount handles the inner next/dynamic
-// with ssr:false (which can only live inside a Client Component).
-export const dynamic = 'force-dynamic';
 
 export default function RootLayout({ children }) {
   return (
