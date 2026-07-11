@@ -64,8 +64,13 @@ class ProductService {
     try {
       const includeOptions = [
         { model: Category },
-        { model: ProductVariation, as: 'ProductVariations' },
-        { model: ProductImage, as: 'ProductImages' },
+        // separate:true fetches these hasMany rows in their own batched query
+        // (WHERE productId IN …) instead of a JOIN. Without it, findAndCountAll
+        // builds products × variations × images rows then dedupes — a big row
+        // explosion. Data returned is identical; limit/offset apply cleanly to
+        // the parent. Only valid for hasMany (not the Brands belongsToMany).
+        { model: ProductVariation, as: 'ProductVariations', separate: true },
+        { model: ProductImage, as: 'ProductImages', separate: true },
         { model: ProductSEO, as: 'ProductSEO' },
         {
           model: Brand,
@@ -115,8 +120,13 @@ class ProductService {
     try {
       const includeOptions = [
         { model: Category },
-        { model: ProductVariation, as: 'ProductVariations' },
-        { model: ProductImage, as: 'ProductImages' },
+        // separate:true fetches these hasMany rows in their own batched query
+        // (WHERE productId IN …) instead of a JOIN. Without it, findAndCountAll
+        // builds products × variations × images rows then dedupes — a big row
+        // explosion. Data returned is identical; limit/offset apply cleanly to
+        // the parent. Only valid for hasMany (not the Brands belongsToMany).
+        { model: ProductVariation, as: 'ProductVariations', separate: true },
+        { model: ProductImage, as: 'ProductImages', separate: true },
         { model: ProductSEO, as: 'ProductSEO' },
         {
           model: Brand,
@@ -270,8 +280,13 @@ class ProductService {
       // Build include options
       const includeOptions = [
         { model: Category },
-        { model: ProductVariation, as: 'ProductVariations' },
-        { model: ProductImage, as: 'ProductImages' },
+        // separate:true fetches these hasMany rows in their own batched query
+        // (WHERE productId IN …) instead of a JOIN. Without it, findAndCountAll
+        // builds products × variations × images rows then dedupes — a big row
+        // explosion. Data returned is identical; limit/offset apply cleanly to
+        // the parent. Only valid for hasMany (not the Brands belongsToMany).
+        { model: ProductVariation, as: 'ProductVariations', separate: true },
+        { model: ProductImage, as: 'ProductImages', separate: true },
         { model: ProductSEO, as: 'ProductSEO' },
         {
           model: Brand,
@@ -335,8 +350,13 @@ class ProductService {
     try {
       const includeOptions = [
         { model: Category },
-        { model: ProductVariation, as: 'ProductVariations' },
-        { model: ProductImage, as: 'ProductImages' },
+        // separate:true fetches these hasMany rows in their own batched query
+        // (WHERE productId IN …) instead of a JOIN. Without it, findAndCountAll
+        // builds products × variations × images rows then dedupes — a big row
+        // explosion. Data returned is identical; limit/offset apply cleanly to
+        // the parent. Only valid for hasMany (not the Brands belongsToMany).
+        { model: ProductVariation, as: 'ProductVariations', separate: true },
+        { model: ProductImage, as: 'ProductImages', separate: true },
         { model: ProductSEO, as: 'ProductSEO' },
         {
           model: Brand,
