@@ -59,7 +59,7 @@ export default function Footer() {
           <div className="col-span-12 md:col-span-3">
             <div className="aspect-[3/4] rounded-2xl overflow-hidden">
               <img
-                src="/footer.png"
+                src="/footer.webp"
                 alt="Velmique"
                 className="w-full h-full object-cover"
               />

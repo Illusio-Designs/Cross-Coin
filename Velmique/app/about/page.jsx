@@ -38,7 +38,7 @@ export default function AboutPage() {
 
         {/* Background image */}
         <img
-          src="/abouthero.png"
+          src="/abouthero.webp"
           alt="Velmique atelier"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -122,7 +122,7 @@ export default function AboutPage() {
           {/* Right — image */}
           <div className="md:col-span-5">
             <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-2)]">
-              <img src="/Aboutpage.png" alt="Velmique atelier"
+              <img src="/Aboutpage.webp" alt="Velmique atelier"
                 className="w-full h-auto object-contain" />
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function AboutPage() {
 
         {/* Background image */}
         <img
-          src="/aboutbg.png"
+          src="/aboutbg.webp"
           alt=""
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover"

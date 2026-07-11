@@ -46,7 +46,7 @@ export default async function Page({ params }) {
     datePublished: post.publishedAt,
     dateModified: post.updatedAt || post.publishedAt,
     author: { '@type': 'Person', name: post.author || 'Velmique Editorial' },
-    publisher: { '@type': 'Organization', name: 'Velmique', logo: { '@type': 'ImageObject', url: `${SITE}/logo.png` } },
+    publisher: { '@type': 'Organization', name: 'Velmique', logo: { '@type': 'ImageObject', url: `${SITE}/logo.webp` } },
     mainEntityOfPage: `${SITE}/blog/${slug}`,
   } : null;
 

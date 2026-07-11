@@ -9,7 +9,7 @@ export const heroSlides = [
     title: 'A Scent To Remember',
     description: 'Hand-blended extraits built on Kannauj rose, aged oud and Kashmir saffron.',
     buttonText: 'Shop Velmique',
-    image: '/perfumehero.png',
+    image: '/perfumehero.webp',
     ctaHref: '/shop',
   },
   {
@@ -17,7 +17,7 @@ export const heroSlides = [
     title: 'Slow Distilled',
     description: 'Rose absolute, oud and Mysore sandalwood — composed by hand, aged for months.',
     buttonText: 'Discover Noir',
-    image: '/perfumehero2.png',
+    image: '/perfumehero2.webp',
     ctaHref: '/shop?collection=noir',
   },
   {
@@ -25,7 +25,7 @@ export const heroSlides = [
     title: 'Golden Hour, Bottled',
     description: 'Tuberose, neroli and warm musk — radiance from desk to dinner.',
     buttonText: 'Explore Luminara',
-    image: '/perfumehero3.png',
+    image: '/perfumehero3.webp',
     ctaHref: '/shop?collection=luminara',
   },
 ];
