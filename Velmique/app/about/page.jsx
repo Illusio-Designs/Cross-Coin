@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-react';
 import SeoWrapper from '@/components/SeoWrapper';
 
 const milestones = [
-  { year: '2018', event: 'Velmique founded in Bandra West by Aarav Khanna, after his apprenticeship at Grasse and a year studying attars in Kannauj.' },
+  { year: '2018', event: 'Velmique founded in Morbi, Gujarat by Obzus India Private Limited — grounded in Grasse technique and the attar heritage of Kannauj.' },
   { year: '2020', event: 'Launched the Signature collection — twelve fragrances composed in-house. Sold out in 72 hours.' },
   { year: '2022', event: 'Opened our flagship boutique at DLF Emporio, New Delhi. Stocked at Le Mill and Good Earth.' },
   { year: '2024', event: 'Launched the Luminara collection — picked up by Vogue, Harper\'s Bazaar and ELLE.' },
@@ -24,7 +24,7 @@ const values = [
   {
     n: '03',
     title: 'Made by Hand',
-    desc: 'Composed and hand-bottled at our Bandra atelier under direct supervision of our Master Perfumer. No outsourcing, no white-labelling, no shortcuts. Every flacon is numbered and signed.',
+    desc: 'Composed and hand-bottled at our Morbi atelier under direct supervision of our Master Perfumer. No outsourcing, no white-labelling, no shortcuts. Every flacon is numbered and signed.',
   },
 ];
 
@@ -55,7 +55,7 @@ export default function AboutPage() {
             <div className="flex items-center gap-4 mb-8">
               <span className="h-px w-12 bg-[var(--gold)]" />
               <p className="text-[var(--gold)] text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-body">
-                Est. 2018 · Mumbai
+                Est. 2018 · Morbi, Gujarat
               </p>
             </div>
 
@@ -69,7 +69,7 @@ export default function AboutPage() {
             {/* Italic tagline */}
             <p className="font-serif italic text-white/90 leading-[1.35] mb-7 max-w-2xl"
               style={{ fontSize: 'clamp(1.2rem, 1.9vw, 1.6rem)' }}>
-              French perfumery, Kannauj attar, Mysore sandalwood — composed in Bandra, hand-bottled for a generation that knows the difference.
+              French perfumery, Kannauj attar, Mysore sandalwood — composed in Morbi, hand-bottled for a generation that knows the difference.
             </p>
 
             {/* Body paragraph */}

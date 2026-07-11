@@ -297,7 +297,7 @@ export function ProductInfo({ product, onColorChange }) {
         {/* 10 — Atelier mini-list (gold dots) */}
         <ul className="space-y-2 pt-1">
           {[
-            'Hand-finished in Bandra',
+            'Hand-finished in Morbi',
             'Hallmarked 18k',
             'Lifetime craftsmanship guarantee',
           ].map((line) => (
