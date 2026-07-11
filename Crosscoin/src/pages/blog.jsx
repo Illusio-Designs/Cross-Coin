@@ -160,7 +160,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
               <div
                 key={post.id}
                 className="blog-card-home"
-                onClick={() => router.push(`/blog-details?slug=${post.slug}`)}
+                onClick={() => router.push(`/blog/${post.slug}`)}
               >
                 <div className="bc-img-wrap">
                   {post.hero_image
