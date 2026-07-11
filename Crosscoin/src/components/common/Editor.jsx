@@ -18,14 +18,19 @@ function resolveMediaUrl(path) {
 }
 
 // Pull the first uploaded image URL/path out of the upload response, which may
-// come back in a few shapes depending on the endpoint version.
+// come back in a few shapes depending on the endpoint version. The product
+// upload endpoint (/api/products/upload-images) returns `uploadedImages: [{ url,
+// path, ... }]` — that key was previously missing here, so every editor upload
+// resolved to null ("no image URL returned"), pushing admins to paste images as
+// base64 which then blew past the JSON body limit on save. `url` is the full
+// ImageKit CDN URL, so we prefer it over the bare `path`.
 function extractUploadedPath(result) {
-  const cand = result?.images || result?.data || result?.urls
+  const cand = result?.uploadedImages || result?.images || result?.data || result?.urls
     || result?.results || result?.uploaded || result?.files;
   const first = Array.isArray(cand) ? cand[0] : cand;
   if (!first) return null;
   if (typeof first === 'string') return first;
-  return first.image_url || first.url || first.path || first.src || first.location || null;
+  return first.url || first.image_url || first.path || first.src || first.location || null;
 }
 
 /**
@@ -47,6 +52,21 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
   const [sourceHtml, setSourceHtml] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  // Holds the latest upload-and-insert handler so the paste/drop handlers below
+  // (created once at mount) always call the current one without stale closures.
+  const uploadInsertRef = useRef(null);
+
+  // Grab the first image file from a paste/drop event, if any.
+  const imageFileFromEvent = (list) => {
+    if (!list) return null;
+    for (const item of list) {
+      const type = item.type || '';
+      if (type.startsWith('image/')) {
+        return typeof item.getAsFile === 'function' ? item.getAsFile() : item;
+      }
+    }
+    return null;
+  };
 
   const editor = useEditor({
     // Required for Next.js SSR — render on the client only to avoid hydration
@@ -64,6 +84,29 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
       Image.configure({ inline: false, HTMLAttributes: { class: 'rte-img' } }),
     ],
     content: value || '',
+    // Intercept pasted/dropped image files and upload them to ImageKit instead
+    // of letting ProseMirror inline them as base64 data URLs. Inlined images
+    // bloat the saved `sections` JSON and were causing 413 "save failed" errors.
+    editorProps: {
+      handlePaste: (view, event) => {
+        const file = imageFileFromEvent(event.clipboardData?.items);
+        if (file) {
+          event.preventDefault();
+          uploadInsertRef.current?.(file);
+          return true;
+        }
+        return false;
+      },
+      handleDrop: (view, event) => {
+        const file = imageFileFromEvent(event.dataTransfer?.files);
+        if (file) {
+          event.preventDefault();
+          uploadInsertRef.current?.(file);
+          return true;
+        }
+        return false;
+      },
+    },
     onUpdate: ({ editor }) => {
       if (!onChange) return;
       const html = editor.getHTML();
@@ -118,10 +161,10 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
     if (url) editor.chain().focus().setImage({ src: url }).run();
   };
 
-  // Upload a picked file via the existing media endpoint, then insert it.
-  const handleImageFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
+  // Upload a single image file to ImageKit and insert it at the cursor. Shared
+  // by the toolbar button, paste, and drop so all three behave identically and
+  // never leave base64 in the document.
+  const uploadAndInsert = async (file) => {
     if (!file) return;
     try {
       setUploading(true);
@@ -129,7 +172,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
       const path = extractUploadedPath(result);
       const src = resolveMediaUrl(path);
       if (src) {
-        editor.chain().focus().setImage({ src, alt: file.name }).run();
+        editor.chain().focus().setImage({ src, alt: file.name || 'image' }).run();
       } else {
         window.alert('Upload succeeded but no image URL was returned. You can paste the image URL instead.');
       }
@@ -138,6 +181,14 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
     } finally {
       setUploading(false);
     }
+  };
+  // Keep the ref used by the paste/drop handlers pointing at the current fn.
+  uploadInsertRef.current = uploadAndInsert;
+
+  const handleImageFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    uploadAndInsert(file);
   };
 
   const items = [
