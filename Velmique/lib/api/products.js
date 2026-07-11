@@ -149,7 +149,7 @@ export function mapProduct(p) {
     description:    p.description || '',
     price,
     originalPrice,
-    images:         all.length ? all : ['/perfumehero.png'],
+    images:         all.length ? all : ['/perfumehero.webp'],
     category:       p.Category?.name || p.category?.name || '',
     collection:     p.Category?.name || p.category?.name || '',
     collectionName: p.Category?.name || p.category?.name || '',

@@ -54,10 +54,10 @@ export default function Navbar() {
             {/* Logo — centered, no hover effect */}
             <Link href="/" className="flex-shrink-0 mx-6" aria-label="Velmique home">
               <Image
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Velmique"
                 width={220}
-                height={64}
+                height={54}
                 priority
                 className={`w-auto object-contain transition-all duration-500 ${scrolled ? 'h-8 md:h-10' : 'h-10 md:h-12'}`}
               />
@@ -125,10 +125,10 @@ export default function Navbar() {
           <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
             <Link href="/" onClick={() => setMobileOpen(false)} aria-label="Velmique home">
               <Image
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Velmique"
                 width={180}
-                height={48}
+                height={44}
                 className="h-8 w-auto object-contain"
               />
             </Link>

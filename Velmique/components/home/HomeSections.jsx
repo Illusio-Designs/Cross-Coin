@@ -106,7 +106,7 @@ export function StoryBand() {
           >
             <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-2)]">
               <img
-                src="/about.png"
+                src="/about.webp"
                 alt="Velmique perfume bottles on display"
                 className="w-full h-auto object-contain"
               />
@@ -415,7 +415,7 @@ export function NotesBand() {
           >
             <div className="md:sticky md:top-28">
               <div className="relative overflow-hidden rounded-2xl bg-[var(--surface)]">
-                <img src="/FRAGRANCE.png" alt="Velmique fragrance composition"
+                <img src="/FRAGRANCE.webp" alt="Velmique fragrance composition"
                   className="w-full h-auto object-contain" />
               </div>
               <div className="mt-5 flex items-center gap-3">
@@ -606,7 +606,7 @@ export function Testimonials({ initialReviews = null }) {
           >
             <div className="relative h-full min-h-[600px] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
               <img
-                src="/review.png"
+                src="/review.webp"
                 alt="Velmique customer reviews"
                 className="w-full h-full object-cover"
               />
