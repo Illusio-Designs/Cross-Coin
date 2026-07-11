@@ -384,9 +384,14 @@ button { font-family: inherit; cursor: pointer; }
   .hero { padding-top: 14px; }
   .hero-card { grid-template-columns: 1fr; }
   .hero-copy { padding: 30px 24px; }
-  .hero-visual { min-height: 320px; }
-  .hero-features { position: static; flex-direction: row; overflow-x: auto; padding: 16px; }
-  .hero-feature { width: auto; }
+  .hero-visual { min-height: auto; display: flex; flex-direction: column; align-items: stretch; padding: 4px 24px 28px; }
+  .hero-spotlight { width: 100%; max-width: 320px; margin: 0 auto; aspect-ratio: 16 / 11; }
+  /* Trust tags: on mobile lay them out as a tidy 3-up grid inside the hero
+     copy (was a horizontally-overflowing row that got cut off at the edges). */
+  .hero-features { position: static; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 18px 0 0; z-index: 1; }
+  .hero-feature { width: auto; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+  .hero-feature b { font-size: 12px; }
+  .hero-feature span { font-size: 10px; line-height: 1.3; }
   .hero-social { display: none; }
   .product-grid { grid-template-columns: repeat(2, 1fr); }
   .cat-grid { grid-template-columns: 1fr; }
