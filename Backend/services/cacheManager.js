@@ -32,7 +32,108 @@ const NAMESPACE = 'crosscoin:cache:';
 // Max value size (1MB) to prevent Redis memory exhaustion
 const MAX_VALUE_SIZE = 1 * 1024 * 1024;
 
+// Cap the in-memory fallback so a burst of unique keys (e.g. per-slug SEO)
+// can't grow the heap unbounded. Oldest entry is evicted on overflow.
+const MEMORY_MAX_ENTRIES = 2000;
+
+/**
+ * In-process fallback cache used ONLY when Redis is unavailable.
+ *
+ * On shared hosting (cPanel/Passenger) Redis is frequently not provisioned, in
+ * which case the Redis path silently no-ops and every request hits MySQL. This
+ * store keeps caching working in that scenario. Values are stored serialized
+ * (mirrors the Redis path — prevents callers mutating cached objects).
+ *
+ * Caveat: this cache is per Node process. If the host runs multiple workers,
+ * an invalidation only clears the local worker; others expire by TTL. That's
+ * an acceptable bound (minutes) and only applies when Redis is down — when
+ * Redis is up, this store is never used for reads, so there's no regression.
+ */
+class MemoryStore {
+  constructor(max = MEMORY_MAX_ENTRIES) {
+    this.max = max;
+    this.m = new Map(); // key -> { v: serializedString, exp: epochMs | 0 }
+  }
+  set(key, serialized, ttlSec) {
+    if (this.m.has(key)) this.m.delete(key); // refresh insertion order (LRU-ish)
+    const exp = ttlSec > 0 ? Date.now() + ttlSec * 1000 : 0;
+    this.m.set(key, { v: serialized, exp });
+    if (this.m.size > this.max) {
+      const oldest = this.m.keys().next().value;
+      this.m.delete(oldest);
+    }
+  }
+  get(key) {
+    const e = this.m.get(key);
+    if (!e) return null;
+    if (e.exp && Date.now() > e.exp) { this.m.delete(key); return null; }
+    // Touch for LRU ordering
+    this.m.delete(key); this.m.set(key, e);
+    return e.v;
+  }
+  delete(key) { return this.m.delete(key) ? 1 : 0; }
+  ttl(key) {
+    const e = this.m.get(key);
+    if (!e) return -2;
+    if (!e.exp) return -1;
+    const s = Math.ceil((e.exp - Date.now()) / 1000);
+    return s > 0 ? s : -2;
+  }
+  expire(key, ttlSec) {
+    const e = this.m.get(key);
+    if (!e) return 0;
+    e.exp = ttlSec > 0 ? Date.now() + ttlSec * 1000 : 0;
+    return 1;
+  }
+  _glob(pattern) {
+    const esc = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp(`^${esc}$`);
+  }
+  invalidate(globPattern) {
+    const re = this._glob(globPattern);
+    let n = 0;
+    for (const k of [...this.m.keys()]) {
+      if (re.test(k)) { this.m.delete(k); n++; }
+    }
+    return n;
+  }
+  keys(globPattern) {
+    const re = this._glob(globPattern);
+    const out = [];
+    for (const k of this.m.keys()) if (re.test(k)) out.push(k);
+    return out;
+  }
+  size() { return this.m.size; }
+  clear() { this.m.clear(); }
+}
+
 class CacheManager {
+  constructor() {
+    this._mem = new MemoryStore();
+    // Periodically drop expired entries so long-lived processes don't hold
+    // stale keys that are never re-accessed. unref() so it never keeps the
+    // process alive on its own.
+    try {
+      const t = setInterval(() => {
+        const now = Date.now();
+        for (const [k, e] of this._mem.m) {
+          if (e.exp && now > e.exp) this._mem.m.delete(k);
+        }
+      }, 60 * 1000);
+      if (t && typeof t.unref === 'function') t.unref();
+    } catch (_) { /* timers unavailable — size cap still bounds memory */ }
+  }
+
+  /**
+   * Whether to use Redis. When ready, Redis is the single source of truth for
+   * reads/writes (shared across workers — correct cross-worker invalidation),
+   * exactly as before this fallback existed. Only when Redis is NOT ready do we
+   * fall back to the in-process store.
+   */
+  _useRedis() {
+    try { return redisService.isReady(); } catch (_) { return false; }
+  }
+
   /**
    * Add namespace prefix to a key
    */
@@ -45,7 +146,6 @@ class CacheManager {
    */
   async set(key, value, ttl = 3600) {
     try {
-      const client = redisService.getClient();
       const serialized = JSON.stringify(value);
 
       // Enforce max value size
@@ -56,10 +156,15 @@ class CacheManager {
       }
 
       const prefixedKey = this._prefixKey(key);
-      if (ttl > 0) {
-        await client.setex(prefixedKey, ttl, serialized);
+      if (this._useRedis()) {
+        const client = redisService.getClient();
+        if (ttl > 0) {
+          await client.setex(prefixedKey, ttl, serialized);
+        } else {
+          await client.set(prefixedKey, serialized);
+        }
       } else {
-        await client.set(prefixedKey, serialized);
+        this._mem.set(prefixedKey, serialized, ttl);
       }
     } catch (error) {
       const { logger } = require('../config/logging.js');
@@ -72,9 +177,14 @@ class CacheManager {
    */
   async get(key) {
     try {
-      const client = redisService.getClient();
-      const data = await client.get(this._prefixKey(key));
-      if (data === null) return null;
+      const prefixedKey = this._prefixKey(key);
+      let data;
+      if (this._useRedis()) {
+        data = await redisService.getClient().get(prefixedKey);
+      } else {
+        data = this._mem.get(prefixedKey);
+      }
+      if (data === null || data === undefined) return null;
       try {
         return JSON.parse(data);
       } catch {
@@ -89,53 +199,60 @@ class CacheManager {
   }
 
   /**
-   * Delete a specific cache key
+   * Delete a specific cache key. Clears both tiers so a Redis recovery never
+   * leaves a stale entry lingering in the in-process store.
    */
   async delete(key) {
+    const prefixedKey = this._prefixKey(key);
+    this._mem.delete(prefixedKey);
     try {
-      const client = redisService.getClient();
-      return await client.del(this._prefixKey(key));
-    } catch (error) {
-      return 0;
-    }
+      if (redisService.isReady()) {
+        return await redisService.getClient().del(prefixedKey);
+      }
+    } catch (error) { /* fall through */ }
+    return 0;
   }
 
   /**
-   * Invalidate cache entries matching a pattern
+   * Invalidate cache entries matching a pattern. Always clears the in-process
+   * store; also clears Redis when it's ready.
    */
   async invalidate(pattern) {
+    let globPattern = pattern;
+    if (pattern instanceof RegExp) {
+      globPattern = pattern.source.replace(/\^/, '').replace(/\$/, '').replace(/\./g, '*');
+    }
+    // Prefix the pattern for namespace isolation
+    const prefixedPattern = globPattern.startsWith(NAMESPACE) ? globPattern : `${NAMESPACE}${globPattern}`;
+
+    // In-process tier (cheap, always safe)
+    let deletedCount = this._mem.invalidate(prefixedPattern);
+
+    // Redis tier
     try {
-      const client = redisService.getClient();
-      let cursor = '0';
-      let deletedCount = 0;
-      const keysToDelete = [];
+      if (redisService.isReady()) {
+        const client = redisService.getClient();
+        let cursor = '0';
+        const keysToDelete = [];
+        do {
+          const [newCursor, keys] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
+          cursor = newCursor;
+          if (keys.length > 0) keysToDelete.push(...keys);
+        } while (cursor !== '0');
 
-      let globPattern = pattern;
-      if (pattern instanceof RegExp) {
-        globPattern = pattern.source.replace(/\^/, '').replace(/\$/, '').replace(/\./g, '*');
-      }
-      // Prefix the pattern for namespace isolation
-      const prefixedPattern = globPattern.startsWith(NAMESPACE) ? globPattern : `${NAMESPACE}${globPattern}`;
-
-      do {
-        const [newCursor, keys] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
-        cursor = newCursor;
-        if (keys.length > 0) keysToDelete.push(...keys);
-      } while (cursor !== '0');
-
-      if (keysToDelete.length > 0) {
-        const batchSize = 100;
-        for (let i = 0; i < keysToDelete.length; i += batchSize) {
-          const batch = keysToDelete.slice(i, i + batchSize);
-          deletedCount += await client.del(...batch);
+        if (keysToDelete.length > 0) {
+          const batchSize = 100;
+          for (let i = 0; i < keysToDelete.length; i += batchSize) {
+            const batch = keysToDelete.slice(i, i + batchSize);
+            deletedCount += await client.del(...batch);
+          }
         }
       }
-      return deletedCount;
     } catch (error) {
       const { logger } = require('../config/logging.js');
       logger.warn(`Cache INVALIDATE error for pattern ${pattern}: ${error.message}`);
-      return 0;
     }
+    return deletedCount;
   }
 
   /**
@@ -143,8 +260,11 @@ class CacheManager {
    */
   async exists(key) {
     try {
-      const client = redisService.getClient();
-      return (await client.exists(this._prefixKey(key))) === 1;
+      const prefixedKey = this._prefixKey(key);
+      if (this._useRedis()) {
+        return (await redisService.getClient().exists(prefixedKey)) === 1;
+      }
+      return this._mem.get(prefixedKey) !== null;
     } catch (error) {
       return false;
     }
@@ -155,8 +275,11 @@ class CacheManager {
    */
   async getTTL(key) {
     try {
-      const client = redisService.getClient();
-      return await client.ttl(this._prefixKey(key));
+      const prefixedKey = this._prefixKey(key);
+      if (this._useRedis()) {
+        return await redisService.getClient().ttl(prefixedKey);
+      }
+      return this._mem.ttl(prefixedKey);
     } catch (error) {
       return -2;
     }
@@ -167,8 +290,11 @@ class CacheManager {
    */
   async expire(key, ttl) {
     try {
-      const client = redisService.getClient();
-      return await client.expire(this._prefixKey(key), ttl);
+      const prefixedKey = this._prefixKey(key);
+      if (this._useRedis()) {
+        return await redisService.getClient().expire(prefixedKey, ttl);
+      }
+      return this._mem.expire(prefixedKey, ttl);
     } catch (error) {
       return 0;
     }
@@ -179,15 +305,20 @@ class CacheManager {
    */
   async getKeys(pattern) {
     try {
-      const client = redisService.getClient();
       const prefixedPattern = pattern.startsWith(NAMESPACE) ? pattern : `${NAMESPACE}${pattern}`;
-      let cursor = '0';
-      const keys = [];
-      do {
-        const [newCursor, batch] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
-        cursor = newCursor;
-        keys.push(...batch);
-      } while (cursor !== '0');
+      let keys;
+      if (this._useRedis()) {
+        const client = redisService.getClient();
+        let cursor = '0';
+        keys = [];
+        do {
+          const [newCursor, batch] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
+          cursor = newCursor;
+          keys.push(...batch);
+        } while (cursor !== '0');
+      } else {
+        keys = this._mem.keys(prefixedPattern);
+      }
       // Strip namespace prefix from returned keys for caller transparency
       return keys.map(k => k.startsWith(NAMESPACE) ? k.slice(NAMESPACE.length) : k);
     } catch (error) {
@@ -202,10 +333,13 @@ class CacheManager {
    */
   async getStats() {
     try {
-      const client = redisService.getClient();
-      const info = await client.info('stats');
-      const dbSize = await client.dbsize();
-      return { dbSize, info };
+      if (this._useRedis()) {
+        const client = redisService.getClient();
+        const info = await client.info('stats');
+        const dbSize = await client.dbsize();
+        return { dbSize, info, tier: 'redis' };
+      }
+      return { dbSize: this._mem.size(), info: 'in-process memory fallback', tier: 'memory' };
     } catch (error) {
       return null;
     }
