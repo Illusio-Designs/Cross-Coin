@@ -11,7 +11,7 @@
  */
 import {
   products, bestsellers, categoryChips, categoryBanners,
-  heroFeatures, technologies, clubPerks,
+  heroFeatures, technologies, clubPerks, reviews,
 } from './mockData';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -71,6 +71,11 @@ export async function getCategories() {
   } catch { return categoryChips; }
 }
 
+export async function getProductReviews(/* slug */) {
+  // Mock pool for now; wire to /api/products/:id/reviews when USE_MOCK is off.
+  return reviews;
+}
+
 // Static content — always frontend-defined for now
 export const getHeroFeatures = () => heroFeatures;
 export const getCategoryBanners = () => categoryBanners;
@@ -97,5 +102,13 @@ function mapProduct(p) {
     badge: p.badge || null,
     description: p.description || '',
     image: images[0]?.large || images[0]?.image_url || null,
+    // Spec/detail fields — fall back sensibly if the backend doesn't provide them
+    sku: p.sku || `MRB-${String(p.id).padStart(4, '0')}`,
+    material: p.material || '78% cotton · 18% polyester · 4% elastane',
+    care: p.care || 'Machine wash cold · Tumble dry low',
+    fit: p.fit || 'True to size',
+    cushioning: p.cushioning || 'Medium',
+    origin: p.origin || 'Ethically made',
+    features: p.features || [],
   };
 }
