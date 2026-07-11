@@ -82,7 +82,7 @@ export function ContactPageClient() {
                 {[
                   { icon: <Mail size={14} />, label: 'Email', value: 'concierge@velquira.com', href: 'mailto:concierge@velquira.com' },
                   { icon: <Phone size={14} />, label: 'Telephone', value: '+91 99999 99999', href: 'tel:+919999999999' },
-                  { icon: <MapPin size={14} />, label: 'Atelier', value: 'Mumbai, Maharashtra, India', href: null },
+                  { icon: <MapPin size={14} />, label: 'Address', value: 'Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
                 ].map((row) => {
                   const Inner = (
                     <div className="flex items-start gap-5 border-b border-gold/15 py-5 transition-colors last:border-0 group-hover:border-gold/40">

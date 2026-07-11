@@ -90,7 +90,7 @@ export default function Footer() {
                 Maison de Parfum<br />for Modern Living
               </p>
               <p className="text-white/40 text-[10px] tracking-[0.25em] uppercase font-body mt-3">
-                14 Pali Hill, Bandra West<br />Mumbai 400050
+                Royal Plaza, Panchasar Road<br />Morbi - 363641, Gujarat, India
               </p>
             </div>
 
