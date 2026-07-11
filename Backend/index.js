@@ -111,9 +111,14 @@ app.use('/api/', generalLimiter);
 // CORS middleware - MUST be before other middleware (handles preflight requests)
 app.use(cors(corsOptions));
 
-// Body parsing middleware — keep limits tight on 2GB server
-app.use(express.json({ 
-    limit: '1mb',
+// Body parsing middleware. Image files never travel as JSON (they go through
+// multipart upload endpoints), so 1mb is normally plenty — but blog posts save
+// their full rich-text `sections` as a JSON body, and a long article (or one an
+// admin built before inline images were uploaded as URLs) can exceed 1mb and
+// get rejected with 413 on save. Raise the JSON limit to a safe 5mb so genuine
+// content saves; urlencoded stays tight since no large form bodies use it.
+app.use(express.json({
+    limit: '5mb',
     verify: (req, res, buf) => { req.rawBody = buf; }
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
