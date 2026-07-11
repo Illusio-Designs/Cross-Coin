@@ -120,7 +120,7 @@ export function Footer() {
             </a>
             <div className="flex items-start gap-2.5 text-sm text-white/55">
               <MapPin size={13} className="mt-0.5 shrink-0 text-white/30" />
-              <span>Mumbai, Maharashtra,<br />India</span>
+              <span>Royal Plaza, Panchasar Road,<br />Morbi - 363641, Gujarat, India</span>
             </div>
           </div>
 

@@ -158,7 +158,7 @@ export default function AboutPage() {
 
           <Reveal delay={0.38}>
             <p className="mt-8 font-display italic text-[13px] text-gold/80">
-              By appointment only &middot; Bandra West, Mumbai
+              By appointment only &middot; Morbi, Gujarat
             </p>
           </Reveal>
         </div>

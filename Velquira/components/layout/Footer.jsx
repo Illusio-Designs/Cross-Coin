@@ -145,9 +145,9 @@ export function Footer() {
                 <li className="flex gap-3">
                   <MapPin size={14} className="mt-0.5 shrink-0 text-gold/80" />
                   <span>
-                    Bandra West
+                    Royal Plaza, Panchasar Road
                     <br />
-                    Mumbai 400050, India
+                    Morbi - 363641, Gujarat, India
                   </span>
                 </li>
                 <li className="flex items-center gap-3">
