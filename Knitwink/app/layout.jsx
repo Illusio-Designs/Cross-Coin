@@ -73,13 +73,23 @@ export default function RootLayout({ children }) {
                   success: function(data) { window.__msg91OtpSuccess = data; },
                   failure: function(error) { window.__msg91OtpFailure = error; }
                 };
-                var s = document.createElement('script');
-                s.type = 'text/javascript';
-                s.src = 'https://verify.msg91.com/otp-provider.js';
-                s.onload = function() {
-                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
-                };
-                document.head.appendChild(s);
+                // Only login + checkout need this; never at first paint. Defer
+                // the third-party script until the browser is idle so it doesn't
+                // compete with the critical render on every page.
+                function loadMsg91() {
+                  if (window.__msg91Started) return;
+                  window.__msg91Started = true;
+                  var s = document.createElement('script');
+                  s.type = 'text/javascript';
+                  s.async = true;
+                  s.src = 'https://verify.msg91.com/otp-provider.js';
+                  s.onload = function() {
+                    if (typeof initSendOTP === 'function') initSendOTP(configuration);
+                  };
+                  document.head.appendChild(s);
+                }
+                var ric = window.requestIdleCallback || function(cb){ return setTimeout(cb, 2500); };
+                ric(loadMsg91);
               })();
             `,
           }}
