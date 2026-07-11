@@ -57,8 +57,6 @@ module.exports.identifyBrand = async (req, res, next) => {
             }
         }
         // For read operations or unauthenticated (public) requests, allow — brand identification is just for scoping
-        
-        console.log(`✅ Brand identified: ${brand.name} (ID: ${brand.id})`);
         next();
     } catch (error) {
         console.error('Brand identification error:', error);
@@ -86,7 +84,6 @@ module.exports.optionalBrand = async (req, res, next) => {
             if (brand) {
                 req.brand = brand;
                 req.brandId = brand.id;
-                console.log(`✅ Optional brand identified: ${brand.name} (ID: ${brand.id})`);
             }
         }
         
