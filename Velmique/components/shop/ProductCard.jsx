@@ -4,6 +4,14 @@ import { Heart, ArrowUpRight, Star } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
+// Request a card-sized image from ImageKit (WebP/AVIF via f-auto) instead of
+// loading the full-resolution original. Only rewrites ImageKit URLs; other
+// sources (and empty values) pass through unchanged.
+const cardImg = (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('ik.imagekit.io')) return url;
+  return `${url.split('?')[0]}?tr=w-600,q-75,f-auto`;
+};
+
 export default function ProductCard({ product, index = 0 }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   const wishlisted = isWishlisted(product.id);
@@ -51,8 +59,10 @@ export default function ProductCard({ product, index = 0 }) {
         <div className="relative overflow-hidden bg-[#EAE0C7]">
           {/* Primary image — natural height drives the card. */}
           <img
-            src={product.images[0]}
+            src={cardImg(product.images[0])}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="block w-full h-auto"
           />
           {/* Secondary image — absolutely positioned to overlay the first
@@ -60,8 +70,10 @@ export default function ProductCard({ product, index = 0 }) {
               produced. */}
           {product.images[1] && (
             <img
-              src={product.images[1]}
+              src={cardImg(product.images[1])}
               alt={product.name}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
             />
           )}
