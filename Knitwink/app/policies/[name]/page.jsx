@@ -35,7 +35,7 @@ export default function PolicyPage() {
         <div className="relative">
           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/30">Legal</p>
           <h1 className="mt-3 text-3xl font-bold text-white lg:text-4xl">
-            {loading ? 'Loading…' : policy?.title || formatTitle(name)}
+            {loading ? formatTitle(name) : policy?.title || formatTitle(name)}
           </h1>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/45">
             Please read this policy carefully before using our services.
