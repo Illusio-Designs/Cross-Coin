@@ -1,19 +1,29 @@
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  Truck, RefreshCw, ShieldCheck, Activity, Dumbbell, Gauge, Minus, Sparkles,
-  LayoutGrid, Layers, Wind, Footprints, Move, Heart, Leaf, Search, ArrowRight,
-  ArrowUpRight, User, ShoppingBag, Star, Phone, Mail, MapPin, Clock, Send,
-  Instagram, Youtube, Facebook,
-} from 'lucide-react';
+  TruckIcon, RefreshIcon, ShieldIcon, Activity01Icon, Dumbbell01Icon, GaugeIcon,
+  MinusSignIcon, SparklesIcon, GridIcon, Layers01Icon, CloudFastWindIcon,
+  RunningShoesIcon, Move01Icon, FavouriteIcon, Leaf01Icon, Search01Icon,
+  ArrowRight01Icon, ArrowUpRight01Icon, UserCircleIcon, ShoppingBag03Icon,
+  StarIcon, CallIcon, Mail01Icon, Location01Icon, Clock01Icon, SentIcon,
+  InstagramIcon, YoutubeIcon, FacebookIcon,
+} from '@hugeicons/core-free-icons';
 
+// HugeIcons (free set = stroke-rounded style). One place maps the app's
+// semantic icon names to HugeIcons, so `<Icon name="…" />` works everywhere.
 const MAP = {
-  Truck, RefreshCw, ShieldCheck, Activity, Dumbbell, Gauge, Minus, Sparkles,
-  LayoutGrid, Layers, Wind, Footprints, Move, Heart, Leaf, Search, ArrowRight,
-  ArrowUpRight, User, ShoppingBag, Star, Phone, Mail, MapPin, Clock, Send,
-  Instagram, Youtube, Facebook,
+  Truck: TruckIcon, RefreshCw: RefreshIcon, ShieldCheck: ShieldIcon,
+  Activity: Activity01Icon, Dumbbell: Dumbbell01Icon, Gauge: GaugeIcon,
+  Minus: MinusSignIcon, Sparkles: SparklesIcon, LayoutGrid: GridIcon,
+  Layers: Layers01Icon, Wind: CloudFastWindIcon, Footprints: RunningShoesIcon,
+  Move: Move01Icon, Heart: FavouriteIcon, Leaf: Leaf01Icon, Search: Search01Icon,
+  ArrowRight: ArrowRight01Icon, ArrowUpRight: ArrowUpRight01Icon,
+  User: UserCircleIcon, ShoppingBag: ShoppingBag03Icon, Star: StarIcon,
+  Phone: CallIcon, Mail: Mail01Icon, MapPin: Location01Icon, Clock: Clock01Icon,
+  Send: SentIcon, Instagram: InstagramIcon, Youtube: YoutubeIcon, Facebook: FacebookIcon,
 };
 
-/** <Icon name="Truck" size={18} /> — renders the matching lucide icon. */
-export default function Icon({ name, ...props }) {
-  const Cmp = MAP[name] || Sparkles;
-  return <Cmp {...props} />;
+/** <Icon name="Truck" size={18} /> — renders the matching HugeIcons (rounded). */
+export default function Icon({ name, size = 18, color, className, strokeWidth = 1.8 }) {
+  const icon = MAP[name] || SparklesIcon;
+  return <HugeiconsIcon icon={icon} size={size} color={color} className={className} strokeWidth={strokeWidth} />;
 }
