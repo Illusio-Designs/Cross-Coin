@@ -130,8 +130,6 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
     try { sections = JSON.parse(post.sections); } catch { sections = []; }
   }
 
-  // Tags key from API is "Tags" not "BlogTags"
-  const tags = (post.Tags || post.BlogTags || []).map(t => `#${t.name}`);
   // Blog hero images are 1920x1020 on ImageKit — request that exact size,
   // sharp and light (WebP/AVIF via f-auto, q-82).
   const heroUrl = getBlogImageSrc(post.hero_image, { w: 1920, h: 1020, q: 82 });
@@ -227,13 +225,6 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
                     />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="article-tags">
-                {tags.map((tag, idx) => <span key={idx} className="article-tag">{tag}</span>)}
               </div>
             )}
 

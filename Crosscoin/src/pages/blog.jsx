@@ -144,22 +144,6 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
           ))}
         </div>
 
-        {/* Tag Filter */}
-        {tags.length > 0 && (
-          <div className="blog-category-filter" style={{ marginTop: 8 }}>
-            {tags.map(t => (
-              <button
-                key={t.id}
-                className={`filter-btn ${activeTag === t.slug ? 'active' : ''}`}
-                style={{ fontSize: 12 }}
-                onClick={() => handleTagChange(t.slug)}
-              >
-                #{t.name}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Blog Grid */}
         {loading && posts.length === 0 ? (
           <div className="blog-no-results"><p>Loading articles...</p></div>
@@ -171,7 +155,6 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
                 try { sections = JSON.parse(sections); } catch { sections = []; }
               }
               const preview = sections[0]?.content ? stripHtml(sections[0].content) : '';
-              const postTags = post.Tags || post.BlogTags || [];
 
               return (
               <div
@@ -209,11 +192,6 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
                         {post.author_name}
                       </div>
                     )}
-                  </div>
-                  <div className="bc-tags">
-                    {postTags.slice(0, 3).map(t => (
-                      <span key={t.id} className="bc-tag">{t.name}</span>
-                    ))}
                   </div>
                   <button className="bc-btn">
                     <div className="bc-btn-inner">
