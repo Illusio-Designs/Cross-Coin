@@ -305,7 +305,7 @@ const getPublicSliders = async (req, res) => {
         const cacheKey = sliderCacheKey(brandName);
         const cached = await cacheManager.get(cacheKey);
         if (cached) {
-            res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+            res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
             return res.status(200).json({ sliders: cached });
         }
 
@@ -378,7 +378,7 @@ const getPublicSliders = async (req, res) => {
 
         await cacheManager.set(cacheKey, slidersResponse, cacheManager.TTL.SLIDERS);
 
-        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
         logger.error('Get public sliders error:', error);

@@ -64,7 +64,7 @@ module.exports.getFeed = async (req, res) => {
       tagged_products: tagsByPost.get(post.id) || [],
     }));
 
-    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
     return res.json({ success: true, stale: !!feed.stale, data });
   } catch (error) {
     return res.status(500).json({
