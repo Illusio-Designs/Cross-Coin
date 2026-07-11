@@ -4,6 +4,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import ProductFaqSection from '../components/common/ProductFaqSection';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { fetchPageFaqs } from '../utils/fetchPageFaqs';
+import { getHeroSrcSet } from '../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -59,12 +60,12 @@ export default function MainPage({ seoData, pageFaqs = [], globalFaqs = [], init
   // priority before it parses the body shaves a big chunk off LCP — the same
   // benefit next/image's `priority` gives, without touching the hero layout.
   //
-  // Only preload when the slide carries a real `imageSrcSet` so the preloaded
-  // candidate matches exactly what HeroSlider's <img srcSet sizes="…100vw">
-  // resolves to (all its breakpoints are 100vw). Preloading a plain href while
-  // the <img> picks a different srcSet candidate would download the hero twice.
+  // Preload the exact same srcSet HeroSlider builds (via the shared
+  // getHeroSrcSet helper) so the preloaded candidate matches what the hero
+  // <img srcSet sizes="…100vw"> resolves to — a mismatch would download the
+  // hero twice. Both use the ImageKit-optimised widths for ImageKit sources.
   const firstSlide = initialData?.slides?.[0];
-  const heroPreloadSrcSet = firstSlide?.imageSrcSet;
+  const heroPreloadSrcSet = firstSlide ? getHeroSrcSet(firstSlide) : undefined;
 
   return (
     <SeoWrapper pageName="home" seoData={seoData}>

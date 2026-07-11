@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Skeleton from '../common/Skeleton';
 import { collectionUrl } from '../../utils/collectionUrl';
+import { getHeroSrcSet } from '../../utils/imageUtils';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
@@ -60,7 +61,7 @@ const HeroSlider = ({ slides = [] }) => {
         <div className="hero-slide__image">
           <img
             src={slides[current].image}
-            srcSet={slides[current].imageSrcSet || `${slides[current].imageThumbnail || slides[current].image} 400w, ${slides[current].imageMobile || slides[current].image} 800w, ${slides[current].image} 1600w`}
+            srcSet={getHeroSrcSet(slides[current])}
             sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
             alt={slides[current].title}
             fetchpriority="high"

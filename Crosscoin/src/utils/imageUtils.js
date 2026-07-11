@@ -71,6 +71,33 @@ export function getBlogImageSrc(url, { w, h, q = 80 } = {}) {
   return `${base}?tr=${parts.join(",")}`;
 }
 
+// Add an ImageKit width/quality transform to a single URL. Only rewrites
+// ImageKit URLs (any existing ?tr= is replaced); everything else passes through
+// unchanged. Width-only keeps the aspect ratio intact.
+export function ikTransform(url, w, q = 78) {
+  if (!url || typeof url !== "string" || !url.includes("ik.imagekit.io")) {
+    return url || null;
+  }
+  return `${url.split("?")[0]}?tr=w-${w},q-${q},f-auto`;
+}
+
+// Build a consistent hero srcSet from a single slide image, at the three
+// breakpoints HeroSlider uses (all 100vw). Used by BOTH the <img srcSet> and
+// the <link rel=preload imageSrcSet> so the browser downloads the hero exactly
+// once (a mismatch would fetch it twice). For non-ImageKit URLs it falls back
+// to the slide's own thumbnail/mobile candidates.
+export function getHeroSrcSet(slide) {
+  if (!slide) return undefined;
+  const img = slide.image;
+  if (img && typeof img === "string" && img.includes("ik.imagekit.io")) {
+    return `${ikTransform(img, 640)} 640w, ${ikTransform(img, 1024)} 1024w, ${ikTransform(img, 1600)} 1600w`;
+  }
+  return (
+    slide.imageSrcSet ||
+    `${slide.imageThumbnail || img} 400w, ${slide.imageMobile || img} 800w, ${img} 1600w`
+  );
+}
+
 // Get optimized image URL with size parameters and error handling
 export function getOptimizedImageSrc(
   imageData,

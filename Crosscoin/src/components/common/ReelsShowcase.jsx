@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicReels, incrementReelView } from "../../services/publicApi";
+import { ikTransform } from "../../utils/imageUtils";
 
 const ReelsShowcase = () => {
   const router = useRouter();
@@ -99,7 +100,7 @@ const ReelsShowcase = () => {
                 {(reel.Products || []).map((product) => (
                   <div key={`${reel.id}-${product.id}`} className="reels-product-card">
                     {product.primary_image ? (
-                      <img src={product.primary_image} alt={product.name} className="reels-product-image" />
+                      <img src={ikTransform(product.primary_image, 120)} alt={product.name} className="reels-product-image" loading="lazy" />
                     ) : null}
                     <div className="reels-product-meta">
                       <p className="reels-product-name">{product.name}</p>

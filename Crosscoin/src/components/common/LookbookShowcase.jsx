@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicLookbooks, getPublicProductBySlug } from "../../services/publicApi";
 import ProductCard from "../products/ProductCard";
+import { ikTransform } from "../../utils/imageUtils";
 
 const LookbookShowcase = () => {
   const router = useRouter();
@@ -99,7 +100,7 @@ const LookbookShowcase = () => {
               onClick={() => selectLookbook(lb)}>
               {isActive && <div className="lb-list-active-bar" />}
               <div className="lb-list-thumb">
-                {cover ? <img src={cover} alt={lb.title} /> : <div className="lb-list-thumb-empty" />}
+                {cover ? <img src={ikTransform(cover, 200)} alt={lb.title} loading="lazy" /> : <div className="lb-list-thumb-empty" />}
               </div>
               <div className="lb-list-info">
                 <span className="lb-list-name">{lb.title}</span>
@@ -121,7 +122,7 @@ const LookbookShowcase = () => {
                     className={`lb-thumb${activeImg === i ? ' lb-thumb--active' : ''}`}
                     aria-label={img.alt_text || `View image ${i + 1}`}
                     onClick={() => { setActiveImg(i); setActiveHotspot(null); setFullProduct(null); }}>
-                    <img src={img.image_url} alt={img.alt_text || `Image ${i + 1}`} />
+                    <img src={ikTransform(img.image_url, 160)} alt={img.alt_text || `Image ${i + 1}`} loading="lazy" />
                   </button>
                 ))}
               </div>
@@ -131,7 +132,7 @@ const LookbookShowcase = () => {
               {currentImage && (
                 <div className="lb-img-inner">
                   <img
-                    src={currentImage.image_url}
+                    src={ikTransform(currentImage.image_url, 800)}
                     alt={currentImage.alt_text || selectedLb.title}
                     className="lb-main-img"
                     width={600}
