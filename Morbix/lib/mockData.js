@@ -35,6 +35,44 @@ export const products = [
   { id: 12, slug: 'wool-lounge',       name: 'Morbix Wool Lounge',      category: 'Lifestyle',   categorySlug: 'lifestyle',   price: 17.9, oldPrice: 21.9, rating: 4.9, reviews: 205, sizes: SIZES, colors: ['#6a7186', '#202c6e'], badge: 'sale', description: 'Cosy brushed-wool lounge socks with a wide, non-binding cuff. The soft landing your feet want at the end of the day.' },
 ];
 
+/* Enrich every product with spec + feature detail. Kept out of the rows above
+   so the base catalog stays readable; values vary a little by category. */
+const MATERIAL_BY_CAT = {
+  Running:      '74% combed cotton · 22% recycled polyester · 4% elastane',
+  Athletic:     '70% performance nylon · 26% cotton · 4% spandex',
+  Compression:  '68% nylon · 28% polyester · 4% elastane',
+  'No-Show':    '80% combed cotton · 16% polyamide · 4% elastane',
+  Lifestyle:    '62% merino wool · 34% cotton · 4% elastane',
+};
+const FEATURES_BY_CAT = {
+  Running:     [['Layers', 'Targeted heel & toe cushioning'], ['Wind', 'Breathable mesh top'], ['Heart', 'Arch-support band'], ['Footprints', 'Seamless toe closure']],
+  Athletic:    [['Footprints', 'Anti-slip grip zones'], ['Move', 'Flex zones for quick cuts'], ['Wind', 'Moisture-wicking knit'], ['Layers', 'Reinforced high-wear areas']],
+  Compression: [['Heart', 'Graduated compression'], ['Layers', 'Plush cushioned footbed'], ['Move', 'Stay-put top band'], ['Wind', 'Breathable ventilation']],
+  'No-Show':   [['Footprints', 'Silicone heel grip'], ['Wind', 'Low-profile breathable knit'], ['Layers', 'Cushioned sole'], ['Leaf', 'Odour-resistant fibres']],
+  Lifestyle:   [['Leaf', 'Temperature-regulating merino'], ['Layers', 'Soft brushed footbed'], ['Move', 'Non-binding cuff'], ['Wind', 'Naturally breathable']],
+};
+products.forEach((p, i) => {
+  p.sku = `MRB-${p.slug.slice(0, 3).toUpperCase()}-${String(i + 1).padStart(3, '0')}`;
+  p.material = MATERIAL_BY_CAT[p.category] || '78% cotton · 18% polyester · 4% elastane';
+  p.care = 'Machine wash cold, inside out · Tumble dry low · Do not bleach';
+  p.fit = 'True to size';
+  p.cushioning = p.category === 'Compression' ? 'Firm support'
+    : p.category === 'Running' ? 'Medium'
+    : p.category === 'Lifestyle' ? 'Plush' : 'Light';
+  p.origin = 'Ethically made';
+  p.features = (FEATURES_BY_CAT[p.category] || FEATURES_BY_CAT.Running)
+    .map(([icon, text]) => ({ icon, text }));
+});
+
+/* A small pool of customer reviews the product page samples from. */
+export const reviews = [
+  { author: 'Alex P.',   rating: 5, date: 'Mar 2025', title: 'My new everyday pair',  text: 'Incredibly comfortable — the cushioning is spot on and they stay up all day. Ordered three more pairs.' },
+  { author: 'Jordan M.', rating: 5, date: 'Feb 2025', title: 'Great for running',     text: 'No blisters on my long runs, breathable and they wash really well. Highly recommend.' },
+  { author: 'Sam R.',    rating: 4, date: 'Feb 2025', title: 'Soft and durable',      text: 'Good quality knit that held up after many washes. Sizing is accurate.' },
+  { author: 'Priya K.',  rating: 5, date: 'Jan 2025', title: 'Love the fit',          text: 'The arch-support band actually makes a difference on long days. Will buy again.' },
+  { author: 'Chris T.',  rating: 4, date: 'Jan 2025', title: 'Solid value',           text: 'Comfortable and well made. Would love a few more colour options.' },
+];
+
 /* Homepage bestsellers = a curated slice of the catalog. */
 export const bestsellers = [products[0], products[1], products[2], products[3], products[4]];
 
