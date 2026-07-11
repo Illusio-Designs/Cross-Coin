@@ -25,6 +25,17 @@ async function fetchJson(url, timeoutMs = 3000) {
 }
 
 export async function getServerSideProps(ctx) {
+  // Edge-cache the rendered homepage HTML on Vercel. Set this unconditionally
+  // and up-front so it applies even when an API call is slow or aborts — the
+  // helpers below only set it on success, which meant a slow API (our exact
+  // problem) left the homepage uncached and re-running SSR on every hit. With
+  // this, repeat visitors are served from Vercel's edge and never wait on the
+  // cPanel API. 5-min fresh window + 10-min stale-while-revalidate.
+  ctx.res?.setHeader?.(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=600'
+  );
+
   // Fetch the SEO/FAQ meta AND the above-the-fold content (hero slides,
   // categories, latest products) on the server, in parallel. Previously these
   // were fetched client-side in a useEffect, so the initial HTML shipped empty
