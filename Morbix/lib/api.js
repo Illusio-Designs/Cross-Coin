@@ -9,7 +9,10 @@
  * The brandFetch() below is already wired for that switch — same pattern the
  * Knitwink/Velmique storefronts use (server-cached via next.revalidate).
  */
-import { bestsellers, categoryChips, categoryBanners, heroFeatures, technologies, clubPerks } from './mockData';
+import {
+  products, bestsellers, categoryChips, categoryBanners,
+  heroFeatures, technologies, clubPerks,
+} from './mockData';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
@@ -32,19 +35,32 @@ export async function getBestsellers() {
     const data = await brandFetch('/api/products/best-sellers?limit=10');
     const list = data?.data?.products || data?.products || [];
     return list.map(mapProduct);
-  } catch {
-    return bestsellers;
-  }
+  } catch { return bestsellers; }
+}
+
+export async function getAllProducts() {
+  if (USE_MOCK) return products;
+  try {
+    const data = await brandFetch('/api/products/catalog?limit=48');
+    const list = data?.data?.products || data?.products || [];
+    return list.map(mapProduct);
+  } catch { return products; }
+}
+
+export async function getProductBySlug(slug) {
+  if (USE_MOCK) return products.find((p) => p.slug === slug) || null;
+  try {
+    const data = await brandFetch(`/api/products/by-slug/${slug}`);
+    return mapProduct(data?.data || data);
+  } catch { return products.find((p) => p.slug === slug) || null; }
 }
 
 export async function getSliders() {
-  if (USE_MOCK) return []; // hero uses the static mock hero for now
+  if (USE_MOCK) return [];
   try {
     const data = await brandFetch('/api/sliders/listing');
     return data?.sliders || [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 export async function getCategories() {
@@ -52,9 +68,7 @@ export async function getCategories() {
   try {
     const data = await brandFetch('/api/categories/listing');
     return Array.isArray(data) ? data : (data?.categories || []);
-  } catch {
-    return categoryChips;
-  }
+  } catch { return categoryChips; }
 }
 
 // Static content — always frontend-defined for now
@@ -70,13 +84,18 @@ function mapProduct(p) {
   const firstVar = variations[0] || {};
   return {
     id: p.id,
+    slug: p.slug,
     name: p.name,
     category: p.category?.name || 'Socks',
+    categorySlug: p.category?.slug || 'all',
     price: Number(firstVar.price || p.price || 0),
     oldPrice: firstVar.comparePrice ? Number(firstVar.comparePrice) : undefined,
     rating: Number(p.avg_rating || 0),
-    sizes: '',
+    reviews: Number(p.review_count || 0),
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['#202c6e', '#2fa39b'],
     badge: p.badge || null,
+    description: p.description || '',
     image: images[0]?.large || images[0]?.image_url || null,
   };
 }

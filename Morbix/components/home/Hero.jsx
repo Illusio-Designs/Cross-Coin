@@ -9,8 +9,8 @@ export default function Hero({ features = [] }) {
           <h1>Socks built for <span className="accent">rhythm, comfort</span> &amp; every mile</h1>
           <p>Engineered knit, lasting cushioning and clean design for every step — for sport and the city alike.</p>
           <div className="hero-cta">
-            <a href="#bestsellers" className="btn btn-primary">Shop the catalog <span className="arrow"><Icon name="ArrowRight" size={14} /></span></a>
-            <a href="#" className="btn btn-ghost">New arrivals</a>
+            <a href="/catalog" className="btn btn-primary">Shop the catalog <span className="arrow"><Icon name="ArrowRight" size={14} /></span></a>
+            <a href="/catalog?cat=running" className="btn btn-ghost">New arrivals</a>
           </div>
         </div>
 

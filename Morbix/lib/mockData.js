@@ -9,27 +9,40 @@ export const heroFeatures = [
 ];
 
 export const categoryChips = [
-  { label: 'Running',     icon: 'Activity' },
-  { label: 'Athletic',    icon: 'Dumbbell' },
-  { label: 'Compression', icon: 'Gauge' },
-  { label: 'No-Show',     icon: 'Minus' },
-  { label: 'Lifestyle',   icon: 'Sparkles' },
-  { label: 'All socks',   icon: 'LayoutGrid' },
+  { label: 'Running',     slug: 'running',     icon: 'Activity' },
+  { label: 'Athletic',    slug: 'athletic',    icon: 'Dumbbell' },
+  { label: 'Compression', slug: 'compression', icon: 'Gauge' },
+  { label: 'No-Show',     slug: 'no-show',     icon: 'Minus' },
+  { label: 'Lifestyle',   slug: 'lifestyle',   icon: 'Sparkles' },
+  { label: 'All socks',   slug: 'all',         icon: 'LayoutGrid' },
 ];
 
-export const bestsellers = [
-  { id: 1, name: 'Morbix Pulse Crew',      category: 'Running socks',     price: 12.9, rating: 4.8, sizes: 'M–XL', badge: null,   image: null },
-  { id: 2, name: 'Morbix Ankle Lite',      category: 'Everyday socks',    price: 9.9,  rating: 4.9, sizes: 'S–XL', badge: 'new',  image: null },
-  { id: 3, name: 'Morbix City Flow',       category: 'Lifestyle socks',   price: 13.9, rating: 4.7, sizes: 'M–L',  badge: null,   image: null },
-  { id: 4, name: 'Morbix Arch Pro',        category: 'Compression socks', price: 16.9, rating: 4.8, sizes: 'M–XL', badge: null,   image: null },
-  { id: 5, name: 'Morbix Merino No-Show',  category: 'Lifestyle socks',   price: 14.9, oldPrice: 18.9, rating: 4.8, sizes: 'S–L', badge: 'sale', image: null },
+const SIZES = ['S', 'M', 'L', 'XL'];
+
+/* Full catalog. `image: null` renders the branded placeholder tile. */
+export const products = [
+  { id: 1,  slug: 'pulse-crew',        name: 'Morbix Pulse Crew',       category: 'Running',     categorySlug: 'running',     price: 12.9, rating: 4.8, reviews: 214, sizes: SIZES, colors: ['#202c6e', '#2fa39b', '#1b2340'], badge: null,   description: 'A cushioned crew sock engineered for the run — targeted padding at heel and toe, a ventilated mesh top and a snug arch band that keeps it locked in mile after mile.' },
+  { id: 2,  slug: 'ankle-lite',        name: 'Morbix Ankle Lite',       category: 'Athletic',    categorySlug: 'athletic',    price: 9.9,  rating: 4.9, reviews: 340, sizes: SIZES, colors: ['#1b2340', '#2fa39b', '#e7f4f2'], badge: 'new',  description: 'Barely-there ankle sock in a breathable knit. Light, fast-drying and low-profile — made for training days and warm-weather miles.' },
+  { id: 3,  slug: 'city-flow',         name: 'Morbix City Flow',        category: 'Lifestyle',   categorySlug: 'lifestyle',   price: 13.9, rating: 4.7, reviews: 128, sizes: SIZES, colors: ['#202c6e', '#6a7186', '#1b2340'], badge: null,   description: 'A clean everyday sock that finishes the look. Soft combed cotton, a ribbed cuff that stays up, and a smooth toe seam for all-day comfort.' },
+  { id: 4,  slug: 'arch-pro',          name: 'Morbix Arch Pro',         category: 'Compression', categorySlug: 'compression', price: 16.9, rating: 4.8, reviews: 97,  sizes: SIZES, colors: ['#1b2340', '#202c6e'], badge: null,   description: 'Graduated compression that keeps legs fresh through long days and long runs. Firm arch support with a seamless, chafe-free finish.' },
+  { id: 5,  slug: 'merino-no-show',    name: 'Morbix Merino No-Show',   category: 'Lifestyle',   categorySlug: 'no-show',     price: 14.9, oldPrice: 18.9, rating: 4.8, reviews: 176, sizes: SIZES, colors: ['#6a7186', '#1b2340', '#2fa39b'], badge: 'sale', description: 'Temperature-regulating merino in an invisible no-show cut. Silky, odour-resistant and grippy at the heel so it never slips into your shoe.' },
+  { id: 6,  slug: 'grip-court',        name: 'Morbix Grip Court',       category: 'Athletic',    categorySlug: 'athletic',    price: 13.9, rating: 4.6, reviews: 82,  sizes: SIZES, colors: ['#202c6e', '#2fa39b'], badge: null,   description: 'Court-ready sock with anti-slip grip zones and reinforced high-wear areas. Stability and cushioning for quick stops and hard cuts.' },
+  { id: 7,  slug: 'trail-terrain',     name: 'Morbix Trail Terrain',    category: 'Running',     categorySlug: 'running',     price: 15.9, rating: 4.7, reviews: 64,  sizes: SIZES, colors: ['#1b2340', '#2fa39b'], badge: 'new',  description: 'A rugged trail sock with extra cushioning, a protective ankle cuff and moisture-wicking knit built for long days off-road.' },
+  { id: 8,  slug: 'daily-crew-3pack',  name: 'Morbix Daily Crew 3-Pack', category: 'Lifestyle',  categorySlug: 'lifestyle',   price: 24.9, rating: 4.9, reviews: 291, sizes: SIZES, colors: ['#1b2340', '#202c6e', '#6a7186'], badge: null, description: 'Three everyday crew socks in a soft cotton blend. The dependable rotation — breathable, durable and endlessly comfortable.' },
+  { id: 9,  slug: 'recovery-comp',     name: 'Morbix Recovery Comp',    category: 'Compression', categorySlug: 'compression', price: 18.9, rating: 4.7, reviews: 58,  sizes: SIZES, colors: ['#202c6e', '#1b2340'], badge: null,   description: 'Knee-high recovery compression to boost circulation after training. Graduated support, plush footbed and a stay-put top band.' },
+  { id: 10, slug: 'featherweight-run', name: 'Morbix Featherweight Run', category: 'Running',    categorySlug: 'running',     price: 14.9, rating: 4.8, reviews: 133, sizes: SIZES, colors: ['#2fa39b', '#1b2340'], badge: null,   description: 'The lightest sock in the range — a paper-thin performance knit with strategic ventilation for race day and fast efforts.' },
+  { id: 11, slug: 'no-show-2pack',     name: 'Morbix No-Show 2-Pack',   category: 'No-Show',     categorySlug: 'no-show',     price: 16.9, rating: 4.6, reviews: 74,  sizes: SIZES, colors: ['#e7f4f2', '#1b2340'], badge: null,  description: 'Two invisible no-show socks with silicone heel grips. Clean lines with any shoe, no slipping, no bunching.' },
+  { id: 12, slug: 'wool-lounge',       name: 'Morbix Wool Lounge',      category: 'Lifestyle',   categorySlug: 'lifestyle',   price: 17.9, oldPrice: 21.9, rating: 4.9, reviews: 205, sizes: SIZES, colors: ['#6a7186', '#202c6e'], badge: 'sale', description: 'Cosy brushed-wool lounge socks with a wide, non-binding cuff. The soft landing your feet want at the end of the day.' },
 ];
+
+/* Homepage bestsellers = a curated slice of the catalog. */
+export const bestsellers = [products[0], products[1], products[2], products[3], products[4]];
 
 export const categoryBanners = [
-  { title: 'Running',     text: 'Cushioned, breathable support for every kilometre.',        image: null },
-  { title: 'Athletic',    text: 'Grip and stability for training and the court.',             image: null },
-  { title: 'Compression', text: 'Graduated support that keeps legs fresh all day.',           image: null },
-  { title: 'Lifestyle',   text: 'Soft merino everyday styles that finish the look.',          image: null },
+  { title: 'Running',     slug: 'running',     text: 'Cushioned, breathable support for every kilometre.', image: null },
+  { title: 'Athletic',    slug: 'athletic',    text: 'Grip and stability for training and the court.',      image: null },
+  { title: 'Compression', slug: 'compression', text: 'Graduated support that keeps legs fresh all day.',     image: null },
+  { title: 'Lifestyle',   slug: 'lifestyle',   text: 'Soft everyday styles that finish the look.',          image: null },
 ];
 
 export const technologies = [

@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import SmoothScroll from '@/components/SmoothScroll';
+import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
@@ -27,11 +28,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <SmoothScroll>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
-        </SmoothScroll>
+        <CartProvider>
+          <SmoothScroll>
+            <Header />
+            <main id="main">{children}</main>
+            <Footer />
+          </SmoothScroll>
+        </CartProvider>
       </body>
     </html>
   );

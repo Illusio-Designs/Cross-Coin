@@ -1,7 +1,16 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import CartButton from './CartButton';
 
-const NAV = ['Catalog', 'Brands', 'New', 'Sale', 'Technology', 'About', 'Delivery'];
+const NAV = [
+  { label: 'Catalog', href: '/catalog' },
+  { label: 'Running', href: '/catalog?cat=running' },
+  { label: 'Athletic', href: '/catalog?cat=athletic' },
+  { label: 'Compression', href: '/catalog?cat=compression' },
+  { label: 'Lifestyle', href: '/catalog?cat=lifestyle' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+];
 
 export default function Header() {
   return (
@@ -16,13 +25,13 @@ export default function Header() {
 
         <nav className="nav">
           {NAV.map((item) => (
-            <Link key={item} href="#">{item}</Link>
+            <Link key={item.label} href={item.href}>{item.label}</Link>
           ))}
         </nav>
 
         <div className="header-actions">
-          <Link href="#" className="pill"><Icon name="User" size={16} /> Sign in</Link>
-          <Link href="#" className="pill cart"><Icon name="ShoppingBag" size={16} /> Cart <span className="badge">0</span></Link>
+          <Link href="/account" className="pill"><Icon name="User" size={16} /> Sign in</Link>
+          <CartButton />
         </div>
       </div>
     </header>

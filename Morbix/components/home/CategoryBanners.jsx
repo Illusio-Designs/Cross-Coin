@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import Icon from '@/components/Icon';
 
 const IMAGES = [
@@ -12,14 +13,14 @@ export default function CategoryBanners({ banners = [] }) {
     <section className="section container">
       <div className="cat-grid">
         {banners.map((b, i) => (
-          <a href="#" className="cat-banner" key={b.title}>
+          <Link href={`/catalog?cat=${b.slug}`} className="cat-banner" key={b.title}>
             <div className="cat-img"><img src={IMAGES[i % IMAGES.length]} alt={b.title} loading="lazy" /></div>
             <div className="cat-copy">
               <h3>{b.title}</h3>
               <p>{b.text}</p>
               <span className="link-more" style={{ color: 'var(--navy)' }}>Shop <Icon name="ArrowRight" size={14} /></span>
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </section>
