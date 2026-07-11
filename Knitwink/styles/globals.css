@@ -50,11 +50,16 @@
 
    Opt-out for a specific button: add `no-touch-min` to its class list. */
 @media (max-width: 768px) {
-  button:not(.no-touch-min):not(label button),
-  [role="button"]:not(.no-touch-min),
-  nav a:not(.no-touch-min),
-  header a:not(.no-touch-min),
-  footer a:not(.no-touch-min) {
+  /* IMPORTANT: exclude .hidden so this hit-area rule never resurrects an
+     element that responsive utilities meant to hide. Without :not(.hidden),
+     `nav a` (specificity 0,1,2) overrode Tailwind's `.hidden` (0,1,0) and the
+     forced `display: inline-flex` un-hid the desktop logo + `hidden lg:flex`
+     nav links on mobile (two logos + full nav on phones). */
+  button:not(.no-touch-min):not(label button):not(.hidden),
+  [role="button"]:not(.no-touch-min):not(.hidden),
+  nav a:not(.no-touch-min):not(.hidden),
+  header a:not(.no-touch-min):not(.hidden),
+  footer a:not(.no-touch-min):not(.hidden) {
     min-height: 44px;
     min-width: 44px;
     /* Keep visual size unchanged for icon-only buttons by using flexbox
