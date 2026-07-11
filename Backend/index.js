@@ -162,7 +162,7 @@ app.use((req, res, next) => {
         if (!res.getHeader('Cache-Control')) {
             const isPublicGet = req.method === 'GET' && !req.headers.authorization && !req.headers['x-brand-name'];
             if (isPublicGet) {
-                res.set('Cache-Control', 'public, max-age=300');
+                res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
             } else {
                 res.set('Cache-Control', 'no-store');
             }
