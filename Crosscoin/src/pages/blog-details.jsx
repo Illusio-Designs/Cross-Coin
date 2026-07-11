@@ -6,6 +6,7 @@ import ProductCard from '../components/products/ProductCard';
 import { getPublicBlogBySlug } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
 import { richHtml } from '../utils/sanitizeHtml';
+import Skeleton from '../components/common/Skeleton';
 import { getBlogImageSrc } from '../utils/imageUtils';
 
 
@@ -104,8 +105,13 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
   if (loading) {
     return (
       <SeoWrapper pageName="blog-details">
-        <div className="blog-details-page" style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
-          <p>Loading article...</p>
+        <div className="blog-details-page" style={{ maxWidth: 820, margin: '0 auto', padding: '32px 16px', display: 'grid', gap: 16 }}>
+          <Skeleton type="text" width="70%" height="34px" />
+          <Skeleton type="text" width="40%" height="16px" />
+          <Skeleton height={360} style={{ borderRadius: 12, margin: '12px 0' }} />
+          <Skeleton type="text" width="100%" height="16px" />
+          <Skeleton type="text" width="100%" height="16px" />
+          <Skeleton type="text" width="85%" height="16px" />
         </div>
       </SeoWrapper>
     );

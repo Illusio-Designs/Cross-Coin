@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/router";
 import { getInstagramFeed } from "../../services/publicApi";
+import Skeleton from "./Skeleton";
 import { ikTransform } from "../../utils/imageUtils";
 
 const InstagramGallery = () => {
@@ -43,7 +44,7 @@ const InstagramGallery = () => {
     await addToCart(payload, null, null, 1, null, payload.images);
   };
 
-  if (loading) return <div className="instagram-gallery__state">Loading Instagram feed...</div>;
+  if (loading) return <div className="instagram-gallery__state"><Skeleton height={320} style={{ borderRadius: 12 }} /></div>;
   if (error) return <div className="instagram-gallery__state">{error}</div>;
 
   return (

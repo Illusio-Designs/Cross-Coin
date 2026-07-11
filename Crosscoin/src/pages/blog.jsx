@@ -4,6 +4,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { getBlogImageSrc } from '../utils/imageUtils';
+import Skeleton from '../components/common/Skeleton';
 
 const LIMIT = 12;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -146,7 +147,18 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
 
         {/* Blog Grid */}
         {loading && posts.length === 0 ? (
-          <div className="blog-no-results"><p>Loading articles...</p></div>
+          <div className="blog-page-grid">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="blog-card-home">
+                <div className="bc-img-wrap"><Skeleton height={200} /></div>
+                <div className="bc-body" style={{ display: 'grid', gap: 10, padding: 16 }}>
+                  <Skeleton type="text" width="90%" height="20px" />
+                  <Skeleton type="text" width="100%" height="14px" />
+                  <Skeleton type="text" width="60%" height="14px" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="blog-page-grid">
             {posts.map((post) => {
@@ -215,7 +227,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
         {hasMore && (
           <div style={{ textAlign: 'center', marginTop: 32 }}>
             <button className="view-all-btn-home" onClick={handleLoadMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Load More'}
+              {loading ? '…' : 'Load More'}
             </button>
           </div>
         )}

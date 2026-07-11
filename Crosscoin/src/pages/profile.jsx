@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import SafeImage from "../components/common/SafeImage";
+import Skeleton from "../components/common/Skeleton";
 import { useRouter } from "next/router";
 import SeoWrapper from "../console/SeoWrapper";
 import { fetchPageSeo } from "../utils/fetchPageSeo";
@@ -233,7 +234,6 @@ export default function Profile({ seoData }) {
         <div className="pf-page">
           <div className="pf-fullpage-loader">
             <div className="pf-spinner" />
-            <p>Loading your profile...</p>
           </div>
         </div>
       </SeoWrapper>
@@ -300,7 +300,7 @@ export default function Profile({ seoData }) {
             {activeTab === 0 && (
               <div className="pf-section">
                 <div className="pf-section-title">My Orders</div>
-                {loadingOrders ? <div className="pf-loading">Loading orders...</div>
+                {loadingOrders ? <div className="pf-loading" style={{ display: 'grid', gap: 12 }}>{[0,1,2].map(i => <Skeleton key={i} height={90} style={{ borderRadius: 10 }} />)}</div>
                   : ordersError ? <div className="pf-error">{ordersError}</div>
                   : orders.length === 0 ? <div className="pf-empty">No orders yet.</div>
                   : orders.map(order => {
@@ -393,7 +393,7 @@ export default function Profile({ seoData }) {
                     Add Address
                   </button>
                 </div>
-                {loadingAddresses ? <div className="pf-loading">Loading...</div>
+                {loadingAddresses ? <div className="pf-loading" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>{[0,1].map(i => <Skeleton key={i} height={110} style={{ borderRadius: 10 }} />)}</div>
                   : addresses.length === 0 ? <div className="pf-empty">No addresses saved.</div>
                   : <div className="pf-addr-grid">
                     {addresses.map(addr => (
