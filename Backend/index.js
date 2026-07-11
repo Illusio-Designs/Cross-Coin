@@ -149,6 +149,14 @@ app.use(compression());
 // Cache-Control middleware (Requirement 2.5)
 // Public read-only GET endpoints get public cache; authenticated/write endpoints get no-store
 app.use((req, res, next) => {
+    // The same API host serves every brand, distinguished only by the
+    // X-Brand-Name request header. Any response marked `public` therefore varies
+    // by that header — advertise it with Vary so browsers (and any CDN that
+    // honours Vary) never serve one brand's cached response to another. This is
+    // the standards-correct guard; a shared CDN like Cloudflare should ALSO add
+    // X-Brand-Name to its cache key, since Cloudflare's free tier ignores Vary.
+    res.vary('X-Brand-Name');
+
     const originalJson = res.json.bind(res);
     res.json = (body) => {
         if (!res.getHeader('Cache-Control')) {
