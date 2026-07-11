@@ -1,36 +1,35 @@
 #!/usr/bin/env bash
 #
-# Vercel "Ignored Build Step" for this monorepo folder.
+# Vercel "Ignored Build Step" — one branch per brand.
 #
-# Point each Vercel project at this file:
-#   Project Settings → Git → Ignored Build Step → "Custom" →
-#     bash vercel-ignore-build.sh
-#   (Root Directory must be this project's folder; Production Branch = main.)
+# Structure:
+#   - Each brand has its own long-lived branch: crosscoin, velmique, knitwink,
+#     gripzus, velquira (the lowercase folder name).
+#   - Each brand has its own Vercel project with:
+#       Root Directory   = this brand's folder (e.g. Crosscoin)
+#       Production Branch = this brand's branch (e.g. crosscoin)
+#       Ignored Build Step (Custom) = bash vercel-ignore-build.sh
 #
-# Exit code contract (Vercel): exit 0 => SKIP the build, exit 1 => BUILD.
+# This script builds ONLY when the branch being deployed is this brand's own
+# branch. Every other branch (main, other brands' branches, and their preview
+# deploys) is skipped — so a push to one brand never rebuilds another.
 #
-# It does two things:
-#   1. Skips every deploy that is not a Production (main) deploy — so pushes to
-#      feature branches / preview deploys never build.
-#   2. On Production, builds only when THIS folder changed in the last commit —
-#      so a push to main that only touched another brand's folder is skipped.
+# Vercel exit contract: exit 0 = SKIP the build, exit 1 = BUILD.
 
-set -o pipefail
+# The brand branch is the lowercase folder name (Vercel runs this from the
+# project's Root Directory, so $PWD's basename is the brand folder).
+BRAND_BRANCH="$(basename "$PWD" | tr '[:upper:]' '[:lower:]')"
+REF="${VERCEL_GIT_COMMIT_REF:-}"
 
-# 1) Only ever build Production (the main branch). Skip previews/branches.
-if [ "$VERCEL_ENV" != "production" ]; then
-  echo "🚫 VERCEL_ENV=$VERCEL_ENV (not production) — skipping build."
+if [ -z "$REF" ]; then
+  echo "⚠️  No VERCEL_GIT_COMMIT_REF — building to be safe."
+  exit 1
+fi
+
+if [ "$REF" != "$BRAND_BRANCH" ]; then
+  echo "🚫 Deploying branch '$REF', but this project builds only '$BRAND_BRANCH' — skipping."
   exit 0
 fi
 
-# 2) Build only if files in this project's Root Directory changed.
-#    Vercel runs this command from the project's Root Directory, so "." is the
-#    folder. If HEAD^ can't be resolved (shallow clone edge case) git returns
-#    non-zero and we fall through to building — the safe default.
-if git diff --quiet HEAD^ HEAD .; then
-  echo "🚫 No changes in this folder since the last commit — skipping build."
-  exit 0
-fi
-
-echo "✅ Changes detected in this folder — proceeding with build."
+echo "✅ On this brand's branch ('$BRAND_BRANCH') — proceeding with build."
 exit 1
