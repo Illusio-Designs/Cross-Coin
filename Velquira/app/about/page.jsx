@@ -20,7 +20,7 @@ export default function AboutPage() {
         eyebrow="The Velquira House"
         title="Light, set"
         titleAccent="by hand."
-        description="A quiet atelier in Bandra, working in solid 18k gold and certified stones — shaping jewellery slowly, the way it was always meant to be made."
+        description="A quiet atelier in Morbi, Gujarat, working in solid 18k gold and certified stones — shaping jewellery slowly, the way it was always meant to be made."
       />
 
       <section className="bg-ivory">

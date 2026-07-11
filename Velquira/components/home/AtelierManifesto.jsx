@@ -56,7 +56,7 @@ export function AtelierManifesto() {
 
           <div className="lg:col-span-7">
             <p className="max-w-xl text-[15px] leading-[1.85] text-white/70 md:text-base">
-              Every Velquira piece begins as a sketch in our Mumbai atelier — refined through
+              Every Velquira piece begins as a sketch in our Morbi atelier — refined through
               hundreds of hours of hand-setting, polishing, and inspection before it ever reaches
               you. We work only in hallmarked gold and certified stones, because heirlooms demand
               nothing less.
