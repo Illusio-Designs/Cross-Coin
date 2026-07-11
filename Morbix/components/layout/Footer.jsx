@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import MorbixLogo from '@/components/MorbixLogo';
 
 const COLS = [
   { title: 'Catalog', links: ['Running', 'Athletic', 'Compression', 'No-Show', 'Lifestyle', 'All socks'] },
@@ -13,7 +14,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-cols">
           <div className="brand-col">
-            <div className="logo-mark" style={{ fontSize: 24 }}><span className="m">M</span><span className="rest">orbix</span></div>
+            <MorbixLogo height={34} />
             <p>Premium socks for sport and city life. Technology, comfort and clean design in every step.</p>
             <div className="socials">
               <a href="#" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/Icon';
+import MorbixLogo from '@/components/MorbixLogo';
 
 export default function MobileNav({ items = [] }) {
   const [open, setOpen] = useState(false);
@@ -27,7 +28,7 @@ export default function MobileNav({ items = [] }) {
       <div className={`drawer-overlay${open ? ' show' : ''}`} onClick={() => setOpen(false)} />
       <aside className={`drawer${open ? ' show' : ''}`} aria-hidden={!open}>
         <div className="drawer-head">
-          <div className="logo-mark" style={{ fontSize: 20 }}><span className="m">M</span><span className="rest">orbix</span></div>
+          <MorbixLogo height={26} />
           <button className="hamburger" aria-label="Close menu" onClick={() => setOpen(false)}><Icon name="X" size={22} /></button>
         </div>
         <nav className="drawer-nav">
