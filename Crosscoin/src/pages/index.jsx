@@ -1,9 +1,7 @@
 import Head from 'next/head';
 import Home from "./home";
 import SeoWrapper from '../console/SeoWrapper';
-import ProductFaqSection from '../components/common/ProductFaqSection';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
-import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 import { getHeroSrcSet } from '../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -36,16 +34,18 @@ export async function getServerSideProps(ctx) {
     'public, s-maxage=300, stale-while-revalidate=600'
   );
 
-  // Fetch the SEO/FAQ meta AND the above-the-fold content (hero slides,
-  // categories, latest products) on the server, in parallel. Previously these
-  // were fetched client-side in a useEffect, so the initial HTML shipped empty
-  // and the hero/products only appeared after JS downloaded, hydrated, and made
-  // its own round-trips — a client waterfall that wrecked LCP and left crawlers
-  // with a blank shell. Now the LCP content is in the HTML the moment it loads.
-  // The edge-cache header set by fetchPageSeo keeps this cheap at the CDN.
-  const [seoData, faqs, slidersJson, categoriesJson, latestJson] = await Promise.all([
+  // Fetch the SEO meta AND the above-the-fold content (hero slides, categories,
+  // latest products) on the server, in parallel. Previously these were fetched
+  // client-side in a useEffect, so the initial HTML shipped empty and the
+  // hero/products only appeared after JS downloaded, hydrated, and made its own
+  // round-trips — a client waterfall that wrecked LCP and left crawlers with a
+  // blank shell. Now the LCP content is in the HTML the moment it loads.
+  //
+  // The homepage does not render any FAQ section (FAQs live on product pages),
+  // so we no longer fetch page/global FAQs here — that removed two per-load API
+  // round-trips that produced nothing visible.
+  const [seoData, slidersJson, categoriesJson, latestJson] = await Promise.all([
     fetchPageSeo('home', ctx),
-    fetchPageFaqs('home', ctx),
     fetchJson(`${API_URL}/api/sliders/listing`),
     fetchJson(`${API_URL}/api/categories/listing`),
     fetchJson(`${API_URL}/api/products/catalog?limit=15&sort=newest`),
@@ -58,14 +58,12 @@ export async function getServerSideProps(ctx) {
   return {
     props: {
       seoData,
-      pageFaqs: faqs.pageFaqs,
-      globalFaqs: faqs.globalFaqs,
       initialData: { slides, categories, latestProducts },
     },
   };
 }
 
-export default function MainPage({ seoData, pageFaqs = [], globalFaqs = [], initialData = {} }) {
+export default function MainPage({ seoData, initialData = {} }) {
   // Preload the first hero image (the LCP element). Since the slide markup is
   // now in the SSR HTML, telling the browser to fetch this image at highest
   // priority before it parses the body shaves a big chunk off LCP — the same
@@ -93,11 +91,6 @@ export default function MainPage({ seoData, pageFaqs = [], globalFaqs = [], init
         </Head>
       )}
       <Home initialData={initialData} />
-      {(pageFaqs.length > 0 || globalFaqs.length > 0) && (
-        <section style={{ padding: '0 16px', maxWidth: 1200, margin: '0 auto' }}>
-          <ProductFaqSection productFaqs={pageFaqs} globalFaqs={globalFaqs} />
-        </section>
-      )}
     </SeoWrapper>
   );
 }
