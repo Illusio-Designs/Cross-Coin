@@ -28,7 +28,10 @@ name: Deploy backend to FTP
 
 on:
   push:
-    branches: [main]
+    # Backend has its own deploy branch (mirrors the one-branch-per-brand
+    # frontend model). Push to `backend` to deploy the API; `main` stays the
+    # integration branch and no longer auto-deploys the backend.
+    branches: [backend]
     paths:
       - 'Backend/**'
       - '.github/workflows/backend-deploy-ftp.yml'
