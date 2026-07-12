@@ -135,7 +135,9 @@ export default function Footer() {
           </div>
           <p className="tracking-wider">
             Made with <span aria-label="love">❤</span> by{' '}
-            <span className="text-paper">Finvera.solutions</span>
+            <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" className="text-paper hover:underline underline-offset-4">
+              Finvera.solutions
+            </a>
           </p>
         </div>
       </div>
