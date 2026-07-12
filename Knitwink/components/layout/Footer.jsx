@@ -135,7 +135,14 @@ export function Footer() {
             <span>Made with</span>
             <span className="text-red-400">❤</span>
             <span>by</span>
-            <span className="font-semibold text-white">Finvera.solutions</span>
+            <a
+              href="https://finvera.solutions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-white transition-colors hover:text-white/80 underline underline-offset-2"
+            >
+              Finvera.solutions
+            </a>
           </div>
         </div>
       </div>

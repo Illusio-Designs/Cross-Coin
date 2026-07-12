@@ -178,7 +178,14 @@ export function Footer() {
           <p>© {year} Velquira · 19.0544° N, 72.8406° E</p>
           <p>
             Made with <span className="text-gold/70">❤</span> by{' '}
-            <span className="text-gold/70">Finvera.solutions</span>
+            <a
+              href="https://finvera.solutions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold/70 transition-colors hover:text-gold"
+            >
+              Finvera.solutions
+            </a>
           </p>
         </div>
       </div>

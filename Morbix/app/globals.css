@@ -341,7 +341,8 @@ button { font-family: inherit; cursor: pointer; }
 .footer .socials a:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
 .footer-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; gap: 12px; }
 .footer-bottom a { color: var(--ink-soft); }
-.footer-credit { color: var(--ink-soft); } .footer-credit b { color: var(--navy); font-weight: 700; }
+.footer-credit { color: var(--ink-soft); } .footer-credit a { color: var(--navy); font-weight: 700; }
+.footer-credit a:hover { color: var(--teal-600); text-decoration: underline; text-underline-offset: 2px; }
 
 /* ============================ INNER PAGES ============================ */
 .muted { color: var(--ink-soft); }

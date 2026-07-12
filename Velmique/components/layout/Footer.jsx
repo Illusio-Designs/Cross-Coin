@@ -155,7 +155,14 @@ export default function Footer() {
             <span>Made with</span>
             <span className="text-[var(--gold-light)]">❤</span>
             <span>by</span>
-            <span className="font-semibold text-white/85">Finvera.solutions</span>
+            <a
+              href="https://finvera.solutions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-white/85 underline underline-offset-2 transition-colors hover:text-[var(--gold-light)]"
+            >
+              Finvera.solutions
+            </a>
           </div>
         </div>
       </div>
