@@ -152,17 +152,10 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-[var(--gold-light)] transition-colors">Terms Of Use</Link>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-body tracking-wider text-white/40">
-            <span>Crafted with</span>
+            <span>Made with</span>
             <span className="text-[var(--gold-light)]">❤</span>
             <span>by</span>
-            <a
-              href="https://illusiodesigns.agency/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-white/85 underline underline-offset-2 transition-colors hover:text-[var(--gold-light)]"
-            >
-              Illusio Designs
-            </a>
+            <span className="font-semibold text-white/85">Finvera.solutions</span>
           </div>
         </div>
       </div>

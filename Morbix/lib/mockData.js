@@ -92,6 +92,12 @@ export const technologies = [
   { icon: 'Leaf',      name: 'ECO COTTON',    text: 'Organic fibres, kinder to the planet' },
 ];
 
+export const blogPosts = [
+  { slug: 'choose-running-socks', category: 'Guides',     date: 'Mar 2025', title: 'How to choose the right running sock', excerpt: 'Cushioning, cut and fabric — the three things that actually matter when you pick a sock for the run.' },
+  { slug: 'science-of-cushioning', category: 'Technology', date: 'Feb 2025', title: 'The science behind targeted cushioning', excerpt: 'Why padding at the heel and toe changes everything, and how we knit it in without the bulk.' },
+  { slug: 'make-socks-last',       category: 'Care',       date: 'Jan 2025', title: '5 ways to make your socks last longer', excerpt: 'A few small habits that keep your favourite pairs feeling new, wash after wash.' },
+];
+
 export const clubPerks = [
   { title: '5% cashback',   sub: 'on every order' },
   { title: 'Early access',  sub: 'to new drops' },

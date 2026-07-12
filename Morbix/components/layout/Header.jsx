@@ -5,11 +5,7 @@ import CartButton from './CartButton';
 import MobileNav from './MobileNav';
 
 const NAV = [
-  { label: 'Catalog', href: '/catalog' },
-  { label: 'Running', href: '/catalog?cat=running' },
-  { label: 'Athletic', href: '/catalog?cat=athletic' },
-  { label: 'Compression', href: '/catalog?cat=compression' },
-  { label: 'Lifestyle', href: '/catalog?cat=lifestyle' },
+  { label: 'Shop', href: '/catalog' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];

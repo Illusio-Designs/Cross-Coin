@@ -32,16 +32,17 @@ export default function Footer() {
 
           <div>
             <h4>Contacts</h4>
-            <ul>
-              <li><Link href="#"><Icon name="Phone" size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 8 }} />+1 800 123-45-67</Link></li>
-              <li><Link href="#"><Icon name="Mail" size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 8 }} />info@morbixsocks.com</Link></li>
-              <li><span style={{ fontSize: 14, opacity: .82 }}><Icon name="Clock" size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 8 }} />Daily 9:00 – 21:00</span></li>
+            <ul className="footer-contacts">
+              <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
+              <li><a href="mailto:support@morbixsocks.com"><Icon name="Mail" size={15} /><span>support@morbixsocks.com</span></a></li>
+              <li><span className="footer-addr"><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India</span></span></li>
             </ul>
           </div>
         </div>
 
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
+          <span className="footer-credit">Made with <span aria-label="love">❤</span> by <b>Finvera.solutions</b></span>
           <span style={{ display: 'flex', gap: 20 }}>
             <Link href="#">Privacy policy</Link>
             <Link href="#">Terms of service</Link>

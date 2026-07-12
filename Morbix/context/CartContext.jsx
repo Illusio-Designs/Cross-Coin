@@ -8,6 +8,10 @@ const KEY = 'morbix_cart';
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const openCart = useCallback(() => setOpen(true), []);
+  const closeCart = useCallback(() => setOpen(false), []);
 
   // Hydrate from localStorage on mount (client only)
   useEffect(() => {
@@ -31,9 +35,11 @@ export function CartProvider({ children }) {
       if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
       return [...prev, {
         key, id: product.id, slug: product.slug, name: product.name,
-        price: product.price, image: product.image || null, size, qty,
+        price: product.price, oldPrice: product.oldPrice || null,
+        image: product.image || null, size, qty,
       }];
     });
+    setOpen(true); // auto-open the drawer on add, like the Crosscoin flow
   }, []);
 
   const remove = useCallback((key) => setItems((prev) => prev.filter((i) => i.key !== key)), []);
@@ -45,7 +51,7 @@ export function CartProvider({ children }) {
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, add, remove, setQty, clear, count, subtotal, ready }}>
+    <CartContext.Provider value={{ items, add, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}>
       {children}
     </CartContext.Provider>
   );

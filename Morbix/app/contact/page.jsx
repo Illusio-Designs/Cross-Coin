@@ -3,9 +3,10 @@ import Icon from '@/components/Icon';
 export const metadata = { title: 'Contact' };
 
 const DETAILS = [
-  { icon: 'Phone', label: 'Phone', value: '+1 800 123-45-67' },
-  { icon: 'Mail', label: 'Email', value: 'info@morbixsocks.com' },
-  { icon: 'Clock', label: 'Hours', value: 'Daily 9:00 – 21:00' },
+  { icon: 'Phone', label: 'Phone', value: '+91 97128 91700' },
+  { icon: 'Mail', label: 'Email', value: 'support@morbixsocks.com' },
+  { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
+  { icon: 'Clock', label: 'Hours', value: 'Mon – Sat, 9:00 – 21:00' },
 ];
 
 export default function ContactPage() {
