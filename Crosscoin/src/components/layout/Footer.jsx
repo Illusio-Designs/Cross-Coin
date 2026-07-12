@@ -142,7 +142,7 @@ const Footer = () => {
         <span className="footer__copyright">© {year ?? ''} CrossCoin. All rights reserved.</span>
         <span className="footer__credit">
           Made with <span role="img" aria-label="love">❤️</span> by&nbsp;
-          <span>Finvera.solutions</span>
+          <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a>
         </span>
       </div>
 

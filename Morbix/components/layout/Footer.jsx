@@ -42,7 +42,7 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
-          <span className="footer-credit">Made with <span aria-label="love">❤</span> by <b>Finvera.solutions</b></span>
+          <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           <span style={{ display: 'flex', gap: 20 }}>
             <Link href="#">Privacy policy</Link>
             <Link href="#">Terms of service</Link>
