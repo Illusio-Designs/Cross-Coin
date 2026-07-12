@@ -177,15 +177,8 @@ export function Footer() {
         <div className="mx-auto flex max-w-[1480px] flex-col items-center justify-between gap-3 px-6 py-5 text-[9px] uppercase tracking-[0.32em] text-white/35 md:flex-row md:px-12 lg:px-20">
           <p>© {year} Velquira · 19.0544° N, 72.8406° E</p>
           <p>
-            Crafted by{' '}
-            <a
-              href="https://illusiodesigns.agency/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gold/70 transition-colors hover:text-gold"
-            >
-              Illusio Designs
-            </a>
+            Made with <span className="text-gold/70">❤</span> by{' '}
+            <span className="text-gold/70">Finvera.solutions</span>
           </p>
         </div>
       </div>

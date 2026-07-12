@@ -25,6 +25,14 @@ export default function AddToCart({ product, size = 'M', display = 'full', qty =
     );
   }
 
+  if (display === 'bar') {
+    return (
+      <button className={`pcard-add-btn${added ? ' added' : ''}`} onClick={onAdd}>
+        {added ? <>Added <Icon name="ShieldCheck" size={15} /></> : <>Add to cart <Icon name="ShoppingBag" size={15} /></>}
+      </button>
+    );
+  }
+
   return (
     <button className="btn btn-primary" style={{ width: '100%' }} onClick={onAdd}>
       {added ? <>Added <Icon name="ShieldCheck" size={16} /></> : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}

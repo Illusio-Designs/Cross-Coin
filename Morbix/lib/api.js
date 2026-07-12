@@ -11,7 +11,7 @@
  */
 import {
   products, bestsellers, categoryChips, categoryBanners,
-  heroFeatures, technologies, clubPerks, reviews,
+  heroFeatures, technologies, clubPerks, reviews, blogPosts,
 } from './mockData';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -74,6 +74,10 @@ export async function getCategories() {
 export async function getProductReviews(/* slug */) {
   // Mock pool for now; wire to /api/products/:id/reviews when USE_MOCK is off.
   return reviews;
+}
+
+export async function getBlogPosts() {
+  return blogPosts;
 }
 
 // Static content — always frontend-defined for now

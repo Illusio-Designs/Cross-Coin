@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/Icon';
 import MorbixLogo from '@/components/MorbixLogo';
+import { useCart } from '@/context/CartContext';
 
 export default function MobileNav({ items = [] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { openCart } = useCart();
 
   // Close the drawer on route change
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -40,7 +42,7 @@ export default function MobileNav({ items = [] }) {
         </nav>
         <div className="drawer-foot">
           <Link href="/account" className="btn btn-ghost" onClick={() => setOpen(false)}><Icon name="User" size={16} /> Sign in</Link>
-          <Link href="/cart" className="btn btn-primary" onClick={() => setOpen(false)}><Icon name="ShoppingBag" size={16} /> Cart</Link>
+          <button type="button" className="btn btn-primary" onClick={() => { setOpen(false); openCart(); }}><Icon name="ShoppingBag" size={16} /> Cart</button>
         </div>
       </aside>
     </>
