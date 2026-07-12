@@ -4,6 +4,7 @@ import SmoothScroll from '@/components/SmoothScroll';
 import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import CartDrawer from '@/components/cart/CartDrawer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }) {
             <Header />
             <main id="main">{children}</main>
             <Footer />
+            <CartDrawer />
           </SmoothScroll>
         </CartProvider>
       </body>

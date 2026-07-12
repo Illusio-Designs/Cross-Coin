@@ -134,10 +134,8 @@ export default function Footer() {
             ))}
           </div>
           <p className="tracking-wider">
-            Made by{' '}
-            <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer" className="text-paper hover:underline underline-offset-4">
-              Illusio Designs
-            </a>
+            Made with <span aria-label="love">❤</span> by{' '}
+            <span className="text-paper">Finvera.solutions</span>
           </p>
         </div>
       </div>
