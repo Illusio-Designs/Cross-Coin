@@ -4,6 +4,11 @@ const isDev = process.env.NODE_ENV !== 'production';
 const nextConfig = {
   images: {
     domains: ['images.unsplash.com', 'plus.unsplash.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'ik.imagekit.io' },
+      { protocol: 'https', hostname: 'api.crosscoin.in' },
+      { protocol: 'https', hostname: 'crosscoin.in' },
+    ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
   },

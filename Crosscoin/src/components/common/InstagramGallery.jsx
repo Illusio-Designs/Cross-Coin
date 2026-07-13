@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/router";
 import { getInstagramFeed } from "../../services/publicApi";
+import Skeleton from "./Skeleton";
+import { ikTransform } from "../../utils/imageUtils";
 
 const InstagramGallery = () => {
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ const InstagramGallery = () => {
     await addToCart(payload, null, null, 1, null, payload.images);
   };
 
-  if (loading) return <div className="instagram-gallery__state">Loading Instagram feed...</div>;
+  if (loading) return <div className="instagram-gallery__state"><Skeleton height={320} style={{ borderRadius: 12 }} /></div>;
   if (error) return <div className="instagram-gallery__state">{error}</div>;
 
   return (
@@ -60,7 +62,7 @@ const InstagramGallery = () => {
             <div className="instagram-gallery__item" key={post.id}>
               <a href={post.permalink} target="_blank" rel="noreferrer" className="instagram-gallery__link" aria-label="View Instagram post">
                 {imageUrl ? (
-                  <img src={imageUrl} alt={post.caption || "Instagram post"} className="instagram-gallery__image" />
+                  <img src={ikTransform(imageUrl, 500)} alt={post.caption || "Instagram post"} className="instagram-gallery__image" loading="lazy" />
                 ) : (
                   <div className="instagram-gallery__placeholder">No image</div>
                 )}
@@ -87,7 +89,7 @@ const InstagramGallery = () => {
                       {post.tagged_products.map((product) => (
                         <div className="instagram-gallery__product" key={`${post.id}-${product.id}`}>
                           {product.primary_image ? (
-                            <img src={product.primary_image} alt={product.name} />
+                            <img src={ikTransform(product.primary_image, 120)} alt={product.name} loading="lazy" />
                           ) : null}
                           <div>
                             <h4>{product.name}</h4>

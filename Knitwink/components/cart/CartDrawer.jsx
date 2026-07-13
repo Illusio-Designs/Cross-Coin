@@ -821,7 +821,7 @@ export function CartDrawer() {
                     }
                   }}
                 >
-                  {isProcessing ? 'Loading...' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
+                  {isProcessing ? 'Please wait…' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
                 </button>
               ) : (
                 <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>Maximum retries reached. Please start a new order.</p>

@@ -15,9 +15,14 @@ export function AnnouncementBar() {
     <div
       className={`w-full overflow-hidden bg-brand-black transition-all duration-300 ${hidden ? 'h-0 opacity-0' : 'h-8 opacity-100'}`}
     >
-      <div className="flex h-8 items-center justify-center px-4">
-        <p className="text-center text-xs text-white">
-          Free Shipping on Orders over ₹599 &nbsp;·&nbsp; Easy Returns &nbsp;·&nbsp; 100% Authentic
+      <div className="flex h-8 items-center justify-center px-3">
+        {/* One line on every width — the fixed h-8 + overflow-hidden clipped
+            the wrapped second line on phones. Slightly smaller + nowrap on
+            mobile so the full message fits; shorter separators on small. */}
+        <p className="whitespace-nowrap text-center text-[10px] text-white sm:text-xs">
+          Free Shipping over ₹599
+          <span className="mx-1.5 sm:mx-2">·</span>Easy Returns
+          <span className="mx-1.5 sm:mx-2">·</span>100% Authentic
         </p>
       </div>
     </div>

@@ -9,17 +9,20 @@ import { getPublicSliders } from '@/lib/api/sliders';
    product flacon placeholder, CTA, indicators) so the page never
    shows a blank gap. If the API returns nothing, HeroBanner itself
    returns null and the next homepage section moves up. */
-export default function Hero3DWrapper() {
-  const [slides, setSlides]   = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function Hero3DWrapper({ initialSlides = null }) {
+  // Seed from server-provided slides so the hero ships in the initial HTML.
+  const hasSeed = Array.isArray(initialSlides) && initialSlides.length > 0;
+  const [slides, setSlides]   = useState(initialSlides || []);
+  const [loading, setLoading] = useState(!hasSeed);
 
   useEffect(() => {
+    if (hasSeed) return; // SSR already provided the slides; skip the client fetch
     let alive = true;
     getPublicSliders()
       .then((s) => { if (alive && Array.isArray(s)) setSlides(s); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [initialSlides]);
 
   if (loading) return <HeroSkeleton />;
   return <HeroBanner slides={slides} />;

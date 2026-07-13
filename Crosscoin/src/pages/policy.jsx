@@ -39,7 +39,7 @@ export default function Policy({ initialPolicy = null, initialSlug = null } = {}
       <div className="pol-hero">
         <span className="pol-hero-badge">Legal</span>
         <h1 className="pol-hero-title">
-          {loading ? "Loading…" : policy?.title || "Policy"}
+          {loading ? "Policy" : policy?.title || "Policy"}
         </h1>
         <p className="pol-hero-sub">
           Please read this policy carefully before using our services.

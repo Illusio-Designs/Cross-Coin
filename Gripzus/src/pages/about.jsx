@@ -8,8 +8,8 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { y: '2022', t: 'A studio, one machine', e: 'Started in Ahmedabad with a single circular machine and a stubborn idea: a sock should hold the foot.' },
-  { y: '2023', t: 'First 500-pair run',    e: 'The Performance Trail launched at one store in Bandra. Sold out in eleven days; the wait list opened.' },
+  { y: '2022', t: 'A studio, one machine', e: 'Started in Morbi, Gujarat with a single circular machine and a stubborn idea: a sock should hold the foot.' },
+  { y: '2023', t: 'First 500-pair run',    e: 'The Performance Trail launched at one store in Morbi. Sold out in eleven days; the wait list opened.' },
   { y: '2024', t: 'Heritage Charcoal',     e: 'Dress socks added — hidden-seam toes, a low-stretch arch. Stocked at 22 boutiques across India.' },
   { y: '2025', t: 'The Merino edit',       e: 'Three years of testing the merino-tencel blend through real winters. Released to members first.' },
   { y: '2026', t: 'Gripzus, direct',       e: 'Atelier to door. The same pairs, the same hands — without the boutique markup.' },
@@ -35,7 +35,7 @@ export default function AboutPage() {
                 Knit with <span className="h-italic text-clay">intention.</span>
               </h1>
               <p className="prose-body text-base md:text-lg mt-6 max-w-xl text-justify">
-                Gripzus is a small atelier in Ahmedabad, obsessed with one quiet question —
+                Gripzus is a small atelier in Morbi, Gujarat, obsessed with one quiet question —
                 how should a sock hold the foot? Three fibres, hand-linked toes, runs of five
                 hundred. Sold while they last, then knit again, slowly.
               </p>
@@ -85,7 +85,7 @@ export default function AboutPage() {
               That a pair worn for a year should be more interesting at the end of it, not less.
             </p>
             <p className="prose-body text-base md:text-lg text-justify">
-              We knit on circular machines in an Ahmedabad workshop, finish every pair by hand,
+              We knit on circular machines in a Morbi workshop, finish every pair by hand,
               and ship them in batches small enough that we still know the names of the people
               on the floor. We do not chase seasons. We make the same pair better, every run.
             </p>

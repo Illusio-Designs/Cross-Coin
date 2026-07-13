@@ -59,7 +59,7 @@ export default function Footer() {
           <div className="col-span-12 md:col-span-3">
             <div className="aspect-[3/4] rounded-2xl overflow-hidden">
               <img
-                src="/footer.png"
+                src="/footer.webp"
                 alt="Velmique"
                 className="w-full h-full object-cover"
               />
@@ -90,7 +90,7 @@ export default function Footer() {
                 Maison de Parfum<br />for Modern Living
               </p>
               <p className="text-white/40 text-[10px] tracking-[0.25em] uppercase font-body mt-3">
-                14 Pali Hill, Bandra West<br />Mumbai 400050
+                Royal Plaza, Panchasar Road<br />Morbi - 363641, Gujarat, India
               </p>
             </div>
 
@@ -152,16 +152,16 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-[var(--gold-light)] transition-colors">Terms Of Use</Link>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-body tracking-wider text-white/40">
-            <span>Crafted with</span>
+            <span>Made with</span>
             <span className="text-[var(--gold-light)]">❤</span>
             <span>by</span>
             <a
-              href="https://illusiodesigns.agency/"
+              href="https://finvera.solutions"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-white/85 underline underline-offset-2 transition-colors hover:text-[var(--gold-light)]"
             >
-              Illusio Designs
+              Finvera.solutions
             </a>
           </div>
         </div>

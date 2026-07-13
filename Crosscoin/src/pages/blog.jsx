@@ -4,6 +4,7 @@ import SeoWrapper from '../console/SeoWrapper';
 import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { getBlogImageSrc } from '../utils/imageUtils';
+import Skeleton from '../components/common/Skeleton';
 
 const LIMIT = 12;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -144,25 +145,20 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
           ))}
         </div>
 
-        {/* Tag Filter */}
-        {tags.length > 0 && (
-          <div className="blog-category-filter" style={{ marginTop: 8 }}>
-            {tags.map(t => (
-              <button
-                key={t.id}
-                className={`filter-btn ${activeTag === t.slug ? 'active' : ''}`}
-                style={{ fontSize: 12 }}
-                onClick={() => handleTagChange(t.slug)}
-              >
-                #{t.name}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Blog Grid */}
         {loading && posts.length === 0 ? (
-          <div className="blog-no-results"><p>Loading articles...</p></div>
+          <div className="blog-page-grid">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="blog-card-home">
+                <div className="bc-img-wrap"><Skeleton height={200} /></div>
+                <div className="bc-body" style={{ display: 'grid', gap: 10, padding: 16 }}>
+                  <Skeleton type="text" width="90%" height="20px" />
+                  <Skeleton type="text" width="100%" height="14px" />
+                  <Skeleton type="text" width="60%" height="14px" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="blog-page-grid">
             {posts.map((post) => {
@@ -171,13 +167,12 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
                 try { sections = JSON.parse(sections); } catch { sections = []; }
               }
               const preview = sections[0]?.content ? stripHtml(sections[0].content) : '';
-              const postTags = post.Tags || post.BlogTags || [];
 
               return (
               <div
                 key={post.id}
                 className="blog-card-home"
-                onClick={() => router.push(`/blog-details?slug=${post.slug}`)}
+                onClick={() => router.push(`/blog/${post.slug}`)}
               >
                 <div className="bc-img-wrap">
                   {post.hero_image
@@ -210,11 +205,6 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
                       </div>
                     )}
                   </div>
-                  <div className="bc-tags">
-                    {postTags.slice(0, 3).map(t => (
-                      <span key={t.id} className="bc-tag">{t.name}</span>
-                    ))}
-                  </div>
                   <button className="bc-btn">
                     <div className="bc-btn-inner">
                       <div className="bc-btn-icon">
@@ -237,7 +227,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
         {hasMore && (
           <div style={{ textAlign: 'center', marginTop: 32 }}>
             <button className="view-all-btn-home" onClick={handleLoadMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Load More'}
+              {loading ? '…' : 'Load More'}
             </button>
           </div>
         )}

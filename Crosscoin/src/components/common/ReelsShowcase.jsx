@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicReels, incrementReelView } from "../../services/publicApi";
+import Skeleton from "./Skeleton";
+import { ikTransform } from "../../utils/imageUtils";
 
 const ReelsShowcase = () => {
   const router = useRouter();
@@ -73,7 +75,7 @@ const ReelsShowcase = () => {
     await addToCart(payload, null, null, 1, null, payload.images);
   };
 
-  if (loading) return <div className="reels-loading">Loading reels...</div>;
+  if (loading) return <div className="reels-loading"><Skeleton height={360} style={{ borderRadius: 12 }} /></div>;
   if (error) return <div className="reels-error">{error}</div>;
 
   return (
@@ -99,7 +101,7 @@ const ReelsShowcase = () => {
                 {(reel.Products || []).map((product) => (
                   <div key={`${reel.id}-${product.id}`} className="reels-product-card">
                     {product.primary_image ? (
-                      <img src={product.primary_image} alt={product.name} className="reels-product-image" />
+                      <img src={ikTransform(product.primary_image, 120)} alt={product.name} className="reels-product-image" loading="lazy" />
                     ) : null}
                     <div className="reels-product-meta">
                       <p className="reels-product-name">{product.name}</p>

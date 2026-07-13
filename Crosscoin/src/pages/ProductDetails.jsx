@@ -14,6 +14,7 @@ import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
 import { richHtml } from '../utils/sanitizeHtml';
+import { ikTransform } from '../utils/imageUtils';
 export default function ProductDetails({ initialProduct = null, initialSlug = null, productFaqs = [], globalFaqs = [] } = {}) {
   const router = useRouter();
   // The slug-based route (/products/[slug]) passes initialSlug as a prop.
@@ -372,7 +373,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
                   onClick={() => setSelectedImage(idx)}
                   aria-label={`View image ${idx + 1}`}
                 >
-                  <img src={img} alt={`View ${idx + 1}`} />
+                  <img src={ikTransform(img, 120)} alt={`View ${idx + 1}`} loading="lazy" />
                 </button>
               ))}
             </div>
@@ -383,7 +384,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
                 aria-label="View full image"
                 type="button"
               >
-                <img src={galleryImages[selectedImage] || galleryImages[0]} alt={productData.title} />
+                <img src={ikTransform(galleryImages[selectedImage] || galleryImages[0], 900)} alt={productData.title} fetchpriority="high" loading="eager" />
                 {productData.styleNo && (
                   <span className="pdt-style-badge">Style: #{productData.styleNo}</span>
                 )}
@@ -442,7 +443,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
             <button className="pdt-lightbox-close" onClick={() => setShowLightbox(false)} aria-label="Close" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             <button className="pdt-lightbox-arrow pdt-lightbox-prev" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }} aria-label="Previous image" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
             <div className="pdt-lightbox-img-wrap" onClick={e => e.stopPropagation()}>
-              <img src={galleryImages[lightboxIndex]} alt={`${productData.title} ${lightboxIndex + 1}`} />
+              <img src={ikTransform(galleryImages[lightboxIndex], 1600)} alt={`${productData.title} ${lightboxIndex + 1}`} />
             </div>
             <button className="pdt-lightbox-arrow pdt-lightbox-next" onClick={e => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % galleryImages.length); }} aria-label="Next image" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
           </div>
@@ -734,7 +735,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
       {/* ── Sticky Bar ── */}
       <div className={`pdt-sticky${showStickyBar ? ' visible' : ''}`}>
         <div className="pdt-sticky-info">
-          <img src={galleryImages[0] || productData.images?.[0]} alt={productData.title} className="pdt-sticky-img" />
+          <img src={ikTransform(galleryImages[0] || productData.images?.[0], 100)} alt={productData.title} className="pdt-sticky-img" loading="lazy" />
           <div>
             <div className="pdt-sticky-name">{productData.title}</div>
             <div className="pdt-sticky-price">&#8377;{productData.price.toFixed(2)}</div>

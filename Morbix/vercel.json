@@ -1,0 +1,19 @@
+{
+  "framework": "nextjs",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" != \"production\" ]; then exit 0; fi; git diff --quiet HEAD^ HEAD .",
+  "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
+    "NEXT_PUBLIC_BRAND_NAME": "morbix",
+    "NEXT_PUBLIC_SITE_NAME": "Morbix",
+    "NEXT_PUBLIC_USE_MOCK": "true"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
+      "NEXT_PUBLIC_BRAND_NAME": "morbix",
+      "NEXT_PUBLIC_SITE_NAME": "Morbix",
+      "NEXT_PUBLIC_USE_MOCK": "true"
+    }
+  }
+}

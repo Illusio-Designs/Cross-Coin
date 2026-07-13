@@ -108,7 +108,7 @@ export function ContactPageClient() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Address</p>
-                  <p className="mt-0.5 text-sm font-medium text-brand-black">Mumbai, Maharashtra, India</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)</p>
                 </div>
               </div>
             </div>

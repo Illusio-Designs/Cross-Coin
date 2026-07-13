@@ -9,7 +9,16 @@ const fsSync = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const multer = require('multer');
 const imagekitService = require('../services/imagekitService.js');
+const cacheManager = require('../services/cacheManager.js');
 const { logger } = require('../config/logging.js');
+
+// Public sliders rarely change but are fetched on every homepage load. Cache
+// the fully-built response per brand and invalidate whenever a slider (or its
+// brand assignment) is created/updated/deleted — same pattern as products and
+// categories. Wiping all brand keys on any write keeps it simple and correct
+// for the many-to-many slider↔brand relationship.
+const sliderCacheKey = (brandName) => `sliders:public:${(brandName || 'all').toLowerCase()}`;
+const invalidateSliderCache = () => cacheManager.invalidate('sliders:public:*');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
@@ -79,7 +88,9 @@ const createSlider = async (req, res) => {
                 brand_id: brandIdToUse,
             });
 
-            res.status(201).json({ 
+            await invalidateSliderCache();
+
+            res.status(201).json({
                 success: true, 
                 message: 'Slider created successfully', 
                 data: slider 
@@ -266,7 +277,9 @@ const updateSlider = async (req, res) => {
         // Update slider
         await slider.update(updateData);
 
-        res.status(200).json({ 
+        await invalidateSliderCache();
+
+        res.status(200).json({
             success: true,
             message: 'Slider updated successfully',
             data: slider
@@ -286,7 +299,16 @@ const getPublicSliders = async (req, res) => {
     try {
         // Get brand from header
         const brandName = req.headers['x-brand-name'];
-        
+
+        // Serve from cache when available (falls through to the query on a
+        // cache miss or when Redis is unavailable — cacheManager is graceful).
+        const cacheKey = sliderCacheKey(brandName);
+        const cached = await cacheManager.get(cacheKey);
+        if (cached) {
+            res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
+            return res.status(200).json({ sliders: cached });
+        }
+
         let includeOptions = [
             {
                 model: Category,
@@ -354,7 +376,9 @@ const getPublicSliders = async (req, res) => {
             return sliderData;
         });
 
-        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        await cacheManager.set(cacheKey, slidersResponse, cacheManager.TTL.SLIDERS);
+
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
         res.status(200).json({ sliders: slidersResponse });
     } catch (error) {
         logger.error('Get public sliders error:', error);
@@ -379,9 +403,11 @@ const deleteSlider = async (req, res) => {
 
         await slider.destroy();
 
-        res.json({ 
-            success: true, 
-            message: 'Slider deleted successfully' 
+        await invalidateSliderCache();
+
+        res.json({
+            success: true,
+            message: 'Slider deleted successfully'
         });
     } catch (error) {
         logger.error('Error deleting slider:', error);
@@ -430,6 +456,7 @@ async function assignSliderToBrands(req, res) {
         await SliderBrand.destroy({ where: { slider_id: id } });
 
         if (brand_ids.length === 0) {
+            await invalidateSliderCache();
             return res.status(200).json({ success: true, message: 'All brand assignments removed', data: { slider_id: id, assignments: [] } });
         }
 
@@ -455,6 +482,8 @@ async function assignSliderToBrands(req, res) {
                 status: 'active'
             });
         }
+
+        await invalidateSliderCache();
 
         res.status(200).json({
             success: true,
@@ -494,6 +523,8 @@ async function removeSliderFromBrand(req, res) {
         }
 
         await sliderBrand.destroy();
+
+        await invalidateSliderCache();
 
         res.status(200).json({
             success: true,

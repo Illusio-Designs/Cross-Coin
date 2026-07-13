@@ -149,7 +149,7 @@ export function mapProduct(p) {
     description:    p.description || '',
     price,
     originalPrice,
-    images:         all.length ? all : ['/perfumehero.png'],
+    images:         all.length ? all : ['/perfumehero.webp'],
     category:       p.Category?.name || p.category?.name || '',
     collection:     p.Category?.name || p.category?.name || '',
     collectionName: p.Category?.name || p.category?.name || '',
@@ -216,11 +216,12 @@ export async function getBestsellers(limit = 6) {
       }
     } catch { /* ignore — falls through to plain catalog below */ }
 
-    // 2. Pull catalog using the SAME limit the shop page uses (200) so
-    //    we hit the same backend cache key. Different limits create
-    //    separate cache entries, which is why the homepage was lagging
-    //    behind the shop page after a product was updated.
-    const catalog = await getPublicProducts({ limit: 200 });
+    // 2. Pull a small catalog slice to hydrate the bestseller cards. We only
+    //    render a handful on the homepage, so fetching 200 products (the shop
+    //    page's limit) just to show 4 was a large, needless payload on every
+    //    homepage load. 48 is plenty to map the curated bestseller IDs plus
+    //    fillers while keeping the response small.
+    const catalog = await getPublicProducts({ limit: 48 });
     const all = catalog.products || [];
     if (!all.length) return [];
 

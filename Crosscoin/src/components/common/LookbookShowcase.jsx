@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import { useCart } from "../../context/CartContext";
 import { getPublicLookbooks, getPublicProductBySlug } from "../../services/publicApi";
 import ProductCard from "../products/ProductCard";
+import Skeleton from "./Skeleton";
+import { ikTransform } from "../../utils/imageUtils";
 
 const LookbookShowcase = () => {
   const router = useRouter();
@@ -58,7 +60,7 @@ const LookbookShowcase = () => {
     loadHotspotProduct(hs);
   };
 
-  if (loading) return <div className="lb-loading">Loading lookbooks...</div>;
+  if (loading) return <div className="lb-loading"><Skeleton height={420} style={{ borderRadius: 12 }} /></div>;
   if (error)   return <div className="lb-error">{error}</div>;
   if (!lookbooks.length) return <div className="lb-error">No lookbooks found.</div>;
 
@@ -99,7 +101,7 @@ const LookbookShowcase = () => {
               onClick={() => selectLookbook(lb)}>
               {isActive && <div className="lb-list-active-bar" />}
               <div className="lb-list-thumb">
-                {cover ? <img src={cover} alt={lb.title} /> : <div className="lb-list-thumb-empty" />}
+                {cover ? <img src={ikTransform(cover, 200)} alt={lb.title} loading="lazy" /> : <div className="lb-list-thumb-empty" />}
               </div>
               <div className="lb-list-info">
                 <span className="lb-list-name">{lb.title}</span>
@@ -121,7 +123,7 @@ const LookbookShowcase = () => {
                     className={`lb-thumb${activeImg === i ? ' lb-thumb--active' : ''}`}
                     aria-label={img.alt_text || `View image ${i + 1}`}
                     onClick={() => { setActiveImg(i); setActiveHotspot(null); setFullProduct(null); }}>
-                    <img src={img.image_url} alt={img.alt_text || `Image ${i + 1}`} />
+                    <img src={ikTransform(img.image_url, 160)} alt={img.alt_text || `Image ${i + 1}`} loading="lazy" />
                   </button>
                 ))}
               </div>
@@ -131,7 +133,7 @@ const LookbookShowcase = () => {
               {currentImage && (
                 <div className="lb-img-inner">
                   <img
-                    src={currentImage.image_url}
+                    src={ikTransform(currentImage.image_url, 800)}
                     alt={currentImage.alt_text || selectedLb.title}
                     className="lb-main-img"
                     width={600}
@@ -157,7 +159,7 @@ const LookbookShowcase = () => {
       {/* Col 3 — Real ProductCard */}
       <div className="lb-product-panel">
         {productLoading ? (
-          <div className="lb-panel-hint"><p>Loading product...</p></div>
+          <div className="lb-panel-hint"><Skeleton type="text" width="70%" height="16px" /></div>
         ) : !cardProduct ? (
           <div className="lb-panel-hint">
             <svg width="40" height="40" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24">

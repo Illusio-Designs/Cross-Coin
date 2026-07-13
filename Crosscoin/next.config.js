@@ -45,7 +45,10 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
+    // Cache optimized images for a year. Sources are ImageKit URLs (already
+    // content-addressed/immutable) so there's no risk of a stale image, and
+    // this stops Next from re-optimizing the same image every 60s.
+    minimumCacheTTL: 31536000,
   },
   
   compress: true,

@@ -104,7 +104,7 @@ export default function Footer() {
                   </a>
                 </li>
                 <li className="flex items-start gap-2.5 text-sm text-paper/55">
-                  <span className="mt-0.5 shrink-0 text-paper/40"><PinIcon /></span><span>Ahmedabad,<br />Gujarat, India</span>
+                  <span className="mt-0.5 shrink-0 text-paper/40"><PinIcon /></span><span>Royal Plaza, Panchasar Road,<br />Morbi - 363641, Gujarat, India</span>
                 </li>
               </ul>
             </div>
@@ -134,9 +134,9 @@ export default function Footer() {
             ))}
           </div>
           <p className="tracking-wider">
-            Made by{' '}
-            <a href="https://illusiodesigns.agency/" target="_blank" rel="noopener noreferrer" className="text-paper hover:underline underline-offset-4">
-              Illusio Designs
+            Made with <span aria-label="love">❤</span> by{' '}
+            <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" className="text-paper hover:underline underline-offset-4">
+              Finvera.solutions
             </a>
           </p>
         </div>

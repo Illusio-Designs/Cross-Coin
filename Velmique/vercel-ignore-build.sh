@@ -1,36 +1,30 @@
 #!/usr/bin/env bash
 #
-# Vercel "Ignored Build Step" for this monorepo folder.
+# Vercel "Ignored Build Step" — production-only, folder-scoped.
 #
-# Point each Vercel project at this file:
-#   Project Settings → Git → Ignored Build Step → "Custom" →
-#     bash vercel-ignore-build.sh
-#   (Root Directory must be this project's folder; Production Branch = main.)
+# Each Vercel project: Root Directory = this brand's folder; Ignored Build Step
+# (Custom) = bash vercel-ignore-build.sh
 #
-# Exit code contract (Vercel): exit 0 => SKIP the build, exit 1 => BUILD.
+#   1. Skips EVERY preview build — any non-production branch, PR, or feature
+#      branch. No preview deployments are built.
+#   2. On the Production Branch, builds ONLY when files in this folder changed,
+#      so one brand's change never rebuilds another.
 #
-# It does two things:
-#   1. Skips every deploy that is not a Production (main) deploy — so pushes to
-#      feature branches / preview deploys never build.
-#   2. On Production, builds only when THIS folder changed in the last commit —
-#      so a push to main that only touched another brand's folder is skipped.
+# Works whatever the project's Production Branch is (main, or a brand branch).
+# Vercel contract: exit 0 = SKIP the build, exit 1 = BUILD.
 
-set -o pipefail
-
-# 1) Only ever build Production (the main branch). Skip previews/branches.
+# 1) Stop all preview builds (VERCEL_ENV is "production" only for the project's
+#    Production Branch; everything else is "preview").
 if [ "$VERCEL_ENV" != "production" ]; then
-  echo "🚫 VERCEL_ENV=$VERCEL_ENV (not production) — skipping build."
+  echo "🚫 ${VERCEL_ENV:-non-production} deploy — preview build skipped."
   exit 0
 fi
 
-# 2) Build only if files in this project's Root Directory changed.
-#    Vercel runs this command from the project's Root Directory, so "." is the
-#    folder. If HEAD^ can't be resolved (shallow clone edge case) git returns
-#    non-zero and we fall through to building — the safe default.
+# 2) Production deploy: build only if this folder changed in the last commit.
 if git diff --quiet HEAD^ HEAD .; then
-  echo "🚫 No changes in this folder since the last commit — skipping build."
+  echo "🚫 Production deploy, but no changes in this folder — skipping."
   exit 0
 fi
 
-echo "✅ Changes detected in this folder — proceeding with build."
+echo "✅ Production deploy with changes in this folder — building."
 exit 1

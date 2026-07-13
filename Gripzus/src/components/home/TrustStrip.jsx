@@ -21,7 +21,7 @@ const ITEMS = [
   },
   {
     title: 'Knit small-batch',
-    note: 'Inspected pair-by-pair in Ahmedabad.',
+    note: 'Inspected pair-by-pair in Morbi.',
     icon: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2l3 6 6 .9-4.5 4.3 1 6.1L12 17l-5.5 3.3 1-6.1L3 8.9 9 8z" />

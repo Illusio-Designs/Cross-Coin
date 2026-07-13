@@ -21,10 +21,13 @@ function cleanImageUrl(url) {
 
 export async function getPublicCategories() {
   try {
-    // Use brand header — backend filters by brand
-    // Add nocache to bypass Redis cache and get fresh data
-    const res = await fetch(`${API_URL}/api/categories/listing?nocache=1`, {
+    // Use brand header — backend filters by brand. ISR-cached (5 min); no abort
+    // signal, since a signalled fetch isn't cached by Next and would force the
+    // homepage dynamic. Dropped the old ?nocache=1 — the backend now invalidates
+    // its category cache on every admin write, so bypassing it is unnecessary.
+    const res = await fetch(`${API_URL}/api/categories/listing`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
+      next: { revalidate: 300 },
     })
     if (!res.ok) return []
     const data = await res.json()
