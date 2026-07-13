@@ -177,7 +177,7 @@ export default function ProductsPage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-brand-black min-h-[240px] sm:min-h-[300px] md:min-h-[380px]">
         <ShimmerImg
-          src="/product hero.jpg"
+          src="/collection hero.jpg"
           alt="Products"
           shimmerClassName="bg-gray-800"
           className="absolute inset-0 h-full w-full object-cover opacity-60"
