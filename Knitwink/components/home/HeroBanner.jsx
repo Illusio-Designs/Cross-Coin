@@ -7,6 +7,29 @@ import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 const SLIDE_DURATION = 5000
 
+// Frontend mirror of the backend category-slug rule (same as Crosscoin's
+// collectionUrl) so a slide routes to a clean /collections/<slug> URL instead
+// of a URL-encoded category name.
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[®™©]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+// Build the redirect target for a slide from its linked category/collection.
+// Priority: explicit buttonLink → category slug → slugified category name →
+// collections index. Mirrors the Crosscoin hero-slider behaviour.
+function slideHref(slide) {
+  if (slide.buttonLink) return slide.buttonLink
+  const slug = slide.categorySlug || slide.category?.slug || slugify(slide.categoryName || slide.category?.name)
+  return slug ? `/collections/${slug}` : '/collections'
+}
+
 export function HeroBanner({ slides = [] }) {
   const [current, setCurrent] = useState(0)
   const [progress, setProgress] = useState(0)
@@ -42,7 +65,7 @@ export function HeroBanner({ slides = [] }) {
   }
 
   const slide = slides[current]
-  const buttonHref = slide.buttonLink || (slide.categoryName ? `/collections/${encodeURIComponent(slide.categoryName)}` : '/collections')
+  const buttonHref = slideHref(slide)
 
   return (
     <section
