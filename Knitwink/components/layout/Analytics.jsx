@@ -51,11 +51,11 @@ export default function Analytics() {
     return () => { cancelled = true; };
   }, []);
 
-  if (!cfg) return null;
-
-  const ga4Id = cfg.ga4_measurement_id || cfg.GA4_MEASUREMENT_ID;
-  const fbPixelId = cfg.fb_pixel_id || cfg.FB_PIXEL_ID;
-  const clarityId = cfg.clarity_id || cfg.CLARITY_ID;
+  const ga4Id = cfg?.ga4_measurement_id || cfg?.GA4_MEASUREMENT_ID;
+  // Meta Pixel — prefer the backend-configured id, otherwise fall back to the
+  // Knitwink pixel so tracking fires even when tracking-config has none set.
+  const fbPixelId = cfg?.fb_pixel_id || cfg?.FB_PIXEL_ID || '1029243193162708';
+  const clarityId = cfg?.clarity_id || cfg?.CLARITY_ID;
 
   return (
     <>
