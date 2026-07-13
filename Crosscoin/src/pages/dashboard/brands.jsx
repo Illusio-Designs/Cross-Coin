@@ -3,7 +3,7 @@ export { default } from './index';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { brandService } from '../../services';
+import { brandService, brandSettingsService } from '../../services';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
@@ -19,6 +19,7 @@ const IC = {
   toggle: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="16" cy="12" r="3" fill="currentColor"/></svg>,
   toggleOff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="8" cy="12" r="3" fill="currentColor"/></svg>,
   brand: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  copy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
 };
 
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
@@ -44,6 +45,51 @@ export function BrandManager() {
   // Invalidate after mutations instead of manual re-fetch.
   const refetchBrands = () => queryClient.invalidateQueries({ queryKey: queryKeys.brandsAdmin });
   const fetchBrands = refetchBrands;  // legacy callers
+
+  // ── Settings completeness vs the Crosscoin reference brand ──────────
+  // Crosscoin holds the canonical set of brand-setting keys. For every other
+  // brand we fetch its settings once and count how many of Crosscoin's keys
+  // are still missing ("pending"), so the ops team can see at a glance which
+  // brands aren't fully configured yet.
+  const referenceBrand = brands.find(
+    b => b.slug?.toLowerCase() === 'crosscoin' || b.name?.toLowerCase() === 'crosscoin'
+  );
+
+  const { data: settingsByBrand = {} } = useQuery({
+    queryKey: ['brandSettingsCompleteness', brands.map(b => b.id).sort().join(',')],
+    enabled: brands.length > 0,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const entries = await Promise.all(brands.map(async (b) => {
+        try {
+          const res = await brandSettingsService.getAllSettings(b.id);
+          const list = res?.success ? (res.data || []) : (Array.isArray(res) ? res : []);
+          return [b.id, list.map(s => s.key)];
+        } catch { return [b.id, []]; }
+      }));
+      return Object.fromEntries(entries);
+    },
+  });
+
+  const referenceKeys = referenceBrand ? (settingsByBrand[referenceBrand.id] || []) : [];
+  const pendingFor = (brand) => {
+    if (!referenceBrand || referenceKeys.length === 0 || brand.id === referenceBrand.id) return null;
+    const have = new Set(settingsByBrand[brand.id] || []);
+    return referenceKeys.filter(k => !have.has(k)).length;
+  };
+  const totalPending = brands.reduce((sum, b) => sum + (pendingFor(b) || 0), 0);
+
+  // ── Product-feed URLs (Google Merchant + Meta catalog) per brand ────
+  // Both platforms ingest the same Google-format feed served by each
+  // storefront at /google-merchant.xml, scoped to that brand.
+  const feedUrl = (brand) => {
+    const d = (brand.domain || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    return d ? `https://${d}/google-merchant.xml` : null;
+  };
+  const copyText = (text) => {
+    if (!text) return;
+    try { navigator.clipboard?.writeText(text); showSuccess('Copied to clipboard'); } catch { /* ignore */ }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -104,6 +150,7 @@ export function BrandManager() {
         <StatTile label="Total brands" value={brands.length} tone="info" />
         <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} tone="good" />
         <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} tone="warn" />
+        <StatTile label="Settings pending" value={totalPending} tone={totalPending > 0 ? 'warn' : 'good'} />
       </StatGrid>
 
       <Panel style={{ marginBottom: 16 }}>
@@ -225,6 +272,47 @@ export function BrandManager() {
                     <span className="brand-swatch" style={{ backgroundColor: brand.secondary_color }} title={brand.secondary_color} />
                   </span>
                 </div>
+
+                {/* Settings completeness vs the Crosscoin reference brand */}
+                {brand.id === referenceBrand?.id ? (
+                  <div className="brand-detail-row">
+                    <span className="brand-detail-key">Settings</span>
+                    <span className="brand-detail-val" style={{ color: '#2563eb', fontWeight: 600 }}>Reference brand</span>
+                  </div>
+                ) : pendingFor(brand) !== null && (
+                  <div className="brand-detail-row">
+                    <span className="brand-detail-key">Settings</span>
+                    <span className="brand-detail-val" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: pendingFor(brand) === 0 ? '#16a34a' : '#d97706' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: pendingFor(brand) === 0 ? '#16a34a' : '#d97706' }} />
+                      {pendingFor(brand) === 0 ? 'All configured' : `${pendingFor(brand)} of ${referenceKeys.length} pending`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Google Merchant / Meta catalog product-feed URLs */}
+                {feedUrl(brand) ? (
+                  <>
+                    <div className="brand-detail-row">
+                      <span className="brand-detail-key">Google feed</span>
+                      <span className="brand-detail-val" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <a href={feedUrl(brand)} target="_blank" rel="noopener noreferrer" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{feedUrl(brand)}</a>
+                        <button type="button" className="sl-btn-edit" title="Copy Google feed URL" onClick={() => copyText(feedUrl(brand))} style={{ flexShrink: 0 }}>{IC.copy}</button>
+                      </span>
+                    </div>
+                    <div className="brand-detail-row">
+                      <span className="brand-detail-key">Facebook feed</span>
+                      <span className="brand-detail-val" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <a href={feedUrl(brand)} target="_blank" rel="noopener noreferrer" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{feedUrl(brand)}</a>
+                        <button type="button" className="sl-btn-edit" title="Copy Facebook feed URL" onClick={() => copyText(feedUrl(brand))} style={{ flexShrink: 0 }}>{IC.copy}</button>
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="brand-detail-row">
+                    <span className="brand-detail-key">Feeds</span>
+                    <span className="brand-detail-val" style={{ color: '#9ca3af', fontStyle: 'italic' }}>Add a domain to generate feed URLs</span>
+                  </div>
+                )}
               </div>
               <div className="brand-card-footer-new">
                 <span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span>
