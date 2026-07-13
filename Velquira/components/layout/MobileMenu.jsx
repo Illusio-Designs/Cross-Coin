@@ -54,11 +54,11 @@ export function MobileMenu() {
             aria-modal="true"
             aria-label="Menu"
           >
-            <div className="flex items-center justify-between border-b border-gold/25 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-line px-6 py-5">
               <VelquiraLogo layout="stacked" size="sm" showTagline />
               <button
                 onClick={closeMobileMenu}
-                className="flex h-10 w-10 items-center justify-center border border-gold/30 text-brand-black/70 transition-colors hover:border-gold hover:text-gold"
+                className="flex h-10 w-10 items-center justify-center border border-line text-brand-black/70 transition-colors hover:border-ink hover:text-ink"
                 aria-label="Close"
               >
                 <X size={18} strokeWidth={1.3} />
@@ -73,10 +73,10 @@ export function MobileMenu() {
                     <Link
                       href={cat.href}
                       onClick={closeMobileMenu}
-                      className="group flex items-baseline gap-3 border-b border-gold/10 py-3"
+                      className="group flex items-baseline gap-3 border-b border-line py-3"
                     >
                       <span className="text-[10px] tabular-nums text-gold/55">{String(i + 1).padStart(2, '0')}</span>
-                      <span className="font-display text-2xl text-brand-black transition-colors group-hover:text-gold-deep">
+                      <span className="font-display text-2xl font-semibold tracking-[-0.02em] text-brand-black transition-colors group-hover:text-gold-deep">
                         {cat.label}
                       </span>
                     </Link>
@@ -100,7 +100,7 @@ export function MobileMenu() {
               </ul>
             </div>
 
-            <div className="border-t border-gold/25 bg-cream/50 px-6 py-5">
+            <div className="border-t border-line bg-paper px-6 py-5">
               <ul className="flex flex-wrap gap-x-5 gap-y-2">
                 {FOOTER_LINKS.map((link) => (
                   <li key={link.href}>

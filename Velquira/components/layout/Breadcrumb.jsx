@@ -5,15 +5,15 @@ import Link from 'next/link'
 
 const SEGMENT_LABELS = {
   collections: 'Collections',
-  products: 'Pieces',
-  cart: 'Bag',
+  products: 'Products',
+  cart: 'Cart',
   account: 'Account',
   orders: 'Orders',
   settings: 'Settings',
   login: 'Sign In',
   register: 'Register',
-  about: 'The House',
-  journal: 'Lustre',
+  about: 'About',
+  journal: 'Journal',
   contact: 'Contact',
   search: 'Search',
   wishlist: 'Wishlist',
@@ -36,12 +36,12 @@ export function Breadcrumb() {
   }))
 
   return (
-    <nav aria-label="Breadcrumb" className="border-b border-gold/10 bg-[#faf5eb]">
-      <div className="mx-auto flex max-w-[1480px] items-center px-6 py-3 md:px-12">
+    <nav aria-label="Breadcrumb" className="border-b border-line bg-paper">
+      <div className="vq-container flex items-center py-3">
         <ol className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] uppercase tracking-[0.34em]">
           <li>
             <Link href="/" className="text-brand-black/40 transition-colors hover:text-gold">
-              Maison
+              Home
             </Link>
           </li>
           {crumbs.map((crumb, i) => {
@@ -50,7 +50,7 @@ export function Breadcrumb() {
               <li key={crumb.href} className="flex items-center gap-3">
                 <span className="vq-diamond opacity-50" style={{ width: 3, height: 3 }} aria-hidden />
                 {isLast ? (
-                  <span className="font-display text-[11px] normal-case tracking-normal text-brand-black" aria-current="page">
+                  <span className="font-display text-[11px] font-semibold normal-case tracking-normal text-brand-black" aria-current="page">
                     {crumb.label}
                   </span>
                 ) : (

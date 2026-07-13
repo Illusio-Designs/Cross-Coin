@@ -25,7 +25,7 @@ const Input = forwardRef(
           ref={ref}
           id={inputId}
           className={cn(
-            'w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 transition-colors duration-150',
+            'w-full rounded-lg border border-gray-200 bg-cream px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 transition-colors duration-150',
             'focus:border-brand-black focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage',
             error && 'border-error focus:border-error',
             className

@@ -7,12 +7,50 @@ import { useWishlistStore } from '@/store/wishlistStore'
 import { StickyATCBar } from './StickyATCBar'
 import { formatPrice, cn } from '@/lib/utils'
 import { getProductReviews } from '@/lib/api/reviews'
-import { ShoppingBag, Star, Heart } from 'lucide-react'
+import { Star, Heart, Minus, Plus, ChevronDown } from 'lucide-react'
 
 function seedNum(id, min, max) {
   let h = 0
   for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0
   return min + Math.abs(h) % (max - min + 1)
+}
+
+/* Hairline accordion row — no boxes, only a top divider. */
+function AccordionRow({ title, children, open, onToggle }) {
+  return (
+    <div className="border-t border-line">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-ink">
+          {title}
+        </span>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.4}
+          className={cn(
+            'shrink-0 text-text-muted transition-transform duration-300',
+            open && 'rotate-180 text-gold'
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          'grid transition-all duration-500 ease-out',
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="pb-6 text-[14px] leading-[1.8] text-text-muted">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function ProductInfo({ product, onColorChange }) {
@@ -21,6 +59,8 @@ export function ProductInfo({ product, onColorChange }) {
   )
   const [addedFeedback, setAddedFeedback] = useState(false)
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
+  const [quantity, setQuantity] = useState(1)
+  const [openPanel, setOpenPanel] = useState('description')
 
   /* Pull real review data so the rating row reflects actual customer
      reviews instead of a hardcoded score. */
@@ -103,7 +143,7 @@ export function ProductInfo({ product, onColorChange }) {
       color: activeColor.name,
       size: 'Free Size',
       price: product.price,
-      quantity: 1,
+      quantity,
       imageUrl,
       handle: product.handle,
     })
@@ -116,26 +156,37 @@ export function ProductInfo({ product, onColorChange }) {
     product.collectionName ||
     product.category ||
     product.categories?.[0]?.name ||
-    'Velquira Atelier'
+    'Velquira'
+
+  const savePercent =
+    product.compareAtPrice && product.compareAtPrice > product.price
+      ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+      : 0
+
+  const TRUST = [
+    'Free Insured Shipping',
+    'Hallmarked 18k Gold',
+    'Lifetime Care',
+  ]
 
   return (
     <>
-      <div className="relative flex flex-col py-2 space-y-7">
+      <div className="relative flex flex-col">
 
         {/* 1 — Collection eyebrow */}
-        <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
           {collectionEyebrow}
         </p>
 
-        {/* 2 — Title (Playfair big) */}
-        <h1 className="font-display text-4xl font-normal leading-[1.05] text-brand-black md:text-5xl">
+        {/* 2 — Title */}
+        <h1 className="vq-display mt-4 text-[clamp(1.9rem,3.2vw,2.8rem)] leading-[1.06] tracking-[-0.02em] text-ink">
           {product.name}
         </h1>
 
         {/* 3 — Star row (only when there are reviews) */}
         {reviewStats.count > 0 && reviewStats.average > 0 && (
-          <div className="flex items-center gap-2 -mt-2">
-            {[1,2,3,4,5].map(i => (
+          <div className="mt-4 flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((i) => (
               <Star
                 key={i}
                 size={13}
@@ -147,44 +198,49 @@ export function ProductInfo({ product, onColorChange }) {
                 }
               />
             ))}
-            <span className="ml-1 text-[12px] text-brand-black/55">
+            <span className="ml-1 text-[12px] text-text-muted">
               {reviewStats.average.toFixed(1)} · {reviewStats.count} {reviewStats.count === 1 ? 'review' : 'reviews'}
             </span>
           </div>
         )}
 
-        {/* 4 — Price (serif) */}
-        <div className="flex items-baseline gap-4">
-          <span className="font-display text-3xl text-brand-black">
+        {/* 4 — Price row */}
+        <div className="mt-6 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+          <span className="vq-display text-[clamp(1.6rem,2.4vw,2.1rem)] text-gold">
             {formatPrice(product.price)}
           </span>
           {product.compareAtPrice && (
-            <span className="font-display text-base text-brand-black/40 line-through">
+            <span className="vq-display text-[16px] text-text-faint line-through">
               {formatPrice(product.compareAtPrice)}
+            </span>
+          )}
+          {savePercent > 0 && (
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">
+              Save {savePercent}%
             </span>
           )}
         </div>
 
-        {/* 5 — Short refined description (clamp 4) */}
+        {/* 5 — Short description */}
         {product.description && (
-          <p className="text-[14px] leading-relaxed text-brand-black/70 line-clamp-4">
+          <p className="mt-5 text-[14px] leading-[1.85] text-text-muted line-clamp-4">
             {product.description}
           </p>
         )}
 
-        {/* Thin gold rule */}
-        <span className="block h-px w-12 bg-gold/60" aria-hidden />
+        {/* Hairline divider */}
+        <span className="mt-8 block h-px w-full bg-line" aria-hidden />
 
-        {/* 6 — Variant selectors (Finish / Colour) */}
+        {/* 6 — Colour / finish selector */}
         {product.colors.length > 0 && product.colors[0].name && (
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
+          <div className="mt-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-text-muted">
               Finish
-              <span className="ml-3 text-[12px] normal-case tracking-normal text-brand-black/65">
-                — {activeColor.name}
+              <span className="ml-3 text-[12px] normal-case tracking-normal text-ink">
+                {activeColor.name}
               </span>
             </p>
-            <div role="radiogroup" aria-label="Select finish" className="mt-4 flex flex-wrap gap-2.5">
+            <div role="radiogroup" aria-label="Select finish" className="mt-4 flex flex-wrap items-center gap-3">
               {product.colors.map((color) =>
                 color.packColors ? (
                   <button
@@ -194,20 +250,18 @@ export function ProductInfo({ product, onColorChange }) {
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'flex items-center gap-2 rounded-full border px-4 py-2 transition-all',
+                      'flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] transition-all duration-300',
                       activeColor.name === color.name
-                        ? 'border-gold ring-1 ring-gold ring-offset-2 ring-offset-ivory bg-cream'
-                        : 'border-gold/40 bg-transparent hover:border-gold'
+                        ? 'border-ink bg-ink text-cream'
+                        : 'border-line text-text-muted hover:border-ink hover:text-ink'
                     )}
                   >
                     <span className="flex gap-1">
                       {color.packColors.map((pc) => (
-                        <span key={pc.name} className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: pc.hex }} />
+                        <span key={pc.name} className="h-3 w-3 rounded-full" style={{ backgroundColor: pc.hex }} />
                       ))}
                     </span>
-                    <span className="text-[12px] text-brand-black/75">
-                      Set of {color.packColors.length}
-                    </span>
+                    <span>Set of {color.packColors.length}</span>
                   </button>
                 ) : (
                   <button
@@ -216,20 +270,18 @@ export function ProductInfo({ product, onColorChange }) {
                     aria-checked={activeColor.name === color.name}
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
+                    aria-label={color.name}
                     className={cn(
-                      'flex items-center gap-2 rounded-full border px-4 py-2 transition-all',
+                      'relative h-8 w-8 rounded-full transition-all duration-300',
                       activeColor.name === color.name
-                        ? 'border-gold ring-1 ring-gold ring-offset-2 ring-offset-ivory bg-cream'
-                        : 'border-gold/40 bg-transparent hover:border-gold'
+                        ? 'ring-1 ring-ink ring-offset-4 ring-offset-cream'
+                        : 'ring-1 ring-line hover:ring-text-muted'
                     )}
                   >
                     <span
-                      className="h-4 w-4 rounded-full border border-gold/30"
+                      className="absolute inset-[3px] rounded-full"
                       style={{ backgroundColor: color.hex }}
                     />
-                    <span className="text-[12px] text-brand-black/75">
-                      {color.name}
-                    </span>
                   </button>
                 )
               )}
@@ -237,15 +289,15 @@ export function ProductInfo({ product, onColorChange }) {
           </div>
         )}
 
-        {/* Render size variants if data carries them — same hairline pill style */}
+        {/* Size pills — only when the data carries sizes */}
         {Array.isArray(product.sizes) && product.sizes.length > 0 && (
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Size</p>
+          <div className="mt-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-text-muted">Size</p>
             <div className="mt-4 flex flex-wrap gap-2.5">
               {product.sizes.map((s) => (
                 <span
                   key={s}
-                  className="rounded-full border border-gold/40 px-4 py-2 text-[12px] text-brand-black/75"
+                  className="rounded-full border border-line px-5 py-2 text-[11px] uppercase tracking-[0.12em] text-text-muted"
                 >
                   {s}
                 </span>
@@ -254,59 +306,121 @@ export function ProductInfo({ product, onColorChange }) {
           </div>
         )}
 
-        {/* 7 — Quiet stock note (only when ≤ 3) */}
-        {stockLeft <= 3 && (
-          <p className="font-display italic text-[13px] text-gold">
-            Only {stockLeft} crafted to order
-          </p>
-        )}
+        {/* 7 — Quantity + stock note */}
+        <div className="mt-8 flex flex-wrap items-center gap-6">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-text-muted">Quantity</p>
+            <div className="mt-4 inline-flex items-center rounded-full border border-line">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                aria-label="Decrease quantity"
+                className="flex h-11 w-11 items-center justify-center text-text-muted transition-colors hover:text-ink"
+              >
+                <Minus size={14} strokeWidth={1.6} />
+              </button>
+              <span className="min-w-[2.5rem] text-center text-[13px] tabular-nums text-ink">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                aria-label="Increase quantity"
+                className="flex h-11 w-11 items-center justify-center text-text-muted transition-colors hover:text-ink"
+              >
+                <Plus size={14} strokeWidth={1.6} />
+              </button>
+            </div>
+          </div>
 
-        {/* 8 — CTA row */}
-        <div ref={atcRef} className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+          {stockLeft <= 3 && (
+            <p className="vq-display mt-8 text-[13px] italic text-text-muted">
+              Only {stockLeft} left — made to order
+            </p>
+          )}
+        </div>
+
+        {/* 8 — Add to Bag + wishlist link */}
+        <div ref={atcRef} className="mt-8">
           <button
             onClick={handleAddToCart}
             className={cn(
-              'inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-transparent bg-brand-black px-8 py-4 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:border-gold hover:bg-gold-deep',
-              addedFeedback && 'border-gold bg-gold-deep'
+              'w-full rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black',
+              addedFeedback && 'bg-black'
             )}
           >
-            <ShoppingBag size={14} strokeWidth={1.6} />
             {addedFeedback ? 'Added to Bag' : 'Add to Bag'}
           </button>
 
           <button
             onClick={handleWishlist}
-            aria-label={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             className={cn(
-              'inline-flex items-center justify-center gap-2 rounded-full border px-7 py-[15px] text-[11px] font-medium uppercase tracking-[0.28em] transition-colors',
-              wishlisted
-                ? 'border-gold bg-gold/10 text-gold-deep'
-                : 'border-gold/50 text-gold hover:border-gold hover:bg-gold/5'
+              'mx-auto mt-5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.26em] transition-colors',
+              wishlisted ? 'text-gold' : 'text-text-muted hover:text-ink'
             )}
           >
             <Heart size={13} strokeWidth={1.6} fill={wishlisted ? 'currentColor' : 'none'} />
-            {wishlisted ? 'Saved' : 'Save'}
+            {wishlisted ? 'Saved to Wishlist' : 'Add to Wishlist'}
           </button>
         </div>
 
-        {/* 9 — Single assurance line in italic gold serif */}
-        <p className="font-display italic text-[13px] text-gold">
-          Certificate of Authenticity included with every piece.
-        </p>
-
-        {/* 10 — Atelier mini-list (gold dots) */}
-        <ul className="space-y-2 pt-1">
-          {[
-            'Hand-finished in Bandra',
-            'Hallmarked 18k',
-            'Lifetime craftsmanship guarantee',
-          ].map((line) => (
-            <li key={line} className="flex items-start gap-3 text-[13px] text-brand-black/70">
-              <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-gold" />
-              <span>{line}</span>
-            </li>
+        {/* 9 — Trust row — hairline separated, no boxes */}
+        <div className="mt-10 grid grid-cols-1 border-y border-line sm:grid-cols-3 sm:divide-x sm:divide-line">
+          {TRUST.map((item) => (
+            <div
+              key={item}
+              className="flex items-center justify-center gap-2 px-3 py-4 text-center"
+            >
+              <span className="vq-diamond shrink-0" aria-hidden />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                {item}
+              </span>
+            </div>
           ))}
-        </ul>
+        </div>
+
+        {/* 10 — Accordion */}
+        <div className="mt-10">
+          <AccordionRow
+            title="Description"
+            open={openPanel === 'description'}
+            onToggle={() => setOpenPanel(openPanel === 'description' ? null : 'description')}
+          >
+            <p>
+              {product.description ||
+                `${product.name} is finished by hand in our studio and checked piece by piece before it ships. A Certificate of Authenticity is included in the box.`}
+            </p>
+          </AccordionRow>
+
+          <AccordionRow
+            title="Materials & Care"
+            open={openPanel === 'materials'}
+            onToggle={() => setOpenPanel(openPanel === 'materials' ? null : 'materials')}
+          >
+            <ul className="space-y-2">
+              <li>Hallmarked 18k gold with ethically sourced stones.</li>
+              <li>Wipe with the soft cloth provided after each wear.</li>
+              <li>Keep away from perfume, lotion and chlorine.</li>
+              <li>Store in the pouch it arrives in to avoid scratches.</li>
+            </ul>
+          </AccordionRow>
+
+          <AccordionRow
+            title="Shipping & Returns"
+            open={openPanel === 'shipping'}
+            onToggle={() => setOpenPanel(openPanel === 'shipping' ? null : 'shipping')}
+          >
+            <ul className="space-y-2">
+              <li>Free insured shipping on every order.</li>
+              <li>Dispatched in 2–4 working days; custom orders take longer.</li>
+              <li>Easy 7-day returns on unworn items in original packaging.</li>
+              <li>Lifetime cleaning and repair support from our studio.</li>
+            </ul>
+          </AccordionRow>
+
+          <span className="block h-px w-full bg-line" aria-hidden />
+        </div>
       </div>
 
       <StickyATCBar

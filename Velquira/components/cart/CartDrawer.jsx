@@ -145,9 +145,7 @@ const EMPTY_ADDR = {
 };
 
 // ── SVG Icons ──────────────────────────────────────────────────────────────
-const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const IconBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>;
-const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
+const IconX = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 const IconPlus = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
@@ -157,9 +155,9 @@ const IconFlame = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const IconClock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const IconMoneyBag = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><path d="M12 2C9 2 7 4 7 6h10c0-2-2-4-5-4z"/><path d="M7 6C4 6 2 9 2 12c0 5 4 10 10 10s10-5 10-10c0-3-2-6-5-6H7z"/><path d="M12 10v4"/><path d="M10 12h4"/></svg>;
 const IconShield = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-    <path d="M12 2L4 5.5V11c0 5.25 3.5 9.74 8 11 4.5-1.26 8-5.75 8-11V5.5L12 2z" fill="#16a34a"/>
-    <polyline points="8.5 12 11 14.5 15.5 10" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2L4 5.5V11c0 5.25 3.5 9.74 8 11 4.5-1.26 8-5.75 8-11V5.5L12 2z"/>
+    <polyline points="8.5 12 11 14.5 15.5 10"/>
   </svg>
 );
 const IconLock = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
@@ -741,11 +739,10 @@ export function CartDrawer() {
         {/* Header */}
         <div className="cd-header">
           <div className="cd-header-left">
-            <span className="cd-header-icon"><IconBag /></span>
-            <div>
-              <span className="cd-header-title">{orderSuccess ? 'Order Confirmed' : 'Your Cart'}</span>
-              {!orderSuccess && <span className="cd-header-count">{totalQty} item{totalQty !== 1 ? 's' : ''}</span>}
-            </div>
+            <span className="cd-header-title vq-display">{orderSuccess ? 'Order Confirmed' : 'Your Bag'}</span>
+            {!orderSuccess && (
+              <span className="cd-header-count">{totalQty} item{totalQty !== 1 ? 's' : ''}</span>
+            )}
           </div>
           <button className="cd-close-btn" onClick={closeDrawer} aria-label="Close cart"><IconX /></button>
         </div>
@@ -755,17 +752,18 @@ export function CartDrawer() {
           {orderSuccess ? (
             <div className="cd-success">
               <div className="cd-success-icon"><IconSuccess /></div>
-              <h3 className="cd-success-title">Order Placed!</h3>
-              <p className="cd-success-order">Order #{orderSuccess.orderNumber}</p>
-              <p className="cd-success-msg">Thank you! You will receive a confirmation shortly.</p>
+              <p className="cd-success-eyebrow">Thank You</p>
+              <h3 className="cd-success-title vq-display">Order Placed</h3>
+              <p className="cd-success-order">#{orderSuccess.orderNumber}</p>
+              <p className="cd-success-msg">We have received your order. A confirmation will reach you shortly.</p>
               <button className="cd-btn-primary" onClick={() => { closeDrawer(); router.push(`/track-order?order=${orderSuccess.orderNumber}`); }}>Track Order</button>
-              <button className="cd-btn-ghost" style={{ marginTop: 8 }} onClick={closeDrawer}>Continue Shopping</button>
+              <button className="cd-btn-ghost" style={{ marginTop: 10 }} onClick={closeDrawer}>Continue Shopping</button>
             </div>
           ) : isMounted && paymentFailed.error ? (
-            <div className="cd-success" style={{ textAlign: 'center', padding: '32px 24px' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
-              <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#b91c1c' }}>Payment Failed</h3>
-              <p style={{ margin: '0 0 20px', fontSize: 14, color: '#6b7280' }}>{paymentFailed.error}</p>
+            <div className="cd-fail">
+              <p className="cd-fail-eyebrow">Payment Failed</p>
+              <h3 className="cd-fail-title vq-display">Something went wrong</h3>
+              <p className="cd-fail-msg">{paymentFailed.error}</p>
               {paymentFailed.retryCount < 3 ? (
                 <button
                   className="cd-btn-primary"
@@ -784,10 +782,10 @@ export function CartDrawer() {
                     }
                   }}
                 >
-                  {isProcessing ? 'Loading...' : `Retry Payment (${3 - paymentFailed.retryCount} left)`}
+                  {isProcessing ? 'Loading...' : `Try Again (${3 - paymentFailed.retryCount} left)`}
                 </button>
               ) : (
-                <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 16 }}>Maximum retries reached. Please start a new order.</p>
+                <p className="cd-fail-note">You have reached the retry limit. Please start a new order.</p>
               )}
               <button
                 className="cd-btn-ghost"
@@ -799,15 +797,16 @@ export function CartDrawer() {
             </div>
           ) : items.length === 0 ? (
             <div className="cd-empty">
-              <span className="cd-empty-icon"><IconBag /></span>
-              <p>Your cart is empty</p>
-              <button className="cd-btn-primary" onClick={closeDrawer}>Continue Shopping</button>
+              <p className="cd-empty-eyebrow">Velquira</p>
+              <h3 className="cd-empty-title vq-display">Your bag is empty</h3>
+              <p className="cd-empty-sub">Nothing here yet. Find something you love and it will show up right here.</p>
+              <button className="cd-btn-primary" onClick={() => { closeDrawer(); router.push('/products'); }}>Shop Products</button>
             </div>
           ) : (
             <div className="cd-single-view">
 
               {/* Items */}
-              <div className="cd-section-title">Items</div>
+              <div className="cd-section-title">Products</div>
               <div className="cd-items-list">
                 {items.map(item => {
                   const img = pickImage(item);
@@ -815,17 +814,17 @@ export function CartDrawer() {
                   const mrp = getMrp(item);
                   const size = getAttr(item, 'size');
                   const color = getAttr(item, 'color');
+                  const meta = [color, size ? `Size ${size}` : null].filter(Boolean).join(' · ');
                   return (
                     <div key={item.id} className="cd-item">
                       <div className="cd-item-img">
                         {img
-                          ? <img src={img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ? <img src={img} alt={item.name} />
                           : <div className="cd-item-img-placeholder" />}
                       </div>
                       <div className="cd-item-info">
                         <p className="cd-item-name">{item.name}</p>
-                        {size && <p className="cd-item-meta">Size: {size}</p>}
-                        {color && <p className="cd-item-meta">{color}</p>}
+                        {meta && <p className="cd-item-meta">{meta}</p>}
                         <div className="cd-item-row">
                           <div className="cd-item-prices">
                             <span className="cd-item-price">₹{price.toFixed(0)}</span>
@@ -837,8 +836,8 @@ export function CartDrawer() {
                             <button className="cd-qty-btn" onClick={() => updateQty(item.id, item.quantity + 1)} aria-label="Increase">+</button>
                           </div>
                         </div>
+                        <button className="cd-item-remove" onClick={() => removeItem(item.id)} aria-label={`Remove ${item.name}`}>Remove</button>
                       </div>
-                      <button className="cd-item-remove" onClick={() => removeItem(item.id)} aria-label="Remove"><IconTrash /></button>
                     </div>
                   );
                 })}
@@ -861,7 +860,7 @@ export function CartDrawer() {
                   {shippingFeeAmount === 0 && (
                     <div className="cd-summary-row">
                       <span>Shipping</span>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>FREE</span>
+                      <span className="cd-summary-free">Free</span>
                     </div>
                   )}
                   {couponDiscount > 0 && (
@@ -1061,7 +1060,7 @@ export function CartDrawer() {
               {/* Payment Method */}
               {sortedShippingFees.length > 0 && (
                 <div className="cd-sv-section" id="cd-section-delivery">
-                  <div className="cd-section-title">How would you like to pay?</div>
+                  <div className="cd-section-title">Payment</div>
                   <div className="cd-delivery-list">
                     {sortedShippingFees.map(fee => {
                       const isCodBlocked = isMounted && fee.orderType === 'cod' && pincodeServiceability?.cod_allowed === false;
@@ -1076,17 +1075,16 @@ export function CartDrawer() {
                             {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
                           </span>
                           <div className="cd-delivery-info">
-                            <p className="cd-delivery-name">{fee.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}</p>
-                            {fee.orderType === 'cod' && !isCodBlocked && <span className="cd-delivery-popular">⭐ Most Popular</span>}
+                            <p className="cd-delivery-name">{fee.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card'}</p>
+                            {fee.orderType === 'cod' && !isCodBlocked && <span className="cd-delivery-popular">Most Popular</span>}
                             {fee.orderType === 'prepaid' && PREPAID_NUDGE_LINE && <p className="cd-delivery-subdesc">{PREPAID_NUDGE_LINE}</p>}
                             {fee.orderType === 'cod' && !isCodBlocked && <p className="cd-delivery-subdesc">Pay when you receive your order</p>}
-                            {isCodBlocked && <p className="cd-delivery-subdesc" style={{ color: '#dc2626' }}>COD not available for this location</p>}
+                            {isCodBlocked && <p className="cd-delivery-subdesc" style={{ color: '#b8472f' }}>Cash on Delivery is not available for this location</p>}
                             <p className="cd-delivery-desc">Delivery by {getDeliveryDateStr()}</p>
                           </div>
                           <div className="cd-delivery-fee-wrap">
-                            <span className="cd-delivery-sparkle">✦</span>
                             <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
-                              {parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee || 0).toFixed(0)}`}
+                              {parseFloat(fee.fee || 0) === 0 ? 'Free' : `₹${parseFloat(fee.fee || 0).toFixed(0)}`}
                             </span>
                           </div>
                         </label>
@@ -1112,6 +1110,19 @@ export function CartDrawer() {
         {/* Footer */}
         {!orderSuccess && items.length > 0 && (
           <div className="cd-footer">
+            {/* Total */}
+            <div className="cd-foot-total">
+              <span className="cd-foot-total-label">Total</span>
+              <span className="cd-foot-total-value vq-display">
+                ₹{isPrepaidDelivery ? prepaidPayable.toFixed(0) : finalTotal.toFixed(0)}
+              </span>
+            </div>
+            <p className="cd-foot-note">
+              {shippingFeeAmount === 0
+                ? 'Free shipping included. Taxes included in the price.'
+                : `Shipping ₹${shippingFeeAmount.toFixed(0)} included. Taxes included in the price.`}
+            </p>
+
             {/* Urgency */}
             {(() => {
               const mm = String(Math.floor(urgencySeconds / 60)).padStart(2, '0');
@@ -1119,8 +1130,8 @@ export function CartDrawer() {
               return (
                 <div className="cd-urgency-bar">
                   <span className="cd-urgency-item"><IconFlame /> <strong>Only 7</strong>&nbsp;left in stock</span>
-                  <span style={{ color: '#ccc' }}>|</span>
-                  <span className="cd-urgency-item" style={{ color: '#555' }}>
+                  <span className="cd-urgency-sep">|</span>
+                  <span className="cd-urgency-item">
                     <IconClock /> Offer ends in <span className="cd-urgency-timer">{mm}:{ss}</span>
                   </span>
                 </div>
@@ -1132,24 +1143,29 @@ export function CartDrawer() {
               {isProcessing
                 ? 'Processing...'
                 : isPrepaidDelivery
-                  ? `Place Order – ₹${prepaidPayable.toFixed(0)}`
+                  ? `Place Order · ₹${prepaidPayable.toFixed(0)}`
                   : isCodDelivery
-                    ? `Place Order – ₹${finalTotal.toFixed(0)}`
+                    ? `Place Order · ₹${finalTotal.toFixed(0)}`
                     : 'Place Order'}
             </button>
 
+            {/* Continue shopping */}
+            <button type="button" className="cd-continue" onClick={closeDrawer}>
+              Continue Shopping
+            </button>
+
             {/* WhatsApp help */}
-            <a href="https://wa.me/91?text=Hi%2C+I+need+help+with+my+Velquira+order" target="_blank" rel="noopener noreferrer" className="cd-whatsapp-help">
+            <a href="https://wa.me/919712891700?text=Hi%2C+I+need+help+with+my+Velquira+order" target="_blank" rel="noopener noreferrer" className="cd-whatsapp-help">
               <IconWhatsApp /> Need help? Chat on WhatsApp
             </a>
 
             {/* Trust bar */}
             <div className="cd-trust-bar">
-              <span className="cd-trust-item"><IconShield /> 100% Money-Back</span>
+              <span className="cd-trust-item"><IconShield /> Money-Back Promise</span>
               <span className="cd-trust-sep">·</span>
               <span className="cd-trust-item"><IconTruckSmall /> Easy Returns</span>
               <span className="cd-trust-sep">·</span>
-              <span className="cd-trust-item"><IconLock /> Powered by Razorpay</span>
+              <span className="cd-trust-item"><IconLock /> Secure Payment</span>
             </div>
           </div>
         )}

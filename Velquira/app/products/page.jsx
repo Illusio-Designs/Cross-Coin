@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { X, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { getPublicProducts, mapProduct } from '@/lib/api/products'
@@ -185,17 +186,17 @@ export default function ProductsPage() {
   const headingTitle =
     selectedCategories.length > 0
       ? selectedCategories.map(c => c.name).join(' · ')
-      : 'All Pieces'
+      : 'All Products'
   const introCopy =
     selectedCategories.length > 0
-      ? `Hand-finished ${selectedCategories.map(c => c.name.toLowerCase()).join(', ')} from the Velquira atelier.`
+      ? `Hand-finished ${selectedCategories.map(c => c.name.toLowerCase()).join(', ')} from the Velquira studio.`
       : 'Hand-finished rings, necklaces, earrings and bracelets in 18k gold, certified diamonds and ethically sourced gemstones.'
 
-  const countLabel = `${filtered.length} ${filtered.length === 1 ? 'piece' : 'pieces'}`
+  const countLabel = `${filtered.length} ${filtered.length === 1 ? 'item' : 'items'}`
 
   return (
     <SeoWrapper pageName="products">
-      <main className="bg-ivory">
+      <main className="bg-cream">
         <PageHero
           variant="minimal"
           align="left"
@@ -206,44 +207,75 @@ export default function ProductsPage() {
           <p className="mt-4 text-[11px] uppercase tracking-[0.3em] text-gold">{countLabel}</p>
         </PageHero>
 
+        {/* Category browse row */}
+        {categories.length > 0 && (
+          <div className="vq-container pt-8 pb-2">
+            <div className="flex flex-wrap gap-2.5">
+              <Link
+                href="/products"
+                className={`rounded-full border px-5 py-2 text-[11px] font-medium uppercase tracking-[0.18em] transition-all duration-300 ${
+                  !categoryParam ? 'border-ink bg-ink text-cream' : 'border-line text-ink hover:border-ink'
+                }`}
+              >
+                All
+              </Link>
+              {categories.map((c) => {
+                const name = (c.name || '').trim()
+                const active = categoryParam === name
+                return (
+                  <Link
+                    key={c.id || c.slug || name}
+                    href={`/products?category=${encodeURIComponent(name)}`}
+                    className={`rounded-full border px-5 py-2 text-[11px] font-medium uppercase tracking-[0.18em] transition-all duration-300 ${
+                      active ? 'border-ink bg-ink text-cream' : 'border-line text-ink hover:border-ink'
+                    }`}
+                  >
+                    {name}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Controls bar — sticky hairline gold rules */}
-        <div className="sticky top-[112px] z-30 border-y border-gold/20 bg-ivory/95 backdrop-blur-sm">
-          <div className="mx-auto flex h-14 max-w-[1320px] items-center justify-between gap-4 px-4 md:px-8">
+        <div className="sticky top-[112px] z-30 border-y border-line bg-cream/95 backdrop-blur-sm">
+          <div className="vq-container flex h-14 items-center justify-between gap-4">
             <button
               onClick={() => setFiltersOpen(true)}
-              className="inline-flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.28em] text-brand-black transition-colors duration-200 hover:text-gold-deep"
+              className="inline-flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.28em] text-ink transition-colors duration-200 hover:text-gold"
             >
               <SlidersHorizontal size={13} strokeWidth={1.6} />
               Refine
               {activeFilterCount > 0 && (
-                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 font-sans text-[9px] font-semibold text-white">
+                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 font-sans text-[9px] font-semibold text-white">
                   {activeFilterCount}
                 </span>
               )}
             </button>
 
-            <p className="hidden font-display text-[13px] italic text-brand-black/55 sm:block">
-              {loading ? 'Curating…' : countLabel}
+            <p className="hidden font-display text-[13px] italic text-text-muted sm:block">
+              {loading ? 'Loading…' : countLabel}
             </p>
 
             <div className="relative">
               <button
                 onClick={() => setSortOpen(!sortOpen)}
-                className="inline-flex items-center gap-2 border-b border-gold/30 px-1 pb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-brand-black transition-colors duration-200 hover:border-gold"
+                className="inline-flex items-center gap-2 border-b border-line px-1 pb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-ink transition-colors duration-200 hover:border-ink"
               >
                 {SORT_OPTIONS.find(o => o.value === sort)?.label}
-                <ChevronDown size={12} strokeWidth={1.7} className={`text-gold transition-transform duration-300 ${sortOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={12} strokeWidth={1.7} className={`text-ink transition-transform duration-300 ${sortOpen ? 'rotate-180' : ''}`} />
               </button>
               {sortOpen && (
-                <div className="absolute right-0 top-full mt-3 w-56 rounded-md border border-gold/25 bg-white py-1 shadow-[0_18px_40px_-22px_rgba(143,102,32,0.28)]">
+                <div className="absolute right-0 top-full mt-3 w-56 rounded-md border border-line bg-cream py-1 shadow-[0_18px_40px_-22px_rgba(20,20,20,0.20)]">
                   {SORT_OPTIONS.map(o => (
                     <button
                       key={o.value}
                       onClick={() => { setSort(o.value); setSortOpen(false) }}
                       className={`block w-full px-4 py-2.5 text-left text-[11px] uppercase tracking-[0.2em] transition-colors duration-150 ${
                         sort === o.value
-                          ? 'text-gold'
-                          : 'text-brand-black/70 hover:text-gold-deep'
+                          ? 'text-ink font-semibold'
+                          : 'text-text-muted hover:text-ink'
                       }`}
                     >
                       {o.label}
@@ -259,24 +291,24 @@ export default function ProductsPage() {
         {filtersOpen && (
           <div className="fixed inset-0 z-[100]">
             <div
-              className="absolute inset-0 bg-brand-black/30 backdrop-blur-sm"
+              className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
               onClick={() => setFiltersOpen(false)}
             />
-            <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-ivory shadow-[0_0_60px_-10px_rgba(58,46,26,0.35)]">
-              <div className="flex items-center justify-between border-b border-gold/20 px-7 py-5">
+            <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-cream shadow-[0_0_60px_-10px_rgba(20,20,20,0.20)]">
+              <div className="flex items-center justify-between border-b border-line px-7 py-5">
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Refine</p>
-                  <p className="mt-1 font-display text-xl text-brand-black">
+                  <p className="mt-1 font-display text-xl text-ink">
                     {filtered.length}{' '}
-                    <span className="text-sm italic text-brand-black/55">
-                      {filtered.length === 1 ? 'piece' : 'pieces'}
+                    <span className="text-sm italic text-text-muted">
+                      {filtered.length === 1 ? 'item' : 'items'}
                     </span>
                   </p>
                 </div>
                 <button
                   onClick={() => setFiltersOpen(false)}
                   aria-label="Close filters"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/30 text-brand-black transition-colors duration-200 hover:border-gold hover:text-gold"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink transition-colors duration-200 hover:border-ink"
                 >
                   <X size={14} strokeWidth={1.6} />
                 </button>
@@ -290,18 +322,18 @@ export default function ProductsPage() {
                       <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
                         Category
                       </p>
-                      <div className="mt-3 h-px w-10 bg-gold/40" />
+                      <div className="mt-3 h-px w-10 bg-gold/50" />
                       <div className="mt-5 flex flex-col gap-3.5">
                         {categories.map(cat => (
                           <label
                             key={cat.id}
-                            className="group flex cursor-pointer items-center gap-3 font-display text-[14px] text-brand-black/80 transition-colors hover:text-brand-black"
+                            className="group flex cursor-pointer items-center gap-3 font-display text-[14px] text-graphite transition-colors hover:text-ink"
                           >
                             <input
                               type="checkbox"
                               checked={selectedCategoryIds.includes(String(cat.id))}
                               onChange={() => toggleCategory(cat)}
-                              className="h-3.5 w-3.5 accent-gold"
+                              className="h-3.5 w-3.5 accent-ink"
                             />
                             {cat.name}
                           </label>
@@ -316,7 +348,7 @@ export default function ProductsPage() {
                       <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
                         Tone
                       </p>
-                      <div className="mt-3 h-px w-10 bg-gold/40" />
+                      <div className="mt-3 h-px w-10 bg-gold/50" />
                       <div className="mt-5 flex flex-wrap gap-4">
                         {filterOptions.colors.map(c => (
                           <button
@@ -328,12 +360,12 @@ export default function ProductsPage() {
                             <span
                               className={`h-7 w-7 rounded-full border transition-all duration-200 ${
                                 selectedColors.includes(c.name)
-                                  ? 'border-gold ring-1 ring-gold ring-offset-2 ring-offset-ivory'
-                                  : 'border-gold/30 group-hover:border-gold'
+                                  ? 'border-gold ring-1 ring-gold ring-offset-2 ring-offset-white'
+                                  : 'border-line group-hover:border-ink'
                               }`}
                               style={{ backgroundColor: c.hex }}
                             />
-                            <span className="text-[10px] uppercase tracking-[0.18em] text-brand-black/65">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-text-muted">
                               {c.name}
                             </span>
                           </button>
@@ -352,13 +384,13 @@ export default function ProductsPage() {
                       {filterOptions.priceRanges.map(r => (
                         <label
                           key={r.label}
-                          className="flex cursor-pointer items-center gap-3 font-display text-[14px] text-brand-black/80 transition-colors hover:text-brand-black"
+                          className="flex cursor-pointer items-center gap-3 font-display text-[14px] text-graphite transition-colors hover:text-ink"
                         >
                           <input
                             type="checkbox"
                             checked={selectedPrices.includes(r.label)}
                             onChange={() => togglePrice(r.label)}
-                            className="h-3.5 w-3.5 accent-gold"
+                            className="h-3.5 w-3.5 accent-ink"
                           />
                           {r.label}
                         </label>
@@ -372,18 +404,18 @@ export default function ProductsPage() {
                       <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
                         Worn By
                       </p>
-                      <div className="mt-3 h-px w-10 bg-gold/40" />
+                      <div className="mt-3 h-px w-10 bg-gold/50" />
                       <div className="mt-5 flex flex-col gap-3.5">
                         {filterOptions.genders.map(g => (
                           <label
                             key={g}
-                            className="flex cursor-pointer items-center gap-3 font-display text-[14px] text-brand-black/80 transition-colors hover:text-brand-black"
+                            className="flex cursor-pointer items-center gap-3 font-display text-[14px] text-graphite transition-colors hover:text-ink"
                           >
                             <input
                               type="checkbox"
                               checked={selectedGenders.includes(g)}
                               onChange={() => toggleGender(g)}
-                              className="h-3.5 w-3.5 accent-gold"
+                              className="h-3.5 w-3.5 accent-ink"
                             />
                             {g}
                           </label>
@@ -394,17 +426,17 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-gold/20 px-7 py-5">
+              <div className="flex items-center justify-between gap-3 border-t border-line px-7 py-5">
                 <button
                   onClick={clearFilters}
                   disabled={activeFilterCount === 0}
-                  className="text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors duration-200 hover:text-gold-deep disabled:opacity-40"
+                  className="text-[11px] font-medium uppercase tracking-[0.28em] text-text-muted transition-colors duration-200 hover:text-ink disabled:opacity-40"
                 >
                   Clear all
                 </button>
                 <button
                   onClick={() => setFiltersOpen(false)}
-                  className="inline-flex items-center justify-center rounded-full bg-brand-black px-6 py-3 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors duration-200 hover:bg-gold-deep"
+                  className="inline-flex items-center justify-center rounded-full bg-ink px-6 py-3 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors duration-200 hover:bg-[#3a3227]"
                 >
                   View {countLabel}
                 </button>
@@ -414,18 +446,18 @@ export default function ProductsPage() {
         )}
 
         {/* Grid */}
-        <section className="px-4 pb-24 pt-12 md:pb-32 md:pt-14 lg:px-8">
-          <div className="mx-auto max-w-[1320px]">
+        <section className="pb-24 pt-12 md:pb-32 md:pt-14">
+          <div className="vq-container">
             {loading ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex flex-col rounded-2xl border border-gold/20 bg-white p-3"
+                    className="flex flex-col rounded-2xl border border-line bg-cream p-3"
                   >
-                    <div className="aspect-square animate-pulse rounded-xl bg-cream" />
-                    <div className="mt-4 h-3 w-3/4 animate-pulse rounded bg-cream" />
-                    <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-cream" />
+                    <div className="aspect-square animate-pulse rounded-xl bg-paper" />
+                    <div className="mt-4 h-3 w-3/4 animate-pulse rounded bg-paper" />
+                    <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-paper" />
                   </div>
                 ))}
               </div>
@@ -433,16 +465,16 @@ export default function ProductsPage() {
               <Reveal>
                 <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
                   <span className="inline-block h-px w-12 bg-gold/60" aria-hidden />
-                  <p className="font-display text-2xl italic text-brand-black">
+                  <p className="font-display text-2xl italic text-ink">
                     Nothing matches just yet.
                   </p>
-                  <p className="text-[14px] leading-relaxed text-brand-black/55">
-                    Loosen a selection to discover more pieces.
+                  <p className="text-[14px] leading-relaxed text-text-muted">
+                    Remove a filter to see more products.
                   </p>
                   {activeFilterCount > 0 && (
                     <button
                       onClick={clearFilters}
-                      className="mt-2 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors duration-200 hover:text-gold-deep"
+                      className="mt-2 text-[11px] font-medium uppercase tracking-[0.28em] text-text-muted transition-colors duration-200 hover:text-ink"
                     >
                       Clear all filters
                     </button>
@@ -451,10 +483,8 @@ export default function ProductsPage() {
               </Reveal>
             ) : (
               <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
-                {filtered.map((p, i) => (
-                  <Reveal key={p.id} delay={Math.min(i * 0.03, 0.3)}>
-                    <ProductCard product={p} />
-                  </Reveal>
+                {filtered.map((p) => (
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
             )}

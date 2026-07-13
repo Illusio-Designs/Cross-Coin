@@ -5,42 +5,42 @@ import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { formatPrice } from '@/lib/utils';
 
-
-
-
-
-
 export function CartUpsell({ products }) {
   const { addItem } = useCart();
 
   if (!products.length) return null;
 
   return (
-    <div className="mt-8 border-t border-gray-200 pt-8">
-      <p className="mb-4 text-xs font-medium uppercase tracking-widest text-gray-600">
-        You might also like
+    <div className="mt-8 border-t border-line pt-7">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
+        You May Also Like
       </p>
-      <ul className="flex flex-col gap-4">
+      <ul className="flex flex-col">
         {products.map((product) => {
           const image = product.images[0];
           const firstVariant = product.variants[0];
           const firstColor = product.colors[0];
 
           return (
-            <li key={product.id} className="flex items-center gap-4">
+            <li
+              key={product.id}
+              className="flex items-center gap-4 border-b border-line py-3.5 last:border-0">
+
               <Link
                 href={`/products/${product.handle}`}
-                className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-                
+                className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-paper focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold">
+
                 {image &&
-                <Image src={image.url} alt={image.alt} fill className="object-cover" />
+                <Image src={image.url} alt={image.alt} fill className="object-contain" />
                 }
               </Link>
 
               <div className="flex flex-1 items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-gray-800">{product.name}</p>
-                  <p className="text-xs text-gray-600">{formatPrice(product.price)}</p>
+                  <p className="vq-display truncate text-sm text-ink">{product.name}</p>
+                  <p className="mt-0.5 text-[12.5px] font-medium text-gold">
+                    {formatPrice(product.price)}
+                  </p>
                 </div>
                 <button
                   onClick={() =>
@@ -59,8 +59,8 @@ export function CartUpsell({ products }) {
                     handle: product.handle
                   })
                   }
-                  className="shrink-0 rounded-full border border-brand-black px-4 py-2 text-xs font-medium uppercase tracking-wider text-brand-black transition-colors duration-150 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-                  
+                  className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-text-muted transition-colors duration-300 hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold">
+
                   Add
                 </button>
               </div>

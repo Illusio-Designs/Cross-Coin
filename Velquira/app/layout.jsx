@@ -50,7 +50,7 @@ export const metadata = {
     default: SITE_NAME,
     template: `%s | ${SITE_NAME}`
   },
-  description: 'Fine jewellery handcrafted in our atelier — hallmarked 18k gold and certified diamonds, made to become heirlooms.',
+  description: 'Fine jewellery handmade in our studio — hallmarked 18k gold and certified diamonds, made to last for generations.',
   icons: {
     icon: '/velquira-logo.svg',
     shortcut: '/velquira-logo.svg',

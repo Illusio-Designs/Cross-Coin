@@ -42,25 +42,25 @@ export default async function SearchPage({ searchParams }) {
     <SeoWrapper pageName="search">
       <main className="min-h-screen bg-ivory">
         {/* Refined page header */}
-        <section className="px-4 pt-36 pb-10 text-center sm:px-6 md:px-10">
+        <section className="vq-container pt-36 pb-10 text-center">
           <Reveal>
             <span className="vq-diamond mx-auto block" aria-hidden />
           </Reveal>
           <Reveal delay={0.08}>
             <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-              {query ? 'Curated Results' : 'Discover'}
+              {query ? 'Search Results' : 'Discover'}
             </p>
           </Reveal>
           <Reveal delay={0.16}>
             <h1 className="mt-3 font-display text-4xl font-normal leading-tight text-brand-black md:text-5xl">
-              {query ? <>Results for <span className="italic">&ldquo;{query}&rdquo;</span></> : 'Search the Atelier'}
+              {query ? <>Results for <span className="italic">&ldquo;{query}&rdquo;</span></> : 'Search'}
             </h1>
           </Reveal>
           <Reveal delay={0.24}>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-brand-black/55">
               {query
-                ? `${products.length} piece${products.length !== 1 ? 's' : ''} matching your search.`
-                : 'Find the piece you are dreaming of by name, occasion, or collection.'}
+                ? `${products.length} product${products.length !== 1 ? 's' : ''} matching your search.`
+                : 'Find what you are looking for by name, occasion, or collection.'}
             </p>
           </Reveal>
           <Reveal delay={0.32}>
@@ -76,7 +76,7 @@ export default async function SearchPage({ searchParams }) {
         </section>
 
         {/* Results */}
-        <section className="px-4 pb-24 sm:px-6 md:px-10">
+        <section className="vq-container pb-24">
           {/* WITH QUERY */}
           {query && (
             products.length > 0 ? (

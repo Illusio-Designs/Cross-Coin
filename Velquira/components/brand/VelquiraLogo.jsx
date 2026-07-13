@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils'
 import { LOGO_CANDIDATES, LOGO_MARK } from '@/lib/brand'
 
 /**
- * VelquiraLogo — mark + wordmark for the atelier brand.
- * `stacked` layout is used in the maison navbar centre.
+ * VelquiraLogo — mark + wordmark for the Velquira brand.
+ * `stacked` layout is used in the navbar centre.
  */
 export function VelquiraLogo({
   className,
@@ -48,7 +48,7 @@ export function VelquiraLogo({
         alt=""
         fill
         priority={priority}
-        className="object-contain drop-shadow-[0_2px_8px_rgba(191,139,46,0.25)]"
+        className="object-contain drop-shadow-[0_2px_8px_rgba(160,125,62,0.28)]"
         onError={() => setSrcIndex((i) => i + 1)}
       />
     </span>

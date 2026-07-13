@@ -106,7 +106,7 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
   const mobileRow = [...display, ...display]
 
   return (
-    <section className="bg-white">
+    <section className="bg-cream">
       <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_1.7fr] lg:gap-14 lg:px-8 lg:py-16">
 
         {/* LEFT — refined rating block */}
@@ -130,7 +130,7 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
           </p>
 
           <p className="mt-5 max-w-sm text-[14px] leading-relaxed text-brand-black/60">
-            Notes from the people who carry our pieces — handwritten after every order.
+            What our customers say — written after every order.
           </p>
 
           {productId && (
@@ -179,7 +179,7 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
             className="hidden items-center justify-center text-[14px] italic text-brand-black/40 lg:flex"
             style={{ height: 520 }}
           >
-            Notes from the atelier will appear here as the first letters arrive.
+            Customer reviews will appear here soon.
           </div>
         )}
 

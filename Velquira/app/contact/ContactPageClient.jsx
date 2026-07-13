@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Instagram, Facebook, ChevronDown, CheckCircle } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock, Instagram, Facebook, ChevronDown, CheckCircle } from 'lucide-react'
 import { PageHero } from '@/components/layout/PageHero'
-import { Reveal } from '@/components/ui/Reveal'
 
 function WhatsAppIcon({ size = 16 }) {
   return (
@@ -14,28 +13,46 @@ function WhatsAppIcon({ size = 16 }) {
   )
 }
 
+/* Contact details — hairline list, no boxes. */
+const DETAILS = [
+  { icon: Mail,   label: 'Email',           value: 'hello@velquira.in',      href: 'mailto:hello@velquira.in' },
+  { icon: Phone,  label: 'Phone / WhatsApp', value: '+91 97128 91700',            href: 'tel:+919712891700' },
+  { icon: MapPin, label: 'Address',          value: 'Bandra West, Mumbai 400050', href: null },
+  { icon: Clock,  label: 'Hours',            value: 'By appointment · Mon–Sat',   href: null },
+]
+
 const FAQS = [
-  { q: 'How long does a Velquira piece take to make?',  a: 'Each piece is bench-finished to order in 5–7 business days. Bespoke commissions take 3–4 weeks. We will keep you updated at every step.' },
-  { q: 'What is your return policy?',                    a: 'We accept returns within 14 days of delivery on unworn pieces in their original packaging. Bespoke and engraved pieces are final sale.' },
-  { q: 'Are your stones certified?',                     a: 'Yes — every diamond and major gemstone arrives with a certificate from a recognised gemological laboratory and is fully traceable.' },
-  { q: 'How should I care for my Velquira jewellery?',   a: 'Store in the velvet pouch provided, avoid contact with perfumes and lotions, and bring it in for complimentary cleaning whenever you wish.' },
-  { q: 'Do you offer ring resizing or bespoke design?',  a: 'Complimentary resizing within the first year, and bespoke commissions on request. Reach us by email and we will respond within 24 hours.' },
+  { q: 'How long does an order take?',              a: 'Everything is made by hand, so most orders take 5–7 working days. Custom orders take 3–4 weeks. We keep you updated at every step.' },
+  { q: 'What is your return policy?',               a: 'You can return unworn items in their original packaging within 14 days of delivery. Custom and engraved orders are final sale.' },
+  { q: 'Are your diamonds certified?',              a: 'Yes. Every diamond and major stone comes with a certificate from a recognised lab, and you can check it yourself.' },
+  { q: 'How do I care for my jewellery?',           a: 'Keep it in the pouch we send, away from perfume and lotion. Bring it back to the studio any time for a free clean.' },
+  { q: 'Do you offer resizing or custom design?',   a: 'Yes. Resizing is free in the first year, and we take custom orders. Email us and we reply within 24 hours.' },
 ]
 
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="border-b border-gold/15 last:border-0">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-4 py-5 text-left" aria-expanded={open}>
-        <span className="font-display text-base text-brand-black">{q}</span>
-        <ChevronDown size={15} className={`shrink-0 text-gold transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+    <div className="border-b border-line last:border-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-6 py-6 text-left"
+        aria-expanded={open}
+      >
+        <span className="vq-display text-[1.15rem] leading-snug text-ink md:text-[1.3rem]">{q}</span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-gold transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+        />
       </button>
       {open && (
-        <p className="pb-5 text-sm leading-[1.85] text-brand-black/70">{a}</p>
+        <p className="max-w-2xl pb-7 text-[15px] leading-[1.9] text-text-muted">{a}</p>
       )}
     </div>
   )
 }
+
+const FIELD_CLASS =
+  'w-full rounded-xl border border-line bg-cream px-5 py-4 text-[15px] text-ink outline-none transition-colors duration-300 placeholder:text-text-faint focus:border-ink focus:ring-0'
 
 export function ContactPageClient() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
@@ -55,160 +72,176 @@ export function ContactPageClient() {
       <PageHero
         variant="split"
         align="left"
-        eyebrow="In Conversation"
-        title="Contact the"
-        titleAccent="Atelier"
-        description="For commissions, care queries, or simply to say hello — our clients are always welcome."
+        eyebrow="Get in Touch"
+        title="Contact"
+        titleAccent="Us"
+        description="For custom orders, care questions, or just to say hello — you are always welcome."
       />
 
-      <section className="bg-ivory vq-lattice">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-4 pb-20 sm:px-6 md:px-10 lg:grid-cols-2 lg:gap-16 lg:pb-24">
+      {/* Details + form */}
+      <section className="bg-cream pb-24 pt-16 md:pb-32 md:pt-20">
+        <div className="vq-container">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-12 lg:gap-24">
 
-          {/* LEFT */}
-          <Reveal>
-            <div className="flex flex-col gap-8">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-gold">Reach Us</p>
-                <h2 className="mt-3 font-display text-2xl text-brand-black md:text-3xl">By appointment or post</h2>
-                <div className="mt-5 h-px w-12 bg-gold/60" />
-                <p className="mt-6 text-sm leading-[1.85] text-brand-black/70">
-                  Our concierge is available Monday to Saturday, 10am – 7pm IST.
-                  Most enquiries are answered within 24 hours.
-                </p>
-              </div>
+            {/* LEFT — contact details */}
+            <div className="lg:col-span-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Reach Us</p>
+              <h2 className="vq-display mt-4 text-[clamp(1.9rem,3.6vw,2.7rem)] leading-[1.1] tracking-[-0.02em] text-ink">
+                Talk to the studio <span className="text-gold">✦</span>
+              </h2>
+              <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
 
-              {/* Contact lines */}
-              <div className="flex flex-col">
-                {[
-                  { icon: <Mail size={14} />, label: 'Email', value: 'concierge@velquira.com', href: 'mailto:concierge@velquira.com' },
-                  { icon: <Phone size={14} />, label: 'Telephone', value: '+91 99999 99999', href: 'tel:+919999999999' },
-                  { icon: <MapPin size={14} />, label: 'Atelier', value: 'Mumbai, Maharashtra, India', href: null },
-                ].map((row) => {
-                  const Inner = (
-                    <div className="flex items-start gap-5 border-b border-gold/15 py-5 transition-colors last:border-0 group-hover:border-gold/40">
-                      <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center border border-gold/40 text-gold transition-colors group-hover:bg-gold group-hover:text-white">
-                        {row.icon}
-                      </div>
+              <p className="mt-7 max-w-md text-[15px] leading-[1.9] text-text-muted">
+                We are here Monday to Saturday, 10am to 7pm. Most messages get a reply within
+                24 hours.
+              </p>
+
+              <div className="mt-10">
+                {DETAILS.map(({ icon: Icon, label, value, href }) => {
+                  const inner = (
+                    <div className="flex items-start gap-5 border-b border-line py-6">
+                      <Icon
+                        size={16}
+                        strokeWidth={1.6}
+                        className="mt-1 shrink-0 text-gold transition-transform duration-300 group-hover:-translate-y-0.5"
+                      />
                       <div>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{row.label}</p>
-                        <p className="mt-1.5 font-display text-base text-brand-black">{row.value}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">
+                          {label}
+                        </p>
+                        <p className="vq-display mt-2 text-[1.15rem] leading-snug text-ink transition-colors duration-300 group-hover:text-gold">
+                          {value}
+                        </p>
                       </div>
                     </div>
                   )
-                  return row.href ? (
-                    <a key={row.label} href={row.href} className="group">{Inner}</a>
+                  return href ? (
+                    <a key={label} href={href} className="group block">{inner}</a>
                   ) : (
-                    <div key={row.label} className="group">{Inner}</div>
+                    <div key={label} className="group block">{inner}</div>
                   )
                 })}
               </div>
 
               {/* Social */}
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-gold">Follow the Journal</p>
-                <div className="mt-4 flex items-center gap-3">
+              <div className="mt-10">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">Follow Us</p>
+                <div className="mt-5 flex items-center gap-3">
                   {[
                     { Icon: Instagram, href: 'https://instagram.com/velquira', label: 'Instagram' },
                     { Icon: Facebook, href: 'https://facebook.com/velquira', label: 'Facebook' },
-                    { Icon: WhatsAppIcon, href: 'https://wa.me/919999999999', label: 'WhatsApp' },
+                    { Icon: WhatsAppIcon, href: 'https://wa.me/919712891700', label: 'WhatsApp' },
                   ].map(({ Icon, href, label }) => (
-                    <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-                      className="flex h-10 w-10 items-center justify-center border border-gold/40 text-gold transition-all hover:bg-gold hover:text-white hover:border-gold">
-                      <Icon size={15} />
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-line text-text-muted transition-all duration-300 hover:-translate-y-0.5 hover:border-ink hover:text-ink"
+                    >
+                      <Icon size={16} />
                     </a>
                   ))}
                 </div>
               </div>
             </div>
-          </Reveal>
 
-          {/* RIGHT — form (underline-only inputs) */}
-          <Reveal delay={0.12}>
-            <div className="relative border border-gold/20 bg-white p-8 sm:p-10">
-              {/* Gold corner ornaments */}
-              <span aria-hidden className="absolute -left-px -top-px h-3 w-3 border-l border-t border-gold/70" />
-              <span aria-hidden className="absolute -right-px -top-px h-3 w-3 border-r border-t border-gold/70" />
-              <span aria-hidden className="absolute -left-px -bottom-px h-3 w-3 border-l border-b border-gold/70" />
-              <span aria-hidden className="absolute -right-px -bottom-px h-3 w-3 border-r border-b border-gold/70" />
-
+            {/* RIGHT — form (toast-only, no API) */}
+            <div className="lg:col-span-7">
               {sent ? (
-                <div className="flex h-full flex-col items-center justify-center gap-5 py-10 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-gold text-gold">
-                    <CheckCircle size={24} strokeWidth={1.4} />
-                  </div>
-                  <p className="font-display text-2xl text-brand-black">Thank you</p>
-                  <p className="text-sm leading-relaxed text-brand-black/70">Your message has been delivered to our atelier. We will reply within 24 hours.</p>
-                  <button onClick={() => setSent(false)} className="mt-2 text-[11px] font-medium uppercase tracking-[0.28em] text-gold underline-offset-4 hover:text-gold-deep">
+                <div className="flex flex-col items-start gap-5 py-6">
+                  <CheckCircle size={30} strokeWidth={1.3} className="text-gold" />
+                  <p className="vq-display text-[clamp(1.8rem,3.4vw,2.6rem)] leading-tight text-ink">
+                    Thank you
+                  </p>
+                  <p className="max-w-md text-[15px] leading-[1.9] text-text-muted">
+                    Your message is on its way to our studio. We will get back to you within
+                    24 hours.
+                  </p>
+                  <button
+                    onClick={() => setSent(false)}
+                    className="mt-2 text-[10px] font-semibold uppercase tracking-[0.26em] text-text-muted underline-offset-8 transition-colors hover:text-ink hover:underline"
+                  >
                     Send another message
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-7">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-8">
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-gold">Write to Us</p>
-                    <p className="mt-2 font-display text-2xl text-brand-black">A note to our atelier</p>
-                    <div className="mt-4 h-px w-12 bg-gold/60" />
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Write to Us</p>
+                    <h2 className="vq-display mt-4 text-[clamp(1.9rem,3.6vw,2.7rem)] leading-[1.1] tracking-[-0.02em] text-ink">
+                      Send a message <span className="text-gold">✦</span>
+                    </h2>
+                    <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
                   </div>
 
-                  {[
-                    { label: 'Your Name',     key: 'name',  type: 'text',  placeholder: 'Priya Sharma' },
-                    { label: 'Email Address', key: 'email', type: 'email', placeholder: 'priya@email.com' },
-                  ].map(({ label, key, type, placeholder }) => (
-                    <div key={key} className="flex flex-col gap-2">
-                      <label className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{label}</label>
-                      <input
-                        required
-                        type={type}
-                        value={form[key]}
-                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                        placeholder={placeholder}
-                        className="border-0 border-b border-gold/30 bg-transparent pb-2.5 font-display text-base text-brand-black placeholder:text-brand-black/30 outline-none transition-colors focus:border-gold focus:ring-0"
-                      />
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+                    {[
+                      { label: 'Your Name',     key: 'name',  type: 'text',  placeholder: 'Priya Sharma' },
+                      { label: 'Email Address', key: 'email', type: 'email', placeholder: 'priya@email.com' },
+                    ].map(({ label, key, type, placeholder }) => (
+                      <div key={key} className="flex flex-col gap-3">
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">
+                          {label}
+                        </label>
+                        <input
+                          required
+                          type={type}
+                          value={form[key]}
+                          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                          placeholder={placeholder}
+                          className={FIELD_CLASS}
+                        />
+                      </div>
+                    ))}
+                  </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">Message</label>
+                  <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">
+                      Message
+                    </label>
                     <textarea
                       required
-                      rows={4}
+                      rows={6}
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      placeholder="How may we be of service?"
-                      className="resize-none border-0 border-b border-gold/30 bg-transparent pb-2.5 text-[15px] leading-relaxed text-brand-black placeholder:text-brand-black/30 outline-none transition-colors focus:border-gold focus:ring-0"
+                      placeholder="Tell us what you are looking for…"
+                      className={`${FIELD_CLASS} resize-none leading-relaxed`}
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={sending}
-                    className="vq-lift mt-3 inline-flex items-center justify-center gap-3 bg-brand-black px-8 py-4 font-display text-sm text-gold transition-colors hover:bg-gold hover:text-white disabled:opacity-50"
+                    className="w-full rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black disabled:pointer-events-none disabled:opacity-50"
                   >
                     {sending ? 'Sending…' : 'Send Message'}
-                    <span className="h-px w-6 bg-gold transition-all" aria-hidden />
                   </button>
                 </form>
               )}
             </div>
-          </Reveal>
+
+          </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="bg-cream">
-        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 md:px-10 lg:py-24">
-          <Reveal>
-            <div className="mb-10 text-center">
-              <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-gold">Frequently Asked</p>
-              <h2 className="mt-3 font-display text-3xl font-normal text-brand-black md:text-4xl">Matters of Craft</h2>
-              <div className="mx-auto mt-5 h-px w-20 bg-gold/60 vq-rule" />
-            </div>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="border border-gold/20 bg-white px-6 py-2 sm:px-8">
-              {FAQS.map((faq) => <FaqItem key={faq.q} q={faq.q} a={faq.a} />)}
-            </div>
-          </Reveal>
+      <section className="vq-section bg-beige">
+        <div className="vq-container">
+          <div className="mb-12 md:mb-16">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Questions</p>
+            <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+              Common Questions <span className="text-gold">✦</span>
+            </h2>
+            <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
+          </div>
+
+          <div className="max-w-4xl border-t border-line">
+            {FAQS.map((faq) => (
+              <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
+          </div>
         </div>
       </section>
     </>

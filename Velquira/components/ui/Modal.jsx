@@ -29,7 +29,7 @@ export function Modal({ open, onClose, title, children, className }) {
       <div
         ref={trapRef}
         className={cn(
-          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-8',
+          'relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-cream p-8',
           className
         )}>
 

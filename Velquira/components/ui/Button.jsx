@@ -12,13 +12,15 @@ import { cn } from '@/lib/utils';
    no heavy shadows. */
 const variantClasses = {
   primary:
-    'rounded-full px-9 py-4 bg-brand-black text-white hover:bg-[#3a3327] focus-visible:ring-sage',
+    'vq-grad-btn rounded-full px-9 py-4 focus-visible:ring-emerald',
+  ink:
+    'rounded-full px-9 py-4 bg-ink text-white hover:bg-[#3a3227] focus-visible:ring-ink',
   champagne:
-    'rounded-full px-9 py-4 bg-sage text-white hover:bg-sage-dark focus-visible:ring-sage',
+    'rounded-full px-9 py-4 bg-gold text-white hover:bg-gold-deep focus-visible:ring-gold',
   secondary:
-    'rounded-full px-9 py-4 border border-brand-black text-brand-black hover:bg-brand-black hover:text-white focus-visible:ring-sage',
+    'rounded-full px-9 py-4 border border-ink text-ink hover:bg-ink hover:text-white focus-visible:ring-ink',
   ghost:
-    'text-brand-black underline underline-offset-[6px] decoration-sage/60 hover:text-sage focus-visible:ring-sage'
+    'text-ink underline underline-offset-[6px] decoration-gold/60 hover:text-gold focus-visible:ring-ink'
 };
 
 const Button = forwardRef(

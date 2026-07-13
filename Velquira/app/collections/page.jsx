@@ -20,11 +20,11 @@ async function fetchCollections() {
 
 export const metadata = {
   title: 'Collections — Velquira',
-  description: 'Discover Velquira\'s curated jewellery collections — natural materials, thoughtful design, a better footprint.',
+  description: 'Explore Velquira\'s jewellery collections — natural materials, thoughtful design, a better footprint.',
   alternates: { canonical: `${SITE}/collections` },
   openGraph: {
     title: 'Collections — Velquira',
-    description: 'Discover Velquira\'s curated jewellery collections.',
+    description: 'Explore Velquira\'s jewellery collections.',
     url: `${SITE}/collections`,
     type: 'website',
   },

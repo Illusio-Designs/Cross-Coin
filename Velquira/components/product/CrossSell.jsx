@@ -35,24 +35,19 @@ export function CrossSell({ currentHandle, relatedProducts, crossSellProducts, i
   const picks = products.slice(0, 3)
 
   return (
-    <section className="bg-ivory px-4 pb-28 pt-24 lg:px-8">
-      <div className="mx-auto max-w-site">
+    <section className="vq-section bg-cream">
+      <div className="vq-container">
         {/* Section heading */}
-        <div className="flex flex-col items-start">
-          <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-            Curated Pairings
-          </p>
-          <h2 className="mt-4 max-w-2xl font-display text-4xl font-normal leading-tight tracking-tight text-brand-black md:text-5xl">
-            Complete the Set
+        <div className="mb-12 md:mb-16">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Related Products</p>
+          <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+            You May Also Like <span className="text-gold">✦</span>
           </h2>
-          <p className="mt-4 max-w-md text-[14px] leading-relaxed text-brand-black/60">
-            Pieces composed in the same hand — to wear alone or together.
-          </p>
-          <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
+          <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
         </div>
 
         {/* Three-up grid */}
-        <div className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
           {picks.map((product, i) => (
             <ProductCard key={product.id || product.handle} product={product} index={i} />
           ))}

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 /* ---------------------------------------------------------------- */
-/* Lightbox — warm ivory ground, espresso backdrop, gold accents    */
+/* Lightbox — clean cream ground, neutral scrim, hairline accents    */
 /* ---------------------------------------------------------------- */
 function Lightbox({ images, startIndex, productName, onClose }) {
   const [active, setActive] = useState(startIndex)
@@ -54,28 +54,28 @@ function Lightbox({ images, startIndex, productName, onClose }) {
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 2147483647 }}>
-      {/* Espresso backdrop with subtle blur */}
-      <div className="absolute inset-0 bg-brand-black/45 backdrop-blur-sm" onClick={onClose} />
+      {/* Neutral scrim with subtle blur */}
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Warm-ivory stage */}
-      <div className="relative flex h-full w-full flex-col bg-ivory">
+      {/* Cream stage */}
+      <div className="relative flex h-full w-full flex-col bg-cream">
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-gold/40 bg-white text-gold transition-colors hover:border-gold hover:bg-gold hover:text-white"
+          className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink transition-all duration-300 hover:border-ink hover:bg-ink hover:text-cream"
           aria-label="Close"
         >
           <X size={18} strokeWidth={1.6} />
         </button>
 
         {/* Counter */}
-        <span className="absolute left-6 top-6 z-10 font-display italic text-[14px] tracking-[0.2em] text-gold">
+        <span className="absolute left-6 top-6 z-10 text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
           {String(active + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
         </span>
 
         {/* Scrollable image stack */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 py-16 md:px-10">
+          <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-16 md:px-10">
             {images.map((img, i) => (
               <div
                 key={i}
@@ -93,21 +93,31 @@ function Lightbox({ images, startIndex, productName, onClose }) {
           </div>
         </div>
 
-        {/* Gold-ringed thumb rail — bottom */}
-        <div className="border-t border-gold/15 bg-ivory/95 px-4 py-4 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 overflow-x-auto">
+        {/* Thumb rail — bottom, borderless */}
+        <div className="border-t border-line bg-cream/95 px-4 py-4 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-4 overflow-x-auto">
             {images.map((img, i) => (
               <button
                 key={i}
                 onClick={() => scrollToImage(i)}
-                className={`h-14 w-14 shrink-0 overflow-hidden rounded-md bg-cream transition-all ${
-                  i === active
-                    ? 'ring-1 ring-gold ring-offset-2 ring-offset-ivory'
-                    : 'border border-gold/20 opacity-60 hover:opacity-100'
-                }`}
+                className="group shrink-0"
                 aria-label={`Image ${i + 1}`}
               >
-                <img src={img.url} alt={`${productName} ${i + 1}`} className="h-full w-full object-cover" />
+                <span className="block h-14 w-14 overflow-hidden bg-paper">
+                  <img
+                    src={img.url}
+                    alt={`${productName} ${i + 1}`}
+                    className={`h-full w-full object-contain p-1 transition-opacity duration-300 ${
+                      i === active ? 'opacity-100' : 'opacity-50 group-hover:opacity-90'
+                    }`}
+                  />
+                </span>
+                <span
+                  className={`mt-2 block h-px w-full transition-colors duration-300 ${
+                    i === active ? 'bg-ink' : 'bg-transparent'
+                  }`}
+                  aria-hidden
+                />
               </button>
             ))}
           </div>
@@ -119,7 +129,7 @@ function Lightbox({ images, startIndex, productName, onClose }) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Main gallery — vertical thumb rail + large clean main image      */
+/* Main gallery — large image on a soft bed + thumb row underneath   */
 /* ---------------------------------------------------------------- */
 export function ProductGallery({ images, colorImages, activeColorName, productName }) {
   const resolvedImages =
@@ -146,71 +156,49 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
 
   return (
     <div className="relative">
-      {/* DESKTOP: vertical thumb rail + main image side by side */}
-      <div className="flex gap-4 md:gap-5">
-        {/* Vertical thumb rail (desktop only) */}
-        {resolvedImages.length > 1 && (
-          <div className="hidden w-20 shrink-0 flex-col gap-3 md:flex">
-            {resolvedImages.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => setSelected(i)}
-                aria-label={`View image ${i + 1}`}
-                className={`h-16 w-16 overflow-hidden rounded-md bg-cream transition-all ${
-                  i === selected
-                    ? 'ring-1 ring-gold ring-offset-2 ring-offset-ivory'
-                    : 'border border-gold/20 opacity-70 hover:opacity-100'
-                }`}
-              >
-                <img
-                  src={img.url}
-                  alt={img.alt || `${productName} ${i + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Main image — soft cream bed, generous padding, nothing cropped */}
+      <div
+        className="group relative overflow-hidden bg-cream"
+        style={{ cursor: 'zoom-in' }}
+        onClick={() => openLightbox(selected)}
+      >
+        <img
+          src={main?.url}
+          alt={main?.alt || productName}
+          className="w-full object-contain p-8 transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04] sm:p-12 md:p-16"
+          style={{ minHeight: 'clamp(360px, 46vw, 660px)', maxHeight: 720 }}
+        />
 
-        {/* Main image — clean warm bed, no frame */}
-        <div className="relative flex-1 min-w-0">
-          <div
-            className="group relative overflow-hidden rounded-xl bg-cream"
-            style={{ cursor: 'zoom-in' }}
-            onClick={() => openLightbox(selected)}
-          >
-            <img
-              src={main?.url}
-              alt={main?.alt || productName}
-              className="w-full object-contain min-h-[360px] p-8 transition-transform duration-[1100ms] ease-out group-hover:scale-[1.03] sm:min-h-[440px] md:min-h-[520px] lg:min-h-[520px]"
-            />
-
-            {/* Click to zoom hint — bottom right */}
-            <span className="pointer-events-none absolute bottom-3 right-4 font-display italic text-[12px] tracking-wide text-gold/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-              click to zoom
-            </span>
-          </div>
-        </div>
+        {/* Zoom hint */}
+        <span className="pointer-events-none absolute bottom-5 right-6 text-[9px] font-semibold uppercase tracking-[0.3em] text-text-faint opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+          Click to zoom
+        </span>
       </div>
 
-      {/* MOBILE: horizontal thumb row */}
+      {/* Thumbnail row — under the main image, borderless, active underline */}
       {resolvedImages.length > 1 && (
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-1 md:hidden">
+        <div className="mt-5 flex gap-4 overflow-x-auto pb-1 md:gap-6">
           {resolvedImages.map((img, i) => (
             <button
               key={i}
               onClick={() => setSelected(i)}
               aria-label={`View image ${i + 1}`}
-              className={`h-14 w-14 shrink-0 overflow-hidden rounded-md bg-cream transition-all ${
-                i === selected
-                  ? 'ring-1 ring-gold ring-offset-2 ring-offset-ivory'
-                  : 'border border-gold/20 opacity-70'
-              }`}
+              className="group shrink-0"
             >
-              <img
-                src={img.url}
-                alt={img.alt || `${productName} ${i + 1}`}
-                className="h-full w-full object-cover"
+              <span className="block h-[68px] w-[68px] overflow-hidden bg-cream md:h-20 md:w-20">
+                <img
+                  src={img.url}
+                  alt={img.alt || `${productName} ${i + 1}`}
+                  className={`h-full w-full object-contain p-2 transition-opacity duration-300 ${
+                    i === selected ? 'opacity-100' : 'opacity-55 group-hover:opacity-90'
+                  }`}
+                />
+              </span>
+              <span
+                className={`mt-2 block h-px w-full transition-colors duration-300 ${
+                  i === selected ? 'bg-ink' : 'bg-line group-hover:bg-text-muted'
+                }`}
+                aria-hidden
               />
             </button>
           ))}

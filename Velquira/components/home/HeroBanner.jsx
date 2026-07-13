@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { JEWELLERY_CATEGORIES } from '@/lib/constants'
 
 const SLIDE_DURATION = 7000
 const EASE = [0.22, 0.65, 0.3, 1]
@@ -26,9 +27,9 @@ function usePrefersReducedMotion() {
 }
 
 /**
- * HeroBanner — cinematic editorial hero.
- * Full-bleed photography, oversized split display type, gold vertical
- * rule, and a quiet bottom caption column. Navbar floats over this band.
+ * HeroBanner — Celestique-style taupe stage.
+ * Oversized serif wordmark over the campaign image, a collection note with a
+ * black pill CTA, and a hairline category index. Slides cross-fade behind.
  */
 export function HeroBanner({ slides = [] }) {
   const reducedMotion = usePrefersReducedMotion()
@@ -38,13 +39,13 @@ export function HeroBanner({ slides = [] }) {
     return [
       {
         id: 'fallback',
-        title: 'Where Light Becomes Heirloom',
+        title: 'A celestial touch for timeless moments',
         description:
-          'Handcrafted in our atelier — 18k gold and certified diamonds.',
-        buttonText: 'Discover the edit',
+          'Discover exquisite jewellery inspired by light — each piece crafted to bring elegance to your most cherished occasions.',
+        buttonText: 'Discover',
         image: FALLBACK_IMAGE,
         ctaHref: '/collections',
-        categoryName: 'Velquira Atelier',
+        categoryName: 'Collection 2025',
       },
     ]
   }, [slides])
@@ -77,121 +78,101 @@ export function HeroBanner({ slides = [] }) {
       ? `/products?category=${encodeURIComponent(slide.categoryName)}`
       : '/collections')
 
-  const titleParts = (slide.title || 'Where Light Becomes Heirloom').split(/\s+(?=\S+$)/)
-  const titleLead = titleParts.length > 1 ? titleParts.slice(0, -1).join(' ') : slide.title
-  const titleAccent = titleParts.length > 1 ? titleParts[titleParts.length - 1] : null
-
-  const imageInitial = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.08 }
-  const imageAnimate = reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }
-  const imageExit = reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.03 }
+  const cats = (JEWELLERY_CATEGORIES || []).slice(0, 4)
 
   return (
     <section
       aria-roledescription="carousel"
-      aria-label="Velquira fine jewellery editorial"
-      className="vq-bleed relative isolate min-h-[92vh] overflow-hidden bg-brand-black text-white md:min-h-[96vh]"
+      aria-label="Velquira fine jewellery"
+      className="px-3 pt-3 md:px-5 md:pt-5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={slide.id ?? safe}
-          className="absolute inset-0"
-          initial={imageInitial}
-          animate={imageAnimate}
-          exit={imageExit}
-          transition={{ duration: 1.4, ease: EASE }}
-        >
-          <Image
-            src={slide.image || FALLBACK_IMAGE}
-            alt={slide.title || 'Velquira fine jewellery'}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-[center_20%]"
-          />
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative isolate flex min-h-[74vh] flex-col justify-between overflow-hidden rounded-[26px] p-6 text-cream md:p-10 lg:p-12"
+        style={{ background: 'linear-gradient(155deg,#b4a894 0%,#a1947f 100%)' }}
+      >
+        {/* campaign image */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={slide.id ?? safe}
+            className="absolute inset-0 -z-10"
+            initial={{ opacity: 0, scale: reducedMotion ? 1 : 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.3, ease: EASE }}
+          >
+            <Image
+              src={slide.image || FALLBACK_IMAGE}
+              alt={slide.title || 'Velquira fine jewellery'}
+              fill
+              priority
+              sizes="100vw"
+              className={`object-cover ${reducedMotion ? '' : 'vq-kenburns'}`}
+            />
+          </motion.div>
+        </AnimatePresence>
+        {/* light warm veils — keep the photo crisp, type legible top & bottom */}
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[rgba(150,137,120,0.28)]" />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-b from-[rgba(45,37,25,0.42)] via-transparent to-[rgba(30,24,15,0.55)]" />
 
-      {/* Layered vignettes — spotlight on piece */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_45%,transparent_0%,rgba(28,23,12,0.55)_100%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-black/80 via-brand-black/25 to-transparent"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-black/70 via-transparent to-brand-black/30"
-      />
-
-      {/* Vertical gold rule — signature motif */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[8%] top-[18%] hidden h-[52%] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent md:block lg:left-[12%]"
-      />
-
-      {/* Oversized split headline */}
-      <div className="relative z-10 flex min-h-[92vh] flex-col justify-end md:min-h-[96vh] md:justify-center">
-        <div className="mx-auto w-full max-w-[1480px] px-6 pb-24 md:px-12 md:pb-0 lg:px-20">
+        {/* ── Top: wordmark + subhead ─────────────────────────────── */}
+        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <h1 className="vq-display leading-[0.86] text-cream" style={{ fontSize: 'clamp(3.4rem,9vw,8rem)', letterSpacing: '0.005em' }}>
+            Velquira<span className="ml-2 align-top text-[0.32em] text-gold-bright">✦</span>
+          </h1>
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={`txt-${safe}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+            <motion.p
+              key={`sub-${safe}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8, ease: EASE }}
-              className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16"
+              transition={{ duration: 0.7, ease: EASE }}
+              className="max-w-[16rem] font-display text-[13px] uppercase leading-[1.6] tracking-[0.16em] text-cream/90 md:pt-4 md:text-right"
             >
-              <div className="lg:col-span-7">
-                <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-gold">
-                  {slide.categoryName || 'Velquira Atelier'}
-                </p>
-
-                <h1 className="vq-display mt-6 text-[clamp(2.75rem,8vw,5.5rem)] text-white">
-                  {titleLead && (
-                    <span className="block">{titleLead}</span>
-                  )}
-                  {titleAccent && (
-                    <span className="mt-1 block italic text-gold-light">{titleAccent}</span>
-                  )}
-                  {!titleAccent && slide.title && (
-                    <span className="block">{slide.title}</span>
-                  )}
-                </h1>
-              </div>
-
-              <div className="flex flex-col justify-end lg:col-span-5 lg:pb-4">
-                {slide.description && (
-                  <p className="max-w-sm text-[14px] leading-[1.8] text-white/72 md:text-[15px]">
-                    {slide.description}
-                  </p>
-                )}
-
-                <Link
-                  href={buttonHref}
-                  className="group/cta mt-8 inline-flex items-center gap-3 self-start rounded-full border border-gold/50 bg-gold/10 px-6 py-3.5 text-[10px] font-medium uppercase tracking-[0.28em] text-gold backdrop-blur-sm transition-all duration-300 hover:border-gold hover:bg-gold hover:text-brand-black"
-                >
-                  {slide.buttonText || 'Discover the edit'}
-                  <ArrowRight
-                    size={13}
-                    strokeWidth={1.7}
-                    className="transition-transform duration-300 group-hover/cta:translate-x-1"
-                  />
-                </Link>
-              </div>
-            </motion.div>
+              {slide.title || 'A celestial touch for timeless moments'}
+            </motion.p>
           </AnimatePresence>
         </div>
-      </div>
 
-      {list.length > 1 && (
-        <div className="absolute inset-x-0 bottom-8 z-20 flex justify-center md:bottom-12">
-          <div role="tablist" aria-label="Slide navigation" className="flex items-center gap-4">
+        {/* ── Bottom: collection note + category index ─────────────── */}
+        <div className="mt-auto flex flex-col gap-8 pt-12 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-cream/70">
+              {slide.categoryName || 'Collection 2025'}
+            </p>
+            {slide.description && (
+              <p className="mt-4 max-w-xs text-[13px] leading-[1.75] text-cream/85">
+                {slide.description}
+              </p>
+            )}
+            <Link
+              href={buttonHref}
+              className="group/cta mt-7 inline-flex items-center gap-3 rounded-full bg-[#1e1912] px-7 py-3.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-400 hover:-translate-y-0.5 hover:bg-black"
+            >
+              {slide.buttonText || 'Discover'}
+              <ArrowRight size={13} strokeWidth={2} className="transition-transform duration-300 group-hover/cta:translate-x-1" />
+            </Link>
+          </div>
+
+          <div className="w-full max-w-[240px]">
+            {cats.map((c) => (
+              <Link
+                key={c.href || c.label}
+                href={c.href || `/products?category=${encodeURIComponent(c.label)}`}
+                className="group/cat flex items-center justify-between border-t border-cream/25 py-3 text-[12px] uppercase tracking-[0.18em] text-cream/90 transition-all duration-300 hover:pl-2 hover:text-cream"
+              >
+                {c.label}
+                <ArrowRight size={13} strokeWidth={1.6} className="transition-transform duration-300 group-hover/cat:translate-x-1" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* slide dots */}
+        {list.length > 1 && (
+          <div role="tablist" aria-label="Slide navigation" className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 md:bottom-6">
             {list.map((_, i) => {
               const active = i === safe
               return (
@@ -202,19 +183,13 @@ export function HeroBanner({ slides = [] }) {
                   aria-selected={active}
                   aria-label={`Go to slide ${i + 1}`}
                   onClick={() => goTo(i)}
-                  className="group/dash relative h-5 w-8 cursor-pointer focus-visible:outline-none"
-                >
-                  <span
-                    className={`pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 transition-all duration-500 ${
-                      active ? 'bg-gold' : 'bg-white/30 group-hover/dash:bg-white/65'
-                    }`}
-                  />
-                </button>
+                  className={`h-1.5 rounded-full transition-all duration-500 ${active ? 'w-6 bg-cream' : 'w-1.5 bg-cream/50 hover:bg-cream/80'}`}
+                />
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   )
 }

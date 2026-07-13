@@ -7,7 +7,6 @@ import { ArrowRight } from 'lucide-react'
 import { getPublicCategories } from '@/lib/api/categories'
 import { PageHero } from '@/components/layout/PageHero'
 import SeoWrapper from '@/components/SeoWrapper'
-import { Reveal } from '@/components/ui/Reveal'
 
 /* Strip duplicated `https://` prefixes that occasionally appear in image fields. */
 function cleanImg(url) {
@@ -27,13 +26,57 @@ const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1200',
 ]
 
+/* Borderless image tile — rounded, dark gradient, serif name + Explore. */
+function CategoryTile({ name, img, href, sizes, featured = false, className = '' }) {
+  return (
+    <Link
+      href={href}
+      className={`group relative block h-full overflow-hidden rounded-[22px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ${className}`}
+    >
+      <div className="relative h-full overflow-hidden bg-paper">
+        <Image
+          src={img}
+          alt={name}
+          fill
+          sizes={sizes}
+          className="object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-105"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-t from-[#211b12]/85 via-[#211b12]/25 to-transparent"
+        />
+
+        <div className={`absolute inset-x-0 bottom-0 z-10 ${featured ? 'p-7 md:p-10' : 'p-5 md:p-6'}`}>
+          <p
+            className={`vq-display leading-tight text-cream ${
+              featured ? 'text-[clamp(1.8rem,3.2vw,2.75rem)]' : 'text-2xl md:text-[26px]'
+            }`}
+          >
+            {name}
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="h-px w-6 bg-gold/70 transition-all duration-500 group-hover:w-10" />
+            <p className="inline-flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.32em] text-gold/90">
+              Explore
+              <ArrowRight
+                size={10}
+                strokeWidth={1.8}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 /**
  * CollectionsPage — the dedicated /collections route.
  *
- * Minimal editorial header (eyebrow + Playfair title + intro + thin
- * gold rule) above a clean grid of premium category cards. Same card
- * pattern as the homepage CategoryCards / ProductCard so the site
- * coheres. No Roman numerals, no rotated ornaments.
+ * Borderless editorial tiles. With 3+ categories the first tile runs large
+ * (2 cols x 2 rows) for an asymmetric magazine grid; below that we fall back
+ * to a clean even grid.
  */
 export default function CollectionsPage({ initialCollections = [] }) {
   const [categories, setCategories] = useState(initialCollections)
@@ -47,89 +90,100 @@ export default function CollectionsPage({ initialCollections = [] }) {
       .finally(() => setLoading(false))
   }, [initialCollections.length])
 
+  const isEditorial = categories.length >= 3
+
   return (
     <SeoWrapper pageName="categories">
-      <main className="bg-ivory">
+      <main className="bg-cream">
         <PageHero
           variant="split"
           align="left"
           eyebrow="Collections"
-          title="The Velquira"
-          titleAccent="House"
-          description="Edits drawn from the same bench, the same eye — composed and finished by hand at the atelier."
+          title="Our"
+          titleAccent="Collections"
+          description="Our collections, designed and handmade in our studio."
         />
 
-        <section className="px-4 pb-24 md:pb-32 lg:px-8">
-          <div className="mx-auto max-w-[1320px]">
+        <section className="pb-24 md:pb-32">
+          <div className="vq-container">
             {loading ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col rounded-2xl border border-gold/20 bg-white p-3"
-                  >
-                    <div className="aspect-[3/4] animate-pulse rounded-xl bg-cream" />
-                    <div className="mt-4 mx-auto h-3 w-1/2 animate-pulse rounded bg-cream" />
-                    <div className="mt-2 mx-auto h-2.5 w-1/4 animate-pulse rounded bg-cream" />
-                  </div>
+                  <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-paper" />
                 ))}
               </div>
             ) : categories.length === 0 ? (
-              <Reveal>
-                <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
-                  <span className="inline-block h-px w-12 bg-gold/60" aria-hidden />
-                  <p className="font-display text-2xl italic text-brand-black">
-                    No collections published yet.
-                  </p>
-                  <p className="text-[14px] leading-relaxed text-brand-black/55">
-                    New houses will be added to the catalogue shortly.
-                  </p>
-                </div>
-              </Reveal>
-            ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
+              <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
+                <span className="inline-block h-px w-12 bg-gold/60" aria-hidden />
+                <p className="vq-display text-[1.75rem] leading-snug text-ink">
+                  No collections yet.
+                </p>
+                <p className="text-[15px] leading-[1.9] text-text-muted">
+                  We are adding new collections soon. In the meantime, have a look at all our
+                  products.
+                </p>
+                <Link
+                  href="/products"
+                  className="mt-4 rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
+                >
+                  Shop All Products
+                </Link>
+              </div>
+            ) : isEditorial ? (
+              /* Asymmetric editorial grid — first tile large */
+              <div className="grid auto-rows-[190px] grid-cols-2 gap-4 sm:auto-rows-[230px] md:auto-rows-[250px] md:grid-cols-4 md:gap-6 lg:auto-rows-[290px]">
                 {categories.map((c, i) => {
                   const name = (c.name || '').trim()
                   const img = cleanImg(c.image) || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]
                   const href = `/products?category=${encodeURIComponent(name)}`
-                  const productCount = c.productCount ?? c.product_count
+                  const big = i === 0
 
                   return (
-                    <Reveal key={c.id || c.slug || name || i} delay={i * 0.05}>
-                      <Link
-                        href={href}
-                        className="group flex flex-col rounded-2xl border border-gold/20 bg-white p-3 transition-[border-color,box-shadow] duration-300 hover:border-gold/55 hover:shadow-[0_22px_45px_-26px_rgba(143,102,32,0.30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-ivory"
-                      >
-                        <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-cream">
-                          <Image
-                            src={img}
-                            alt={name}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                          />
-                        </div>
+                    <CategoryTile
+                      key={c.id || c.slug || name || i}
+                      name={name}
+                      img={img}
+                      href={href}
+                      featured={big}
+                      className={big ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'}
+                      sizes={
+                        big
+                          ? '(max-width: 768px) 100vw, 50vw'
+                          : '(max-width: 768px) 50vw, 25vw'
+                      }
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              /* Clean even grid for 1–2 collections — a single tile runs wide,
+                 two tiles sit side by side. Never a lone half-width card. */
+              <div
+                className={
+                  categories.length === 1
+                    ? 'grid grid-cols-1'
+                    : 'grid grid-cols-1 gap-6 sm:grid-cols-2 md:gap-8'
+                }
+              >
+                {categories.map((c, i) => {
+                  const name = (c.name || '').trim()
+                  const img = cleanImg(c.image) || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]
+                  const href = `/products?category=${encodeURIComponent(name)}`
+                  const solo = categories.length === 1
 
-                        <div className="mt-3.5 px-1 pb-1 text-center">
-                          <p className="font-display text-[16px] leading-tight text-brand-black">
-                            {name}
-                          </p>
-                          {typeof productCount === 'number' && productCount > 0 && (
-                            <p className="mt-0.5 text-[11px] italic text-brand-black/45">
-                              {productCount} {productCount === 1 ? 'piece' : 'pieces'}
-                            </p>
-                          )}
-                          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.28em] text-gold transition-colors duration-200 group-hover:text-gold-deep">
-                            Shop
-                            <ArrowRight
-                              size={10}
-                              strokeWidth={1.7}
-                              className="transition-transform duration-300 group-hover:translate-x-1"
-                            />
-                          </p>
-                        </div>
-                      </Link>
-                    </Reveal>
+                  return (
+                    <div
+                      key={c.id || c.slug || name || i}
+                      className={solo ? 'aspect-[4/5] sm:aspect-[16/9]' : 'aspect-[4/5]'}
+                    >
+                      <CategoryTile
+                        name={name}
+                        img={img}
+                        href={href}
+                        featured
+                        sizes={solo ? '100vw' : '(max-width: 640px) 100vw, 50vw'}
+                      />
+                    </div>
                   )
                 })}
               </div>
@@ -139,14 +193,14 @@ export default function CollectionsPage({ initialCollections = [] }) {
 
         {/* Closing — view all link */}
         {!loading && categories.length > 0 && (
-          <section className="px-4 pb-24 text-center md:pb-32 lg:px-8">
-            <Reveal>
+          <section className="pb-24 text-center md:pb-32">
+            <div className="vq-container">
               <Link
                 href="/products"
-                className="group inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.28em] text-brand-black/70 transition-colors duration-200 hover:text-gold"
+                className="group inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.28em] text-graphite transition-colors duration-200 hover:text-ink"
               >
                 <span className="relative pb-1">
-                  Browse every piece
+                  Browse All Products
                   <span
                     aria-hidden
                     className="absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-gold transition-transform duration-500 ease-out group-hover:scale-x-100"
@@ -158,7 +212,7 @@ export default function CollectionsPage({ initialCollections = [] }) {
                   className="transition-transform duration-300 group-hover:translate-x-1"
                 />
               </Link>
-            </Reveal>
+            </div>
           </section>
         )}
       </main>

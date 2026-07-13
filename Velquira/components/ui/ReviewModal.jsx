@@ -76,7 +76,7 @@ export function ReviewModal({ isOpen, onClose, productId = null, productName = n
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md rounded-3xl bg-cream p-6 shadow-2xl">
         <button onClick={handleClose} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">
           <X size={15} />
         </button>

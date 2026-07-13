@@ -36,12 +36,12 @@ export default function TrackOrderPage() {
     <SeoWrapper pageName="track-order">
       <main className="min-h-screen bg-ivory">
         {/* Refined page header */}
-        <section className="px-4 pt-36 pb-10 text-center sm:px-6 md:px-10">
+        <section className="vq-container pt-36 pb-10 text-center">
           <Reveal>
             <span className="vq-diamond mx-auto block" aria-hidden />
           </Reveal>
           <Reveal delay={0.08}>
-            <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Bespoke Journey</p>
+            <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Track Your Order</p>
           </Reveal>
           <Reveal delay={0.16}>
             <h1 className="mt-3 font-display text-4xl font-normal leading-tight text-brand-black md:text-5xl">
@@ -50,7 +50,7 @@ export default function TrackOrderPage() {
           </Reveal>
           <Reveal delay={0.24}>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-brand-black/55">
-              Enter your order reference to follow each piece on its way to you.
+              Enter your order number to follow your order on its way to you.
             </p>
           </Reveal>
           <Reveal delay={0.32}>
@@ -59,14 +59,14 @@ export default function TrackOrderPage() {
         </section>
 
         {/* Search */}
-        <section className="px-4 pb-16 md:px-6">
+        <section className="vq-container pb-16">
           <Reveal delay={0.1}>
             <form
               onSubmit={handleTrack}
               className="mx-auto flex max-w-xl flex-col gap-2"
             >
-              <label className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Order Reference</label>
-              <div className="flex items-center gap-4 border-b border-gold/30 focus-within:border-gold">
+              <label className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Order Number</label>
+              <div className="flex items-center gap-4 border-b border-line focus-within:border-ink">
                 <input
                   value={orderNumber}
                   onChange={e => setOrderNumber(e.target.value)}
@@ -76,7 +76,7 @@ export default function TrackOrderPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex shrink-0 items-center gap-2 py-3 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors hover:text-gold-deep disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-2 py-3 text-[11px] font-medium uppercase tracking-[0.28em] text-ink transition-colors hover:text-graphite disabled:opacity-50"
                 >
                   <Search size={13} strokeWidth={1.6} />
                   {loading ? 'Tracking…' : 'Track'}
@@ -113,10 +113,10 @@ export default function TrackOrderPage() {
                         return (
                           <div key={step} className="relative z-10 flex flex-1 flex-col items-center gap-3">
                             <div
-                              className={`flex h-9 w-9 items-center justify-center rounded-full border bg-ivory transition-colors ${
+                              className={`flex h-9 w-9 items-center justify-center rounded-full border bg-cream transition-colors ${
                                 reached
-                                  ? 'border-gold bg-gold text-white'
-                                  : 'border-gold/30 text-brand-black/40'
+                                  ? 'border-ink bg-ink text-white'
+                                  : 'border-line text-brand-black/40'
                               }`}
                             >
                               {reached ? <CheckCircle size={14} strokeWidth={1.6} /> : <span className="font-display text-xs">{i + 1}</span>}
@@ -135,7 +135,7 @@ export default function TrackOrderPage() {
                           <div key={i} className="h-px flex-1">
                             <div
                               className={`h-full transition-colors ${
-                                i < currentStep ? 'bg-gold' : 'bg-gold/20'
+                                i < currentStep ? 'bg-ink' : 'bg-line'
                               }`}
                             />
                           </div>

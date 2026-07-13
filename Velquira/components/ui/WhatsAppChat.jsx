@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { prefersReducedData } from '@/lib/netinfo';
 
-const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917434834000';
+const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919712891700';
 const WA_MESSAGE = 'Hi! I need help with Velquira.';
 
 export function WhatsAppChat() {

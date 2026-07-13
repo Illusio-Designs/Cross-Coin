@@ -27,7 +27,7 @@ export const NAV_LINKS = [
   { label: 'Collections', href: '/collections' },
   { label: 'Products', href: '/products' },
   { label: 'About', href: '/about' },
-  { label: 'Lustre', href: '/journal' },
+  { label: 'Journal', href: '/journal' },
 ];
 
 // Fine-jewellery categories — clicking one applies a category filter on

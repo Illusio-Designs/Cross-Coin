@@ -33,7 +33,7 @@ export default function PolicyPage() {
     <SeoWrapper pageName={name || 'policy'}>
       <main className="bg-ivory">
         {/* Editorial page header */}
-        <section className="px-4 pt-24 pb-10 text-center sm:px-6 md:px-10 md:pt-32 md:pb-14">
+        <section className="vq-container pt-24 pb-10 text-center md:pt-32 md:pb-14">
           <Reveal>
             <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
               Policies
