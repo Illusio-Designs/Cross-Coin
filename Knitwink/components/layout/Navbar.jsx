@@ -76,14 +76,14 @@ export function Navbar() {
             </svg>
           </button>
           <Link href={ROUTES.home} className="hidden lg:block focus-visible:outline-none" aria-label="Knitwink home">
-            <img src="/logo.webp" alt="Knitwink" className="h-8 w-auto object-contain" />
+            <img src="/logo.png" alt="Knitwink" className="h-8 w-auto object-contain" />
           </Link>
         </div>
 
         {/* Center — mobile logo + desktop nav links */}
         <div className="flex items-center justify-center gap-1">
           <Link href={ROUTES.home} className="lg:hidden focus-visible:outline-none" aria-label="Knitwink home">
-            <img src="/logo.webp" alt="Knitwink" className="h-9 w-auto object-contain" />
+            <img src="/logo.png" alt="Knitwink" className="h-9 w-auto object-contain" />
           </Link>
           {NAV_LINKS.map(({ label, href }) => (
             <Link
