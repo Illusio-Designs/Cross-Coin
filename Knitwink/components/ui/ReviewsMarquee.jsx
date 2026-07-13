@@ -36,16 +36,20 @@ function ReviewCard({ review }) {
 }
 
 function buildCols(reviews) {
-  const a = reviews.filter((_, i) => i % 3 === 0)
-  const b = reviews.filter((_, i) => i % 3 === 1)
-  const c = reviews.filter((_, i) => i % 3 === 2)
-  const max = Math.max(a.length, b.length, c.length)
-  const pad = (arr) => { while (arr.length < max) arr = [...arr, ...reviews]; return arr.slice(0, max) }
-  const pa = pad(a), pb = pad(b), pc = pad(c)
+  if (!reviews.length) return { col1: [], col2: [], col3: [] }
+  // Build a dense pool first so every column has enough cards to overflow the
+  // 440px viewport — with only a few unique reviews the old split produced
+  // short columns and the scroll loop revealed big empty gaps. Each column is
+  // then tripled so the -33.333% keyframe loops seamlessly.
+  let pool = reviews
+  while (pool.length < 15) pool = [...pool, ...reviews]
+  const a = pool.filter((_, i) => i % 3 === 0)
+  const b = pool.filter((_, i) => i % 3 === 1)
+  const c = pool.filter((_, i) => i % 3 === 2)
   return {
-    col1: [...pa, ...pa, ...pa],
-    col2: [...pb, ...pb, ...pb],
-    col3: [...pc, ...pc, ...pc],
+    col1: [...a, ...a, ...a],
+    col2: [...b, ...b, ...b],
+    col3: [...c, ...c, ...c],
   }
 }
 
