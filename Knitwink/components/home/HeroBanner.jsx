@@ -87,7 +87,7 @@ export function HeroBanner({ slides = [] }) {
               src={slide.image}
               alt={slide.title || 'Banner'}
               shimmerClassName="bg-gray-800"
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-contain object-center"
             />
           </motion.div>
         </AnimatePresence>
