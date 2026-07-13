@@ -1057,7 +1057,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               <h3 className="cd-success-title">Order Placed!</h3>
               <p className="cd-success-order">Order #{orderSuccess.orderNumber}</p>
               <p className="cd-success-msg">Thank you! You will receive a confirmation shortly.</p>
-              <button className="cd-btn-primary" onClick={() => { onClose(); router.push(`/ThankYou?order_number=${orderSuccess.orderNumber}`); }}>View Order</button>
+              <button className="cd-btn-primary" onClick={() => { onClose(); router.push(`/thank-you?order_number=${orderSuccess.orderNumber}`); }}>View Order</button>
               <button className="cd-btn-ghost" style={{ marginTop: 8 }} onClick={onClose}>Continue Shopping</button>
             </div>
           ) : isMounted && paymentFailed.error ? (

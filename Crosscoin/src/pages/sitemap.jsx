@@ -267,7 +267,7 @@ const Sitemap = ({ seoData }) => {
               <div className="cat-col">
                 <Link href="/blog" className="cat-heading">Other Pages</Link>
                 <ul className="cat-links">
-                  <li><Link href="/ThankYou">Thank You</Link></li>
+                  <li><Link href="/thank-you">Thank You</Link></li>
                   <li><Link href="/blog">Blog</Link></li>
                   <li><Link href="/sitemap">Sitemap</Link></li>
                 </ul>
