@@ -4,4 +4,4 @@ export const LOGO_CANDIDATES = [
 ]
 
 export const LOGO_MARK = '/velquira-logo.svg'
-export const SITE_TAGLINE = 'Fine Jewellery · Mumbai Studio'
+export const SITE_TAGLINE = 'Fine Jewellery · Morbi Studio'
