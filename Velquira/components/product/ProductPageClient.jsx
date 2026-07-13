@@ -11,26 +11,24 @@ export function ProductPageClient({ product }) {
   )
 
   return (
-    <div className="relative mx-auto max-w-site">
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14">
-        {/* LEFT — Gallery (cols 1–7), sticky on desktop scroll */}
-        <div className="min-w-0 lg:col-span-7 lg:sticky lg:top-[110px] lg:self-start">
-          <Reveal>
-            <ProductGallery
-              images={product.images}
-              colorImages={product.colorImages}
-              activeColorName={activeColor.name}
-              productName={product.name}
-            />
-          </Reveal>
-        </div>
+    <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16 xl:gap-20">
+      {/* LEFT — Gallery (~58%) */}
+      <div className="min-w-0 lg:col-span-7">
+        <Reveal>
+          <ProductGallery
+            images={product.images}
+            colorImages={product.colorImages}
+            activeColorName={activeColor.name}
+            productName={product.name}
+          />
+        </Reveal>
+      </div>
 
-        {/* RIGHT — Editorial info (cols 8–12) */}
-        <div className="min-w-0 lg:col-span-5">
-          <Reveal delay={0.12}>
-            <ProductInfo product={product} onColorChange={setActiveColor} />
-          </Reveal>
-        </div>
+      {/* RIGHT — Buy column (~42%), sticky on desktop */}
+      <div className="min-w-0 lg:col-span-5 lg:sticky lg:top-32 lg:self-start">
+        <Reveal delay={0.12}>
+          <ProductInfo product={product} onColorChange={setActiveColor} />
+        </Reveal>
       </div>
     </div>
   )

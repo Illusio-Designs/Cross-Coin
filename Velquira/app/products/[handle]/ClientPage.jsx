@@ -13,14 +13,15 @@ import { Reveal } from '@/components/ui/Reveal'
 
 function ProductSkeleton() {
   return (
-    <div className="bg-ivory px-5 pt-36 pb-10 lg:px-8">
-      <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-12">
+    <div className="bg-beige pt-10 pb-24">
+      <div className="vq-container grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="aspect-square w-full animate-pulse bg-cream lg:col-span-7" />
-        <div className="flex flex-col gap-4 py-6 lg:col-span-5">
+        <div className="flex flex-col gap-5 lg:col-span-5">
           <div className="h-3 w-24 animate-pulse bg-cream" />
-          <div className="h-8 w-3/4 animate-pulse bg-cream" />
-          <div className="h-6 w-28 animate-pulse bg-cream" />
-          <div className="h-12 w-full animate-pulse bg-cream" />
+          <div className="h-10 w-3/4 animate-pulse bg-cream" />
+          <div className="h-7 w-28 animate-pulse bg-cream" />
+          <div className="h-px w-full bg-line" />
+          <div className="h-14 w-full animate-pulse bg-cream" />
         </div>
       </div>
     </div>
@@ -43,52 +44,53 @@ export default function ProductPage({ initialProduct = null, initialBestsellers 
 
   if (loading) return <ProductSkeleton />
   if (!product) return (
-    <div className="bg-ivory px-5 py-32 text-center">
-      <p className="font-display text-3xl text-brand-black/75">Piece not found.</p>
-      <Link
-        href="/collections/all"
-        className="mt-6 inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.28em] text-gold hover:text-gold-deep"
-      >
-        Return to the Collection
-      </Link>
+    <div className="bg-beige py-32">
+      <div className="vq-container text-center">
+        <p className="vq-display text-[clamp(2rem,4vw,3rem)] text-ink">Product not found.</p>
+        <Link
+          href="/collections/all"
+          className="mt-8 inline-block rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
+        >
+          Back to Products
+        </Link>
+      </div>
     </div>
   )
 
   return (
     <SeoWrapper pageName={handle || 'product-details'} seoData={product?.seo || null}>
-      <main className="bg-ivory">
-        {/* Hero spread (12-col, gallery + info) — breadcrumb comes from root layout */}
-        <section className="px-4 pt-10 pb-20 lg:px-8">
-          <ProductPageClient product={product} />
+      <main className="bg-cream">
+        {/* Main buy block — gallery + buy column. Breadcrumb comes from root layout */}
+        <section className="bg-beige pt-8 pb-20 md:pb-28">
+          <div className="vq-container">
+            <ProductPageClient product={product} />
+          </div>
         </section>
 
-        {/* The Maker's Hand */}
+        {/* How it's made */}
         <Reveal>
           <FeatureHighlight />
         </Reveal>
 
-        {/* Reviews — A Legacy of Trust */}
+        {/* You may also like */}
         <Reveal>
-          <section className="bg-white">
-            <div className="mx-auto flex max-w-[1320px] flex-col items-center px-4 pt-20 text-center md:pt-28 lg:px-8">
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                Testimonials
-              </p>
-              <h2 className="mt-4 max-w-2xl font-display text-4xl font-normal leading-tight tracking-tight text-brand-black md:text-5xl">
-                A Legacy of Trust
-              </h2>
-              <p className="mt-4 max-w-md text-[14px] leading-relaxed text-brand-black/60">
-                Notes from the people who carry this piece.
-              </p>
-              <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
+          <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
+        </Reveal>
+
+        {/* Customer reviews */}
+        <Reveal>
+          <section className="bg-cream pt-[clamp(64px,9vw,116px)]">
+            <div className="vq-container">
+              <div className="mb-12 md:mb-16">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Testimonials</p>
+                <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+                  Customer Reviews <span className="text-gold">✦</span>
+                </h2>
+                <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
+              </div>
             </div>
             <ReviewsSection productId={product.id} productName={product.name} initialReviews={initialReviews} initialStats={initialStats} />
           </section>
-        </Reveal>
-
-        {/* Complete the Set */}
-        <Reveal>
-          <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
         </Reveal>
       </main>
     </SeoWrapper>

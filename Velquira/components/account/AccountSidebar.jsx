@@ -17,25 +17,25 @@ export function AccountSidebar() {
   const { logout } = useAuth();
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Account navigation">
+    <nav className="flex flex-col border-t border-line" aria-label="Account navigation">
       {NAV.map((item) =>
       <Link
         key={item.href}
         href={item.href}
         className={cn(
-          'rounded-lg px-4 py-2.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2',
+          'border-b border-line border-l-2 py-4 pl-4 text-[10px] font-semibold uppercase tracking-[0.24em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2',
           pathname === item.href ?
-          'bg-gray-100 font-medium text-brand-black' :
-          'text-gray-600 hover:text-brand-black'
+          'border-l-gold text-ink' :
+          'border-l-transparent text-text-muted hover:text-ink'
         )}>
-        
+
           {item.label}
         </Link>
       )}
       <button
         onClick={logout}
-        className="mt-4 rounded-lg px-4 py-2.5 text-left text-sm text-gray-600 transition-colors duration-150 hover:text-brand-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
-        
+        className="mt-8 w-fit border-b border-line pb-1 text-left text-[10px] font-semibold uppercase tracking-[0.24em] text-text-muted transition-colors duration-300 hover:border-ink hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2">
+
         Sign Out
       </button>
     </nav>);

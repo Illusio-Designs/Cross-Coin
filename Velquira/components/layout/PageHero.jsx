@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils'
 
 const VARIANTS = {
-  editorial: 'bg-ivory vq-lattice',
-  obsidian: 'bg-brand-black text-white',
-  split: 'bg-ivory vq-lattice',
-  minimal: 'bg-[#faf5eb] border-b border-gold/15',
-  cream: 'bg-cream vq-lattice',
+  editorial: 'bg-cream vq-lattice',
+  obsidian: 'bg-ink text-white',
+  split: 'bg-cream vq-lattice',
+  minimal: 'bg-paper border-b border-line',
+  cream: 'bg-paper vq-lattice',
 }
 
 export function PageHero({
@@ -32,7 +32,7 @@ export function PageHero({
     >
       {isDark && (
         <>
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgba(191,139,46,0.16),transparent)]" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgba(255,255,255,0.06),transparent)]" />
           <div aria-hidden className="vq-nav-rule-bottom opacity-40" />
         </>
       )}
@@ -43,7 +43,7 @@ export function PageHero({
 
       <div
         className={cn(
-          'relative mx-auto max-w-[1480px] px-6 md:px-12 lg:px-16',
+          'relative vq-container',
           align === 'center' && 'text-center',
           align === 'left' && 'text-left'
         )}
@@ -53,18 +53,14 @@ export function PageHero({
         {title && (
           <h1
             className={cn(
-              'vq-display mt-5 max-w-4xl',
+              'vq-display mt-4 max-w-4xl tracking-[-0.02em] leading-[1.02]',
               align === 'center' && 'mx-auto',
-              isMinimal ? 'text-3xl md:text-[2.5rem]' : 'text-[2.5rem] md:text-6xl lg:text-[4rem]',
-              isDark ? 'text-white' : 'text-brand-black'
+              isMinimal ? 'text-3xl md:text-[2.5rem]' : 'text-[2.6rem] md:text-6xl lg:text-[4.2rem]',
+              isDark ? 'text-white' : 'text-ink'
             )}
           >
             {title}
-            {titleAccent && (
-              <span className={cn('mt-2 block font-display italic', isDark ? 'text-gold-light' : 'text-gold')}>
-                {titleAccent}
-              </span>
-            )}
+            {titleAccent ? ` ${titleAccent}` : ''} <span className="text-gold">✦</span>
           </h1>
         )}
 
@@ -73,7 +69,7 @@ export function PageHero({
             className={cn(
               'mt-6 max-w-xl font-display text-base italic leading-relaxed md:text-lg',
               align === 'center' && 'mx-auto',
-              isDark ? 'text-white/60' : 'text-brand-black/55'
+              isDark ? 'text-white/60' : 'text-graphite'
             )}
           >
             {description}

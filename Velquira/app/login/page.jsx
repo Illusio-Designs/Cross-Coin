@@ -135,7 +135,7 @@ export default function LoginPage() {
           <div>
             <p className="vq-display text-4xl text-white">Welcome back.</p>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/55">
-              Sign in to view orders, manage your wishlist, and access atelier services.
+              Sign in to view orders, manage your wishlist, and access account services.
             </p>
           </div>
         </div>
@@ -155,14 +155,14 @@ export default function LoginPage() {
           <div className="mb-10 hidden lg:block">
             <VelquiraLogo size="sm" />
             <h1 className="vq-display mt-6 text-3xl text-brand-black">Sign In</h1>
-            <p className="mt-2 text-sm text-brand-black/55">Your atelier account awaits.</p>
+            <p className="mt-2 text-sm text-brand-black/55">Your account awaits.</p>
           </div>
 
           {step === 'phone' ? (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Phone</label>
-                <div className="flex items-center gap-2 border-b border-gold/30 bg-transparent py-3 focus-within:border-gold">
+                <div className="flex items-center gap-2 border-b border-line bg-transparent py-3 focus-within:border-ink">
                   <span className="text-sm text-brand-black/40">+91</span>
                   <input
                     type="tel"
@@ -185,7 +185,7 @@ export default function LoginPage() {
               <button
                 onClick={handleSendOtp}
                 disabled={digits.length !== 10}
-                className="flex items-center justify-center gap-2 rounded-full bg-brand-black py-4 text-[10px] font-medium uppercase tracking-[0.28em] text-gold disabled:opacity-40"
+                className="flex items-center justify-center gap-2 rounded-full bg-ink py-4 text-[10px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:bg-[#3a3227] disabled:opacity-40"
               >
                 Send OTP <ArrowRight size={14} />
               </button>
@@ -209,7 +209,7 @@ export default function LoginPage() {
                     value={d}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    className="h-14 w-14 border border-gold/30 bg-white text-center text-xl font-display text-brand-black outline-none focus:border-gold"
+                    className="h-14 w-14 border border-line bg-cream text-center text-xl font-display text-brand-black outline-none focus:border-ink"
                   />
                 ))}
               </div>
@@ -217,7 +217,7 @@ export default function LoginPage() {
               <button
                 onClick={handleVerify}
                 disabled={loading}
-                className="rounded-full bg-brand-black py-4 text-[10px] font-medium uppercase tracking-[0.28em] text-gold disabled:opacity-40"
+                className="rounded-full bg-ink py-4 text-[10px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:bg-[#3a3227] disabled:opacity-40"
               >
                 {loading ? 'Verifying…' : 'Verify & Sign In'}
               </button>

@@ -12,7 +12,7 @@ export default function CollectionLoading() {
       </div>
 
       {/* Controls skeleton */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-6">
+      <div className="flex items-center justify-between border-b border-line pb-6">
         <div className="hidden gap-2 md:flex">
           {Array.from({ length: 5 }).map((_, i) =>
           <Skeleton key={i} className="h-8 w-20 rounded-full" />

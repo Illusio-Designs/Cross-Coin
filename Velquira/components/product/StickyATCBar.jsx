@@ -2,10 +2,9 @@
 
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
-import { ShoppingBag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
-/* Slim editorial sticky bar — ivory ground, hairline gold top edge.
+/* Slim sticky bar — cream/blur ground, hairline top edge.
    Appears when the in-page CTA scrolls out of view. Preserves the
    visibility trigger contract (`visible` prop) used by ProductInfo. */
 export function StickyATCBar({ visible, productName, color, price, imageUrl, onAddToCart }) {
@@ -17,16 +16,13 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
   return createPortal(
     <div
       style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1050 }}
-      className="border-t border-gold/30 bg-ivory/95 backdrop-blur-md"
+      className="border-t border-line bg-cream/90 backdrop-blur-xl"
     >
-      <div
-        className="mx-auto flex max-w-site items-center justify-between gap-4 px-4 md:px-6 lg:px-8"
-        style={{ height: 72 }}
-      >
-        {/* LEFT — hairline gold thumb + serif name + price */}
+      <div className="vq-container flex items-center justify-between gap-6 py-3.5">
+        {/* LEFT — thumb + name + price */}
         <div className="flex min-w-0 items-center gap-4">
           {imageUrl && (
-            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-gold/30 bg-cream">
+            <div className="hidden h-12 w-12 shrink-0 overflow-hidden bg-paper sm:block">
               <img
                 src={imageUrl}
                 alt={productName}
@@ -34,25 +30,31 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
               />
             </div>
           )}
-          <div className="min-w-0 leading-tight">
-            <p className="truncate font-display text-[15px] font-normal text-brand-black">
+          <div className="min-w-0">
+            <p className="vq-display truncate text-[16px] leading-tight text-ink">
               {productName}
             </p>
-            <p className="mt-0.5 flex items-center gap-2 text-[12px] text-brand-black/65">
-              {color && <span className="truncate uppercase tracking-[0.2em] text-[10px] text-gold">{color}</span>}
-              <span className="font-display text-[13px] text-brand-black/75">
+            <p className="mt-1 flex items-center gap-3 leading-none">
+              <span className="vq-display text-[14px] text-gold">
                 {formatPrice(price)}
               </span>
+              {color && (
+                <>
+                  <span className="h-3 w-px bg-line" aria-hidden />
+                  <span className="truncate text-[9px] font-semibold uppercase tracking-[0.24em] text-text-muted">
+                    {color}
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        {/* RIGHT — gold-on-cocoa pill */}
+        {/* RIGHT — black pill */}
         <button
           onClick={onAddToCart}
-          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-transparent bg-brand-black px-6 py-3 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:border-gold hover:bg-gold-deep md:px-8"
+          className="shrink-0 rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
         >
-          <ShoppingBag size={14} strokeWidth={1.6} />
           <span className="hidden sm:inline">Add to Bag</span>
           <span className="sm:hidden">Add</span>
         </button>

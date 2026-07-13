@@ -1,15 +1,62 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import SeoWrapper from '@/components/SeoWrapper'
 import { PageHero } from '@/components/layout/PageHero'
-import { Reveal } from '@/components/ui/Reveal'
 
-const PROMISES = [
-  { phrase: 'Ethically Sourced.', sub: 'Traceable diamonds and conflict-free gemstones, certified at origin.' },
-  { phrase: 'Hand-Finished.',     sub: 'Each piece bench-set by a single artisan from casting to polish.' },
-  { phrase: 'Hallmarked 18k.',    sub: 'Solid 18k yellow, rose and white gold cast from recycled bullion.' },
-  { phrase: 'For Generations.',   sub: 'Generous metalwork and settings designed to be re-set and inherited.' },
+/* Standard section header — identical pattern site-wide. */
+function SectionTitle({ eyebrow, title, className = '' }) {
+  return (
+    <div className={`mb-12 md:mb-16 ${className}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">{eyebrow}</p>
+      <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+        {title} <span className="text-gold">✦</span>
+      </h2>
+      <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
+    </div>
+  )
+}
+
+const STEPS = [
+  {
+    label: 'Step One',
+    title: 'Design',
+    body: 'Every design starts as a drawing on paper in our studio. We keep working on the proportions until they feel right, and only then do we cut any gold.',
+  },
+  {
+    label: 'Step Two',
+    title: 'Setting',
+    body: 'One jeweller stays with your order from start to finish. The gold is cast, then every stone is set by hand under a loupe until it sits perfectly flush.',
+  },
+  {
+    label: 'Step Three',
+    title: 'Finishing',
+    body: 'The finished jewellery is polished, hallmarked and checked twice. It ships in a soft pouch with its diamond certificate and a simple care card.',
+  },
+]
+
+const VALUES = [
+  {
+    label: 'Shipping',
+    phrase: 'Free Insured Shipping',
+    sub: 'Fully insured, tracked delivery across India — from our studio to your door.',
+  },
+  {
+    label: 'Metal',
+    phrase: 'Hallmarked 18k Gold',
+    sub: 'Solid 18k yellow, rose and white gold. Hallmarked, never plated.',
+  },
+  {
+    label: 'Stones',
+    phrase: 'Certified Diamonds',
+    sub: 'Every diamond comes with a lab certificate you can check yourself.',
+  },
+  {
+    label: 'Care',
+    phrase: 'Lifetime Care',
+    sub: 'Free cleaning and polishing for life, plus free resizing in the first year.',
+  },
 ]
 
 export default function AboutPage() {
@@ -17,150 +64,142 @@ export default function AboutPage() {
     <SeoWrapper pageName="about">
       <PageHero
         variant="obsidian"
-        eyebrow="The Velquira House"
+        eyebrow="About Us"
         title="Light, set"
         titleAccent="by hand."
-        description="A quiet atelier in Bandra, working in solid 18k gold and certified stones — shaping jewellery slowly, the way it was always meant to be made."
+        description="A small studio in Bandra, working in solid 18k gold and certified stones — making jewellery slowly, the way it should be made."
       />
 
-      <section className="bg-ivory">
-        <div className="mx-auto max-w-site px-4 py-16 sm:px-6 md:px-10 md:py-20">
-          <Reveal>
-            <div className="mx-auto w-full max-w-5xl overflow-hidden border border-gold/20 bg-white p-2">
-              <div className="aspect-[3/2] w-full overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1600"
-                  alt="A diamond solitaire from the Velquira atelier"
-                  className="h-full w-full object-cover transition-transform duration-[1100ms] ease-out hover:scale-[1.03]"
+      {/* 1 — Our Story: editorial split */}
+      <section className="vq-section bg-cream">
+        <div className="vq-container">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-20">
+            <div className="lg:col-span-6">
+              <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-[28px] bg-paper">
+                <Image
+                  src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1400"
+                  alt="A jeweller setting a stone at the Velquira bench"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.04]"
                 />
               </div>
             </div>
-          </Reveal>
-        </div>
-      </section>
 
-      {/* 2. The Atelier — editorial 2-column split */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-site px-4 py-20 sm:px-6 md:px-10 lg:py-28">
-          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
-            <Reveal className="lg:col-span-5">
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                  The Atelier
+            <div className="lg:col-span-6">
+              <SectionTitle eyebrow="Who We Are" title="Our Story" className="mb-8 md:mb-10" />
+
+              <div className="flex flex-col gap-6 text-[15px] leading-[1.9] text-text-muted">
+                <p>
+                  Velquira is a small jewellery studio in Mumbai. Everything we sell is made
+                  here by hand, in solid 18k gold that carries a hallmark, with diamonds that
+                  come with their own certificate. Nothing is mass produced, and nothing is
+                  plated.
                 </p>
-                <h2 className="mt-5 font-display text-4xl font-normal leading-[1.08] text-brand-black md:text-5xl">
-                  In the atelier
-                </h2>
-                <div className="mt-6 h-px w-12 bg-gold/60" />
-
-                <div className="mt-8 flex flex-col gap-5 text-[15px] leading-[1.85] text-brand-black/75">
-                  <p>
-                    Velquira began as a quiet exchange between three jewellers who shared one
-                    frustration — fine jewellery, made carelessly, designed to be replaced.
-                    We resolved to make the opposite.
-                  </p>
-                  <p>
-                    Every piece begins as a sketch on tracing paper, is cast in solid 18k gold,
-                    then hand-finished at the bench — pavé set, milgrain edged, mirror polished.
-                    No production lines. No shortcuts.
-                  </p>
-                  <p>
-                    We work directly with our diamond cutters and gemstone suppliers, refuse
-                    synthetic certifications, and price our pieces by the craft they hold —
-                    not the season they belong to.
-                  </p>
-                </div>
+                <p>
+                  We started because good jewellery had become hard to buy honestly. So we
+                  kept it simple — clear pricing, real materials, and jewellery you can wear
+                  every day and pass on later. If you want something made just for you, we do
+                  custom orders too.
+                </p>
               </div>
-            </Reveal>
-
-            <Reveal delay={0.15} className="lg:col-span-7">
-              <div className="relative">
-                <div className="aspect-[4/5] w-full overflow-hidden bg-cream">
-                  <img
-                    src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200"
-                    alt="An artisan setting a stone at the Velquira bench"
-                    className="h-full w-full object-cover transition-transform duration-[1100ms] ease-out hover:scale-[1.03]"
-                  />
-                </div>
-              </div>
-            </Reveal>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Our Promise */}
-      <section className="bg-cream">
-        <div className="mx-auto max-w-site px-4 py-20 sm:px-6 md:px-10 lg:py-28">
-          <Reveal>
-            <div className="text-center">
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                Our Promise
-              </p>
-              <h2 className="mt-5 font-display text-4xl font-normal text-brand-black md:text-5xl">
-                Crafted to Endure
-              </h2>
-              <div className="mx-auto mt-6 h-px w-12 bg-gold/60" />
-            </div>
-          </Reveal>
+      {/* 2 — How It's Made: three steps, hairline dividers, no boxes */}
+      <section className="vq-section bg-beige">
+        <div className="vq-container">
+          <SectionTitle eyebrow="The Process" title="How It's Made" />
 
-          <div className="mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-            {PROMISES.map((p, i) => (
-              <Reveal key={p.phrase} delay={i * 0.08}>
-                <div className="flex flex-col items-start gap-3 border-t border-gold/25 pt-6">
-                  <p className="font-display italic text-[20px] leading-snug text-brand-black">
-                    {p.phrase}
-                  </p>
-                  <p className="text-[14px] leading-[1.7] text-brand-black/60">
-                    {p.sub}
-                  </p>
-                </div>
-              </Reveal>
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-line">
+            {STEPS.map((s, i) => (
+              <div
+                key={s.title}
+                className={`lg:px-12 ${i === 0 ? 'lg:pl-0' : ''} ${i === STEPS.length - 1 ? 'lg:pr-0' : ''}`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">
+                  {s.label}
+                </p>
+                <h3 className="vq-display mt-4 text-[1.75rem] leading-tight text-ink md:text-[2rem]">
+                  {s.title}
+                </h3>
+                <p className="mt-5 max-w-sm text-[15px] leading-[1.9] text-text-muted">
+                  {s.body}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 4. Visit the Atelier */}
-      <section className="bg-ivory">
-        <div className="mx-auto max-w-site px-4 py-20 text-center sm:px-6 md:px-10 lg:py-28">
-          <Reveal>
-            <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-              By Invitation
-            </p>
-          </Reveal>
+      {/* 3 — Dark band pull-quote */}
+      <section className="vq-night">
+        <div className="vq-container py-24 text-center md:py-32">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
+            What We Believe
+          </p>
+          <blockquote className="vq-display mx-auto mt-8 max-w-4xl text-[clamp(1.8rem,3.6vw,3rem)] leading-[1.25] tracking-[-0.01em] text-cream">
+            “Jewellery should be made slowly, by people who sign their work — and it should
+            still be worth wearing thirty years from now.”
+          </blockquote>
+          <span
+            className="mx-auto mt-10 block h-px w-16 bg-gradient-to-r from-transparent via-gold to-transparent"
+            aria-hidden
+          />
+        </div>
+      </section>
 
-          <Reveal delay={0.08}>
-            <h2 className="mx-auto mt-6 max-w-3xl font-display text-3xl font-normal leading-tight text-brand-black md:text-5xl">
-              Visit the Velquira Atelier
-            </h2>
-          </Reveal>
+      {/* 4 — Why Velquira: values row, hairline dividers, no boxes */}
+      <section className="vq-section bg-cream">
+        <div className="vq-container">
+          <SectionTitle eyebrow="Why Velquira" title="What You Get" />
 
-          <Reveal delay={0.16}>
-            <div className="mx-auto mt-6 h-px w-12 bg-gold/60" />
-          </Reveal>
+          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-line">
+            {VALUES.map((v, i) => (
+              <div
+                key={v.phrase}
+                className={`lg:px-10 ${i === 0 ? 'lg:pl-0' : ''} ${i === VALUES.length - 1 ? 'lg:pr-0' : ''}`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">
+                  {v.label}
+                </p>
+                <p className="vq-display mt-4 text-[1.4rem] leading-snug text-ink">
+                  {v.phrase}
+                </p>
+                <p className="mt-3 text-[14px] leading-[1.8] text-text-muted">{v.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <Reveal delay={0.22}>
-            <p className="mx-auto mt-8 max-w-xl text-[15px] leading-[1.85] text-brand-black/70">
-              Step into our workspace to see pieces in person, discuss a commission,
-              or have a heirloom re-set. We receive a small number of guests each week.
-            </p>
-          </Reveal>
+      {/* 5 — Closing CTA */}
+      <section className="vq-section bg-beige">
+        <div className="vq-container text-center">
+          <p className="vq-display mx-auto max-w-2xl text-[clamp(1.7rem,3.4vw,2.6rem)] leading-[1.25] text-ink">
+            Made by hand in Mumbai, and ready to be worn.
+          </p>
+          <p className="mx-auto mt-6 max-w-lg text-[15px] leading-[1.9] text-text-muted">
+            Have a look at everything we make, or write to us if you would like something
+            custom.
+          </p>
 
-          <Reveal delay={0.3}>
+          <div className="mt-10 flex flex-col items-center justify-center gap-6 sm:flex-row">
+            <Link
+              href="/products"
+              className="rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
+            >
+              Shop All Products
+            </Link>
             <Link
               href="/contact"
-              className="mt-10 inline-flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-gold transition-colors hover:text-gold-deep"
+              className="text-[10px] font-semibold uppercase tracking-[0.26em] text-text-muted underline-offset-8 transition-colors hover:text-ink hover:underline"
             >
-              Request an Appointment
-              <span aria-hidden>&rarr;</span>
+              Get in Touch
             </Link>
-          </Reveal>
-
-          <Reveal delay={0.38}>
-            <p className="mt-8 font-display italic text-[13px] text-gold/80">
-              By appointment only &middot; Bandra West, Mumbai
-            </p>
-          </Reveal>
+          </div>
         </div>
       </section>
     </SeoWrapper>

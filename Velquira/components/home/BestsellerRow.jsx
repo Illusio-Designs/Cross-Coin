@@ -13,29 +13,23 @@ export function BestsellerRow({ products = [] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', dragFree: true })
 
   return (
-    <section className="relative overflow-hidden bg-brand-black px-6 py-24 text-white md:py-32">
+    <section className="relative overflow-hidden vq-section text-ink" style={{ background: '#f5f0e6' }}>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        className="pointer-events-none absolute inset-0 opacity-100"
         style={{
           backgroundImage:
-            'radial-gradient(circle at 20% 50%, #bf8b2e 0%, transparent 50%), radial-gradient(circle at 80% 50%, #bf8b2e 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 50%, rgba(160, 125, 62, 0.06) 0%, transparent 60%), radial-gradient(circle at 80% 50%, rgba(160, 125, 62, 0.05) 0%, transparent 60%)',
         }}
       />
 
-      <div className="relative mx-auto max-w-site">
-        <div className="mb-14 flex flex-col items-start md:mb-20 lg:max-w-xl">
-          <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-gold">
-            Most Coveted
-          </p>
-          <h2 className="vq-display mt-4 text-4xl text-white md:text-5xl">
-            Bestselling Pieces
+      <div className="relative vq-container">
+        <div className="mb-12 md:mb-16">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Bestsellers</p>
+          <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+            Most Loved <span className="text-gold">✦</span>
           </h2>
-          <div className="mt-6 flex items-center gap-4">
-            <span className="h-px w-12 bg-gold/50" />
-            <span className="vq-diamond" aria-hidden />
-            <span className="h-px w-12 bg-gold/50" />
-          </div>
+          <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
         </div>
 
         <div className="mb-10 flex items-center justify-between">
@@ -47,20 +41,20 @@ export function BestsellerRow({ products = [] }) {
             <span className="inline-block transition-transform duration-500 group-hover/all:translate-x-1">→</span>
           </Link>
 
-          <div className="flex gap-2.5">
+          <div className="flex gap-4">
             <button
               onClick={() => emblaApi?.scrollPrev()}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-white transition-colors hover:border-gold hover:bg-gold hover:text-brand-black"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-ink text-ink bg-transparent transition-all duration-300 hover:bg-ink hover:text-white cursor-pointer"
               aria-label="Previous"
             >
-              <ChevronLeft size={14} strokeWidth={1.3} />
+              <ChevronLeft size={16} strokeWidth={1.6} />
             </button>
             <button
               onClick={() => emblaApi?.scrollNext()}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-white transition-colors hover:border-gold hover:bg-gold hover:text-brand-black"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-ink text-ink bg-transparent transition-all duration-300 hover:bg-ink hover:text-white cursor-pointer"
               aria-label="Next"
             >
-              <ChevronRight size={14} strokeWidth={1.3} />
+              <ChevronRight size={16} strokeWidth={1.6} />
             </button>
           </div>
         </div>
@@ -69,7 +63,7 @@ export function BestsellerRow({ products = [] }) {
           <div className="flex gap-7 overflow-hidden">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="w-[240px] shrink-0 md:w-[280px]">
-                <div className="aspect-square w-full animate-pulse border border-gold/15 bg-white/5" />
+                <div className="aspect-square w-full animate-pulse border border-line bg-paper" />
               </div>
             ))}
           </div>

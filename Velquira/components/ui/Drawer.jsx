@@ -37,7 +37,7 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
           <motion.div
             ref={trapRef}
             className={cn(
-              'fixed top-0 flex h-full w-full max-w-md flex-col bg-white',
+              'fixed top-0 flex h-full w-full max-w-md flex-col bg-cream',
               side === 'right' ? 'right-0' : 'left-0',
               className
             )}

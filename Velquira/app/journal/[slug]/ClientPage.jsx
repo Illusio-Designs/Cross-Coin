@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, Share2, Link2, Twitter } from 'lucide-react'
 import { getPost, getPosts } from '@/lib/api/blog'
 import { richHtml } from '@/lib/sanitizeHtml'
 import SeoWrapper from '@/components/SeoWrapper'
-import { Reveal } from '@/components/ui/Reveal'
 import { BlogCard } from '@/components/home/BlogCard'
 
 function formatDate(str) {
@@ -46,21 +46,23 @@ export default function BlogPostPage({ initialPost = null }) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-ivory px-6 pt-32 pb-20">
-        <div className="mx-auto max-w-3xl space-y-6">
-          <div className="h-3 w-20 animate-pulse bg-cream" />
-          <div className="h-12 w-3/4 animate-pulse bg-cream" />
-          <div className="h-3 w-1/2 animate-pulse bg-cream" />
-          <div className="mt-10 aspect-[16/9] w-full animate-pulse bg-cream" />
-          <div className="space-y-3 pt-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-3 animate-pulse bg-cream/70 ${
-                  i % 4 === 3 ? 'w-2/3' : 'w-full'
-                }`}
-              />
-            ))}
+      <main className="min-h-screen bg-beige pt-28 pb-24 md:pt-32">
+        <div className="vq-container">
+          <div className="aspect-[16/7] w-full animate-pulse rounded-3xl bg-cream" />
+          <div className="mx-auto mt-14 max-w-[70ch] space-y-5">
+            <div className="h-2.5 w-24 animate-pulse rounded-full bg-cream" />
+            <div className="h-10 w-4/5 animate-pulse rounded-lg bg-cream" />
+            <div className="h-3 w-1/2 animate-pulse rounded-full bg-cream" />
+            <div className="space-y-3 pt-8">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-3 animate-pulse rounded-full bg-cream/70 ${
+                    i % 4 === 3 ? 'w-2/3' : 'w-full'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </main>
@@ -69,19 +71,24 @@ export default function BlogPostPage({ initialPost = null }) {
 
   if (!post) {
     return (
-      <main className="min-h-screen bg-ivory">
-        <section className="mx-auto flex max-w-md flex-col items-center gap-5 px-6 py-32 text-center">
-          <span className="h-px w-12 bg-gold/60" aria-hidden />
-          <p className="font-display text-2xl italic text-brand-black">
-            That entry is not in the journal.
-          </p>
-          <Link
-            href="/journal"
-            className="mt-2 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.28em] text-gold underline-offset-4 hover:text-gold-deep"
-          >
-            <ArrowLeft size={13} strokeWidth={1.6} /> Lustre
-          </Link>
-        </section>
+      <main className="min-h-screen bg-beige">
+        <div className="vq-container">
+          <section className="mx-auto flex max-w-md flex-col items-center gap-6 py-40 text-center">
+            <span className="vq-diamond" aria-hidden />
+            <h1 className="vq-display text-[clamp(1.7rem,3.4vw,2.4rem)] leading-tight text-ink">
+              We could not find that story
+            </h1>
+            <p className="text-[14px] leading-relaxed text-text-muted">
+              The link may be old, or the story may have been moved.
+            </p>
+            <Link
+              href="/journal"
+              className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
+            >
+              <ArrowLeft size={13} strokeWidth={1.8} /> Back to Journal
+            </Link>
+          </section>
+        </div>
       </main>
     )
   }
@@ -114,157 +121,146 @@ export default function BlogPostPage({ initialPost = null }) {
       : '#'
 
   const date = formatDate(post.publishedAt || post.createdAt)
-  const authorName = post.author?.name || 'The Velquira Atelier'
+  const authorName = post.author?.name || 'The Velquira Studio'
 
   return (
     <SeoWrapper pageName={slug || 'blog-details'} seoData={post?.seo || null}>
-      <main className="relative bg-ivory">
-        {/* Back link */}
-        <section className="px-6 pt-24 md:pt-32">
-          <div className="mx-auto max-w-3xl">
-            <Reveal>
-              <Link
-                href="/journal"
-                className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors hover:text-gold-deep"
-              >
-                <ArrowLeft size={13} strokeWidth={1.6} /> Lustre
-              </Link>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Article opening */}
-        <section className="px-6 pt-8 pb-12 text-center md:pb-14">
-          <div className="mx-auto max-w-3xl">
-            <Reveal>
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                {post.category || 'Journal Entry'}
-              </p>
-            </Reveal>
-
-            <Reveal delay={0.1}>
-              <h1 className="mt-5 font-display text-4xl font-normal leading-[1.08] text-brand-black md:text-6xl">
-                {post.title}
-              </h1>
-            </Reveal>
-
-            <Reveal delay={0.18}>
-              <p className="mt-6 font-display text-sm italic text-brand-black/55">
-                By {authorName}
-                {date && <> · {date}</>}
-                {post.readTime && <> · {post.readTime} min read</>}
-              </p>
-            </Reveal>
-
-            <Reveal delay={0.26}>
-              <div className="mx-auto mt-7 h-px w-12 bg-gold/60" aria-hidden />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Cover image — clean, no frame, no overlay */}
+      <main className="relative bg-beige pb-4">
+        {/* ── Hero image ───────────────────────────────────────────────── */}
         {post.coverImage && (
-          <section className="px-6 pb-12 md:px-12 md:pb-16">
-            <Reveal y={20}>
-              <div className="mx-auto max-w-4xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+          <section className="pt-24 md:pt-28">
+            <div className="vq-container">
+              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-3xl bg-cream md:aspect-[21/9]">
+                <Image
                   src={post.coverImage}
                   alt={post.title}
-                  className="h-auto w-full object-cover"
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover"
                 />
               </div>
-            </Reveal>
+            </div>
           </section>
         )}
 
-        {/* Article body */}
-        <section className="px-6 md:px-12">
-          <div className="mx-auto max-w-2xl py-10 md:py-14">
-            <Reveal delay={0.05}>
+        {/* ── Article ──────────────────────────────────────────────────── */}
+        <section className={post.coverImage ? 'pt-14 md:pt-20' : 'pt-28 md:pt-32'}>
+          <div className="vq-container">
+            <article className="mx-auto max-w-[70ch]">
+              <Link
+                href="/journal"
+                className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.26em] text-text-muted transition-colors hover:text-gold"
+              >
+                <ArrowLeft size={12} strokeWidth={1.8} /> Back to Journal
+              </Link>
+
+              {post.category && (
+                <p className="mt-10 text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
+                  {post.category}
+                </p>
+              )}
+
+              <h1 className="vq-display mt-4 text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.05] tracking-[-0.02em] text-ink">
+                {post.title}
+              </h1>
+
+              {/* Meta row */}
+              <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 text-[10px] font-semibold uppercase tracking-[0.26em] text-text-muted">
+                {date && <span>{date}</span>}
+                {date && authorName && (
+                  <span className="vq-diamond" aria-hidden />
+                )}
+                {authorName && <span>{authorName}</span>}
+                {post.readTime && (
+                  <>
+                    <span className="vq-diamond" aria-hidden />
+                    <span>{post.readTime} min read</span>
+                  </>
+                )}
+              </div>
+              <span className="mt-6 block h-px w-full bg-line" aria-hidden />
+
+              {/* Body */}
               <div
-                className="font-sans text-[15px] leading-[1.85] text-brand-black/80
-                  first-letter:font-display first-letter:text-7xl first-letter:float-left first-letter:mr-3 first-letter:text-gold first-letter:leading-[0.85]
-                  [&_p]:mb-5
-                  [&_h2]:font-display [&_h2]:text-3xl [&_h2]:mt-12 [&_h2]:mb-4 [&_h2]:text-brand-black [&_h2]:leading-snug
-                  [&_h3]:font-display [&_h3]:text-2xl [&_h3]:mt-10 [&_h3]:mb-3 [&_h3]:text-brand-black [&_h3]:leading-snug
-                  [&_h4]:font-display [&_h4]:text-xl [&_h4]:mt-8 [&_h4]:mb-3 [&_h4]:text-brand-black
-                  [&_a]:text-gold [&_a]:underline [&_a]:underline-offset-4 [&_a:hover]:text-gold-deep
-                  [&_blockquote]:my-8 [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-6 [&_blockquote]:font-display [&_blockquote]:text-xl [&_blockquote]:italic [&_blockquote]:text-brand-black/75
-                  [&_ul]:my-5 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2
-                  [&_ol]:my-5 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2
-                  [&_li]:text-brand-black/80
-                  [&_img]:my-8 [&_img]:rounded-md
-                  [&_strong]:text-brand-black [&_strong]:font-medium
-                  [&_em]:italic"
+                className="blog-content mt-12"
                 {...richHtml(post.body || `<p>${post.excerpt || ''}</p>`)}
               />
-            </Reveal>
 
-            {/* Footer rule + share */}
-            <Reveal delay={0.1}>
-              <div className="mx-auto mt-14 h-px w-12 bg-gold/40" aria-hidden />
+              {/* Share */}
+              <span className="mt-16 block h-px w-full bg-line" aria-hidden />
 
-              <div className="mt-10 flex flex-col items-center gap-5 text-center">
-                <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                  Share this entry
+              <div className="mt-10 flex flex-col gap-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
+                  Share this story
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     onClick={handleNativeShare}
-                    className="inline-flex items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.28em] text-brand-black transition-colors hover:border-gold hover:text-gold"
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-ink transition-colors duration-300 hover:border-gold hover:text-gold"
                   >
-                    <Share2 size={12} strokeWidth={1.6} />
+                    <Share2 size={12} strokeWidth={1.8} />
                     Share
                   </button>
                   <button
                     onClick={handleCopyLink}
-                    className="inline-flex items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.28em] text-brand-black transition-colors hover:border-gold hover:text-gold"
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-ink transition-colors duration-300 hover:border-gold hover:text-gold"
                   >
-                    <Link2 size={12} strokeWidth={1.6} />
+                    <Link2 size={12} strokeWidth={1.8} />
                     {copied ? 'Copied' : 'Copy link'}
                   </button>
                   <a
                     href={tweetHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.28em] text-brand-black transition-colors hover:border-gold hover:text-gold"
+                    className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-ink transition-colors duration-300 hover:border-gold hover:text-gold"
                   >
-                    <Twitter size={12} strokeWidth={1.6} />
+                    <Twitter size={12} strokeWidth={1.8} />
                     Tweet
                   </a>
                 </div>
 
                 {post.tags?.length > 0 && (
-                  <p className="mt-2 font-display text-xs italic text-brand-black/55">
+                  <p className="text-[12px] text-text-faint">
                     {post.tags.slice(0, 4).join(' · ')}
                   </p>
                 )}
               </div>
-            </Reveal>
+            </article>
           </div>
         </section>
 
-        {/* More from Lustre */}
+        {/* ── More from the Journal ────────────────────────────────────── */}
         {related.length > 0 && (
-          <section className="border-t border-gold/15 px-6 py-20 md:px-12 md:py-24">
-            <Reveal>
-              <div className="mb-12 text-center">
-                <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-                  Lustre
+          <section className="vq-section">
+            <div className="vq-container">
+              <div className="mb-12 md:mb-16">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">
+                  Keep Reading
                 </p>
-                <h2 className="mt-4 font-display text-3xl font-normal text-brand-black md:text-4xl">
-                  More from Lustre
+                <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+                  More from the Journal <span className="text-gold">✦</span>
                 </h2>
-                <div className="mx-auto mt-6 h-px w-12 bg-gold/60" aria-hidden />
+                <span
+                  className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent"
+                  aria-hidden
+                />
               </div>
-            </Reveal>
-            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-x-6 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-              {related.map((p, i) => (
-                <Reveal key={p.id || p.slug} delay={i * 0.08}>
-                  <BlogCard post={p} />
-                </Reveal>
-              ))}
+
+              <div className="grid grid-cols-1 gap-x-10 gap-y-16 md:grid-cols-2 lg:grid-cols-3">
+                {related.map((p) => (
+                  <BlogCard key={p.id || p.slug} post={p} />
+                ))}
+              </div>
+
+              <div className="mt-16">
+                <Link
+                  href="/journal"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1e1912] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-black"
+                >
+                  <ArrowLeft size={12} strokeWidth={1.8} /> Back to Journal
+                </Link>
+              </div>
             </div>
           </section>
         )}

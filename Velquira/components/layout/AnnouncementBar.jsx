@@ -1,7 +1,7 @@
 'use client'
 
 const PHRASES = [
-  'Complimentary Insured Shipping on Orders Above ₹2,500',
+  'Free Insured Shipping on Orders Above ₹2,500',
   'Lifetime Craftsmanship Guarantee',
   'Hallmarked 18k Gold',
 ]

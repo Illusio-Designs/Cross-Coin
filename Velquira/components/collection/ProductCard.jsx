@@ -3,22 +3,19 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Heart } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/hooks/useCart';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { toastAddedToCart } from '@/lib/toast';
 
 /**
- * ProductCard — premium jewellery card.
- *
- * Bordered rounded card with a primary/hover image cross-fade, badge +
- * wishlist heart, a single name-and-price row, and an add-to-bag CTA.
- * Gold hairline border, warm-cream image bed, serif typography.
+ * ProductCard — Celestique pedestal card.
+ * The piece floats on a soft cream pedestal; a serif small-caps name, a metal
+ * note, and a gold price sit quietly beneath. No boxes, no clutter.
  */
 export function ProductCard({ product, variant = 'light' }) {
-  const [hovered, setHovered] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
   const { addItem } = useCart();
   const wishlisted = useWishlistStore((s) => s.hasItem(product.id));
@@ -34,7 +31,7 @@ export function ProductCard({ product, variant = 'light' }) {
     e.preventDefault();
     e.stopPropagation();
     const firstColor = product.colors?.[0]?.name ?? '';
-    const variant =
+    const cartVariant =
       product.variants?.find((v) => v.color === firstColor) ||
       product.variants?.[0];
     const colorImages = (firstColor && product.colorImages?.[firstColor]) || [];
@@ -42,9 +39,9 @@ export function ProductCard({ product, variant = 'light' }) {
       colorImages[0]?.url || product.images?.[0]?.url || '';
 
     addItem({
-      id: variant?.id ?? product.id,
+      id: cartVariant?.id ?? product.id,
       productId: product.id,
-      variantId: variant?.id ?? 'one-size',
+      variantId: cartVariant?.id ?? 'one-size',
       name: product.name,
       color: firstColor || 'Default',
       size: 'One Size',
@@ -60,110 +57,87 @@ export function ProductCard({ product, variant = 'light' }) {
 
   const primaryImage = product.images?.[0];
   const hoverImage = product.images?.[1] ?? primaryImage;
-
   const slug = product.handle ?? product.slug ?? String(product.id);
-
-  const isDark = variant === 'dark';
-  const cardCls = isDark
-    ? 'group flex flex-col rounded-2xl border border-gold/25 bg-white/[0.04] p-3 backdrop-blur-sm transition-[border-color,box-shadow,background] duration-300 hover:border-gold/55 hover:bg-white/[0.07] hover:shadow-[0_22px_45px_-26px_rgba(191,139,46,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold'
-    : 'group flex flex-col rounded-2xl border border-gold/20 bg-white p-3 transition-[border-color,box-shadow] duration-300 hover:border-gold/55 hover:shadow-[0_22px_45px_-26px_rgba(143,102,32,0.30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-ivory';
+  const metal = product.metal || product.material || '18k yellow gold';
 
   return (
     <Link
       href={`/products/${slug}`}
-      className={cardCls}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="group relative flex flex-col focus-visible:outline-none"
     >
-      {/* Image */}
-      <div className={`relative aspect-square overflow-hidden rounded-xl ${isDark ? 'bg-white/5' : 'bg-cream'}`}>
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={hovered ? 'h' : 'p'}
-            className="absolute inset-0 p-5 sm:p-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            {primaryImage?.url ? (
-              <Image
-                src={hovered ? hoverImage?.url || primaryImage.url : primaryImage.url}
-                alt={(hovered ? hoverImage?.alt : primaryImage?.alt) || product.name}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-contain object-center transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-            ) : (
-              <div className="h-full w-full bg-cream" />
-            )}
-          </motion.div>
-        </AnimatePresence>
+      {/* ── Pedestal image ─────────────────────────────────────────── */}
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-cream ring-1 ring-line transition-all duration-500 group-hover:ring-gold/40 group-hover:shadow-[0_26px_54px_-30px_rgba(60,45,20,0.35)]">
+        {/* soft pedestal glow */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_36%_at_50%_74%,rgba(255,255,255,0.9)_0%,transparent_70%),radial-gradient(75%_60%_at_50%_38%,#faf6ee_0%,transparent_62%)]" />
+
+        {primaryImage?.url ? (
+          <Image
+            src={primaryImage.url}
+            alt={primaryImage?.alt || product.name}
+            fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-contain object-center p-6 transition-transform duration-[1600ms] ease-out group-hover:-translate-y-1.5 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <div className="h-full w-full bg-mist" />
+        )}
 
         {product.badge && (
-          <div className="absolute left-2.5 top-2.5 max-w-[60%]">
-            <span className="block truncate rounded-full border border-gold/45 bg-white/95 px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.22em] text-gold">
-              {product.badge}
-            </span>
-          </div>
+          <span className="absolute left-3 top-3 z-10 rounded-full bg-cream/85 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.24em] text-ink backdrop-blur-sm">
+            {product.badge}
+          </span>
         )}
 
-        {/* Wishlist heart — top-right */}
-        <button
+        <motion.button
           type="button"
           onClick={handleWishlist}
+          whileHover={{ scale: 1.12 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
           aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition-all duration-200 hover:scale-110 hover:bg-white"
+          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-cream/85 backdrop-blur-sm transition-colors duration-200 hover:bg-cream"
         >
           <Heart
-            size={14}
-            className={wishlisted ? 'text-gold' : 'text-brand-black/70'}
-            fill={wishlisted ? 'currentColor' : 'none'}
-            strokeWidth={1.7}
+            size={13}
+            className={wishlisted ? 'text-gold fill-gold' : 'text-ink/45'}
+            strokeWidth={1.8}
           />
-        </button>
+        </motion.button>
+
+        {/* Quick add — quiet pill, appears on hover */}
+        <div className="absolute inset-x-3 bottom-3 z-10 translate-y-3 opacity-0 transition-all duration-400 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            className={`w-full rounded-full py-2.5 text-[9.5px] font-semibold uppercase tracking-[0.24em] transition-all duration-300 ${
+              addedFeedback
+                ? 'bg-gold text-cream'
+                : 'bg-[#1e1912] text-cream hover:bg-black'
+            }`}
+          >
+            {addedFeedback ? 'Added ✓' : 'Add to bag'}
+          </button>
+        </div>
       </div>
 
-      {/* Info */}
-      <div className="mt-3.5 px-1">
-        {product.collectionName && (
-          <p className="truncate text-[9px] font-medium uppercase tracking-[0.28em] text-gold">
-            {product.collectionName}
+      {/* ── Caption ────────────────────────────────────────────────── */}
+      <div className="px-1 pt-4 text-center">
+        <p className="font-display text-[13px] uppercase leading-tight tracking-[0.06em] text-ink">
+          {product.name}
+        </p>
+        <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-text-faint">
+          {metal}
+        </p>
+        <div className="mt-2 flex items-baseline justify-center gap-2">
+          <p className="font-display text-[15px] text-gold">
+            {formatPrice(product.price)}
           </p>
-        )}
-
-        {/* Name + price — single row */}
-        <div className="mt-1.5 flex items-baseline justify-between gap-3">
-          <p className={`min-w-0 truncate font-display text-[15px] leading-tight ${isDark ? 'text-white' : 'text-brand-black'}`}>
-            {product.name}
-          </p>
-          <div className="flex shrink-0 items-baseline gap-1.5">
-            <p className={`font-display text-[15px] font-medium ${isDark ? 'text-white' : 'text-brand-black'}`}>
-              {formatPrice(product.price)}
+          {product.compareAtPrice && (
+            <p className="text-[11px] line-through text-text-faint">
+              {formatPrice(product.compareAtPrice)}
             </p>
-            {product.compareAtPrice && (
-              <p className={`text-[12px] line-through ${isDark ? 'text-white/35' : 'text-brand-black/35'}`}>
-                {formatPrice(product.compareAtPrice)}
-              </p>
-            )}
-          </div>
+          )}
         </div>
-
-        {/* Add to Bag */}
-        <button
-          aria-label="Add to bag"
-          onClick={handleAddToCart}
-          className={`mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors duration-200 ${
-            addedFeedback
-              ? 'border-gold bg-gold text-brand-black'
-              : isDark
-                ? 'border-gold/45 text-white hover:border-gold hover:bg-gold hover:text-brand-black'
-                : 'border-gold/40 text-brand-black hover:border-brand-black hover:bg-brand-black hover:text-white'
-          }`}
-        >
-          <ShoppingBag size={12} strokeWidth={1.6} />
-          {addedFeedback ? 'Added' : 'Add to Bag'}
-        </button>
       </div>
     </Link>
   );

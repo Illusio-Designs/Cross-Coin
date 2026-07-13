@@ -16,19 +16,16 @@ export function ReviewBand() {
   const fetchFn = useCallback(() => getAllReviews(), [])
 
   return (
-    <section className="bg-white">
+    <section className="bg-cream">
       {/* Section heading */}
-      <div className="mx-auto flex max-w-[1320px] flex-col items-center px-4 pt-20 text-center md:pt-28 lg:px-8">
-        <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">
-          Testimonials
-        </p>
-        <h2 className="mt-4 max-w-2xl font-display text-4xl font-normal leading-tight tracking-tight text-brand-black md:text-5xl">
-          A Legacy of Trust
-        </h2>
-        <p className="mt-4 max-w-md text-[14px] leading-relaxed text-brand-black/60">
-          Notes from the people who carry our pieces.
-        </p>
-        <span className="mt-6 inline-block h-px w-12 bg-gold/60" aria-hidden />
+      <div className="vq-container pt-20 md:pt-28">
+        <div className="mb-12 md:mb-16">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Reviews</p>
+          <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
+            Customer Reviews <span className="text-gold">✦</span>
+          </h2>
+          <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
+        </div>
       </div>
 
       {/* Existing reviews marquee — content untouched */}

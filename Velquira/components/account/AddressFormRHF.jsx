@@ -28,6 +28,9 @@ const EMPTY = {
   city: '', state: '', postalCode: '', country: 'India', isDefault: false,
 };
 
+const FIELD_BASE =
+  'w-full rounded-[2px] border bg-cream px-4 py-3 text-sm text-ink placeholder:text-text-faint transition-colors duration-300 focus:outline-none';
+
 export default function AddressFormRHF({
   defaultValues = EMPTY,
   onSubmit,
@@ -68,28 +71,28 @@ export default function AddressFormRHF({
   }, [pincode, phone, address, watch]);
 
   const disabled = busy || isSubmitting;
-  const inputBase = (hasError) => ({
-    border: hasError ? '1px solid #dc2626' : '1px solid #d1d5db',
-    borderRadius: 6, padding: '8px 10px', fontSize: 14, background: '#fff',
-  });
+  const fieldClass = (hasError) =>
+    `${FIELD_BASE} ${hasError ? 'border-[#b8472f] focus:border-[#b8472f]' : 'border-line focus:border-ink'}`;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <div className="grid gap-6 sm:grid-cols-2">
         {FIELDS.map((f) => (
-          <div key={f.name} style={{ display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor={`addr-${f.name}`} style={{ fontSize: 12, color: '#374151', marginBottom: 4 }}>{f.label}</label>
+          <div key={f.name} className="flex flex-col gap-2.5">
+            <label htmlFor={`addr-${f.name}`} className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">
+              {f.label}
+            </label>
             {f.textarea ? (
               <textarea id={`addr-${f.name}`} rows={2} placeholder={f.placeholder}
                 {...register(f.name)} aria-invalid={errors[f.name] ? 'true' : 'false'}
-                style={inputBase(!!errors[f.name])} />
+                className={fieldClass(!!errors[f.name])} />
             ) : (
               <input id={`addr-${f.name}`} inputMode={f.inputMode || 'text'} placeholder={f.placeholder}
                 {...register(f.name)} aria-invalid={errors[f.name] ? 'true' : 'false'}
-                style={inputBase(!!errors[f.name])} />
+                className={fieldClass(!!errors[f.name])} />
             )}
             {errors[f.name] && (
-              <p role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '4px 0 0 0' }}>{errors[f.name].message}</p>
+              <p role="alert" className="text-xs text-[#b8472f]">{errors[f.name].message}</p>
             )}
           </div>
         ))}
@@ -97,35 +100,35 @@ export default function AddressFormRHF({
 
       {quality && (
         <div role="status" aria-live="polite"
-          style={{
-            marginTop: 12, padding: '10px 12px', borderRadius: 8, fontSize: 13,
-            background: quality.cod_allowed === false ? '#fef3c7' : '#ecfdf5',
-            color: quality.cod_allowed === false ? '#92400e' : '#065f46',
-            border: `1px solid ${quality.cod_allowed === false ? '#fcd34d' : '#a7f3d0'}`,
-          }}>
-          <strong>Address quality: {quality.score}/100.</strong>{' '}
+          className={`mt-7 rounded-[2px] border px-4 py-3 text-sm ${
+            quality.cod_allowed === false
+              ? 'border-[#ecdcb4] bg-[#f6efe0] text-[#8a6d1f]'
+              : 'border-[#cfe6d8] bg-[#eaf4ee] text-[#5f7a3c]'
+          }`}>
+          <strong className="font-semibold">Address quality: {quality.score}/100.</strong>{' '}
           {quality.cod_allowed === false
-            ? 'COD is not available for this address — please choose a prepaid option at checkout.'
-            : 'COD is available for this address.'}
+            ? 'Cash on delivery is not available for this address — please choose a prepaid option at checkout.'
+            : 'Cash on delivery is available for this address.'}
         </div>
       )}
 
       {showDefaultCheckbox && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13 }}>
-          <input type="checkbox" {...register('isDefault')} disabled={disabled} />
+        <label className="mt-7 flex cursor-pointer items-center gap-2.5 text-sm text-text-muted">
+          <input type="checkbox" {...register('isDefault')} disabled={disabled}
+            className="h-3.5 w-3.5 accent-ink" />
           Set as default address
         </label>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+      <div className="mt-9 flex items-center justify-end gap-3 border-t border-line pt-7">
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={disabled}
-            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}>
+            className="rounded-full border border-line px-7 py-3.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-text-muted transition-colors duration-300 hover:border-ink hover:text-ink disabled:opacity-55">
             Cancel
           </button>
         )}
         <button type="submit" disabled={disabled}
-          style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#111', color: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1 }}>
+          className="rounded-full bg-[#1e1912] px-7 py-3.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-cream transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-55">
           {disabled ? 'Saving…' : submitLabel}
         </button>
       </div>

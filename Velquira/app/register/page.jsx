@@ -124,12 +124,12 @@ export default function RegisterPage() {
   if (step === 'details') return (
     <main className="bg-ivory">
       {/* Refined page header */}
-      <section className="px-4 pt-36 pb-10 text-center sm:px-6 md:px-10">
+      <section className="vq-container pt-36 pb-10 text-center">
         <Reveal>
           <span className="vq-diamond mx-auto block" aria-hidden />
         </Reveal>
         <Reveal delay={0.08}>
-          <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">The Atelier</p>
+          <p className="mt-5 text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Account</p>
         </Reveal>
         <Reveal delay={0.16}>
           <h1 className="mt-3 font-display text-4xl font-normal leading-tight text-brand-black md:text-5xl">
@@ -138,7 +138,7 @@ export default function RegisterPage() {
         </Reveal>
         <Reveal delay={0.24}>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-brand-black/55">
-            A private space to keep your saved pieces, orders, and bespoke moments.
+            A private space for your saved items, orders, and custom requests.
           </p>
         </Reveal>
         <Reveal delay={0.32}>
@@ -147,7 +147,7 @@ export default function RegisterPage() {
       </section>
 
       {/* Form */}
-      <section className="px-4 pb-24 md:px-6">
+      <section className="vq-container pb-24">
         <Reveal delay={0.1}>
           <form
             onSubmit={(e) => { e.preventDefault(); handleSendOtp() }}
@@ -159,13 +159,13 @@ export default function RegisterPage() {
                 value={form.username}
                 onChange={e => set('username', e.target.value)}
                 placeholder="Your name"
-                className="border-0 border-b border-gold/30 bg-transparent px-0 py-2.5 text-sm text-brand-black placeholder:text-brand-black/30 focus:border-gold focus:outline-none"
+                className="border-0 border-b border-line bg-transparent px-0 py-2.5 text-sm text-brand-black placeholder:text-brand-black/30 focus:border-ink focus:outline-none"
               />
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold">Phone</label>
-              <div className="flex items-center gap-3 border-b border-gold/30 focus-within:border-gold">
+              <div className="flex items-center gap-3 border-b border-line focus-within:border-ink">
                 <span className="text-sm text-brand-black/55">+91</span>
                 <input
                   type="tel"
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={e => set('email', e.target.value)}
                 placeholder="you@email.com"
-                className="border-0 border-b border-gold/30 bg-transparent px-0 py-2.5 text-sm text-brand-black placeholder:text-brand-black/30 focus:border-gold focus:outline-none"
+                className="border-0 border-b border-line bg-transparent px-0 py-2.5 text-sm text-brand-black placeholder:text-brand-black/30 focus:border-ink focus:outline-none"
               />
             </div>
 
@@ -193,13 +193,13 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={!form.username.trim() || digits.length !== 10}
-              className="vq-lift mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-brand-black px-8 py-3.5 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors hover:bg-brand-black/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="vq-lift mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-ink px-8 py-3.5 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:bg-[#3a3227] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Send Verification <ArrowRight size={13} strokeWidth={1.6} />
             </button>
 
             <p className="text-center text-[11px] tracking-wide text-brand-black/55">
-              Already a patron?{' '}
+              Already have an account?{' '}
               <Link href="/login" className="font-medium uppercase tracking-[0.2em] text-gold underline-offset-4 hover:text-gold-deep">
                 Sign In
               </Link>
@@ -213,7 +213,7 @@ export default function RegisterPage() {
   return (
     <main className="bg-ivory">
       {/* Refined page header */}
-      <section className="px-4 pt-36 pb-10 text-center sm:px-6 md:px-10">
+      <section className="vq-container pt-36 pb-10 text-center">
         <Reveal>
           <span className="vq-diamond mx-auto block" aria-hidden />
         </Reveal>
@@ -235,7 +235,7 @@ export default function RegisterPage() {
         </Reveal>
       </section>
 
-      <section className="px-4 pb-24 md:px-6">
+      <section className="vq-container pb-24">
         <Reveal delay={0.1}>
           <div className="mx-auto flex max-w-sm flex-col gap-7">
             <div className="flex justify-center gap-4">
@@ -249,7 +249,7 @@ export default function RegisterPage() {
                   value={d}
                   onChange={e => handleOtpChange(i, e.target.value)}
                   onKeyDown={e => handleOtpKeyDown(i, e)}
-                  className="h-14 w-12 border-0 border-b border-gold/30 bg-transparent text-center font-display text-2xl text-brand-black focus:border-gold focus:outline-none"
+                  className="h-14 w-12 border-0 border-b border-line bg-transparent text-center font-display text-2xl text-brand-black focus:border-ink focus:outline-none"
                 />
               ))}
             </div>
@@ -259,7 +259,7 @@ export default function RegisterPage() {
             <button
               onClick={handleVerify}
               disabled={loading}
-              className="vq-lift inline-flex items-center justify-center rounded-full bg-brand-black px-8 py-3.5 text-[11px] font-medium uppercase tracking-[0.28em] text-gold transition-colors hover:bg-brand-black/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="vq-lift inline-flex items-center justify-center rounded-full bg-ink px-8 py-3.5 text-[11px] font-medium uppercase tracking-[0.28em] text-white transition-colors hover:bg-[#3a3227] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Creating Account…' : 'Verify & Create Account'}
             </button>

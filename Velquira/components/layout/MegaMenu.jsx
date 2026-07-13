@@ -6,7 +6,7 @@ import { JEWELLERY_CATEGORIES } from '@/lib/constants'
 
 const CATEGORY_NOTES = {
   Rings: 'Solitaires, bands & statement pieces',
-  Necklaces: 'Pendants, chains & layering edits',
+  Necklaces: 'Pendants, chains & layering styles',
   Earrings: 'Studs, hoops & drop silhouettes',
   Bracelets: 'Tennis, bangles & cuffs',
   Bridal: 'Engagement & wedding heirlooms',
@@ -17,15 +17,15 @@ const FEATURED = [
     href: '/products?category=Bridal',
     image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900',
     eyebrow: 'Featured',
-    title: 'The Bridal Edit',
+    title: 'Bridal Collection',
     caption: 'Heirloom diamonds, made to last generations.',
   },
   {
     href: '/collections',
     image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=900',
     eyebrow: 'New In',
-    title: '18k Gold Atelier',
-    caption: 'Hand-finished pieces from the workshop.',
+    title: '18k Gold Studio',
+    caption: 'Hand-finished products from our studio.',
   },
 ]
 
@@ -39,7 +39,7 @@ export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.28, ease: [0.22, 0.65, 0.3, 1] }}
-          className="absolute left-0 right-0 top-full z-40 border-t border-gold/25 bg-[#faf5eb] shadow-[0_24px_64px_rgba(58,46,26,0.12)]"
+          className="absolute left-0 right-0 top-full z-40 border-t border-line bg-cream shadow-[0_24px_64px_rgba(20,20,20,0.10)]"
         >
           <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-0 px-6 py-10 md:grid-cols-[1.1fr_auto_1.3fr] md:px-12 md:py-12">
             <div className="md:pr-10">
@@ -52,7 +52,7 @@ export function MegaMenu({ activeMenu, categories = JEWELLERY_CATEGORIES }) {
                         {String(i + 1).padStart(2, '0')}
                       </span>
                       <span className="flex flex-col">
-                        <span className="font-display text-[26px] leading-tight text-brand-black transition-colors duration-300 group-hover:text-gold-deep md:text-[28px]">
+                        <span className="font-display text-[26px] font-semibold tracking-[-0.02em] leading-tight text-brand-black transition-colors duration-300 group-hover:text-gold-deep md:text-[28px]">
                           {cat.label}
                         </span>
                         {CATEGORY_NOTES[cat.label] && (
