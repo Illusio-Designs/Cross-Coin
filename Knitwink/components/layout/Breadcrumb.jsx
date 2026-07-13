@@ -31,9 +31,13 @@ const DARK_PAGES = ['/contact', '/journal', '/about', '/policies', '/collections
 export function Breadcrumb() {
   const pathname = usePathname()
 
-  if (pathname === '/') return null
+  // Home page — no breadcrumb. Covers both "/" and the static-export "/index"
+  // route (some deployments report the home path as /index).
+  if (pathname === '/' || pathname === '/index') return null
 
   let segments = pathname.split('/').filter(Boolean)
+  // A lone "index" segment is the home page too — never show a breadcrumb for it.
+  if (segments.length === 1 && segments[0].toLowerCase() === 'index') return null
   if (segments[0] === 'policies' && segments.length > 1) {
     segments = segments.slice(1)
   }
