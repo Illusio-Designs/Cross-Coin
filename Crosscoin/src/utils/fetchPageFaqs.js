@@ -16,12 +16,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
 async function fetchJson(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
   try {
-    const res = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
+    const res = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' }, signal: controller.signal });
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

@@ -24,7 +24,7 @@ export function WishlistPageClient() {
               ? items.length === 0
                 ? 'Save what you love and come back to it any time.'
                 : `${items.length} item${items.length === 1 ? '' : 's'} saved`
-              : 'Loading your saved items…'}
+              : 'Save what you love and come back to it any time.'}
           </p>
         </div>
       </section>

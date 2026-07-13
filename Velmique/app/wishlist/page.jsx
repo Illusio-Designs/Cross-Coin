@@ -113,7 +113,7 @@ export default function WishlistPage() {
               // the freshly-fetched product gallery and fall back hard.
               const primaryImg = product?.images?.find(Boolean);
               const itemImgOk  = item.image && !item.image.includes('/assets/demo-product');
-              const safeSrc    = primaryImg || (itemImgOk ? item.image : '/perfumehero.png');
+              const safeSrc    = primaryImg || (itemImgOk ? item.image : '/perfumehero.webp');
 
               return (
                 <motion.div
@@ -130,8 +130,8 @@ export default function WishlistPage() {
                       src={safeSrc}
                       alt={item.name}
                       onError={(e) => {
-                        if (e.currentTarget.src.indexOf('/perfumehero.png') === -1) {
-                          e.currentTarget.src = '/perfumehero.png';
+                        if (e.currentTarget.src.indexOf('/perfumehero.webp') === -1) {
+                          e.currentTarget.src = '/perfumehero.webp';
                         }
                       }}
                       className="block w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.03]"

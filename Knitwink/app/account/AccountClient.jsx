@@ -9,6 +9,7 @@ import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
 import { updateProfile, changePassword } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { queryKeys } from '@/lib/queryClient'
 import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
@@ -304,7 +305,7 @@ export default function AccountClient() {
                   Add Address
                 </button>
               </div>
-              {loadingAddresses ? <div className="pf-loading">Loading...</div>
+              {loadingAddresses ? <div className="pf-loading" style={{ display: 'grid', gap: 12 }}>{[0, 1].map((i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}</div>
                 : addresses.length === 0 ? <div className="pf-empty">No addresses saved.</div>
                 : <div className="pf-addr-grid">
                   {addresses.map(addr => (

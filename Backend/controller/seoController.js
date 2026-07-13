@@ -4,7 +4,16 @@ const fs = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
+const cacheManager = require('../services/cacheManager.js');
 const { logger } = require('../config/logging.js');
+
+// Public SEO is read on every SSR page render but its up to 3 fallback lookups
+// (brand row → global row → any row, then product/blog derivation) make it one
+// of the heavier public queries. Cache the resolved payload per brand+page and
+// invalidate on any SeoMetadata write. TTL matches the 5-min CDN window the
+// storefront already uses for these responses, so staleness is unchanged.
+const seoCacheKey = (brandId, pageName) => `seo:public:${brandId || 1}:${pageName || ''}`;
+const invalidateSeoCache = () => cacheManager.invalidate('seo:public:*');
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/seo'));
@@ -121,7 +130,24 @@ module.exports.getSEOData = async (req, res) => {
         if (!page_name) {
             return res.status(400).json({ message: 'Missing page_name parameter' });
         }
-        
+
+        // Cache the resolved SEO payload. Serve on hit; on miss, wrap res.json so
+        // whichever of the many success branches below fires also populates the
+        // cache — no restructuring of the resolution logic, so behaviour is
+        // identical. Only successful payloads are cached.
+        const cacheKey = seoCacheKey(req.brandId, page_name);
+        const cachedSeo = await cacheManager.get(cacheKey);
+        if (cachedSeo) {
+            return res.json(cachedSeo);
+        }
+        const _sendJson = res.json.bind(res);
+        res.json = (body) => {
+            if (body && body.success) {
+                cacheManager.set(cacheKey, body, 300).catch(() => {}); // 5-min window, matches CDN
+            }
+            return _sendJson(body);
+        };
+
         // Handle product-details:ID format
         if (page_name && page_name.startsWith('product-details:')) {
             const productId = page_name.split(':')[1];
@@ -347,7 +373,9 @@ module.exports.updateSEOData = async (req, res) => {
             where: { page_name, brand_id: req.brandId || null }
         });
 
-        res.json({ 
+        await invalidateSeoCache();
+
+        res.json({
             success: true,
             message: seoData.isNewRecord ? 'SEO data created successfully' : 'SEO data updated successfully',
             data: updatedData
@@ -413,6 +441,8 @@ module.exports.createSEOData = async (req, res) => {
 
         logger.info('Created SEO data:', seoData.toJSON());
 
+        await invalidateSeoCache();
+
         res.status(201).json({
             success: true,
             message: 'SEO data created successfully',
@@ -452,6 +482,8 @@ module.exports.deleteSEOData = async (req, res) => {
                 message: 'SEO data not found'
             });
         }
+
+        await invalidateSeoCache();
 
         res.status(200).json({
             success: true,

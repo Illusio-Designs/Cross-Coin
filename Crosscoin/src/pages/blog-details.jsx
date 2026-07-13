@@ -6,6 +6,7 @@ import ProductCard from '../components/products/ProductCard';
 import { getPublicBlogBySlug } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
 import { richHtml } from '../utils/sanitizeHtml';
+import Skeleton from '../components/common/Skeleton';
 import { getBlogImageSrc } from '../utils/imageUtils';
 
 
@@ -104,8 +105,13 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
   if (loading) {
     return (
       <SeoWrapper pageName="blog-details">
-        <div className="blog-details-page" style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
-          <p>Loading article...</p>
+        <div className="blog-details-page" style={{ maxWidth: 820, margin: '0 auto', padding: '32px 16px', display: 'grid', gap: 16 }}>
+          <Skeleton type="text" width="70%" height="34px" />
+          <Skeleton type="text" width="40%" height="16px" />
+          <Skeleton height={360} style={{ borderRadius: 12, margin: '12px 0' }} />
+          <Skeleton type="text" width="100%" height="16px" />
+          <Skeleton type="text" width="100%" height="16px" />
+          <Skeleton type="text" width="85%" height="16px" />
         </div>
       </SeoWrapper>
     );
@@ -130,8 +136,6 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
     try { sections = JSON.parse(post.sections); } catch { sections = []; }
   }
 
-  // Tags key from API is "Tags" not "BlogTags"
-  const tags = (post.Tags || post.BlogTags || []).map(t => `#${t.name}`);
   // Blog hero images are 1920x1020 on ImageKit — request that exact size,
   // sharp and light (WebP/AVIF via f-auto, q-82).
   const heroUrl = getBlogImageSrc(post.hero_image, { w: 1920, h: 1020, q: 82 });
@@ -227,13 +231,6 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
                     />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <div className="article-tags">
-                {tags.map((tag, idx) => <span key={idx} className="article-tag">{tag}</span>)}
               </div>
             )}
 

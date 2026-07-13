@@ -28,7 +28,11 @@ name: Deploy backend to FTP
 
 on:
   push:
-    branches: [main]
+    # Symmetric with the frontend ignore-build script: deploy the API when
+    # Backend/ changes on `main` (shared model), OR on a push to the dedicated
+    # `backend` branch. The paths filter keeps it from deploying on unrelated
+    # changes. Works whichever workflow you use.
+    branches: [main, backend]
     paths:
       - 'Backend/**'
       - '.github/workflows/backend-deploy-ftp.yml'

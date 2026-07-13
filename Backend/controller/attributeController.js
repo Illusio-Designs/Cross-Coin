@@ -309,7 +309,7 @@ module.exports.getMegaMenu = async (req, res) => {
         // Try cache first
         const cached = await cacheManager.get(cacheKey);
         if (cached) {
-            res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+            res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
             return res.json({ success: true, data: cached });
         }
 
@@ -377,7 +377,7 @@ module.exports.getMegaMenu = async (req, res) => {
         // Cache for 30 minutes
         await cacheManager.set(cacheKey, result, 1800);
 
-        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
         res.json({ success: true, data: result });
     } catch (error) {
         logger.error('Error fetching mega menu:', error);

@@ -32,7 +32,7 @@ export default function ContactPage() {
               {[
                 { icon: Mail, label: 'Email', value: 'hello@velmique.in', href: 'mailto:hello@velmique.in' },
                 { icon: Phone, label: 'Phone / WhatsApp', value: '+91 97128 91700', href: 'tel:+919712891700' },
-                { icon: MapPin, label: 'Atelier', value: '14 Pali Hill, Bandra West, Mumbai 400050', href: 'https://maps.google.com/?q=Pali+Hill+Bandra+West+Mumbai' },
+                { icon: MapPin, label: 'Address', value: 'Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
               ].map(item => (
                 <div key={item.label} className="flex items-start gap-4">
                   <div className="w-11 h-11 rounded-full bg-[var(--surface-2)] flex items-center justify-center flex-shrink-0">

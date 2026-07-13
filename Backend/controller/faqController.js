@@ -48,7 +48,7 @@ module.exports.getPublicFaqs = async (req, res) => {
       order: [['display_order', 'ASC'], ['id', 'ASC']],
       attributes: ['id', 'question', 'answer', 'display_order'],
     });
-    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
     return res.json({ success: true, faqs: rows });
   } catch (err) {
     logger.error('getPublicFaqs failed:', err.message);

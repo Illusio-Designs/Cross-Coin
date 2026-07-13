@@ -12,12 +12,28 @@ function cleanUrl(url) {
   return url;
 }
 
-async function brandFetch(path) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'X-Brand-Name': BRAND_NAME },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-  return res.json();
+// `revalidate` (seconds) opts the request into Next's server data cache so the
+// page can be statically regenerated (ISR) instead of hitting the API on every
+// render; ignored on the client. A cached (ISR) request must NOT carry an abort
+// signal — Next won't cache a signalled fetch, which would force the whole route
+// dynamic. So we only attach the 4s timeout to uncached calls (client / dynamic
+// SSR), where a stalled API could actually block a live render. ISR
+// regeneration runs in the background, so it doesn't need the guard.
+async function brandFetch(path, revalidate) {
+  const cached = typeof revalidate === 'number';
+  const controller = cached ? null : new AbortController();
+  const timer = controller ? setTimeout(() => controller.abort(), 4000) : null;
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: { 'X-Brand-Name': BRAND_NAME },
+      ...(controller ? { signal: controller.signal } : {}),
+      ...(cached ? { next: { revalidate } } : {}),
+    });
+    if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+    return res.json();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // Map backend product to Knitwink Product type
@@ -164,7 +180,7 @@ export async function getPublicProducts(params = {}) {
 
 export async function getBestsellers() {
   try {
-    const data = await brandFetch(`/api/products/best-sellers?limit=10`)
+    const data = await brandFetch(`/api/products/best-sellers?limit=10`, 300)
     const products = data?.data?.products || data?.data || data?.products || []
     if (!Array.isArray(products) || products.length === 0) {
       const result = await getPublicProducts({ limit: 10 })

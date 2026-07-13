@@ -1861,7 +1861,7 @@ module.exports.getAllPublicProducts = async (req, res) => {
     const crypto = require('crypto');
     const etagHash = crypto.createHash('md5').update(JSON.stringify({ page, limit, total: result.pagination.total })).digest('hex').slice(0, 16);
     res.set({
-      "Cache-Control": "public, max-age=300", // 5 minutes cache
+      "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=600", // browser 5m, edge 10m + SWR
       ETag: `"products-${etagHash}"`,
     });
 

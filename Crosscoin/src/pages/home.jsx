@@ -93,9 +93,13 @@ const Home = ({ initialData = {} }) => {
       try {
         if (needCategories) setLoading(true);
         if (needLatest) setLatestProductsLoading(true);
-        setExclusiveProductsLoading(true);
 
-        const [slidersData, categoriesData, latestData, exclusiveData, reviewsData] = await Promise.all([
+        // Only the above-the-fold pieces are fetched on mount — and only when
+        // SSR didn't already provide them (the common case resolves instantly
+        // from props). The below-the-fold Exclusive Offers strip and Reviews
+        // are deferred to an IntersectionObserver (see the effect below) so
+        // they don't add two API round-trips to every initial load.
+        const [slidersData, categoriesData, latestData] = await Promise.all([
           // 1. Sliders (only if SSR didn't provide them)
           needSliders
             ? getPublicSliders().catch(() => [])
@@ -119,39 +123,95 @@ const Home = ({ initialData = {} }) => {
                 .then((data) => (data.success && data.data.products ? data.data.products : []))
                 .catch(() => [])
             : Promise.resolve(latestProducts),
-
-          // 4. Exclusive/featured products (below the fold). Pull a sensible
-          //    strip-sized batch instead of 100 full payloads, and drop the
-          //    cache:'no-store' so the browser/CDN can reuse the response.
-          fetch(`${API_BASE}/api/products/catalog?sort=featured&limit=24`, {
-            headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
-          })
-            .then((r) => r.json())
-            .then((data) => (data.success && data.data.products ? data.data.products : []))
-            .catch(() => []),
-
-          // 5. Reviews (below the fold)
-          getAllPublicReviews({ limit: 30, sort: 'highest' }).catch(() => []),
         ]);
 
         if (needSliders) setSlides(slidersData);
         if (needCategories) setCategories(categoriesData);
         if (needLatest) setLatestProducts(latestData);
-        setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData?.reviews || reviewsData?.data || []));
-        setExclusiveProducts(exclusiveData && exclusiveData.length > 0 ? exclusiveData : []);
 
         setLoading(false);
         setLatestProductsLoading(false);
-        setExclusiveProductsLoading(false);
       } catch (error) {
         setLoading(false);
         setLatestProductsLoading(false);
-        setExclusiveProductsLoading(false);
       }
     };
 
     fetchAllData();
   }, []);
+
+  // ── Defer below-the-fold data until its section nears the viewport ──────────
+  // The Exclusive Offers strip and the Reviews slider are never part of the
+  // first paint, so fetching them on mount just adds two round-trips that
+  // compete with the critical render. Instead we load each the moment its
+  // section is within 400px of the viewport (or immediately if it's already on
+  // screen). A no-IntersectionObserver fallback loads both on first scroll.
+  const exclusivesSectionRef = useRef(null);
+  const reviewsSectionRef = useRef(null);
+  const exclusivesLoadedRef = useRef(false);
+  const reviewsLoadedRef = useRef(false);
+
+  const loadExclusives = useCallback(async () => {
+    if (exclusivesLoadedRef.current) return;
+    exclusivesLoadedRef.current = true;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    setExclusiveProductsLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/products/catalog?sort=featured&limit=24`, {
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+      });
+      const data = await r.json();
+      setExclusiveProducts(data.success && data.data.products ? data.data.products : []);
+    } catch {
+      setExclusiveProducts([]);
+    } finally {
+      setExclusiveProductsLoading(false);
+    }
+  }, []);
+
+  const loadReviews = useCallback(async () => {
+    if (reviewsLoadedRef.current) return;
+    reviewsLoadedRef.current = true;
+    try {
+      const r = await getAllPublicReviews({ limit: 30, sort: 'highest' });
+      setReviews(Array.isArray(r) ? r : (r?.reviews || r?.data || []));
+    } catch {
+      setReviews([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const targets = [
+      [exclusivesSectionRef.current, loadExclusives],
+      [reviewsSectionRef.current, loadReviews],
+    ].filter(([el]) => el);
+    if (targets.length === 0) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      // Fallback: load both once the user scrolls at all.
+      const onScroll = () => {
+        loadExclusives();
+        loadReviews();
+        window.removeEventListener('scroll', onScroll);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const match = targets.find(([el]) => el === entry.target);
+          if (match) match[1]();
+          io.unobserve(entry.target);
+        });
+      },
+      { rootMargin: '400px 0px' }
+    );
+    targets.forEach(([el]) => io.observe(el));
+    return () => io.disconnect();
+  }, [loadExclusives, loadReviews]);
 
   const fetchCategoryProducts = useCallback(async (categoryName) => {
     try {
@@ -197,7 +257,7 @@ const Home = ({ initialData = {} }) => {
         <section aria-label="Shop By Category">
           <SlidingCollection collections={categories} isLoading={loading} />
         </section>
-        <section aria-label="Exclusive Offers">
+        <section aria-label="Exclusive Offers" ref={exclusivesSectionRef}>
           <UnlockedExclusives products={exclusiveProducts} loading={exclusiveProductsLoading} />
         </section>
         <section className="shop-by-category" aria-label="Latest Products">
@@ -323,7 +383,7 @@ const Home = ({ initialData = {} }) => {
           </div>
           <LookbookShowcase />
         </section>
-        <section className="home-reviews-section" aria-label="Customer Reviews">
+        <section className="home-reviews-section" aria-label="Customer Reviews" ref={reviewsSectionRef}>
           <div className="home-reviews-header">
             <h2 className="section-header-h2">Customer <strong>Reviews</strong></h2>
             <p className="section-header-sub">What our customers are saying</p>

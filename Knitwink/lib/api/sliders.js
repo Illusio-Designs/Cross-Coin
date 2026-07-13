@@ -22,8 +22,11 @@ function cleanUrl(url) {
 
 export async function getPublicSliders() {
   try {
+    // ISR-cached (5 min). No abort signal here — a signalled fetch is not cached
+    // by Next and would force the homepage to render dynamically on every hit.
     const res = await fetch(`${API_URL}/api/sliders/listing`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return [];
     const data = await res.json();

@@ -110,17 +110,17 @@ export function Footer() {
           {/* Col 5 — Contact (last) */}
           <div className="flex flex-col gap-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Contact</p>
-            <a href="mailto:support@knitwink.com" className="flex items-start gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
+            <a href="mailto:support@knitwink.com" className="no-touch-min flex items-start gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
               <Mail size={13} className="mt-0.5 shrink-0 text-white/30" />
               support@knitwink.com
             </a>
-            <a href="tel:+919712891700" className="flex items-center gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
+            <a href="tel:+919712891700" className="no-touch-min flex items-center gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
               <Phone size={13} className="shrink-0 text-white/30" />
               +91 97128 91700
             </a>
             <div className="flex items-start gap-2.5 text-sm text-white/55">
               <MapPin size={13} className="mt-0.5 shrink-0 text-white/30" />
-              <span>Mumbai, Maharashtra,<br />India</span>
+              <span>Royal Plaza, Panchasar Road,<br />Morbi - 363641, Gujarat, India</span>
             </div>
           </div>
 
@@ -132,16 +132,16 @@ export function Footer() {
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
           <span className="text-xs text-white/35">© {year} Knitwink. All rights reserved.</span>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs text-white/35">
-            <span>Crafted with</span>
+            <span>Made with</span>
             <span className="text-red-400">❤</span>
             <span>by</span>
             <a
-              href="https://illusiodesigns.agency/"
+              href="https://finvera.solutions"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-white transition-colors hover:text-white/80 underline underline-offset-2"
             >
-              Illusio Designs
+              Finvera.solutions
             </a>
           </div>
         </div>

@@ -79,15 +79,16 @@ const SafeImage = ({
     let newSrc = null;
     
     if (imageData) {
-      // Use centralized image handler utility
       newSrc = getImageUrl(imageData);
-      
-      // Add optimization for product cards
-      if (isProductCard && newSrc && !newSrc.includes('?tr=')) {
-        const { width: imgWidth, quality: imgQuality } = getResponsiveSizingParams(sizes);
-        const format = supportedFormat === 'avif' ? 'avif' : 
-                       supportedFormat === 'webp' ? 'webp' : 'jpeg';
-        newSrc = `${newSrc}?w=${imgWidth}&q=${imgQuality}&fmt=${format}`;
+
+      // Optimize ImageKit images with ImageKit's real transform syntax
+      // (tr=w-…,q-…,f-auto). The previous ?w=&q=&fmt= params were NOT understood
+      // by ImageKit, so full-resolution images were being served. Width-only so
+      // the aspect ratio is preserved (no square cropping); f-auto delivers
+      // WebP/AVIF automatically.
+      if (newSrc && newSrc.includes('ik.imagekit.io') && !/[?&]tr=/.test(newSrc)) {
+        const w = isSlider ? 1600 : (isProductCard ? 600 : 800);
+        newSrc = `${newSrc.split('?')[0]}?tr=w-${w},q-78,f-auto`;
       }
     }
     

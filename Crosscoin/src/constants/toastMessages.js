@@ -170,7 +170,7 @@ export const TOAST_TEXT = {
   syncInProgress: '⏳ Sync already in progress. Please wait...',
 
   // Info messages
-  loading: '⏳ Loading...',
+  loading: '⏳ Please wait…',
   processing: '⏳ Processing...',
   saving: '⏳ Saving...',
   deleting: '⏳ Deleting...',

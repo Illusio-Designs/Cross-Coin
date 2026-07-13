@@ -81,12 +81,32 @@ const mediumLimiter = rateLimit({
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
-// General: all other API routes (120 req / min)
+// Public, cached, read-only GET endpoints. The storefront renders server-side
+// on Vercel, so every SSR call reaches this API from a small pool of Vercel IPs
+// — with IP-based limiting that whole stream looks like one client and can trip
+// the general limiter, 429-ing the storefront under load. These endpoints are
+// idempotent and already edge/Redis-cached, so rate-limiting them buys little
+// abuse protection; we skip them (GET only) to keep the storefront reliable.
+// Writes (POST/PUT/DELETE) to the same paths, and every sensitive/auth endpoint,
+// still go through the limiter.
+const PUBLIC_READ_PREFIXES = [
+  '/api/sliders', '/api/categories', '/api/products', '/api/seo',
+  '/api/public', '/api/blogs', '/api/reviews', '/api/lookbooks',
+  '/api/reels', '/api/instagram', '/api/policies', '/api/faqs',
+];
+const isPublicReadGet = (req) => {
+  if ((req.method || 'GET').toUpperCase() !== 'GET') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return PUBLIC_READ_PREFIXES.some((p) => path.startsWith(p));
+};
+
+// General: all other API routes (120 req / min), skipping public cached reads.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isPublicReadGet,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
@@ -111,9 +131,14 @@ app.use('/api/', generalLimiter);
 // CORS middleware - MUST be before other middleware (handles preflight requests)
 app.use(cors(corsOptions));
 
-// Body parsing middleware — keep limits tight on 2GB server
-app.use(express.json({ 
-    limit: '1mb',
+// Body parsing middleware. Image files never travel as JSON (they go through
+// multipart upload endpoints), so 1mb is normally plenty — but blog posts save
+// their full rich-text `sections` as a JSON body, and a long article (or one an
+// admin built before inline images were uploaded as URLs) can exceed 1mb and
+// get rejected with 413 on save. Raise the JSON limit to a safe 5mb so genuine
+// content saves; urlencoded stays tight since no large form bodies use it.
+app.use(express.json({
+    limit: '5mb',
     verify: (req, res, buf) => { req.rawBody = buf; }
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -124,12 +149,20 @@ app.use(compression());
 // Cache-Control middleware (Requirement 2.5)
 // Public read-only GET endpoints get public cache; authenticated/write endpoints get no-store
 app.use((req, res, next) => {
+    // The same API host serves every brand, distinguished only by the
+    // X-Brand-Name request header. Any response marked `public` therefore varies
+    // by that header — advertise it with Vary so browsers (and any CDN that
+    // honours Vary) never serve one brand's cached response to another. This is
+    // the standards-correct guard; a shared CDN like Cloudflare should ALSO add
+    // X-Brand-Name to its cache key, since Cloudflare's free tier ignores Vary.
+    res.vary('X-Brand-Name');
+
     const originalJson = res.json.bind(res);
     res.json = (body) => {
         if (!res.getHeader('Cache-Control')) {
             const isPublicGet = req.method === 'GET' && !req.headers.authorization && !req.headers['x-brand-name'];
             if (isPublicGet) {
-                res.set('Cache-Control', 'public, max-age=300');
+                res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=600');
             } else {
                 res.set('Cache-Control', 'no-store');
             }

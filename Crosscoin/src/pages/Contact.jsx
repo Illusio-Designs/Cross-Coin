@@ -43,8 +43,8 @@ const contactInfo = [
       </svg>
     ),
     label: 'Address',
-    value: '403, 4th Floor, Dev App, Sanidhay Park Soc',
-    sub: 'Morbi, Gujarat, India — 363641',
+    value: 'Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road',
+    sub: 'Morbi - 363641, Gujarat, India',
     href: null,
   },
 ];

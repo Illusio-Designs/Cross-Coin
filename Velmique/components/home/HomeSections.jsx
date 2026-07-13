@@ -106,7 +106,7 @@ export function StoryBand() {
           >
             <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-2)]">
               <img
-                src="/about.png"
+                src="/about.webp"
                 alt="Velmique perfume bottles on display"
                 className="w-full h-auto object-contain"
               />
@@ -197,11 +197,13 @@ export function CollectionBanner() {
    4. CUSTOMER FAVORITES — live best-sellers from the API. If the brand
    has no published products yet, the section quietly hides itself.
    ───────────────────────────────────── */
-export function BestSellers() {
-  const [items, setItems] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+export function BestSellers({ initialItems = null }) {
+  const hasSeed = Array.isArray(initialItems) && initialItems.length > 0;
+  const [items, setItems] = useState(() => (hasSeed ? initialItems.slice(0, 4) : []));
+  const [loaded, setLoaded] = useState(hasSeed);
 
   useEffect(() => {
+    if (hasSeed) return; // seeded from the server; skip client fetch
     let alive = true;
     getBestsellers(4).then(list => {
       if (!alive) return;
@@ -209,7 +211,7 @@ export function BestSellers() {
       setLoaded(true);
     });
     return () => { alive = false; };
-  }, []);
+  }, [initialItems]);
 
   if (loaded && !items.length) return null;
 
@@ -257,11 +259,13 @@ export function BestSellers() {
    Each card links to /shop?collection=<slug>. Hides itself if there
    are no categories yet so the homepage stays clean.
    ───────────────────────────────────── */
-export function CollectionsBand() {
-  const [cats, setCats] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+export function CollectionsBand({ initialCategories = null }) {
+  const hasSeed = Array.isArray(initialCategories) && initialCategories.length > 0;
+  const [cats, setCats] = useState(() => (hasSeed ? initialCategories.slice(0, 6) : []));
+  const [loaded, setLoaded] = useState(hasSeed);
 
   useEffect(() => {
+    if (hasSeed) return; // seeded from the server; skip client fetch
     let alive = true;
     getPublicCategories().then(list => {
       if (!alive) return;
@@ -269,7 +273,7 @@ export function CollectionsBand() {
       setLoaded(true);
     });
     return () => { alive = false; };
-  }, []);
+  }, [initialCategories]);
 
   if (loaded && !cats.length) return null;
 
@@ -411,7 +415,7 @@ export function NotesBand() {
           >
             <div className="md:sticky md:top-28">
               <div className="relative overflow-hidden rounded-2xl bg-[var(--surface)]">
-                <img src="/FRAGRANCE.png" alt="Velmique fragrance composition"
+                <img src="/FRAGRANCE.webp" alt="Velmique fragrance composition"
                   className="w-full h-auto object-contain" />
               </div>
               <div className="mt-5 flex items-center gap-3">
@@ -519,26 +523,33 @@ function mapReview(r) {
   };
 }
 
-export function Testimonials() {
-  const [reviews, setReviews] = useState([]);
-  const [loaded,  setLoaded]  = useState(false);
-  const [stats,   setStats]   = useState({ avg: 0, total: 0 });
+export function Testimonials({ initialReviews = null }) {
+  // Map + summarise a raw reviews array into the shape this section renders.
+  const summarise = (rs) => {
+    const mapped = (rs || []).map(mapReview).filter(r => r.text);
+    const total = mapped.length;
+    const sum = mapped.reduce((s, r) => s + (r.rating || 0), 0);
+    return { mapped, stats: total ? { avg: sum / total, total } : { avg: 0, total: 0 } };
+  };
+
+  const seeded = (Array.isArray(initialReviews) && initialReviews.length) ? summarise(initialReviews) : null;
+  const [reviews, setReviews] = useState(() => (seeded ? seeded.mapped : []));
+  const [loaded,  setLoaded]  = useState(!!seeded);
+  const [stats,   setStats]   = useState(() => (seeded ? seeded.stats : { avg: 0, total: 0 }));
 
   useEffect(() => {
+    if (seeded) return; // seeded from the server; skip client fetch
     let alive = true;
     getAllReviews({ limit: 24 }).then(({ reviews: rs }) => {
       if (!alive) return;
-      const mapped = (rs || []).map(mapReview).filter(r => r.text);
+      const { mapped, stats: st } = summarise(rs);
       setReviews(mapped);
-      if (mapped.length) {
-        const total = mapped.length;
-        const sum = mapped.reduce((s, r) => s + (r.rating || 0), 0);
-        setStats({ avg: sum / total, total });
-      }
+      setStats(st);
       setLoaded(true);
     });
     return () => { alive = false; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialReviews]);
 
   // Split into two rows — each marquee scrolls independently.
   const { topRow, bottomRow } = useMemo(() => {
@@ -595,7 +606,7 @@ export function Testimonials() {
           >
             <div className="relative h-full min-h-[600px] overflow-hidden rounded-2xl bg-[var(--surface-2)]">
               <img
-                src="/review.png"
+                src="/review.webp"
                 alt="Velmique customer reviews"
                 className="w-full h-full object-cover"
               />
