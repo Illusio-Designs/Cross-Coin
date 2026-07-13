@@ -67,7 +67,7 @@ export default function AboutPage() {
         eyebrow="About Us"
         title="Light, set"
         titleAccent="by hand."
-        description="A small studio in Bandra, working in solid 18k gold and certified stones — making jewellery slowly, the way it should be made."
+        description="A small studio in Morbi, Gujarat, working in solid 18k gold and certified stones — making jewellery slowly, the way it should be made."
       />
 
       {/* 1 — Our Story: editorial split */}
@@ -91,7 +91,7 @@ export default function AboutPage() {
 
               <div className="flex flex-col gap-6 text-[15px] leading-[1.9] text-text-muted">
                 <p>
-                  Velquira is a small jewellery studio in Mumbai. Everything we sell is made
+                  Velquira is a small jewellery studio in Morbi, Gujarat. Everything we sell is made
                   here by hand, in solid 18k gold that carries a hallmark, with diamonds that
                   come with their own certificate. Nothing is mass produced, and nothing is
                   plated.
@@ -179,7 +179,7 @@ export default function AboutPage() {
       <section className="vq-section bg-beige">
         <div className="vq-container text-center">
           <p className="vq-display mx-auto max-w-2xl text-[clamp(1.7rem,3.4vw,2.6rem)] leading-[1.25] text-ink">
-            Made by hand in Mumbai, and ready to be worn.
+            Made by hand in Morbi, and ready to be worn.
           </p>
           <p className="mx-auto mt-6 max-w-lg text-[15px] leading-[1.9] text-text-muted">
             Have a look at everything we make, or write to us if you would like something

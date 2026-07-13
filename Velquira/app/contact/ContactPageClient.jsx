@@ -17,7 +17,7 @@ function WhatsAppIcon({ size = 16 }) {
 const DETAILS = [
   { icon: Mail,   label: 'Email',           value: 'hello@velquira.in',      href: 'mailto:hello@velquira.in' },
   { icon: Phone,  label: 'Phone / WhatsApp', value: '+91 97128 91700',            href: 'tel:+919712891700' },
-  { icon: MapPin, label: 'Address',          value: 'Bandra West, Mumbai 400050', href: null },
+  { icon: MapPin, label: 'Address',          value: 'Royal Plaza, Panchasar Road, Morbi 363641, Gujarat', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
   { icon: Clock,  label: 'Hours',            value: 'By appointment · Mon–Sat',   href: null },
 ]
 

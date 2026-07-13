@@ -73,7 +73,7 @@ export function AtelierManifesto() {
 
           <div className="lg:col-span-7">
             <p className="max-w-xl text-[15px] leading-[1.85] text-white/72 md:text-base">
-              Every Velquira piece starts as a sketch in our Mumbai studio — then goes through
+              Every Velquira piece starts as a sketch in our Morbi studio — then goes through
               hundreds of hours of hand-setting, polishing, and checking before it reaches
               you. We only use hallmarked gold and certified stones, because jewellery this good
               deserves nothing less.

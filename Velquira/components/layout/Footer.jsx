@@ -100,7 +100,7 @@ export function Footer() {
             <ul className="flex flex-col gap-3.5 text-[13px] text-cream/55">
               <li className="flex gap-2.5">
                 <MapPin size={14} className="mt-0.5 shrink-0 text-gold/70" />
-                <span>Bandra West<br />Mumbai 400050</span>
+                <span>Royal Plaza, Panchasar Road<br />Morbi 363641, Gujarat</span>
               </li>
               <li>
                 <a href="mailto:hello@velquira.in" className="flex items-center gap-2.5 transition-colors hover:text-cream">
