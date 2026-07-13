@@ -105,6 +105,15 @@ const nextConfig = {
   // Redirects for old URLs
   async redirects() {
     return [
+      // Thank-you page renamed to the kebab-case slug convention (/thank-you).
+      // Keep the old /ThankYou path working — it's used by the backend
+      // payment-success redirect and any existing links. Query params such as
+      // ?order_number=… are preserved automatically on redirect.
+      {
+        source: '/ThankYou',
+        destination: '/thank-you',
+        permanent: true,
+      },
       // Legacy product URL (/ProductDetails?slug=foo) → clean slug URL.
       // 301 (permanent: true) consolidates link equity for SEO and tells
       // Google to drop the query-string version from the index.
