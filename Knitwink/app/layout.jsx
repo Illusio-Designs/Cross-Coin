@@ -50,6 +50,9 @@ export const metadata = {
   openGraph: {
     siteName: SITE_NAME,
     type: 'website'
+  },
+  verification: {
+    google: 'hob77L8ruZk751C4viqFjIqqG2G3o8XDJNj1cmYANgA'
   }
 };
 
