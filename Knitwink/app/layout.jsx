@@ -117,6 +117,16 @@ export default function RootLayout({ children }) {
               <WhatsAppChat />
               <ToastContainer />
               <Analytics />
+              {/* Meta Pixel <noscript> fallback (JS-disabled visitors) */}
+              <noscript>
+                <img
+                  height="1"
+                  width="1"
+                  style={{ display: 'none' }}
+                  alt=""
+                  src="https://www.facebook.com/tr?id=1029243193162708&ev=PageView&noscript=1"
+                />
+              </noscript>
             </CartProvider>
           </AuthProvider>
         </ClientProviders>
