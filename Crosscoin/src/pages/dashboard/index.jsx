@@ -28,7 +28,6 @@ import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
 import AnalyticsPage from "../../components/Dashboard/AnalyticsPage";
-import { BrandSettingsManager } from "./brandSettings";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
@@ -187,11 +186,9 @@ function Dashboard() {
       case 'instagram-admin': return <AdminInstagramFeed />;
       case 'whatsapp':        return <WhatsAppManager />;
       case 'whatsapp-chat':   return <WhatsAppManager />;
-      case 'brands':          return <BrandManager onOpenSettings={(brandId) => {
-        if (brandId) { try { sessionStorage.setItem('dash_settings_brand', String(brandId)); } catch {} }
-        setCurrentView('brand-settings');
-      }} />;
-      case 'brand-settings':  return <BrandSettingsManager />;
+      // Brands and settings are now one combined page — both menu items open it.
+      case 'brands':          return <BrandManager />;
+      case 'brand-settings':  return <BrandManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
       case 'analytics':       return <AnalyticsPage />;
