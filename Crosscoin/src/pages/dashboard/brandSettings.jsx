@@ -45,7 +45,15 @@ export function BrandSettingsManager() {
       const response = await brandService.getAllBrands(true);
       if (response.success && response.data.length > 0) {
         setBrands(response.data);
-        setSelectedBrandId(response.data[0].id);
+        // Preselect the brand handed over from the Brands page ("Manage
+        // settings"), otherwise default to the first brand.
+        let preselect = response.data[0].id;
+        try {
+          const stored = sessionStorage.getItem('dash_settings_brand');
+          if (stored && response.data.some(b => String(b.id) === stored)) preselect = Number(stored);
+          sessionStorage.removeItem('dash_settings_brand');
+        } catch { /* ignore */ }
+        setSelectedBrandId(preselect);
       }
     } catch { showError('loadingFailed'); }
   };

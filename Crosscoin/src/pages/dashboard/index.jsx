@@ -187,7 +187,10 @@ function Dashboard() {
       case 'instagram-admin': return <AdminInstagramFeed />;
       case 'whatsapp':        return <WhatsAppManager />;
       case 'whatsapp-chat':   return <WhatsAppManager />;
-      case 'brands':          return <BrandManager />;
+      case 'brands':          return <BrandManager onOpenSettings={(brandId) => {
+        if (brandId) { try { sessionStorage.setItem('dash_settings_brand', String(brandId)); } catch {} }
+        setCurrentView('brand-settings');
+      }} />;
       case 'brand-settings':  return <BrandSettingsManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
