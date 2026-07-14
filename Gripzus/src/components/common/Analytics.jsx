@@ -1,8 +1,6 @@
-'use client';
-
 import Script from 'next/script';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
 
 /**
  * Analytics — GA4 + Meta Pixel + Microsoft Clarity, driven by the platform
@@ -17,9 +15,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
 
 export default function Analytics() {
+  const router = useRouter();
   const [cfg, setCfg] = useState(null);
-  const pathname = usePathname();
 
+  // Fetch the tracking IDs once (skip on localhost).
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return;
     let aborted = false;
@@ -37,12 +36,16 @@ export default function Analytics() {
     return () => { aborted = true; };
   }, []);
 
-  // Fire a page_view / PageView on client-side route changes.
+  // Fire GA page_view + FB PageView on client-side route changes.
   useEffect(() => {
-    if (!cfg || typeof window === 'undefined') return;
-    if (cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
-    if (cfg.fbId && window.fbq) window.fbq('track', 'PageView');
-  }, [pathname, cfg]);
+    const onRouteChange = (url) => {
+      if (typeof window === 'undefined') return;
+      if (window.gtag) window.gtag('event', 'page_view', { page_path: url });
+      if (window.fbq) window.fbq('track', 'PageView');
+    };
+    router.events.on('routeChangeComplete', onRouteChange);
+    return () => router.events.off('routeChangeComplete', onRouteChange);
+  }, [router.events]);
 
   if (!cfg) return null;
   const { gaId, fbId, clarityId } = cfg;
