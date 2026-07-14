@@ -24,7 +24,7 @@ const IC = {
 
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 
-export function BrandManager() {
+export function BrandManager({ onOpenSettings }) {
   const queryClient = useQueryClient();
   const [confirmState, setConfirmState] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -323,7 +323,14 @@ export function BrandManager() {
               </div>
               <div className="brand-card-footer-new">
                 <span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span>
-                <small className="brand-updated">Updated {new Date(brand.updated_at).toLocaleDateString()}</small>
+                <button
+                  type="button"
+                  onClick={() => onOpenSettings?.(brand.id)}
+                  title="Open this brand's settings"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0 }}
+                >
+                  Manage settings →
+                </button>
               </div>
             </div>
           ))}
