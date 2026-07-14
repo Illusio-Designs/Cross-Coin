@@ -71,7 +71,14 @@ export function BrandManager() {
     },
   });
 
-  const referenceKeys = referenceBrand ? (settingsByBrand[referenceBrand.id] || []) : [];
+  // Crosscoin carries dual shipping data — the legacy Fship keys alongside the
+  // current provider (we moved from Fship → the new one). Those Fship keys are
+  // deprecated, so exclude them from the canonical set: other brands shouldn't
+  // be counted as "pending" for settings we no longer use.
+  const IGNORED_KEY = /fship/i;
+  const referenceKeys = referenceBrand
+    ? (settingsByBrand[referenceBrand.id] || []).filter(k => !IGNORED_KEY.test(k))
+    : [];
   const pendingFor = (brand) => {
     if (!referenceBrand || referenceKeys.length === 0 || brand.id === referenceBrand.id) return null;
     const have = new Set(settingsByBrand[brand.id] || []);
