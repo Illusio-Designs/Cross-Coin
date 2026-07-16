@@ -193,7 +193,13 @@ adminApi.interceptors.response.use(
     }
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/auth/")) {
+      // Only bounce to the admin login when the user is actually inside the
+      // admin dashboard. A stale/expired admin token must NOT redirect public
+      // storefront visitors (e.g. the home page) to /auth/adminlogin — just
+      // drop the token and let the public page render normally.
+      if (typeof window !== "undefined"
+          && window.location.pathname.startsWith("/dashboard")
+          && !window.location.pathname.includes("/auth/")) {
         window.location.href = "/auth/adminlogin";
       }
     }
