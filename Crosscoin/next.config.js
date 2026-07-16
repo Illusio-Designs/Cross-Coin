@@ -87,13 +87,16 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Tracker libraries are served from their own CDNs.
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://*.msg91.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Tracking beacons (1x1 pixels) and FB / GA pixel images.
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
               // Beacon endpoints the trackers POST to.
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.analytics.google.com",
+              // GA4 sends collect beacons to www.google-analytics.com AND (for
+              // Google Signals) to analytics.google.com and www.google.com, so
+              // all three host forms must be allowed or the hits are refused.
+              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com",
               "frame-ancestors 'none'",
             ].join('; ') + ';'
           },
