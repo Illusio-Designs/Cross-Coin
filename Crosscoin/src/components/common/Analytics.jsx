@@ -50,7 +50,7 @@ const Analytics = () => {
   useEffect(() => {
     if (isDashboard || isLocalhost) return;
     let aborted = false;
-    fetch(`${API_URL}/api/public/tracking-config`)
+    fetch(`${API_URL}/api/public/tracking-config`, { headers: { 'X-Brand-Name': 'crosscoin' } })
       .then(r => r.json())
       .then(d => {
         if (aborted || !d?.success) return;

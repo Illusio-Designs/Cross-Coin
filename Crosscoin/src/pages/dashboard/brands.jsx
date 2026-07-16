@@ -222,9 +222,14 @@ export function BrandManager() {
                         <td style={{ ...cell, color: '#5a6072' }}>{brand.domain || '—'}</td>
                         <td style={cell}><span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span></td>
                         <td style={cell}>
-                          {isRef ? <span style={{ color: '#2563eb', fontWeight: 600 }}>Reference</span>
-                            : pending === null ? '—'
-                            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: pending === 0 ? '#16a34a' : '#d97706' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pending === 0 ? '#16a34a' : '#d97706' }} />{pending === 0 ? 'All set' : `${pending} of ${predefinedKeys.length} pending`}</span>}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            {isRef ? <span style={{ color: '#2563eb', fontWeight: 600 }}>Reference brand</span>
+                              : pending === null ? <span style={{ color: '#8a90a2' }}>—</span>
+                              : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: pending === 0 ? '#16a34a' : '#d97706' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pending === 0 ? '#16a34a' : '#d97706' }} />{pending === 0 ? 'All set' : `${pending} of ${predefinedKeys.length} pending`}</span>}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : brand.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                              {isOpen ? '▴ Hide settings' : '▾ View settings'}
+                            </button>
+                          </div>
                         </td>
                         <td style={cell} onClick={(e) => e.stopPropagation()}>
                           {url ? (
