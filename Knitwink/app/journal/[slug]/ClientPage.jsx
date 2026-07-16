@@ -109,10 +109,15 @@ export default function JournalDetailClient() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(postingLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      {/* Cover image — full width, tall */}
+      {/* Cover image — a fixed-height banner so a tall/portrait source image
+          doesn't blow up to full-viewport height. The full image is shown
+          (object-contain, no zoom/crop) over a soft blurred fill of itself. */}
       {post.coverImage && (
-        <section className="bg-gray-50">
-          <img src={post.coverImage} alt={post.title} className="h-auto w-full object-cover" />
+        <section className="relative h-[40vh] w-full overflow-hidden bg-gray-50 sm:h-[48vh] md:h-[56vh]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.coverImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover object-center blur-2xl opacity-60" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-contain object-center" />
         </section>
       )}
 

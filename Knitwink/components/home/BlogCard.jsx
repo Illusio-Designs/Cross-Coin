@@ -13,12 +13,17 @@ export function BlogCard({ post }) {
       href={`/journal/${post.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow hover:shadow-md"
     >
-      {/* Image — tall, rounded top */}
-      <div className="relative overflow-hidden">
-        {post.coverImage
-          ? <img src={post.coverImage} alt={post.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-          : <div className="w-full bg-gray-100" />
-        }
+      {/* Image — fixed aspect so every card in the grid lines up, with a
+          soft blurred fill behind so nothing is hard-cropped awkwardly. */}
+      <div className="relative aspect-[16/11] overflow-hidden bg-gray-100">
+        {post.coverImage && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.coverImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl opacity-60" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105" />
+          </>
+        )}
       </div>
 
       {/* Content */}
