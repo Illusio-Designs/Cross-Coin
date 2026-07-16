@@ -311,7 +311,7 @@ function CardGrid() {
                 {
                   key: 'customer',
                   label: 'Customer',
-                  cellStyle: { wordBreak: 'break-word' },
+                  cellStyle: { overflowWrap: 'break-word', minWidth: 120 },
                   render: (o) => o.customerName || '—',
                 },
                 {
@@ -370,16 +370,19 @@ function CardGrid() {
                 {
                   key: 'name',
                   label: 'Product',
-                  // Long product names should wrap, not be truncated to 200px.
-                  // Old .table-product-name CSS forced ellipsis which clipped
-                  // most real product names.
-                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', wordBreak: 'break-word' },
+                  // Long product names should wrap to 2–3 comfortable lines, not
+                  // one word per line. A minWidth stops the auto table-layout
+                  // from collapsing this column, and overflowWrap (not the old
+                  // wordBreak:break-word) keeps the column's min-content sane so
+                  // it claims the remaining width instead of shrinking to ~1ch.
+                  headerStyle: { minWidth: 170 },
+                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', whiteSpace: 'normal', overflowWrap: 'break-word', minWidth: 170 },
                   render: (p) => p.name,
                 },
                 {
                   key: 'sold',
                   label: 'Sold',
-                  cellStyle: { fontVariantNumeric: 'tabular-nums' },
+                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
                   render: (p) => `${(p.totalSold || 0).toLocaleString('en-IN')} units`,
                 },
                 {
