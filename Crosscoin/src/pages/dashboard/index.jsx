@@ -13,7 +13,6 @@ import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import ShippingFees from "./shipping/shippingFees";
-import { ShippingSettingsManager } from "./shipping/shippingSettings";
 import Payments from "./payments/payments";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
@@ -164,7 +163,6 @@ function Dashboard() {
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
       case 'shippingFees':    return <ShippingFees />;
-      case 'shipping-settings': return <ShippingSettingsManager />;
       case 'payments':        return <Payments />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
@@ -190,9 +188,10 @@ function Dashboard() {
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
       case 'utm-analytics':   return <UTMAnalytics />;
-      case 'monitoring':      return <MonitoringDashboard />;
       case 'staff-users':     return <StaffUsers />;
-      default:                return <CardGrid />;
+      // The main dashboard now also shows the monitoring panel below the
+      // stat cards (the standalone Monitoring page was removed).
+      default:                return <><CardGrid /><MonitoringDashboard /></>;
     }
   };
 
