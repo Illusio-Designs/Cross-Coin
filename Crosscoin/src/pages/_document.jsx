@@ -198,6 +198,24 @@ export default function Document({ tracking }) {
 
 Document.getInitialProps = async (ctx) => {
   const initialProps = await ctx.defaultGetInitialProps(ctx);
+
+  // Only ever load analytics on the real production deployment. Vercel mints a
+  // unique *.vercel.app URL for every preview deployment; if the tag fired
+  // there it would send hits to the live GA property, so GA fills up with
+  // dozens of "unconfigured" *.vercel.app domains and flags the tag as
+  // "Needs Attention". VERCEL_ENV is 'production' only on the production
+  // deployment ('preview' / 'development' otherwise).
+  const vercelEnv = process.env.VERCEL_ENV;
+  if (vercelEnv && vercelEnv !== "production") {
+    return { ...initialProps, tracking: null };
+  }
+  // Belt-and-suspenders: even the production build is reachable at its own
+  // *.vercel.app alias — only report for the real domain, never that alias.
+  const host = ((ctx.req && ctx.req.headers && ctx.req.headers.host) || "").split(":")[0];
+  if (host.endsWith(".vercel.app")) {
+    return { ...initialProps, tracking: null };
+  }
+
   // Never load tracking on the admin dashboard or auth screens.
   const path = ctx.pathname || "";
   if (path.startsWith("/dashboard") || path.startsWith("/auth")) {
