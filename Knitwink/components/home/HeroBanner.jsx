@@ -83,6 +83,15 @@ export function HeroBanner({ slides = [] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeInOut' }}
           >
+            {/* Blurred fill so the letterbox area around the (uncropped)
+                banner is a soft extension of the image, not a hard black bar. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slide.image}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-110 object-cover object-center blur-2xl"
+            />
             <ShimmerImg
               src={slide.image}
               alt={slide.title || 'Banner'}
