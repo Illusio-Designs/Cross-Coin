@@ -32,7 +32,6 @@ const IC = {
 const ALL_MENU = [
   { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
   { label: 'Orders',       icon: IC.orders,    view: 'orders',    roles: ['admin','order_manager'] },
-  { label: 'Monitoring',   icon: IC.monitoring, view: 'monitoring', roles: ['admin'] },
   {
     label: 'Products', icon: IC.products, roles: ['admin','product_manager'],
     submenu: [
@@ -73,7 +72,6 @@ const ALL_MENU = [
     label: 'Settings', icon: IC.settings, roles: ['admin'],
     submenu: [
       { label: 'Brands & Settings', view: 'brands' },
-      { label: 'Shipping',       view: 'shipping-settings' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
     ],
   },
