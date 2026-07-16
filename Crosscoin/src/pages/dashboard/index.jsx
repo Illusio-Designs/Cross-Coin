@@ -27,7 +27,6 @@ import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
-import AnalyticsPage from "../../components/Dashboard/AnalyticsPage";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
@@ -177,7 +176,6 @@ function Dashboard() {
       case 'seo-health':      return <SeoHub initialTab="overview" />;
       case 'seo-bulk':        return <SeoHub initialTab="products" />;
       case 'seo-pages':       return <SeoHub initialTab="pages" />;
-      case 'seo-search':      return <SeoHub initialTab="search" />;
       case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
@@ -191,7 +189,6 @@ function Dashboard() {
       case 'brand-settings':  return <BrandManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
-      case 'analytics':       return <AnalyticsPage />;
       case 'utm-analytics':   return <UTMAnalytics />;
       case 'monitoring':      return <MonitoringDashboard />;
       case 'staff-users':     return <StaffUsers />;

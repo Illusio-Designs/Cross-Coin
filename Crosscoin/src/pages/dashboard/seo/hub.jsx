@@ -17,7 +17,6 @@ import GlobalSeoSettings from './global';
 import SeoBulkEditor     from './bulk';
 import SEO               from './seo';
 import FaqsManager       from './faqs';
-import SearchConsoleTab  from './search-console';
 import Dropdown          from '../../../components/ui/Dropdown';
 import { brandService }  from '../../../services';
 
@@ -27,7 +26,6 @@ const TABS = [
   { id: 'products',  label: 'Products',        Component: SeoBulkEditor },
   { id: 'faqs',      label: 'FAQs',            Component: FaqsManager },
   { id: 'settings',  label: 'Settings',        Component: GlobalSeoSettings },
-  { id: 'search',    label: 'Search Console',  Component: SearchConsoleTab },
 ];
 
 export default function SeoHub({ initialTab = 'overview' } = {}) {

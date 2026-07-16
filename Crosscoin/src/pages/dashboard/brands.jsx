@@ -130,6 +130,30 @@ export function BrandManager() {
     finally { setSavingKey(null); }
   };
 
+  // ── Settings inline delete ────────────────────────────────────────
+  // Lets an admin remove a stored setting entirely (e.g. the GA4 service
+  // account keys they no longer want kept). Only offered when a value
+  // actually exists for the key.
+  const deleteSetting = (brand, keyObj) => {
+    const existing = valueMap(brand.id).get(keyObj.key);
+    if (!existing) return;
+    setConfirmState({
+      message: `Delete the setting "${keyObj.key}" for ${brand.display_name || brand.name}? Its stored value will be removed.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        const dk = `${brand.id}:${keyObj.key}`;
+        setSavingKey(dk);
+        try {
+          await brandSettingsService.deleteSetting(brand.id, keyObj.key);
+          showSuccess('Setting deleted');
+          setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
+          queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
+        } catch { showError('Failed to delete setting'); }
+        finally { setSavingKey(null); }
+      },
+    });
+  };
+
   const filteredBrands = brands.filter(b =>
     b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -260,7 +284,7 @@ export function BrandManager() {
                               ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #eef0f4', borderRadius: 8 }}>
                                   <thead>
-                                    <tr><th style={th}>Key</th><th style={th}>Category</th><th style={th}>Value</th><th style={{ ...th, width: 90, textAlign: 'right' }}>Save</th></tr>
+                                    <tr><th style={th}>Key</th><th style={th}>Category</th><th style={th}>Value</th><th style={{ ...th, width: 110, textAlign: 'right' }}>Actions</th></tr>
                                   </thead>
                                   <tbody>
                                     {predefinedKeys.map(k => {
@@ -273,7 +297,10 @@ export function BrandManager() {
                                           <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{k.key}{missing && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: '#d97706', display: 'inline-block' }} title="Not set" />}</td>
                                           <td style={{ ...cell, color: '#8a90a2', fontSize: 12 }}>{CATEGORY_LABEL[k.category] || k.category}</td>
                                           <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} placeholder={k.description || 'Enter value…'} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
-                                          <td style={{ ...cell, textAlign: 'right' }}><button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, k)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button></td>
+                                          <td style={{ ...cell, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                            <button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, k)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button>
+                                            {s && <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, k)} style={{ marginLeft: 6 }}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>}
+                                          </td>
                                         </tr>
                                       );
                                     })}
