@@ -73,7 +73,7 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[70vh] items-end justify-start bg-gray-900 sm:min-h-[80vh] md:min-h-[88vh]">
+      <div className="relative flex min-h-[54vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -103,7 +103,7 @@ export function HeroBanner({ slides = [] }) {
 
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 via-brand-black/10 to-transparent" />
 
-        <div className="relative z-10 max-w-xl p-5 sm:p-8 md:max-w-2xl md:p-14 lg:max-w-3xl lg:p-20">
+        <div className="relative z-10 max-w-xl p-5 pb-14 sm:p-8 sm:pb-12 md:max-w-2xl md:p-14 lg:max-w-3xl lg:p-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -120,10 +120,10 @@ export function HeroBanner({ slides = [] }) {
                   {slide.description}
                 </h1>
               )}
-              <div style={{ marginTop: 'calc(var(--spacing) * 5)', marginBottom: 'calc(var(--spacing) * 10)' }}>
+              <div style={{ marginTop: 'calc(var(--spacing) * 4)', marginBottom: 'calc(var(--spacing) * 2)' }}>
                 <Link
                   href={buttonHref}
-                  className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-medium uppercase tracking-wider text-brand-black transition-colors hover:bg-off-white"
+                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-brand-black transition-colors hover:bg-off-white sm:px-7 sm:py-3 sm:text-sm"
                 >
                   {slide.buttonText || 'Shop Now'}
                 </Link>
@@ -132,7 +132,7 @@ export function HeroBanner({ slides = [] }) {
           </AnimatePresence>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-4 px-8 pb-6 md:px-14 lg:px-20">
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-5 pb-4 sm:gap-4 sm:px-8 sm:pb-6 md:px-14 lg:px-20">
           <div className="flex gap-2">
             {slides.map((_, i) => (
               <button
