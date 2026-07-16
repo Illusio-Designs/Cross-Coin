@@ -28,7 +28,7 @@ export default function HeroBanner({ slides = [] }) {
   const titleBottom = words.slice(mid).join(' ');
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#C9A84C] via-[#BFAB5E] to-[#A89548] h-[92vh] md:h-[96vh]">
+    <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#C9A84C] via-[#BFAB5E] to-[#A89548] h-[76vh] md:h-[96vh]">
 
       {/* Subtle paper grain */}
       <div
@@ -57,7 +57,7 @@ export default function HeroBanner({ slides = [] }) {
               {/* Headline — backend title auto-split into solid + outlined lines */}
               <motion.h1
                 className="font-display text-[#FBF7EC] text-center leading-[0.82] tracking-[-0.02em] uppercase"
-                style={{ fontSize: 'clamp(3.4rem, 11vw, 10.5rem)' }}
+                style={{ fontSize: 'clamp(2.6rem, 11vw, 10.5rem)' }}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9 }}
@@ -78,12 +78,12 @@ export default function HeroBanner({ slides = [] }) {
 
               {/* Slide image */}
               <motion.div
-                className="relative w-full max-w-[760px] -mt-24 md:-mt-44 z-10"
+                className="relative w-full max-w-[760px] -mt-16 md:-mt-44 z-10"
                 initial={{ opacity: 0, scale: 0.95, y: 30 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-[68vh] md:h-[78vh] flex items-end justify-center">
+                <div className="relative h-[52vh] md:h-[78vh] flex items-end justify-center">
                   <img
                     src={slide.image}
                     alt={slide.title}
