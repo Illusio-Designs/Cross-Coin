@@ -73,8 +73,7 @@ const ALL_MENU = [
   {
     label: 'Settings', icon: IC.settings, roles: ['admin'],
     submenu: [
-      { label: 'Brands',         view: 'brands' },
-      { label: 'Brand Settings', view: 'brand-settings' },
+      { label: 'Brands & Settings', view: 'brands' },
       { label: 'Shipping',       view: 'shipping-settings' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
     ],
