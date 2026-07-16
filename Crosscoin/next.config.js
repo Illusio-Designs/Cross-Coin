@@ -96,7 +96,10 @@ const nextConfig = {
               // GA4 sends collect beacons to www.google-analytics.com AND (for
               // Google Signals) to analytics.google.com and www.google.com, so
               // all three host forms must be allowed or the hits are refused.
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com",
+              // stats.g.doubleclick.net is GA4's Google Signals / remarketing
+              // beacon (demographics + audiences); without it those features
+              // are refused even though basic page_view hits succeed.
+              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com",
               "frame-ancestors 'none'",
             ].join('; ') + ';'
           },
