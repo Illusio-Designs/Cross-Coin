@@ -39,6 +39,8 @@ const BRAND_ORDER_PREFIXES = {
   velmique: 'VM',
   velquira: 'VQ',
   gripzus: 'GZ',
+  morbix: 'MX',
+  soxbae: 'SB',
 };
 const DEFAULT_ORDER_PREFIX = 'CC';
 
