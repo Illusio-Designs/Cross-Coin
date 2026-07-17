@@ -32,8 +32,6 @@ const IC = {
 const ALL_MENU = [
   { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
   { label: 'Orders',       icon: IC.orders,    view: 'orders',    roles: ['admin','order_manager'] },
-  { label: 'Analytics',    icon: IC.analytics, view: 'analytics', roles: ['admin'] },
-  { label: 'Monitoring',   icon: IC.monitoring, view: 'monitoring', roles: ['admin'] },
   {
     label: 'Products', icon: IC.products, roles: ['admin','product_manager'],
     submenu: [
@@ -65,7 +63,7 @@ const ALL_MENU = [
       { label: 'Slider',    view: 'slider' },
       { label: 'Blogs',     view: 'blogs' },
       // Single SEO entry — opens the unified hub (Overview / Pages /
-      // Products / FAQs / Settings / Search Console tabs in one view).
+      // Products / FAQs / Settings tabs in one view).
       { label: 'SEO',           view: 'seo' },
       { label: 'Policies',  view: 'policies', roles: ['admin'] },
     ],
@@ -73,9 +71,7 @@ const ALL_MENU = [
   {
     label: 'Settings', icon: IC.settings, roles: ['admin'],
     submenu: [
-      { label: 'Brands',         view: 'brands' },
-      { label: 'Brand Settings', view: 'brand-settings' },
-      { label: 'Shipping',       view: 'shipping-settings' },
+      { label: 'Brands & Settings', view: 'brands' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
     ],
   },

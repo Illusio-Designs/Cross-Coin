@@ -66,9 +66,13 @@ router.use('/', require('./seoAdminRoutes.js'));
 // public site's <Analytics> component can mount gtag / fbq / Clarity with
 // the real IDs (instead of a build-time env var that has to be redeployed
 // whenever the admin updates them in the dashboard).
-router.get('/public/tracking-config', async (req, res) => {
+router.get('/public/tracking-config', optionalBrand, async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId, 10) || 1;
+    // Resolve the brand from the X-Brand-Name header (optionalBrand sets
+    // req.brandId), falling back to a ?brandId query and finally brand 1
+    // (Crosscoin). Previously this only read ?brandId and defaulted to 1, so
+    // every brand received Crosscoin's tracking IDs instead of their own.
+    const brandId = req.brandId || parseInt(req.query.brandId, 10) || 1;
     const settingsHelper = require('../services/settingsHelper');
     const [ga, fb, clarity] = await Promise.all([
       settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID'),

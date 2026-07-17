@@ -111,7 +111,7 @@ export function ProductCard({ product }) {
         <AnimatePresence initial={false}>
           <motion.div
             key={hovered ? 'h' : 'p'}
-            className="absolute inset-0 p-4"
+            className="absolute inset-0 p-1.5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -123,7 +123,8 @@ export function ProductCard({ product }) {
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-contain object-center"
-              onLoad={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)} />
+              onLoad={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)}
+              onError={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)} />
 
           </motion.div>
         </AnimatePresence>

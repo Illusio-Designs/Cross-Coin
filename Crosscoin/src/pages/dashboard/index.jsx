@@ -13,7 +13,6 @@ import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import ShippingFees from "./shipping/shippingFees";
-import { ShippingSettingsManager } from "./shipping/shippingSettings";
 import Payments from "./payments/payments";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
@@ -27,7 +26,6 @@ import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
 import UTMAnalytics from "./analytics/utmAnalytics";
-import AnalyticsPage from "../../components/Dashboard/AnalyticsPage";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
@@ -165,7 +163,6 @@ function Dashboard() {
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
       case 'shippingFees':    return <ShippingFees />;
-      case 'shipping-settings': return <ShippingSettingsManager />;
       case 'payments':        return <Payments />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
@@ -177,7 +174,6 @@ function Dashboard() {
       case 'seo-health':      return <SeoHub initialTab="overview" />;
       case 'seo-bulk':        return <SeoHub initialTab="products" />;
       case 'seo-pages':       return <SeoHub initialTab="pages" />;
-      case 'seo-search':      return <SeoHub initialTab="search" />;
       case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
@@ -191,11 +187,11 @@ function Dashboard() {
       case 'brand-settings':  return <BrandManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
-      case 'analytics':       return <AnalyticsPage />;
       case 'utm-analytics':   return <UTMAnalytics />;
-      case 'monitoring':      return <MonitoringDashboard />;
       case 'staff-users':     return <StaffUsers />;
-      default:                return <CardGrid />;
+      // The main dashboard now also shows the monitoring panel below the
+      // stat cards (the standalone Monitoring page was removed).
+      default:                return <><CardGrid /><MonitoringDashboard /></>;
     }
   };
 
