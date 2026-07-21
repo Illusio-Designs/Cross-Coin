@@ -56,14 +56,16 @@
   width: 72px;
   flex-shrink: 0;
   /* Cap the strip so a long list of images scrolls instead of stretching the
-     row and leaving the main image floating in empty space. */
-  max-height: 520px;
+     row and leaving the main image floating in empty space. Height is an exact
+     multiple of a thumb (88px) + gap (8px) so no thumbnail is cut at the edge. */
+  max-height: 472px; /* 5 whole thumbnails */
   overflow-y: auto;
 }
 
 .pdt-thumb {
   width: 72px;
   height: 88px;
+  flex-shrink: 0; /* keep full size in the scrolling strip — don't squish */
   border: 2px solid transparent;
   border-radius: 6px;
   overflow: hidden;
@@ -1158,9 +1160,10 @@
     padding: 28px;
   }
 
-  /* Thumbnail strip roughly matches the (smaller) square main image on phones. */
+  /* Thumbnail strip roughly matches the (smaller) square main image on phones —
+     3 whole thumbnails (3×88 + 2×8) so none is cut at the edge. */
   .pdt-thumbs {
-    max-height: 340px;
+    max-height: 280px;
   }
 
   .pdt-details {
