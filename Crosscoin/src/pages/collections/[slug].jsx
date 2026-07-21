@@ -17,6 +17,7 @@
 
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import ProductCard from '../../components/products/ProductCard';
 import ProductFaqSection from '../../components/common/ProductFaqSection';
@@ -77,6 +78,13 @@ export default function CollectionSlugPage({ slug, category, globalFaqs }) {
   // [slug] segment becomes "Cross Coin® Professional Performance Ankle Socks"
   // instead of the literal placeholder.
   const { setCustomBreadcrumbs } = useBreadcrumb();
+  const router = useRouter();
+  // ProductCard navigates via this callback — every other page passes it, but
+  // this collection page was missing it, so clicking a product here did
+  // nothing (onProductClick was undefined). Route to the clean product slug.
+  const handleProductClick = (product) => {
+    if (product?.slug) router.push(`/products/${product.slug}`);
+  };
   useEffect(() => {
     if (category?.name) {
       setCustomBreadcrumbs([
@@ -201,6 +209,7 @@ export default function CollectionSlugPage({ slug, category, globalFaqs }) {
             {products.map(p => (
               <ProductCard
                 key={p.id}
+                onProductClick={handleProductClick}
                 product={{
                   id: p.id,
                   slug: p.slug,
