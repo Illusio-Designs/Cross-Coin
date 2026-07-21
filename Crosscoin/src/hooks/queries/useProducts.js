@@ -9,7 +9,7 @@ import {
 } from '../../services/publicApi';
 
 /** Public categories — 1 hour stale */
-export const useCategories = () =>
+export const useCategories = (options = {}) =>
   useQuery({
     queryKey: queryKeys.categories,
     queryFn: async () => {
@@ -17,6 +17,7 @@ export const useCategories = () =>
       return Array.isArray(data) ? data : [];
     },
     staleTime: 60 * 60 * 1000,
+    ...options,
   });
 
 /** All public products (catalog) — 30 min stale */
