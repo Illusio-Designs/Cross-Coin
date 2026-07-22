@@ -39,7 +39,7 @@ export async function getBestsellers() {
   try {
     const data = await brandFetch('/api/products/best-sellers?limit=10', 300);
     const list = data?.data?.products || data?.products || data?.data || [];
-    if (Array.isArray(list) && list.length) return list.map(mapProduct);
+    if (Array.isArray(list) && list.length) return list.map(mapProduct).filter(Boolean);
     // Nothing flagged as a best-seller yet — fall back to the live catalog so
     // the home page still shows real products (same behaviour as Knitwink).
     return getAllProducts();
@@ -50,20 +50,22 @@ export async function getAllProducts() {
   try {
     const data = await brandFetch('/api/products/catalog?limit=48');
     const list = data?.data?.products || data?.products || data?.data || [];
-    return Array.isArray(list) ? list.map(mapProduct) : [];
+    return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
   } catch { return []; }
 }
 
 export async function getProductBySlug(slug) {
+  // Fetched fresh (no revalidate → cache: 'no-store') so a newly-added or
+  // just-edited product is never hidden behind a stale server cache.
   try {
-    const data = await brandFetch(`/api/products/by-slug/${slug}`, 120);
+    const data = await brandFetch(`/api/products/by-slug/${slug}`);
     const p = data?.data || data;
     if (p?.id) return mapProduct(p);
   } catch { /* fall through to id lookup */ }
   // A product with no slug resolves by its numeric id instead.
   if (/^\d+$/.test(String(slug))) {
     try {
-      const data = await brandFetch(`/api/products/${slug}`, 120);
+      const data = await brandFetch(`/api/products/${slug}`);
       const p = data?.data || data;
       if (p?.id) return mapProduct(p);
     } catch { /* not found */ }
@@ -76,13 +78,14 @@ export async function getProductBySlug(slug) {
 // GET /api/categories/by-name/:name -> { id, name, slug, image, products: [...] }
 export async function getCategoryByName(handle) {
   if (!handle) return null;
+  // Fetched fresh so collection product lists reflect the live catalog.
   try {
-    const data = await brandFetch(`/api/categories/by-name/${encodeURIComponent(handle)}`, 300);
+    const data = await brandFetch(`/api/categories/by-name/${encodeURIComponent(handle)}`);
     const cat = data?.data || data;
     if (cat && (cat.id || cat.products || cat.name)) return cat;
   } catch { /* fall through to by-slug */ }
   try {
-    const data = await brandFetch(`/api/categories/by-slug/${encodeURIComponent(handle)}`, 300);
+    const data = await brandFetch(`/api/categories/by-slug/${encodeURIComponent(handle)}`);
     return data?.data || data || null;
   } catch { return null; }
 }
@@ -91,7 +94,7 @@ export async function getCategoryByName(handle) {
 export async function getProductsByCategory(handle) {
   const cat = await getCategoryByName(handle);
   const list = cat?.products || cat?.data?.products || [];
-  return Array.isArray(list) ? list.map(mapProduct) : [];
+  return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
 }
 
 // Lightweight product search — used by /search.
@@ -101,7 +104,7 @@ export async function searchProducts(query) {
   try {
     const data = await brandFetch(`/api/products/catalog?search=${encodeURIComponent(q)}&limit=48`);
     const list = data?.data?.products || data?.products || data?.data || [];
-    const mapped = Array.isArray(list) ? list.map(mapProduct) : [];
+    const mapped = Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
     const lower = q.toLowerCase();
     const filtered = mapped.filter((p) =>
       p.name?.toLowerCase().includes(lower) || p.category?.toLowerCase().includes(lower)
@@ -162,9 +165,16 @@ export async function getBlogBySlug(slug) {
 
 // ---- Policies (privacy / terms / shipping / returns) ----------------------
 
+// Policies are SHARED across all brands — they are NOT brand-scoped. So this
+// fetch deliberately omits the X-Brand-Name header (matching how the other
+// storefronts read shared policy content).
 export async function getPolicy(name) {
   try {
-    const data = await brandFetch(`/api/policies/name/${name}`, 300);
+    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(name)}`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) throw new Error(`Failed to fetch policy ${name}`);
+    const data = await res.json();
     return data?.data || data || null;
   } catch { return null; }
 }
@@ -213,39 +223,86 @@ function collectAttr(variations, key) {
   return out;
 }
 
+// Coerce any backend value to a plain string safe to render as a React child.
+// Objects/arrays (e.g. a rich-text description object, a localized-name object)
+// must NEVER reach JSX directly — that throws "Objects are not valid as a React
+// child" and 500s the server render. This is the guard that prevents that.
+function str(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  // Common shapes the backend may use for rich/localized text.
+  if (typeof v === 'object') {
+    return str(v.value ?? v.text ?? v.name ?? v.title ?? v.label ?? v.en ?? '');
+  }
+  return '';
+}
+
+// Coerce to a finite number (never NaN — NaN.toFixed renders "NaN").
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Normalise a product's `features` into a strict [{ icon: string, text: string }]
+// shape. The backend may send strings, or objects with varied keys — anything
+// non-string as `text` would crash the PDP list.
+function normalizeFeatures(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((f) => {
+      if (typeof f === 'string') return { icon: 'Sparkles', text: f };
+      if (f && typeof f === 'object') {
+        const text = str(f.text ?? f.title ?? f.label ?? f.name ?? f.value);
+        const icon = typeof f.icon === 'string' ? f.icon : 'Sparkles';
+        return { icon, text };
+      }
+      return { icon: 'Sparkles', text: str(f) };
+    })
+    .filter((f) => f.text);
+}
+
 // Backend product -> Morbix shape. REAL DATA ONLY: sizes/colors/material come
 // from the actual variation attributes, sku from the variation/product; fields
 // the backend doesn't provide are left empty (the PDP spec table hides empty
-// rows) — no fabricated/placeholder values.
+// rows) — no fabricated/placeholder values. Every rendered field is coerced to
+// a primitive so a surprising backend shape can never 500 the page.
 function mapProduct(p) {
-  const variations = p.ProductVariations || p.variations || [];
-  const images = p.ProductImages || p.images || [];
+  if (!p || typeof p !== 'object') return null;
+  const variations = Array.isArray(p.ProductVariations) ? p.ProductVariations
+    : Array.isArray(p.variations) ? p.variations : [];
+  const images = Array.isArray(p.ProductImages) ? p.ProductImages
+    : Array.isArray(p.images) ? p.images : [];
   const firstVar = variations[0] || {};
   const sizes = collectAttr(variations, 'size');
   const colorNames = collectAttr(variations, 'color');
   const materials = collectAttr(variations, 'material');
+  const firstImg = images[0];
+  const image = firstImg
+    ? (typeof firstImg === 'string' ? firstImg : (firstImg.large || firstImg.image_url || firstImg.url || null))
+    : null;
   return {
     id: p.id,
-    slug: p.slug,
-    name: p.name,
-    category: p.category?.name || p.Category?.name || '',
-    categorySlug: p.category?.slug || p.Category?.slug || '',
-    price: Number(firstVar.price || p.price || 0),
-    oldPrice: firstVar.comparePrice ? Number(firstVar.comparePrice) : undefined,
-    rating: Number(p.avg_rating || 0),
-    reviews: Number(p.review_count || 0),
-    sizes,
-    colors: colorNames.map((c) => getColorHex(c)),
-    badge: p.badge || null,
-    description: p.description || '',
-    image: images[0]?.large || images[0]?.image_url || images[0]?.url || null,
-    sku: firstVar.sku || p.sku || '',
-    material: materials.join(', ') || p.material || '',
-    care: p.care || '',
-    fit: p.fit || '',
-    cushioning: p.cushioning || '',
-    origin: p.origin || '',
-    features: Array.isArray(p.features) ? p.features : [],
+    slug: str(p.slug),
+    name: str(p.name),
+    category: str(p.category?.name || p.Category?.name || p.category),
+    categorySlug: str(p.category?.slug || p.Category?.slug || ''),
+    price: num(firstVar.price || p.price || 0),
+    oldPrice: firstVar.comparePrice ? num(firstVar.comparePrice) : undefined,
+    rating: num(p.avg_rating),
+    reviews: num(p.review_count),
+    sizes: Array.isArray(sizes) ? sizes.map(str).filter(Boolean) : [],
+    colors: Array.isArray(colorNames) ? colorNames.map((c) => getColorHex(str(c))) : [],
+    badge: typeof p.badge === 'string' ? p.badge : null,
+    description: str(p.description),
+    image: typeof image === 'string' ? image : null,
+    sku: str(firstVar.sku || p.sku),
+    material: str(materials.join(', ') || p.material),
+    care: str(p.care),
+    fit: str(p.fit),
+    cushioning: str(p.cushioning),
+    origin: str(p.origin),
+    features: normalizeFeatures(p.features),
   };
 }
 

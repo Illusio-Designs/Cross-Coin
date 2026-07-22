@@ -3,7 +3,8 @@ import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductsByCategory, getCategories } from '@/lib/api';
 
-export const revalidate = 300;
+// Render on-demand with fresh collection products (no stale server cache).
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const { handle } = await params;

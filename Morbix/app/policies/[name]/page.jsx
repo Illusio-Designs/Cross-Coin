@@ -25,11 +25,22 @@ function sanitize(html) {
     .replace(/javascript:/gi, '');
 }
 
+// Coerce any backend value to a string safe to render / sanitize.
+function str(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (typeof v === 'object') return str(v.html ?? v.content ?? v.value ?? v.text ?? '');
+  return '';
+}
+
 export default async function PolicyPage({ params }) {
   const { name } = await params;
   const policy = await getPolicy(name);
-  const title = policy?.title || TITLES[name] || 'Policy';
-  const content = policy?.content || policy?.body || policy?.html || '';
+  const title = str(policy?.title || policy?.name) || TITLES[name] || 'Policy';
+  const content = str(
+    policy?.content ?? policy?.body ?? policy?.html ?? policy?.description ?? policy?.policy_content ?? policy?.text
+  );
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>

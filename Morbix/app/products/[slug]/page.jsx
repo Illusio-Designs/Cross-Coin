@@ -6,12 +6,9 @@ import ProductCard from '@/components/home/ProductCard';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const all = await getAllProducts();
-  return all.map((p) => ({ slug: p.slug }));
-}
+// Render on-demand with fresh data (never a stale/empty server cache), and so
+// a surprising single product can never fail a static build.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
