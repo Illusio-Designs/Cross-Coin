@@ -9,16 +9,44 @@ import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 import { collectionUrl } from '../utils/collectionUrl';
 
-export async function getServerSideProps(ctx) {
-  const [seoData, faqs] = await Promise.all([
-    fetchPageSeo('categories', ctx),
-    fetchPageFaqs('categories', ctx),
-  ]);
-  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs } };
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+
+// Fetch the category list on the server so the grid is in the first HTML
+// (edge-cached), instead of every visitor waiting on a client-side request to
+// the slow origin API before anything appears.
+async function fetchCategories() {
+  try {
+    const r = await fetch(`${API_URL}/api/categories/listing`, {
+      headers: { 'X-Brand-Name': 'crosscoin' },
+    });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
+  } catch {
+    return [];
+  }
 }
 
-const Collections = ({ seoData, pageFaqs = [], globalFaqs = [] }) => {
-  const { data: categories = [], isLoading, error, refetch } = useCategories();
+export async function getServerSideProps(ctx) {
+  const [seoData, faqs, initialCategories] = await Promise.all([
+    fetchPageSeo('categories', ctx),
+    fetchPageFaqs('categories', ctx),
+    fetchCategories(),
+  ]);
+  // CDN-cache the rendered page for 5 min so most visitors get it from the edge.
+  ctx.res?.setHeader?.(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=600'
+  );
+  return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs, initialCategories } };
+}
+
+const Collections = ({ seoData, pageFaqs = [], globalFaqs = [], initialCategories = [] }) => {
+  // Seed React Query with the server-fetched list so the grid renders instantly
+  // (no loading spinner) and doesn't refetch on the client.
+  const { data: categories = [], isLoading, error, refetch } = useCategories({
+    initialData: initialCategories.length ? initialCategories : undefined,
+  });
 
   // Safety guard: Ensure categories is always an array
   const safeCategories = Array.isArray(categories) ? categories : [];

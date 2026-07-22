@@ -9,12 +9,12 @@ export default function BlogSection({ posts = [] }) {
           <span className="eyebrow">Journal</span>
           <h2 style={{ marginTop: 8 }}>Stories &amp; guides</h2>
         </div>
-        <Link href="#" className="link-more">All articles <Icon name="ArrowRight" size={14} /></Link>
+        <Link href="/journal" className="link-more">All articles <Icon name="ArrowRight" size={14} /></Link>
       </div>
 
       <div className="blog-grid">
         {posts.map((p) => (
-          <Link href="#" className="blog-card" key={p.slug}>
+          <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
             <div className="blog-media" aria-hidden><Icon name="Sparkles" size={40} /></div>
             <div className="blog-body">
               <div className="blog-meta"><span className="blog-cat">{p.category}</span><span>·</span><span>{p.date}</span></div>

@@ -5,7 +5,9 @@ import CartButton from './CartButton';
 import MobileNav from './MobileNav';
 
 const NAV = [
-  { label: 'Shop', href: '/catalog' },
+  { label: 'Shop', href: '/products' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'Journal', href: '/journal' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
@@ -30,6 +32,8 @@ export default function Header() {
         </nav>
 
         <div className="header-actions">
+          <Link href="/search" className="pill icon-pill" aria-label="Search"><Icon name="Search" size={16} /></Link>
+          <Link href="/wishlist" className="pill icon-pill" aria-label="Wishlist"><Icon name="Heart" size={16} /></Link>
           <Link href="/account" className="pill sign-in"><Icon name="User" size={16} /> <span>Sign in</span></Link>
           <CartButton />
         </div>

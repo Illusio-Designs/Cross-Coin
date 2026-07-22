@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import SafeImage from "../common/SafeImage";
 import { FiHeart } from "react-icons/fi";
 import { useWishlist } from "../../context/WishlistContext";
@@ -18,6 +19,15 @@ export const filterOptions = {
 
 const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const router = useRouter();
+
+  // Navigate on click. Prefer the caller's handler, but fall back to routing
+  // by the product's own slug so the card still works if a page forgets to
+  // pass onProductClick (which is exactly what broke the collection page).
+  const handleCardClick = () => {
+    if (onProductClick) onProductClick(product);
+    else if (product?.slug) router.push(`/products/${product.slug}`);
+  };
 
 
   const variation = product?.variations?.[0];
@@ -78,7 +88,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   });
 
   return (
-    <div className="product-card" onClick={() => onProductClick(product)} style={{ cursor: "pointer" }}>
+    <div className="product-card" onClick={handleCardClick} style={{ cursor: "pointer" }}>
       <div className="product-image">
         <div className="product-image__inner">
           <SafeImage

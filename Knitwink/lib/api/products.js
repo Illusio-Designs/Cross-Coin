@@ -198,8 +198,23 @@ export async function getFeaturedCollections() {
 }
 
 export const getProduct = async (handle) => {
-  const data = await brandFetch(`/api/products/by-slug/${handle}`, 120);
-  return mapProduct(data?.data || data);
+  // Primary lookup is by slug. If a product has no slug its handle falls back
+  // to a numeric id (see mapProduct), and /by-slug/<id> 404s — so retry the
+  // by-id endpoint before giving up, otherwise the product page opens empty.
+  try {
+    const data = await brandFetch(`/api/products/by-slug/${handle}`, 120);
+    const product = data?.data || data;
+    if (product?.id) return mapProduct(product);
+  } catch { /* fall through to id lookup */ }
+
+  if (/^\d+$/.test(String(handle))) {
+    try {
+      const data = await brandFetch(`/api/products/${handle}`, 120);
+      const product = data?.data || data;
+      if (product?.id) return mapProduct(product);
+    } catch { /* not found */ }
+  }
+  return null;
 };
 
 export const getProducts = async () => {

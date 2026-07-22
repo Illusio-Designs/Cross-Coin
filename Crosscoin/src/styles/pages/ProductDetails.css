@@ -46,6 +46,7 @@
   display: flex;
   gap: 12px;
   min-width: 0;
+  align-items: flex-start;
 }
 
 .pdt-thumbs {
@@ -54,11 +55,17 @@
   gap: 8px;
   width: 72px;
   flex-shrink: 0;
+  /* Cap the strip so a long list of images scrolls instead of stretching the
+     row and leaving the main image floating in empty space. Height is an exact
+     multiple of a thumb (88px) + gap (8px) so no thumbnail is cut at the edge. */
+  max-height: 472px; /* 5 whole thumbnails */
+  overflow-y: auto;
 }
 
 .pdt-thumb {
   width: 72px;
   height: 88px;
+  flex-shrink: 0; /* keep full size in the scrolling strip — don't squish */
   border: 2px solid transparent;
   border-radius: 6px;
   overflow: hidden;
@@ -84,7 +91,11 @@
 }
 
 .pdt-main-img {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
+  /* Stable square box so the image never floats in empty space and the
+     3s auto-cycle between images of different shapes doesn't jump the height. */
+  aspect-ratio: 1 / 1;
   border-radius: 6px;
   overflow: hidden;
   background: var(--gray-bg);
@@ -93,13 +104,15 @@
   border: none;
   padding: 0;
   display: block;
-  width: 100%;
 }
 
 .pdt-main-img img {
   width: 100%;
+  height: 100%;
   display: block;
-  object-fit: cover;
+  /* contain (not cover) so infographic images with text are shown in full,
+     never cropped; the letterbox sits on the neutral gray background. */
+  object-fit: contain;
   transition: transform 0.4s ease;
 }
 
@@ -1145,6 +1158,12 @@
 @media (max-width: 600px) {
   .pdt-wrapper {
     padding: 28px;
+  }
+
+  /* Thumbnail strip roughly matches the (smaller) square main image on phones —
+     3 whole thumbnails (3×88 + 2×8) so none is cut at the edge. */
+  .pdt-thumbs {
+    max-height: 280px;
   }
 
   .pdt-details {

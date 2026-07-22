@@ -3,9 +3,24 @@ import Icon from '@/components/Icon';
 import MorbixLogo from '@/components/MorbixLogo';
 
 const COLS = [
-  { title: 'Catalog', links: ['Running', 'Athletic', 'Compression', 'No-Show', 'Lifestyle', 'All socks'] },
-  { title: 'For buyers', links: ['Delivery & payment', 'Returns & exchange', 'Size guide', 'Loyalty program', 'FAQ'] },
-  { title: 'Company', links: ['About', 'Technology', 'Blog', 'Careers', 'Contact'] },
+  { title: 'Shop', links: [
+    { label: 'All socks', href: '/products' },
+    { label: 'Collections', href: '/collections' },
+    { label: 'Wishlist', href: '/wishlist' },
+    { label: 'Track order', href: '/track-order' },
+  ] },
+  { title: 'For buyers', links: [
+    { label: 'Shipping & delivery', href: '/policies/shipping' },
+    { label: 'Returns & exchange', href: '/policies/returns' },
+    { label: 'Privacy policy', href: '/policies/privacy' },
+    { label: 'Terms of service', href: '/policies/terms' },
+  ] },
+  { title: 'Company', links: [
+    { label: 'About', href: '/about' },
+    { label: 'Journal', href: '/journal' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'My account', href: '/account' },
+  ] },
 ];
 
 export default function Footer() {
@@ -26,7 +41,7 @@ export default function Footer() {
           {COLS.map((col) => (
             <div key={col.title}>
               <h4>{col.title}</h4>
-              <ul>{col.links.map((l) => <li key={l}><Link href="#">{l}</Link></li>)}</ul>
+              <ul>{col.links.map((l) => <li key={l.label}><Link href={l.href}>{l.label}</Link></li>)}</ul>
             </div>
           ))}
 
@@ -44,8 +59,8 @@ export default function Footer() {
           <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
           <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           <span style={{ display: 'flex', gap: 20 }}>
-            <Link href="#">Privacy policy</Link>
-            <Link href="#">Terms of service</Link>
+            <Link href="/policies/privacy">Privacy policy</Link>
+            <Link href="/policies/terms">Terms of service</Link>
           </span>
         </div>
       </div>

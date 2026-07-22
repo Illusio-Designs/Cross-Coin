@@ -2,7 +2,7 @@ import Icon from '@/components/Icon';
 
 // Auto-scrolling ("live") trust strip shown right after the hero.
 const ITEMS = [
-  { icon: 'Truck', text: 'Free shipping over $50' },
+  { icon: 'Truck', text: 'Free shipping over ₹999' },
   { icon: 'RefreshCw', text: '14-day easy returns' },
   { icon: 'ShieldCheck', text: '100% authentic products' },
   { icon: 'Layers', text: 'Cushioned comfort knit' },
