@@ -11,23 +11,38 @@ import { heroFeatures, technologies } from './content';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
 
-export async function brandFetch(path, revalidate = 300) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'X-Brand-Name': BRAND },
-    next: { revalidate },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-  return res.json();
+// Same pattern as Knitwink: only opt into Next's data cache when a numeric
+// `revalidate` is passed (ISR). Calls without it are fetched fresh (dynamic) so
+// newly-added products show immediately instead of serving a stale/empty cache.
+// A cached (ISR) request must NOT carry an abort signal, or Next won't cache it.
+export async function brandFetch(path, revalidate) {
+  const cached = typeof revalidate === 'number';
+  const controller = cached ? null : new AbortController();
+  const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: { 'X-Brand-Name': BRAND },
+      ...(controller ? { signal: controller.signal } : {}),
+      ...(cached ? { next: { revalidate } } : { cache: 'no-store' }),
+    });
+    if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+    return res.json();
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ---- Products -------------------------------------------------------------
 
 export async function getBestsellers() {
   try {
-    const data = await brandFetch('/api/products/best-sellers?limit=10');
+    const data = await brandFetch('/api/products/best-sellers?limit=10', 300);
     const list = data?.data?.products || data?.products || data?.data || [];
-    return Array.isArray(list) ? list.map(mapProduct) : [];
-  } catch { return []; }
+    if (Array.isArray(list) && list.length) return list.map(mapProduct);
+    // Nothing flagged as a best-seller yet — fall back to the live catalog so
+    // the home page still shows real products (same behaviour as Knitwink).
+    return getAllProducts();
+  } catch { return getAllProducts(); }
 }
 
 export async function getAllProducts() {
@@ -40,10 +55,19 @@ export async function getAllProducts() {
 
 export async function getProductBySlug(slug) {
   try {
-    const data = await brandFetch(`/api/products/by-slug/${slug}`);
+    const data = await brandFetch(`/api/products/by-slug/${slug}`, 120);
     const p = data?.data || data;
-    return p?.id ? mapProduct(p) : null;
-  } catch { return null; }
+    if (p?.id) return mapProduct(p);
+  } catch { /* fall through to id lookup */ }
+  // A product with no slug resolves by its numeric id instead.
+  if (/^\d+$/.test(String(slug))) {
+    try {
+      const data = await brandFetch(`/api/products/${slug}`, 120);
+      const p = data?.data || data;
+      if (p?.id) return mapProduct(p);
+    } catch { /* not found */ }
+  }
+  return null;
 }
 
 // Products in a given category (by slug/handle) — used by /collections/[handle].
@@ -78,7 +102,7 @@ export async function searchProducts(query) {
 
 export async function getSliders() {
   try {
-    const data = await brandFetch('/api/sliders/listing');
+    const data = await brandFetch('/api/sliders/listing', 300);
     return data?.sliders || data?.data || (Array.isArray(data) ? data : []);
   } catch { return []; }
 }
@@ -87,7 +111,7 @@ export async function getSliders() {
 
 export async function getCategories() {
   try {
-    const data = await brandFetch('/api/categories/listing');
+    const data = await brandFetch('/api/categories/listing', 300);
     const list = Array.isArray(data) ? data : (data?.data || data?.categories || []);
     return Array.isArray(list) ? list.map(mapCategoryChip) : [];
   } catch { return []; }
@@ -100,7 +124,7 @@ export async function getCategories() {
 export async function getProductReviews(productId) {
   try {
     const path = productId ? `/api/reviews/product/${productId}` : '/api/reviews/all';
-    const data = await brandFetch(path);
+    const data = await brandFetch(path, 300);
     const list = data?.data?.reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : []);
     return Array.isArray(list) ? list.map(mapReview) : [];
   } catch { return []; }
@@ -110,7 +134,7 @@ export async function getProductReviews(productId) {
 
 export async function getBlogPosts() {
   try {
-    const data = await brandFetch('/api/blogs/listing');
+    const data = await brandFetch('/api/blogs/listing', 300);
     const list = data?.data?.posts || data?.posts || data?.data || (Array.isArray(data) ? data : []);
     return Array.isArray(list) ? list.map(mapBlog) : [];
   } catch { return []; }
@@ -118,7 +142,7 @@ export async function getBlogPosts() {
 
 export async function getBlogBySlug(slug) {
   try {
-    const data = await brandFetch(`/api/blogs/by-slug/${slug}`);
+    const data = await brandFetch(`/api/blogs/by-slug/${slug}`, 300);
     const post = data?.data || data;
     return post?.slug ? mapBlog(post) : null;
   } catch { return null; }
@@ -128,7 +152,7 @@ export async function getBlogBySlug(slug) {
 
 export async function getPolicy(name) {
   try {
-    const data = await brandFetch(`/api/policies/name/${name}`);
+    const data = await brandFetch(`/api/policies/name/${name}`, 300);
     return data?.data || data || null;
   } catch { return null; }
 }
