@@ -7,6 +7,7 @@
  * empty state.
  */
 import { heroFeatures, technologies } from './content';
+import { getColorHex } from './colorMap';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
@@ -70,16 +71,27 @@ export async function getProductBySlug(slug) {
   return null;
 }
 
-// Products in a given category (by slug/handle) — used by /collections/[handle].
-export async function getProductsByCategory(handle) {
+// A single collection/category WITH its products embedded — the SAME endpoint
+// Knitwink / Crosscoin / Velmique use for collection-detail pages.
+// GET /api/categories/by-name/:name -> { id, name, slug, image, products: [...] }
+export async function getCategoryByName(handle) {
+  if (!handle) return null;
   try {
-    const data = await brandFetch(`/api/products/catalog?category=${encodeURIComponent(handle)}&limit=48`);
-    const list = data?.data?.products || data?.products || data?.data || [];
-    const mapped = Array.isArray(list) ? list.map(mapProduct) : [];
-    // Fallback: some backends ignore the category filter — filter client-side.
-    const filtered = mapped.filter((p) => p.categorySlug === handle || p.category?.toLowerCase() === handle);
-    return filtered.length ? filtered : mapped;
-  } catch { return []; }
+    const data = await brandFetch(`/api/categories/by-name/${encodeURIComponent(handle)}`, 300);
+    const cat = data?.data || data;
+    if (cat && (cat.id || cat.products || cat.name)) return cat;
+  } catch { /* fall through to by-slug */ }
+  try {
+    const data = await brandFetch(`/api/categories/by-slug/${encodeURIComponent(handle)}`, 300);
+    return data?.data || data || null;
+  } catch { return null; }
+}
+
+// Products in a given collection (by slug/name) — used by /collections/[handle].
+export async function getProductsByCategory(handle) {
+  const cat = await getCategoryByName(handle);
+  const list = cat?.products || cat?.data?.products || [];
+  return Array.isArray(list) ? list.map(mapProduct) : [];
 }
 
 // Lightweight product search — used by /search.
@@ -176,32 +188,64 @@ export const getTechnologies = () => technologies;
 
 // ---- Backend → Morbix shape mappers ---------------------------------------
 
+// Parse a variation's attributes (backend stores them as a JSON string or object).
+function parseAttrs(v) {
+  const a = v && v.attributes;
+  if (!a) return {};
+  if (typeof a === 'string') { try { return JSON.parse(a); } catch { return {}; } }
+  return a;
+}
+
+// Collect the distinct real values of an attribute (e.g. size, color, material)
+// across all of a product's variations.
+function collectAttr(variations, key) {
+  const out = [];
+  const seen = new Set();
+  variations.forEach((v) => {
+    const val = parseAttrs(v)[key];
+    const arr = Array.isArray(val) ? val : (val != null && val !== '' ? [val] : []);
+    arr.forEach((x) => {
+      const s = String(x).trim();
+      const k = s.toLowerCase();
+      if (s && !seen.has(k)) { seen.add(k); out.push(s); }
+    });
+  });
+  return out;
+}
+
+// Backend product -> Morbix shape. REAL DATA ONLY: sizes/colors/material come
+// from the actual variation attributes, sku from the variation/product; fields
+// the backend doesn't provide are left empty (the PDP spec table hides empty
+// rows) — no fabricated/placeholder values.
 function mapProduct(p) {
   const variations = p.ProductVariations || p.variations || [];
   const images = p.ProductImages || p.images || [];
   const firstVar = variations[0] || {};
+  const sizes = collectAttr(variations, 'size');
+  const colorNames = collectAttr(variations, 'color');
+  const materials = collectAttr(variations, 'material');
   return {
     id: p.id,
     slug: p.slug,
     name: p.name,
-    category: p.category?.name || p.Category?.name || 'Socks',
-    categorySlug: p.category?.slug || p.Category?.slug || 'all',
+    category: p.category?.name || p.Category?.name || '',
+    categorySlug: p.category?.slug || p.Category?.slug || '',
     price: Number(firstVar.price || p.price || 0),
     oldPrice: firstVar.comparePrice ? Number(firstVar.comparePrice) : undefined,
     rating: Number(p.avg_rating || 0),
     reviews: Number(p.review_count || 0),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: ['#202c6e', '#2fa39b'],
+    sizes,
+    colors: colorNames.map((c) => getColorHex(c)),
     badge: p.badge || null,
     description: p.description || '',
     image: images[0]?.large || images[0]?.image_url || images[0]?.url || null,
-    sku: p.sku || `MRB-${String(p.id).padStart(4, '0')}`,
-    material: p.material || '78% cotton · 18% polyester · 4% elastane',
-    care: p.care || 'Machine wash cold · Tumble dry low',
-    fit: p.fit || 'True to size',
-    cushioning: p.cushioning || 'Medium',
-    origin: p.origin || 'Ethically made',
-    features: p.features || [],
+    sku: firstVar.sku || p.sku || '',
+    material: materials.join(', ') || p.material || '',
+    care: p.care || '',
+    fit: p.fit || '',
+    cushioning: p.cushioning || '',
+    origin: p.origin || '',
+    features: Array.isArray(p.features) ? p.features : [],
   };
 }
 
