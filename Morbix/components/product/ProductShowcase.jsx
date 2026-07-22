@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Icon from '@/components/Icon';
-import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useCart } from '@/context/CartContext';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
@@ -57,6 +56,15 @@ export default function ProductShowcase({ product }) {
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
 
+  // Preload every gallery image once so switching colour/thumbnail is instant
+  // (no network wait, no shimmer flash — the swap looks immediate).
+  useEffect(() => {
+    const urls = new Set();
+    (product.images || []).forEach((u) => urls.add(u));
+    (product.colorImages || []).forEach((arr) => (arr || []).forEach((u) => urls.add(u)));
+    urls.forEach((u) => { const im = new Image(); im.src = u; });
+  }, [product]);
+
   const pickColor = (i) => { setColor(i); setActive(0); };
 
   const onAdd = () => {
@@ -78,7 +86,7 @@ export default function ProductShowcase({ product }) {
       <div className="pdp-gallery">
         <div className="pdp-main">
           {mainSrc
-            ? <ShimmerImg src={mainSrc} alt={product.name} />
+            ? <img src={mainSrc} alt={product.name} />
             : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
           {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
         </div>
@@ -93,7 +101,7 @@ export default function ProductShowcase({ product }) {
                 onClick={() => setActive(i)}
                 aria-label={`View image ${i + 1}`}
               >
-                <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} loading="lazy" />
+                <img src={src} alt={`${product.name} view ${i + 1}`} loading="lazy" />
               </button>
             ))}
           </div>
@@ -119,8 +127,6 @@ export default function ProductShowcase({ product }) {
             ? <span className="in-stock"><Icon name="ShieldCheck" size={13} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
             : <span className="muted" style={{ color: 'var(--sale)' }}><Icon name="X" size={13} /> Out of stock</span>}
         </div>
-
-        <p className="pdp-desc">{product.description}</p>
 
         <div className="buy">
           {product.colors?.length > 0 && (
