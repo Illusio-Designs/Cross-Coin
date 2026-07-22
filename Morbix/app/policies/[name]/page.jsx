@@ -3,12 +3,21 @@ import { getPolicy } from '@/lib/api';
 
 export const revalidate = 300;
 
+// Keys are the real backend policy slugs (lowercased + hyphenated title), the
+// same ones the other brands use — the /api/policies/name/:name endpoint
+// matches by title, so a bare "returns" would NOT match "Cancellation and
+// Refund". Older short slugs are kept as aliases so existing links don't 404.
 const TITLES = {
+  'privacy-policy': 'Privacy Policy',
+  'terms-and-conditions': 'Terms & Conditions',
+  'shipping-policy': 'Shipping & Delivery',
+  'cancellation-and-refund': 'Cancellation & Refund',
+  // legacy aliases
   privacy: 'Privacy Policy',
-  terms: 'Terms of Service',
+  terms: 'Terms & Conditions',
   shipping: 'Shipping & Delivery',
-  returns: 'Returns & Exchange',
-  refund: 'Refund Policy',
+  returns: 'Cancellation & Refund',
+  refund: 'Cancellation & Refund',
 };
 
 export async function generateMetadata({ params }) {

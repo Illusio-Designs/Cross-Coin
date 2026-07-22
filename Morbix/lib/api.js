@@ -168,9 +168,20 @@ export async function getBlogBySlug(slug) {
 // Policies are SHARED across all brands — they are NOT brand-scoped. So this
 // fetch deliberately omits the X-Brand-Name header (matching how the other
 // storefronts read shared policy content).
+// Map short/legacy slugs to the real backend policy names (the endpoint
+// matches by title, so "returns" must become "cancellation-and-refund").
+const POLICY_ALIAS = {
+  privacy: 'privacy-policy',
+  terms: 'terms-and-conditions',
+  shipping: 'shipping-policy',
+  returns: 'cancellation-and-refund',
+  refund: 'cancellation-and-refund',
+};
+
 export async function getPolicy(name) {
+  const resolved = POLICY_ALIAS[name] || name;
   try {
-    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(name)}`, {
+    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(resolved)}`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) throw new Error(`Failed to fetch policy ${name}`);

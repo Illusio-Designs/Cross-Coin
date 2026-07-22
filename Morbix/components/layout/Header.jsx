@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import MorbixLogo from '@/components/MorbixLogo';
+import BrandLogo from '@/components/BrandLogo';
 import CartButton from './CartButton';
 import MobileNav from './MobileNav';
 
@@ -20,7 +20,7 @@ export default function Header() {
 
         <Link href="/" className="logo" aria-label="Morbix home">
           <div>
-            <MorbixLogo height={30} />
+            <BrandLogo height={38} />
             <div className="logo-sub">Comfort in every step</div>
           </div>
         </Link>

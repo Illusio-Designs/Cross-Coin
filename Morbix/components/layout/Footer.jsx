@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import MorbixLogo from '@/components/MorbixLogo';
+import BrandLogo from '@/components/BrandLogo';
 
 const COLS = [
   { title: 'Shop', links: [
@@ -10,10 +10,10 @@ const COLS = [
     { label: 'Track order', href: '/track-order' },
   ] },
   { title: 'For buyers', links: [
-    { label: 'Shipping & delivery', href: '/policies/shipping' },
-    { label: 'Returns & exchange', href: '/policies/returns' },
-    { label: 'Privacy policy', href: '/policies/privacy' },
-    { label: 'Terms of service', href: '/policies/terms' },
+    { label: 'Shipping & delivery', href: '/policies/shipping-policy' },
+    { label: 'Cancellation & refund', href: '/policies/cancellation-and-refund' },
+    { label: 'Privacy policy', href: '/policies/privacy-policy' },
+    { label: 'Terms of service', href: '/policies/terms-and-conditions' },
   ] },
   { title: 'Company', links: [
     { label: 'About', href: '/about' },
@@ -29,7 +29,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-cols">
           <div className="brand-col">
-            <MorbixLogo height={34} />
+            <BrandLogo height={42} />
             <p>Premium socks for sport and city life. Technology, comfort and clean design in every step.</p>
             <div className="socials">
               <a href="#" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
@@ -59,8 +59,8 @@ export default function Footer() {
           <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
           <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           <span style={{ display: 'flex', gap: 20 }}>
-            <Link href="/policies/privacy">Privacy policy</Link>
-            <Link href="/policies/terms">Terms of service</Link>
+            <Link href="/policies/privacy-policy">Privacy policy</Link>
+            <Link href="/policies/terms-and-conditions">Terms of service</Link>
           </span>
         </div>
       </div>
