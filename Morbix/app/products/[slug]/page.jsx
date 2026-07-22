@@ -28,17 +28,6 @@ export default async function ProductPage({ params }) {
   const [all, reviews] = await Promise.all([getAllProducts(), getProductReviews(product.id)]);
   const related = all.filter((p) => p.categorySlug === product.categorySlug && p.slug !== product.slug).slice(0, 5);
 
-  const specs = [
-    ['Material', product.material],
-    ['Care', product.care],
-    ['Fit', product.fit],
-    ['Cushioning', product.cushioning],
-    ['Category', product.category],
-    ['Available sizes', Array.isArray(product.sizes) ? product.sizes.join(', ') : product.sizes],
-    ['Origin', product.origin],
-    ['SKU', product.sku],
-  ].filter(([, v]) => v);
-
   return (
     <div className="container" style={{ paddingTop: 24, paddingBottom: 20 }}>
       <nav className="crumbs">
@@ -47,36 +36,8 @@ export default async function ProductPage({ params }) {
         <span>/</span> <b>{product.name}</b>
       </nav>
 
-      {/* ── Gallery + buy panel (shared colour selection) ── */}
+      {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} />
-
-      {/* ── About + Specifications ── */}
-      <section className="pdp-details">
-        <div className="pdp-about">
-          <span className="eyebrow">Details</span>
-          <h2>About this product</h2>
-          {product.description
-            ? <p>{product.description}</p>
-            : <p className="muted">No description available for this product yet.</p>}
-
-          {product.features?.length > 0 && (
-            <ul className="pdp-features">
-              {product.features.map((f) => (
-                <li key={f.text}><span className="ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <aside className="pdp-specs">
-          <h3>Specifications</h3>
-          <dl>
-            {specs.map(([k, v]) => (
-              <div className="spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
-            ))}
-          </dl>
-        </aside>
-      </section>
 
       {/* ── Reviews ── */}
       <section className="pdp-reviews section" id="reviews">

@@ -81,19 +81,27 @@ export default function ProductShowcase({ product }) {
     setTimeout(() => setAdded(false), 1600);
   };
 
+  // Specification rows reflect the SELECTED variation (colour / size / SKU /
+  // material change as you pick), then fall back to product-level details.
+  const specs = [
+    ['Color', selectedColorName],
+    ['Size', effectiveSize],
+    ['Material', activeVariant?.material || product.material],
+    ['Care', product.care],
+    ['Fit', product.fit],
+    ['Cushioning', product.cushioning],
+    ['Category', product.category],
+    ['SKU', sku],
+    ['Origin', product.origin],
+  ].filter(([, v]) => v);
+
   return (
+    <>
     <div className="pdp">
       <div className="pdp-gallery">
-        <div className="pdp-main">
-          {mainSrc
-            ? <img src={mainSrc} alt={product.name} />
-            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
-          {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
-        </div>
-
         {shown.length > 1 && (
           <div className="pdp-thumbs">
-            {shown.slice(0, 8).map((src, i) => (
+            {shown.slice(0, 6).map((src, i) => (
               <button
                 key={src + i}
                 type="button"
@@ -106,6 +114,13 @@ export default function ProductShowcase({ product }) {
             ))}
           </div>
         )}
+
+        <div className="pdp-main">
+          {mainSrc
+            ? <img src={mainSrc} alt={product.name} />
+            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
+          {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
+        </div>
       </div>
 
       <div className="pdp-info">
@@ -175,5 +190,34 @@ export default function ProductShowcase({ product }) {
         </div>
       </div>
     </div>
+
+    {/* ── About + Specifications (specs track the selected variation) ── */}
+    <section className="pdp-details">
+      <div className="pdp-about">
+        <span className="eyebrow">Details</span>
+        <h2>About this product</h2>
+        {product.description
+          ? <p>{product.description}</p>
+          : <p className="muted">No description available for this product yet.</p>}
+
+        {product.features?.length > 0 && (
+          <ul className="pdp-features">
+            {product.features.map((f) => (
+              <li key={f.text}><span className="ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <aside className="pdp-specs">
+        <h3>Specifications</h3>
+        <dl>
+          {specs.map(([k, v]) => (
+            <div className="spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
+          ))}
+        </dl>
+      </aside>
+    </section>
+    </>
   );
 }

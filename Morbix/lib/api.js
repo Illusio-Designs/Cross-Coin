@@ -358,10 +358,12 @@ function mapProduct(p) {
     const a = parseAttrs(v);
     const cV = Array.isArray(a.color) ? a.color[0] : a.color;
     const sV = Array.isArray(a.size) ? a.size[0] : a.size;
+    const mV = Array.isArray(a.material) ? a.material[0] : a.material;
     return {
       id: v.id,
       color: str(cV),
       size: str(sV),
+      material: str(mV),
       sku: str(v.sku || p.sku),
       price: num(v.price ?? p.price ?? 0),
       oldPrice: v.comparePrice ? num(v.comparePrice) : undefined,
