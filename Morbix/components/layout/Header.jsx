@@ -19,10 +19,7 @@ export default function Header() {
         <MobileNav items={NAV} />
 
         <Link href="/" className="logo" aria-label="Morbix home">
-          <div>
-            <BrandLogo height={38} />
-            <div className="logo-sub">Comfort in every step</div>
-          </div>
+          <BrandLogo height={38} />
         </Link>
 
         <nav className="nav">
