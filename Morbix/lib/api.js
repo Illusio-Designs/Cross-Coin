@@ -206,6 +206,21 @@ function parseAttrs(v) {
   return a;
 }
 
+// Some backend image URLs are accidentally doubled (…https://…https://…);
+// keep only the last real URL. Same guard the other brands use.
+function cleanUrl(url) {
+  const u = String(url || '');
+  if (u.indexOf('https://') !== u.lastIndexOf('https://')) return u.substring(u.lastIndexOf('https://'));
+  return u;
+}
+
+// Pull a usable URL string out of a backend image (string or object shape).
+function imgUrl(img) {
+  if (!img) return '';
+  if (typeof img === 'string') return cleanUrl(img);
+  return cleanUrl(img.large || img.image_url || img.medium || img.url || '');
+}
+
 // Collect the distinct real values of an attribute (e.g. size, color, material)
 // across all of a product's variations.
 function collectAttr(variations, key) {
@@ -277,10 +292,35 @@ function mapProduct(p) {
   const sizes = collectAttr(variations, 'size');
   const colorNames = collectAttr(variations, 'color');
   const materials = collectAttr(variations, 'material');
-  const firstImg = images[0];
-  const image = firstImg
-    ? (typeof firstImg === 'string' ? firstImg : (firstImg.large || firstImg.image_url || firstImg.url || null))
-    : null;
+
+  // Real product images (deduped, in order) for the gallery + thumbnails.
+  const productImages = images
+    .map((img) => ({ url: imgUrl(img), variationId: (img && typeof img === 'object') ? (img.product_variation_id ?? null) : null }))
+    .filter((i) => i.url);
+  const allUrls = [];
+  const seenUrl = new Set();
+  productImages.forEach((i) => { if (!seenUrl.has(i.url)) { seenUrl.add(i.url); allUrls.push(i.url); } });
+  const image = allUrls[0] || null;
+
+  // Map each variation id -> its (lowercased) colour, then group images by colour
+  // so selecting a swatch on the PDP shows that variation's own photos.
+  const varIdToColor = {};
+  variations.forEach((v) => {
+    const cArr = (() => { const c = parseAttrs(v).color; return Array.isArray(c) ? c : (c != null && c !== '' ? [c] : []); })();
+    if (cArr[0]) varIdToColor[v.id] = String(cArr[0]).trim().toLowerCase();
+  });
+  const urlsByColor = {};
+  productImages.forEach((i) => {
+    const key = i.variationId != null ? varIdToColor[i.variationId] : null;
+    if (key) { (urlsByColor[key] ||= []).push(i.url); }
+  });
+  // Parallel to `colors`: colorImages[i] = that colour's photos (or all images
+  // when the backend didn't link any to that variation).
+  const colorImages = colorNames.map((cn) => {
+    const arr = urlsByColor[String(cn).trim().toLowerCase()];
+    return (arr && arr.length) ? arr : allUrls;
+  });
+
   return {
     id: p.id,
     slug: str(p.slug),
@@ -296,6 +336,8 @@ function mapProduct(p) {
     badge: typeof p.badge === 'string' ? p.badge : null,
     description: str(p.description),
     image: typeof image === 'string' ? image : null,
+    images: allUrls,
+    colorImages,
     sku: str(firstVar.sku || p.sku),
     material: str(materials.join(', ') || p.material),
     care: str(p.care),

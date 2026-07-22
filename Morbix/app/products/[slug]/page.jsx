@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
-import ProductBuy from '@/components/product/ProductBuy';
+import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductCard from '@/components/home/ProductCard';
-import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
 
 // Render on-demand with fresh data (never a stale/empty server cache), and so
@@ -48,45 +47,8 @@ export default async function ProductPage({ params }) {
         <span>/</span> <b>{product.name}</b>
       </nav>
 
-      {/* ── Buy panel ── */}
-      <div className="pdp">
-        <div className="pdp-gallery">
-          <div className="pdp-main">
-            {product.image
-              ? <ShimmerImg src={product.image} alt={product.name} />
-              : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
-            {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
-          </div>
-          <div className="pdp-thumbs">
-            {[0, 1, 2, 3].map((i) => (
-              <div className="pdp-thumb" key={i}><Icon name="Footprints" size={22} color="#c3ccd2" /></div>
-            ))}
-          </div>
-        </div>
-
-        <div className="pdp-info">
-          <span className="eyebrow">{product.category}</span>
-          <h1>{product.name}</h1>
-          <div className="pdp-meta">
-            <span className="rating"><Icon name="Star" size={14} /> {product.rating}</span>
-            <a href="#reviews" className="muted">{product.reviews} reviews</a>
-            <span className="in-stock"><Icon name="ShieldCheck" size={13} /> In stock</span>
-          </div>
-          <div className="pdp-price">
-            ₹{product.price.toFixed(0)}
-            {product.oldPrice && <span className="old">₹{product.oldPrice.toFixed(0)}</span>}
-          </div>
-          <p className="pdp-desc">{product.description}</p>
-
-          <ProductBuy product={product} />
-
-          <div className="pdp-trust">
-            <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
-            <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
-            <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
-          </div>
-        </div>
-      </div>
+      {/* ── Gallery + buy panel (shared colour selection) ── */}
+      <ProductShowcase product={product} />
 
       {/* ── About + Specifications ── */}
       <section className="pdp-details">
