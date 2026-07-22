@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
 import ProductBuy from '@/components/product/ProductBuy';
 import ProductCard from '@/components/home/ProductCard';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
 
 export const revalidate = 300;
@@ -45,8 +46,8 @@ export default async function ProductPage({ params }) {
   return (
     <div className="container" style={{ paddingTop: 24, paddingBottom: 20 }}>
       <nav className="crumbs">
-        <Link href="/">Home</Link> <span>/</span> <Link href="/catalog">Catalog</Link>{' '}
-        <span>/</span> <Link href={`/catalog?cat=${product.categorySlug}`}>{product.category}</Link>{' '}
+        <Link href="/">Home</Link> <span>/</span> <Link href="/products">Shop</Link>{' '}
+        <span>/</span> <Link href={`/collections/${product.categorySlug}`}>{product.category}</Link>{' '}
         <span>/</span> <b>{product.name}</b>
       </nav>
 
@@ -55,7 +56,7 @@ export default async function ProductPage({ params }) {
         <div className="pdp-gallery">
           <div className="pdp-main">
             {product.image
-              ? <img src={product.image} alt={product.name} />
+              ? <ShimmerImg src={product.image} alt={product.name} />
               : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
             {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
           </div>
@@ -75,15 +76,15 @@ export default async function ProductPage({ params }) {
             <span className="in-stock"><Icon name="ShieldCheck" size={13} /> In stock</span>
           </div>
           <div className="pdp-price">
-            ${product.price.toFixed(2)}
-            {product.oldPrice && <span className="old">${product.oldPrice.toFixed(2)}</span>}
+            ₹{product.price.toFixed(0)}
+            {product.oldPrice && <span className="old">₹{product.oldPrice.toFixed(0)}</span>}
           </div>
           <p className="pdp-desc">{product.description}</p>
 
           <ProductBuy product={product} />
 
           <div className="pdp-trust">
-            <div><Icon name="Truck" size={16} /> Free shipping over $50</div>
+            <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
             <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
             <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
           </div>

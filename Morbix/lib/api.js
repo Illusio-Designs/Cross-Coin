@@ -1,20 +1,15 @@
 /* Morbix data layer.
  *
  * The Morbix storefront shares the same backend API as the other brands,
- * scoped by the `X-Brand-Name: morbix` header. It now fetches LIVE data by
- * default (same as the Knitwink/Velmique storefronts). The bundled mock data
- * is only used as a fallback if a request errors, or if you explicitly set
- * NEXT_PUBLIC_USE_MOCK="true" (e.g. for local design work before the catalog
- * is seeded).
+ * scoped by the `X-Brand-Name: morbix` header. It fetches LIVE data only —
+ * there is no mock/sample fallback. When a request fails or returns nothing,
+ * these functions return an empty value ([] / null) and the UI renders a real
+ * empty state.
  */
-import {
-  products, bestsellers, categoryChips, categoryBanners,
-  heroFeatures, technologies, clubPerks, reviews as mockReviews, blogPosts as mockBlogPosts,
-} from './mockData';
+import { heroFeatures, technologies } from './content';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 export async function brandFetch(path, revalidate = 300) {
   const res = await fetch(`${API_URL}${path}`, {
@@ -28,36 +23,60 @@ export async function brandFetch(path, revalidate = 300) {
 // ---- Products -------------------------------------------------------------
 
 export async function getBestsellers() {
-  if (USE_MOCK) return bestsellers;
   try {
     const data = await brandFetch('/api/products/best-sellers?limit=10');
     const list = data?.data?.products || data?.products || data?.data || [];
-    return Array.isArray(list) ? list.map(mapProduct) : bestsellers;
-  } catch { return bestsellers; }
+    return Array.isArray(list) ? list.map(mapProduct) : [];
+  } catch { return []; }
 }
 
 export async function getAllProducts() {
-  if (USE_MOCK) return products;
   try {
     const data = await brandFetch('/api/products/catalog?limit=48');
     const list = data?.data?.products || data?.products || data?.data || [];
-    return Array.isArray(list) ? list.map(mapProduct) : products;
-  } catch { return products; }
+    return Array.isArray(list) ? list.map(mapProduct) : [];
+  } catch { return []; }
 }
 
 export async function getProductBySlug(slug) {
-  if (USE_MOCK) return products.find((p) => p.slug === slug) || null;
   try {
     const data = await brandFetch(`/api/products/by-slug/${slug}`);
     const p = data?.data || data;
     return p?.id ? mapProduct(p) : null;
-  } catch { return products.find((p) => p.slug === slug) || null; }
+  } catch { return null; }
+}
+
+// Products in a given category (by slug/handle) — used by /collections/[handle].
+export async function getProductsByCategory(handle) {
+  try {
+    const data = await brandFetch(`/api/products/catalog?category=${encodeURIComponent(handle)}&limit=48`);
+    const list = data?.data?.products || data?.products || data?.data || [];
+    const mapped = Array.isArray(list) ? list.map(mapProduct) : [];
+    // Fallback: some backends ignore the category filter — filter client-side.
+    const filtered = mapped.filter((p) => p.categorySlug === handle || p.category?.toLowerCase() === handle);
+    return filtered.length ? filtered : mapped;
+  } catch { return []; }
+}
+
+// Lightweight product search — used by /search.
+export async function searchProducts(query) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  try {
+    const data = await brandFetch(`/api/products/catalog?search=${encodeURIComponent(q)}&limit=48`);
+    const list = data?.data?.products || data?.products || data?.data || [];
+    const mapped = Array.isArray(list) ? list.map(mapProduct) : [];
+    const lower = q.toLowerCase();
+    const filtered = mapped.filter((p) =>
+      p.name?.toLowerCase().includes(lower) || p.category?.toLowerCase().includes(lower)
+    );
+    return filtered.length ? filtered : mapped;
+  } catch { return []; }
 }
 
 // ---- Sliders --------------------------------------------------------------
 
 export async function getSliders() {
-  if (USE_MOCK) return [];
   try {
     const data = await brandFetch('/api/sliders/listing');
     return data?.sliders || data?.data || (Array.isArray(data) ? data : []);
@@ -67,12 +86,11 @@ export async function getSliders() {
 // ---- Categories -----------------------------------------------------------
 
 export async function getCategories() {
-  if (USE_MOCK) return categoryChips;
   try {
     const data = await brandFetch('/api/categories/listing');
     const list = Array.isArray(data) ? data : (data?.data || data?.categories || []);
-    return Array.isArray(list) && list.length ? list.map(mapCategoryChip) : categoryChips;
-  } catch { return categoryChips; }
+    return Array.isArray(list) ? list.map(mapCategoryChip) : [];
+  } catch { return []; }
 }
 
 // ---- Reviews --------------------------------------------------------------
@@ -80,33 +98,30 @@ export async function getCategories() {
 // Pass a product id for that product's reviews; call with no id for the
 // brand-wide public reviews used on the home page.
 export async function getProductReviews(productId) {
-  if (USE_MOCK) return mockReviews;
   try {
     const path = productId ? `/api/reviews/product/${productId}` : '/api/reviews/all';
     const data = await brandFetch(path);
     const list = data?.data?.reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : []);
-    return Array.isArray(list) && list.length ? list.map(mapReview) : mockReviews;
-  } catch { return mockReviews; }
+    return Array.isArray(list) ? list.map(mapReview) : [];
+  } catch { return []; }
 }
 
 // ---- Blog -----------------------------------------------------------------
 
 export async function getBlogPosts() {
-  if (USE_MOCK) return mockBlogPosts;
   try {
     const data = await brandFetch('/api/blogs/listing');
     const list = data?.data?.posts || data?.posts || data?.data || (Array.isArray(data) ? data : []);
-    return Array.isArray(list) && list.length ? list.map(mapBlog) : mockBlogPosts;
-  } catch { return mockBlogPosts; }
+    return Array.isArray(list) ? list.map(mapBlog) : [];
+  } catch { return []; }
 }
 
 export async function getBlogBySlug(slug) {
-  if (USE_MOCK) return mockBlogPosts.find((b) => b.slug === slug) || null;
   try {
     const data = await brandFetch(`/api/blogs/by-slug/${slug}`);
     const post = data?.data || data;
     return post?.slug ? mapBlog(post) : null;
-  } catch { return mockBlogPosts.find((b) => b.slug === slug) || null; }
+  } catch { return null; }
 }
 
 // ---- Policies (privacy / terms / shipping / returns) ----------------------
@@ -118,11 +133,22 @@ export async function getPolicy(name) {
   } catch { return null; }
 }
 
-// ---- Static, frontend-defined content -------------------------------------
+// ---- Client-side commerce APIs (re-exported) ------------------------------
+// The purchase/account flows (cart, checkout, payments, orders, addresses,
+// wishlist, auth, reviews submit, contact) live in lib/api/* client modules
+// so they can attach the logged-in user's bearer token. They are re-exported
+// here so `@/lib/api` keeps working, and `@/lib/api/cart` etc. also resolve.
+export * from './api/auth';
+export * from './api/cart';
+export * from './api/addresses';
+export * from './api/orders';
+export * from './api/wishlist';
+export { submitReview } from './api/reviews';
+export { sendMessage } from './api/contact';
+
+// ---- Static, presentational site content ----------------------------------
 export const getHeroFeatures = () => heroFeatures;
-export const getCategoryBanners = () => categoryBanners;
 export const getTechnologies = () => technologies;
-export const getClubPerks = () => clubPerks;
 
 // ---- Backend → Morbix shape mappers ---------------------------------------
 
@@ -186,6 +212,16 @@ function parseSections(raw) {
   try { return JSON.parse(raw); } catch { return []; }
 }
 
+// Strip <script>/<style> and inline event handlers from backend HTML before
+// it is rendered. Not a full sanitiser, but removes the dangerous vectors.
+function basicSanitize(html) {
+  return String(html || '')
+    .replace(/<\/?(script|style)[^>]*>/gi, '')
+    .replace(/ on\w+="[^"]*"/gi, '')
+    .replace(/ on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 function mapBlog(p) {
   const sections = parseSections(p.sections);
   const firstContent = sections[0]?.content || p.excerpt || '';
@@ -197,5 +233,10 @@ function mapBlog(p) {
     date: fmtDate(p.published_at || p.publishedAt || p.created_at || p.createdAt),
     title: p.title,
     excerpt,
+    // Full article body: each section's heading + sanitised HTML content.
+    sections: sections.map((s) => ({
+      heading: s.heading || s.title || '',
+      content: basicSanitize(s.content || s.body || ''),
+    })),
   };
 }

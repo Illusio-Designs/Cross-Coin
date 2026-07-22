@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
+import ShimmerImg from '@/components/ui/ShimmerImg';
+import WishlistButton from '@/components/product/WishlistButton';
 
 export default function ProductCard({ product }) {
-  const { slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, image } = product;
-  const href = `/product/${slug}`;
+  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, image } = product;
+  const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   return (
@@ -12,11 +14,11 @@ export default function ProductCard({ product }) {
       <div className="pcard-media">
         {badge === 'new' && <span className="pcard-badge new">New</span>}
         {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
-        <button className="pcard-fav" aria-label="Add to wishlist"><Icon name="Heart" size={15} /></button>
+        <WishlistButton productId={id} />
 
         <Link href={href} className="pcard-imglink" aria-label={name}>
           {image
-            ? <img src={image} alt={name} loading="lazy" />
+            ? <ShimmerImg src={image} alt={name} loading="lazy" />
             : <span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>}
         </Link>
 
@@ -45,7 +47,7 @@ export default function ProductCard({ product }) {
 
         <div className="pcard-foot">
           <div className="pcard-price">
-            ${price.toFixed(2)}{oldPrice && <span className="old">${oldPrice.toFixed(2)}</span>}
+            ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </div>
           <span className="pcard-sizes">{Array.isArray(sizes) ? sizes.join(' · ') : sizes}</span>
         </div>

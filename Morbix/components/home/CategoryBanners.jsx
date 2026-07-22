@@ -10,7 +10,7 @@ export default function CategoryBanners({ banners = [] }) {
     <section className="section container">
       <div className="cat-grid">
         {banners.map((b, i) => (
-          <Link href={`/catalog?cat=${b.slug}`} className={`cat-banner cat-banner-${i % 4}`} key={b.title}>
+          <Link href={`/collections/${b.slug}`} className={`cat-banner cat-banner-${i % 4}`} key={b.title}>
             <div className="cat-copy">
               <h3>{b.title}</h3>
               <p>{b.text}</p>

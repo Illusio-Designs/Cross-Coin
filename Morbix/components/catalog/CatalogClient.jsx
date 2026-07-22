@@ -12,7 +12,9 @@ const SORTS = [
 ];
 const SIZES = ['S', 'M', 'L', 'XL'];
 
-export default function CatalogClient({ products = [], chips = [], initialCat = 'all' }) {
+export default function CatalogClient({ products = [], chips: rawChips = [], initialCat = 'all' }) {
+  // Always offer an "All" option in front of the live categories.
+  const chips = [{ label: 'All socks', slug: 'all', icon: 'LayoutGrid' }, ...rawChips];
   const [cat, setCat] = useState(initialCat);
   const [sizes, setSizes] = useState([]);
   const [sort, setSort] = useState('featured');
@@ -66,7 +68,7 @@ export default function CatalogClient({ products = [], chips = [], initialCat = 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 40 }}>
       <div className="page-hero">
-        <span className="eyebrow">Catalog</span>
+        <span className="eyebrow">Shop</span>
         <h1>{activeLabel}</h1>
         <p>Premium socks engineered for movement and everyday comfort.</p>
       </div>

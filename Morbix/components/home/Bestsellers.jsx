@@ -7,11 +7,15 @@ export default function Bestsellers({ products = [] }) {
     <section className="section container" id="bestsellers">
       <div className="section-head">
         <h2>Bestsellers</h2>
-        <Link href="/catalog" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
+        <Link href="/products" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
       </div>
-      <div className="product-grid">
-        {products.map((p) => <ProductCard key={p.id} product={p} />)}
-      </div>
+      {products.length > 0 ? (
+        <div className="product-grid">
+          {products.map((p) => <ProductCard key={p.id} product={p} />)}
+        </div>
+      ) : (
+        <div className="empty">No products yet — check back soon.</div>
+      )}
     </section>
   );
 }
