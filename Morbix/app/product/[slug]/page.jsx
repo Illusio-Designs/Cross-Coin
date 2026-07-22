@@ -28,7 +28,7 @@ export default async function ProductPage({ params }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviews] = await Promise.all([getAllProducts(), getProductReviews(slug)]);
+  const [all, reviews] = await Promise.all([getAllProducts(), getProductReviews(product.id)]);
   const related = all.filter((p) => p.categorySlug === product.categorySlug && p.slug !== product.slug).slice(0, 5);
 
   const specs = [
