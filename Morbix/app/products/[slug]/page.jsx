@@ -55,8 +55,9 @@ export default async function ProductPage({ params }) {
         <div className="pdp-about">
           <span className="eyebrow">Details</span>
           <h2>About this product</h2>
-          <p>{product.description}</p>
-          <p>Every pair is knit for the long haul — reinforced where it counts, breathable where it matters, and finished with a seamless toe so nothing rubs. Designed for {product.category.toLowerCase()} and built to feel just as good on the tenth wear as the first.</p>
+          {product.description
+            ? <p>{product.description}</p>
+            : <p className="muted">No description available for this product yet.</p>}
 
           {product.features?.length > 0 && (
             <ul className="pdp-features">

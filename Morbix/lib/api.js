@@ -215,10 +215,14 @@ function cleanUrl(url) {
 }
 
 // Pull a usable URL string out of a backend image (string or object shape).
+// Backends differ on the field name, so check every common one.
 function imgUrl(img) {
   if (!img) return '';
   if (typeof img === 'string') return cleanUrl(img);
-  return cleanUrl(img.large || img.image_url || img.medium || img.url || '');
+  return cleanUrl(
+    img.large || img.image_url || img.medium || img.url || img.src ||
+    img.path || img.image || img.thumbnail || img.small || ''
+  );
 }
 
 // Collect the distinct real values of an attribute (e.g. size, color, material)
@@ -293,32 +297,48 @@ function mapProduct(p) {
   const colorNames = collectAttr(variations, 'color');
   const materials = collectAttr(variations, 'material');
 
-  // Real product images (deduped, in order) for the gallery + thumbnails.
-  const productImages = images
-    .map((img) => ({ url: imgUrl(img), variationId: (img && typeof img === 'object') ? (img.product_variation_id ?? null) : null }))
-    .filter((i) => i.url);
+  // Gather images from the product level AND from each variation — some backends
+  // attach photos per-variation rather than (or as well as) at the top level.
+  // Keep first-seen order and de-dupe by URL.
   const allUrls = [];
   const seenUrl = new Set();
-  productImages.forEach((i) => { if (!seenUrl.has(i.url)) { seenUrl.add(i.url); allUrls.push(i.url); } });
-  const image = allUrls[0] || null;
+  const pushUrl = (raw) => { const u = imgUrl(raw); if (u && !seenUrl.has(u)) { seenUrl.add(u); allUrls.push(u); } };
 
-  // Map each variation id -> its (lowercased) colour, then group images by colour
-  // so selecting a swatch on the PDP shows that variation's own photos.
+  // variation id -> its (lowercased) colour name.
   const varIdToColor = {};
   variations.forEach((v) => {
-    const cArr = (() => { const c = parseAttrs(v).color; return Array.isArray(c) ? c : (c != null && c !== '' ? [c] : []); })();
-    if (cArr[0]) varIdToColor[v.id] = String(cArr[0]).trim().toLowerCase();
+    const c = parseAttrs(v).color;
+    const first = Array.isArray(c) ? c[0] : c;
+    if (first != null && first !== '') varIdToColor[v.id] = String(first).trim().toLowerCase();
   });
+
+  // colour name -> that colour's image URLs.
   const urlsByColor = {};
-  productImages.forEach((i) => {
-    const key = i.variationId != null ? varIdToColor[i.variationId] : null;
-    if (key) { (urlsByColor[key] ||= []).push(i.url); }
+  const addColorUrl = (color, raw) => { const u = imgUrl(raw); if (color && u) (urlsByColor[color] ||= []).push(u); };
+
+  // Product-level images (linked to a colour by product_variation_id when set).
+  images.forEach((img) => {
+    pushUrl(img);
+    if (img && typeof img === 'object' && img.product_variation_id != null) {
+      addColorUrl(varIdToColor[img.product_variation_id], img);
+    }
   });
-  // Parallel to `colors`: colorImages[i] = that colour's photos (or all images
-  // when the backend didn't link any to that variation).
+  // Variation-level images (belong to that coloured variation directly).
+  variations.forEach((v) => {
+    const vImgs = Array.isArray(v.ProductImages) ? v.ProductImages
+      : Array.isArray(v.images) ? v.images : [];
+    const color = varIdToColor[v.id];
+    vImgs.forEach((img) => { pushUrl(img); addColorUrl(color, img); });
+  });
+
+  const image = allUrls[0] || null;
+
+  // Parallel to `colors`: colorImages[i] = that colour's own photos (de-duped),
+  // falling back to every image when the backend didn't link any to that colour.
   const colorImages = colorNames.map((cn) => {
     const arr = urlsByColor[String(cn).trim().toLowerCase()];
-    return (arr && arr.length) ? arr : allUrls;
+    const uniq = arr ? [...new Set(arr)] : [];
+    return uniq.length ? uniq : allUrls;
   });
 
   return {
