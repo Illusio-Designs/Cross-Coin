@@ -341,6 +341,23 @@ function mapProduct(p) {
     return uniq.length ? uniq : allUrls;
   });
 
+  // Full per-variation data so the PDP can reflect the EXACT selected combo
+  // (price / SKU / stock) and add that precise variation to the cart.
+  const variants = variations.map((v) => {
+    const a = parseAttrs(v);
+    const cV = Array.isArray(a.color) ? a.color[0] : a.color;
+    const sV = Array.isArray(a.size) ? a.size[0] : a.size;
+    return {
+      id: v.id,
+      color: str(cV),
+      size: str(sV),
+      sku: str(v.sku || p.sku),
+      price: num(v.price ?? p.price ?? 0),
+      oldPrice: v.comparePrice ? num(v.comparePrice) : undefined,
+      stock: num(v.stock),
+    };
+  });
+
   return {
     id: p.id,
     slug: str(p.slug),
@@ -353,6 +370,8 @@ function mapProduct(p) {
     reviews: num(p.review_count),
     sizes: Array.isArray(sizes) ? sizes.map(str).filter(Boolean) : [],
     colors: Array.isArray(colorNames) ? colorNames.map((c) => getColorHex(str(c))) : [],
+    colorNames: Array.isArray(colorNames) ? colorNames.map(str) : [],
+    variants,
     badge: typeof p.badge === 'string' ? p.badge : null,
     description: str(p.description),
     image: typeof image === 'string' ? image : null,
