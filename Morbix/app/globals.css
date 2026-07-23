@@ -114,7 +114,7 @@ button { font-family: inherit; cursor: pointer; }
 .drawer-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 20px 24px; border-top: 1px solid var(--line); }
 
 /* ============================ CART DRAWER ============================ */
-.cd-backdrop { position: fixed; inset: 0; background: rgba(17,24,69,.42); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 70; }
+.cd-backdrop { position: fixed; inset: 0; background: rgba(17,24,69,.42); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 70; }
 .cd-backdrop.show { opacity: 1; pointer-events: auto; }
 .cd-drawer { position: fixed; top: 0; right: 0; height: 100dvh; width: 420px; max-width: 92vw; background: var(--bg); z-index: 71; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; box-shadow: -12px 0 44px rgba(17,24,69,.2); }
 .cd-drawer.show { transform: translateX(0); }
@@ -402,10 +402,10 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-gallery { display: flex; gap: 14px; align-items: flex-start; }
 .pdp-main { flex: 1; min-width: 0; aspect-ratio: 1/1; border-radius: var(--r-lg); background: #f2f5f6; display: grid; place-items: center; position: relative; overflow: hidden; }
 .pdp-main img { width: 100%; height: 100%; object-fit: contain; }
-.pdp-thumbs { display: flex; flex-direction: column; gap: 10px; width: 100px; flex-shrink: 0; max-height: var(--rail-h, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; outline: none; scroll-behavior: smooth; }
+.pdp-thumbs { display: flex; flex-direction: column; gap: 10px; width: 92px; flex-shrink: 0; max-height: var(--rail-h, 460px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; outline: none; scroll-behavior: smooth; }
 .pdp-thumbs::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.pdp-thumb { width: 100px; border-radius: 12px; background: #f2f5f6; border: 1.5px solid var(--line-soft); overflow: hidden; padding: 0; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; flex-shrink: 0; display: block; }
-.pdp-thumb img { width: 100%; height: auto; display: block; }
+.pdp-thumb { width: 92px; height: 92px; border-radius: 12px; background: #f2f5f6; display: grid; place-items: center; border: 1.5px solid var(--line-soft); overflow: hidden; padding: 0; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; flex-shrink: 0; }
+.pdp-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .pdp-thumb:hover { border-color: var(--ink-soft); }
 .pdp-thumb.active { border-color: var(--navy); box-shadow: 0 0 0 1.5px var(--navy); }
 .pdp-info h1 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; margin: 8px 0 12px; }
@@ -603,8 +603,8 @@ button { font-family: inherit; cursor: pointer; }
   .pdp { grid-template-columns: 1fr; gap: 24px; }
   /* Keep the vertical thumbnail rail beside the main image (top-to-bottom
      scroll only), just smaller on narrow screens. */
-  .pdp-thumbs { width: 78px; }
-  .pdp-thumb { width: 78px; }
+  .pdp-thumbs { width: 76px; }
+  .pdp-thumb { width: 76px; height: 76px; }
   .pdp-highlights { grid-template-columns: 1fr; }
   .cart-layout { grid-template-columns: 1fr; }
   .cart-summary { position: static; }
