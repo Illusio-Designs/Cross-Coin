@@ -91,7 +91,21 @@ export async function getCategoryByName(handle) {
 }
 
 // Products in a given collection (by slug/name) — used by /collections/[handle].
+// Uses the SAME full catalog data as the main /products listing so the cards
+// are identical (price, colours, image). Falls back to the category-embedded
+// products only if the catalog filter finds nothing.
 export async function getProductsByCategory(handle) {
+  if (!handle) return [];
+  const h = String(handle).trim().toLowerCase();
+  const slugify = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, '-');
+  const all = await getAllProducts();
+  const filtered = all.filter((p) =>
+    String(p.categorySlug).toLowerCase() === h ||
+    slugify(p.category) === h ||
+    String(p.category).toLowerCase() === h
+  );
+  if (filtered.length) return filtered;
+  // Fallback: products embedded in the category record.
   const cat = await getCategoryByName(handle);
   const list = cat?.products || cat?.data?.products || [];
   return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
@@ -445,17 +459,31 @@ function basicSanitize(html) {
     .replace(/javascript:/gi, '');
 }
 
+// Pull the first <img src> out of the section HTML as a last-resort cover.
+function firstSectionImage(sections) {
+  for (const s of sections) {
+    const m = String(s?.content || s?.body || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (m) return cleanUrl(m[1]);
+  }
+  return '';
+}
+
 function mapBlog(p) {
   const sections = parseSections(p.sections);
   const firstContent = sections[0]?.content || p.excerpt || '';
   const plain = String(firstContent).replace(/<[^>]+>/g, '').trim();
   const excerpt = plain ? plain.substring(0, 160) + (plain.length > 160 ? '…' : '') : (p.title || '');
+  // Cover image: backend stores it as `hero_image` (same as the other brands);
+  // fall back to other common fields, then to the first image in the body.
+  const image = imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
+    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections);
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',
     date: fmtDate(p.published_at || p.publishedAt || p.created_at || p.createdAt),
     title: p.title,
     excerpt,
+    image,
     // Full article body: each section's heading + sanitised HTML content.
     sections: sections.map((s) => ({
       heading: s.heading || s.title || '',

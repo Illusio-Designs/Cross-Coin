@@ -1,14 +1,25 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import { getCategories } from '@/lib/api';
+import { getCategories, getAllProducts } from '@/lib/api';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Collections' };
 
 const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles', 'Layers', 'Leaf'];
 
 export default async function CollectionsPage() {
-  const categories = await getCategories();
+  const [categories, all] = await Promise.all([getCategories(), getAllProducts()]);
+
+  // If a category has no image of its own, use the first product's photo in
+  // that collection as the cover, plus a live product count.
+  const enriched = categories.map((c) => {
+    const inCat = all.filter((p) => p.categorySlug === c.slug || p.category === c.label);
+    return {
+      ...c,
+      image: c.image || inCat.find((p) => p.image)?.image || '',
+      count: c.count || inCat.length,
+    };
+  });
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
@@ -18,11 +29,11 @@ export default async function CollectionsPage() {
         <p>Find the right pair for every kind of movement.</p>
       </div>
 
-      {categories.length === 0 ? (
+      {enriched.length === 0 ? (
         <div className="empty">No collections yet — check back soon.</div>
       ) : (
         <div className="cat-grid" style={{ marginTop: 26 }}>
-          {categories.map((c, i) => (
+          {enriched.map((c, i) => (
             <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
               {c.image
                 ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
