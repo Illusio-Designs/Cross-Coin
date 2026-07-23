@@ -31,8 +31,9 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!form.comment.trim() || !form.name.trim()) {
-      setStatus({ state: 'error', msg: 'Please add your name and a short review.' });
+    // The backend requires ALL of productId, rating, comment, name AND email.
+    if (!form.name.trim() || !form.email.trim() || !form.comment.trim()) {
+      setStatus({ state: 'error', msg: 'Please fill in your name, email and review.' });
       return;
     }
     setStatus({ state: 'loading', msg: '' });
@@ -82,14 +83,14 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
               {[1, 2, 3, 4, 5].map((n) => (
                 <button type="button" key={n} onClick={() => setForm((f) => ({ ...f, rating: n }))}
                   aria-label={`${n} star${n > 1 ? 's' : ''}`} className="rating-star">
-                  <Icon name="Star" size={22} color={n <= form.rating ? 'var(--star)' : '#d7dde2'} />
+                  <span className="rating-star-ic" style={{ color: n <= form.rating ? 'var(--star)' : '#d7dde2' }}>★</span>
                 </button>
               ))}
             </div>
           </div>
           <div className="field-row">
             <input className="input" placeholder="Your name" value={form.name} onChange={set('name')} required />
-            <input className="input" type="email" placeholder="Email (optional)" value={form.email} onChange={set('email')} />
+            <input className="input" type="email" placeholder="Email" value={form.email} onChange={set('email')} required />
           </div>
           <textarea className="input" rows={4} placeholder="Share your experience with this product…"
             value={form.comment} onChange={set('comment')} required />
