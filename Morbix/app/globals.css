@@ -426,6 +426,13 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Reviews */
 .pdp-reviews { border-top: 1px solid var(--line); margin-top: 20px; }
+.review-form { background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 22px; margin: 8px 0 24px; display: grid; gap: 14px; max-width: 640px; }
+.review-form-rating { display: flex; align-items: center; gap: 14px; }
+.rating-picker { display: flex; gap: 4px; }
+.rating-star { background: none; border: 0; padding: 2px; line-height: 0; cursor: pointer; }
+.form-msg { font-size: 13px; font-weight: 600; margin: 6px 0 0; }
+.form-msg.error { color: var(--sale); }
+.form-msg.success { color: var(--teal-600); }
 .reviews-layout { display: grid; grid-template-columns: 280px 1fr; gap: 32px; align-items: start; }
 .reviews-summary { background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 26px; text-align: center; position: sticky; top: 96px; }
 .rs-score { font-size: 52px; font-weight: 900; line-height: 1; }

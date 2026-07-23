@@ -435,11 +435,11 @@ function fmtDate(value) {
 
 function mapReview(r) {
   return {
-    author: r.name || r.user_name || r.customer_name || r.author || 'Verified Buyer',
+    author: r.reviewerName || r.guestName || r.name || r.user_name || r.customer_name || r.author || 'Verified Buyer',
     rating: Number(r.rating || 0),
     date: fmtDate(r.createdAt || r.created_at || r.date),
     title: r.title || r.heading || '',
-    text: r.comment || r.review || r.text || r.body || '',
+    text: r.review || r.comment || r.text || r.body || '',
   };
 }
 
