@@ -1,6 +1,7 @@
 import Icon from '@/components/Icon';
+import HeroSlider from './HeroSlider';
 
-export default function Hero({ features = [] }) {
+export default function Hero({ features = [], slides = [] }) {
   return (
     <section className="hero container">
       <div className="hero-card">
@@ -15,13 +16,15 @@ export default function Hero({ features = [] }) {
         </div>
 
         <div className="hero-visual">
-          {/* Branded product-spotlight placeholder — drop a real product/lifestyle
-              photo at public/hero.webp and replace this block with an <img>. */}
-          <div className="hero-spotlight" aria-hidden>
-            <span className="hero-spotlight-tag">Morbix</span>
-            <Icon name="Footprints" size={130} />
-            <span className="hero-spotlight-cap">Premium knit socks</span>
-          </div>
+          {slides.length > 0 ? (
+            <HeroSlider slides={slides} />
+          ) : (
+            <div className="hero-spotlight" aria-hidden>
+              <span className="hero-spotlight-tag">Morbix</span>
+              <Icon name="Footprints" size={130} />
+              <span className="hero-spotlight-cap">Premium knit socks</span>
+            </div>
+          )}
           <div className="hero-features">
             {features.map((f) => (
               <div className="hero-feature" key={f.title}>

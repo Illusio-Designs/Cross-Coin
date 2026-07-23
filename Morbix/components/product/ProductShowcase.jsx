@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
 
@@ -16,6 +16,20 @@ export default function ProductShowcase({ product }) {
   const [active, setActive] = useState(0);         // active gallery image
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Match the thumbnail rail's height to the main image so it never runs longer
+  // than the photo — extra thumbnails scroll inside it instead.
+  const mainRef = useRef(null);
+  const [railH, setRailH] = useState(0);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const selectedColorName = colorNames[color] || '';
 
@@ -105,7 +119,7 @@ export default function ProductShowcase({ product }) {
   return (
     <>
     <div className="pdp">
-      <div className="pdp-gallery">
+      <div className="pdp-gallery" style={railH ? { '--rail-h': `${railH}px` } : undefined}>
         {shown.length > 1 && (
           <div className="pdp-thumbs">
             {shown.map((src, i) => (
@@ -122,7 +136,7 @@ export default function ProductShowcase({ product }) {
           </div>
         )}
 
-        <div className="pdp-main">
+        <div className="pdp-main" ref={mainRef}>
           {mainSrc
             ? <img src={mainSrc} alt={product.name} />
             : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}

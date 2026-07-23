@@ -6,17 +6,18 @@ import Technologies from '@/components/home/Technologies';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getProductReviews, getBlogPosts } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getProductReviews, getBlogPosts, getSliders } from '@/lib/api';
 
 // Static/ISR — regenerate every 5 min.
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [products, categories, reviews, posts] = await Promise.all([
+  const [products, categories, reviews, posts, slides] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getProductReviews(),
     getBlogPosts(),
+    getSliders(),
   ]);
 
   // Collection cards from live categories — same card as the /collections page.
@@ -29,12 +30,12 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero features={getHeroFeatures()} />
+      <Hero features={getHeroFeatures()} slides={slides} />
       <Marquee />
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
-      {reviews.length > 0 && <Reveal as="section"><ReviewsSection reviews={reviews} /></Reveal>}
+      <Reveal as="section"><ReviewsSection reviews={reviews} /></Reveal>
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
     </>
   );

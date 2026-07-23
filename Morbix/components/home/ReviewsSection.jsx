@@ -23,6 +23,10 @@ export default function ReviewsSection({ reviews = [] }) {
         </div>
       </div>
 
+      {reviews.length === 0 && (
+        <div className="empty" style={{ marginTop: 8 }}>No reviews yet — your feedback will appear here.</div>
+      )}
+
       <div className="review-grid">
         {reviews.slice(0, 6).map((r, i) => (
           <div className="review" key={i}>

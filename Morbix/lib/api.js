@@ -132,7 +132,16 @@ export async function searchProducts(query) {
 export async function getSliders() {
   try {
     const data = await brandFetch('/api/sliders/listing', 300);
-    return data?.sliders || data?.data || (Array.isArray(data) ? data : []);
+    const list = data?.sliders || data?.data || (Array.isArray(data) ? data : []);
+    return (Array.isArray(list) ? list : [])
+      .map((s) => ({
+        image: imgUrl(s.image || s.image_url || s.desktop_image || s.banner || s.large || ''),
+        mobileImage: imgUrl(s.mobile_image || s.image_mobile || s.mobile || ''),
+        title: str(s.title || s.heading || ''),
+        subtitle: str(s.subtitle || s.description || ''),
+        link: s.link || s.url || s.redirect_url || s.href || '',
+      }))
+      .filter((s) => s.image);
   } catch { return []; }
 }
 
