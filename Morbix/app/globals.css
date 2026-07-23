@@ -403,7 +403,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-main img { width: 100%; height: 100%; object-fit: contain; }
 .pdp-thumbs { display: flex; flex-direction: column; gap: 10px; width: 96px; flex-shrink: 0; max-height: var(--rail-h, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 .pdp-thumb { width: 96px; height: 96px; border-radius: 14px; background: #f2f5f6; display: grid; place-items: center; border: 1.5px solid var(--line-soft); overflow: hidden; padding: 0; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; flex-shrink: 0; }
-.pdp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pdp-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .pdp-thumb:hover { border-color: var(--ink-soft); }
 .pdp-thumb.active { border-color: var(--navy); box-shadow: 0 0 0 1.5px var(--navy); }
 .pdp-info h1 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; margin: 8px 0 12px; }
