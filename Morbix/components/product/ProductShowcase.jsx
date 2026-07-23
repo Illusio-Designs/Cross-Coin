@@ -121,7 +121,15 @@ export default function ProductShowcase({ product }) {
     <div className="pdp">
       <div className="pdp-gallery" style={railH ? { '--rail-h': `${railH}px` } : undefined}>
         {shown.length > 1 && (
-          <div className="pdp-thumbs">
+          <div
+            className="pdp-thumbs"
+            tabIndex={0}
+            aria-label="Product image thumbnails"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.currentTarget.scrollBy({ top: 120, behavior: 'smooth' }); e.preventDefault(); }
+              if (e.key === 'ArrowUp') { e.currentTarget.scrollBy({ top: -120, behavior: 'smooth' }); e.preventDefault(); }
+            }}
+          >
             {shown.map((src, i) => (
               <button
                 key={src + i}
