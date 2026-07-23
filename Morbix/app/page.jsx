@@ -15,7 +15,7 @@ export default async function HomePage() {
   const [products, categories, reviews, posts, slides] = await Promise.all([
     getBestsellers(),
     getCategories(),
-    getProductReviews(),
+    getProductReviews(null, 60),
     getBlogPosts(),
     getSliders(),
   ]);
