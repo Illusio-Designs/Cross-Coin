@@ -26,16 +26,12 @@ export default function Hero({ features = [], slides = [] }) {
             </div>
           )}
           <div className="hero-features">
-            {features.map((f) => (
+            {features.slice(0, 3).map((f) => (
               <div className="hero-feature" key={f.title}>
                 <span className="ic"><Icon name={f.icon} size={18} /></span>
                 <div><b>{f.title}</b><span>{f.sub}</span></div>
               </div>
             ))}
-          </div>
-          <div className="hero-social">
-            <span className="avatars"><span /><span /><span /></span>
-            <div><b>10 000+ customers</b><small>★ 4.9 average rating</small></div>
           </div>
         </div>
       </div>
