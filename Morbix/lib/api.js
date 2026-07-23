@@ -158,11 +158,14 @@ export async function getCategories() {
 // ---- Reviews --------------------------------------------------------------
 
 // Pass a product id for that product's reviews; call with no id for the
-// brand-wide public reviews used on the home page.
-export async function getProductReviews(productId) {
+// brand-wide public reviews used on the home page. A product's reviews are
+// fetched FRESH (no cache) so a newly-approved review shows up immediately;
+// the home feed stays cached (300s) so the home page can remain static.
+export async function getProductReviews(productId, revalidate) {
   try {
     const path = productId ? `/api/reviews/product/${productId}` : '/api/reviews/all';
-    const data = await brandFetch(path, 300);
+    const rev = revalidate ?? (productId ? undefined : 300);
+    const data = await brandFetch(path, rev);
     const list = data?.data?.reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : []);
     return Array.isArray(list) ? list.map(mapReview) : [];
   } catch { return []; }

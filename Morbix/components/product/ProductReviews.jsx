@@ -14,18 +14,19 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
   const [status, setStatus] = useState({ state: 'idle', msg: '' });
 
+  // Summary reflects ONLY the reviews actually shown (approved). No fallback to
+  // the product's review_count — that includes unapproved reviews and would
+  // show "5.0 / 1 review" next to an empty list.
   const { avg, total, dist } = useMemo(() => {
     const list = reviews.filter((r) => Number(r.rating) > 0);
-    const total = list.length || fallbackCount;
-    const avg = list.length
-      ? list.reduce((a, r) => a + Number(r.rating), 0) / list.length
-      : Number(fallbackRating) || 0;
+    const total = list.length;
+    const avg = total ? list.reduce((a, r) => a + Number(r.rating), 0) / total : 0;
     const dist = [5, 4, 3, 2, 1].map((s) => {
       const c = list.filter((r) => Math.round(Number(r.rating)) === s).length;
-      return { s, pct: list.length ? Math.round((c / list.length) * 100) : 0 };
+      return { s, pct: total ? Math.round((c / total) * 100) : 0 };
     });
     return { avg, total, dist };
-  }, [reviews, fallbackRating, fallbackCount]);
+  }, [reviews]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -104,13 +105,15 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
 
       <div className="reviews-layout">
         <div className="reviews-summary">
-          <div className="rs-score">{avg.toFixed(1)}</div>
+          <div className="rs-score">{total ? avg.toFixed(1) : '—'}</div>
           <div className="rs-stars">
             {[0, 1, 2, 3, 4].map((i) => (
               <Icon key={i} name="Star" size={16} color={i < Math.round(avg) ? 'var(--star)' : '#d7dde2'} />
             ))}
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>Based on {total} review{total === 1 ? '' : 's'}</div>
+          <div className="muted" style={{ fontSize: 13 }}>
+            {total ? `Based on ${total} review${total === 1 ? '' : 's'}` : 'No reviews yet'}
+          </div>
           <div className="rs-bars">
             {dist.map((d) => (
               <div className="rs-bar" key={d.s}>
