@@ -61,14 +61,22 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
     <section className="pdp-reviews section" id="reviews">
       <div className="section-head" style={{ justifyContent: 'space-between' }}>
         <h2>Customer reviews</h2>
-        <button type="button" className="btn btn-ghost" onClick={() => setOpen((o) => !o)}>
-          {open ? 'Close' : 'Write a review'} <Icon name="Star" size={15} />
+        <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>
+          Write a review <Icon name="Star" size={15} />
         </button>
       </div>
 
       {open && (
-        <form className="review-form" onSubmit={onSubmit}>
-          <div className="review-form-rating">
+        <div className="review-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="review-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
+            <div className="review-modal-head">
+              <h3>Write a review</h3>
+              <button type="button" className="review-modal-close" onClick={() => setOpen(false)} aria-label="Close">
+                <Icon name="X" size={18} />
+              </button>
+            </div>
+            <form className="review-form" onSubmit={onSubmit}>
+              <div className="review-form-rating">
             <span className="opt-label">Your rating</span>
             <div className="rating-picker">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -86,10 +94,12 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
           <textarea className="input" rows={4} placeholder="Share your experience with this product…"
             value={form.comment} onChange={set('comment')} required />
           {status.state === 'error' && <p className="form-msg error">{status.msg}</p>}
-          <button type="submit" className="btn btn-primary" disabled={status.state === 'loading'}>
-            {status.state === 'loading' ? 'Submitting…' : 'Submit review'}
-          </button>
-        </form>
+              <button type="submit" className="btn btn-primary" disabled={status.state === 'loading'}>
+                {status.state === 'loading' ? 'Submitting…' : 'Submit review'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
 
       {status.state === 'success' && !open && <p className="form-msg success">{status.msg}</p>}

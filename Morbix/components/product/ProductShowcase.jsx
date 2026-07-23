@@ -65,6 +65,13 @@ export default function ProductShowcase({ product }) {
     urls.forEach((u) => { const im = new Image(); im.src = u; });
   }, [product]);
 
+  // Auto-advance the main image through the thumbnails, one by one, every 3s.
+  useEffect(() => {
+    if (shown.length <= 1) return;
+    const t = setInterval(() => setActive((a) => (a + 1) % shown.length), 3000);
+    return () => clearInterval(t);
+  }, [shown.length, color]);
+
   const pickColor = (i) => { setColor(i); setActive(0); };
 
   const onAdd = () => {
@@ -101,7 +108,7 @@ export default function ProductShowcase({ product }) {
       <div className="pdp-gallery">
         {shown.length > 1 && (
           <div className="pdp-thumbs">
-            {shown.slice(0, 6).map((src, i) => (
+            {shown.map((src, i) => (
               <button
                 key={src + i}
                 type="button"

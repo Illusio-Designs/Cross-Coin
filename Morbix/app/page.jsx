@@ -19,11 +19,12 @@ export default async function HomePage() {
     getBlogPosts(),
   ]);
 
-  // Build category banners from live categories (no fabricated data).
-  const banners = categories.slice(0, 4).map((c) => ({
-    title: c.label,
+  // Collection cards from live categories — same card as the /collections page.
+  // Use the category image, or fall back to a product photo from that category.
+  const collections = categories.slice(0, 4).map((c) => ({
+    label: c.label,
     slug: c.slug,
-    text: `Shop the ${c.label} collection.`,
+    image: c.image || products.find((p) => p.categorySlug === c.slug && p.image)?.image || '',
   }));
 
   return (
@@ -31,7 +32,7 @@ export default async function HomePage() {
       <Hero features={getHeroFeatures()} />
       <Marquee />
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
-      {banners.length > 0 && <Reveal as="section"><CategoryBanners banners={banners} /></Reveal>}
+      {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
       {reviews.length > 0 && <Reveal as="section"><ReviewsSection reviews={reviews} /></Reveal>}
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
