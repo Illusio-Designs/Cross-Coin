@@ -513,7 +513,6 @@ export default function CartDrawer() {
                   {processing ? 'Processing…' : isPrepaid ? `Pay ₹${total.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
                 </button>
               )}
-              <button className="cd-viewcart" onClick={() => { closeCart(); router.push('/cart'); }}>View full cart</button>
               <div className="cd-trust" style={{ marginTop: 12, marginBottom: 0 }}>
                 <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                 <span><Icon name="RefreshCw" size={14} /> Easy returns</span>
