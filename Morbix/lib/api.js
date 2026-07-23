@@ -401,10 +401,14 @@ function mapProduct(p) {
 }
 
 function mapCategoryChip(c) {
+  const count = Array.isArray(c.products) ? c.products.length
+    : num(c.product_count ?? c.products_count ?? c.count);
   return {
     label: c.name || c.label || '',
     slug: c.slug || String(c.id || ''),
     icon: 'Sparkles',
+    image: imgUrl(c.image || c.image_url || c.banner || c.thumbnail || ''),
+    count,
   };
 }
 

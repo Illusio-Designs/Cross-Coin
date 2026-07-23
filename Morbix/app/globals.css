@@ -285,18 +285,17 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ============================ CATEGORY BANNERS ============================ */
-.cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.cat-banner { position: relative; border-radius: var(--r-lg); overflow: hidden; min-height: 200px; display: flex; background: #eef1f3; transition: box-shadow .2s; }
-.cat-banner:hover { box-shadow: var(--shadow-soft); }
-.cat-banner .cat-copy { padding: 28px 30px; display: flex; flex-direction: column; justify-content: center; max-width: 64%; z-index: 2; }
-.cat-banner h3 { font-size: 26px; font-weight: 900; color: var(--ink); }
-.cat-banner p { font-size: 13px; color: var(--ink-soft); margin: 8px 0 16px; }
-.cat-icon { position: absolute; right: 20px; bottom: 6px; z-index: 1; color: rgba(32,44,110,.09); transition: color .2s; }
-.cat-banner:hover .cat-icon { color: rgba(47,163,155,.16); }
-.cat-banner-0 { background: linear-gradient(120deg, #e9eef1 0%, #dbe6e9 100%); }
-.cat-banner-1 { background: linear-gradient(120deg, #e7f4f2 0%, #d5ebe7 100%); }
-.cat-banner-2 { background: linear-gradient(120deg, #eceff6 0%, #dfe4f2 100%); }
-.cat-banner-3 { background: linear-gradient(120deg, #eef1f3 0%, #e2e9ec 100%); }
+.cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+/* Image-forward collection card: category photo, gradient overlay, CTA. */
+.collection-card { position: relative; display: block; border-radius: var(--r-lg); overflow: hidden; aspect-ratio: 4 / 5; background: #eef1f3; box-shadow: var(--shadow-soft); }
+.collection-card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
+.collection-card-fallback { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(32,44,110,.16); background: linear-gradient(135deg, #eef3f5, #dfeae9); }
+.collection-card:hover .collection-card-img { transform: scale(1.06); }
+.collection-card-overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 20px; background: linear-gradient(to top, rgba(17,24,69,.82) 0%, rgba(17,24,69,.2) 46%, transparent 74%); }
+.collection-card-text h3 { font-size: 21px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+.collection-card-text span { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.82); }
+.collection-card-cta { flex-shrink: 0; width: 40px; height: 40px; border-radius: 999px; background: #fff; color: var(--navy); display: grid; place-items: center; transition: background .2s ease, color .2s ease; }
+.collection-card:hover .collection-card-cta { background: var(--teal); color: #fff; }
 
 /* ============================ TECHNOLOGIES ============================ */
 .tech-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 26px 18px; }
@@ -560,7 +559,8 @@ button { font-family: inherit; cursor: pointer; }
   .hero-social b { font-size: 12px; }
   .hero-social small { font-size: 10px; }
   .product-grid { grid-template-columns: repeat(2, 1fr); }
-  .cat-grid { grid-template-columns: 1fr; }
+  .cat-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .collection-card-text h3 { font-size: 17px; }
   .tech-grid { grid-template-columns: repeat(2, 1fr); }
   .tech:nth-child(3n) { border-right: 1px solid var(--line-soft); }
   .tech:nth-child(2n) { border-right: 0; }
