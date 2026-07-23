@@ -32,8 +32,8 @@ export default async function HomePage() {
     <>
       <Hero features={getHeroFeatures()} slides={slides} />
       <Marquee />
-      <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
+      <Reveal as="section"><Bestsellers products={products} /></Reveal>
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
       <Reveal as="section"><ReviewsSection reviews={reviews} /></Reveal>
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
