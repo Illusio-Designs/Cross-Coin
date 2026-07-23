@@ -45,13 +45,10 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
         name: form.name.trim(),
         email: form.email.trim(),
       });
-      // Show it right away.
-      setReviews((prev) => [
-        { author: form.name.trim(), rating: Number(form.rating), date: 'Just now', title: '', text: form.comment.trim() },
-        ...prev,
-      ]);
+      // Do NOT show it yet — reviews only appear after an admin approves them
+      // (the list endpoint returns approved reviews only).
       setForm({ name: '', email: '', rating: 5, comment: '' });
-      setStatus({ state: 'success', msg: 'Thanks! Your review has been submitted.' });
+      setStatus({ state: 'success', msg: 'Thanks! Your review has been submitted and will appear once approved.' });
       setOpen(false);
     } catch (err) {
       setStatus({ state: 'error', msg: err.message || 'Could not submit your review. Please try again.' });
