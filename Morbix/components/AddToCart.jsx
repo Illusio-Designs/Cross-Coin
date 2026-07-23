@@ -12,7 +12,9 @@ export default function AddToCart({ product, size = 'M', display = 'full', qty =
   const onAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    add(product, size, qty);
+    const color = Array.isArray(product.colorNames) ? product.colorNames[0] : null;
+    const variationId = Array.isArray(product.variants) ? product.variants[0]?.id : null;
+    add({ ...product, color: color || null }, size, qty, variationId ?? null);
     setAdded(true);
     setTimeout(() => setAdded(false), 1400);
   };

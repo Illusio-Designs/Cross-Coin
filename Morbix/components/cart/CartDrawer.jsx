@@ -68,7 +68,6 @@ export default function CartDrawer() {
   const { items, subtotal, count, setQty, remove, clear, open, closeCart } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
-  const [mode, setMode] = useState('cart'); // 'cart' | 'checkout'
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -101,12 +100,12 @@ export default function CartDrawer() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, closeCart]);
 
-  // Reset to cart view whenever the drawer closes
-  useEffect(() => { if (!open) { setMode('cart'); setError(''); setRetryState(null); } }, [open]);
+  // Clear transient state whenever the drawer closes
+  useEffect(() => { if (!open) { setError(''); setRetryState(null); } }, [open]);
 
-  // Load shipping fees + addresses once we enter checkout
+  // Load shipping fees + addresses as soon as the drawer opens (single view)
   useEffect(() => {
-    if (mode !== 'checkout') return;
+    if (!open) return;
     let alive = true;
     getShippingFees().then((data) => {
       const raw = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
@@ -116,10 +115,10 @@ export default function CartDrawer() {
       setSelectedFee((prev) => prev || list.find((f) => f.orderType === 'prepaid') || list.find((f) => f.isDefault) || list[0]);
     }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); } });
     return () => { alive = false; };
-  }, [mode]);
+  }, [open]);
 
   useEffect(() => {
-    if (mode !== 'checkout' || authLoading) return;
+    if (!open || authLoading) return;
     if (!isAuthenticated) { setShowForm(true); return; }
     getUserAddresses().then((data) => {
       const list = Array.isArray(data) ? data : data?.addresses || [];
@@ -128,7 +127,7 @@ export default function CartDrawer() {
       if (def) { setSelectedAddress(def); checkPin(def.postal_code || def.postalCode); }
       else setShowForm(true);
     }).catch(() => setShowForm(true));
-  }, [mode, authLoading, isAuthenticated]);
+  }, [open, authLoading, isAuthenticated]);
 
   const checkPin = async (pin) => {
     const p = String(pin || '').replace(/\D/g, '');
@@ -330,14 +329,9 @@ export default function CartDrawer() {
         {/* Header */}
         <div className="cd-header">
           <div className="cd-header-left">
-            {mode === 'checkout' && (
-              <button className="cd-close" onClick={() => setMode('cart')} aria-label="Back to cart" style={{ marginRight: 4 }}>
-                <Icon name="ArrowRight" size={18} className="cd-back-ic" />
-              </button>
-            )}
             <span className="cd-header-icon"><Icon name="ShoppingBag" size={18} /></span>
             <div>
-              <span className="cd-header-title">{mode === 'checkout' ? 'Checkout' : 'Your cart'}</span>
+              <span className="cd-header-title">Your cart</span>
               <span className="cd-header-count">{count} item{count !== 1 ? 's' : ''}</span>
             </div>
           </div>
@@ -351,59 +345,47 @@ export default function CartDrawer() {
             <p>Add a few pairs and they’ll show up here.</p>
             <button className="btn btn-primary" onClick={closeCart}>Continue shopping</button>
           </div>
-        ) : mode === 'cart' ? (
-          <>
-            {/* Free-shipping nudge */}
-            <div className="cd-ship">
-              {remaining > 0 ? (
-                <span><Icon name="Truck" size={15} /> You’re <b>₹{remaining.toFixed(0)}</b> away from free shipping</span>
-              ) : (
-                <span className="cd-ship-done"><Icon name="ShieldCheck" size={15} /> You’ve unlocked free shipping!</span>
-              )}
-              <div className="cd-ship-track"><span className="cd-ship-fill" style={{ width: `${pct}%` }} /></div>
-            </div>
-
-            {/* Items */}
-            <div className="cd-body">
-              {items.map((i) => (
-                <div className="cd-item" key={i.key}>
-                  <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
-                    {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Footprints" size={26} />}
-                  </Link>
-                  <div className="cd-item-main">
-                    <div className="cd-item-top">
-                      <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
-                      <button className="cd-remove" onClick={() => remove(i.key)} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
-                    </div>
-                    <span className="cd-item-size">Size {i.size}</span>
-                    <div className="cd-item-bot">
-                      <div className="cd-qty">
-                        <button onClick={() => setQty(i.key, i.qty - 1)} aria-label="Decrease quantity">−</button>
-                        <span>{i.qty}</span>
-                        <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
-                      </div>
-                      <span className="cd-item-price">₹{(i.price * i.qty).toFixed(0)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            <div className="cd-foot">
-              <div className="cd-trust">
-                <span><Icon name="ShieldCheck" size={14} /> Secure checkout</span>
-                <span><Icon name="RefreshCw" size={14} /> 14-day returns</span>
-              </div>
-              <div className="cd-subtotal"><span>Subtotal</span><b>₹{subtotal.toFixed(0)}</b></div>
-              <button className="cd-checkout" onClick={() => { setError(''); setMode('checkout'); }}>Checkout <Icon name="ArrowRight" size={16} /></button>
-              <button className="cd-viewcart" onClick={() => { closeCart(); router.push('/cart'); }}>View full cart</button>
-            </div>
-          </>
         ) : (
-          /* ── Checkout view ── */
+          /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-checkout">
+              {/* Free-shipping nudge */}
+              <div className="cd-ship">
+                {remaining > 0 ? (
+                  <span><Icon name="Truck" size={15} /> You’re <b>₹{remaining.toFixed(0)}</b> away from free shipping</span>
+                ) : (
+                  <span className="cd-ship-done"><Icon name="ShieldCheck" size={15} /> You’ve unlocked free shipping!</span>
+                )}
+                <div className="cd-ship-track"><span className="cd-ship-fill" style={{ width: `${pct}%` }} /></div>
+              </div>
+
+              {/* Items */}
+              <div className="cd-co-section">
+                <div className="cd-section-title">Items</div>
+                {items.map((i) => (
+                  <div className="cd-item" key={i.key}>
+                    <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
+                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Footprints" size={26} />}
+                    </Link>
+                    <div className="cd-item-main">
+                      <div className="cd-item-top">
+                        <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
+                        <button className="cd-remove" onClick={() => remove(i.key)} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
+                      </div>
+                      {i.color && <span className="cd-item-size">{i.color}</span>}
+                      <div className="cd-item-bot">
+                        <div className="cd-qty">
+                          <button onClick={() => setQty(i.key, i.qty - 1)} aria-label="Decrease quantity">−</button>
+                          <span>{i.qty}</span>
+                          <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
+                        </div>
+                        <span className="cd-item-price">₹{(i.price * i.qty).toFixed(0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Contact (guests) */}
               {!isAuthenticated && (
                 <div className="cd-co-section">
@@ -531,6 +513,7 @@ export default function CartDrawer() {
                   {processing ? 'Processing…' : isPrepaid ? `Pay ₹${total.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
                 </button>
               )}
+              <button className="cd-viewcart" onClick={() => { closeCart(); router.push('/cart'); }}>View full cart</button>
               <div className="cd-trust" style={{ marginTop: 12, marginBottom: 0 }}>
                 <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                 <span><Icon name="RefreshCw" size={14} /> Easy returns</span>

@@ -29,9 +29,19 @@ function cleanUrl(url) {
   return url;
 }
 
+// Pull the colour out of a backend cart row's variation attributes.
+function attrColor(item) {
+  const a = item.color || item.variation?.attributes || item.attributes;
+  if (!a) return null;
+  if (typeof a === 'string' && !a.trim().startsWith('{')) return a;
+  const obj = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return {}; } })() : a;
+  const c = obj?.color;
+  return Array.isArray(c) ? c[0] : (c || null);
+}
+
 // Normalise a backend cart row into the Morbix cart-item shape the UI uses.
 // Morbix items: { key, id, productId, variationId, serverId, slug, name,
-//                 price, oldPrice, image, size, qty }
+//                 price, oldPrice, image, color, size, qty }
 function normalizeServerItem(item) {
   const productId = item.productId ?? item.product_id ?? item.id;
   const variationId = item.variationId ?? item.variation_id ?? null;
@@ -49,6 +59,7 @@ function normalizeServerItem(item) {
     price: parseFloat(item.price || 0),
     oldPrice: item.comparePrice ? parseFloat(item.comparePrice) : null,
     image,
+    color: attrColor(item),
     size,
     qty: item.quantity || 1,
   };
@@ -180,6 +191,7 @@ export function CartProvider({ children }) {
           price: product.price,
           oldPrice: product.oldPrice || null,
           image: product.image || null,
+          color: product.color || null,
           size,
           qty,
         },

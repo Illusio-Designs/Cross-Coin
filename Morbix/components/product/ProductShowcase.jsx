@@ -90,10 +90,11 @@ export default function ProductShowcase({ product }) {
 
   const onAdd = () => {
     if (!inStock) return;
-    // Merge the variation's price/image/sku onto the product so the guest cart
-    // line shows the right combo; authed carts recompute from variationId.
+    // Use the SELECTED variation's main image (its first photo — stable, not the
+    // auto-rotating one), and pass the colour so the cart line shows it.
+    const variationMainImage = shown[0] || product.image || null;
     add(
-      { ...product, price, oldPrice: oldPrice || null, image: mainSrc || product.image, sku },
+      { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
       effectiveSize || 'M',
       qty,
       activeVariant?.id ?? null
