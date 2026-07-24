@@ -25,6 +25,9 @@ export const metadata = {
     description: 'Engineered knit, lasting cushioning and clean design in every step.',
   },
   icons: { icon: '/icon.svg' },
+  // Deployment marker so we can verify EXACTLY which commit is live:
+  // view page source and search for <meta name="x-build" …>.
+  other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
 };
 
 export default function RootLayout({ children }) {

@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" != \"production\" ]; then exit 0; fi; git diff --quiet HEAD^ HEAD .",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; fi; exit 0",
   "installCommand": "npm install --legacy-peer-deps",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
