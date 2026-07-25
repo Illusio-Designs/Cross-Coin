@@ -20,7 +20,12 @@ export default function RegisterClient() {
 
   const digits = form.phone.replace(/\D/g, '').slice(0, 10);
   const identifier = '91' + digits;
-  const isLocal = process.env.NODE_ENV !== 'production';
+  // ⚠️ TEMPORARY test mode: OTP boxes always show and "1111" creates the
+  // account without MSG91, until the Morbix domain is whitelisted in MSG91.
+  // SECURITY: set to false before real launch (while true anyone can register
+  // with 1111).
+  const OTP_TEST_MODE = true;
+  const isLocal = OTP_TEST_MODE || process.env.NODE_ENV !== 'production';
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 

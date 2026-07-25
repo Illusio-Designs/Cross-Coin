@@ -19,10 +19,12 @@ export default function LoginClient() {
   const [loading, setLoading] = useState(false);
 
   const digits = phone.replace(/\D/g, '').slice(0, 10);
-  // Dev bypass (OTP 1111) whenever running a local dev build — works no matter
-  // how you open it (localhost or a LAN IP like 192.168.x.x); production always
-  // uses the real MSG91 OTP.
-  const isLocal = process.env.NODE_ENV !== 'production';
+  // ⚠️ TEMPORARY test mode: shows the OTP boxes and lets OTP "1111" sign in
+  // WITHOUT MSG91, until the Morbix domain is whitelisted in the MSG91 widget.
+  // SECURITY: set this to false (or delete it) before real launch — while true,
+  // anyone can sign in with 1111. Flip to real OTP by removing OTP_TEST_MODE.
+  const OTP_TEST_MODE = true;
+  const isLocal = OTP_TEST_MODE || process.env.NODE_ENV !== 'production';
 
   // Step 1 — send OTP via the MSG91 widget.
   const handleSendOtp = async () => {
