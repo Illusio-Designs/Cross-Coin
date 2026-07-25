@@ -751,7 +751,7 @@ button { font-family: inherit; cursor: pointer; }
    ========================================================================== */
 .cd-back-ic { transform: rotate(180deg); }
 .cd-checkout:disabled { opacity: .6; }
-.cd-body.cd-checkout { display: block; padding-bottom: 20px; }
+.cd-body.cd-body-checkout { display: block; padding-bottom: 20px; }
 .cd-co-section { padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .cd-co-section:last-child { border-bottom: 0; }
 .cd-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 12px; }

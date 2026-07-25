@@ -379,7 +379,7 @@ export default function CartDrawer() {
         ) : (
           /* ── Single-view cart + checkout ── */
           <>
-            <div className="cd-body cd-checkout">
+            <div className="cd-body cd-body-checkout">
               {/* Free-shipping nudge */}
               <div className="cd-ship">
                 {remaining > 0 ? (
