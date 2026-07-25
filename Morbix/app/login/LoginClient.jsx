@@ -2,26 +2,31 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import { useAuth } from '@/context/AuthContext';
-import { checkPhone, sendOtp, verifyOtp, loginWithOtp } from '@/lib/api/auth';
+import { checkPhone, loginWithOtp } from '@/lib/api/auth';
 
+// Phone + OTP login using the shared MSG91 widget (window.sendOtp /
+// window.verifyOtp), exactly like Knitwink / Crosscoin / Gripzus. The widget's
+// verified access_token is exchanged at /api/users/login for our JWT.
 export default function LoginClient() {
-  const router = useRouter();
   const { fetchUser } = useAuth();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState('phone');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const digits = phone.replace(/\D/g, '').slice(0, 10);
+  const isLocal = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
+  // Step 1 — send OTP via the MSG91 widget.
   const handleSendOtp = async () => {
     setError('');
     if (digits.length !== 10) { setError('Enter a valid 10-digit number.'); return; }
+    if (isLocal) { setStep('otp'); return; }
+
     setLoading(true);
     try {
       const check = await checkPhone(digits);
@@ -30,43 +35,66 @@ export default function LoginClient() {
         setLoading(false);
         return;
       }
-      await sendOtp({ phone: digits });
-      setStep('otp');
-    } catch (e) {
-      setError(e.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* if check endpoint is unavailable, continue */ }
+    setLoading(false);
+
+    const identifier = '91' + digits;
+    let attempts = 0;
+    const trySend = () => {
+      if (typeof window.sendOtp === 'function') {
+        window.sendOtp(identifier, () => setStep('otp'), () => setError('Failed to send OTP. Please try again.'));
+      } else if (attempts < 15) {
+        attempts++;
+        setTimeout(trySend, 400);
+      } else {
+        setError('OTP service is still loading — please try again in a moment.');
+      }
+    };
+    trySend();
   };
 
   const handleOtpChange = (i, val) => {
+    val = val.replace(/\D/g, '');
     if (val.length > 1) val = val.slice(-1);
     const next = [...otp];
-    next[i] = val.replace(/\D/g, '');
+    next[i] = val;
     setOtp(next);
-    if (val && i < 5) otpRefs[i + 1].current?.focus();
+    if (val && i < 3) otpRefs[i + 1].current?.focus();
   };
   const handleOtpKey = (i, e) => {
     if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs[i - 1].current?.focus();
   };
 
-  const handleVerify = async () => {
+  // Step 2 — verify OTP via the widget, then log in with the access_token.
+  const handleVerify = () => {
     const code = otp.join('');
-    if (code.length < 4) { setError('Enter the OTP sent to your phone.'); return; }
+    if (code.length < 4) { setError('Enter the full OTP.'); return; }
     setLoading(true);
     setError('');
+
+    if (isLocal) {
+      if (code !== '1111') { setError('Dev mode: use OTP 1111.'); setLoading(false); return; }
+      doLogin('dev-localhost-bypass');
+      return;
+    }
+    if (typeof window.verifyOtp !== 'function') { setError('OTP service not ready. Please refresh.'); setLoading(false); return; }
+    window.verifyOtp(
+      code,
+      (data) => {
+        const token = typeof data === 'string' ? data : (data?.message || data?.token || JSON.stringify(data));
+        doLogin(token);
+      },
+      () => { setError('Invalid OTP. Please try again.'); setLoading(false); }
+    );
+  };
+
+  const doLogin = async (accessToken) => {
     try {
-      const verified = await verifyOtp({ phone: digits, otp: code, access_token: code });
-      // Prefer an access_token to complete the users/login exchange; if the
-      // verify already returned a session token, we're signed in.
-      if (!verified.token) {
-        const accessToken = verified.access_token || verified.accessToken || code;
-        await loginWithOtp({ phone: digits, access_token: accessToken });
-      }
+      await loginWithOtp({ phone: digits, access_token: accessToken });
       await fetchUser();
-      router.replace('/account');
-    } catch (e) {
-      setError(e.message || 'Invalid OTP. Please try again.');
+      window.location.replace('/account');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
       setLoading(false);
     }
   };
@@ -94,7 +122,7 @@ export default function LoginClient() {
               </label>
               {error && <p className="auth-error">{error}{error.includes('register') && <> <Link href="/register" style={{ fontWeight: 600, textDecoration: 'underline' }}>Register</Link></>}</p>}
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSendOtp} disabled={loading || digits.length !== 10}>
-                {loading ? 'Sending…' : <>Send OTP <Icon name="ArrowRight" size={16} /></>}
+                {loading ? 'Please wait…' : <>Send OTP <Icon name="ArrowRight" size={16} /></>}
               </button>
               <p className="muted" style={{ textAlign: 'center', fontSize: 13 }}>
                 New to Morbix? <Link href="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create an account</Link>
@@ -115,7 +143,7 @@ export default function LoginClient() {
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleVerify} disabled={loading}>
                 {loading ? 'Verifying…' : 'Verify & sign in'}
               </button>
-              <button className="link-more" style={{ justifyContent: 'center' }} onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); setError(''); }}>
+              <button className="link-more" style={{ justifyContent: 'center' }} onClick={() => { setStep('phone'); setOtp(['', '', '', '']); setError(''); }}>
                 Change number
               </button>
             </>
