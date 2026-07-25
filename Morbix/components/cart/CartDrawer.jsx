@@ -379,7 +379,7 @@ export default function CartDrawer() {
         ) : (
           /* ── Single-view cart + checkout ── */
           <>
-            <div className="cd-body cd-body-checkout">
+            <div className="cd-body cd-body-checkout" data-lenis-prevent>
               {/* Free-shipping nudge */}
               <div className="cd-ship">
                 {remaining > 0 ? (
@@ -420,28 +420,12 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* Contact (guests) */}
-              {!isAuthenticated && (
-                <div className="cd-co-section">
-                  <div className="cd-section-title">Contact details</div>
-                  <label className="cd-label">Full name
-                    <input className="cd-input" value={guest.fullName} onChange={(e) => setGuest((p) => ({ ...p, fullName: e.target.value }))} placeholder="Your name" autoComplete="name" />
-                  </label>
-                  <div className="cd-form-grid2">
-                    <label className="cd-label">Email
-                      <input className="cd-input" type="email" value={guest.email} onChange={(e) => setGuest((p) => ({ ...p, email: e.target.value }))} placeholder="you@email.com" autoComplete="email" />
-                    </label>
-                    <label className="cd-label">Phone
-                      <input className="cd-input" type="tel" inputMode="numeric" maxLength={10} value={guest.phone} onChange={(e) => setGuest((p) => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="10-digit mobile" autoComplete="tel" />
-                    </label>
-                  </div>
-                  <p className="muted" style={{ fontSize: 12 }}>Have an account? <Link href="/login" onClick={closeCart} style={{ color: 'var(--navy)', fontWeight: 600 }}>Sign in</Link></p>
-                </div>
-              )}
-
-              {/* Address */}
+              {/* Delivery details — contact + address in ONE box (like the other brands) */}
               <div className="cd-co-section">
-                <div className="cd-section-title">Delivery address</div>
+                <div className="cd-section-title">{isAuthenticated ? 'Delivery address' : 'Delivery details'}</div>
+                {!isAuthenticated && (
+                  <p className="muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>Have an account? <Link href="/login" onClick={closeCart} style={{ color: 'var(--navy)', fontWeight: 600 }}>Sign in</Link></p>
+                )}
                 {isAuthenticated && addresses.length > 1 && !showForm && (
                   <div className="cd-addr-list">
                     {addresses.map((a) => (
@@ -467,11 +451,19 @@ export default function CartDrawer() {
 
                 {showForm && (
                   <form className="cd-co-form" onSubmit={saveAddress}>
-                    {isAuthenticated && (
+                    {isAuthenticated ? (
                       <div className="cd-form-grid2">
                         <label className="cd-label">Full name<input className="cd-input" name="fullName" value={form.fullName} onChange={onFormChange} required placeholder="Full name" /></label>
                         <label className="cd-label">Phone<input className="cd-input" name="phoneNumber" type="tel" inputMode="numeric" maxLength={10} value={form.phoneNumber} onChange={onFormChange} required placeholder="10-digit mobile" /></label>
                       </div>
+                    ) : (
+                      <>
+                        <label className="cd-label">Full name<input className="cd-input" value={guest.fullName} onChange={(e) => setGuest((p) => ({ ...p, fullName: e.target.value }))} placeholder="Your name" autoComplete="name" /></label>
+                        <div className="cd-form-grid2">
+                          <label className="cd-label">Email<input className="cd-input" type="email" value={guest.email} onChange={(e) => setGuest((p) => ({ ...p, email: e.target.value }))} placeholder="you@email.com" autoComplete="email" /></label>
+                          <label className="cd-label">Phone<input className="cd-input" type="tel" inputMode="numeric" maxLength={10} value={guest.phone} onChange={(e) => setGuest((p) => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="10-digit mobile" autoComplete="tel" /></label>
+                        </div>
+                      </>
                     )}
                     <label className="cd-label">Address<input className="cd-input" name="address" value={form.address} onChange={onFormChange} required placeholder="House / flat, street, area, landmark" /></label>
                     <div className="cd-form-grid2">

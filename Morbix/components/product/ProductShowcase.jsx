@@ -125,6 +125,7 @@ export default function ProductShowcase({ product }) {
           <div
             className="pdp-thumbs"
             tabIndex={0}
+            data-lenis-prevent
             aria-label="Product image thumbnails"
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') { e.currentTarget.scrollBy({ top: 120, behavior: 'smooth' }); e.preventDefault(); }

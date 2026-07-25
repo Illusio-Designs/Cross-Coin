@@ -33,7 +33,7 @@ export default function MobileNav({ items = [] }) {
           <BrandLogo height={30} />
           <button className="hamburger" aria-label="Close menu" onClick={() => setOpen(false)}><Icon name="X" size={22} /></button>
         </div>
-        <nav className="drawer-nav">
+        <nav className="drawer-nav" data-lenis-prevent>
           {items.map((item) => (
             <Link key={item.label} href={item.href} onClick={() => setOpen(false)}>
               {item.label} <Icon name="ArrowRight" size={16} />

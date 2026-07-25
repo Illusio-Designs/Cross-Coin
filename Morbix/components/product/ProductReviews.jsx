@@ -67,7 +67,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
 
       {open && (
         <div className="review-modal-overlay" onClick={() => setOpen(false)}>
-          <div className="review-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
+          <div className="review-modal" data-lenis-prevent onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
             <div className="review-modal-head">
               <h3>Write a review</h3>
               <button type="button" className="review-modal-close" onClick={() => setOpen(false)} aria-label="Close">
