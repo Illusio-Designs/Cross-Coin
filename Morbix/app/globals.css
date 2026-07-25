@@ -408,10 +408,13 @@ button { font-family: inherit; cursor: pointer; }
 .filter-trigger { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 11px 18px; font-size: 14px; font-weight: 700; color: var(--ink); }
 .filter-trigger:hover { border-color: var(--navy); }
 .filter-badge { background: var(--navy); color: #fff; border-radius: 999px; min-width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; padding: 0 6px; }
-.filter-overlay { position: fixed; inset: 0; background: rgba(17,24,69,.4); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 60; }
+.filter-overlay { position: fixed; inset: 0; background: rgba(17,24,69,.45); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 60; }
 .filter-overlay.show { opacity: 1; pointer-events: auto; }
-.filter-drawer { position: fixed; left: 0; right: 0; bottom: 0; max-height: 88dvh; background: var(--bg); z-index: 61; transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; border-radius: 22px 22px 0 0; box-shadow: 0 -8px 40px rgba(17,24,69,.2); }
-.filter-drawer.show { transform: translateY(0); }
+/* Centered modal */
+.filter-drawer { position: fixed; top: 50%; left: 50%; width: min(460px, 92vw); max-height: 85vh; background: var(--bg); z-index: 61; transform: translate(-50%, -46%); opacity: 0; pointer-events: none; transition: transform .25s ease, opacity .25s ease; display: flex; flex-direction: column; border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+.filter-drawer.show { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
+.filter-head .hamburger { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; color: var(--ink-soft); }
+.filter-head .hamburger:hover { color: var(--navy); border-color: var(--navy); }
 .filter-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .filter-head b { font-size: 17px; }
 .filter-body { padding: 6px 20px 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
