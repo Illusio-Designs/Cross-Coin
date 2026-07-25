@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 import BrandLogo from '@/components/BrandLogo';
 import CartButton from './CartButton';
+import WishlistLink from './WishlistLink';
 import MobileNav from './MobileNav';
 
 const NAV = [
@@ -30,7 +31,7 @@ export default function Header() {
 
         <div className="header-actions">
           <Link href="/search" className="pill icon-pill" aria-label="Search"><Icon name="Search" size={16} /></Link>
-          <Link href="/wishlist" className="pill icon-pill" aria-label="Wishlist"><Icon name="Heart" size={16} /></Link>
+          <WishlistLink />
           <Link href="/account" className="pill sign-in"><Icon name="User" size={16} /> <span>Sign in</span></Link>
           <CartButton />
         </div>

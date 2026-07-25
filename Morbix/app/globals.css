@@ -702,6 +702,8 @@ button { font-family: inherit; cursor: pointer; }
    HEADER ICON PILLS
    ========================================================================== */
 .pill.icon-pill { padding: 10px; }
+.wl-link { position: relative; }
+.wl-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--sale); color: #fff; font-size: 10px; font-weight: 800; line-height: 1; display: grid; place-items: center; }
 .pcard-fav.active svg { color: var(--sale); }
 
 /* ============================================================================

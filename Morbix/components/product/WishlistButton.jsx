@@ -1,8 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Icon from '@/components/Icon';
 import { addToWishlist, removeFromWishlist } from '@/lib/api/wishlist';
+
+// Heart that FILLS red when active (not just an outline).
+function HeartIcon({ filled }) {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+      fill={filled ? 'var(--sale)' : 'none'} stroke={filled ? 'var(--sale)' : 'currentColor'}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
 
 const LS_KEY = 'morbix_wishlist_ids';
 
@@ -47,7 +57,7 @@ export default function WishlistButton({ productId, className = 'pcard-fav' }) {
       aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}
       aria-pressed={active}
     >
-      <Icon name="Heart" size={15} color={active ? 'var(--sale)' : undefined} />
+      <HeartIcon filled={active} />
     </button>
   );
 }

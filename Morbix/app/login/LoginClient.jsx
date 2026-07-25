@@ -124,7 +124,7 @@ export default function LoginClient() {
                 <div className="phone-input">
                   <span>+91</span>
                   <input type="tel" inputMode="numeric" value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(-10))}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
                     placeholder="10-digit mobile" />
                 </div>

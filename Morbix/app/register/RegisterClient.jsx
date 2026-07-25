@@ -132,7 +132,7 @@ export default function RegisterClient() {
                 <div className="phone-input">
                   <span>+91</span>
                   <input type="tel" inputMode="numeric" value={form.phone}
-                    onChange={(e) => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) => set('phone', e.target.value.replace(/\D/g, '').slice(-10))}
                     placeholder="10-digit mobile" />
                 </div>
               </label>
