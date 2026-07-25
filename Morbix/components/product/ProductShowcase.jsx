@@ -20,6 +20,7 @@ export default function ProductShowcase({ product }) {
   // Match the thumbnail rail's height to the main image so it never runs longer
   // than the photo — extra thumbnails scroll inside it instead.
   const mainRef = useRef(null);
+  const thumbsRef = useRef(null);
   const [railH, setRailH] = useState(0);
   useEffect(() => {
     const el = mainRef.current;
@@ -86,6 +87,14 @@ export default function ProductShowcase({ product }) {
     return () => clearInterval(t);
   }, [shown.length, color]);
 
+  // Keep the active thumbnail scrolled into view within the rail.
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector(`[data-thumb="${active}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [active]);
+
   const pickColor = (i) => { setColor(i); setActive(0); };
 
   const onAdd = () => {
@@ -124,6 +133,7 @@ export default function ProductShowcase({ product }) {
         {shown.length > 1 && (
           <div
             className="pdp-thumbs"
+            ref={thumbsRef}
             tabIndex={0}
             data-lenis-prevent
             aria-label="Product image thumbnails"
@@ -136,6 +146,7 @@ export default function ProductShowcase({ product }) {
               <button
                 key={src + i}
                 type="button"
+                data-thumb={i}
                 className={`pdp-thumb${i === active ? ' active' : ''}`}
                 onClick={() => setActive(i)}
                 aria-label={`View image ${i + 1}`}
