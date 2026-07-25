@@ -785,6 +785,30 @@ button { font-family: inherit; cursor: pointer; }
 .cd-summary-total span { color: var(--ink) !important; font-weight: 900 !important; }
 .cd-error { color: var(--sale); font-size: 13px; margin: 0 0 10px; text-align: center; }
 
+/* Item MRP strikethrough */
+.cd-item-prices { display: flex; align-items: baseline; gap: 8px; }
+.cd-item-mrp { font-size: 12px; color: var(--ink-soft); text-decoration: line-through; }
+
+/* Payment card extras: Most Popular + delivery date */
+.cd-pay-info b { display: flex; align-items: center; gap: 8px; }
+.cd-pay-popular { font-size: 10px; font-weight: 700; color: var(--teal-600); background: var(--teal-050); border-radius: 999px; padding: 2px 8px; letter-spacing: .02em; }
+.cd-pay-date { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
+
+/* Urgency bar */
+.cd-urgency { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--ink-soft); background: var(--teal-050); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.cd-urgency b { color: var(--navy); font-variant-numeric: tabular-nums; font-weight: 800; }
+
+/* WhatsApp help */
+.cd-whatsapp { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-600); margin-top: 12px; }
+.cd-whatsapp:hover { color: var(--teal); }
+
+/* Order success screen */
+.cd-success { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 26px; }
+.cd-success-ic { width: 68px; height: 68px; border-radius: 999px; background: var(--teal-050); color: var(--teal-600); display: grid; place-items: center; margin-bottom: 16px; }
+.cd-success-title { font-size: 20px; font-weight: 900; }
+.cd-success-order { font-size: 14px; color: var(--navy); font-weight: 700; margin: 6px 0 2px; }
+.cd-success-msg { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; max-width: 300px; }
+
 /* ============================================================================
    CHECKOUT PAGE (standalone) — kept for /cart summary parity
    ========================================================================== */

@@ -87,6 +87,16 @@ export default function CartDrawer() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [retryState, setRetryState] = useState(null);
+  const [orderSuccess, setOrderSuccess] = useState(null);
+  const [urgencySeconds, setUrgencySeconds] = useState(600);
+
+  // Countdown timer (urgency), like the other brands' drawers.
+  useEffect(() => {
+    if (!open) return;
+    setUrgencySeconds(600);
+    const t = setInterval(() => setUrgencySeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [open]);
 
   // Lock scroll + escape
   useEffect(() => {
@@ -101,7 +111,7 @@ export default function CartDrawer() {
   }, [open, closeCart]);
 
   // Clear transient state whenever the drawer closes
-  useEffect(() => { if (!open) { setError(''); setRetryState(null); } }, [open]);
+  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); } }, [open]);
 
   // Load shipping fees + addresses as soon as the drawer opens (single view)
   useEffect(() => {
@@ -240,9 +250,18 @@ export default function CartDrawer() {
 
   const finishSuccess = (order) => {
     clear();
-    closeCart();
-    const id = order?.id;
-    router.push(id ? `/account/orders/${id}` : '/account/orders');
+    setError('');
+    setRetryState(null);
+    setOrderSuccess({
+      orderNumber: order?.order_number || order?.orderNumber || '—',
+      id: order?.id || null,
+    });
+  };
+
+  const deliveryDateStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   };
 
   const openRazorpay = (rzpOrder, reservationId) => {
@@ -331,14 +350,26 @@ export default function CartDrawer() {
           <div className="cd-header-left">
             <span className="cd-header-icon"><Icon name="ShoppingBag" size={18} /></span>
             <div>
-              <span className="cd-header-title">Your cart</span>
-              <span className="cd-header-count">{count} item{count !== 1 ? 's' : ''}</span>
+              <span className="cd-header-title">{orderSuccess ? 'Order confirmed' : 'Your cart'}</span>
+              {!orderSuccess && <span className="cd-header-count">{count} item{count !== 1 ? 's' : ''}</span>}
             </div>
           </div>
           <button className="cd-close" onClick={closeCart} aria-label="Close cart"><Icon name="X" size={20} /></button>
         </div>
 
-        {items.length === 0 ? (
+        {orderSuccess ? (
+          <div className="cd-success">
+            <span className="cd-success-ic"><Icon name="ShieldCheck" size={40} /></span>
+            <b className="cd-success-title">Order placed!</b>
+            <p className="cd-success-order">Order #{orderSuccess.orderNumber}</p>
+            <p className="cd-success-msg">Thank you! You’ll get a confirmation shortly.</p>
+            <button className="btn btn-primary" style={{ width: '100%' }}
+              onClick={() => { closeCart(); router.push(orderSuccess.id ? `/account/orders/${orderSuccess.id}` : '/account/orders'); }}>
+              Track order
+            </button>
+            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={closeCart}>Continue shopping</button>
+          </div>
+        ) : items.length === 0 ? (
           <div className="cd-empty">
             <span className="cd-empty-ic"><Icon name="ShoppingBag" size={34} /></span>
             <b>Your cart is empty</b>
@@ -379,7 +410,10 @@ export default function CartDrawer() {
                           <span>{i.qty}</span>
                           <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
                         </div>
-                        <span className="cd-item-price">₹{(i.price * i.qty).toFixed(0)}</span>
+                        <div className="cd-item-prices">
+                          <span className="cd-item-price">₹{(i.price * i.qty).toFixed(0)}</span>
+                          {i.oldPrice > i.price && <span className="cd-item-mrp">₹{(i.oldPrice * i.qty).toFixed(0)}</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -461,17 +495,21 @@ export default function CartDrawer() {
 
               {/* Payment */}
               <div className="cd-co-section">
-                <div className="cd-section-title">Payment method</div>
+                <div className="cd-section-title">How would you like to pay?</div>
                 <div className="cd-pay-list">
                   {sortedFees.map((fee) => {
                     const codBlocked = fee.orderType === 'cod' && serviceability?.cod_allowed === false;
+                    const isCodOpt = fee.orderType === 'cod';
                     return (
                       <label key={fee.id} className={`cd-pay-option${selectedFee?.id === fee.id ? ' active' : ''}${codBlocked ? ' disabled' : ''}`}>
                         <input type="radio" name="cdpay" checked={selectedFee?.id === fee.id} disabled={codBlocked} onChange={() => !codBlocked && setSelectedFee(fee)} />
-                        <span className="cd-pay-icon"><Icon name={fee.orderType === 'cod' ? 'ShieldCheck' : 'ShoppingBag'} size={18} /></span>
+                        <span className="cd-pay-icon"><Icon name={isCodOpt ? 'ShieldCheck' : 'ShoppingBag'} size={18} /></span>
                         <div className="cd-pay-info">
-                          <b>{fee.orderType === 'cod' ? 'Cash on Delivery' : 'Pay online (UPI / Card)'}</b>
-                          <span className="muted">{codBlocked ? 'Not available for this PIN' : fee.orderType === 'cod' ? 'Pay when it arrives' : 'Secure via Razorpay'}</span>
+                          <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
+                            {isCodOpt && !codBlocked && <span className="cd-pay-popular">Most Popular</span>}
+                          </b>
+                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : 'Secure payment via Razorpay'}</span>
+                          <span className="cd-pay-date"><Icon name="Truck" size={12} /> Delivery by {deliveryDateStr()}</span>
                         </div>
                         <span className={`cd-pay-fee${parseFloat(fee.fee || 0) === 0 ? ' free' : ''}`}>{parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee).toFixed(0)}`}</span>
                       </label>
@@ -505,6 +543,13 @@ export default function CartDrawer() {
 
             {/* Checkout footer */}
             <div className="cd-foot">
+              {/* Urgency bar */}
+              <div className="cd-urgency">
+                <span><Icon name="ShieldCheck" size={13} /> Order in the next</span>
+                <b>{String(Math.floor(urgencySeconds / 60)).padStart(2, '0')}:{String(urgencySeconds % 60).padStart(2, '0')}</b>
+                <span>to get it by {deliveryDateStr()}</span>
+              </div>
+
               {error && <p className="cd-error">{error}</p>}
               {retryState && retryState.count < 3 ? (
                 <button className="cd-checkout" onClick={doRetry} disabled={processing}>{processing ? 'Please wait…' : `Retry payment (${3 - retryState.count} left)`}</button>
@@ -513,9 +558,15 @@ export default function CartDrawer() {
                   {processing ? 'Processing…' : isPrepaid ? `Pay ₹${total.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
                 </button>
               )}
-              <div className="cd-trust" style={{ marginTop: 12, marginBottom: 0 }}>
+
+              <a className="cd-whatsapp" href="https://wa.me/919712891700?text=Hi%2C%20I%20need%20help%20with%20my%20Morbix%20order" target="_blank" rel="noopener noreferrer">
+                <Icon name="Phone" size={14} /> Need help? Chat on WhatsApp
+              </a>
+
+              <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                 <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                 <span><Icon name="RefreshCw" size={14} /> Easy returns</span>
+                <span><Icon name="ShoppingBag" size={14} /> Razorpay</span>
               </div>
             </div>
           </>
