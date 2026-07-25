@@ -19,7 +19,10 @@ export default function LoginClient() {
   const [loading, setLoading] = useState(false);
 
   const digits = phone.replace(/\D/g, '').slice(0, 10);
-  const isLocal = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  // Dev bypass (OTP 1111) whenever running a local dev build — works no matter
+  // how you open it (localhost or a LAN IP like 192.168.x.x); production always
+  // uses the real MSG91 OTP.
+  const isLocal = process.env.NODE_ENV !== 'production';
 
   // Step 1 — send OTP via the MSG91 widget.
   const handleSendOtp = async () => {
