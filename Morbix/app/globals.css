@@ -605,6 +605,11 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media (max-width: 760px) {
   .container { padding: 0 26px; }
+  .account-layout { grid-template-columns: 1fr; gap: 16px; }
+  .account-nav { flex-direction: row; overflow-x: auto; position: static; }
+  .account-nav-btn { white-space: nowrap; }
+  .account-nav-btn.danger { border-top: 0; border-radius: 12px; }
+  .account-content { padding: 18px; }
   .header-inner { height: 66px; }
   .logo-sub { display: none; }
   .sign-in span { display: none; }
@@ -742,6 +747,19 @@ button { font-family: inherit; cursor: pointer; }
 .account-link b { font-size: 15px; }
 .account-link .muted { font-size: 12px; }
 .account-section { margin-top: 40px; }
+/* Tabbed account */
+.account-layout { display: grid; grid-template-columns: 240px 1fr; gap: 26px; margin-top: 26px; align-items: start; }
+.account-nav { display: flex; flex-direction: column; gap: 4px; background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 10px; position: sticky; top: 92px; }
+.account-nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; transition: background .15s ease, color .15s ease; }
+.account-nav-btn:hover { background: var(--line-soft); }
+.account-nav-btn.active { background: var(--navy); color: #fff; }
+.account-nav-btn.active svg { color: #fff; }
+.account-nav-btn svg { color: var(--ink-soft); flex-shrink: 0; }
+.account-nav-btn.danger { color: var(--sale); margin-top: 4px; border-top: 1px solid var(--line-soft); border-radius: 0 0 12px 12px; }
+.account-nav-btn.danger svg { color: var(--sale); }
+.account-content { min-width: 0; background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 24px; }
+.acct-detail { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.acct-detail:last-child { border-bottom: 0; }
 .order-list { display: grid; gap: 10px; }
 .order-row { display: flex; align-items: center; gap: 16px; background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r); padding: 16px 18px; transition: box-shadow .2s, border-color .2s; }
 .order-row:hover { box-shadow: var(--shadow-soft); border-color: var(--line); }
