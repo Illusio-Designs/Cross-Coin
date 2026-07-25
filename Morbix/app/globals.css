@@ -131,7 +131,8 @@ button { font-family: inherit; cursor: pointer; }
 .cd-ship-done { color: var(--teal-600); font-weight: 600; }
 .cd-ship-track { height: 6px; border-radius: 999px; background: #d5e7e4; margin-top: 9px; overflow: hidden; }
 .cd-ship-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; transition: width .35s ease; }
-.cd-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 20px; display: flex; flex-direction: column; background: var(--bg); position: relative; z-index: 1; }
+.cd-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 8px 20px; display: flex; flex-direction: column; background: var(--bg); position: relative; z-index: 1; scrollbar-width: none; -ms-overflow-style: none; }
+.cd-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .cd-item { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .cd-drawer.show .cd-item { animation: cdItemIn .4s cubic-bezier(.4,0,.2,1) backwards; }
 .cd-drawer.show .cd-item:nth-child(1) { animation-delay: .08s; }
