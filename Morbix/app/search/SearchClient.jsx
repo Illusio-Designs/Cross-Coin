@@ -50,8 +50,8 @@ export default function SearchClient({ initialQuery = '' }) {
           autoFocus
         />
         {q && (
-          <button className="go" aria-label="Clear search" type="button" onClick={() => setQ('')}>
-            <Icon name="X" size={16} />
+          <button className="search-clear" aria-label="Clear search" type="button" onClick={() => setQ('')}>
+            <Icon name="X" size={15} />
           </button>
         )}
       </div>

@@ -45,7 +45,11 @@ export default function LoginClient() {
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
-        window.sendOtp(identifier, () => setStep('otp'), () => setError('Failed to send OTP. Please try again.'));
+        window.sendOtp(identifier, () => setStep('otp'), (err) => {
+          console.error('MSG91 sendOtp failed:', err);
+          const msg = typeof err === 'string' ? err : (err?.message || err?.type);
+          setError(msg ? `Couldn’t send OTP: ${msg}` : 'Failed to send OTP. Please try again.');
+        });
       } else if (attempts < 15) {
         attempts++;
         setTimeout(trySend, 400);

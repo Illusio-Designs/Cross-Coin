@@ -224,6 +224,8 @@ button { font-family: inherit; cursor: pointer; }
 .search-input { flex: 1; min-width: 280px; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 8px 8px 20px; box-shadow: var(--shadow-soft); }
 .search-input input { border: 0; outline: 0; flex: 1; font-size: 14px; background: transparent; color: var(--ink); }
 .search-input .go { width: 44px; height: 44px; border-radius: 999px; background: var(--navy); color: #fff; display: grid; place-items: center; }
+.search-input .search-clear { width: 30px; height: 30px; border-radius: 999px; border: 0; background: var(--line-soft); color: var(--ink-soft); display: grid; place-items: center; flex-shrink: 0; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.search-input .search-clear:hover { background: var(--line); color: var(--ink); }
 .chips { display: flex; gap: 10px; flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 11px 18px; font-size: 13px; font-weight: 600; color: var(--ink); transition: .15s; }
 .chip:hover { border-color: var(--teal); color: var(--teal-600); }
@@ -581,9 +583,15 @@ button { font-family: inherit; cursor: pointer; }
 .contact-detail > div { min-width: 0; } .contact-detail b { word-break: break-word; }
 .contact-detail b { display: block; }
 .contact-form { background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 26px; display: grid; gap: 16px; }
-.contact-form label { font-size: 13px; font-weight: 600; display: grid; gap: 8px; }
-.contact-form input, .contact-form textarea { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-family: inherit; font-size: 14px; color: var(--ink); resize: vertical; }
-.contact-form input:focus, .contact-form textarea:focus { outline: 0; border-color: var(--navy); }
+.contact-form label { font-size: 13px; font-weight: 600; color: var(--ink); display: grid; gap: 8px; }
+.contact-form input, .contact-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; font-family: inherit; font-size: 14px; color: var(--ink); background: #fff; resize: vertical; transition: border-color .15s ease, box-shadow .15s ease; }
+.contact-form input::placeholder, .contact-form textarea::placeholder { color: var(--ink-soft); }
+.contact-form input:focus, .contact-form textarea:focus { outline: 0; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(32,44,110,.08); }
+/* Kill the browser autofill blue tint so fields stay consistent */
+.contact-form input:-webkit-autofill, .phone-input input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 40px #fff inset; box-shadow: 0 0 0 40px #fff inset;
+  -webkit-text-fill-color: var(--ink); caret-color: var(--ink);
+}
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .auth-wrap { max-width: 420px; margin: 0 auto; }
 .auth-form { margin-top: 4px; }
@@ -700,7 +708,8 @@ button { font-family: inherit; cursor: pointer; }
    AUTH (login / register / track)
    ========================================================================== */
 .auth-error { color: var(--sale); font-size: 13px; margin: 0; }
-.phone-input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+.phone-input { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.phone-input:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(32,44,110,.08); }
 .phone-input span { color: var(--ink-soft); font-size: 14px; }
 .phone-input input { border: 0; outline: 0; flex: 1; padding: 12px 0; font-family: inherit; font-size: 14px; background: transparent; color: var(--ink); }
 .otp-row { display: flex; gap: 10px; justify-content: center; }
