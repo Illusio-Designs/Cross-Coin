@@ -138,7 +138,10 @@ export async function getSliders() {
         image: imgUrl(s.image || s.image_url || s.desktop_image || s.banner || s.large || ''),
         mobileImage: imgUrl(s.mobile_image || s.image_mobile || s.mobile || ''),
         title: str(s.title || s.heading || ''),
-        subtitle: str(s.subtitle || s.description || ''),
+        description: str(s.description || s.subtitle || s.subheading || s.text || ''),
+        buttonText: str(s.buttonText || s.button_text || s.cta || s.button || ''),
+        categorySlug: str(s.categorySlug || s.category_slug || s.category?.slug || ''),
+        categoryName: str(s.categoryName || s.category_name || s.category?.name || ''),
         link: s.link || s.url || s.redirect_url || s.href || '',
       }))
       .filter((s) => s.image);
