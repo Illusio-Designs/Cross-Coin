@@ -116,7 +116,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ============================ CART DRAWER ============================ */
 .cd-backdrop { position: fixed; inset: 0; background: rgba(17,24,69,.42); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 70; }
 .cd-backdrop.show { opacity: 1; pointer-events: auto; }
-.cd-drawer { position: fixed; top: 0; right: 0; height: 100dvh; width: 420px; max-width: 92vw; background: var(--bg); z-index: 71; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; box-shadow: -12px 0 44px rgba(17,24,69,.2); }
+.cd-drawer { position: fixed; top: 0; right: 0; height: 100dvh; width: 420px; max-width: 92vw; background: #f5f7f8; z-index: 71; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); display: flex; flex-direction: column; box-shadow: -12px 0 44px rgba(17,24,69,.2); isolation: isolate; }
 .cd-drawer.show { transform: translateX(0); }
 .cd-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cd-header-left { display: flex; align-items: center; gap: 12px; }
