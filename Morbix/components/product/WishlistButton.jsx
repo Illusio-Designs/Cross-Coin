@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { addToWishlist, removeFromWishlist } from '@/lib/api/wishlist';
+import { toast } from '@/lib/toast';
 
 // Heart that FILLS red when active (not just an outline).
 function HeartIcon({ filled }) {
@@ -42,9 +43,11 @@ export default function WishlistButton({ productId, className = 'pcard-fav' }) {
     setActive(next);
     if (next) {
       writeLocal([...new Set([...ids, id])]);
+      toast.wishlist('Added to wishlist');
       try { await addToWishlist(productId); } catch {}
     } else {
       writeLocal(ids.filter((x) => x !== id));
+      toast.wishlist('Removed from wishlist');
       try { await removeFromWishlist(productId); } catch {}
     }
     window.dispatchEvent(new Event('morbix-wishlist-change'));

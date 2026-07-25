@@ -6,6 +6,7 @@ import Icon from '@/components/Icon';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL, BRAND } from '@/lib/api/client';
 import { loginWithOtp } from '@/lib/api/auth';
+import { toast } from '@/lib/toast';
 
 // Phone-OTP registration (no password), identical flow to the other brands:
 // name + phone (+ optional email) -> MSG91 OTP -> create the account -> log in.
@@ -34,12 +35,12 @@ export default function RegisterClient() {
     setError('');
     if (!form.name.trim()) { setError('Please enter your name.'); return; }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number.'); return; }
-    if (isLocal) { setStep('otp'); return; }
+    if (isLocal) { setStep('otp'); toast.info('Enter OTP 1111 to continue'); return; }
 
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
-        window.sendOtp(identifier, () => setStep('otp'), (err) => {
+        window.sendOtp(identifier, () => { setStep('otp'); toast.info(`OTP sent to +91 ${digits}`); }, (err) => {
           console.error('MSG91 sendOtp failed:', err);
           const msg = typeof err === 'string' ? err : (err?.message || err?.type);
           setError(msg ? `Couldn’t send OTP: ${msg}` : 'Failed to send OTP. Please try again.');
@@ -109,6 +110,7 @@ export default function RegisterClient() {
       window.location.replace('/account');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
+      toast.error(err.message || 'Registration failed. Please try again.');
       setLoading(false);
     }
   };

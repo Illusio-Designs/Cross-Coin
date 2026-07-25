@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import Icon from '@/components/Icon';
+import { toast } from '@/lib/toast';
 
 /** Add-to-cart button. `size="full"` for the detail page, `icon` for cards. */
 export default function AddToCart({ product, size = 'M', display = 'full', qty = 1 }) {
@@ -15,6 +16,7 @@ export default function AddToCart({ product, size = 'M', display = 'full', qty =
     const color = Array.isArray(product.colorNames) ? product.colorNames[0] : null;
     const variationId = Array.isArray(product.variants) ? product.variants[0]?.id : null;
     add({ ...product, color: color || null }, size, qty, variationId ?? null);
+    toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1400);
   };

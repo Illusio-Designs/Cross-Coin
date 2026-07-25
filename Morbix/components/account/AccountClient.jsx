@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses';
+import { toast } from '@/lib/toast';
 
 const EMPTY = { full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false };
 
@@ -88,13 +89,14 @@ function Dashboard() {
       setShowForm(false);
       setForm(EMPTY);
       setEditingId(null);
-    } catch (e2) { setErr(e2.message || 'Failed to save address.'); }
+      toast.success(editingId ? 'Address updated' : 'Address saved');
+    } catch (e2) { setErr(e2.message || 'Failed to save address.'); toast.error(e2.message || 'Failed to save address'); }
     finally { setSaving(false); }
   };
 
-  const remove = async (id) => { try { await deleteAddress(id); await loadAddresses(); } catch {} };
-  const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); } catch {} };
-  const doLogout = async () => { await logout(); router.replace('/'); };
+  const remove = async (id) => { try { await deleteAddress(id); await loadAddresses(); toast.info('Address removed'); } catch { toast.error('Could not remove address'); } };
+  const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); toast.success('Default address updated'); } catch { toast.error('Could not update default'); } };
+  const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>

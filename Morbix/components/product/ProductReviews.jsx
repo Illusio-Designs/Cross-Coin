@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
 import { submitReview } from '@/lib/api';
+import { toast } from '@/lib/toast';
 
 // Product reviews: real average + distribution computed from the actual
 // reviews, the review list, and a working "write a review" form that POSTs to
@@ -35,6 +36,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
     // The backend requires ALL of productId, rating, comment, name AND email.
     if (!form.name.trim() || !form.email.trim() || !form.comment.trim()) {
       setStatus({ state: 'error', msg: 'Please fill in your name, email and review.' });
+      toast.error('Please fill in your name, email and review');
       return;
     }
     setStatus({ state: 'loading', msg: '' });
@@ -51,8 +53,10 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
       setForm({ name: '', email: '', rating: 5, comment: '' });
       setStatus({ state: 'success', msg: 'Thanks! Your review has been submitted and will appear once approved.' });
       setOpen(false);
+      toast.success('Review submitted — it will appear once approved');
     } catch (err) {
       setStatus({ state: 'error', msg: err.message || 'Could not submit your review. Please try again.' });
+      toast.error(err.message || 'Could not submit your review');
     }
   };
 

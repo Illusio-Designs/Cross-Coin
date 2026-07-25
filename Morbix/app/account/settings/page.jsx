@@ -6,6 +6,7 @@ import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
 import { useAuth } from '@/context/AuthContext';
 import { updateProfile, changePassword } from '@/lib/api/auth';
+import { toast } from '@/lib/toast';
 
 function Settings() {
   const { user, fetchUser } = useAuth();
@@ -29,21 +30,23 @@ function Settings() {
       await updateProfile(profile);
       await fetchUser();
       setProfileMsg('Profile updated.');
-    } catch (e2) { setProfileMsg(e2.message || 'Update failed.'); }
+      toast.success('Profile updated');
+    } catch (e2) { setProfileMsg(e2.message || 'Update failed.'); toast.error(e2.message || 'Update failed'); }
     finally { setSavingProfile(false); }
   };
 
   const savePassword = async (e) => {
     e.preventDefault();
     setPwMsg('');
-    if (pw.newPassword.length < 6) { setPwMsg('New password must be at least 6 characters.'); return; }
-    if (pw.newPassword !== pw.confirm) { setPwMsg('Passwords do not match.'); return; }
+    if (pw.newPassword.length < 6) { setPwMsg('New password must be at least 6 characters.'); toast.error('New password must be at least 6 characters'); return; }
+    if (pw.newPassword !== pw.confirm) { setPwMsg('Passwords do not match.'); toast.error('Passwords do not match'); return; }
     setSavingPw(true);
     try {
       await changePassword({ currentPassword: pw.currentPassword, newPassword: pw.newPassword });
       setPw({ currentPassword: '', newPassword: '', confirm: '' });
       setPwMsg('Password updated.');
-    } catch (e2) { setPwMsg(e2.message || 'Password change failed.'); }
+      toast.success('Password updated');
+    } catch (e2) { setPwMsg(e2.message || 'Password change failed.'); toast.error(e2.message || 'Password change failed'); }
     finally { setSavingPw(false); }
   };
 

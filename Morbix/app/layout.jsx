@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import SmoothScroll from '@/components/SmoothScroll';
 import Msg91Loader from '@/components/Msg91Loader';
+import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
@@ -44,6 +45,7 @@ export default function RootLayout({ children }) {
               <Footer />
               <CartDrawer />
             </SmoothScroll>
+            <ToastHost />
             <Analytics />
           </CartProvider>
         </AuthProvider>

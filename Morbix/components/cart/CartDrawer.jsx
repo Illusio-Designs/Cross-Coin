@@ -7,6 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
+import { toast } from '@/lib/toast';
 import {
   getShippingFees,
   createOrder,
@@ -198,8 +199,10 @@ export default function CartDrawer() {
       checkPin(form.postalCode);
       setShowForm(false);
       setForm(EMPTY_ADDR);
+      toast.success('Delivery address saved');
     } catch (e2) {
       setError(e2.message || 'Failed to save address.');
+      toast.error(e2.message || 'Failed to save address');
     } finally {
       setSavingAddr(false);
     }
@@ -215,8 +218,9 @@ export default function CartDrawer() {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount });
         setCouponMsg(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(0)} off`);
         setCoupon('');
-      } else setCouponMsg(data.message || 'Invalid coupon code.');
-    } catch (e) { setCouponMsg(e.message || 'Could not validate coupon.'); }
+        toast.success(`Coupon ${data.coupon.code} applied`);
+      } else { setCouponMsg(data.message || 'Invalid coupon code.'); toast.error(data.message || 'Invalid coupon code'); }
+    } catch (e) { setCouponMsg(e.message || 'Could not validate coupon.'); toast.error(e.message || 'Could not validate coupon'); }
     finally { setCouponBusy(false); }
   };
 
@@ -256,6 +260,7 @@ export default function CartDrawer() {
       orderNumber: order?.order_number || order?.orderNumber || '—',
       id: order?.id || null,
     });
+    toast.success('Order placed successfully!');
   };
 
   const deliveryDateStr = () => {
@@ -309,7 +314,7 @@ export default function CartDrawer() {
         const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
         if (!result?.order) throw new Error('Order creation failed.');
         finishSuccess(result.order);
-      } catch (e) { setError(e.message || 'Order placement failed.'); setProcessing(false); }
+      } catch (e) { setError(e.message || 'Order placement failed.'); toast.error(e.message || 'Order placement failed'); setProcessing(false); }
       return;
     }
     if (isPrepaid) {
@@ -401,7 +406,7 @@ export default function CartDrawer() {
                     <div className="cd-item-main">
                       <div className="cd-item-top">
                         <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
-                        <button className="cd-remove" onClick={() => remove(i.key)} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
+                        <button className="cd-remove" onClick={() => { remove(i.key); toast.info(`${i.name} removed from cart`); }} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
                       </div>
                       <div className="cd-item-meta">
                         {i.color && <span>{i.color}</span>}

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
+import { toast } from '@/lib/toast';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -108,6 +109,7 @@ export default function ProductShowcase({ product }) {
       qty,
       activeVariant?.id ?? null
     );
+    toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   };
