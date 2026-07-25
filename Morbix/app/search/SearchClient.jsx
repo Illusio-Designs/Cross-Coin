@@ -49,11 +49,9 @@ export default function SearchClient({ initialQuery = '' }) {
           aria-label="Search products"
           autoFocus
         />
-        {q && (
-          <button className="go" aria-label="Clear search" type="button" onClick={() => setQ('')}>
-            <Icon name="X" size={16} />
-          </button>
-        )}
+        <button className="go" aria-label={q ? 'Clear search' : 'Search'} type="button" onClick={() => { if (q) setQ(''); }}>
+          <Icon name={q ? 'X' : 'Search'} size={16} />
+        </button>
       </div>
 
       {!trimmed ? (
