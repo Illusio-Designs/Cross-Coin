@@ -403,17 +403,22 @@ export default function CartDrawer() {
                         <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
                         <button className="cd-remove" onClick={() => remove(i.key)} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
                       </div>
-                      {i.color && <span className="cd-item-size">{i.color}</span>}
+                      <div className="cd-item-meta">
+                        {i.color && <span>{i.color}</span>}
+                        {i.size && <span>Size: {i.size}</span>}
+                      </div>
+                      <div className="cd-item-prices">
+                        <span className="cd-item-price">₹{Number(i.price).toFixed(0)}</span>
+                        {i.oldPrice > i.price && <span className="cd-item-mrp">₹{Number(i.oldPrice).toFixed(0)}</span>}
+                        {i.oldPrice > i.price && <span className="cd-item-off">{Math.round((1 - i.price / i.oldPrice) * 100)}% off</span>}
+                      </div>
                       <div className="cd-item-bot">
                         <div className="cd-qty">
-                          <button onClick={() => setQty(i.key, i.qty - 1)} aria-label="Decrease quantity">−</button>
+                          <button onClick={() => setQty(i.key, i.qty - 1)} disabled={i.qty <= 1} aria-label="Decrease quantity">−</button>
                           <span>{i.qty}</span>
                           <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
                         </div>
-                        <div className="cd-item-prices">
-                          <span className="cd-item-price">₹{(i.price * i.qty).toFixed(0)}</span>
-                          {i.oldPrice > i.price && <span className="cd-item-mrp">₹{(i.oldPrice * i.qty).toFixed(0)}</span>}
-                        </div>
+                        <span className="cd-item-linetotal">₹{(i.price * i.qty).toFixed(0)}</span>
                       </div>
                     </div>
                   </div>
