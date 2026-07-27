@@ -23,6 +23,9 @@ import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 
 const FREE_SHIP_THRESHOLD = 999;
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+// Optional instant discount for paying online (prepaid) — same env-gated
+// incentive the other brands use. Defaults to 0 (no discount) unless configured.
+const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 
 const FALLBACK_FEES = [
   { id: 'fallback-prepaid', orderType: 'prepaid', fee: 0, isDefault: true },
@@ -63,6 +66,19 @@ function loadRazorpay() {
   });
 }
 const genIdem = () => 'idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+
+// Persist a guest session id in a cookie so the backend can associate a guest's
+// cart/session across COD + prepaid checkout — same helper the other brands use.
+function getOrCreateGuestSessionId() {
+  if (typeof document === 'undefined') return 'guest-' + Date.now();
+  const key = 'guestSessionId';
+  const match = document.cookie.split('; ').find((r) => r.startsWith(key + '='));
+  if (match) return match.split('=')[1];
+  const id = 'guest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${key}=${id}; expires=${expires}; path=/; SameSite=Lax`;
+  return id;
+}
 
 export default function CartDrawer() {
   const router = useRouter();
@@ -154,6 +170,10 @@ export default function CartDrawer() {
   const total = Math.max(0, subtotal + shippingFee - couponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
+  // Prepaid instant discount (0 unless configured) → the amount actually payable
+  // online is the total minus that incentive.
+  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
+  const prepaidPayable = Math.max(0, total - prepaidInstantDiscount);
   const remaining = Math.max(0, FREE_SHIP_THRESHOLD - subtotal);
   const pct = Math.min(100, (subtotal / FREE_SHIP_THRESHOLD) * 100);
 
@@ -231,6 +251,7 @@ export default function CartDrawer() {
   const guestBlocks = () => {
     const parts = (guest.fullName || '').trim().split(/\s+/);
     return {
+      session_id: getOrCreateGuestSessionId(),
       guest_info: { email: guest.email, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', phone: guest.phone },
       email: guest.email, firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', phone: guest.phone,
       shipping_address: {
@@ -244,9 +265,12 @@ export default function CartDrawer() {
   };
 
   const buildData = (paymentType) => {
+    // Prepaid orders fold the instant discount into discount_amount (same as the
+    // other brands); COD sends only the coupon discount.
+    const discountAmount = paymentType === 'razorpay' ? prepaidInstantDiscount + couponDiscount : couponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
-      discount_amount: couponDiscount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
+      discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     return { ...guestBlocks(), ...base };
@@ -319,7 +343,7 @@ export default function CartDrawer() {
     }
     if (isPrepaid) {
       if (!RAZORPAY_KEY) { setError('Online payment is not configured. Please choose Cash on Delivery.'); return; }
-      if (total <= 0) { setError('Order amount must be greater than zero.'); return; }
+      if (prepaidPayable <= 0) { setError('Order amount must be greater than zero.'); return; }
       setProcessing(true);
       try {
         const ok = await loadRazorpay();
@@ -510,7 +534,7 @@ export default function CartDrawer() {
                           <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
                             {isCodOpt && !codBlocked && <span className="cd-pay-popular">Most Popular</span>}
                           </b>
-                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : 'Secure payment via Razorpay'}</span>
+                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : `Secure payment via Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 ? ` · ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}</span>
                           <span className="cd-pay-date"><Icon name="Truck" size={12} /> Delivery by {deliveryDateStr()}</span>
                         </div>
                         <span className={`cd-pay-fee${parseFloat(fee.fee || 0) === 0 ? ' free' : ''}`}>{parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee).toFixed(0)}`}</span>
@@ -539,7 +563,8 @@ export default function CartDrawer() {
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
                 {couponDiscount > 0 && <div className="cd-summary-row"><span>Coupon</span><span style={{ color: 'var(--teal-600)' }}>−₹{couponDiscount.toFixed(0)}</span></div>}
-                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{total.toFixed(0)}</span></div>
+                {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
+                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>
             </div>
 
@@ -557,7 +582,7 @@ export default function CartDrawer() {
                 <button className="cd-checkout" onClick={doRetry} disabled={processing}>{processing ? 'Please wait…' : `Retry payment (${3 - retryState.count} left)`}</button>
               ) : (
                 <button className="cd-checkout" onClick={placeOrder} disabled={processing || authLoading}>
-                  {processing ? 'Processing…' : isPrepaid ? `Pay ₹${total.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
+                  {processing ? 'Processing…' : isPrepaid ? `Pay ₹${prepaidPayable.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
                 </button>
               )}
 
