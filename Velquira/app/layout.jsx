@@ -22,12 +22,12 @@ export const metadata = {
     template: '%s | Velquira',
   },
   description:
-    'Velquira fine jewellery — rings, necklaces, earrings and bracelets in hallmarked gold, handcrafted in the Morbi studio for life’s most cherished moments.',
+    'Velquira fine jewellery — rings, necklaces, earrings and bracelets in hallmarked gold, handmade in the Morbi studio for life’s most special moments.',
   openGraph: {
     siteName: 'Velquira',
     type: 'website',
     title: 'Velquira — Fine jewellery, crafted to be treasured',
-    description: 'Hallmarked gold jewellery, handcrafted for life’s most cherished moments.',
+    description: 'Hallmarked gold jewellery, handmade for life’s most special moments.',
   },
   // Deployment marker so we can verify EXACTLY which commit is live.
   other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },

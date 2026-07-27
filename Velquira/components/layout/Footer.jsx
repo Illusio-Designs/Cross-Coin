@@ -30,7 +30,7 @@ export default function Footer() {
         <div className="footer-cols">
           <div className="brand-col">
             <BrandLogo height={42} />
-            <p>Fine handcrafted jewellery in hallmarked gold and certified stones — designed in our Morbi atelier to be treasured for a lifetime.</p>
+            <p>Fine handmade jewellery in hallmarked gold and certified stones — designed in our Morbi studio to be treasured for a lifetime.</p>
             <div className="socials">
               <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
               <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>

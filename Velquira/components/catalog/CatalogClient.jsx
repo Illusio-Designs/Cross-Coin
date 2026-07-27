@@ -164,7 +164,7 @@ export default function CatalogClient({ products = [], chips: rawChips = [], ini
       <div className="page-hero">
         <span className="eyebrow">Shop</span>
         <h1>{activeLabel}</h1>
-        <p>Fine handcrafted jewellery in hallmarked gold and certified stones.</p>
+        <p>Fine handmade jewellery in hallmarked gold and certified stones.</p>
       </div>
 
       {/* Quick category chips (desktop) */}

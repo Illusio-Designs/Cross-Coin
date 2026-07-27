@@ -7,7 +7,7 @@ export default function BlogSection({ posts = [] }) {
       <div className="section-head">
         <div>
           <span className="eyebrow">Journal</span>
-          <h2 style={{ marginTop: 8 }}>Stories &amp; guides</h2>
+          <h2 style={{ marginTop: 8 }}>Stories &amp; Guides</h2>
         </div>
         <Link href="/journal" className="link-more">All articles <Icon name="ArrowRight" size={14} /></Link>
       </div>

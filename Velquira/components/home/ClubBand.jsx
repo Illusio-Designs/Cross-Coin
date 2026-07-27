@@ -2,10 +2,10 @@ export default function ClubBand({ perks = [] }) {
   return (
     <section className="section container">
       <div className="club">
-        <div className="club-card"><b>MORBIX CLUB</b></div>
+        <div className="club-card"><b>THE VELQUIRA CIRCLE</b></div>
         <div>
-          <h2>Join Morbix Club</h2>
-          <p>Exclusive offers, early access to new drops, personal bonuses and more — free to join.</p>
+          <h2>Join the Velquira Circle</h2>
+          <p>Private previews, first access to new collections, personal appointments and complimentary care — free to join.</p>
           <div className="club-perks">
             {perks.map((p) => (
               <div key={p.title}><b>{p.title}</b>{p.sub}</div>

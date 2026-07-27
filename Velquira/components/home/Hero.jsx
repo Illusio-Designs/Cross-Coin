@@ -19,15 +19,15 @@ export default function Hero({ features = [], slides = [] }) {
 
   const slide = hasSlides ? slides[Math.min(current, slides.length - 1)] : null;
   const title = slide?.title || 'Fine jewellery, crafted to be treasured';
-  const desc = slide?.description || 'Hallmarked gold, certified stones and timeless design — handcrafted in our Morbi atelier for life’s most cherished moments.';
+  const desc = slide?.description || 'Hallmarked gold, certified stones and timeless design — handmade in our Morbi studio for life’s most special moments.';
   const ctaText = slide?.buttonText || 'Explore the collection';
   const ctaHref = slide?.link || (slide?.categorySlug ? `/collections/${slide.categorySlug}` : '/products');
 
   return (
     <section className="vq-hero">
       <div className="container vq-hero-inner">
-        <span className="vq-crest">EST · MMXXIV · MORBI</span>
-        <span className="vq-eyebrow"><i /> <b>❖</b> The Velquira Maison <b>❖</b> <i /></span>
+        <span className="vq-crest">MADE IN MORBI, INDIA</span>
+        <span className="vq-eyebrow"><i /> <b>❖</b> Fine Gold Jewellery <b>❖</b> <i /></span>
         <h1 className="vq-hero-title">{title}</h1>
         <span className="vq-flourish" aria-hidden />
         <p className="vq-hero-desc">{desc}</p>
@@ -48,7 +48,7 @@ export default function Hero({ features = [], slides = [] }) {
           ) : (
             <div className="vq-hero-ph" aria-hidden>
               <Icon name="Sparkles" size={64} />
-              <span>Fine handcrafted jewellery</span>
+              <span>Fine handmade jewellery</span>
             </div>
           )}
           {hasSlides && slides.length > 1 && (

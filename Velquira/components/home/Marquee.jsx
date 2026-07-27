@@ -4,7 +4,7 @@ import Icon from '@/components/Icon';
 const ITEMS = [
   { icon: 'ShieldCheck', text: '916 BIS hallmarked gold' },
   { icon: 'Truck', text: 'Free insured shipping' },
-  { icon: 'Sparkles', text: 'Handcrafted in Morbi' },
+  { icon: 'Sparkles', text: 'Handmade in Morbi' },
   { icon: 'Gauge', text: 'Certified gemstones' },
   { icon: 'Heart', text: 'Lifetime cleaning & care' },
   { icon: 'RefreshCw', text: '15-day easy exchange' },

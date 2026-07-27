@@ -10,7 +10,7 @@ export default function ReviewsSection({ reviews = [] }) {
       <div className="section-head">
         <div>
           <span className="eyebrow">Reviews</span>
-          <h2 style={{ marginTop: 8 }}>What our customers say</h2>
+          <h2 style={{ marginTop: 8 }}>In Their Words</h2>
         </div>
         <div className="reviews-badge">
           <b>{avg ? avg.toFixed(1) : '—'}</b>

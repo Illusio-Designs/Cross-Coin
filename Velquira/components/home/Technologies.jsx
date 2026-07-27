@@ -4,7 +4,7 @@ export default function Technologies({ items = [] }) {
   return (
     <section className="section container">
       <div className="section-head">
-        <h2>Technology for your movement</h2>
+        <span className="eyebrow">Our craft</span><h2>The Velquira Craft</h2>
       </div>
       <div className="tech-grid">
         {items.map((t) => (

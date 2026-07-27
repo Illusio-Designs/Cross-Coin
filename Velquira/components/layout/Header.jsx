@@ -20,7 +20,7 @@ export default function Header() {
   return (
     <header className="header vq-header">
       <div className="vq-annc">
-        Complimentary insured shipping <b>✦</b> Book a private appointment <b>✦</b> Handcrafted in Morbi
+        Complimentary insured shipping <b>✦</b> Book a private appointment <b>✦</b> Handmade in Morbi
       </div>
 
       <div className="container vq-header-main">

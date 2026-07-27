@@ -4,7 +4,7 @@ export const metadata = { title: 'About' };
 
 const VALUES = [
   { icon: 'ShieldCheck', title: 'Hallmarked purity', text: 'Every piece is 916 BIS-certified gold — assured purity you can pass down.' },
-  { icon: 'Sparkles', title: 'Handcrafted', text: 'Cut, set and finished by master artisans in our Morbi atelier.' },
+  { icon: 'Sparkles', title: 'Handmade', text: 'Cut, set and finished by master artisans in our Morbi studio.' },
   { icon: 'Gauge', title: 'Certified stones', text: 'Conflict-free, lab-certified diamonds and gemstones, ethically sourced.' },
 ];
 
@@ -13,8 +13,8 @@ export default function AboutPage() {
     <div className="container" style={{ paddingTop: 34, paddingBottom: 20 }}>
       <div className="page-hero">
         <span className="eyebrow">Our story</span>
-        <h1>The Velquira Maison</h1>
-        <p>Velquira crafts fine jewellery for life’s most cherished moments — engagements, heirlooms and everyday elegance. From our atelier in Morbi, we pair hallmarked gold and certified stones with old-world craftsmanship and quiet, timeless design.</p>
+        <h1>About Velquira</h1>
+        <p>Velquira crafts fine jewellery for life’s most special moments — engagements, heirlooms and everyday elegance. From our studio in Morbi, we pair hallmarked gold and certified stones with expert craft and quiet, timeless design.</p>
       </div>
 
       <div className="about-values">

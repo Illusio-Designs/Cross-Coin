@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 
 // Same image-forward collection card as the /collections page (minus the
-// product count), so the home "Shop by collection" section matches exactly.
+// product count), so the home "Explore the Collections" section matches exactly.
 const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles'];
 
 export default function CategoryBanners({ items = [] }) {
@@ -11,7 +11,7 @@ export default function CategoryBanners({ items = [] }) {
       <div className="section-head">
         <div>
           <span className="eyebrow">Collections</span>
-          <h2 style={{ marginTop: 8 }}>Shop by collection</h2>
+          <h2 style={{ marginTop: 8 }}>Explore the Collections</h2>
         </div>
         <Link href="/collections" className="link-more">All collections <Icon name="ArrowRight" size={14} /></Link>
       </div>
