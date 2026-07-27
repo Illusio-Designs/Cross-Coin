@@ -40,6 +40,10 @@ export default function MobileNav({ items = [] }) {
             </Link>
           ))}
         </nav>
+        <div className="drawer-links">
+          <Link href="/search" onClick={() => setOpen(false)}><Icon name="Search" size={16} /> Search</Link>
+          <Link href="/wishlist" onClick={() => setOpen(false)}><Icon name="Heart" size={16} /> Wishlist</Link>
+        </div>
         <div className="drawer-foot">
           <Link href="/account" className="btn btn-ghost" onClick={() => setOpen(false)}><Icon name="User" size={16} /> Sign in</Link>
           <button type="button" className="btn btn-primary" onClick={() => { setOpen(false); openCart(); }}><Icon name="ShoppingBag" size={16} /> Cart</button>

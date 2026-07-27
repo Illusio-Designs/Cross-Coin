@@ -11,13 +11,12 @@ export default async function CollectionsPage() {
   const [categories, all] = await Promise.all([getCategories(), getAllProducts()]);
 
   // If a category has no image of its own, use the first product's photo in
-  // that collection as the cover, plus a live product count.
+  // that collection as the cover.
   const enriched = categories.map((c) => {
     const inCat = all.filter((p) => p.categorySlug === c.slug || p.category === c.label);
     return {
       ...c,
       image: c.image || inCat.find((p) => p.image)?.image || '',
-      count: c.count || inCat.length,
     };
   });
 
@@ -41,7 +40,6 @@ export default async function CollectionsPage() {
               <div className="collection-card-overlay">
                 <div className="collection-card-text">
                   <h3>{c.label}</h3>
-                  {c.count > 0 && <span>{c.count} product{c.count === 1 ? '' : 's'}</span>}
                 </div>
                 <span className="collection-card-cta" aria-hidden><Icon name="ArrowRight" size={16} /></span>
               </div>
