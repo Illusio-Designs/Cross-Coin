@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
@@ -17,6 +17,21 @@ export default function ExclusiveSection({ products = [] }) {
   const [color, setColor] = useState(0);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const thumbsRef = useRef(null);
+  const mainRef = useRef(null);
+  const [railH, setRailH] = useState(0);
+
+  // Match the thumbnail rail height to the main image (same as the PDP), so the
+  // rail never runs longer than the photo — extra thumbnails scroll inside it.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const product = list[active];
 
@@ -33,6 +48,25 @@ export default function ExclusiveSection({ products = [] }) {
     const t = setInterval(() => setThumb((i) => (i + 1) % gallery.length), 3000);
     return () => clearInterval(t);
   }, [gallery.length, active, color]);
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail (never the
+  // page) — identical behaviour to the product-detail gallery.
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector(`[data-thumb="${thumb}"]`);
+    if (!el) return;
+    const railRect = rail.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const vertical = rail.scrollHeight > rail.clientHeight + 1;
+    if (vertical) {
+      const delta = (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2;
+      rail.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rail.scrollWidth > rail.clientWidth + 1) {
+      const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
+      rail.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }, [thumb]);
 
   if (!product) return null;
 
@@ -76,18 +110,18 @@ export default function ExclusiveSection({ products = [] }) {
 
         <div className="excl-grid">
           {/* Gallery */}
-          <div className="excl-gallery">
+          <div className="excl-gallery" style={railH ? { '--excl-rail-h': `${railH}px` } : undefined}>
             {gallery.length > 1 && (
-              <div className="excl-thumbs" data-lenis-prevent>
+              <div className="excl-thumbs" ref={thumbsRef} data-lenis-prevent>
                 {gallery.map((src, i) => (
-                  <button key={src + i} type="button" className={`excl-thumb${i === thumb ? ' active' : ''}`}
+                  <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
                     onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
                     <img src={src} alt="" loading="lazy" />
                   </button>
                 ))}
               </div>
             )}
-            <div className="excl-main">
+            <div className="excl-main" ref={mainRef}>
               {mainSrc
                 ? <img src={mainSrc} alt={product.name} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}

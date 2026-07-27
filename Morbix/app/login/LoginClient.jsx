@@ -154,7 +154,7 @@ export default function LoginClient() {
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleVerify} disabled={loading}>
                 {loading ? 'Verifying…' : 'Verify & sign in'}
               </button>
-              <button className="link-more" style={{ alignSelf: 'center', marginTop: 4 }} onClick={() => { setStep('phone'); setOtp(['', '', '', '']); setError(''); }}>
+              <button className="link-more" style={{ width: '100%', justifyContent: 'center', textAlign: 'center', marginTop: 4 }} onClick={() => { setStep('phone'); setOtp(['', '', '', '']); setError(''); }}>
                 Change number
               </button>
             </>

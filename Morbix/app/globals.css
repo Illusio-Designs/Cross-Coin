@@ -284,7 +284,7 @@ button { font-family: inherit; cursor: pointer; }
 .excl-panel-head p { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
 .excl-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto; grid-template-areas: "gallery info switch"; gap: 28px; margin-top: 26px; align-items: center; }
 .excl-gallery { grid-area: gallery; display: flex; gap: 12px; min-width: 0; }
-.excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; scrollbar-width: none; flex-shrink: 0; }
+.excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: var(--excl-rail-h, 460px); overflow-y: auto; scrollbar-width: none; flex-shrink: 0; scroll-behavior: smooth; }
 .excl-thumbs::-webkit-scrollbar { display: none; }
 /* Gallery mirrors the product-detail page: square thumbnails + main image on a
    light neutral panel with object-fit: contain (shows the FULL image, never
@@ -1029,6 +1029,20 @@ button { font-family: inherit; cursor: pointer; }
   .account-links { grid-template-columns: 1fr 1fr; }
   .settings-grid, .addr-grid, .order-detail-grid, .checkout-layout { grid-template-columns: 1fr; }
   .checkout-summary { position: static; }
+  /* Account/profile — stack the sidebar above the content and turn the nav into
+     a horizontal scrollable row. (These must live here, AFTER the base
+     .account-* rules, or the base rules would override them.) */
+  .account-layout { grid-template-columns: 1fr; gap: 16px; }
+  .account-nav { flex-direction: row; overflow-x: auto; position: static; gap: 6px; scrollbar-width: none; }
+  .account-nav::-webkit-scrollbar { display: none; }
+  .account-nav-btn { white-space: nowrap; width: auto; }
+  .account-nav-btn.danger { border-top: 0; border-radius: 12px; margin-top: 0; }
+  .account-content { padding: 18px; }
+}
+@media (max-width: 460px) {
+  .order-row { flex-wrap: wrap; }
+  .order-row > div { flex: 1 1 100%; }
+  .order-row .order-status { order: 3; }
 }
 @media (max-width: 520px) {
   .account-links { grid-template-columns: 1fr; }
