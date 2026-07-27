@@ -257,9 +257,9 @@ button { font-family: inherit; cursor: pointer; }
 .pcard-add-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; padding: 11px; box-shadow: var(--shadow); transition: background .15s; }
 .pcard-add-btn:hover, .pcard-add-btn.added { background: var(--teal); }
 .pcard-body { padding: 15px 16px 17px; display: grid; gap: 8px; }
-.pcard-toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.pcard-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--teal-600); }
-.pcard-ratingchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--line-soft); padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+.pcard-toprow { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.pcard-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--teal-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pcard-ratingchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--line-soft); padding: 2px 8px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
 .pcard-ratingchip em { font-style: normal; font-weight: 500; color: var(--ink-soft); }
 .pcard-name { font-size: 15px; font-weight: 700; line-height: 1.35; transition: color .15s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pcard a:hover .pcard-name { color: var(--navy); }
@@ -746,6 +746,9 @@ button { font-family: inherit; cursor: pointer; }
   .catalog-mobilebar { display: flex; }
   .review-grid { grid-template-columns: 1fr; }
   .blog-grid { grid-template-columns: 1fr; }
+  /* Stack the section header (title + badge / "View all") on phones so the
+     title never gets squeezed against the element beside it. */
+  .section-head { flex-direction: column; align-items: flex-start; gap: 12px; }
   .cart-item { grid-template-columns: 64px 1fr auto; }
   .hero h1 { font-size: 28px; }
   .club { padding: 28px 22px; }
@@ -756,6 +759,11 @@ button { font-family: inherit; cursor: pointer; }
   .hero-copy { padding: 26px 20px; }
   .product-grid { gap: 12px; }
   .drawer-foot { grid-template-columns: 1fr; }
+  /* On 2-up phone cards, drop the review count so the full category label fits
+     and the rating chip stays compact. */
+  .pcard-ratingchip em { display: none; }
+  .pcard-body { padding: 13px 13px 15px; }
+  .pcard-name { font-size: 14px; }
 }
 @media (min-width: 761px) and (max-width: 1040px) {
   .pdp { grid-template-columns: 1fr 1fr; }
