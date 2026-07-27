@@ -18,20 +18,6 @@ export default function ExclusiveSection({ products = [] }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const thumbsRef = useRef(null);
-  const mainRef = useRef(null);
-  const [railH, setRailH] = useState(0);
-
-  // Match the thumbnail rail height to the main image (same as the PDP), so the
-  // rail never runs longer than the photo — extra thumbnails scroll inside it.
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const update = () => setRailH(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const product = list[active];
 
@@ -110,7 +96,7 @@ export default function ExclusiveSection({ products = [] }) {
 
         <div className="excl-grid">
           {/* Gallery */}
-          <div className="excl-gallery" style={railH ? { '--excl-rail-h': `${railH}px` } : undefined}>
+          <div className="excl-gallery">
             {gallery.length > 1 && (
               <div className="excl-thumbs" ref={thumbsRef} data-lenis-prevent>
                 {gallery.map((src, i) => (
@@ -121,7 +107,7 @@ export default function ExclusiveSection({ products = [] }) {
                 ))}
               </div>
             )}
-            <div className="excl-main" ref={mainRef}>
+            <div className="excl-main">
               {mainSrc
                 ? <img src={mainSrc} alt={product.name} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}

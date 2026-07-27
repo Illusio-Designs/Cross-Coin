@@ -258,7 +258,8 @@ button { font-family: inherit; cursor: pointer; }
 .pcard-add-btn:hover, .pcard-add-btn.added { background: var(--teal); }
 /* Mobile-only persistent bag icon on the image (hover bars don't work on touch). */
 .pcard-mobadd { display: none; }
-.pcard-mobadd .pcard-add { width: 42px; height: 42px; border-radius: 999px; background: var(--navy); color: #fff; border: 0; display: grid; place-items: center; box-shadow: 0 6px 16px -4px rgba(17,24,69,.5); cursor: pointer; }
+.pcard-mobadd .pcard-add { width: 36px; height: 36px; border-radius: 999px; background: var(--navy); color: #fff; border: 0; display: grid; place-items: center; box-shadow: 0 5px 14px -5px rgba(17,24,69,.5); cursor: pointer; }
+.pcard-mobadd .pcard-add svg { width: 15px; height: 15px; }
 .pcard-mobadd .pcard-add.added, .pcard-mobadd .pcard-add:active { background: var(--teal); }
 .pcard-body { padding: 14px 15px 16px; display: grid; gap: 9px; }
 .pcard-name { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); transition: color .15s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; }
@@ -288,7 +289,10 @@ button { font-family: inherit; cursor: pointer; }
 .excl-panel-head p { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
 .excl-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto; grid-template-areas: "gallery info switch"; gap: 28px; margin-top: 26px; align-items: center; }
 .excl-gallery { grid-area: gallery; display: flex; gap: 12px; min-width: 0; }
-.excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: var(--excl-rail-h, 460px); overflow-y: auto; scrollbar-width: none; flex-shrink: 0; scroll-behavior: smooth; }
+/* Rail shows exactly 3 thumbnails (76px each + 10px gaps = 248px); the rest
+   scroll inside it. The main image is set to the same height so the showcase
+   isn't a tall square. */
+.excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: 248px; overflow-y: auto; scrollbar-width: none; flex-shrink: 0; scroll-behavior: smooth; }
 .excl-thumbs::-webkit-scrollbar { display: none; }
 /* Gallery mirrors the product-detail page: square thumbnails + main image on a
    light neutral panel with object-fit: contain (shows the FULL image, never
@@ -296,7 +300,7 @@ button { font-family: inherit; cursor: pointer; }
 .excl-thumb { width: 76px; height: 76px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line-soft); background: #f2f5f6; cursor: pointer; padding: 0; transition: border-color .15s ease; flex-shrink: 0; }
 .excl-thumb.active { border-color: var(--teal); }
 .excl-thumb img { width: 100%; height: 100%; object-fit: contain; }
-.excl-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1 / 1; border-radius: var(--r-lg); overflow: hidden; background: #f2f5f6; display: grid; place-items: center; }
+.excl-main { position: relative; flex: 1; min-width: 0; height: 248px; border-radius: var(--r-lg); overflow: hidden; background: #f2f5f6; display: grid; place-items: center; }
 .excl-main img { width: 100%; height: 100%; object-fit: contain; }
 .excl-info { grid-area: info; position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; background: #fff; border: 1px solid var(--line-soft); border-radius: 20px; padding: 24px; box-shadow: 0 14px 40px -30px rgba(27,35,64,.45); }
 .excl-info::before { content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--teal), var(--navy)); }
