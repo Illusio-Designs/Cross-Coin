@@ -60,10 +60,12 @@ export default function ExclusiveSection({ products = [] }) {
   return (
     <section className="section exclusive">
       <div className="container">
-        <div className="section-head" style={{ justifyContent: 'center', textAlign: 'center', flexDirection: 'column', gap: 6 }}>
-          <span className="eyebrow">Hand-picked for you</span>
-          <h2>An editor’s pick worth a closer look</h2>
-        </div>
+        <div className="excl-panel">
+          <div className="excl-panel-head">
+            <span className="excl-ribbon"><Icon name="Sparkles" size={13} /> Spotlight</span>
+            <h2>The Morbix Edit</h2>
+            <p>One standout pair, chosen this week — worth a closer look.</p>
+          </div>
 
         <div className="excl-grid">
           {/* Gallery */}
@@ -135,6 +137,7 @@ export default function ExclusiveSection({ products = [] }) {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </section>

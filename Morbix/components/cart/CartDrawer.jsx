@@ -417,6 +417,14 @@ export default function CartDrawer() {
                 ))}
               </div>
 
+              {/* Order summary — right after the items, so pricing is clear up front */}
+              <div className="cd-co-section cd-co-summary">
+                <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
+                <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
+                {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
+                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
+              </div>
+
               {/* Delivery details — contact + address in ONE box (like the other brands) */}
               <div className="cd-co-section">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery address' : 'Delivery details'}</div>
@@ -505,14 +513,6 @@ export default function CartDrawer() {
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Summary */}
-              <div className="cd-co-section cd-co-summary">
-                <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
-                <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
-                {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
-                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>
             </div>
 

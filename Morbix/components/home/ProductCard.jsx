@@ -30,28 +30,25 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="pcard-body">
-        <span className="pcard-cat">{category}</span>
-        <Link href={href}><h3 className="pcard-name">{name}</h3></Link>
-
-        <div className="pcard-rating">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Icon key={i} name="Star" size={12} color={i < Math.round(rating) ? 'var(--star)' : '#dce2e6'} />
-          ))}
-          <span className="pcard-rcount">{rating}{reviews ? ` (${reviews})` : ''}</span>
+        <div className="pcard-toprow">
+          <span className="pcard-cat">{category}</span>
+          {rating > 0 && (
+            <span className="pcard-ratingchip"><Icon name="Star" size={11} color="var(--star)" /> {Number(rating).toFixed(1)}{reviews ? <em>({reviews})</em> : null}</span>
+          )}
         </div>
 
-        {colors?.length > 0 && (
-          <div className="pcard-colors">
-            {colors.slice(0, 4).map((c, i) => <span key={i} style={{ background: c }} />)}
-            {colors.length > 4 && <em>+{colors.length - 4}</em>}
-          </div>
-        )}
+        <Link href={href}><h3 className="pcard-name">{name}</h3></Link>
 
         <div className="pcard-foot">
           <div className="pcard-price">
             ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </div>
-          <span className="pcard-sizes">{Array.isArray(sizes) ? sizes.join(' · ') : sizes}</span>
+          {colors?.length > 0 && (
+            <div className="pcard-colors">
+              {colors.slice(0, 4).map((c, i) => <span key={i} style={{ background: c }} />)}
+              {colors.length > 4 && <em>+{colors.length - 4}</em>}
+            </div>
+          )}
         </div>
       </div>
     </article>
