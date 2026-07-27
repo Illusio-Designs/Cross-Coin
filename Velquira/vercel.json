@@ -1,5 +1,7 @@
 {
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" != \"production\" ]; then exit 0; fi; git diff --quiet HEAD^ HEAD .",
+  "framework": "nextjs",
+  "installCommand": "npm install --legacy-peer-deps",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; fi; exit 0",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.crosscoin.in",
     "NEXT_PUBLIC_BRAND_NAME": "velquira",
