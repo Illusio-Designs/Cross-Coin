@@ -34,6 +34,7 @@ function Dashboard() {
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [addresses, setAddresses] = useState([]);
   const [loadingAddr, setLoadingAddr] = useState(true);
+  const [addrError, setAddrError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -51,12 +52,18 @@ function Dashboard() {
 
   const loadAddresses = useCallback(async () => {
     setLoadingAddr(true);
+    setAddrError(false);
     try { setAddresses(await getAddresses()); }
-    catch { setAddresses([]); }
+    catch { setAddrError(true); }
     finally { setLoadingAddr(false); }
   }, []);
 
   useEffect(() => { loadOrders(); loadAddresses(); }, [loadOrders, loadAddresses]);
+
+  // If the first load errored, retry automatically when the Addresses tab opens.
+  useEffect(() => {
+    if (tab === 1 && addrError && !loadingAddr) loadAddresses();
+  }, [tab, addrError, loadingAddr, loadAddresses]);
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -178,7 +185,9 @@ function Dashboard() {
               )}
 
               {loadingAddr ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={90} radius={14} /></div>
+                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={90} radius={14} /><Skeleton height={90} radius={14} /></div>
+              ) : addrError ? (
+                <div className="empty">Couldn’t load your addresses. <button className="link-more" onClick={loadAddresses}><Icon name="RefreshCw" size={14} /> Retry</button></div>
               ) : addresses.length === 0 && !showForm ? (
                 <div className="empty">No saved addresses yet.</div>
               ) : (

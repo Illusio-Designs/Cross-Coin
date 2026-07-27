@@ -256,6 +256,10 @@ button { font-family: inherit; cursor: pointer; }
 .pcard:hover .pcard-quickadd { transform: none; opacity: 1; }
 .pcard-add-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; padding: 11px; box-shadow: var(--shadow); transition: background .15s; }
 .pcard-add-btn:hover, .pcard-add-btn.added { background: var(--teal); }
+/* Mobile-only persistent bag icon on the image (hover bars don't work on touch). */
+.pcard-mobadd { display: none; }
+.pcard-mobadd .pcard-add { width: 42px; height: 42px; border-radius: 999px; background: var(--navy); color: #fff; border: 0; display: grid; place-items: center; box-shadow: 0 6px 16px -4px rgba(17,24,69,.5); cursor: pointer; }
+.pcard-mobadd .pcard-add.added, .pcard-mobadd .pcard-add:active { background: var(--teal); }
 .pcard-body { padding: 14px 15px 16px; display: grid; gap: 9px; }
 .pcard-name { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); transition: color .15s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; }
 .pcard a:hover .pcard-name { color: var(--navy); }
@@ -725,6 +729,10 @@ button { font-family: inherit; cursor: pointer; }
   .hero-social b { font-size: 12px; }
   .hero-social small { font-size: 10px; }
   .product-grid { grid-template-columns: repeat(2, 1fr); }
+  /* On touch, hide the hover quick-add bar and show a persistent bag icon at the
+     image's bottom-right instead. */
+  .pcard-quickadd { display: none; }
+  .pcard-mobadd { display: block; position: absolute; right: 10px; bottom: 10px; z-index: 3; }
   .cat-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
   .collection-card-overlay { padding: 14px; }
   .collection-card-text h3 { font-size: 15px; line-height: 1.25; }
@@ -821,6 +829,19 @@ button { font-family: inherit; cursor: pointer; }
    HEADER ICON PILLS
    ========================================================================== */
 .pill.icon-pill { padding: 10px; }
+/* ===================== FLOATING WIDGETS (WA + top) ===================== */
+.fab-stack { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fab { width: 54px; height: 54px; border-radius: 999px; display: grid; place-items: center; border: 0; cursor: pointer; box-shadow: 0 10px 26px -8px rgba(17,24,69,.45); transition: transform .18s ease, box-shadow .18s ease, opacity .2s ease; }
+.fab:hover { transform: translateY(-2px); }
+.fab-wa { background: #25d366; color: #fff; }
+.fab-top { width: 46px; height: 46px; background: var(--navy); color: #fff; opacity: 0; transform: translateY(10px); pointer-events: none; }
+.fab-top.show { opacity: 1; transform: none; pointer-events: auto; }
+@media (max-width: 520px) {
+  .fab-stack { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); gap: 10px; }
+  .fab { width: 50px; height: 50px; }
+  .fab-top { width: 42px; height: 42px; }
+}
+
 /* ============================ TOASTS ============================ */
 .toast-host { position: fixed; z-index: 2000; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 40px)); pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line-soft); border-left: 4px solid var(--navy); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); animation: toast-in .22s cubic-bezier(.16,1,.3,1); }

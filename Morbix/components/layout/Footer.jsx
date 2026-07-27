@@ -32,9 +32,9 @@ export default function Footer() {
             <BrandLogo height={42} />
             <p>Premium socks for sport and city life. Technology, comfort and clean design in every step.</p>
             <div className="socials">
-              <a href="#" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
-              <a href="#" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
-              <a href="#" aria-label="YouTube"><Icon name="Youtube" size={18} /></a>
+              <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
+              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
+              <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
             </div>
           </div>
 

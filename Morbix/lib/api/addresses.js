@@ -18,7 +18,10 @@ export function normaliseAddr(data) {
 
 export async function getAddresses() {
   const res = await fetch(`${API_URL}/api/shipping-addresses`, { headers: authHeaders() });
-  if (!res.ok) return [];
+  // Throw on failure so callers can tell "request failed" apart from "no
+  // addresses yet" (a 200 with an empty list) — otherwise a slow/failed call
+  // looks identical to an empty address book.
+  if (!res.ok) throw new Error('Failed to load addresses');
   const data = await res.json();
   return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || [];
 }

@@ -24,8 +24,13 @@ export default function ProductCard({ product }) {
             : <span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>}
         </Link>
 
+        {/* Desktop: quick-add bar on hover. */}
         <div className="pcard-quickadd">
           <AddToCart product={product} display="bar" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
+        </div>
+        {/* Mobile: a persistent bag icon (no hover on touch), bottom-right. */}
+        <div className="pcard-mobadd">
+          <AddToCart product={product} display="icon" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
         </div>
       </div>
 

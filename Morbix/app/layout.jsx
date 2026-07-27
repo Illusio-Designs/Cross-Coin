@@ -8,6 +8,7 @@ import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
@@ -52,6 +53,7 @@ export default function RootLayout({ children }) {
               <Footer />
               <CartDrawer />
             </SmoothScroll>
+            <FloatingWidgets />
             <ToastHost />
             <Analytics />
           </CartProvider>
