@@ -1175,3 +1175,146 @@ button { font-family: inherit; cursor: pointer; }
 .footer-credit a { color: var(--gold-lite); font-weight: 600; }
 .footer-credit a:hover { color: #fff; }
 .footer .brand-col img { filter: none; }
+
+/* ============================================================================
+   VELQUIRA — premium refinement pass (whole-site cohesion)
+   Generous rhythm, gold focus states, serif accents, sharp refined radii.
+   ========================================================================== */
+
+/* Rhythm + eyebrows */
+.section { padding: 74px 0; }
+.eyebrow { color: var(--teal-600); letter-spacing: .26em; font-weight: 600; }
+.container { max-width: var(--maxw); }
+
+/* Forms & inputs — refined, gold focus, quiet radii */
+.contact-form { background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.contact-form input, .contact-form textarea, .input, .cd-input { border-radius: 4px; border: 1px solid var(--line); background: var(--card); }
+.contact-form input:focus, .contact-form textarea:focus, .input:focus, .cd-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(191,139,46,.12); outline: 0; }
+.phone-input { border-radius: 4px; border-color: var(--line); }
+.phone-input:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(191,139,46,.12); }
+.phone-input span { border-right-color: var(--line); }
+.otp-row input { border-radius: 4px; }
+.otp-row input:focus { border-color: var(--teal); }
+
+/* Collection / category cards — editorial, serif label, gold CTA */
+.collection-card { border-radius: 5px; box-shadow: none; border: 1px solid var(--line); }
+.collection-card-overlay { background: linear-gradient(to top, rgba(42,33,24,.82) 0%, rgba(42,33,24,.15) 55%, transparent 78%); }
+.collection-card-text h3 { font-family: var(--font-serif); font-weight: 600; font-size: 26px; letter-spacing: 0; }
+.collection-card-cta { background: var(--gold-lite); color: #2a2118; }
+.collection-card:hover .collection-card-cta { background: #fff; color: var(--navy); }
+
+/* Product detail — serif title, gold price, quiet frames */
+.pdp-info h1 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(32px, 4vw, 52px); letter-spacing: 0; }
+.pdp-info .eyebrow { color: var(--teal-600); }
+.pdp-price { font-family: var(--font-body); font-weight: 600; font-size: 26px; letter-spacing: .02em; }
+.pdp-price .old { color: var(--ink-soft); }
+.pdp-main, .pdp-thumb, .excl-main, .excl-thumb, .pdp-specs { border-radius: 5px; }
+.size-btn { border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+.size-btn.active { background: var(--navy); border-color: var(--navy); }
+.opt-label, .excl-opt-label { letter-spacing: .14em; }
+.pdp-about h2, .pdp-specs h3, .excl-info h3 { font-family: var(--font-serif); font-weight: 600; }
+.excl-panel { border-radius: 10px; }
+.excl-info h3 { font-size: clamp(24px, 2.6vw, 34px); }
+.excl-price { font-family: var(--font-body); font-weight: 600; }
+
+/* Reviews — elegant */
+.reviews-badge { border-radius: 4px; border-color: var(--line); background: var(--card); }
+.reviews-summary, .review { border-radius: 6px; border-color: var(--line); background: var(--card); }
+.review-title, .rs-score { font-family: var(--font-serif); }
+.review-av { background: var(--teal-050); color: var(--teal-600); font-family: var(--font-serif); }
+
+/* Journal / blog cards */
+.bcard, .blog-card, .journal-card { border-radius: 5px; border-color: var(--line); }
+.bcard h3, .blog-card h3, .journal-card h3 { font-family: var(--font-serif); font-weight: 600; }
+
+/* Cart drawer — refined */
+.cd-item, .cd-co-section, .cd-pay-option, .cd-addr-card, .cd-addr-option { border-radius: 5px; }
+.cd-checkout { border-radius: 3px; letter-spacing: .16em; text-transform: uppercase; font-size: 12px; font-weight: 600; }
+.cd-header-icon { border-radius: 6px; }
+.cd-item-price { color: var(--ink); }
+
+/* Account / misc cards */
+.order-row, .addr-card, .account-nav, .account-content, .settings-single .contact-form, .track-card { border-radius: 6px; border-color: var(--line); }
+.account-nav-btn.active { background: var(--navy); }
+.pill.sign-in, .account-nav-btn { border-radius: 4px; }
+
+/* Badges + pills, sharper */
+.pcard-badge, .badge, .order-status, .track-status { border-radius: 2px; }
+
+/* Toasts refined */
+.toast { border-radius: 6px; border-left-color: var(--teal); }
+
+/* ============================================================================
+   VELQUIRA — WARM CLASSIC GOLD (heritage · opulent · timeless)
+   Rich gold, ornamental dividers, decorative double borders, classic serif.
+   This is the FINAL layer — it wins.
+   ========================================================================== */
+:root {
+  --bg: #f6eede;         /* richer warm cream */
+  --card: #fffdf6;
+  --line: #e2d3b4;       /* deeper gold-sand hairline */
+  --line-soft: #ece0c8;
+  --gold: #bf8b2e;
+  --gold-deep: #8f6620;
+}
+body { background:
+  radial-gradient(1200px 600px at 50% -200px, #faf4e6, transparent 70%),
+  var(--bg); }
+
+/* A slim gold ribbon crowns the whole site */
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200;
+  background: linear-gradient(90deg, #8f6620, #e5c890 20%, #bf8b2e 50%, #e5c890 80%, #8f6620); }
+
+/* Reusable ornament: gold line — diamond — gold line */
+.vq-flourish, .section-head h2::after {
+  content: ''; display: block; height: 16px; margin: 20px auto 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='16' viewBox='0 0 168 16'%3E%3Cpath d='M2 8 H64M104 8 H166' stroke='%23bf8b2e' stroke-width='1'/%3E%3Crect x='78' y='2' width='12' height='12' fill='%23bf8b2e' transform='rotate(45 84 8)'/%3E%3Ccircle cx='84' cy='8' r='2.4' fill='%23f6eede'/%3E%3C/svg%3E") center/168px 16px no-repeat;
+  width: 168px;
+}
+.vq-flourish { margin: 22px auto 0; }
+
+/* HERO — heritage crest + framed opulence */
+.vq-crest { font-family: var(--font-body); font-size: 10px; letter-spacing: .42em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 18px; }
+.vq-eyebrow b { color: var(--gold); font-style: normal; margin: 0 2px; }
+.vq-hero-title { font-style: normal; }
+.vq-hero-frame { border-radius: 340px 340px 10px 10px; border: 2px solid var(--gold); box-shadow: 0 30px 60px -30px rgba(143,102,32,.5); }
+.vq-hero-frame::after { border: 1px solid rgba(191,139,46,.5); }
+.vq-hero-trust-sep, .vq-hero-trust-item svg { color: var(--gold); }
+
+/* Rich gold primary buttons; refined gold-outline ghosts */
+.btn-primary { background: linear-gradient(180deg, #c8922f, #a5741f); color: #fff6e3; border: 1px solid var(--gold-deep); box-shadow: 0 8px 20px -10px rgba(143,102,32,.5); }
+.btn-primary:hover { background: linear-gradient(180deg, #a5741f, #8f6620); color: #fff; }
+.btn-ghost { border: 1px solid var(--gold); color: var(--gold-deep); }
+.btn-ghost:hover { background: var(--teal-050); border-color: var(--gold-deep); color: var(--gold-deep); }
+.vq-textlink { color: var(--gold-deep); border-bottom-color: var(--gold); }
+
+/* Section headings — serif, gold ornament rule */
+.section-head h2 { color: var(--ink); }
+.eyebrow { color: var(--gold-deep); }
+
+/* HEADER — heritage bar with gold hairline + serif small-caps nav */
+.header { background: rgba(246,238,222,.86); border-bottom: 1px solid var(--line); }
+.nav a { color: var(--ink); }
+.nav a::after { background: var(--gold); }
+.nav a:hover { color: var(--gold-deep); }
+.pill:hover, .pill.cart:hover { background: #efe2c8; color: var(--gold-deep); }
+.pill .badge, .pill.cart .badge { background: var(--gold); }
+
+/* Cards — decorative gold hairline frames */
+.pcard-media { border: 1px solid var(--line); }
+.pcard-name { color: var(--ink); }
+.collection-card { border: 1px solid var(--line); }
+.collection-card-cta { background: linear-gradient(#e5c890,#bf8b2e); color: #2a2118; }
+
+/* Reviews, forms, etc. keep gold focus */
+.contact-form input:focus, .input:focus, .cd-input:focus, .phone-input:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(191,139,46,.14); }
+
+/* FOOTER — opulent espresso with a gold ornament crown */
+.footer { background: linear-gradient(180deg, #2f2519, #221a10); position: relative; }
+.footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='16' viewBox='0 0 168 16'%3E%3Cpath d='M2 8 H64M104 8 H166' stroke='%23bf8b2e' stroke-width='1'/%3E%3Crect x='78' y='2' width='12' height='12' fill='%23bf8b2e' transform='rotate(45 84 8)'/%3E%3Ccircle cx='84' cy='8' r='2.4' fill='%23271f14'/%3E%3C/svg%3E") center 22px/168px 16px no-repeat; }
+.footer .container { padding-top: 20px; }
+.footer h4 { color: var(--gold-lite); }
+
+/* Marquee — gold on espresso, ornament separators already gold */
+.marquee-wrap { background: linear-gradient(90deg,#2f2519,#3a2e1c,#2f2519); border-top: 1px solid rgba(191,139,46,.25); border-bottom: 1px solid rgba(191,139,46,.25); }

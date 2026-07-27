@@ -26,8 +26,10 @@ export default function Hero({ features = [], slides = [] }) {
   return (
     <section className="vq-hero">
       <div className="container vq-hero-inner">
-        <span className="vq-eyebrow"><i /> The Velquira Maison <i /></span>
+        <span className="vq-crest">EST · MMXXIV · MORBI</span>
+        <span className="vq-eyebrow"><i /> <b>❖</b> The Velquira Maison <b>❖</b> <i /></span>
         <h1 className="vq-hero-title">{title}</h1>
+        <span className="vq-flourish" aria-hidden />
         <p className="vq-hero-desc">{desc}</p>
         <div className="vq-hero-cta">
           <a href={ctaHref} className="btn btn-primary">{ctaText}</a>
