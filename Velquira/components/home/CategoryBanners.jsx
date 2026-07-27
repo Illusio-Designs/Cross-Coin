@@ -3,7 +3,7 @@ import Icon from '@/components/Icon';
 
 // Same image-forward collection card as the /collections page (minus the
 // product count), so the home "Explore the Collections" section matches exactly.
-const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles'];
+const ICONS = ['Sparkles', 'Heart', 'Star', 'Layers'];
 
 export default function CategoryBanners({ items = [] }) {
   return (

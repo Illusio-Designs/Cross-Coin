@@ -16,13 +16,13 @@ export function Skeleton({ width = '100%', height = 16, radius = 8, className = 
 /** A product-card shaped skeleton for grid loading states. */
 export function ProductCardSkeleton() {
   return (
-    <div className="pcard" aria-hidden="true">
-      <div className="pcard-media"><Skeleton width="100%" height="100%" radius={0} /></div>
-      <div className="pcard-body" style={{ display: 'grid', gap: 8 }}>
-        <Skeleton width="40%" height={10} />
-        <Skeleton width="80%" height={16} />
-        <Skeleton width="55%" height={12} />
-        <Skeleton width="35%" height={18} />
+    <div className="vqp" aria-hidden="true">
+      <div className="vqp-media"><Skeleton width="100%" height="100%" radius={0} /></div>
+      <div className="vqp-plate" style={{ display: 'grid', gap: 9, justifyItems: 'center' }}>
+        <Skeleton width="38%" height={9} />
+        <Skeleton width="70%" height={18} />
+        <Skeleton width={40} height={1} />
+        <Skeleton width="42%" height={15} />
       </div>
     </div>
   );

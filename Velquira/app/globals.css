@@ -239,7 +239,7 @@ button { font-family: inherit; cursor: pointer; }
 .chip svg { color: var(--ink-soft); }
 
 /* ============================ PRODUCTS ============================ */
-.product-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px 24px; }
 .pcard { background: var(--card); border: 1px solid var(--line-soft); border-radius: 20px; overflow: hidden; position: relative; display: flex; flex-direction: column; transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s, border-color .3s; }
 .pcard:hover { transform: translateY(-6px); box-shadow: 0 26px 44px -26px rgba(27,35,64,.30); border-color: transparent; }
 .pcard-media { position: relative; aspect-ratio: 1 / 1; background: linear-gradient(160deg, #f7f1e5, #efe4cf); overflow: hidden; }
@@ -365,11 +365,11 @@ button { font-family: inherit; cursor: pointer; }
 .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); will-change: opacity, transform; }
 .reveal.in { opacity: 1; transform: none; }
 /* Staggered rise for product cards within a revealed grid */
-.reveal.in .product-grid .pcard { animation: cardIn .6s cubic-bezier(.16,1,.3,1) both; }
-.reveal.in .product-grid .pcard:nth-child(2) { animation-delay: .06s; }
-.reveal.in .product-grid .pcard:nth-child(3) { animation-delay: .12s; }
-.reveal.in .product-grid .pcard:nth-child(4) { animation-delay: .18s; }
-.reveal.in .product-grid .pcard:nth-child(5) { animation-delay: .24s; }
+.reveal.in .product-grid .vqp { animation: cardIn .6s cubic-bezier(.16,1,.3,1) both; }
+.reveal.in .product-grid .vqp:nth-child(2) { animation-delay: .06s; }
+.reveal.in .product-grid .vqp:nth-child(3) { animation-delay: .12s; }
+.reveal.in .product-grid .vqp:nth-child(4) { animation-delay: .18s; }
+.reveal.in .product-grid .vqp:nth-child(5) { animation-delay: .24s; }
 @keyframes cardIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 /* Hero entrance */
 .hero-copy > * { animation: heroRise .7s cubic-bezier(.16,1,.3,1) both; }
@@ -1345,3 +1345,129 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .vq-annc { font-size: 9px; letter-spacing: .12em; }
   .vq-annc b:last-of-type { display: none; }
 }
+
+/* ============================================================================
+   VELQUIRA — STRUCTURAL REDESIGN LAYER (cards · collections · spotlight · titles)
+   Genuinely different markup + layout from the ported brand, not a recolour.
+   Editorial "gallery plate" cards, framed collection nameplates, an heirloom
+   spotlight spread, and ornament-flanked section titles. This wins over all
+   earlier .pcard / .collection-card / .excl rules.
+   ========================================================================== */
+
+/* ── PRODUCT CARD → editorial gallery plate ──────────────────────────────── */
+.vqp { position: relative; display: flex; flex-direction: column; background: transparent; }
+.vqp-media { position: relative; aspect-ratio: 4 / 5; overflow: hidden;
+  background: linear-gradient(165deg, #fffdf7, #f4e9d2); border: 1px solid var(--line); }
+/* inner double-hairline gold frame — the jewellery "portal" motif */
+.vqp-frame-line { position: absolute; inset: 10px; border: 1px solid rgba(191,139,46,.32); z-index: 2; pointer-events: none; transition: inset .45s cubic-bezier(.16,1,.3,1), border-color .3s; }
+.vqp:hover .vqp-frame-line { inset: 6px; border-color: rgba(191,139,46,.6); }
+.vqp-imglink { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; }
+.vqp-imglink img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s cubic-bezier(.16,1,.3,1); }
+.vqp:hover .vqp-imglink img { transform: scale(1.06); }
+.vqp-ph { color: var(--gold); opacity: .5; }
+
+.vqp-tags { position: absolute; top: 14px; left: 14px; z-index: 4; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.vqp-tag { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; padding: 5px 10px; line-height: 1; color: #fff; background: var(--navy); }
+.vqp-tag.b-new_arrival, .vqp-tag.b-new { background: var(--gold); color: #2a2118; }
+.vqp-tag.b-hot_selling { background: var(--navy); }
+.vqp-tag.b-low_stock { background: #b8801f; }
+.vqp-tag.b-out_of_stock { background: #9a8a6c; }
+.vqp-tag.sale { background: var(--sale); }
+
+.vqp-fav { position: absolute; top: 12px; right: 12px; z-index: 4; width: 36px; height: 36px; display: grid; place-items: center;
+  border: 1px solid var(--line); background: rgba(255,253,246,.9); backdrop-filter: blur(3px); color: var(--ink-soft);
+  transition: color .15s, border-color .15s, transform .15s; }
+.vqp-fav:hover { color: var(--sale); border-color: var(--gold); transform: scale(1.06); }
+.vqp-fav.active { border-color: var(--sale); }
+
+/* desktop reveal — a slim gold-bordered "Add to cart" that lifts up */
+.vqp-reveal { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 4;
+  transform: translateY(140%); opacity: 0; transition: transform .42s cubic-bezier(.16,1,.3,1), opacity .3s; }
+.vqp:hover .vqp-reveal { transform: none; opacity: 1; }
+.vqp-reveal .pcard-add-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border: 1px solid var(--gold-deep); border-radius: 2px; background: rgba(42,33,24,.92); backdrop-filter: blur(2px);
+  color: #f7ecd2; font-family: var(--font-body); font-weight: 500; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; padding: 13px; transition: background .18s, color .18s; }
+.vqp-reveal .pcard-add-btn:hover, .vqp-reveal .pcard-add-btn.added { background: linear-gradient(180deg,#c8922f,#a5741f); color: #fff; border-color: var(--gold-deep); }
+
+/* touch: persistent bag disc */
+.vqp-mob { display: none; position: absolute; right: 12px; bottom: 12px; z-index: 4; }
+.vqp-mob .pcard-add { width: 40px; height: 40px; border-radius: 999px; background: var(--navy); color: var(--gold-lite);
+  border: 1px solid var(--gold); display: grid; place-items: center; }
+.vqp-mob .pcard-add.added, .vqp-mob .pcard-add:active { background: linear-gradient(180deg,#c8922f,#a5741f); color: #fff; }
+
+/* nameplate below the plate — centred, serif, gold rule */
+.vqp-plate { text-align: center; padding: 17px 6px 4px; display: flex; flex-direction: column; align-items: center; }
+.vqp-cat { font-size: 9.5px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--gold-deep); }
+.vqp-name { font-family: var(--font-serif); font-size: 19px; font-weight: 600; line-height: 1.25; color: var(--ink); margin-top: 7px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color .15s; }
+.vqp a:hover .vqp-name { color: var(--gold-deep); }
+.vqp-rule { width: 34px; height: 1px; background: var(--gold); opacity: .55; margin: 11px 0; }
+.vqp-meta { display: flex; align-items: center; gap: 12px; }
+.vqp-price { font-family: var(--font-body); font-size: 15px; font-weight: 600; letter-spacing: .05em; color: var(--ink); }
+.vqp-price .old { font-size: 12px; color: var(--ink-soft); text-decoration: line-through; font-weight: 400; margin-left: 7px; }
+.vqp-rate { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--gold-deep); }
+.vqp-colors { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 5px; margin-top: 11px; }
+.vqp-colors span { width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid #fffdf6; outline: 1px solid var(--line); }
+.vqp-colors em { font-size: 10.5px; color: var(--ink-soft); font-style: normal; }
+
+/* ── SECTION TITLES → ornament-flanked kicker, serif headline ────────────── */
+.section-head .eyebrow { display: inline-flex; align-items: center; gap: 14px; }
+.section-head .eyebrow::before, .section-head .eyebrow::after { content: ''; width: 28px; height: 1px; background: var(--gold); opacity: .55; }
+
+/* ── COLLECTION CARD → framed heirloom nameplate over the image ──────────── */
+.cat-grid { gap: 26px; }
+.collection-card { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line); border-radius: 3px; background: #f1e5cd; box-shadow: none; }
+.collection-card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.16,1,.3,1); }
+.collection-card:hover .collection-card-img { transform: scale(1.05); }
+.collection-card-overlay { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  background: linear-gradient(180deg, rgba(42,33,24,.12), rgba(42,33,24,.5)); }
+/* a floating gold-hairline plaque holds the name */
+.collection-card-text { padding: 22px 30px; border: 1px solid rgba(247,236,210,.7); background: rgba(42,33,24,.34); backdrop-filter: blur(2px); position: relative; transition: background .3s, border-color .3s; }
+.collection-card-text::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(229,200,144,.4); pointer-events: none; }
+.collection-card:hover .collection-card-text { background: rgba(42,33,24,.5); border-color: var(--gold-lite); }
+.collection-card-text h3 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(20px, 2.2vw, 27px); color: #fff8ec; letter-spacing: .01em; }
+.collection-card-cta { position: static; width: auto; height: auto; margin-top: 12px; display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--gold-lite); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; padding: 0; border-radius: 0; }
+.collection-card-cta::before { content: 'View collection'; }
+.collection-card:hover .collection-card-cta { background: transparent; color: #fff; }
+
+/* ── SPOTLIGHT → an heirloom presentation spread ─────────────────────────── */
+.excl-panel { border-radius: 4px; border: 1px solid var(--gold); background:
+  radial-gradient(700px 340px at 50% -80px, #fff9ec, transparent 70%), var(--card);
+  box-shadow: 0 30px 70px -44px rgba(143,102,32,.45); }
+.excl-panel::before { display: none; }
+/* ornamental corner ticks */
+.excl-panel::after { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(191,139,46,.28); border-radius: 2px; pointer-events: none; }
+.excl-panel-head { position: relative; z-index: 1; }
+.excl-ribbon { background: transparent; color: var(--gold-deep); letter-spacing: .26em; padding: 0; }
+.excl-ribbon svg { color: var(--gold); }
+.excl-panel-head h2 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(28px, 3.6vw, 44px); }
+.excl-panel-head h2::after { content: ''; display: block; width: 52px; height: 1px; background: var(--gold); margin: 16px auto 0; opacity: .7; }
+.excl-grid { position: relative; z-index: 1; }
+.excl-main { border: 1px solid var(--line); background: #fffdf6; border-radius: 3px; }
+.excl-main::after { content: ''; position: absolute; inset: 9px; border: 1px solid rgba(191,139,46,.28); border-radius: 2px; pointer-events: none; }
+.excl-thumb { border-radius: 3px; }
+.excl-thumb.active { border-color: var(--gold); }
+.excl-info { background: transparent; border: 0; box-shadow: none; padding: 8px 4px; }
+.excl-info::before { display: none; }
+.excl-cat { color: var(--gold-deep); letter-spacing: .22em; }
+.excl-info h3 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(26px, 2.8vw, 36px); margin-top: 4px; }
+.excl-info h3 + .excl-price { margin-top: 6px; }
+.excl-price { font-family: var(--font-body); font-weight: 600; }
+.excl-price .old { font-weight: 400; }
+.excl-off { color: var(--sale); background: #f6e8d6; border-radius: 2px; }
+.excl-desc { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 4px; }
+.excl-switch-thumb { border-radius: 3px; }
+.excl-switch-thumb.active { border-color: var(--gold); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) { .product-grid { grid-template-columns: repeat(3, 1fr); } .cat-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .vqp-reveal { display: none; } .vqp-mob { display: block; } }
+@media (max-width: 720px)  {
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 22px 14px; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .vqp-name { font-size: 16px; }
+  .vqp-plate { padding-top: 14px; }
+  .vqp-fav { width: 32px; height: 32px; }
+}
+@media (max-width: 400px)  { .product-grid { gap: 18px 12px; } }

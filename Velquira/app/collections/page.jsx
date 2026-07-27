@@ -5,7 +5,7 @@ import { getCategories, getAllProducts } from '@/lib/api';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Collections' };
 
-const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles', 'Layers', 'Leaf'];
+const ICONS = ['Sparkles', 'Heart', 'Star', 'Layers', 'Gauge', 'Leaf'];
 
 export default async function CollectionsPage() {
   const [categories, all] = await Promise.all([getCategories(), getAllProducts()]);
@@ -25,7 +25,7 @@ export default async function CollectionsPage() {
       <div className="page-hero">
         <span className="eyebrow">Collections</span>
         <h1>Shop by collection</h1>
-        <p>Find the right pair for every kind of movement.</p>
+        <p>Rings, necklaces, earrings and more — each piece handmade and hallmarked.</p>
       </div>
 
       {enriched.length === 0 ? (

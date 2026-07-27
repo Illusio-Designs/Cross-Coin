@@ -4,52 +4,58 @@ import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
 
+// Velquira product card — an editorial "gallery plate" rather than a boxed
+// storefront tile: a tall portrait image inside a double gold hairline frame,
+// then a centred nameplate (category kicker → serif name → gold rule → price).
+// Deliberately structured differently from the other brands' square cards.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image } = product;
+  const { id, slug, name, category, price, oldPrice, rating, sizes, colors, badge, badgeKey, image } = product;
   const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   return (
-    <article className="pcard">
-      <div className="pcard-media">
-        <div className="pcard-badges">
-          {badge && <span className={`pcard-badge b-${badgeKey || 'default'}`}>{badge}</span>}
-          {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
-        </div>
-        <WishlistButton productId={id} />
+    <article className="vqp">
+      <div className="vqp-media">
+        <span className="vqp-frame-line" aria-hidden />
 
-        <Link href={href} className="pcard-imglink" aria-label={name}>
+        <div className="vqp-tags">
+          {badge && <span className={`vqp-tag b-${badgeKey || 'default'}`}>{badge}</span>}
+          {oldPrice && <span className="vqp-tag sale">-{off}%</span>}
+        </div>
+        <WishlistButton productId={id} className="vqp-fav" />
+
+        <Link href={href} className="vqp-imglink" aria-label={name}>
           {image
             ? <ShimmerImg src={image} alt={name} loading="lazy" />
-            : <span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>}
+            : <span className="vqp-ph" aria-hidden><Icon name="Sparkles" size={40} /></span>}
         </Link>
 
-        {/* Desktop: quick-add bar on hover. */}
-        <div className="pcard-quickadd">
+        {/* Desktop: an elegant reveal on hover. */}
+        <div className="vqp-reveal">
           <AddToCart product={product} display="bar" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
         </div>
-        {/* Mobile: a persistent bag icon (no hover on touch), bottom-right. */}
-        <div className="pcard-mobadd">
+        {/* Touch: a persistent bag disc, bottom-right of the plate. */}
+        <div className="vqp-mob">
           <AddToCart product={product} display="icon" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
         </div>
       </div>
 
-      <div className="pcard-body">
-        {/* Lead with the product name (not the long collection name) so the card
-            reads cleanly — same as the other brands. */}
-        <Link href={href}><h3 className="pcard-name">{name}</h3></Link>
+      <div className="vqp-plate">
+        {category && <span className="vqp-cat">{category}</span>}
+        <Link href={href}><h3 className="vqp-name">{name}</h3></Link>
+        <span className="vqp-rule" aria-hidden />
 
-        <div className="pcard-foot">
-          <div className="pcard-price">
+        <div className="vqp-meta">
+          <span className="vqp-price">
             ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
-          </div>
+          </span>
           {rating > 0 && (
-            <span className="pcard-rate"><Icon name="Star" size={12} color="var(--star)" /> {Number(rating).toFixed(1)}</span>
+            <span className="vqp-rate"><Icon name="Star" size={11} color="var(--gold)" /> {Number(rating).toFixed(1)}</span>
           )}
         </div>
 
         {colors?.length > 0 && (
-          <div className="pcard-colors">
+          <div className="vqp-colors">
             {colors.slice(0, 5).map((c, i) => <span key={i} style={{ background: c }} />)}
             {colors.length > 5 && <em>+{colors.length - 5}</em>}
           </div>
