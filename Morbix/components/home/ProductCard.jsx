@@ -30,26 +30,25 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="pcard-body">
-        <div className="pcard-toprow">
-          <span className="pcard-cat">{category}</span>
-          {rating > 0 && (
-            <span className="pcard-ratingchip"><Icon name="Star" size={11} color="var(--star)" /> {Number(rating).toFixed(1)}{reviews ? <em>({reviews})</em> : null}</span>
-          )}
-        </div>
-
+        {/* Lead with the product name (not the long collection name) so the card
+            reads cleanly — same as the other brands. */}
         <Link href={href}><h3 className="pcard-name">{name}</h3></Link>
 
         <div className="pcard-foot">
           <div className="pcard-price">
             ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </div>
-          {colors?.length > 0 && (
-            <div className="pcard-colors">
-              {colors.slice(0, 4).map((c, i) => <span key={i} style={{ background: c }} />)}
-              {colors.length > 4 && <em>+{colors.length - 4}</em>}
-            </div>
+          {rating > 0 && (
+            <span className="pcard-rate"><Icon name="Star" size={12} color="var(--star)" /> {Number(rating).toFixed(1)}</span>
           )}
         </div>
+
+        {colors?.length > 0 && (
+          <div className="pcard-colors">
+            {colors.slice(0, 5).map((c, i) => <span key={i} style={{ background: c }} />)}
+            {colors.length > 5 && <em>+{colors.length - 5}</em>}
+          </div>
+        )}
       </div>
     </article>
   );

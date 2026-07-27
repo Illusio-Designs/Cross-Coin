@@ -256,19 +256,16 @@ button { font-family: inherit; cursor: pointer; }
 .pcard:hover .pcard-quickadd { transform: none; opacity: 1; }
 .pcard-add-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; padding: 11px; box-shadow: var(--shadow); transition: background .15s; }
 .pcard-add-btn:hover, .pcard-add-btn.added { background: var(--teal); }
-.pcard-body { padding: 15px 16px 17px; display: grid; gap: 8px; }
-.pcard-toprow { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
-.pcard-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--teal-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.pcard-ratingchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--line-soft); padding: 2px 8px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
-.pcard-ratingchip em { font-style: normal; font-weight: 500; color: var(--ink-soft); }
-.pcard-name { font-size: 15px; font-weight: 700; line-height: 1.35; transition: color .15s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard-body { padding: 14px 15px 16px; display: grid; gap: 9px; }
+.pcard-name { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--ink); transition: color .15s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; }
 .pcard a:hover .pcard-name { color: var(--navy); }
-.pcard-colors { display: flex; align-items: center; gap: 5px; }
-.pcard-colors span { width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #fff; outline: 1px solid var(--line); }
-.pcard-colors em { font-size: 11px; color: var(--ink-soft); font-style: normal; }
-.pcard-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; gap: 8px; }
+.pcard-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pcard-price { font-size: 18px; font-weight: 800; color: var(--navy); }
 .pcard-price .old { font-size: 12px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; margin-left: 6px; }
+.pcard-rate { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
+.pcard-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.pcard-colors span { width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #fff; outline: 1px solid var(--line); }
+.pcard-colors em { font-size: 11px; color: var(--ink-soft); font-style: normal; }
 .price { font-size: 16px; font-weight: 800; }
 .price .old { font-size: 12px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; margin-left: 6px; }
 
@@ -289,11 +286,14 @@ button { font-family: inherit; cursor: pointer; }
 .excl-gallery { grid-area: gallery; display: flex; gap: 12px; min-width: 0; }
 .excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; scrollbar-width: none; flex-shrink: 0; }
 .excl-thumbs::-webkit-scrollbar { display: none; }
-.excl-thumb { width: 62px; height: 62px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #eef1f4; cursor: pointer; padding: 0; opacity: .6; transition: opacity .15s ease, border-color .15s ease; }
-.excl-thumb.active { opacity: 1; border-color: var(--teal); }
-.excl-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.excl-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1 / 1; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, #f3f6f7, #e8eff1); display: grid; place-items: center; box-shadow: 0 18px 44px -28px rgba(27,35,64,.5); }
-.excl-main img { width: 100%; height: 100%; object-fit: cover; }
+/* Gallery mirrors the product-detail page: square thumbnails + main image on a
+   light neutral panel with object-fit: contain (shows the FULL image, never
+   cropped). */
+.excl-thumb { width: 72px; height: 72px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line-soft); background: #f2f5f6; cursor: pointer; padding: 0; transition: border-color .15s ease; flex-shrink: 0; }
+.excl-thumb.active { border-color: var(--teal); }
+.excl-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.excl-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1 / 1; border-radius: var(--r-lg); overflow: hidden; background: #f2f5f6; display: grid; place-items: center; }
+.excl-main img { width: 100%; height: 100%; object-fit: contain; }
 .excl-info { grid-area: info; position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; background: #fff; border: 1px solid var(--line-soft); border-radius: 20px; padding: 24px; box-shadow: 0 14px 40px -30px rgba(27,35,64,.45); }
 .excl-info::before { content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--teal), var(--navy)); }
 .excl-cat { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--teal-600); }
@@ -691,8 +691,9 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media (max-width: 760px) {
   /* Safety net: never allow a stray wide element to scroll the whole page
-     sideways on phones. */
-  html, body { overflow-x: hidden; }
+     sideways on phones. Use `clip` (not `hidden`) so it does NOT create a
+     scroll container — `hidden` would break the sticky header. */
+  html, body { overflow-x: clip; }
   .container { padding: 0 26px; }
   .account-layout { grid-template-columns: 1fr; gap: 16px; }
   .account-nav { flex-direction: row; overflow-x: auto; position: static; }
@@ -822,7 +823,7 @@ button { font-family: inherit; cursor: pointer; }
    ========================================================================== */
 .pill.icon-pill { padding: 10px; }
 /* ============================ TOASTS ============================ */
-.toast-host { position: fixed; z-index: 2000; right: 20px; top: 84px; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 40px)); pointer-events: none; }
+.toast-host { position: fixed; z-index: 2000; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 40px)); pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line-soft); border-left: 4px solid var(--navy); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); animation: toast-in .22s cubic-bezier(.16,1,.3,1); }
 .toast-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: var(--teal-050); color: var(--teal-600); }
 .toast-msg { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
@@ -839,7 +840,7 @@ button { font-family: inherit; cursor: pointer; }
 .toast-info { border-left-color: var(--navy); }
 .toast-info .toast-ic { background: #e9ecf6; color: var(--navy); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-12px) scale(.98); } to { opacity: 1; transform: none; } }
-@media (max-width: 520px) { .toast-host { left: 16px; right: 16px; top: 76px; max-width: none; } }
+@media (max-width: 520px) { .toast-host { left: auto; right: 12px; top: 12px; max-width: min(340px, calc(100vw - 24px)); } }
 
 .wl-link { position: relative; }
 .wl-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--sale); color: #fff; font-size: 10px; font-weight: 800; line-height: 1; display: grid; place-items: center; }
