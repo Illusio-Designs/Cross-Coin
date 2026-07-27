@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
@@ -26,6 +26,13 @@ export default function ExclusiveSection({ products = [] }) {
     const g = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
     return g.length ? g : (product.image ? [product.image] : []);
   }, [product, color]);
+
+  // Auto-advance the spotlight image through the gallery, one by one, every 3s.
+  useEffect(() => {
+    if (gallery.length <= 1) return;
+    const t = setInterval(() => setThumb((i) => (i + 1) % gallery.length), 3000);
+    return () => clearInterval(t);
+  }, [gallery.length, active, color]);
 
   if (!product) return null;
 
