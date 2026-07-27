@@ -703,7 +703,7 @@ button { font-family: inherit; cursor: pointer; }
    ========================================================================== */
 .pill.icon-pill { padding: 10px; }
 /* ============================ TOASTS ============================ */
-.toast-host { position: fixed; z-index: 200; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 40px)); pointer-events: none; }
+.toast-host { position: fixed; z-index: 2000; right: 20px; top: 84px; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 40px)); pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line-soft); border-left: 4px solid var(--navy); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); animation: toast-in .22s cubic-bezier(.16,1,.3,1); }
 .toast-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: var(--teal-050); color: var(--teal-600); }
 .toast-msg { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
@@ -719,8 +719,8 @@ button { font-family: inherit; cursor: pointer; }
 .toast-wishlist .toast-ic { background: #fbeae4; color: var(--sale); }
 .toast-info { border-left-color: var(--navy); }
 .toast-info .toast-ic { background: #e9ecf6; color: var(--navy); }
-@keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-@media (max-width: 520px) { .toast-host { left: 16px; right: 16px; bottom: 16px; max-width: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-12px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 520px) { .toast-host { left: 16px; right: 16px; top: 76px; max-width: none; } }
 
 .wl-link { position: relative; }
 .wl-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--sale); color: #fff; font-size: 10px; font-weight: 800; line-height: 1; display: grid; place-items: center; }
