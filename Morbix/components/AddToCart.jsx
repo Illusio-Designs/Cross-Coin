@@ -13,9 +13,24 @@ export default function AddToCart({ product, size = 'M', display = 'full', qty =
   const onAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    // Mirror the product-detail add: carry colour, the product image and the
+    // first variant's price/SKU so the cart line shows the same details.
     const color = Array.isArray(product.colorNames) ? product.colorNames[0] : null;
-    const variationId = Array.isArray(product.variants) ? product.variants[0]?.id : null;
-    add({ ...product, color: color || null }, size, qty, variationId ?? null);
+    const variant = Array.isArray(product.variants) ? product.variants[0] : null;
+    const image = product.image || (Array.isArray(product.images) ? product.images[0] : null) || null;
+    add(
+      {
+        ...product,
+        color: color || null,
+        image,
+        price: variant?.price ?? product.price,
+        oldPrice: variant?.oldPrice ?? product.oldPrice ?? null,
+        sku: variant?.sku || product.sku || null,
+      },
+      size,
+      qty,
+      variant?.id ?? null
+    );
     toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1400);

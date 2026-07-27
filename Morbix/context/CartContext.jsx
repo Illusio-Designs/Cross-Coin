@@ -150,17 +150,60 @@ export function CartProvider({ children }) {
     try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
   }, [items, ready]);
 
+  // Reconcile with the server cart, but KEEP the colour/image/oldPrice we already
+  // know locally when the server row doesn't return them — so a freshly-added
+  // item never loses its colour just because the backend omits it.
   const refreshServerCart = async () => {
     try {
       const data = await apiGetCart();
-      setItems(Array.isArray(data) ? data.map(normalizeServerItem) : []);
+      setItems((prev) => {
+        const byKey = new Map(prev.map((i) => [i.key, i]));
+        return (Array.isArray(data) ? data : []).map((raw) => {
+          const norm = normalizeServerItem(raw);
+          const local = byKey.get(norm.key);
+          if (!local) return norm;
+          return {
+            ...norm,
+            color: norm.color || local.color || null,
+            image: norm.image || local.image || null,
+            oldPrice: norm.oldPrice ?? local.oldPrice ?? null,
+            slug: norm.slug || local.slug || '',
+          };
+        });
+      });
     } catch {
       /* keep current items */
     }
   };
 
+  // Build the local cart-item shape (full details, so the drawer shows colour,
+  // image and price instantly — no waiting on the network).
+  const toLocalItem = (product, size, qty, variationId) => ({
+    key: `${product.id}-${variationId ?? size}`,
+    id: product.id,
+    productId: product.id,
+    variationId: variationId || null,
+    slug: product.slug,
+    name: product.name,
+    price: product.price,
+    oldPrice: product.oldPrice || null,
+    image: product.image || null,
+    color: product.color || null,
+    size,
+    qty,
+  });
+
   const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
+    // 1) Optimistic local insert — the item shows in the drawer INSTANTLY.
+    const key = `${product.id}-${variationId ?? size}`;
+    setItems((prev) => {
+      const found = prev.find((i) => i.key === key);
+      if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
+      return [...prev, toLocalItem(product, size, qty, variationId)];
+    });
     setOpen(true);
+    // 2) For logged-in users, sync to the backend in the background and
+    //    reconcile (keeping the colour/image we just set).
     if (isAuthed()) {
       try {
         await apiAddToCart({
@@ -170,33 +213,10 @@ export function CartProvider({ children }) {
           size: size || null,
         });
         await refreshServerCart();
-        return;
       } catch {
-        /* fall through to local add so the UI still reflects intent */
+        /* optimistic item stays so the UI still reflects intent */
       }
     }
-    setItems((prev) => {
-      const key = `${product.id}-${variationId ?? size}`;
-      const found = prev.find((i) => i.key === key);
-      if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
-      return [
-        ...prev,
-        {
-          key,
-          id: product.id,
-          productId: product.id,
-          variationId: variationId || null,
-          slug: product.slug,
-          name: product.name,
-          price: product.price,
-          oldPrice: product.oldPrice || null,
-          image: product.image || null,
-          color: product.color || null,
-          size,
-          qty,
-        },
-      ];
-    });
   }, []);
 
   const remove = useCallback(async (key) => {

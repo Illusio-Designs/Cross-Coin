@@ -17,7 +17,6 @@ import {
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
-  validateCoupon,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 
@@ -95,10 +94,6 @@ export default function CartDrawer() {
   const [selectedFee, setSelectedFee] = useState(null);
   const [serviceability, setServiceability] = useState(null);
 
-  const [coupon, setCoupon] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [couponBusy, setCouponBusy] = useState(false);
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -165,7 +160,7 @@ export default function CartDrawer() {
   };
 
   const shippingFee = parseFloat(selectedFee?.fee || 0);
-  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount || 0) : 0;
+  const couponDiscount = 0;
   const total = Math.max(0, subtotal + shippingFee - couponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -225,21 +220,6 @@ export default function CartDrawer() {
     }
   };
 
-  const applyCoupon = async () => {
-    const code = coupon.trim().toUpperCase();
-    if (!code) return;
-    setCouponBusy(true); setCouponMsg('');
-    try {
-      const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode: isCod ? 'cod' : 'prepaid', cartItems: items });
-      if (data.success) {
-        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount });
-        setCouponMsg(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(0)} off`);
-        setCoupon('');
-        toast.success(`Coupon ${data.coupon.code} applied`);
-      } else { setCouponMsg(data.message || 'Invalid coupon code.'); toast.error(data.message || 'Invalid coupon code'); }
-    } catch (e) { setCouponMsg(e.message || 'Could not validate coupon.'); toast.error(e.message || 'Could not validate coupon'); }
-    finally { setCouponBusy(false); }
-  };
 
   const buildItems = () => items
     .filter((i) => (i.productId ?? i.id) != null && !Number.isNaN(Number(i.productId ?? i.id)))
@@ -267,7 +247,7 @@ export default function CartDrawer() {
     const discountAmount = paymentType === 'razorpay' ? prepaidInstantDiscount + couponDiscount : couponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
-      discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
+      discount_amount: discountAmount, coupon_id: null, idempotency_key: genIdem(),
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     return { ...guestBlocks(), ...base };
@@ -527,25 +507,10 @@ export default function CartDrawer() {
                 </div>
               </div>
 
-              {/* Coupon */}
-              <div className="cd-co-section">
-                <div className="cd-section-title">Coupon</div>
-                {appliedCoupon ? (
-                  <div className="cd-coupon-applied"><span><Icon name="Check" size={14} /> {appliedCoupon.code}</span><button className="link-more" onClick={() => { setAppliedCoupon(null); setCouponMsg(''); }}>Remove</button></div>
-                ) : (
-                  <div className="cd-coupon-row">
-                    <input className="cd-input" value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="Coupon code" />
-                    <button className="btn btn-ghost" onClick={applyCoupon} disabled={couponBusy || !coupon.trim()}>{couponBusy ? '…' : 'Apply'}</button>
-                  </div>
-                )}
-                {couponMsg && <p className="cd-coupon-msg">{couponMsg}</p>}
-              </div>
-
               {/* Summary */}
               <div className="cd-co-section cd-co-summary">
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
-                {couponDiscount > 0 && <div className="cd-summary-row"><span>Coupon</span><span style={{ color: 'var(--teal-600)' }}>−₹{couponDiscount.toFixed(0)}</span></div>}
                 {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
                 <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>

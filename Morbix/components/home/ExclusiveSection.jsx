@@ -40,7 +40,14 @@ export default function ExclusiveSection({ products = [] }) {
   const onAdd = () => {
     const variant = product.variants?.find((v) => v.color === selectedColorName) || product.variants?.[0];
     add(
-      { ...product, image: gallery[0] || product.image || null, color: selectedColorName || null },
+      {
+        ...product,
+        image: gallery[0] || product.image || null,
+        color: selectedColorName || null,
+        price: variant?.price ?? product.price,
+        oldPrice: variant?.oldPrice ?? product.oldPrice ?? null,
+        sku: variant?.sku || product.sku || null,
+      },
       product.sizes?.[1] || product.sizes?.[0] || 'M',
       qty,
       variant?.id ?? null
