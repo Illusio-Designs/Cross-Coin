@@ -273,7 +273,7 @@ export default function CartDrawer() {
   const openRazorpay = (rzpOrder, reservationId) => {
     const options = {
       key: RAZORPAY_KEY, amount: rzpOrder.amount, currency: rzpOrder.currency,
-      name: 'Morbix', description: 'Payment for your Morbix order', order_id: rzpOrder.id,
+      name: 'Velquira', description: 'Payment for your Velquira order', order_id: rzpOrder.id,
       prefill: {
         name: isAuthenticated ? (user?.username || user?.name || '') : guest.fullName,
         email: isAuthenticated ? (user?.email || '') : guest.email,
@@ -532,7 +532,7 @@ export default function CartDrawer() {
                 </button>
               )}
 
-              <a className="cd-whatsapp" href="https://wa.me/919712891700?text=Hi%2C%20I%20need%20help%20with%20my%20Morbix%20order" target="_blank" rel="noopener noreferrer">
+              <a className="cd-whatsapp" href="https://wa.me/919712891700?text=Hi%2C%20I%20need%20help%20with%20my%20Velquira%20order" target="_blank" rel="noopener noreferrer">
                 <Icon name="Phone" size={14} /> Need help? Chat on WhatsApp
               </a>
 

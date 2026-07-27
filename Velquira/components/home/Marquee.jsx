@@ -2,12 +2,12 @@ import Icon from '@/components/Icon';
 
 // Auto-scrolling ("live") trust strip shown right after the hero.
 const ITEMS = [
-  { icon: 'Truck', text: 'Free shipping over ₹999' },
-  { icon: 'RefreshCw', text: '14-day easy returns' },
-  { icon: 'ShieldCheck', text: '100% authentic products' },
-  { icon: 'Layers', text: 'Cushioned comfort knit' },
-  { icon: 'Leaf', text: 'Eco-friendly materials' },
-  { icon: 'Clock', text: '24/7 customer support' },
+  { icon: 'ShieldCheck', text: '916 BIS hallmarked gold' },
+  { icon: 'Truck', text: 'Free insured shipping' },
+  { icon: 'Sparkles', text: 'Handcrafted in Morbi' },
+  { icon: 'Gauge', text: 'Certified gemstones' },
+  { icon: 'Heart', text: 'Lifetime cleaning & care' },
+  { icon: 'RefreshCw', text: '15-day easy exchange' },
 ];
 
 export default function Marquee() {

@@ -6,7 +6,7 @@ import Icon from '@/components/Icon';
 // Floating helpers pinned bottom-right, same as the other brands:
 //  • a WhatsApp chat button (always visible)
 //  • a back-to-top button that appears once you scroll down
-const WA_URL = `https://wa.me/919712891700?text=${encodeURIComponent('Hi! I need help with my Morbix order.')}`;
+const WA_URL = `https://wa.me/919712891700?text=${encodeURIComponent('Hi! I need help with my Velquira order.')}`;
 
 export default function FloatingWidgets() {
   const [scrolled, setScrolled] = useState(false);

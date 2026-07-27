@@ -4,7 +4,7 @@ import BrandLogo from '@/components/BrandLogo';
 
 const COLS = [
   { title: 'Shop', links: [
-    { label: 'All socks', href: '/products' },
+    { label: 'All jewellery', href: '/products' },
     { label: 'Collections', href: '/collections' },
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'Track order', href: '/track-order' },
@@ -30,7 +30,7 @@ export default function Footer() {
         <div className="footer-cols">
           <div className="brand-col">
             <BrandLogo height={42} />
-            <p>Premium socks for sport and city life. Technology, comfort and clean design in every step.</p>
+            <p>Fine handcrafted jewellery in hallmarked gold and certified stones — designed in our Morbi atelier to be treasured for a lifetime.</p>
             <div className="socials">
               <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
               <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
@@ -49,14 +49,14 @@ export default function Footer() {
             <h4>Contacts</h4>
             <ul className="footer-contacts">
               <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
-              <li><a href="mailto:support@morbixsocks.com"><Icon name="Mail" size={15} /><span>support@morbixsocks.com</span></a></li>
+              <li><a href="mailto:support@velquira.in"><Icon name="Mail" size={15} /><span>support@velquira.in</span></a></li>
               <li><span className="footer-addr"><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India</span></span></li>
             </ul>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Velquira. All rights reserved.</span>
           <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
         </div>
       </div>

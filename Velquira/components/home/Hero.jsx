@@ -17,16 +17,16 @@ export default function Hero({ features = [], slides = [] }) {
   }, [slides.length]);
 
   const slide = hasSlides ? slides[Math.min(current, slides.length - 1)] : null;
-  const title = slide?.title || 'Socks built for rhythm, comfort & every mile';
-  const desc = slide?.description || 'Engineered knit, lasting cushioning and clean design for every step — for sport and the city alike.';
-  const ctaText = slide?.buttonText || 'Shop the catalog';
+  const title = slide?.title || 'Fine jewellery, crafted to be treasured';
+  const desc = slide?.description || 'Hallmarked gold, certified stones and timeless design — each Velquira piece is handcrafted in our Morbi atelier for life’s most cherished moments.';
+  const ctaText = slide?.buttonText || 'Explore the collection';
   const ctaHref = slide?.link || (slide?.categorySlug ? `/collections/${slide.categorySlug}` : '/products');
 
   return (
     <section className="hero container">
       <div className="hero-card">
         <div className="hero-copy">
-          <span className="hero-badge">Premium collection</span>
+          <span className="hero-badge">The Velquira Maison</span>
           <h1>{title}</h1>
           <p>{desc}</p>
           <div className="hero-cta">
@@ -46,16 +46,16 @@ export default function Hero({ features = [], slides = [] }) {
           {hasSlides ? (
             <div className="hero-slider">
               {slides.map((s, i) => (
-                <img key={i} src={s.image} alt={s.title || 'Morbix'}
+                <img key={i} src={s.image} alt={s.title || 'Velquira'}
                   className={`hero-slide-img${i === current ? ' active' : ''}`}
                   loading={i === 0 ? 'eager' : 'lazy'} />
               ))}
             </div>
           ) : (
             <div className="hero-spotlight" aria-hidden>
-              <span className="hero-spotlight-tag">Morbix</span>
-              <Icon name="Footprints" size={130} />
-              <span className="hero-spotlight-cap">Premium knit socks</span>
+              <span className="hero-spotlight-tag">Velquira</span>
+              <Icon name="Sparkles" size={120} />
+              <span className="hero-spotlight-cap">Fine handcrafted jewellery</span>
             </div>
           )}
 
