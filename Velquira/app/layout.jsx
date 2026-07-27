@@ -29,7 +29,6 @@ export const metadata = {
     title: 'Velquira — Fine jewellery, crafted to be treasured',
     description: 'Hallmarked gold jewellery, handcrafted for life’s most cherished moments.',
   },
-  icons: { icon: '/icon.svg' },
   // Deployment marker so we can verify EXACTLY which commit is live.
   other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
 };

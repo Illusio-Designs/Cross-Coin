@@ -1138,3 +1138,40 @@ button { font-family: inherit; cursor: pointer; }
 .pcard-rate { color: var(--teal-600); }
 .pcard-colors { justify-content: center; margin-top: 8px; }
 .pcard-badge { border-radius: 2px; font-weight: 600; letter-spacing: .1em; }
+
+/* ── Header: minimal maison bar (letter-spaced nav, quiet icon actions) ── */
+.header { background: rgba(247,243,234,.82); backdrop-filter: saturate(120%) blur(10px); border-bottom: 1px solid var(--line); }
+.header-inner { height: 86px; }
+.nav { gap: 36px; }
+.nav a { position: relative; font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; font-weight: 500; color: var(--ink); opacity: 1; }
+.nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 1px; background: var(--teal); transform: scaleX(0); transform-origin: center; transition: transform .28s ease; }
+.nav a:hover { color: var(--teal-600); } .nav a:hover::after { transform: scaleX(1); }
+.header-actions { gap: 4px; }
+.pill { background: transparent; border: 0; box-shadow: none; padding: 10px; border-radius: 999px; color: var(--ink); }
+.pill:hover { background: var(--teal-050); border: 0; color: var(--teal-600); }
+.pill.sign-in span { display: none; }
+.pill.cart { background: transparent; color: var(--ink); border: 0; gap: 6px; }
+.pill.cart:hover { background: var(--teal-050); color: var(--teal-600); }
+.pill.cart .badge, .pill .badge { background: var(--teal); color: #fff; }
+.hamburger { border-color: var(--line); background: transparent; }
+.hamburger:hover { border-color: var(--teal); color: var(--teal-600); }
+
+/* ── Marquee: espresso strip, gold text ── */
+.marquee-wrap { background: var(--navy); color: var(--gold-lite); margin-top: 30px; }
+.marquee-ic { color: var(--gold-lite); }
+.marquee-sep { color: var(--teal); }
+
+/* ── Footer: deep espresso maison with gold ── */
+.footer { background: var(--navy); color: #ddccae; padding: 72px 0 30px; margin-top: 64px; }
+.footer h4 { color: var(--gold-lite); letter-spacing: .2em; }
+.footer a { color: #cdbc9c; opacity: .92; } .footer a:hover { color: var(--gold-lite); opacity: 1; }
+.footer .brand-col p { color: #a8987a; }
+.footer-contacts svg { color: var(--teal); }
+.footer-contacts .footer-addr { color: #cdbc9c; opacity: .92; }
+.footer .socials a { border: 1px solid rgba(229,200,144,.28); color: #e5c890; }
+.footer .socials a:hover { background: var(--teal); border-color: var(--teal); color: #2a2118; }
+.footer-bottom { border-top: 1px solid rgba(229,200,144,.16); color: #a8987a; }
+.footer-bottom a { color: #a8987a; }
+.footer-credit a { color: var(--gold-lite); font-weight: 600; }
+.footer-credit a:hover { color: #fff; }
+.footer .brand-col img { filter: none; }
