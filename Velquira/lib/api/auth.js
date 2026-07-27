@@ -1,97 +1,180 @@
-import { apiClient } from '@/lib/api/client'
-
-/**
- * Auth API surface. All HTTP goes through the shared apiClient so it
- * inherits the 30s timeout, CSRF mirror, brand header, and categorised
- * error toasts.
+/* Auth API — mirrors Knitwink/lib/api/auth.js for the Morbix brand.
  *
- * Token storage today is still localStorage (matches existing call
- * sites). The apiClient transparently reads from both cookies AND
- * localStorage, so when the auth-cookie migration lands this file
- * needs minimal change.
+ * Consumer auth is phone + OTP based (MSG91 access_token verified by the
+ * backend). Email/password register + admin login are available too. The
+ * bearer token is persisted in localStorage under `token`.
  */
+import { API_URL, BRAND, authHeaders, getToken, setToken, clearToken } from './client';
 
-function setToken(token) {
-  if (typeof window === 'undefined' || !token) return
-  try { localStorage.setItem('token', token) } catch { /* ignore */ }
+function headers(withAuth = false) {
+  return authHeaders(withAuth ? {} : {});
 }
 
-function clearToken() {
-  if (typeof window === 'undefined') return
-  try { localStorage.removeItem('token') } catch { /* ignore */ }
-}
-
-function hasToken() {
-  if (typeof window === 'undefined') return false
-  try { return !!localStorage.getItem('token') } catch { return false }
-}
-
-// Register (email/password)
+// ── Registration (email/password) ──────────────────────────────────────────
 export async function register({ username, email, password, phone }) {
-  return apiClient.post('/api/users/register', { username, email, password, phone, role: 'consumer' })
+  const res = await fetch(`${API_URL}/api/users/register`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ username, email, password, phone, role: 'consumer' }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Registration failed');
+  if (data.token) setToken(data.token);
+  return data;
 }
 
-// OTP Login (phone + MSG91 access_token)
-export async function loginWithOtp({ phone, access_token }) {
-  const data = await apiClient.post('/api/users/login', { phone, access_token })
-  if (data?.token) setToken(data.token)
-  return data
-}
-
-// Admin/staff login (email + password)
-export async function adminLogin({ email, password }) {
-  const data = await apiClient.post('/api/users/admin-login', { email, password })
-  if (data?.token) setToken(data.token)
-  return data
-}
-
-// Get current user
-export async function getMe() {
-  if (!hasToken()) return null
-  try { return await apiClient.get('/api/users/me', { suppressErrorToast: true }) }
-  catch { return null }
-}
-
-// Get profile
-export async function getProfile() {
-  if (!hasToken()) return null
-  try { return await apiClient.get('/api/users/profile', { suppressErrorToast: true }) }
-  catch { return null }
-}
-
-// Update profile
-export async function updateProfile(data) {
-  return apiClient.put('/api/users/profile', data)
-}
-
-// Change password
-export async function changePassword({ currentPassword, newPassword }) {
-  return apiClient.put('/api/users/change-password', { currentPassword, newPassword })
-}
-
-// Logout
-export async function logout() {
-  try { await apiClient.post('/api/users/logout', {}, { suppressErrorToast: true }) }
-  catch { /* swallow — we clear local state regardless */ }
-  clearToken()
-}
-
-// Refresh token
-export async function refreshToken() {
+// ── Check if a phone number already has an account ─────────────────────────
+export async function checkPhone(phone) {
   try {
-    const data = await apiClient.post('/api/users/refresh-token', {}, { suppressErrorToast: true })
-    if (data?.token) setToken(data.token)
-    return data
-  } catch { return null }
+    const res = await fetch(`${API_URL}/api/users/check-phone`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { exists: false, ok: false };
+    return { exists: !!data.exists, ok: true, ...data };
+  } catch {
+    // If the endpoint is unavailable, don't block the flow.
+    return { exists: true, ok: false };
+  }
 }
 
-// Verify OTP (for checkout COD flow)
-export async function verifyOtp({ phone, access_token }) {
-  const data = await apiClient.post('/api/auth/otp/verify', { phone, access_token })
-  if (data?.token) setToken(data.token)
-  return data
+// ── OTP send / verify ──────────────────────────────────────────────────────
+// Send an OTP to a phone number. The backend integrates with MSG91.
+export async function sendOtp({ phone }) {
+  const res = await fetch(`${API_URL}/api/auth/otp/send`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ phone }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+  return data;
 }
 
-// Aliases for backward compatibility with old imports
-export const login = loginWithOtp
-export const updatePassword = changePassword
+// Verify an OTP. Returns { access_token } (MSG91 token) and/or { token }.
+export async function verifyOtp({ phone, otp, access_token }) {
+  const res = await fetch(`${API_URL}/api/auth/otp/verify`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ phone, otp, access_token }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+  if (data.token) setToken(data.token);
+  return data;
+}
+
+// ── Login (phone + verified MSG91 access_token) ────────────────────────────
+export async function loginWithOtp({ phone, access_token }) {
+  const res = await fetch(`${API_URL}/api/users/login`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ phone, access_token }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (data.code === 'USER_NOT_FOUND') throw new Error('No account found. Please register first.');
+    throw new Error(data.message || 'Login failed');
+  }
+  if (!data.token) throw new Error('No token received');
+  setToken(data.token);
+  return data;
+}
+
+// ── Current user ───────────────────────────────────────────────────────────
+export async function getCurrentUser() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/users/me`, { headers: authHeaders() });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export const getMe = getCurrentUser;
+
+// ── Profile ────────────────────────────────────────────────────────────────
+export async function getProfile() {
+  if (!getToken()) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/users/profile`, { headers: authHeaders() });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function updateProfile(data) {
+  const res = await fetch(`${API_URL}/api/users/profile`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(result.message || 'Update failed');
+  return result;
+}
+
+export async function changePassword({ currentPassword, newPassword }) {
+  const res = await fetch(`${API_URL}/api/users/change-password`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Password change failed');
+  return data;
+}
+
+// ── Logout ─────────────────────────────────────────────────────────────────
+export async function logout() {
+  const token = getToken();
+  if (token) {
+    await fetch(`${API_URL}/api/users/logout`, { method: 'POST', headers: authHeaders() }).catch(() => {});
+  }
+  clearToken();
+}
+
+// ── Refresh token ──────────────────────────────────────────────────────────
+export async function refreshToken() {
+  const res = await fetch(`${API_URL}/api/users/refresh-token`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data.token) setToken(data.token);
+  return data;
+}
+
+// ── Forgot / reset password ────────────────────────────────────────────────
+export async function forgotPassword({ email }) {
+  const res = await fetch(`${API_URL}/api/users/forgot-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Request failed');
+  return data;
+}
+
+export async function resetPassword({ token, password }) {
+  const res = await fetch(`${API_URL}/api/users/reset-password`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Reset failed');
+  return data;
+}
+
+// Aliases for convenience / backward-compat with Knitwink naming.
+export const login = loginWithOtp;
+export { BRAND };

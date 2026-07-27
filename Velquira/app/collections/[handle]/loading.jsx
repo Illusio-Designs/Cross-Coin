@@ -1,31 +1,11 @@
-import { Skeleton } from '@/components/ui/Skeleton';
-import { ProductGridSkeleton } from '@/components/collection/ProductGrid';
+import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
 
 export default function CollectionLoading() {
   return (
-    <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
-      {/* Header skeleton */}
-      <div className="flex flex-col items-center gap-3 pb-8 pt-16">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-5 w-96" />
-        <Skeleton className="h-4 w-20" />
-      </div>
-
-      {/* Controls skeleton */}
-      <div className="flex items-center justify-between border-b border-line pb-6">
-        <div className="hidden gap-2 md:flex">
-          {Array.from({ length: 5 }).map((_, i) =>
-          <Skeleton key={i} className="h-8 w-20 rounded-full" />
-          )}
-        </div>
-        <Skeleton className="h-8 w-28 rounded-full md:hidden" />
-        <Skeleton className="h-5 w-32" />
-      </div>
-
-      {/* Grid skeleton */}
-      <div className="py-8">
-        <ProductGridSkeleton />
-      </div>
-    </div>);
-
+    <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
+      <Skeleton width="30%" height={38} />
+      <div style={{ height: 26 }} />
+      <ProductGridSkeleton count={8} />
+    </div>
+  );
 }

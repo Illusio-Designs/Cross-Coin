@@ -1,61 +1,62 @@
-import ClientPage from './ClientPage';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import Icon from '@/components/Icon';
+import { getBlogBySlug, getBlogPosts } from '@/lib/api';
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velquira.com';
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
+export const revalidate = 300;
 
-async function fetchPost(slug) {
-  try {
-    const r = await fetch(`${API}/api/blogs/${encodeURIComponent(slug)}`, {
-      headers: { 'X-Brand-Name': BRAND },
-      next: { revalidate: 600 },
-    });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j?.data || j?.post || j;
-  } catch { return null; }
+export async function generateStaticParams() {
+  const posts = await getBlogPosts();
+  return posts.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const p = await fetchPost(slug);
-  if (!p) return { title: 'Journal — Velquira' };
-  const title = `${p.title} — Velquira Journal`;
-  const description = (p.excerpt || p.body || '').replace(/<[^>]*>/g, '').slice(0, 160);
-  const image = p.coverImage || p.image || `${SITE}/og.jpg`;
-  const url = `${SITE}/journal/${slug}`;
-  return {
-    title,
-    description,
-    alternates: { canonical: url },
-    openGraph: { title, description, url, images: [{ url: image }], type: 'article', publishedTime: p.publishedAt, authors: [p.author].filter(Boolean) },
-    twitter: { card: 'summary_large_image', title, description, images: [image] },
-  };
+  const post = await getBlogBySlug(slug);
+  return post ? { title: post.title, description: post.excerpt } : { title: 'Article' };
 }
 
-export default async function Page({ params }) {
+export default async function JournalArticlePage({ params }) {
   const { slug } = await params;
-  const post = await fetchPost(slug);
-
-  const jsonLd = post ? {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.title,
-    description: (post.excerpt || '').slice(0, 200),
-    image: post.coverImage || post.image,
-    datePublished: post.publishedAt,
-    dateModified: post.updatedAt || post.publishedAt,
-    author: { '@type': 'Person', name: post.author || 'Velquira Editorial' },
-    publisher: { '@type': 'Organization', name: 'Velquira', logo: { '@type': 'ImageObject', url: `${SITE}/logo.png` } },
-    mainEntityOfPage: `${SITE}/journal/${slug}`,
-  } : null;
+  const post = await getBlogBySlug(slug);
+  if (!post) notFound();
 
   return (
-    <>
-      {jsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      )}
-      <ClientPage initialPost={post} />
-    </>
+    <div className="container" style={{ paddingTop: 24, paddingBottom: 50 }}>
+      <nav className="crumbs">
+        <Link href="/">Home</Link> <span>/</span> <Link href="/journal">Journal</Link> <span>/</span> <b>{post.title}</b>
+      </nav>
+
+      <article className="article">
+        <div className="blog-meta" style={{ justifyContent: 'center' }}>
+          {post.category && <span className="blog-cat">{post.category}</span>}
+          {post.date && <><span>·</span><span>{post.date}</span></>}
+        </div>
+        <h1 className="article-title">{post.title}</h1>
+
+        {post.image && (
+          <div className="article-hero">
+            <img src={post.image} alt={post.title} />
+          </div>
+        )}
+
+        <div className="article-body">
+          {post.sections && post.sections.length > 0 ? (
+            post.sections.map((s, i) => (
+              <section key={i}>
+                {s.heading && <h2>{s.heading}</h2>}
+                {s.content && <div dangerouslySetInnerHTML={{ __html: s.content }} />}
+              </section>
+            ))
+          ) : (
+            <p>{post.excerpt}</p>
+          )}
+        </div>
+
+        <Link href="/journal" className="link-more" style={{ marginTop: 24 }}>
+          <Icon name="ArrowRight" size={14} /> Back to all articles
+        </Link>
+      </article>
+    </div>
   );
 }

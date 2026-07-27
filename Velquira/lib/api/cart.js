@@ -1,24 +1,50 @@
-import { apiClient } from '@/lib/api/client'
+/* Cart API — mirrors Knitwink/lib/api/cart.js for the Morbix brand.
+ * Server-side cart for logged-in users. Guests use a localStorage cart
+ * (see context/CartContext.jsx). Endpoints: /api/cart, /api/cart/items.
+ */
+import { API_URL, authHeaders } from './client';
 
 export async function getCart() {
-  const data = await apiClient.get('/api/cart')
-  return data.cart || data.items || data || []
+  const res = await fetch(`${API_URL}/api/cart`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch cart');
+  const data = await res.json();
+  return data.cart || data.items || data || [];
 }
 
 export async function addToCart({ productId, variationId, quantity = 1, size = null }) {
-  return apiClient.post('/api/cart/items', { productId, variationId, quantity, size })
+  const res = await fetch(`${API_URL}/api/cart/items`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ productId, variationId, quantity, size }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to add to cart');
+  return data;
 }
 
 export async function updateCartItem(productId, quantity, variationId = null) {
-  return apiClient.put(`/api/cart/items/${productId}`, { quantity, variationId })
+  const res = await fetch(`${API_URL}/api/cart/items/${productId}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ quantity, variationId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to update cart');
+  return data;
 }
 
 export async function removeFromCart(productId, variationId = null) {
-  let path = `/api/cart/items/${productId}`
-  if (variationId != null) path += `/${variationId}`
-  return apiClient.delete(path)
+  let url = `${API_URL}/api/cart/items/${productId}`;
+  if (variationId != null) url += `/${variationId}`;
+  const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to remove from cart');
+  return data;
 }
 
 export async function clearCart() {
-  return apiClient.delete('/api/cart')
+  const res = await fetch(`${API_URL}/api/cart`, { method: 'DELETE', headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to clear cart');
+  return data;
 }

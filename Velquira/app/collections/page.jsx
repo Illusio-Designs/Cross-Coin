@@ -1,54 +1,52 @@
-import ClientPage from './ClientPage';
+import Link from 'next/link';
+import Icon from '@/components/Icon';
+import { getCategories, getAllProducts } from '@/lib/api';
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velquira.com';
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Collections' };
 
-export const revalidate = 600;
+const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles', 'Layers', 'Leaf'];
 
-async function fetchCollections() {
-  try {
-    const r = await fetch(`${API}/api/categories`, {
-      headers: { 'X-Brand-Name': BRAND },
-      next: { revalidate: 600 },
-    });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return Array.isArray(j) ? j : (j.data || j.items || []);
-  } catch { return []; }
-}
+export default async function CollectionsPage() {
+  const [categories, all] = await Promise.all([getCategories(), getAllProducts()]);
 
-export const metadata = {
-  title: 'Collections — Velquira',
-  description: 'Explore Velquira\'s jewellery collections — natural materials, thoughtful design, a better footprint.',
-  alternates: { canonical: `${SITE}/collections` },
-  openGraph: {
-    title: 'Collections — Velquira',
-    description: 'Explore Velquira\'s jewellery collections.',
-    url: `${SITE}/collections`,
-    type: 'website',
-  },
-};
-
-export default async function Page() {
-  const collections = await fetchCollections();
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: 'Velquira Collections',
-    url: `${SITE}/collections`,
-    hasPart: collections.slice(0, 24).map((c) => ({
-      '@type': 'Collection',
-      name: c.name || c.title,
-      url: `${SITE}/collections/${c.slug || c.handle || c.id}`,
-    })),
-  };
+  // If a category has no image of its own, use the first product's photo in
+  // that collection as the cover.
+  const enriched = categories.map((c) => {
+    const inCat = all.filter((p) => p.categorySlug === c.slug || p.category === c.label);
+    return {
+      ...c,
+      image: c.image || inCat.find((p) => p.image)?.image || '',
+    };
+  });
 
   return (
-    <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ClientPage initialCollections={collections} />
-    </>
+    <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
+      <div className="page-hero">
+        <span className="eyebrow">Collections</span>
+        <h1>Shop by collection</h1>
+        <p>Find the right pair for every kind of movement.</p>
+      </div>
+
+      {enriched.length === 0 ? (
+        <div className="empty">No collections yet — check back soon.</div>
+      ) : (
+        <div className="cat-grid" style={{ marginTop: 26 }}>
+          {enriched.map((c, i) => (
+            <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
+              {c.image
+                ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
+                : <span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>}
+              <div className="collection-card-overlay">
+                <div className="collection-card-text">
+                  <h3>{c.label}</h3>
+                </div>
+                <span className="collection-card-cta" aria-hidden><Icon name="ArrowRight" size={16} /></span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,121 +1,65 @@
-
-import { Suspense } from 'react';
-import { Inter, Playfair_Display, Dancing_Script, Cormorant_Garamond } from 'next/font/google';
-import '@/styles/globals.css';
-import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer } from 'react-toastify';
-import { Navbar } from '@/components/layout/Navbar';
-import { Footer } from '@/components/layout/Footer';
-import { MobileMenu } from '@/components/layout/MobileMenu';
-import { CartDrawer } from '@/components/cart/CartDrawer';
-import { BackToTop } from '@/components/ui/BackToTop';
-import { WhatsAppChat } from '@/components/ui/WhatsAppChat';
-import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
-import { GrainOverlay } from '@/components/ui/GrainOverlay';
-import { Breadcrumb } from '@/components/layout/Breadcrumb';
+import { Cormorant_Garamond, Jost } from 'next/font/google';
+import './globals.css';
+import SmoothScroll from '@/components/SmoothScroll';
+import Msg91Loader from '@/components/Msg91Loader';
+import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
-import ClientProviders from '@/components/layout/ClientProviders';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import CartDrawer from '@/components/cart/CartDrawer';
+import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
-import { SITE_NAME } from '@/lib/constants';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap'
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap'
-});
-
-const dancingScript = Dancing_Script({
-  subsets: ['latin'],
-  variable: '--font-dancing',
-  display: 'swap'
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-cormorant',
-  display: 'swap'
-});
+// Elegant serif display + refined sans body — a fine-jewellery pairing.
+const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-display', display: 'swap' });
+const body = Jost({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
 export const metadata = {
+  metadataBase: new URL('https://www.velquira.in'),
   title: {
-    default: SITE_NAME,
-    template: `%s | ${SITE_NAME}`
+    default: 'Velquira — Fine jewellery, crafted to be treasured',
+    template: '%s | Velquira',
   },
-  description: 'Fine jewellery handmade in our studio — hallmarked 18k gold and certified diamonds, made to last for generations.',
-  icons: {
-    icon: '/velquira-logo.svg',
-    shortcut: '/velquira-logo.svg',
-    apple: '/apple-icon.png'
-  },
+  description:
+    'Velquira fine jewellery — rings, necklaces, earrings and bracelets in hallmarked gold, handcrafted in the Morbi studio for life’s most cherished moments.',
   openGraph: {
-    siteName: SITE_NAME,
-    type: 'website'
-  }
+    siteName: 'Velquira',
+    type: 'website',
+    title: 'Velquira — Fine jewellery, crafted to be treasured',
+    description: 'Hallmarked gold jewellery, handcrafted for life’s most cherished moments.',
+  },
+  icons: { icon: '/icon.svg' },
+  // Deployment marker so we can verify EXACTLY which commit is live.
+  other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
+};
+
+// Mobile browser chrome tinted to the Velquira espresso brand.
+export const viewport = {
+  themeColor: '#2a2118',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} ${cormorant.variable} h-full scroll-smooth antialiased`}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var configuration = {
-                  widgetId: "366342706343383735393039",
-                  tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
-                  exposeMethods: true,
-                  identifier: "",
-                  captchaType: "invisible",
-                  success: function(data) { window.__msg91OtpSuccess = data; },
-                  failure: function(error) { window.__msg91OtpFailure = error; }
-                };
-                var s = document.createElement('script');
-                s.type = 'text/javascript';
-                s.src = 'https://verify.msg91.com/otp-provider.js';
-                s.onload = function() {
-                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
-                };
-                document.head.appendChild(s);
-              })();
-            `,
-          }}
-        />
-      </head>
-      <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-ivory font-sans text-brand-black">
-        <GrainOverlay />
-        <a href="#main" className="skip-to-main">Skip to main content</a>
-        <ClientProviders>
-          <AuthProvider>
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body>
+        <Msg91Loader />
+        <AuthProvider>
           <CartProvider>
-          <WishlistHydrator />
-          <Navbar />
-          <Breadcrumb />
-          <MobileMenu />
-          <CartDrawer />
-          <main id="main" className="flex-1 pb-1">
-            {children}
-          </main>
-          <Footer />
-          <BackToTop />
-          <WhatsAppChat />
-          <Suspense fallback={null}>
+            <SmoothScroll>
+              <Header />
+              <main id="main">{children}</main>
+              <Footer />
+              <CartDrawer />
+            </SmoothScroll>
+            <FloatingWidgets />
+            <ToastHost />
             <Analytics />
-          </Suspense>
-          <ToastContainer />
           </CartProvider>
-          </AuthProvider>
-        </ClientProviders>
+        </AuthProvider>
       </body>
-    </html>);
-
+    </html>
+  );
 }

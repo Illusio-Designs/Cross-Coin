@@ -1,150 +1,185 @@
-import { apiClient } from '@/lib/api/client'
-
-// Get user's orders
-export async function getUserOrders(params = {}) {
-  const qp = new URLSearchParams()
-  if (params.status) qp.append('status', params.status)
-  if (params.page) qp.append('page', params.page)
-  if (params.limit) qp.append('limit', params.limit)
-  return apiClient.get(`/api/orders/my-orders?${qp.toString()}`)
-}
-
-// Create order (logged-in user)
-export async function createOrder(orderData) {
-  return apiClient.post('/api/orders', orderData)
-}
-
-/**
- * Guest order — the backend may stamp a freshly minted user token on the
- * response header (`x-auth-token`) so the guest is silently signed in.
- * apiClient doesn't surface raw response headers, so we use raw fetch
- * for this specific call to capture the header. All hardening (timeout,
- * brand header, auth) is replicated inline.
+/* Orders / checkout / payments API — mirrors Knitwink/lib/api/orders.js.
+ *
+ * Covers the full purchase flow against the Cross-Coin backend:
+ *   - COD orders:      POST /api/orders            (auth)
+ *                      POST /api/orders/guest-checkout (guest)
+ *   - Prepaid:         POST /api/checkout/initiate       (auth)
+ *                      POST /api/checkout/guest/initiate (guest)
+ *                      POST /api/checkout/retry
+ *                      POST /api/payments/razorpay/verify
+ *   - Order history:   GET  /api/orders/my-orders, /api/orders/:id
+ *   - Tracking:        GET  /api/orders/track/:orderNumber (public)
+ *   - Cancellation:    PUT  /api/orders/:id/cancel
+ *   - Shipping fees:   GET  /api/shipping-fees
+ *   - Serviceability:  GET  /api/serviceability/:pincode
+ *   - Coupons:         POST /api/coupons/validate
  */
+import { API_URL, BRAND, authHeaders, getToken, setToken } from './client';
+
+// ── Order history ──────────────────────────────────────────────────────────
+export async function getUserOrders(params = {}) {
+  const qp = new URLSearchParams();
+  if (params.status) qp.append('status', params.status);
+  if (params.page) qp.append('page', params.page);
+  if (params.limit) qp.append('limit', params.limit);
+  const res = await fetch(`${API_URL}/api/orders/my-orders?${qp.toString()}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+export async function getOrder(id) {
+  const res = await fetch(`${API_URL}/api/orders/${id}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Order not found');
+  return res.json();
+}
+
+// ── COD orders ─────────────────────────────────────────────────────────────
+export async function createOrder(orderData) {
+  const res = await fetch(`${API_URL}/api/orders`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(orderData),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Order creation failed');
+  return data;
+}
+
 export async function createGuestOrder(orderData) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
-  const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velquira'
-  const ac = new AbortController()
-  const timer = setTimeout(() => ac.abort(), 30_000)
-  let res
-  try {
-    res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-      body: JSON.stringify(orderData),
-      signal: ac.signal,
-    })
-  } finally { clearTimeout(timer) }
-  const data = await res.json()
-  const newToken = res.headers.get('x-auth-token')
-  if (newToken && typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('token', newToken)
-      window.dispatchEvent(new Event('storage'))
-    } catch { /* ignore */ }
-  }
-  if (!res.ok) throw new Error(data.message || 'Order creation failed')
-  return data
+  const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(orderData),
+  });
+  const data = await res.json().catch(() => ({}));
+  // Guest checkout auto-creates a user and returns a session token.
+  const newToken = res.headers.get('x-auth-token');
+  if (newToken) setToken(newToken);
+  if (!res.ok) throw new Error(data.message || 'Order creation failed');
+  return data;
 }
 
-// Track order by order number (public)
+// ── Order tracking (public) ────────────────────────────────────────────────
 export async function trackOrder(orderNumber) {
-  return apiClient.get(`/api/orders/track/${encodeURIComponent(orderNumber)}`)
+  const res = await fetch(`${API_URL}/api/orders/track/${encodeURIComponent(orderNumber)}`, {
+    headers: { 'X-Brand-Name': BRAND },
+  });
+  if (!res.ok) throw new Error('Order not found');
+  return res.json();
 }
 
-// Cancel order
+// ── Cancellation ───────────────────────────────────────────────────────────
 export async function cancelOrder(orderId, reason = '') {
-  return apiClient.put(`/api/orders/${orderId}/cancel`, { reason })
+  const res = await fetch(`${API_URL}/api/orders/${orderId}/cancel`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ reason }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Cancellation failed');
+  return data;
 }
 
-// Initiate checkout (prepaid, logged-in)
+// ── Prepaid checkout initiation ────────────────────────────────────────────
 export async function initiateCheckout(checkoutData) {
-  return apiClient.post('/api/checkout/initiate', checkoutData)
+  const res = await fetch(`${API_URL}/api/checkout/initiate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(checkoutData),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Checkout failed');
+  return data;
 }
 
-// Initiate guest checkout (prepaid, no auth)
 export async function initiateGuestCheckout(checkoutData) {
-  return apiClient.post('/api/checkout/guest/initiate', checkoutData)
+  const res = await fetch(`${API_URL}/api/checkout/guest/initiate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(checkoutData),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Checkout failed');
+  return data;
 }
 
-// Create Razorpay order
-export async function createRazorpayOrder({ amount, currency = 'INR', receipt, isGuest = false }) {
-  const endpoint = isGuest ? '/api/payments/guest/razorpay/order' : '/api/payments/razorpay/order'
-  const data = await apiClient.post(endpoint, { amount, currency, receipt })
-  return data.order
-}
-
-// Verify Razorpay payment
-export async function verifyPayment({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }) {
-  return apiClient.post('/api/payments/razorpay/verify', { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id })
-}
-
-// Get shipping fees
-export async function getShippingFees() {
-  try { return await apiClient.get('/api/shipping-fees', { suppressErrorToast: true }) }
-  catch { return [] }
-}
-
-// Shipping addresses
-export async function getUserAddresses() {
-  try {
-    const data = await apiClient.get('/api/shipping-addresses', { suppressErrorToast: true })
-    return Array.isArray(data) ? data : data?.shippingAddresses || data?.addresses || []
-  } catch { return [] }
-}
-
-export async function createAddress(data) {
-  return apiClient.post('/api/shipping-addresses', data)
-}
-
-function normaliseAddr(data) {
-  return {
-    full_name: data.full_name || data.fullName || '',
-    address: data.address || '',
-    city: data.city || '',
-    state: data.state || '',
-    postal_code: data.postal_code || data.postalCode || data.pincode || '',
-    country: data.country || 'India',
-    phone_number: data.phone_number || data.phoneNumber || data.phone || '',
-    is_default: data.is_default ?? data.isDefault ?? false,
-  }
-}
-
-export async function createShippingAddress(data) {
-  return apiClient.post('/api/shipping-addresses', normaliseAddr(data))
-}
-
-export async function updateShippingAddress(id, data) {
-  return apiClient.put(`/api/shipping-addresses/${id}`, normaliseAddr(data))
-}
-
-// Retry checkout — extends stock reservation & gets a new Razorpay order
+// Retry checkout — extends stock reservation & returns a fresh Razorpay order.
 export async function retryCheckout(reservationId) {
-  return apiClient.post('/api/checkout/retry', { reservation_id: reservationId })
+  const res = await fetch(`${API_URL}/api/checkout/retry`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ reservation_id: reservationId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Retry failed');
+  return data;
 }
 
-// Check if a pincode is serviceable
+// ── Razorpay ───────────────────────────────────────────────────────────────
+export async function createRazorpayOrder({ amount, currency = 'INR', receipt, isGuest = false }) {
+  const endpoint = isGuest ? '/api/payments/guest/razorpay/order' : '/api/payments/razorpay/order';
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ amount, currency, receipt }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Payment order failed');
+  return data.order;
+}
+
+export async function verifyPayment({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }) {
+  const res = await fetch(`${API_URL}/api/payments/razorpay/verify`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Payment verification failed');
+  return data;
+}
+
+// ── Shipping fees ──────────────────────────────────────────────────────────
+export async function getShippingFees() {
+  const res = await fetch(`${API_URL}/api/shipping-fees`, {
+    headers: getToken() ? authHeaders() : { 'X-Brand-Name': BRAND },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// ── Serviceability ─────────────────────────────────────────────────────────
 export async function checkPincodeServiceability(pincode) {
   try {
-    const data = await apiClient.get(`/api/serviceability/${pincode}`, { suppressErrorToast: true })
+    const res = await fetch(`${API_URL}/api/serviceability/${pincode}`, {
+      headers: { 'X-Brand-Name': BRAND },
+    });
+    if (!res.ok) return { serviceable: true, cod_allowed: true };
+    const data = await res.json();
     return {
       serviceable: data.serviceable !== false,
-      cod_allowed: data.cod_allowed !== false || data.cod_available !== false,
+      cod_allowed: data.cod_allowed !== false && data.cod_available !== false,
       estimated_delivery_days: data.estimated_delivery_days || 5,
-    }
+      city: data.city,
+      state: data.state,
+    };
   } catch {
-    return { serviceable: true, cod_allowed: true }
+    return { serviceable: true, cod_allowed: true };
   }
 }
 
-// Validate a coupon code
+// ── Coupons ────────────────────────────────────────────────────────────────
 export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }) {
-  return apiClient.post('/api/coupons/validate', { code, cartTotal, paymentMode, cartItems })
+  const res = await fetch(`${API_URL}/api/coupons/validate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ code, cartTotal, paymentMode, cartItems }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Invalid coupon');
+  return data;
 }
 
-// Alias for CartDrawer compatibility
-export { verifyPayment as updateOrderPayment }
-
-// Aliases for backward compatibility
-export const getOrders = getUserOrders
-export const getOrder = (id) => apiClient.get(`/api/orders/${id}`)
+// Aliases for backward-compat with Knitwink naming.
+export const getOrders = getUserOrders;
+export const updateOrderPayment = verifyPayment;

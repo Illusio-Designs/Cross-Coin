@@ -1,139 +1,185 @@
-'use client'
+'use client';
 
-import Image from 'next/image'
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
-import { formatPrice } from '@/lib/utils'
+import { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import Icon from '@/components/Icon';
+import { useCart } from '@/context/CartContext';
+import { toast } from '@/lib/toast';
 
-/**
- * ExclusiveSection — dark editorial spotlight.
- * Deep obsidian background, floating gold frame, luxury typography.
- */
-export function ExclusiveSection({ products = [] }) {
-  if (!products.length) {
-    return (
-      <section className="bg-paper vq-section">
-        <div className="vq-container">
-          <div className="mx-auto mb-12 h-3 w-40 animate-pulse rounded bg-line md:mb-16" />
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16">
-            <div className="lg:col-span-7">
-              <div className="aspect-[4/5] animate-pulse bg-line" />
-            </div>
-            <div className="flex flex-col justify-center gap-5 lg:col-span-5">
-              <div className="h-3 w-28 animate-pulse rounded bg-line" />
-              <div className="h-10 w-3/4 animate-pulse rounded bg-line" />
-              <div className="h-3 w-full animate-pulse rounded bg-line" />
-            </div>
-          </div>
-        </div>
-      </section>
-    )
-  }
+// "Hand-Picked for You" — a featured-product spotlight (same idea as the other
+// brands' Exclusive section). Pick a product on the right rail, browse its
+// images on the left, choose a colour and add it straight to the cart.
+export default function ExclusiveSection({ products = [] }) {
+  const list = Array.isArray(products) ? products.slice(0, 6) : [];
+  const { add } = useCart();
+  const [active, setActive] = useState(0);
+  const [thumb, setThumb] = useState(0);
+  const [color, setColor] = useState(0);
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const thumbsRef = useRef(null);
+  const mainRef = useRef(null);
+  const [railH, setRailH] = useState(0);
 
-  const feature = products[0]
-  const featureImage = feature.images?.[0]?.url || ''
-  const featureSlug = feature.handle ?? feature.slug ?? String(feature.id)
-  const featureDescription =
-    feature.description ||
-    'Simple and elegant — light caught in 18k gold, set by hand in our studio. The kind of piece you keep for decades.'
+  // Match the thumbnail rail height to the main image — exactly like the PDP.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const product = list[active];
+
+  const gallery = useMemo(() => {
+    if (!product) return [];
+    const perColor = product.colorImages?.[color];
+    const g = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
+    return g.length ? g : (product.image ? [product.image] : []);
+  }, [product, color]);
+
+  // Auto-advance the spotlight image through the gallery, one by one, every 3s.
+  useEffect(() => {
+    if (gallery.length <= 1) return;
+    const t = setInterval(() => setThumb((i) => (i + 1) % gallery.length), 3000);
+    return () => clearInterval(t);
+  }, [gallery.length, active, color]);
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail (never the
+  // page) — identical behaviour to the product-detail gallery.
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector(`[data-thumb="${thumb}"]`);
+    if (!el) return;
+    const railRect = rail.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const vertical = rail.scrollHeight > rail.clientHeight + 1;
+    if (vertical) {
+      const delta = (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2;
+      rail.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rail.scrollWidth > rail.clientWidth + 1) {
+      const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
+      rail.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }, [thumb]);
+
+  if (!product) return null;
+
+  const colorNames = product.colorNames || [];
+  const selectedColorName = colorNames[color] || '';
+  const mainSrc = gallery[Math.min(thumb, gallery.length - 1)] || product.image || null;
+  const off = product.oldPrice ? Math.round((1 - product.price / product.oldPrice) * 100) : 0;
+
+  const pick = (i) => { setActive(i); setThumb(0); setColor(0); setQty(1); };
+  const pickColor = (i) => { setColor(i); setThumb(0); };
+
+  const onAdd = () => {
+    const variant = product.variants?.find((v) => v.color === selectedColorName) || product.variants?.[0];
+    add(
+      {
+        ...product,
+        image: gallery[0] || product.image || null,
+        color: selectedColorName || null,
+        price: variant?.price ?? product.price,
+        oldPrice: variant?.oldPrice ?? product.oldPrice ?? null,
+        sku: variant?.sku || product.sku || null,
+      },
+      product.sizes?.[1] || product.sizes?.[0] || 'M',
+      qty,
+      variant?.id ?? null
+    );
+    toast.cart(`${product.name} added to cart`);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1600);
+  };
 
   return (
-    <section className="relative overflow-hidden bg-paper vq-section">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-40 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full opacity-30"
-        style={{ background: 'radial-gradient(circle, rgba(160,125,62,0.10) 0%, transparent 70%)' }}
-      />
-
-      {/* Faint watermark */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-8 top-1/4 select-none font-display text-[10rem] font-light italic leading-none"
-        style={{ color: 'rgba(160,125,62,0.03)' }}
-      >
-        Featured
-      </div>
-
-      <div className="relative vq-container">
-        <div className="mb-12 md:mb-16">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-gold">Featured</p>
-          <h2 className="vq-display mt-4 text-[clamp(2.1rem,4.8vw,3.5rem)] leading-[1.02] tracking-[-0.02em] text-ink">
-            Handcrafted <span className="text-gold">✦</span>
-          </h2>
-          <span className="mt-6 block h-px w-14 bg-gradient-to-r from-gold to-transparent" aria-hidden />
-        </div>
-
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <Link
-            href={`/products/${featureSlug}`}
-            className="group relative mx-auto block w-full max-w-[520px]"
-            aria-label={feature.name || 'Featured product'}
-          >
-            {/* Outer offset gold frame */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -inset-4 border border-gold/30 transition-all duration-700 ease-out group-hover:-inset-2 group-hover:border-gold/50"
-            />
-            {/* Image container */}
-            <div className="relative aspect-[4/5] overflow-hidden bg-paper-2 border border-line group-hover:border-gold/30 transition-colors duration-500">
-              {featureImage ? (
-                <Image
-                  src={featureImage}
-                  alt={feature.name || 'Featured product'}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 520px"
-                  className="object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.04]"
-                />
-              ) : (
-                <div className="h-full w-full bg-paper-2" />
-              )}
-              {/* Shine sweep */}
-              <span
-                aria-hidden
-                className="vq-shine opacity-0 transition-opacity duration-700 group-hover:opacity-100"
-              />
-            </div>
-          </Link>
-
-          <div className="flex flex-col justify-center">
-            <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-gold/70">
-              Featured Product
-            </p>
-
-            <h3 className="mt-5 font-display text-3xl font-medium leading-[1.08] text-ink md:text-4xl lg:text-[2.75rem]">
-              {feature.name || 'Featured'}
-            </h3>
-
-            <p className="mt-6 max-w-md text-[15px] leading-[1.85] text-text-muted">
-              {featureDescription}
-            </p>
-
-            <div className="mt-8 flex items-baseline gap-4 border-t border-line pt-8">
-              <p className="font-display text-3xl font-medium text-ink">
-                {formatPrice(feature.price)}
-              </p>
-              {feature.compareAtPrice && (
-                <p className="text-[14px] text-text-faint line-through">
-                  {formatPrice(feature.compareAtPrice)}
-                </p>
-              )}
-            </div>
-
-            <Link
-              href={`/products/${featureSlug}`}
-              className="vq-grad-btn group/cta mt-10 inline-flex items-center gap-3 self-start rounded-full px-9 py-4 text-[10px] font-semibold uppercase tracking-[0.3em]"
-            >
-              Buy Now
-              <ArrowRight
-                size={13}
-                strokeWidth={2}
-                className="transition-transform duration-300 group-hover/cta:translate-x-1.5"
-              />
-            </Link>
+    <section className="section exclusive">
+      <div className="container">
+        <div className="excl-panel">
+          <div className="excl-panel-head">
+            <span className="excl-ribbon"><Icon name="Sparkles" size={13} /> Spotlight</span>
+            <h2>The Morbix Edit</h2>
+            <p>One standout pair, chosen this week — worth a closer look.</p>
           </div>
+
+        <div className="excl-grid">
+          {/* Gallery */}
+          <div className="excl-gallery" style={railH ? { '--excl-rail-h': `${railH}px` } : undefined}>
+            {gallery.length > 1 && (
+              <div className="excl-thumbs" ref={thumbsRef} data-lenis-prevent>
+                {gallery.map((src, i) => (
+                  <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
+                    onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
+                    <img src={src} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="excl-main" ref={mainRef}>
+              {mainSrc
+                ? <img src={mainSrc} alt={product.name} />
+                : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}
+              {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="excl-info">
+            <span className="excl-cat">{product.category}</span>
+            <h3>{product.name}</h3>
+            <div className="excl-price">
+              ₹{Number(product.price).toFixed(0)}
+              {product.oldPrice ? <span className="old">₹{Number(product.oldPrice).toFixed(0)}</span> : null}
+              {off > 0 && <span className="excl-off">{off}% OFF</span>}
+            </div>
+
+            {product.colors?.length > 0 && (
+              <div className="excl-opt">
+                <span className="excl-opt-label">Color{selectedColorName ? ` — ${selectedColorName}` : ''}</span>
+                <div className="swatches">
+                  {product.colors.map((c, i) => (
+                    <button key={i} type="button" className={`swatch${i === color ? ' active' : ''}`}
+                      style={{ background: c }} onClick={() => pickColor(i)}
+                      aria-label={colorNames[i] || `Color ${i + 1}`} title={colorNames[i] || ''} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {product.description && <p className="excl-desc">{product.description}</p>}
+
+            <div className="excl-actions">
+              <div className="qty">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              </div>
+              <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={onAdd}>
+                {added ? <>Added <Icon name="ShieldCheck" size={16} /></> : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}
+              </button>
+              <Link href={`/products/${product.slug}`} className="btn btn-ghost">View</Link>
+            </div>
+          </div>
+
+          {/* Product switcher */}
+          {list.length > 1 && (
+            <div className="excl-switch" data-lenis-prevent>
+              {list.map((p, i) => (
+                <button key={p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
+                  onClick={() => pick(i)} aria-label={p.name} title={p.name}>
+                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

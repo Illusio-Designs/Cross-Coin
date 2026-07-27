@@ -1,29 +1,40 @@
-import { cn } from '@/lib/utils';
-
-
-
-
-
-export function Skeleton({ className }) {
+/**
+ * Skeleton — a shimmering placeholder block. Compose these to build the
+ * per-route loading.jsx screens. Pass width/height (any CSS length), an
+ * optional `radius`, and `className` for layout.
+ */
+export function Skeleton({ width = '100%', height = 16, radius = 8, className = '', style = {} }) {
   return (
-    <div
-      className={cn('animate-pulse rounded-md bg-gray-100', className)}
-      aria-hidden="true" />);
-
-
+    <span
+      className={`shimmer${className ? ' ' + className : ''}`}
+      style={{ display: 'block', width, height, borderRadius: radius, ...style }}
+      aria-hidden="true"
+    />
+  );
 }
 
+/** A product-card shaped skeleton for grid loading states. */
 export function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      <Skeleton className="aspect-[4/5] w-full md:aspect-[3/4]" />
-      <div className="flex gap-1.5">
-        {[...Array(4)].map((_, i) =>
-        <Skeleton key={i} className="h-4 w-4 rounded-full" />
-        )}
+    <div className="pcard" aria-hidden="true">
+      <div className="pcard-media"><Skeleton width="100%" height="100%" radius={0} /></div>
+      <div className="pcard-body" style={{ display: 'grid', gap: 8 }}>
+        <Skeleton width="40%" height={10} />
+        <Skeleton width="80%" height={16} />
+        <Skeleton width="55%" height={12} />
+        <Skeleton width="35%" height={18} />
       </div>
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-4 w-1/4" />
-    </div>);
-
+    </div>
+  );
 }
+
+/** A grid of product-card skeletons. */
+export function ProductGridSkeleton({ count = 8 }) {
+  return (
+    <div className="product-grid">
+      {Array.from({ length: count }).map((_, i) => <ProductCardSkeleton key={i} />)}
+    </div>
+  );
+}
+
+export default Skeleton;

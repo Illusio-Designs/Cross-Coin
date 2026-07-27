@@ -1,23 +1,23 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import Link from 'next/link';
+import Icon from '@/components/Icon';
 
-export default function Error({
-  error,
-  reset
-
-
-
-}) {
+// Root error boundary — catches render errors in any route segment that lacks
+// its own boundary, so a data hiccup degrades to a friendly page, never a raw
+// server crash.
+export default function RootError({ error, reset }) {
   return (
-    <section className="bg-cream">
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 text-center">
-        <h1 className="font-display text-3xl font-normal text-brand-black">Something went wrong</h1>
-        <p className="text-base leading-relaxed text-gray-600">
-          {error.message ?? 'An unexpected error occurred.'}
-        </p>
-        <Button onClick={reset}>Try again</Button>
+    <div className="container" style={{ paddingTop: 60, paddingBottom: 80 }}>
+      <div className="cart-empty">
+        <Icon name="Sparkles" size={44} color="#c3ccd2" />
+        <b style={{ fontSize: 18 }}>Something went wrong</b>
+        <p className="muted">We hit a snag loading this page. Please try again.</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button className="btn btn-primary" onClick={() => reset()}>Try again</button>
+          <Link href="/" className="btn btn-ghost">Go home</Link>
+        </div>
       </div>
-    </section>);
-
+    </div>
+  );
 }

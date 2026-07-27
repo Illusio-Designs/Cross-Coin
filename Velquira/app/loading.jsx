@@ -1,10 +1,13 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
 
-export default function Loading() {
+export default function HomeLoading() {
   return (
-    <div className="mx-auto max-w-site px-6 py-32 md:px-10 lg:px-16">
-      <Skeleton className="mx-auto h-16 w-2/3" />
-      <Skeleton className="mx-auto mt-6 h-6 w-1/3" />
-    </div>);
-
+    <div className="container" style={{ paddingTop: 34, paddingBottom: 40 }}>
+      <Skeleton height={360} radius={24} />
+      <div style={{ height: 40 }} />
+      <Skeleton width="30%" height={26} />
+      <div style={{ height: 20 }} />
+      <ProductGridSkeleton count={5} />
+    </div>
+  );
 }

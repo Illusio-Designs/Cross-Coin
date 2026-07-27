@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
   getCart as apiGetCart,
   addToCart as apiAddToCart,
@@ -8,281 +8,269 @@ import {
   removeFromCart as apiRemoveFromCart,
   clearCart as apiClearCart,
 } from '@/lib/api/cart';
-import { toastAddedToCart } from '@/lib/toast';
 
-const GUEST_CART_KEY = 'velquira_guest_cart';
+const CartContext = createContext(null);
+const KEY = 'morbix_cart';
+
+function isAuthed() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !!localStorage.getItem('token');
+  } catch {
+    return false;
+  }
+}
 
 function cleanUrl(url) {
-  if (!url) return '';
+  if (!url || typeof url !== 'string') return '';
   if (url.includes('https://') && url.indexOf('https://') !== url.lastIndexOf('https://')) {
     return url.substring(url.lastIndexOf('https://'));
   }
   return url;
 }
 
-function normalizeApiItem(item) {
-  // Backend cart controller returns flat format:
-  // { id, productId, variationId, name, image, images:[{image_url}], price, quantity, size, color }
-  // This handles that directly.
+// Pull the colour out of a backend cart row's variation attributes.
+function attrColor(item) {
+  const a = item.color || item.variation?.attributes || item.attributes;
+  if (!a) return null;
+  if (typeof a === 'string' && !a.trim().startsWith('{')) return a;
+  const obj = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return {}; } })() : a;
+  const c = obj?.color;
+  return Array.isArray(c) ? c[0] : (c || null);
+}
 
-  // Flat format detection (backend already processed)
-  if (item.productId !== undefined || (item.name && !item.Product)) {
-    const colorVal = item.color;
-    const colorStr = Array.isArray(colorVal) ? colorVal.join(', ') : (colorVal || null);
-    const images = Array.isArray(item.images) && item.images.length > 0
-      ? item.images.map(i => ({ image_url: cleanUrl(i.image_url || i.url || '') }))
-      : item.image ? [{ image_url: cleanUrl(item.image) }] : [];
-
-    return {
-      id: item.id,
-      productId: item.productId || item.product_id,
-      variationId: item.variationId || item.variation_id || null,
-      name: item.name || '',
-      images,
-      image: cleanUrl(item.image || images[0]?.image_url || ''),
-      price: parseFloat(item.price || 0),
-      compareAtPrice: 0,
-      variation: null,
-      size: item.size || null,
-      color: colorStr,
-      quantity: item.quantity || 1,
-      sku: '',
-    };
-  }
-
-  // DB join format fallback (Product / ProductVariation nested)
-  const variation = item.ProductVariation || item.variation || null;
-  const product = item.Product || {};
-  let images = [];
-  if (variation?.VariationImages?.length > 0) {
-    images = variation.VariationImages.map(img => ({
-      image_url: cleanUrl(img.large || img.image_url || img.url || ''),
-    }));
-  } else if (product.ProductImages?.length > 0) {
-    images = product.ProductImages.map(img => ({
-      image_url: cleanUrl(img.large || img.image_url || img.url || ''),
-    }));
-  }
-  const attrs = variation?.attributes
-    ? (typeof variation.attributes === 'string' ? JSON.parse(variation.attributes) : variation.attributes)
-    : {};
+// Normalise a backend cart row into the Morbix cart-item shape the UI uses.
+// Morbix items: { key, id, productId, variationId, serverId, slug, name,
+//                 price, oldPrice, image, color, size, qty }
+function normalizeServerItem(item) {
+  const productId = item.productId ?? item.product_id ?? item.id;
+  const variationId = item.variationId ?? item.variation_id ?? null;
+  const images = Array.isArray(item.images) ? item.images : [];
+  const image = cleanUrl(item.image || images[0]?.image_url || images[0]?.url || '');
+  const size = item.size || (Array.isArray(item.size) ? item.size[0] : null) || 'M';
   return {
-    id: item.id,
-    productId: item.product_id || item.productId,
-    variationId: item.variation_id || item.variationId || null,
-    name: product.name || item.name || '',
-    images,
-    image: images[0]?.image_url || '',
-    price: parseFloat(variation?.price || item.price || 0),
-    compareAtPrice: parseFloat(variation?.comparePrice || item.comparePrice || 0),
-    variation: variation ? { ...variation, attributes: attrs } : null,
-    size: item.size || (attrs.size ? (Array.isArray(attrs.size) ? attrs.size[0] : attrs.size) : null),
-    color: item.color || (attrs.color ? (Array.isArray(attrs.color) ? attrs.color.join(', ') : attrs.color) : null),
-    quantity: item.quantity || 1,
-    sku: variation?.sku || '',
+    key: `${productId}-${variationId ?? size}`,
+    id: productId,
+    productId,
+    variationId,
+    serverId: item.id,
+    slug: item.slug || item.handle || '',
+    name: item.name || '',
+    price: parseFloat(item.price || 0),
+    oldPrice: item.comparePrice ? parseFloat(item.comparePrice) : null,
+    image,
+    color: attrColor(item),
+    size,
+    qty: item.quantity || 1,
   };
 }
 
-const CartContext = createContext(null);
-
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isCartLoading, setIsCartLoading] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [items, setItems] = useState([]);
+  const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
 
-  const pendingRef = useRef(false);
-  const prevIsAuthRef = useRef(false);
+  const prevAuthRef = useRef(false);
+  const loadingRef = useRef(false);
 
-  // Sync isLoggedIn with token in localStorage
+  const openCart = useCallback(() => setOpen(true), []);
+  const closeCart = useCallback(() => setOpen(false), []);
+
+  const readGuestCart = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // Track the auth state and re-run the loader on login/logout.
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    setIsLoggedIn(!!token);
-    setIsHydrated(true);
-
-    const onStorage = () => setIsLoggedIn(!!localStorage.getItem('token'));
+    setLoggedIn(isAuthed());
+    const onStorage = () => setLoggedIn(isAuthed());
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const isAuthenticated = () =>
-    typeof window !== 'undefined' ? !!localStorage.getItem('token') : false;
-
+  // Load cart: backend for authed users (merging the guest cart on first
+  // login), localStorage for guests. Mirrors the Knitwink approach.
   useEffect(() => {
-    if (!isHydrated || pendingRef.current) return;
+    if (loadingRef.current) return;
+    let cancelled = false;
 
     const load = async () => {
-      pendingRef.current = true;
-      setIsCartLoading(true);
-      const authed = isAuthenticated();
+      loadingRef.current = true;
+      const authed = isAuthed();
       try {
         if (authed) {
-          // Merge guest cart on first login
-          if (!prevIsAuthRef.current) {
-            try {
-              const raw = localStorage.getItem(GUEST_CART_KEY);
-              const guestItems = raw ? JSON.parse(raw) : [];
-              for (const item of guestItems) {
-                try {
-                  await apiAddToCart({
-                    productId: Number(item.productId),
-                    variationId: item.variationId ? Number(item.variationId) : null,
-                    quantity: item.quantity || 1,
-                    size: item.size || null,
-                  });
-                } catch { /* non-fatal */ }
+          // Merge any guest cart into the server cart on first login.
+          if (!prevAuthRef.current) {
+            const guest = readGuestCart();
+            for (const it of guest) {
+              const pid = Number(it.productId ?? it.id);
+              if (!pid || Number.isNaN(pid)) continue;
+              try {
+                await apiAddToCart({
+                  productId: pid,
+                  variationId: it.variationId ? Number(it.variationId) : null,
+                  quantity: it.qty || 1,
+                  size: it.size || null,
+                });
+              } catch {
+                /* non-fatal */
               }
-              if (guestItems.length > 0) localStorage.removeItem(GUEST_CART_KEY);
-            } catch { /* non-fatal */ }
+            }
+            if (guest.length) {
+              try { localStorage.removeItem(KEY); } catch {}
+            }
           }
           const data = await apiGetCart();
-          setCartItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
-        } else {
-          try {
-            const raw = localStorage.getItem(GUEST_CART_KEY);
-            const parsed = raw ? JSON.parse(raw) : [];
-            // Filter out legacy items that don't have a valid productId (from old schema)
-            const cleaned = parsed.filter(i => i.productId != null && !isNaN(Number(i.productId)));
-            if (cleaned.length !== parsed.length) {
-              localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cleaned));
-            }
-            setCartItems(cleaned);
-          } catch { setCartItems([]); }
+          if (!cancelled) setItems(Array.isArray(data) ? data.map(normalizeServerItem) : []);
+        } else if (!cancelled) {
+          setItems(readGuestCart());
         }
-      } catch { setCartItems([]); }
-      finally {
-        prevIsAuthRef.current = authed;
-        setIsCartLoading(false);
-        pendingRef.current = false;
+      } catch {
+        if (!cancelled) setItems(authed ? [] : readGuestCart());
+      } finally {
+        prevAuthRef.current = authed;
+        loadingRef.current = false;
+        if (!cancelled) setReady(true);
       }
     };
 
     load();
-  }, [isHydrated, isLoggedIn]);
+    return () => { cancelled = true; };
+  }, [loggedIn]);
 
-  // Persist guest cart to localStorage
+  // Persist the guest cart to localStorage (guests only).
   useEffect(() => {
-    if (!isHydrated || isCartLoading || isAuthenticated()) return;
-    try { localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cartItems)); } catch { /* ignore */ }
-  }, [cartItems, isHydrated, isCartLoading]);
+    if (!ready || isAuthed()) return;
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
+  }, [items, ready]);
 
-  const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, imageUrl = null) => {
-    const authed = isAuthenticated();
+  // Reconcile with the server cart, but KEEP the colour/image/oldPrice we already
+  // know locally when the server row doesn't return them — so a freshly-added
+  // item never loses its colour just because the backend omits it.
+  const refreshServerCart = async () => {
+    try {
+      const data = await apiGetCart();
+      setItems((prev) => {
+        const byKey = new Map(prev.map((i) => [i.key, i]));
+        return (Array.isArray(data) ? data : []).map((raw) => {
+          const norm = normalizeServerItem(raw);
+          const local = byKey.get(norm.key);
+          if (!local) return norm;
+          return {
+            ...norm,
+            color: norm.color || local.color || null,
+            image: norm.image || local.image || null,
+            oldPrice: norm.oldPrice ?? local.oldPrice ?? null,
+            slug: norm.slug || local.slug || '',
+          };
+        });
+      });
+    } catch {
+      /* keep current items */
+    }
+  };
 
-    if (authed) {
+  // Build the local cart-item shape (full details, so the drawer shows colour,
+  // image and price instantly — no waiting on the network).
+  const toLocalItem = (product, size, qty, variationId) => ({
+    key: `${product.id}-${variationId ?? size}`,
+    id: product.id,
+    productId: product.id,
+    variationId: variationId || null,
+    slug: product.slug,
+    name: product.name,
+    price: product.price,
+    oldPrice: product.oldPrice || null,
+    image: product.image || null,
+    color: product.color || null,
+    size,
+    qty,
+  });
+
+  const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
+    // 1) Optimistic local insert — the item shows in the drawer INSTANTLY.
+    const key = `${product.id}-${variationId ?? size}`;
+    setItems((prev) => {
+      const found = prev.find((i) => i.key === key);
+      if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
+      return [...prev, toLocalItem(product, size, qty, variationId)];
+    });
+    setOpen(true);
+    // 2) For logged-in users, sync to the backend in the background and
+    //    reconcile (keeping the colour/image we just set).
+    if (isAuthed()) {
       try {
         await apiAddToCart({
           productId: Number(product.id),
           variationId: variationId ? Number(variationId) : null,
-          quantity,
-          size: selectedSize || null,
+          quantity: qty,
+          size: size || null,
         });
-        const data = await apiGetCart();
-        setCartItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
-        toastAddedToCart(product.name);
+        await refreshServerCart();
       } catch {
-        _addGuestItem(product, selectedColor, selectedSize, quantity, variationId, imageUrl);
+        /* optimistic item stays so the UI still reflects intent */
       }
-    } else {
-      _addGuestItem(product, selectedColor, selectedSize, quantity, variationId, imageUrl);
     }
+  }, []);
 
-    setIsDrawerOpen(true);
-  };
-
-  function _addGuestItem(product, selectedColor, selectedSize, quantity, variationId, imageUrl) {
-    const vid = variationId ? String(variationId) : null;
-    setCartItems(prev => {
-      const existing = prev.find(i => String(i.productId) === String(product.id) && String(i.variationId) === String(vid));
-      if (existing) {
-        return prev.map(i =>
-          String(i.productId) === String(product.id) && String(i.variationId) === String(vid)
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        );
+  const remove = useCallback(async (key) => {
+    const item = items.find((i) => i.key === key);
+    if (item && isAuthed()) {
+      try {
+        await apiRemoveFromCart(item.productId ?? item.id, item.variationId ?? null);
+        await refreshServerCart();
+        return;
+      } catch {
+        /* fall through */
       }
-      const url = imageUrl || product.images?.[0]?.url || '';
-      const newItem = {
-        id: Date.now() + Math.random(),
-        productId: String(product.id),
-        variationId: vid,
-        name: product.name,
-        image: url,
-        images: url ? [{ image_url: url }] : [],
-        price: parseFloat(product.price || 0),
-        compareAtPrice: parseFloat(product.compareAtPrice || 0),
-        variation: null,
-        size: selectedSize || 'Free Size',
-        color: selectedColor || '',
-        quantity,
-      };
-      return [...prev, newItem];
-    });
-    toastAddedToCart(product.name);
-  }
-
-  const removeFromCart = async (itemId) => {
-    const item = cartItems.find(i => i.id === itemId);
-    if (!item) return;
-    if (isAuthenticated()) {
-      try {
-        await apiRemoveFromCart(item.productId, item.variationId ?? null);
-        const data = await apiGetCart();
-        setCartItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
-        return;
-      } catch { /* fall through to local remove */ }
     }
-    setCartItems(prev => prev.filter(i => i.id !== itemId));
-  };
+    setItems((prev) => prev.filter((i) => i.key !== key));
+  }, [items]);
 
-  const updateQuantity = async (itemId, newQty) => {
-    if (newQty < 1) { await removeFromCart(itemId); return; }
-    const item = cartItems.find(i => i.id === itemId);
-    if (!item) return;
-    if (isAuthenticated()) {
+  const setQty = useCallback(async (key, qty) => {
+    const item = items.find((i) => i.key === key);
+    if (qty <= 0) { await remove(key); return; }
+    if (item && isAuthed()) {
       try {
-        await apiUpdateCartItem(item.productId, newQty, item.variationId ?? null);
-        const data = await apiGetCart();
-        setCartItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+        await apiUpdateCartItem(item.productId ?? item.id, qty, item.variationId ?? null);
+        await refreshServerCart();
         return;
-      } catch { /* fall through to local update */ }
+      } catch {
+        /* fall through */
+      }
     }
-    setCartItems(prev => prev.map(i => i.id === itemId ? { ...i, quantity: newQty } : i));
-  };
+    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, qty } : i)));
+  }, [items, remove]);
 
-  const clearCart = async () => {
-    if (isAuthenticated()) {
-      try { await apiClearCart(); } catch { /* non-fatal */ }
+  const clear = useCallback(async () => {
+    if (isAuthed()) {
+      try { await apiClearCart(); } catch {}
     } else {
-      try { localStorage.removeItem(GUEST_CART_KEY); } catch { /* ignore */ }
+      try { localStorage.removeItem(KEY); } catch {}
     }
-    setCartItems([]);
-  };
+    setItems([]);
+  }, []);
 
-  const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
-  const cartTotal = cartItems.reduce((s, i) => s + parseFloat(i.price || 0) * i.quantity, 0);
+  const count = items.reduce((n, i) => n + i.qty, 0);
+  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
 
   return (
-    <CartContext.Provider value={{
-      cartItems,
-      cartCount,
-      cartTotal,
-      isCartLoading,
-      isDrawerOpen,
-      setIsDrawerOpen,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-    }}>
+    <CartContext.Provider
+      value={{ items, add, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
+    >
       {children}
     </CartContext.Provider>
   );
 }
 
-export function useCartContext() {
+export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCartContext must be used within CartProvider');
+  if (!ctx) throw new Error('useCart must be used within CartProvider');
   return ctx;
 }
