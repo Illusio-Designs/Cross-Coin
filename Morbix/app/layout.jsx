@@ -32,6 +32,13 @@ export const metadata = {
   other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
 };
 
+// Mobile browser chrome (address bar / status bar) tinted to the Morbix brand.
+export const viewport = {
+  themeColor: '#202c6e',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
