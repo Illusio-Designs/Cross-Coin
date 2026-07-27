@@ -33,7 +33,7 @@ export default async function CollectionPage({ params }) {
       {products.length === 0 ? (
         <div className="empty" style={{ marginTop: 20 }}>
           No products in this collection yet.
-          <Link href="/products" className="btn btn-primary">Browse all socks</Link>
+          <Link href="/products" className="btn btn-primary">Browse all jewellery</Link>
         </div>
       ) : (
         <div className="product-grid" style={{ marginTop: 24 }}>

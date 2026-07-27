@@ -98,7 +98,7 @@ export default function RegisterClient() {
         headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
         body: JSON.stringify({
           username: form.name.trim(),
-          email: form.email.trim() || `${digits}@phone.morbixsocks.com`,
+          email: form.email.trim() || `${digits}@phone.velquira.in`,
           phone: digits,
           password: Math.random().toString(36).slice(-12) + 'Mx1!',
           role: 'consumer',

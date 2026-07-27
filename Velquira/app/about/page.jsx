@@ -3,9 +3,9 @@ import Icon from '@/components/Icon';
 export const metadata = { title: 'About' };
 
 const VALUES = [
-  { icon: 'Layers', title: 'Built to last', text: 'Reinforced knit and premium fibres that survive wash after wash.' },
-  { icon: 'Wind', title: 'Engineered comfort', text: 'Ventilation, cushioning and arch support designed around real feet.' },
-  { icon: 'Leaf', title: 'Kinder materials', text: 'Organic cotton and recycled yarns, because comfort should not cost the planet.' },
+  { icon: 'ShieldCheck', title: 'Hallmarked purity', text: 'Every piece is 916 BIS-certified gold — assured purity you can pass down.' },
+  { icon: 'Sparkles', title: 'Handcrafted', text: 'Cut, set and finished by master artisans in our Morbi atelier.' },
+  { icon: 'Gauge', title: 'Certified stones', text: 'Conflict-free, lab-certified diamonds and gemstones, ethically sourced.' },
 ];
 
 export default function AboutPage() {
@@ -13,8 +13,8 @@ export default function AboutPage() {
     <div className="container" style={{ paddingTop: 34, paddingBottom: 20 }}>
       <div className="page-hero">
         <span className="eyebrow">Our story</span>
-        <h1>Comfort in every step</h1>
-        <p>Morbix makes premium socks for people who move — runners, athletes and city dwellers alike. We obsess over the details most brands ignore: the arch band that stays put, the toe seam you never feel, the knit that breathes.</p>
+        <h1>The Velquira Maison</h1>
+        <p>Velquira crafts fine jewellery for life’s most cherished moments — engagements, heirlooms and everyday elegance. From our atelier in Morbi, we pair hallmarked gold and certified stones with old-world craftsmanship and quiet, timeless design.</p>
       </div>
 
       <div className="about-values">
@@ -29,8 +29,8 @@ export default function AboutPage() {
 
       <div className="about-band">
         <div>
-          <h2>Designed for movement, made for every day</h2>
-          <p>From the first prototype to the pair on your feet, every Morbix sock is tested by real athletes and refined until it disappears — so all you notice is the run, the game, or the walk home.</p>
+          <h2>Made to be treasured for generations</h2>
+          <p>From the first sketch to the final polish, every Velquira piece is shaped by hand and inspected against exacting standards — so what you wear today becomes tomorrow’s heirloom.</p>
         </div>
       </div>
     </div>

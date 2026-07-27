@@ -50,7 +50,7 @@ export default function WishlistClient() {
         <div className="cart-empty">
           <Icon name="Heart" size={40} color="#c3ccd2" />
           <p>Your wishlist is empty.</p>
-          <Link href="/products" className="btn btn-primary">Discover socks</Link>
+          <Link href="/products" className="btn btn-primary">Discover jewellery</Link>
         </div>
       ) : (
         <div className="product-grid" style={{ marginTop: 24 }}>

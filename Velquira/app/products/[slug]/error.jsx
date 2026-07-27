@@ -15,7 +15,7 @@ export default function ProductError({ error, reset }) {
         <p className="muted">It may be unavailable right now. Please try again in a moment.</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
           <button className="btn btn-primary" onClick={() => reset()}>Try again</button>
-          <Link href="/products" className="btn btn-ghost">Browse all socks</Link>
+          <Link href="/products" className="btn btn-ghost">Browse all jewellery</Link>
         </div>
       </div>
     </div>

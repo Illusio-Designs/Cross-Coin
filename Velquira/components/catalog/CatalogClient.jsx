@@ -12,7 +12,7 @@ const SORTS = [
 ];
 
 export default function CatalogClient({ products = [], chips: rawChips = [], initialCat = 'all' }) {
-  const chips = [{ label: 'All socks', slug: 'all', icon: 'LayoutGrid' }, ...rawChips];
+  const chips = [{ label: 'All jewellery', slug: 'all', icon: 'LayoutGrid' }, ...rawChips];
   const [cat, setCat] = useState(initialCat);
   const [sizes, setSizes] = useState([]);
   const [colors, setColors] = useState([]);
@@ -89,7 +89,7 @@ export default function CatalogClient({ products = [], chips: rawChips = [], ini
     return by ? [...out].sort(by) : out;
   }, [products, cat, sizes, colors, priceSel, sort, facets]);
 
-  const activeLabel = chips.find((c) => c.slug === cat)?.label || 'All socks';
+  const activeLabel = chips.find((c) => c.slug === cat)?.label || 'All jewellery';
   const sortLabel = SORTS.find((s) => s.value === sort)?.label;
 
   const SortDropdown = () => (
@@ -164,7 +164,7 @@ export default function CatalogClient({ products = [], chips: rawChips = [], ini
       <div className="page-hero">
         <span className="eyebrow">Shop</span>
         <h1>{activeLabel}</h1>
-        <p>Premium socks engineered for movement and everyday comfort.</p>
+        <p>Fine handcrafted jewellery in hallmarked gold and certified stones.</p>
       </div>
 
       {/* Quick category chips (desktop) */}
