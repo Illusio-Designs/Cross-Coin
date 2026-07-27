@@ -288,19 +288,17 @@ button { font-family: inherit; cursor: pointer; }
 .excl-panel-head h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; line-height: 1.1; margin-top: 12px; color: var(--ink); }
 .excl-panel-head p { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
 .excl-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto; grid-template-areas: "gallery info switch"; gap: 28px; margin-top: 26px; align-items: center; }
-.excl-gallery { grid-area: gallery; display: flex; gap: 12px; min-width: 0; }
-/* Rail shows exactly 3 thumbnails (76px each + 10px gaps = 248px); the rest
-   scroll inside it. The main image is set to the same height so the showcase
-   isn't a tall square. */
-.excl-thumbs { display: flex; flex-direction: column; gap: 10px; max-height: 248px; overflow-y: auto; scrollbar-width: none; flex-shrink: 0; scroll-behavior: smooth; }
-.excl-thumbs::-webkit-scrollbar { display: none; }
-/* Gallery mirrors the product-detail page: square thumbnails + main image on a
-   light neutral panel with object-fit: contain (shows the FULL image, never
+/* Image showcase mirrors the product-detail page EXACTLY: a vertical rail of
+   92px square thumbnails whose height tracks the main image, and a square main
+   image on a light neutral panel with object-fit: contain (full image, never
    cropped). */
-.excl-thumb { width: 76px; height: 76px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line-soft); background: #f2f5f6; cursor: pointer; padding: 0; transition: border-color .15s ease; flex-shrink: 0; }
+.excl-gallery { grid-area: gallery; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.excl-thumbs { display: flex; flex-direction: column; gap: 10px; width: 92px; flex-shrink: 0; max-height: var(--excl-rail-h, 460px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; scroll-behavior: smooth; }
+.excl-thumbs::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.excl-thumb { width: 92px; height: 92px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line-soft); background: #f2f5f6; cursor: pointer; padding: 0; transition: border-color .15s ease; flex-shrink: 0; }
 .excl-thumb.active { border-color: var(--teal); }
 .excl-thumb img { width: 100%; height: 100%; object-fit: contain; }
-.excl-main { position: relative; flex: 1; min-width: 0; height: 248px; border-radius: var(--r-lg); overflow: hidden; background: #f2f5f6; display: grid; place-items: center; }
+.excl-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1 / 1; border-radius: var(--r-lg); overflow: hidden; background: #f2f5f6; display: grid; place-items: center; }
 .excl-main img { width: 100%; height: 100%; object-fit: contain; }
 .excl-info { grid-area: info; position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; background: #fff; border: 1px solid var(--line-soft); border-radius: 20px; padding: 24px; box-shadow: 0 14px 40px -30px rgba(27,35,64,.45); }
 .excl-info::before { content: ''; position: absolute; top: 0; left: 24px; right: 24px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--teal), var(--navy)); }
@@ -327,8 +325,10 @@ button { font-family: inherit; cursor: pointer; }
 /* Mobile — single column stack */
 @media (max-width: 760px) {
   .excl-grid { grid-template-columns: 1fr; grid-template-areas: "gallery" "info" "switch"; gap: 18px; }
-  /* Keep the SAME showcase as the PDP on mobile: square main image + 76px
-     thumbnails so ~3 thumbs show and the rest scroll inside the rail. */
+  /* Same showcase as the PDP on mobile: 76px thumbnails (PDP shrinks to 76 too),
+     square main image, rail height tracks the main. */
+  .excl-thumbs { width: 76px; }
+  .excl-thumb { width: 76px; height: 76px; }
   .excl-info { padding: 20px; }
   .excl-info h3 { font-size: 20px; }
   .excl-price { font-size: 22px; }
