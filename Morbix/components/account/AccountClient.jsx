@@ -116,8 +116,6 @@ function Dashboard() {
               <Icon name={t.icon} size={17} /> <span>{t.label}</span>
             </button>
           ))}
-          <Link href="/wishlist" className="account-nav-btn"><Icon name="Heart" size={17} /> <span>Wishlist</span></Link>
-          <Link href="/track-order" className="account-nav-btn"><Icon name="Truck" size={17} /> <span>Track order</span></Link>
           <button className="account-nav-btn danger" onClick={doLogout}><Icon name="ArrowUpRight" size={17} /> <span>Log out</span></button>
         </aside>
 

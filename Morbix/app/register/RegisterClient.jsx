@@ -161,7 +161,7 @@ export default function RegisterClient() {
               <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
                 {loading ? 'Creating account…' : 'Verify & create account'}
               </button>
-              <button type="button" className="link-more" style={{ justifyContent: 'center' }}
+              <button type="button" className="link-more" style={{ alignSelf: 'center', marginTop: 4 }}
                 onClick={() => { setStep('details'); setOtp(['', '', '', '']); setError(''); }}>
                 ← Edit details
               </button>
