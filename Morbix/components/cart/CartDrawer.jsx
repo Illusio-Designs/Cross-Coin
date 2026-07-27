@@ -502,9 +502,7 @@ export default function CartDrawer() {
                         <input type="radio" name="cdpay" checked={selectedFee?.id === fee.id} disabled={codBlocked} onChange={() => !codBlocked && setSelectedFee(fee)} />
                         <span className="cd-pay-icon"><Icon name={isCodOpt ? 'ShieldCheck' : 'ShoppingBag'} size={18} /></span>
                         <div className="cd-pay-info">
-                          <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
-                            {isCodOpt && !codBlocked && <span className="cd-pay-popular">Most Popular</span>}
-                          </b>
+                          <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}</b>
                           <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : `Secure payment via Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 ? ` · ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}</span>
                           <span className="cd-pay-date"><Icon name="Truck" size={12} /> Delivery by {deliveryDateStr()}</span>
                         </div>
