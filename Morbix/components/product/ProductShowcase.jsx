@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
-import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useCart } from '@/context/CartContext';
+import { toast } from '@/lib/toast';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -17,6 +17,21 @@ export default function ProductShowcase({ product }) {
   const [active, setActive] = useState(0);         // active gallery image
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Match the thumbnail rail's height to the main image so it never runs longer
+  // than the photo — extra thumbnails scroll inside it instead.
+  const mainRef = useRef(null);
+  const thumbsRef = useRef(null);
+  const [railH, setRailH] = useState(0);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const selectedColorName = colorNames[color] || '';
 
@@ -57,47 +72,111 @@ export default function ProductShowcase({ product }) {
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
 
+  // Preload every gallery image once so switching colour/thumbnail is instant
+  // (no network wait, no shimmer flash — the swap looks immediate).
+  useEffect(() => {
+    const urls = new Set();
+    (product.images || []).forEach((u) => urls.add(u));
+    (product.colorImages || []).forEach((arr) => (arr || []).forEach((u) => urls.add(u)));
+    urls.forEach((u) => { const im = new Image(); im.src = u; });
+  }, [product]);
+
+  // Auto-advance the main image through the thumbnails, one by one, every 3s.
+  useEffect(() => {
+    if (shown.length <= 1) return;
+    const t = setInterval(() => setActive((a) => (a + 1) % shown.length), 3000);
+    return () => clearInterval(t);
+  }, [shown.length, color]);
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail — never the
+  // page. (el.scrollIntoView scrolls every ancestor, so on mobile it yanked the
+  // whole page back to the top each time the autoplay advanced the image.)
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector(`[data-thumb="${active}"]`);
+    if (!el) return;
+    const railRect = rail.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const vertical = rail.scrollHeight > rail.clientHeight + 1;
+    if (vertical) {
+      const delta = (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2;
+      rail.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rail.scrollWidth > rail.clientWidth + 1) {
+      const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
+      rail.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }, [active]);
+
   const pickColor = (i) => { setColor(i); setActive(0); };
 
   const onAdd = () => {
     if (!inStock) return;
-    // Merge the variation's price/image/sku onto the product so the guest cart
-    // line shows the right combo; authed carts recompute from variationId.
+    // Use the SELECTED variation's main image (its first photo — stable, not the
+    // auto-rotating one), and pass the colour so the cart line shows it.
+    const variationMainImage = shown[0] || product.image || null;
     add(
-      { ...product, price, oldPrice: oldPrice || null, image: mainSrc || product.image, sku },
+      { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
       effectiveSize || 'M',
       qty,
       activeVariant?.id ?? null
     );
+    toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   };
 
-  return (
-    <div className="pdp">
-      <div className="pdp-gallery">
-        <div className="pdp-main">
-          {mainSrc
-            ? <ShimmerImg src={mainSrc} alt={product.name} />
-            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
-          {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
-        </div>
+  // Specification rows reflect the SELECTED variation (colour / size / SKU /
+  // material change as you pick), then fall back to product-level details.
+  const specs = [
+    ['Color', selectedColorName],
+    ['Size', effectiveSize],
+    ['Material', activeVariant?.material || product.material],
+    ['Care', product.care],
+    ['Fit', product.fit],
+    ['Cushioning', product.cushioning],
+    ['Category', product.category],
+    ['SKU', sku],
+    ['Origin', product.origin],
+  ].filter(([, v]) => v);
 
+  return (
+    <>
+    <div className="pdp">
+      <div className="pdp-gallery" style={railH ? { '--rail-h': `${railH}px` } : undefined}>
         {shown.length > 1 && (
-          <div className="pdp-thumbs">
-            {shown.slice(0, 8).map((src, i) => (
+          <div
+            className="pdp-thumbs"
+            ref={thumbsRef}
+            tabIndex={0}
+            data-lenis-prevent
+            aria-label="Product image thumbnails"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.currentTarget.scrollBy({ top: 120, behavior: 'smooth' }); e.preventDefault(); }
+              if (e.key === 'ArrowUp') { e.currentTarget.scrollBy({ top: -120, behavior: 'smooth' }); e.preventDefault(); }
+            }}
+          >
+            {shown.map((src, i) => (
               <button
                 key={src + i}
                 type="button"
+                data-thumb={i}
                 className={`pdp-thumb${i === active ? ' active' : ''}`}
                 onClick={() => setActive(i)}
                 aria-label={`View image ${i + 1}`}
               >
-                <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} loading="lazy" />
+                <img src={src} alt={`${product.name} view ${i + 1}`} loading="lazy" />
               </button>
             ))}
           </div>
         )}
+
+        <div className="pdp-main" ref={mainRef}>
+          {mainSrc
+            ? <img src={mainSrc} alt={product.name} />
+            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
+          {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
+        </div>
       </div>
 
       <div className="pdp-info">
@@ -119,8 +198,6 @@ export default function ProductShowcase({ product }) {
             ? <span className="in-stock"><Icon name="ShieldCheck" size={13} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
             : <span className="muted" style={{ color: 'var(--sale)' }}><Icon name="X" size={13} /> Out of stock</span>}
         </div>
-
-        <p className="pdp-desc">{product.description}</p>
 
         <div className="buy">
           {product.colors?.length > 0 && (
@@ -169,5 +246,34 @@ export default function ProductShowcase({ product }) {
         </div>
       </div>
     </div>
+
+    {/* ── About + Specifications (specs track the selected variation) ── */}
+    <section className="pdp-details">
+      <div className="pdp-about">
+        <span className="eyebrow">Details</span>
+        <h2>About this product</h2>
+        {product.description
+          ? <p>{product.description}</p>
+          : <p className="muted">No description available for this product yet.</p>}
+
+        {product.features?.length > 0 && (
+          <ul className="pdp-features">
+            {product.features.map((f) => (
+              <li key={f.text}><span className="ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <aside className="pdp-specs">
+        <h3>Specifications</h3>
+        <dl>
+          {specs.map(([k, v]) => (
+            <div className="spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
+          ))}
+        </dl>
+      </aside>
+    </section>
+    </>
   );
 }

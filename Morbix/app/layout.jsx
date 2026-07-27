@@ -1,11 +1,14 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import SmoothScroll from '@/components/SmoothScroll';
+import Msg91Loader from '@/components/Msg91Loader';
+import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
@@ -25,12 +28,23 @@ export const metadata = {
     description: 'Engineered knit, lasting cushioning and clean design in every step.',
   },
   icons: { icon: '/icon.svg' },
+  // Deployment marker so we can verify EXACTLY which commit is live:
+  // view page source and search for <meta name="x-build" …>.
+  other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
+};
+
+// Mobile browser chrome (address bar / status bar) tinted to the Morbix brand.
+export const viewport = {
+  themeColor: '#202c6e',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
+        <Msg91Loader />
         <AuthProvider>
           <CartProvider>
             <SmoothScroll>
@@ -39,6 +53,8 @@ export default function RootLayout({ children }) {
               <Footer />
               <CartDrawer />
             </SmoothScroll>
+            <FloatingWidgets />
+            <ToastHost />
             <Analytics />
           </CartProvider>
         </AuthProvider>

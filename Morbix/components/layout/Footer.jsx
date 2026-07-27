@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import MorbixLogo from '@/components/MorbixLogo';
+import BrandLogo from '@/components/BrandLogo';
 
 const COLS = [
   { title: 'Shop', links: [
@@ -10,10 +10,10 @@ const COLS = [
     { label: 'Track order', href: '/track-order' },
   ] },
   { title: 'For buyers', links: [
-    { label: 'Shipping & delivery', href: '/policies/shipping' },
-    { label: 'Returns & exchange', href: '/policies/returns' },
-    { label: 'Privacy policy', href: '/policies/privacy' },
-    { label: 'Terms of service', href: '/policies/terms' },
+    { label: 'Shipping & delivery', href: '/policies/shipping-policy' },
+    { label: 'Cancellation & refund', href: '/policies/cancellation-and-refund' },
+    { label: 'Privacy policy', href: '/policies/privacy-policy' },
+    { label: 'Terms of service', href: '/policies/terms-and-conditions' },
   ] },
   { title: 'Company', links: [
     { label: 'About', href: '/about' },
@@ -29,12 +29,12 @@ export default function Footer() {
       <div className="container">
         <div className="footer-cols">
           <div className="brand-col">
-            <MorbixLogo height={34} />
+            <BrandLogo height={42} />
             <p>Premium socks for sport and city life. Technology, comfort and clean design in every step.</p>
             <div className="socials">
-              <a href="#" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
-              <a href="#" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
-              <a href="#" aria-label="YouTube"><Icon name="Youtube" size={18} /></a>
+              <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
+              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
+              <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
             </div>
           </div>
 
@@ -58,10 +58,6 @@ export default function Footer() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Morbix. All rights reserved.</span>
           <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
-          <span style={{ display: 'flex', gap: 20 }}>
-            <Link href="/policies/privacy">Privacy policy</Link>
-            <Link href="/policies/terms">Terms of service</Link>
-          </span>
         </div>
       </div>
     </footer>

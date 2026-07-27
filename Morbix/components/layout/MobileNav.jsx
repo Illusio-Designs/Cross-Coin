@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/Icon';
-import MorbixLogo from '@/components/MorbixLogo';
+import BrandLogo from '@/components/BrandLogo';
 import { useCart } from '@/context/CartContext';
 
 export default function MobileNav({ items = [] }) {
@@ -30,16 +30,20 @@ export default function MobileNav({ items = [] }) {
       <div className={`drawer-overlay${open ? ' show' : ''}`} onClick={() => setOpen(false)} />
       <aside className={`drawer${open ? ' show' : ''}`} aria-hidden={!open}>
         <div className="drawer-head">
-          <MorbixLogo height={26} />
+          <BrandLogo height={30} />
           <button className="hamburger" aria-label="Close menu" onClick={() => setOpen(false)}><Icon name="X" size={22} /></button>
         </div>
-        <nav className="drawer-nav">
+        <nav className="drawer-nav" data-lenis-prevent>
           {items.map((item) => (
             <Link key={item.label} href={item.href} onClick={() => setOpen(false)}>
               {item.label} <Icon name="ArrowRight" size={16} />
             </Link>
           ))}
         </nav>
+        <div className="drawer-links">
+          <Link href="/search" onClick={() => setOpen(false)}><Icon name="Search" size={16} /> Search</Link>
+          <Link href="/wishlist" onClick={() => setOpen(false)}><Icon name="Heart" size={16} /> Wishlist</Link>
+        </div>
         <div className="drawer-foot">
           <Link href="/account" className="btn btn-ghost" onClick={() => setOpen(false)}><Icon name="User" size={16} /> Sign in</Link>
           <button type="button" className="btn btn-primary" onClick={() => { setOpen(false); openCart(); }}><Icon name="ShoppingBag" size={16} /> Cart</button>

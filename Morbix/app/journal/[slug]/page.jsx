@@ -34,6 +34,12 @@ export default async function JournalArticlePage({ params }) {
         </div>
         <h1 className="article-title">{post.title}</h1>
 
+        {post.image && (
+          <div className="article-hero">
+            <img src={post.image} alt={post.title} />
+          </div>
+        )}
+
         <div className="article-body">
           {post.sections && post.sections.length > 0 ? (
             post.sections.map((s, i) => (

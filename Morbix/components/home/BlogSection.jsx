@@ -15,7 +15,11 @@ export default function BlogSection({ posts = [] }) {
       <div className="blog-grid">
         {posts.map((p) => (
           <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
-            <div className="blog-media" aria-hidden><Icon name="Sparkles" size={40} /></div>
+            <div className="blog-media">
+              {p.image
+                ? <img src={p.image} alt={p.title} loading="lazy" />
+                : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
+            </div>
             <div className="blog-body">
               <div className="blog-meta"><span className="blog-cat">{p.category}</span><span>·</span><span>{p.date}</span></div>
               <h3>{p.title}</h3>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Icon from '@/components/Icon';
 import { trackOrder } from '@/lib/api/orders';
+import { toast } from '@/lib/toast';
 
 const STEPS = ['confirmed', 'processing', 'shipped', 'delivered'];
 
@@ -23,6 +24,7 @@ export default function TrackOrderClient() {
       setOrder(data.order || data);
     } catch {
       setError('Order not found. Please check the order number.');
+      toast.error('Order not found. Please check the order number.');
     } finally {
       setLoading(false);
     }

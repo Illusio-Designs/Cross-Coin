@@ -1,14 +1,24 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import { getCategories } from '@/lib/api';
+import { getCategories, getAllProducts } from '@/lib/api';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Collections' };
 
 const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles', 'Layers', 'Leaf'];
 
 export default async function CollectionsPage() {
-  const categories = await getCategories();
+  const [categories, all] = await Promise.all([getCategories(), getAllProducts()]);
+
+  // If a category has no image of its own, use the first product's photo in
+  // that collection as the cover.
+  const enriched = categories.map((c) => {
+    const inCat = all.filter((p) => p.categorySlug === c.slug || p.category === c.label);
+    return {
+      ...c,
+      image: c.image || inCat.find((p) => p.image)?.image || '',
+    };
+  });
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
@@ -18,18 +28,21 @@ export default async function CollectionsPage() {
         <p>Find the right pair for every kind of movement.</p>
       </div>
 
-      {categories.length === 0 ? (
+      {enriched.length === 0 ? (
         <div className="empty">No collections yet — check back soon.</div>
       ) : (
         <div className="cat-grid" style={{ marginTop: 26 }}>
-          {categories.map((c, i) => (
-            <Link href={`/collections/${c.slug}`} className={`cat-banner cat-banner-${i % 4}`} key={c.slug}>
-              <div className="cat-copy">
-                <h3>{c.label}</h3>
-                <p>Shop the {c.label} collection.</p>
-                <span className="link-more" style={{ color: 'var(--navy)' }}>Shop <Icon name="ArrowRight" size={14} /></span>
+          {enriched.map((c, i) => (
+            <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
+              {c.image
+                ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
+                : <span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>}
+              <div className="collection-card-overlay">
+                <div className="collection-card-text">
+                  <h3>{c.label}</h3>
+                </div>
+                <span className="collection-card-cta" aria-hidden><Icon name="ArrowRight" size={16} /></span>
               </div>
-              <div className="cat-icon" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={90} /></div>
             </Link>
           ))}
         </div>

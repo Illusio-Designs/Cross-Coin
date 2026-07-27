@@ -6,6 +6,7 @@ import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { getWishlist } from '@/lib/api/wishlist';
+import { getAllProducts } from '@/lib/api';
 
 export default function WishlistClient() {
   const [items, setItems] = useState([]);
@@ -14,8 +15,13 @@ export default function WishlistClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getWishlist();
-      setItems(Array.isArray(data) ? data : []);
+      // Pull the FULL catalog product for each wishlist item so the cards are
+      // identical to the rest of the site (image, category, rating, colours,
+      // sizes). Fall back to the wishlist row itself if it's not in the catalog.
+      const [all, wl] = await Promise.all([getAllProducts(), getWishlist()]);
+      const byId = new Map(all.map((p) => [String(p.id), p]));
+      const merged = (Array.isArray(wl) ? wl : []).map((w) => byId.get(String(w.id)) || w).filter(Boolean);
+      setItems(merged);
     } catch {
       setItems([]);
     } finally {

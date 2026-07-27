@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import Icon from '@/components/Icon';
+import { toast } from '@/lib/toast';
 
 /** Add-to-cart button. `size="full"` for the detail page, `icon` for cards. */
 export default function AddToCart({ product, size = 'M', display = 'full', qty = 1 }) {
@@ -12,7 +13,25 @@ export default function AddToCart({ product, size = 'M', display = 'full', qty =
   const onAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    add(product, size, qty);
+    // Mirror the product-detail add: carry colour, the product image and the
+    // first variant's price/SKU so the cart line shows the same details.
+    const color = Array.isArray(product.colorNames) ? product.colorNames[0] : null;
+    const variant = Array.isArray(product.variants) ? product.variants[0] : null;
+    const image = product.image || (Array.isArray(product.images) ? product.images[0] : null) || null;
+    add(
+      {
+        ...product,
+        color: color || null,
+        image,
+        price: variant?.price ?? product.price,
+        oldPrice: variant?.oldPrice ?? product.oldPrice ?? null,
+        sku: variant?.sku || product.sku || null,
+      },
+      size,
+      qty,
+      variant?.id ?? null
+    );
+    toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1400);
   };

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-import MorbixLogo from '@/components/MorbixLogo';
+import BrandLogo from '@/components/BrandLogo';
 import CartButton from './CartButton';
+import WishlistLink from './WishlistLink';
 import MobileNav from './MobileNav';
 
 const NAV = [
@@ -19,10 +20,7 @@ export default function Header() {
         <MobileNav items={NAV} />
 
         <Link href="/" className="logo" aria-label="Morbix home">
-          <div>
-            <MorbixLogo height={30} />
-            <div className="logo-sub">Comfort in every step</div>
-          </div>
+          <BrandLogo height={38} />
         </Link>
 
         <nav className="nav">
@@ -33,7 +31,7 @@ export default function Header() {
 
         <div className="header-actions">
           <Link href="/search" className="pill icon-pill" aria-label="Search"><Icon name="Search" size={16} /></Link>
-          <Link href="/wishlist" className="pill icon-pill" aria-label="Wishlist"><Icon name="Heart" size={16} /></Link>
+          <WishlistLink />
           <Link href="/account" className="pill sign-in"><Icon name="User" size={16} /> <span>Sign in</span></Link>
           <CartButton />
         </div>

@@ -91,7 +91,21 @@ export async function getCategoryByName(handle) {
 }
 
 // Products in a given collection (by slug/name) — used by /collections/[handle].
+// Uses the SAME full catalog data as the main /products listing so the cards
+// are identical (price, colours, image). Falls back to the category-embedded
+// products only if the catalog filter finds nothing.
 export async function getProductsByCategory(handle) {
+  if (!handle) return [];
+  const h = String(handle).trim().toLowerCase();
+  const slugify = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, '-');
+  const all = await getAllProducts();
+  const filtered = all.filter((p) =>
+    String(p.categorySlug).toLowerCase() === h ||
+    slugify(p.category) === h ||
+    String(p.category).toLowerCase() === h
+  );
+  if (filtered.length) return filtered;
+  // Fallback: products embedded in the category record.
   const cat = await getCategoryByName(handle);
   const list = cat?.products || cat?.data?.products || [];
   return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
@@ -118,7 +132,19 @@ export async function searchProducts(query) {
 export async function getSliders() {
   try {
     const data = await brandFetch('/api/sliders/listing', 300);
-    return data?.sliders || data?.data || (Array.isArray(data) ? data : []);
+    const list = data?.sliders || data?.data || (Array.isArray(data) ? data : []);
+    return (Array.isArray(list) ? list : [])
+      .map((s) => ({
+        image: imgUrl(s.image || s.image_url || s.desktop_image || s.banner || s.large || ''),
+        mobileImage: imgUrl(s.mobile_image || s.image_mobile || s.mobile || ''),
+        title: str(s.title || s.heading || ''),
+        description: str(s.description || s.subtitle || s.subheading || s.text || ''),
+        buttonText: str(s.buttonText || s.button_text || s.cta || s.button || ''),
+        categorySlug: str(s.categorySlug || s.category_slug || s.category?.slug || ''),
+        categoryName: str(s.categoryName || s.category_name || s.category?.name || ''),
+        link: s.link || s.url || s.redirect_url || s.href || '',
+      }))
+      .filter((s) => s.image);
   } catch { return []; }
 }
 
@@ -135,11 +161,14 @@ export async function getCategories() {
 // ---- Reviews --------------------------------------------------------------
 
 // Pass a product id for that product's reviews; call with no id for the
-// brand-wide public reviews used on the home page.
-export async function getProductReviews(productId) {
+// brand-wide public reviews used on the home page. A product's reviews are
+// fetched FRESH (no cache) so a newly-approved review shows up immediately;
+// the home feed stays cached (300s) so the home page can remain static.
+export async function getProductReviews(productId, revalidate) {
   try {
     const path = productId ? `/api/reviews/product/${productId}` : '/api/reviews/all';
-    const data = await brandFetch(path, 300);
+    const rev = revalidate ?? (productId ? undefined : 300);
+    const data = await brandFetch(path, rev);
     const list = data?.data?.reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : []);
     return Array.isArray(list) ? list.map(mapReview) : [];
   } catch { return []; }
@@ -168,9 +197,20 @@ export async function getBlogBySlug(slug) {
 // Policies are SHARED across all brands — they are NOT brand-scoped. So this
 // fetch deliberately omits the X-Brand-Name header (matching how the other
 // storefronts read shared policy content).
+// Map short/legacy slugs to the real backend policy names (the endpoint
+// matches by title, so "returns" must become "cancellation-and-refund").
+const POLICY_ALIAS = {
+  privacy: 'privacy-policy',
+  terms: 'terms-and-conditions',
+  shipping: 'shipping-policy',
+  returns: 'cancellation-and-refund',
+  refund: 'cancellation-and-refund',
+};
+
 export async function getPolicy(name) {
+  const resolved = POLICY_ALIAS[name] || name;
   try {
-    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(name)}`, {
+    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(resolved)}`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) throw new Error(`Failed to fetch policy ${name}`);
@@ -286,6 +326,15 @@ function normalizeFeatures(raw) {
 // the backend doesn't provide are left empty (the PDP spec table hides empty
 // rows) — no fabricated/placeholder values. Every rendered field is coerced to
 // a primitive so a surprising backend shape can never 500 the page.
+// Backend badge keys → display labels (mirrors the backend BADGE_DISPLAY config
+// used by the other brands).
+const BADGE_LABELS = {
+  new_arrival: 'New Arrival',
+  hot_selling: 'Hot Selling',
+  low_stock: 'Low Stock',
+  out_of_stock: 'Out of Stock',
+};
+
 function mapProduct(p) {
   if (!p || typeof p !== 'object') return null;
   const variations = Array.isArray(p.ProductVariations) ? p.ProductVariations
@@ -347,10 +396,12 @@ function mapProduct(p) {
     const a = parseAttrs(v);
     const cV = Array.isArray(a.color) ? a.color[0] : a.color;
     const sV = Array.isArray(a.size) ? a.size[0] : a.size;
+    const mV = Array.isArray(a.material) ? a.material[0] : a.material;
     return {
       id: v.id,
       color: str(cV),
       size: str(sV),
+      material: str(mV),
       sku: str(v.sku || p.sku),
       price: num(v.price ?? p.price ?? 0),
       oldPrice: v.comparePrice ? num(v.comparePrice) : undefined,
@@ -372,7 +423,11 @@ function mapProduct(p) {
     colors: Array.isArray(colorNames) ? colorNames.map((c) => getColorHex(str(c))) : [],
     colorNames: Array.isArray(colorNames) ? colorNames.map(str) : [],
     variants,
-    badge: typeof p.badge === 'string' ? p.badge : null,
+    // Badge straight from the backend badge field (labels mirror the backend
+    // BADGE_DISPLAY config, same as the other brands). `badge` = display label,
+    // `badgeKey` = raw key for styling.
+    badgeKey: typeof p.badge === 'string' ? p.badge : null,
+    badge: (typeof p.badge === 'string' && BADGE_LABELS[p.badge]) || null,
     description: str(p.description),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
@@ -388,10 +443,14 @@ function mapProduct(p) {
 }
 
 function mapCategoryChip(c) {
+  const count = Array.isArray(c.products) ? c.products.length
+    : num(c.product_count ?? c.products_count ?? c.count);
   return {
     label: c.name || c.label || '',
     slug: c.slug || String(c.id || ''),
     icon: 'Sparkles',
+    image: imgUrl(c.image || c.image_url || c.banner || c.thumbnail || ''),
+    count,
   };
 }
 
@@ -404,11 +463,11 @@ function fmtDate(value) {
 
 function mapReview(r) {
   return {
-    author: r.name || r.user_name || r.customer_name || r.author || 'Verified Buyer',
+    author: r.reviewerName || r.guestName || r.name || r.user_name || r.customer_name || r.author || 'Verified Buyer',
     rating: Number(r.rating || 0),
     date: fmtDate(r.createdAt || r.created_at || r.date),
     title: r.title || r.heading || '',
-    text: r.comment || r.review || r.text || r.body || '',
+    text: r.review || r.comment || r.text || r.body || '',
   };
 }
 
@@ -428,17 +487,31 @@ function basicSanitize(html) {
     .replace(/javascript:/gi, '');
 }
 
+// Pull the first <img src> out of the section HTML as a last-resort cover.
+function firstSectionImage(sections) {
+  for (const s of sections) {
+    const m = String(s?.content || s?.body || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (m) return cleanUrl(m[1]);
+  }
+  return '';
+}
+
 function mapBlog(p) {
   const sections = parseSections(p.sections);
   const firstContent = sections[0]?.content || p.excerpt || '';
   const plain = String(firstContent).replace(/<[^>]+>/g, '').trim();
   const excerpt = plain ? plain.substring(0, 160) + (plain.length > 160 ? '…' : '') : (p.title || '');
+  // Cover image: backend stores it as `hero_image` (same as the other brands);
+  // fall back to other common fields, then to the first image in the body.
+  const image = imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
+    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections);
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',
     date: fmtDate(p.published_at || p.publishedAt || p.created_at || p.createdAt),
     title: p.title,
     excerpt,
+    image,
     // Full article body: each section's heading + sanitised HTML content.
     sections: sections.map((s) => ({
       heading: s.heading || s.title || '',
