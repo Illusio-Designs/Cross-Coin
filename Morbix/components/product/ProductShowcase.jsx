@@ -88,12 +88,24 @@ export default function ProductShowcase({ product }) {
     return () => clearInterval(t);
   }, [shown.length, color]);
 
-  // Keep the active thumbnail scrolled into view within the rail.
+  // Keep the active thumbnail in view by scrolling ONLY the rail — never the
+  // page. (el.scrollIntoView scrolls every ancestor, so on mobile it yanked the
+  // whole page back to the top each time the autoplay advanced the image.)
   useEffect(() => {
     const rail = thumbsRef.current;
     if (!rail) return;
     const el = rail.querySelector(`[data-thumb="${active}"]`);
-    if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    if (!el) return;
+    const railRect = rail.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const vertical = rail.scrollHeight > rail.clientHeight + 1;
+    if (vertical) {
+      const delta = (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2;
+      rail.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rail.scrollWidth > rail.clientWidth + 1) {
+      const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
+      rail.scrollBy({ left: delta, behavior: 'smooth' });
+    }
   }, [active]);
 
   const pickColor = (i) => { setColor(i); setActive(0); };
