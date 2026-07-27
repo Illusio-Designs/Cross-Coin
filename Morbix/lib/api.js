@@ -326,6 +326,15 @@ function normalizeFeatures(raw) {
 // the backend doesn't provide are left empty (the PDP spec table hides empty
 // rows) — no fabricated/placeholder values. Every rendered field is coerced to
 // a primitive so a surprising backend shape can never 500 the page.
+// Backend badge keys → display labels (mirrors the backend BADGE_DISPLAY config
+// used by the other brands).
+const BADGE_LABELS = {
+  new_arrival: 'New Arrival',
+  hot_selling: 'Hot Selling',
+  low_stock: 'Low Stock',
+  out_of_stock: 'Out of Stock',
+};
+
 function mapProduct(p) {
   if (!p || typeof p !== 'object') return null;
   const variations = Array.isArray(p.ProductVariations) ? p.ProductVariations
@@ -414,7 +423,11 @@ function mapProduct(p) {
     colors: Array.isArray(colorNames) ? colorNames.map((c) => getColorHex(str(c))) : [],
     colorNames: Array.isArray(colorNames) ? colorNames.map(str) : [],
     variants,
-    badge: typeof p.badge === 'string' ? p.badge : null,
+    // Badge straight from the backend badge field (labels mirror the backend
+    // BADGE_DISPLAY config, same as the other brands). `badge` = display label,
+    // `badgeKey` = raw key for styling.
+    badgeKey: typeof p.badge === 'string' ? p.badge : null,
+    badge: (typeof p.badge === 'string' && BADGE_LABELS[p.badge]) || null,
     description: str(p.description),
     image: typeof image === 'string' ? image : null,
     images: allUrls,

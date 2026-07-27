@@ -21,7 +21,6 @@ import {
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 
-const FREE_SHIP_THRESHOLD = 999;
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
 // incentive the other brands use. Defaults to 0 (no discount) unless configured.
@@ -174,8 +173,6 @@ export default function CartDrawer() {
   // online is the total minus that incentive.
   const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
   const prepaidPayable = Math.max(0, total - prepaidInstantDiscount);
-  const remaining = Math.max(0, FREE_SHIP_THRESHOLD - subtotal);
-  const pct = Math.min(100, (subtotal / FREE_SHIP_THRESHOLD) * 100);
 
   const sortedFees = useMemo(() => {
     const arr = [...fees];
@@ -409,16 +406,6 @@ export default function CartDrawer() {
           /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
-              {/* Free-shipping nudge */}
-              <div className="cd-ship">
-                {remaining > 0 ? (
-                  <span><Icon name="Truck" size={15} /> You’re <b>₹{remaining.toFixed(0)}</b> away from free shipping</span>
-                ) : (
-                  <span className="cd-ship-done"><Icon name="ShieldCheck" size={15} /> You’ve unlocked free shipping!</span>
-                )}
-                <div className="cd-ship-track"><span className="cd-ship-fill" style={{ width: `${pct}%` }} /></div>
-              </div>
-
               {/* Items */}
               <div className="cd-co-section">
                 <div className="cd-section-title">Items</div>
@@ -430,24 +417,20 @@ export default function CartDrawer() {
                     <div className="cd-item-main">
                       <div className="cd-item-top">
                         <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
-                        <button className="cd-remove" onClick={() => { remove(i.key); toast.info(`${i.name} removed from cart`); }} aria-label={`Remove ${i.name}`}><Icon name="X" size={15} /></button>
+                        <button className="cd-remove" onClick={() => { remove(i.key); toast.info(`${i.name} removed from cart`); }} aria-label={`Remove ${i.name}`}><Icon name="Trash" size={16} /></button>
                       </div>
-                      <div className="cd-item-meta">
-                        {i.color && <span>{i.color}</span>}
-                        {i.size && <span>Size: {i.size}</span>}
-                      </div>
-                      <div className="cd-item-prices">
-                        <span className="cd-item-price">₹{Number(i.price).toFixed(0)}</span>
-                        {i.oldPrice > i.price && <span className="cd-item-mrp">₹{Number(i.oldPrice).toFixed(0)}</span>}
-                        {i.oldPrice > i.price && <span className="cd-item-off">{Math.round((1 - i.price / i.oldPrice) * 100)}% off</span>}
-                      </div>
+                      {i.color && <div className="cd-item-variant">{i.color}</div>}
                       <div className="cd-item-bot">
+                        <div className="cd-item-prices">
+                          <span className="cd-item-price">₹{Number(i.price).toFixed(0)}</span>
+                          {i.oldPrice > i.price && <span className="cd-item-mrp">₹{Number(i.oldPrice).toFixed(0)}</span>}
+                          {i.oldPrice > i.price && <span className="cd-item-off">{Math.round((1 - i.price / i.oldPrice) * 100)}% off</span>}
+                        </div>
                         <div className="cd-qty">
                           <button onClick={() => setQty(i.key, i.qty - 1)} disabled={i.qty <= 1} aria-label="Decrease quantity">−</button>
                           <span>{i.qty}</span>
                           <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
                         </div>
-                        <span className="cd-item-linetotal">₹{(i.price * i.qty).toFixed(0)}</span>
                       </div>
                     </div>
                   </div>

@@ -5,15 +5,17 @@ import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
 
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, image } = product;
+  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image } = product;
   const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   return (
     <article className="pcard">
       <div className="pcard-media">
-        {badge === 'new' && <span className="pcard-badge new">New</span>}
-        {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
+        <div className="pcard-badges">
+          {badge && <span className={`pcard-badge b-${badgeKey || 'default'}`}>{badge}</span>}
+          {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
+        </div>
         <WishlistButton productId={id} />
 
         <Link href={href} className="pcard-imglink" aria-label={name}>
