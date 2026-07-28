@@ -143,15 +143,7 @@ function registerWorkers() {
     return result;
   });
 
-  // ── cron:instagram-refresh ────────────────────────────────────────
-  registerProcessor('cron:instagram-refresh', 1, async () => {
-    const instagramService = require('./instagramService.js');
-    const brandId = 1;
-    await instagramService.refreshAccessTokenIfNeeded(brandId);
-    const result = await instagramService.refreshFeed(brandId);
-    logger.info(`[queue] cron:instagram-refresh done: stale=${!!result.stale} count=${Array.isArray(result.data) ? result.data.length : 0}`);
-    return { stale: !!result.stale, count: Array.isArray(result.data) ? result.data.length : 0 };
-  });
+  // (cron:instagram-refresh processor removed — Instagram feed retired.)
 
   logger.info('[integrationQueue] all workers registered');
 }

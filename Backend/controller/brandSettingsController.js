@@ -147,7 +147,17 @@ async function createSetting(req, res) {
                 message: 'Setting with this key already exists for this brand'
             });
         }
-        
+
+        // Surface the specific field/rule instead of an opaque 500 "Validation error".
+        if (error.name === 'SequelizeValidationError') {
+            const fields = (error.errors || []).map((e) => ({ field: e.path, message: e.message }));
+            return res.status(400).json({
+                success: false,
+                message: fields.length ? `Validation failed — ${fields.map((f) => `${f.field}: ${f.message}`).join('; ')}` : 'Validation failed',
+                errors: fields
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Failed to create setting',

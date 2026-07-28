@@ -77,11 +77,7 @@ function initializeCronJobs() {
     }
   });
 
-  // Instagram feed refresh — every 6 hours
-  cron.schedule('0 */6 * * *', () => {
-    console.log('\n⏰ [CRON] enqueue cron:instagram-refresh at:', new Date().toISOString());
-    trigger('cron:instagram-refresh');
-  });
+  // (Instagram feed refresh cron removed — feature retired.)
 
   // ── Abandoned Cart Recovery — every hour at :15 ──────────────────────────
   // Finds carts with items that haven't converted to an order in 1 hour

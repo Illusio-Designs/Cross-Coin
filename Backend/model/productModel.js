@@ -118,6 +118,14 @@ const Product = sequelize.define('Product', {
         },
         {
             fields: ['badge']
+        },
+        // The public listing sorts by createdAt DESC on every load; without an
+        // index that's a full-table filesort (the 2–12s slow queries in prod).
+        {
+            fields: ['createdAt']
+        },
+        {
+            fields: ['status']
         }
     ]
 });

@@ -16,6 +16,7 @@ const {
     bulkRefreshFShipStatus,
     validateOrderForShipping, getAvailableCouriers, syncWithCourier,
     generateLabel, generateLabelForOrder, downloadOrderLabel,
+    requeueFailedShipments,
 } = require('../controller/orderShippingController.js');
 const {
     exportDeliveredOrders,
@@ -87,6 +88,7 @@ router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSing
 router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
+router.post('/shipping/requeue-failed', isAuthenticated, isOrderManager, requeueFailedShipments);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);

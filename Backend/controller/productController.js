@@ -1642,6 +1642,13 @@ module.exports.getPublicProductBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
+    // Reject obviously-bad slugs the frontend sometimes sends (e.g.
+    // /api/products/by-slug/null when a link renders before data loads) so we
+    // don't run a full product lookup for garbage input.
+    if (!slug || ['null', 'undefined', 'false', 'nan'].includes(String(slug).trim().toLowerCase())) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
     // Decode the URL-encoded slug to handle %28/%29 (parens).
     const decodedSlug = decodeURIComponent(slug);
 

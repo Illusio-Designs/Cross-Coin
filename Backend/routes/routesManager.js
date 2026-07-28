@@ -23,7 +23,6 @@ router.use('/policies',           optionalBrand, require('./policyRoutes.js'));
 router.use('/seo',                optionalBrand, require('./seoRoutes.js'));
 router.use('/lookbooks',          optionalBrand, require('./lookbookRoutes.js'));
 router.use('/reels',              optionalBrand, require('./reelRoutes.js'));
-router.use('/instagram',          optionalBrand, require('./instagramRoutes.js'));
 
 // ── User features ─────────────────────────────────────────────────────────
 router.use('/loyalty',            optionalBrand, require('./loyaltyRoutes.js'));

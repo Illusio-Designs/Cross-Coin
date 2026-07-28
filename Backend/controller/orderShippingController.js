@@ -2341,3 +2341,49 @@ module.exports.validateOrderForShippingProvider = module.exports.validateOrderFo
 module.exports.createShipmentForOrder     = module.exports.createOrderInFShip;
 module.exports.updateOrderStatusFromShippingProvider = module.exports.updateOrderStatusFromFShip;
 module.exports.prepareShipmentPayload     = module.exports.prepareFShipOrderData;
+
+/**
+ * Bulk re-queue stuck / failed shipping syncs.
+ * POST /api/orders/shipping/requeue-failed   Body: { limit?: number }
+ *
+ * Finds orders whose sync failed or exhausted attempts (and that aren't
+ * cancelled or already synced) and pushes each onto the integration queue so
+ * they retry through the active provider (iThink). Returns immediately — the
+ * actual provider calls happen in the bounded worker, never on this request.
+ */
+module.exports.requeueFailedShipments = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.body?.limit, 10) || 200, 500);
+    const orders = await Order.findAll({
+      where: {
+        status: { [Op.notIn]: ['cancelled', 'delivered', 'returned'] },
+        fship_waybill: { [Op.is]: null },
+        [Op.or]: [
+          { fship_sync_status: 'failed' },
+          { fship_sync_attempts: { [Op.gte]: 5 } },
+        ],
+      },
+      attributes: ['id', 'order_number'],
+      limit,
+      order: [['createdAt', 'ASC']],
+    });
+
+    const { enqueue } = require('../services/integrationQueue.js');
+    let queued = 0;
+    for (const o of orders) {
+      await enqueue('shipping:sync-order', { orderId: o.id, auto: true, serviceType: 'surface' });
+      queued += 1;
+    }
+
+    logger.info(`[requeue-failed] queued ${queued} stuck order(s) for re-sync`);
+    return res.status(202).json({
+      success: true,
+      queued,
+      message: `Re-queued ${queued} stuck order(s) for sync. Refresh status in a few minutes.`,
+      order_numbers: orders.map((o) => o.order_number),
+    });
+  } catch (error) {
+    logger.error('requeueFailedShipments error:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to re-queue orders', error: error.message });
+  }
+};

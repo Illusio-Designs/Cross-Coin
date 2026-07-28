@@ -71,10 +71,17 @@ function verifyWebhookSignature(source) {
   return function webhookSignatureMiddleware(req, res, next) {
     const secret = process.env[cfg.envKey];
 
-    // No secret configured → log + skip enforcement (avoid breaking webhook
-    // delivery during initial setup). Operator should configure the secret
-    // in env once the provider dashboard is updated.
+    // No secret configured. By default we log + pass through (so webhook
+    // delivery isn't broken before the operator has set the secret). Once you
+    // set WEBHOOK_REQUIRE_SIGNATURE=true this fails CLOSED instead — unsigned/
+    // unconfigured requests are rejected, closing the spoofing gap. Recommended
+    // flow: set WHATSAPP_WEBHOOK_SECRET first (enforcement then works via the
+    // HMAC check below), then set WEBHOOK_REQUIRE_SIGNATURE=true.
     if (!secret) {
+      if (String(process.env.WEBHOOK_REQUIRE_SIGNATURE).toLowerCase() === 'true') {
+        logger.error(`[webhookSignature:${source}] ${cfg.envKey} not set and WEBHOOK_REQUIRE_SIGNATURE=true — rejecting request.`);
+        return res.status(401).json({ success: false, message: 'Webhook signature required' });
+      }
       logger.warn(`[webhookSignature:${source}] ${cfg.envKey} not set — accepting unsigned request.`);
       return next();
     }

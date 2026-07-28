@@ -92,7 +92,7 @@ const mediumLimiter = rateLimit({
 const PUBLIC_READ_PREFIXES = [
   '/api/sliders', '/api/categories', '/api/products', '/api/seo',
   '/api/public', '/api/blogs', '/api/reviews', '/api/lookbooks',
-  '/api/reels', '/api/instagram', '/api/policies', '/api/faqs',
+  '/api/reels', '/api/policies', '/api/faqs',
 ];
 const isPublicReadGet = (req) => {
   if ((req.method || 'GET').toUpperCase() !== 'GET') return false;
