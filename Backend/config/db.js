@@ -31,12 +31,17 @@ const sequelize = new Sequelize(
         benchmark: true,
         logging: slowQueryLogger,
         dialectOptions: { charset: 'utf8mb4' },
+        // Pool sizing is env-tunable so it can be kept UNDER the MySQL user's
+        // `max_user_connections` cap without a redeploy. On shared/cPanel hosting
+        // the effective limit is (DB_POOL_MAX × number of Node/Passenger
+        // instances) — keep that product a few below the cap. min:0 lets idle
+        // connections fully drain so the app never pins connections while quiet.
         pool: {
-            max: 15,     // increased — cron jobs + API requests need headroom
-            min: 2,      // keep 2 idle connections ready
-            acquire: 60000, // wait up to 60s for a connection before timeout
-            idle: 30000, // release idle connections after 30s
-            evict: 15000,
+            max: Number.parseInt(process.env.DB_POOL_MAX || '10', 10),
+            min: Number.parseInt(process.env.DB_POOL_MIN || '0', 10),
+            acquire: Number.parseInt(process.env.DB_POOL_ACQUIRE || '60000', 10),
+            idle: Number.parseInt(process.env.DB_POOL_IDLE || '10000', 10),
+            evict: Number.parseInt(process.env.DB_POOL_EVICT || '10000', 10),
         },
         retry: { max: 2 },
     }

@@ -17,7 +17,7 @@ const { logger } = require('../config/logging.js');
 function registerWorkers() {
   // ── shipping:sync-order ────────────────────────────────────────────
   registerProcessor('shipping:sync-order', 2, async (job) => {
-    const { orderId } = job.data;
+    const { orderId, logistics = null, serviceType = null, auto = false } = job.data;
     if (!orderId) throw new Error('orderId required');
 
     const { Order } = require('../model/orderModel.js');
@@ -43,7 +43,25 @@ function registerWorkers() {
     }
 
     const orderShippingController = require('../controller/orderShippingController.js');
-    const result = await orderShippingController.enhancedSyncSingleOrder(fullOrder);
+
+    // Do the slow external courier call HERE (worker), never inside an HTTP
+    // request. Manual courier selection travels on the job payload; without it
+    // we auto-select with fallback. enhancedSyncSingleOrder/autoSelect open
+    // their own short transaction, so at most `concurrency` DB connections are
+    // ever pinned by shipping syncs at once.
+    let result;
+    if (auto || !logistics) {
+      const { service: provider } = await orderShippingController.resolveProviderForOrder(fullOrder);
+      const autoResult = await orderShippingController.autoSelectCourierWithFallback(fullOrder, provider);
+      result = autoResult.success
+        ? autoResult.result
+        : { success: false, error: autoResult.error || 'auto courier selection failed' };
+    } else {
+      result = await orderShippingController.enhancedSyncSingleOrder(
+        fullOrder, null, null, null, logistics, serviceType || 'surface'
+      );
+    }
+
     if (!result.success) {
       // Throw so Bull schedules another attempt per backoff policy.
       throw new Error(result.error || 'sync returned success=false');

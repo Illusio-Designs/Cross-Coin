@@ -30,56 +30,40 @@ const instanceCache = new Map();
  * @returns {Promise<FShipService|IThinkService>}
  */
 async function getShippingProvider(brandId = 1) {
-  const providerName = await settingsHelper.getSetting(brandId, 'SHIPPING_PROVIDER', 'fship');
-  return getProviderByName(providerName, brandId);
+  // FShip is retired — iThink is the only active provider. We ignore any stale
+  // SHIPPING_PROVIDER='fship' brand setting and always return iThink.
+  return getProviderByName('ithink', brandId);
 }
 
 /**
  * Get a specific provider by name (skips the DB lookup).
  *
- * @param {'fship'|'ithink'} providerName
+ * FShip has been decommissioned. Every request — including legacy shipments
+ * recorded as 'fship' — resolves to iThink so status refresh on historical
+ * orders never crashes on a missing provider.
+ *
+ * @param {'ithink'|'fship'} providerName  (fship kept only for back-compat)
  * @param {number} brandId
- * @returns {FShipService|IThinkService}
+ * @returns {IThinkService}
  */
 function getProviderByName(providerName, brandId = 1) {
-  const key = `${brandId}:${providerName}`;
-
+  const key = `${brandId}:ithink`;
   if (instanceCache.has(key)) {
     return instanceCache.get(key);
   }
-
-  let service;
-  switch (providerName) {
-    case 'ithink': {
-      const { IThinkService } = require('./iThinkService');
-      service = new IThinkService(brandId);
-      break;
-    }
-    case 'fship':
-    default: {
-      const FShipService = require('./fshipService');
-      // FShipService is exported as a singleton; create a fresh instance for the brand
-      if (typeof FShipService === 'function') {
-        service = new FShipService(brandId);
-      } else if (FShipService.constructor && FShipService.brandId !== undefined) {
-        // Already a singleton — reuse if same brand, else we can't easily clone
-        service = FShipService;
-      } else {
-        service = FShipService;
-      }
-      break;
-    }
-  }
-
+  const { IThinkService } = require('./iThinkService');
+  const service = new IThinkService(brandId);
   instanceCache.set(key, service);
   return service;
 }
 
 /**
  * Get the provider name string for a brand (for storing in order_shipments.provider).
+ * Always 'ithink' now — any legacy 'fship' setting is coerced.
  */
 async function getProviderName(brandId = 1) {
-  return await settingsHelper.getSetting(brandId, 'SHIPPING_PROVIDER', 'fship');
+  const name = await settingsHelper.getSetting(brandId, 'SHIPPING_PROVIDER', 'ithink');
+  return name === 'fship' ? 'ithink' : name;
 }
 
 /**

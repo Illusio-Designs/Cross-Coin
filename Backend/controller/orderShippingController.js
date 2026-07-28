@@ -66,6 +66,9 @@ async function resolveProviderForOrder(order) {
 // Exposed so other modules (e.g. orderService.cancelOrder) can route a call
 // to the provider that actually issued the AWB.
 module.exports.resolveProviderForOrder = resolveProviderForOrder;
+// Exposed so the integration queue worker can auto-select a courier off the
+// request path (see services/integrationQueueWorkers.js → shipping:sync-order).
+module.exports.autoSelectCourierWithFallback = autoSelectCourierWithFallback;
 
 // ── Courier fallback helper: try Delhivery → Amazon → Xpressbees ────────
 async function autoSelectCourierWithFallback(order, provider, transaction = null) {
@@ -1981,169 +1984,77 @@ module.exports.getAvailableCouriers = async (req, res) => {
  * Body: { logistics: 'delhivery', s_type: 'surface' }
  */
 module.exports.syncWithCourier = async (req, res) => {
-  const transaction = await sequelize.transaction();
-
   try {
     const { id } = req.params;
     let { logistics, s_type, auto } = req.body;
     s_type = s_type || 'surface';
 
-    logger.debug(`=== SYNC WITH COURIER: Order ${id}, Logistics: ${logistics}, Auto: ${auto} ===`);
+    logger.debug(`=== SYNC WITH COURIER (queued): Order ${id}, Logistics: ${logistics}, Auto: ${auto} ===`);
 
-    // Auto mode: try couriers with fallback (Delhivery → Amazon → Xpressbees)
-    if (auto || !logistics) {
-      logger.debug(`🔄 Auto courier selection enabled`);
-    }
-
-    // Load the order
+    // Lightweight, connection-safe pre-checks — plain reads, NO long-lived
+    // transaction and NO external courier call on the request path. The slow
+    // provider round-trip is handed to the integration queue so this endpoint
+    // returns immediately and never pins a DB connection (which is what used
+    // to exhaust `max_user_connections` and surface as "Network Error" on the
+    // dashboard).
     const order = await Order.findByPk(id, {
-      include: [
-        {
-          model: OrderItem,
-          as: 'OrderItems',
-          include: [
-            { model: Product, as: 'Product' },
-            { model: ProductVariation, as: 'ProductVariation' }
-          ]
-        },
-        { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
-        { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
-        { model: ShippingAddress, as: 'ShippingAddress' },
-      ]
-    }, { transaction });
-
+      include: [{ model: ShippingAddress, as: 'ShippingAddress' }],
+    });
     if (!order) {
-      await transaction.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
+      return res.status(404).json({ success: false, message: 'Order not found' });
     }
-
-    logger.debug(`Found order: ${order.order_number} - Status: ${order.status}`);
-
-    // Skip sync for cancelled orders
     if (order.status === 'cancelled') {
-      await transaction.rollback();
       return res.json({
         success: true,
         message: `Order ${order.order_number} is cancelled. No sync needed.`,
-        data: {
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            status: order.status,
-            action: 'skipped'
-          }
-        }
+        data: { order: { id: order.id, order_number: order.order_number, status: order.status, action: 'skipped' } },
       });
     }
 
-    // Validate order for shipping
+    // Validate (reads only) before queueing so operators get instant feedback
+    // on bad addresses instead of a silent queued failure.
     const { validateOrderForShipping } = require('../services/shippingValidationService');
     const validation = await validateOrderForShipping(id);
     if (!validation.valid) {
-      await transaction.rollback();
       return res.status(400).json({
         success: false,
         message: 'Order has validation errors',
-        errors: validation.errors
+        errors: validation.errors,
       });
     }
 
-    // Resolve provider and test connection
-    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-    try {
-      const testResult = await provider.testConnection();
-      if (!testResult.success) {
-        throw new Error(testResult.message);
-      }
-      logger.debug(`✅ ${providerName} connection successful`);
-    } catch (authError) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `${providerName} connection failed`,
-        provider: providerName,
-        error: authError.message
-      });
-    }
+    // Hand off to the integration queue (Bull on Redis). Bounded worker
+    // concurrency caps how many syncs hold a DB connection at once. If Redis
+    // is down, enqueue() runs the job inline AFTER this response is sent, so
+    // the request still never holds a connection during the provider call.
+    const { enqueue } = require('../services/integrationQueue.js');
+    await enqueue('shipping:sync-order', {
+      orderId: order.id,
+      logistics: (auto ? null : logistics) || null,
+      serviceType: s_type,
+      auto: !!auto || !logistics,
+    });
 
-    // Auto or manual sync
-    let syncResult;
-    let selectedCourier;
+    // NOTE: we deliberately do NOT pre-set fship_sync_status to 'syncing' here.
+    // enhancedSyncSingleOrder treats 'syncing' as "already in flight" and would
+    // skip the job we just queued. The worker owns the sync state machine.
 
-    if (auto || !logistics) {
-      // Auto mode: try couriers with fallback (Delhivery → Amazon → Xpressbees)
-      const autoResult = await autoSelectCourierWithFallback(order, provider, transaction);
-      if (autoResult.success) {
-        syncResult = autoResult.result;
-        selectedCourier = autoResult.courier;
-      } else {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: `Failed to auto-select courier for order ${order.order_number}`,
-          error: autoResult.error
-        });
-      }
-    } else {
-      // Manual mode: sync with specified courier
-      syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName, logistics, s_type);
-      selectedCourier = logistics;
-    }
-
-    if (syncResult.success) {
-      await transaction.commit();
-
-      return res.json({
-        success: true,
-        message: `Order ${order.order_number} synced with ${selectedCourier} via ${providerName}`,
-        data: {
-          provider: providerName,
-          logistics: selectedCourier,
-          auto: auto || !logistics,
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            status: syncResult.status,
-            provider: providerName,
-            provider_order_id: syncResult.fship_order_id,
-            waybill: syncResult.waybill,
-            action: syncResult.action
-          },
-          label: syncResult.labelId ? {
-            labelId: syncResult.labelId,
-            pdfUrl: syncResult.labelUrl2,
-            downloadUrl: syncResult.labelUrl2 ? `/api/orders/label/download/${syncResult.labelId}` : null
-          } : null,
-          result: syncResult
-        }
-      });
-    } else {
-      // Save the sync error to the order
-      await order.update({
-        fship_sync_status: 'failed',
-        fship_sync_error: syncResult.error || 'Sync failed — unknown error',
-      }, { transaction });
-
-      await transaction.commit();
-
-      return res.status(400).json({
-        success: false,
-        message: `Failed to sync order ${order.order_number} with ${selectedCourier}`,
-        error: syncResult.error
-      });
-    }
-
+    return res.status(202).json({
+      success: true,
+      queued: true,
+      message: `Sync queued for order ${order.order_number}. Refresh status in a moment.`,
+      data: {
+        auto: !!auto || !logistics,
+        logistics: (auto ? null : logistics) || null,
+        order: { id: order.id, order_number: order.order_number, status: order.status, action: 'queued' },
+      },
+    });
   } catch (error) {
-    logger.error('❌ SYNC WITH COURIER FAILED:', error);
-    await transaction.rollback();
-
+    logger.error('❌ SYNC WITH COURIER (queue) FAILED:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to sync order with courier',
-      error: error.message
+      message: 'Failed to queue order sync',
+      error: error.message,
     });
   }
 };
