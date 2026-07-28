@@ -10,6 +10,37 @@ const fs = require('fs/promises');
 const imagekitService = require('../services/imagekitService.js');
 const { logger } = require('../config/logging.js');
 
+// Allowed BlogPost.status enum values — kept in sync with blogPostModel.js.
+// Passing anything else to .create()/.update() throws a SequelizeValidationError
+// which previously surfaced only as an opaque 500 "Validation error".
+const VALID_BLOG_STATUSES = ['draft', 'published', 'archived'];
+
+// Turn a Sequelize validation/constraint error into a precise 400/422 the admin
+// UI can actually act on (which field, which rule) instead of a generic 500.
+// Returns the sent response when it handled the error, or null otherwise.
+function sendSequelizeError(res, error, where) {
+  const name = error?.name || '';
+  if (name === 'SequelizeValidationError' || name === 'SequelizeUniqueConstraintError') {
+    const fields = (error.errors || []).map((e) => ({ field: e.path, message: e.message, value: e.value }));
+    const detail = fields.map((f) => `${f.field}: ${f.message}`).join('; ') || error.message;
+    logger.warn(`${where}: ${name} — ${detail}`);
+    return res.status(400).json({
+      success: false,
+      message: fields.length ? `Validation failed — ${detail}` : (error.message || 'Validation failed'),
+      errors: fields,
+    });
+  }
+  if (name === 'SequelizeForeignKeyConstraintError') {
+    logger.warn(`${where}: foreign key constraint — ${error.message}`);
+    return res.status(422).json({
+      success: false,
+      message: 'A referenced record does not exist (check brand, category or product ids).',
+      error: error.message,
+    });
+  }
+  return null;
+}
+
 // Format a single ProductImage row → card-ready object
 const fmtImg = (img) => ({
   id: img.id,
@@ -211,6 +242,12 @@ const createPost = async (req, res) => {
       await t.rollback();
       return res.status(400).json({ success: false, message: 'brand_ids is required and must be a non-empty array' });
     }
+    // Guard the status enum up-front with a clear message (empty string or an
+    // unknown value would otherwise blow up as an opaque model validation error).
+    if (!VALID_BLOG_STATUSES.includes(status)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: `status must be one of: ${VALID_BLOG_STATUSES.join(', ')}` });
+    }
 
     // Validate sections
     let parsedSections = null;
@@ -318,6 +355,8 @@ const createPost = async (req, res) => {
     }
   } catch (error) {
     if (!committed) await t.rollback();
+    const handled = sendSequelizeError(res, error, 'createPost');
+    if (handled) return handled;
     logger.error('createPost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
@@ -431,6 +470,10 @@ const updatePost = async (req, res) => {
 
     // Handle status and published_at
     if (status !== undefined) {
+      if (!VALID_BLOG_STATUSES.includes(status)) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: `status must be one of: ${VALID_BLOG_STATUSES.join(', ')}` });
+      }
       updateData.status = status;
       if (status === 'published' && !post.published_at) {
         updateData.published_at = new Date();
@@ -527,6 +570,8 @@ const updatePost = async (req, res) => {
     }
   } catch (error) {
     if (!committed) await t.rollback();
+    const handled = sendSequelizeError(res, error, 'updatePost');
+    if (handled) return handled;
     logger.error('updatePost error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
