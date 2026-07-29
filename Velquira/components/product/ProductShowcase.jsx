@@ -249,10 +249,9 @@ export default function ProductShowcase({ product }) {
           <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
           <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
         </div>
-        </div>
 
-        {/* About + Specs live in the buy column now, so the right side fills out
-            beside the tall gallery instead of being just price + options. */}
+        {/* About + Specs sit INSIDE the same card, below the buy options, so the
+            whole right side reads as one arranged panel. */}
         <div className="pdp-about">
           <span className="eyebrow">Details</span>
           <h2>About this product</h2>
@@ -277,6 +276,7 @@ export default function ProductShowcase({ product }) {
             ))}
           </dl>
         </aside>
+        </div>
       </div>
     </div>
     </>

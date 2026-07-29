@@ -1347,7 +1347,9 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .vq-header .hamburger { display: grid; }
 }
 @media (max-width: 760px) {
-  .vq-header-main { padding: 12px 0; }
+  /* Vertical-only — keep the container's side padding so the hamburger/cart
+     don't sit flush against the screen edges. */
+  .vq-header-main { padding-top: 12px; padding-bottom: 12px; }
   .vq-desk { display: none; }             /* search + wishlist + account live in the drawer on mobile */
   .vq-annc { font-size: 9px; letter-spacing: .12em; }
   .vq-annc b:last-of-type { display: none; }
@@ -2025,25 +2027,29 @@ p { text-align: justify; text-justify: inter-word; }
 .pdp-head .pdp-meta .rating svg { color: var(--gold); }
 .pdp-head::after { content: ''; display: block; width: 56px; height: 1px; background: var(--gold); opacity: .7; margin: 20px auto 0; }
 
-/* The right column stacks: purchase card → About → Specifications, so it fills
-   out beside the tall gallery (not just price + buy options). */
-.pdp-info { display: flex; flex-direction: column; gap: 26px; }
+/* ONE bordered card holds it all: price + buy options, then About, then
+   Specifications — separated by hairline dividers so it reads as a single
+   arranged panel rather than stacked boxes. */
+.pdp-info { display: block; }
 .pdp-buycard { border: 1px solid var(--gold); border-radius: 4px;
-  background: linear-gradient(180deg, #fffdf7, #f9f1de); padding: 26px 24px 24px;
+  background: linear-gradient(180deg, #fffdf7, #f9f1de); padding: 28px 26px;
   box-shadow: 0 24px 60px -46px rgba(143,102,32,.55); }
 .pdp-buycard .pdp-price { padding-top: 0; margin-bottom: 12px; }
 .pdp-buycard .buy { padding-top: 20px; border-top: 1px solid rgba(191,139,46,.3); }
 .pdp-buycard .pdp-trust { border-top: 1px dashed rgba(191,139,46,.35); }
 
-/* About + Specs inside the right column — no top border/margin (they used to be
-   a separate full-width band); the specs keep the "certificate" card treatment. */
-.pdp-info .pdp-about { margin: 0; }
-.pdp-info .pdp-about h2 { font-size: clamp(21px, 2.4vw, 26px); margin: 8px 0 14px; }
-.pdp-info .pdp-features { grid-template-columns: 1fr; margin-top: 18px; }
-.pdp-info .pdp-specs { position: static; top: auto; margin: 0; }
+/* About — an inner section opened by a hairline divider. */
+.pdp-buycard .pdp-about { margin-top: 22px; padding-top: 22px; border-top: 1px solid rgba(191,139,46,.3); }
+.pdp-buycard .pdp-about h2 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(20px, 2.2vw, 24px); margin: 8px 0 12px; }
+.pdp-buycard .pdp-features { grid-template-columns: 1fr; margin-top: 16px; }
+
+/* Specifications — drop the separate "certificate" card frame (it lives inside
+   the main box now); keep the centred label + heading + spec rows. */
+.pdp-buycard .pdp-specs { position: static; top: auto; margin-top: 22px; padding: 22px 0 0;
+  background: transparent; border: 0; border-top: 1px solid rgba(191,139,46,.3);
+  border-radius: 0; box-shadow: none; }
 
 @media (max-width: 900px) {
   .pdp-head { margin-bottom: 24px; }
   .pdp-buycard { box-shadow: none; padding: 22px 18px; }
-  .pdp-info { gap: 22px; }
 }
