@@ -56,7 +56,6 @@ export default async function JournalArticlePage({ params }) {
 
         {post.tags?.length > 0 && (
           <div className="article-tags">
-            <span className="article-tags-label">Tags</span>
             {post.tags.map((t) => <span className="article-tag" key={t}>{t}</span>)}
           </div>
         )}
