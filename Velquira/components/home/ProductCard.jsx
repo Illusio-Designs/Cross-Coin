@@ -30,7 +30,6 @@ export default function ProductCard({ product }) {
         <WishlistButton productId={id} className="vqp-fav" />
 
         <div className="vqp-cap">
-          {category && <span className="vqp-kick">{category}</span>}
           <h3 className="vqp-name">{name}</h3>
           <div className="vqp-price">
             ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}

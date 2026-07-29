@@ -3,8 +3,9 @@ import Icon from '@/components/Icon';
 export const metadata = { title: 'Contact' };
 
 const DETAILS = [
-  { icon: 'Phone', label: 'Phone', value: '+91 97128 91700' },
-  { icon: 'Mail', label: 'Email', value: 'support@velquira.in' },
+  { icon: 'Phone', label: 'Phone', value: '+91 97128 91700', href: 'tel:+919712891700' },
+  { icon: 'Mail', label: 'Email', value: 'support@velquira.in', href: 'mailto:support@velquira.in' },
+  { icon: 'WhatsApp', label: 'WhatsApp', value: 'Chat with us', href: 'https://wa.me/919712891700' },
   { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
   { icon: 'Clock', label: 'Hours', value: 'Mon – Sat, 9:00 – 21:00' },
 ];
@@ -20,12 +21,24 @@ export default function ContactPage() {
 
       <div className="contact-layout">
         <div className="contact-details">
-          {DETAILS.map((d) => (
-            <div className="contact-detail" key={d.label}>
-              <span className="ic"><Icon name={d.icon} size={18} /></span>
-              <div><span className="muted">{d.label}</span><b>{d.value}</b></div>
-            </div>
-          ))}
+          {DETAILS.map((d) => {
+            const inner = (
+              <>
+                <span className="ic"><Icon name={d.icon} size={18} /></span>
+                <div><span className="muted">{d.label}</span><b>{d.value}</b></div>
+              </>
+            );
+            return d.href ? (
+              <a
+                className="contact-detail"
+                key={d.label}
+                href={d.href}
+                {...(d.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              >{inner}</a>
+            ) : (
+              <div className="contact-detail" key={d.label}>{inner}</div>
+            );
+          })}
         </div>
 
         <form className="contact-form" action="#" method="post">
