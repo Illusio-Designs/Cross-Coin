@@ -13,38 +13,53 @@ const NAV = [
   { label: 'Contact', href: '/contact' },
 ];
 
-// Soxbae header — premium editorial layout: a slim centred announcement line,
-// a centred wordmark flanked by search (left) and account/wishlist/cart (right),
-// then a centred nav row under a hairline. Calm, spacious, gallery-like.
+// Soxbae header — a single-row SPLIT-NAV structure (unique to Soxbae, not the
+// stacked centred-nav layout): the nav wraps around the centred wordmark —
+// three links on the left, two links + the utility icons on the right — all in
+// one line. A slim running-benefit strip sits above it.
+const NAV_L = [
+  { label: 'Shop', href: '/products' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'Journal', href: '/journal' },
+];
+const NAV_R = [
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+];
+
 export default function Header() {
   return (
     <header className="sx-hd">
-      <div className="sx-annc">
-        <span>Free shipping over ₹499</span>
-        <em>·</em>
-        <span>Happiness in feet</span>
-        <em>·</em>
-        <span>15-day easy returns</span>
+      <div className="sx-ticker" aria-hidden="true">
+        <div className="sx-ticker-track">
+          {Array.from({ length: 2 }).map((_, r) => (
+            <div className="sx-ticker-run" key={r}>
+              <span>Free shipping over ₹499</span><i>✦</i>
+              <span>Cushioned comfort knit</span><i>✦</i>
+              <span>15-day easy returns</span><i>✦</i>
+              <span>Happiness in feet</span><i>✦</i>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="sx-hd-main container">
-        <div className="sx-hd-side sx-hd-left">
+      <div className="sx-hd-row container">
+        <nav className="sx-hd-nav sx-hd-nav-l">
           <MobileNav items={NAV} />
-          <Link href="/search" className="sx-hd-ic sx-hd-desk" aria-label="Search"><Icon name="Search" size={18} /></Link>
-        </div>
+          {NAV_L.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
+        </nav>
 
         <Link href="/" className="sx-hd-logo" aria-label="Soxbae home"><BrandLogo height={32} /></Link>
 
-        <div className="sx-hd-side sx-hd-right">
+        <nav className="sx-hd-nav sx-hd-nav-r">
+          {NAV_R.map((item) => <Link key={item.label} href={item.href} className="sx-hd-desk">{item.label}</Link>)}
+          <span className="sx-hd-div sx-hd-desk" aria-hidden="true" />
+          <Link href="/search" className="sx-hd-ic sx-hd-desk" aria-label="Search"><Icon name="Search" size={18} /></Link>
           <span className="sx-hd-desk"><WishlistLink /></span>
           <Link href="/account" className="sx-hd-ic sx-hd-desk" aria-label="Account"><Icon name="User" size={18} /></Link>
           <CartButton />
-        </div>
+        </nav>
       </div>
-
-      <nav className="sx-hd-nav container">
-        {NAV.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
-      </nav>
     </header>
   );
 }

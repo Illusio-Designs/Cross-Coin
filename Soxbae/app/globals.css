@@ -1424,38 +1424,44 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-link-quiet { color: var(--ink-soft); border-color: var(--line); }
 .sx-link-quiet:hover { color: var(--ink); border-color: var(--ink); }
 
-/* ── HEADER ─────────────────────────────────────────────────────────────── */
-.sx-hd { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 88%, transparent);
+/* ── HEADER → split-nav single row (unique to Soxbae) ───────────────────── */
+.sx-hd { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 90%, transparent);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-.sx-annc { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
-  background: var(--ink); color: #f4f1ea; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 500; padding: 9px 16px; }
-.sx-annc em { color: var(--accent); font-style: normal; }
-.sx-hd-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 20px; padding-bottom: 16px; gap: 16px; }
-.sx-hd-side { display: flex; align-items: center; gap: 6px; }
-.sx-hd-left { justify-self: start; }
-.sx-hd-right { justify-self: end; }
+
+/* Slim running-benefit ticker */
+.sx-ticker { background: var(--ink); color: #f4f1ea; overflow: hidden; }
+.sx-ticker-track { display: flex; width: max-content; animation: sxTicker 26s linear infinite; }
+.sx-ticker-run { display: flex; align-items: center; flex-shrink: 0; }
+.sx-ticker-run span { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 500; padding: 8px 0; }
+.sx-ticker-run i { color: var(--accent); font-style: normal; margin: 0 22px; font-size: 9px; }
+@keyframes sxTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .sx-ticker-track { animation: none; } }
+
+/* One-row bar: left nav · centred logo · right nav + utilities */
+.sx-hd-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 18px; padding-bottom: 18px; gap: 20px; }
+.sx-hd-nav { display: flex; align-items: center; gap: 30px; }
+.sx-hd-nav-l { justify-self: start; }
+.sx-hd-nav-r { justify-self: end; gap: 22px; }
 .sx-hd-logo { justify-self: center; display: inline-flex; }
-.sx-hd-ic { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 999px; color: var(--ink); transition: background .15s, color .15s; }
+.sx-hd-nav > a { position: relative; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink); padding: 2px 0; white-space: nowrap; }
+.sx-hd-nav > a::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -5px; height: 1px; background: var(--accent); transition: right .25s ease; }
+.sx-hd-nav > a:hover { color: var(--accent-600); } .sx-hd-nav > a:hover::after { right: 0; }
+.sx-hd-div { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+.sx-hd-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: var(--ink); transition: background .15s, color .15s; }
 .sx-hd-ic:hover { background: var(--accent-050); color: var(--accent-600); }
-.sx-hd-nav { display: flex; justify-content: center; gap: 40px; padding-top: 14px; padding-bottom: 16px; border-top: 1px solid var(--line); }
-.sx-hd-nav a { position: relative; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ink); padding: 2px 0; }
-.sx-hd-nav a::after { content: ''; position: absolute; left: 50%; right: 50%; bottom: -4px; height: 1px; background: var(--accent); transition: left .25s, right .25s; }
-.sx-hd-nav a:hover { color: var(--accent-600); } .sx-hd-nav a:hover::after { left: 0; right: 0; }
 /* Cart + wishlist rendered minimal (no chunky orange pill) */
 .sx-hd .pill.cart { background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 999px;
-  font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; padding: 10px 16px; }
+  font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; padding: 9px 15px; }
 .sx-hd .pill.cart:hover { background: var(--ink); color: #fff; }
 .sx-hd .pill.cart .badge { background: var(--accent); color: #fff; }
-.sx-hd .wl-link { width: 42px; height: 42px; border: 0; background: transparent; color: var(--ink); }
+.sx-hd .wl-link { width: 40px; height: 40px; border: 0; background: transparent; color: var(--ink); }
 .sx-hd .wl-link:hover { background: var(--accent-050); color: var(--accent-600); }
 .sx-hd .wl-count { position: absolute; top: 5px; right: 5px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; }
 .sx-hd .hamburger { display: none; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 10px; }
 @media (max-width: 900px) {
-  .sx-hd-nav { display: none; }
+  .sx-hd-nav-l > a, .sx-hd-desk { display: none; }
   .sx-hd .hamburger { display: grid; }
-  .sx-hd-desk { display: none; }
-  .sx-hd-main { padding-top: 12px; padding-bottom: 12px; }
-  .sx-annc em + span { display: none; }  /* keep it short on phones */
+  .sx-hd-row { padding-top: 12px; padding-bottom: 12px; }
 }
 
 /* ── HERO ───────────────────────────────────────────────────────────────── */
