@@ -17,12 +17,8 @@ export function Skeleton({ width = '100%', height = 16, radius = 8, className = 
 export function ProductCardSkeleton() {
   return (
     <div className="vqp" aria-hidden="true">
-      <div className="vqp-media"><Skeleton width="100%" height="100%" radius={0} /></div>
-      <div className="vqp-plate" style={{ display: 'grid', gap: 9, justifyItems: 'center' }}>
-        <Skeleton width="38%" height={9} />
-        <Skeleton width="70%" height={18} />
-        <Skeleton width={40} height={1} />
-        <Skeleton width="42%" height={15} />
+      <div className="vqp-media" style={{ aspectRatio: '3 / 4' }}>
+        <Skeleton width="100%" height="100%" radius={2} />
       </div>
     </div>
   );
