@@ -1566,3 +1566,75 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .club-perks div { border-right: 0; padding: 6px 0; }
   .blog-media { height: 220px; }
 }
+
+/* ============================================================================
+   VELQUIRA — INNER PAGES REDESIGN (PDP · About · Contact · page hero)
+   Rebuilt from the ported layouts into the heirloom system: gold-framed
+   galleries, a hallmark "certificate" spec card, gold-ring detail icons,
+   espresso invitation bands and centered serif page heroes. Appended → wins.
+   ========================================================================== */
+
+/* ── Shared inner-page hero → centered, serif, gold flourish ─────────────── */
+.page-hero { max-width: 660px; margin-left: auto; margin-right: auto; text-align: center; }
+.page-hero .eyebrow { display: inline-flex; align-items: center; gap: 14px; }
+.page-hero .eyebrow::before, .page-hero .eyebrow::after { content: ''; width: 28px; height: 1px; background: var(--gold); opacity: .55; }
+.page-hero h1 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(34px, 4.4vw, 56px); }
+.page-hero h1::after { content: ''; display: block; width: 52px; height: 1px; background: var(--gold); margin: 16px auto 4px; }
+
+/* ── PDP GALLERY → gold-framed, portrait presentation ───────────────────── */
+.pdp-main { aspect-ratio: 4 / 5; background: linear-gradient(160deg,#fffdf7,#f2e7cf); border: 1px solid var(--line); border-radius: 4px; }
+.pdp-main::after { content: ''; position: absolute; inset: 10px; border: 1px solid rgba(191,139,46,.3); border-radius: 2px; pointer-events: none; z-index: 2; }
+.pdp-thumb { border-radius: 3px; border: 1px solid var(--line); }
+.pdp-thumb.active { border-color: var(--gold); }
+
+/* ── PDP INFO → serif title, gold-hairline sections, small-caps labels ──── */
+.pdp-info { display: flex; flex-direction: column; }
+.pdp-info .eyebrow { color: var(--gold-deep); letter-spacing: .22em; }
+.pdp-meta { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.pdp-meta .rating { color: var(--gold-deep); font-weight: 600; }
+.pdp-meta .rating svg { color: var(--gold); }
+.pdp-price { font-family: var(--font-body); font-weight: 600; letter-spacing: .02em; padding-top: 16px; }
+.opt-label { letter-spacing: .18em; color: var(--gold-deep); }
+.swatch.active { outline: 2px solid var(--gold); }
+.size-btn { border-radius: 2px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; font-size: 12.5px; }
+.size-btn.active { background: var(--navy); border-color: var(--navy); color: #f7ecd2; }
+.buy { padding-top: 20px; border-top: 1px solid var(--line); }
+.qty { border: 1px solid var(--line); border-radius: 2px; }
+.pdp-trust { border-top: 1px solid var(--line); }
+.pdp-trust div svg { color: var(--gold); }
+.pdp-highlights .ic, .pdp-features .ic { background: transparent; border: 1px solid var(--gold); color: var(--gold-deep); border-radius: 999px; }
+
+/* ── PDP DETAILS → serif about + hallmark "certificate" spec card ───────── */
+.pdp-about h2 { font-family: var(--font-serif); font-weight: 600; }
+.pdp-about .eyebrow, .pdp-specs h3 + * .eyebrow { color: var(--gold-deep); }
+.pdp-specs { background: linear-gradient(180deg,#fffdf6,#f8efdc); border: 1px solid var(--gold); border-radius: 4px; padding: 26px; position: sticky; top: 96px; }
+.pdp-specs::before { content: 'Certificate of craft'; display: block; font-size: 10px; letter-spacing: .28em; text-transform: uppercase; color: var(--gold-deep); text-align: center; margin-bottom: 6px; }
+.pdp-specs h3 { font-family: var(--font-serif); font-weight: 600; font-size: 20px; text-align: center; margin-bottom: 16px; }
+.pdp-specs h3::after { content: ''; display: block; width: 40px; height: 1px; background: var(--gold); margin: 12px auto 0; }
+.spec-row { border-bottom: 1px dashed rgba(191,139,46,.35); }
+.spec-row dt { letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
+.spec-row dd { font-family: var(--font-serif); font-weight: 600; font-size: 15px; }
+
+/* ── ABOUT → gold-hairline value cards + espresso heritage band ─────────── */
+.about-values { grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.about-card { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 32px 26px; text-align: center; position: relative; }
+.about-card::after { content: ''; position: absolute; inset: 7px; border: 1px solid rgba(191,139,46,.22); border-radius: 2px; pointer-events: none; }
+.about-card .ic { width: 54px; height: 54px; border-radius: 999px; background: transparent; border: 1px solid var(--gold); color: var(--gold-deep); margin: 0 auto 16px; }
+.about-card b { font-family: var(--font-serif); font-weight: 600; font-size: 20px; }
+.about-band { background: linear-gradient(180deg,#2f2519,#221a10); border: 1px solid var(--gold-deep); border-radius: 6px; padding: 56px 44px; text-align: center; position: relative; }
+.about-band::before { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(191,139,46,.35); border-radius: 3px; pointer-events: none; }
+.about-band h2 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(26px,3.2vw,40px); color: #fff8ec; max-width: 640px; margin: 0 auto; }
+.about-band h2::after { content: ''; display: block; width: 52px; height: 1px; background: var(--gold); margin: 16px auto 0; }
+.about-band p { color: #c3b088; margin: 16px auto 0; }
+
+/* ── CONTACT → gold-hairline detail rows, gold-ring icons ───────────────── */
+.contact-detail { background: var(--card); border: 1px solid var(--line); border-radius: 3px; }
+.contact-detail .ic { background: transparent; border: 1px solid var(--gold); color: var(--gold-deep); border-radius: 999px; }
+.contact-detail .muted { text-transform: uppercase; letter-spacing: .12em; font-size: 10.5px; color: var(--gold-deep); }
+.contact-detail b { font-family: var(--font-serif); font-weight: 600; font-size: 15px; }
+.contact-form label { letter-spacing: .1em; text-transform: uppercase; font-size: 11px; color: var(--gold-deep); }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .about-values { grid-template-columns: 1fr; }
+}
