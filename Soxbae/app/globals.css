@@ -1536,6 +1536,12 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sxp:hover .sxp-name a { color: var(--accent-600); }
 .sxp-price { margin-top: 8px; font-size: 14.5px; font-weight: 600; letter-spacing: .01em; color: var(--ink); }
 .sxp-price .old { color: var(--ink-soft); text-decoration: line-through; font-weight: 400; margin-left: 8px; font-size: 12.5px; }
+/* Colourway swatches on a merged card — each dot links to that colour's page. */
+.sxp-swatches { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.sxp-sw { width: 15px; height: 15px; border-radius: 999px; border: 1.5px solid #fff; outline: 1px solid var(--line);
+  transition: transform .15s ease, outline-color .15s ease; }
+.sxp-sw:hover { transform: scale(1.18); outline-color: var(--ink); }
+.sxp-sw-more { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-left: 2px; }
 @media (hover: none) { .sxp-add { opacity: 1; transform: none; } }
 @media (max-width: 700px) {
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; }

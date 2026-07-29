@@ -8,9 +8,12 @@ import WishlistButton from '@/components/product/WishlistButton';
 // set quietly BELOW on the ivory (category · name · price). A discreet add
 // button fades in over the image on hover.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image } = product;
+  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group } = product;
   const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
+  // When this card represents several colourways (merged from separate products),
+  // show a swatch per colour — each links straight to that colour's page.
+  const swatches = Array.isArray(group) && group.length > 1 ? group : null;
 
   return (
     <article className="sxp">
@@ -36,8 +39,17 @@ export default function ProductCard({ product }) {
         {category && <span className="sxp-cat">{category}</span>}
         <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
         <div className="sxp-price">
-          ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+          {swatches ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
         </div>
+        {swatches && (
+          <div className="sxp-swatches" aria-label={`${swatches.length} colours`}>
+            {swatches.slice(0, 6).map((s) => (
+              <Link key={s.slug} href={`/products/${s.slug}`} className="sxp-sw"
+                style={{ background: s.hex }} title={s.name} aria-label={s.name} />
+            ))}
+            {swatches.length > 6 && <span className="sxp-sw-more">+{swatches.length - 6}</span>}
+          </div>
+        )}
       </div>
     </article>
   );
