@@ -1843,3 +1843,55 @@ input[type="password"], input[type="number"], textarea, select,
   .tech:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }
   .tech:last-child { border-bottom: 0; }
 }
+
+/* ============================================================================
+   VELQUIRA — LIGHTEN + SIMPLIFY (spotlight, craft, reviews). Appended → wins.
+   Undo the dark spotlight; make all three light, airy and clean.
+   ========================================================================== */
+
+/* ── FEATURED PIECE spotlight → light & clean (revert dark) ──────────────── */
+.excl-panel { background: var(--card); border: 1px solid var(--line); box-shadow: 0 22px 54px -38px rgba(143,102,32,.35); }
+.excl-panel::after { display: none; }
+.excl-ribbon { color: var(--gold-deep); }
+.excl-panel-head h2 { color: var(--ink); }
+.excl-panel-head p { color: var(--ink-soft); }
+.excl-cat { color: var(--gold-deep); }
+.excl-info h3 { color: var(--ink); }
+.excl-price { color: var(--ink); }
+.excl-price .old { color: var(--ink-soft); }
+.excl-off { color: var(--sale); background: #f6e8d6; }
+.excl-opt-label { color: var(--ink); }
+.excl-desc { color: var(--ink-soft); border-top-color: var(--line); }
+.excl-main { background: #fffdf6; border: 1px solid var(--line); }
+.excl-main::after { display: none; }
+.excl-thumb { background: #f4efe3; border: 1px solid var(--line); }
+.excl-thumb.active { border-color: var(--gold); }
+.excl-switch-thumb { background: #f1e9da; border-color: var(--line); }
+.excl-switch-thumb.active { border-color: var(--gold); }
+.excl-actions .qty { border: 1px solid var(--line); color: var(--ink); }
+.excl-actions .qty button, .excl-actions .qty span { color: var(--ink); }
+.excl-actions .btn-ghost { border-color: var(--gold); color: var(--gold-deep); }
+.excl-actions .btn-ghost:hover { background: var(--teal-050); color: var(--gold-deep); }
+
+/* ── OUR CRAFT → airy, borderless 3×2 grid (no card, no dividers) ────────── */
+.tech-grid { grid-template-columns: repeat(3, 1fr); gap: 46px 30px; border: 0; background: transparent; padding: 8px 0 0; border-radius: 0; }
+.tech { display: block; text-align: center; border: 0; padding: 0; }
+.tech .ic { grid-column: auto; grid-row: auto; width: 54px; height: 54px; margin: 0 auto 16px; border: 1px solid var(--gold); border-radius: 999px; background: transparent; color: var(--gold-deep); display: grid; place-items: center; }
+.tech b { grid-column: auto; display: block; align-self: auto; font-family: var(--font-serif); font-size: 20px; font-weight: 600; }
+.tech span { grid-column: auto; display: block; align-self: auto; margin-top: 8px; font-size: 12.5px; color: var(--ink-soft); }
+@media (max-width: 640px) { .tech-grid { grid-template-columns: 1fr 1fr; gap: 34px 18px; } .tech { border: 0; } }
+
+/* ── REVIEWS → clean borderless testimonials (light) ────────────────────── */
+.review-grid { gap: 30px; }
+.review-grid .review { background: transparent; border: 0; box-shadow: none; padding: 0 6px; }
+.review-grid .review::before { display: none; }
+.review-grid .review:hover { transform: none; box-shadow: none; }
+.review-grid .review .review-stars { margin-bottom: 12px !important; color: var(--gold); }
+.review-title { font-family: var(--font-serif); font-weight: 600; font-size: 18px; color: var(--ink); }
+.review-grid .review p { font-family: var(--font-serif); font-style: italic; font-size: 16.5px; line-height: 1.72; color: var(--ink); }
+.review-grid .review .review-head { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 18px; }
+.review-av { background: transparent; border: 1px solid var(--gold); color: var(--gold-deep); }
+
+/* Justify body paragraphs everywhere; keep short centered intros centered. */
+p { text-align: justify; text-justify: inter-word; }
+.page-hero p, .section-head p, .excl-panel-head p, .about-band p, .club p, .vq-foot-tag, .empty, .hero-desc, .vq-hero-desc { text-align: center; }
