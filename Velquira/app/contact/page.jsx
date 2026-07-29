@@ -7,7 +7,6 @@ const DETAILS = [
   { icon: 'Mail', label: 'Email', value: 'support@velquira.in', href: 'mailto:support@velquira.in' },
   { icon: 'WhatsApp', label: 'WhatsApp', value: 'Chat with us', href: 'https://wa.me/919712891700' },
   { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
-  { icon: 'Clock', label: 'Hours', value: 'Mon – Sat, 9:00 – 21:00' },
 ];
 
 export default function ContactPage() {

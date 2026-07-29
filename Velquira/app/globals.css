@@ -1795,3 +1795,51 @@ input[type="password"], input[type="number"], textarea, select,
 @media (hover: none) { .collection-card-cta { max-height: 44px; opacity: 1; margin-top: 12px; padding: 11px; } }
 @media (max-width: 1000px) { .cat-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 640px)  { .cat-grid { grid-template-columns: repeat(2, 1fr); } .collection-card-text h3 { font-size: 16px; } }
+
+/* ============================================================================
+   VELQUIRA — SPOTLIGHT (dark showcase) + OUR CRAFT (feature list) redesign
+   ========================================================================== */
+
+/* ── FEATURED PIECE spotlight → dark espresso showcase (was a light panel) ─ */
+.excl-panel { background: linear-gradient(180deg,#2f2519,#221a10); border: 1px solid var(--gold-deep); box-shadow: 0 30px 70px -40px rgba(0,0,0,.6); }
+.excl-panel::after { border-color: rgba(191,139,46,.32); }
+.excl-ribbon { color: var(--gold-lite); }
+.excl-ribbon svg { color: var(--gold); }
+.excl-panel-head h2 { color: #fff8ec; }
+.excl-panel-head h2::after { background: var(--gold); }
+.excl-panel-head p { color: #c3b088; }
+.excl-cat { color: var(--gold-lite); }
+.excl-info h3 { color: #fff8ec; }
+.excl-price { color: #fff8ec; }
+.excl-price .old { color: #a8977a; }
+.excl-off { color: #fff; background: rgba(191,139,46,.28); }
+.excl-opt-label { color: var(--gold-lite); }
+.excl-desc { color: #c3b088; border-top-color: rgba(191,139,46,.28); }
+.excl-main { background: #1c1610; border: 1px solid var(--gold-deep); }
+.excl-main::after { border-color: rgba(191,139,46,.3); }
+.excl-thumb { background: #1c1610; border: 1px solid rgba(191,139,46,.35); }
+.excl-thumb.active { border-color: var(--gold); }
+.excl-switch-thumb { background: #1c1610; border-color: rgba(191,139,46,.35); }
+.excl-actions .qty { border: 1px solid rgba(191,139,46,.4); color: #fff8ec; }
+.excl-actions .qty button { color: #fff8ec; }
+.excl-actions .qty span { color: #fff8ec; }
+.excl-actions .btn-ghost { border-color: var(--gold); color: var(--gold-lite); }
+.excl-actions .btn-ghost:hover { background: rgba(191,139,46,.16); color: #fff8ec; }
+
+/* ── OUR CRAFT → bordered feature list (icon left, text right; 2-up) ─────── */
+.tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--card); }
+.tech { display: grid; grid-template-columns: auto 1fr; column-gap: 18px; row-gap: 2px; align-items: center; text-align: left;
+  padding: 26px 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tech:nth-child(2n) { border-right: 0; }
+.tech:nth-last-child(-n+2) { border-bottom: 0; }
+.tech .ic { grid-column: 1; grid-row: 1 / span 2; align-self: center; width: 50px; height: 50px; border: 1px solid var(--gold); border-radius: 999px; background: transparent; color: var(--gold-deep); margin: 0; }
+.tech b { grid-column: 2; align-self: end; font-family: var(--font-serif); font-size: 19px; font-weight: 600; letter-spacing: 0; }
+.tech span { align-self: start; grid-column: 2; font-size: 12.5px; color: var(--ink-soft); margin-top: 0; }
+
+@media (max-width: 640px) {
+  .tech-grid { grid-template-columns: 1fr; }
+  .tech { border-right: 0; }
+  .tech:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .tech:last-child { border-bottom: 0; }
+}
