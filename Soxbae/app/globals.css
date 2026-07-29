@@ -1164,3 +1164,87 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 /* Hero ghost button — visible on the black hero */
 .hero .btn-ghost { color: #fff; border-color: rgba(255,255,255,.35); background: transparent; }
 .hero .btn-ghost:hover { color: #17181a; background: #fff; border-color: #fff; }
+
+/* ============================================================================
+   SOXBAE — whole-site design pass (footer, collections, reviews, PDP, blog,
+   about, contact, cart, spotlight). Bold black + orange. Appended → wins.
+   ========================================================================== */
+
+/* ── FOOTER → bold black ─────────────────────────────────────────────────── */
+.footer { background: #17181a; color: #b7b8bd; padding: 64px 0 30px; margin-top: 60px; }
+.footer h4 { color: var(--teal); font-weight: 800; letter-spacing: .14em; }
+.footer a { color: #cfd0d3; opacity: 1; } .footer a:hover { color: var(--teal); }
+.footer .brand-col p { color: #93949a; }
+.footer-contacts svg { color: var(--teal); }
+.footer-contacts .footer-addr { color: #cfd0d3; }
+.footer .socials a { width: 38px; height: 38px; border-radius: 999px; border: 1px solid #34353a; display: grid; place-items: center; color: #cfd0d3; }
+.footer .socials a:hover { background: var(--teal); border-color: var(--teal); color: #17181a; }
+.footer-bottom { border-top: 1px solid #2a2b2f; color: #93949a; }
+.footer-bottom a { color: #93949a; } .footer-credit a { color: var(--teal); font-weight: 700; }
+.footer .brand-col img { filter: brightness(0) invert(1); }
+
+/* ── COLLECTION CARDS → bold overlay polish ─────────────────────────────── */
+.cat-grid { gap: 20px; }
+.collection-card { border-radius: 20px; box-shadow: none; }
+.collection-card-overlay { background: linear-gradient(to top, rgba(10,10,11,.85) 0%, rgba(10,10,11,.2) 46%, transparent 74%); }
+.collection-card-text h3 { font-weight: 900; font-size: 22px; }
+.collection-card-cta { background: var(--teal); color: #17181a; }
+.collection-card:hover .collection-card-cta { background: #fff; color: #17181a; }
+
+/* ── REVIEWS → bold white cards, orange stars, black avatar ─────────────── */
+.review-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.review-grid .review { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 24px 22px; }
+.review-grid .review:hover { border-color: #17181a; box-shadow: 0 18px 40px -26px rgba(0,0,0,.28); transform: translateY(-3px); }
+.review-title { font-weight: 900; font-size: 17px; }
+.review-grid .review p { font-size: 14px; line-height: 1.7; color: var(--ink-soft); text-align: justify; }
+.review-av { background: #17181a; color: var(--teal); font-weight: 900; }
+.reviews-badge { border-radius: 999px; border: 1px solid var(--line); }
+.reviews-badge b { color: var(--ink); }
+
+/* ── PDP → bold, orange actions ─────────────────────────────────────────── */
+.pdp-info h1 { font-weight: 900; }
+.pdp-price { font-weight: 900; }
+.pdp-thumb.active { border-color: var(--teal); border-width: 2px; }
+.size-btn.active { background: #17181a; border-color: #17181a; color: #fff; }
+.swatch.active { outline: 2px solid var(--teal); }
+.buy .btn-primary { background: var(--teal); color: #17181a; }
+.buy .btn-primary:hover { background: var(--teal-600); }
+.pdp-specs { border-radius: 18px; }
+.pdp-features .ic, .pdp-highlights .ic { background: #17181a; color: var(--teal); border-radius: 12px; }
+
+/* ── BLOG CARDS → bold clean cards, orange read ─────────────────────────── */
+.blog-card { border-radius: 20px; border: 1px solid var(--line); overflow: hidden; }
+.blog-card:hover { border-color: #17181a; box-shadow: 0 18px 40px -26px rgba(0,0,0,.24); transform: translateY(-4px); }
+.blog-media { background: radial-gradient(120% 120% at 40% 25%,#f4f4f4,#dcdcdc); }
+.blog-card h3 { font-weight: 900; }
+.blog-cat { color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.blog-read { color: var(--ink); font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: .06em; border-bottom: 2px solid var(--teal); padding-bottom: 2px; width: fit-content; }
+.blog-read:hover { color: var(--teal-600); }
+
+/* ── SPOTLIGHT / exclusive → bold panel ─────────────────────────────────── */
+.excl-panel { border-radius: 24px; background: #fff; border: 1px solid var(--line); }
+.excl-panel::before { background: var(--teal); }
+.excl-panel-head h2 { font-weight: 900; }
+.excl-ribbon { background: var(--teal-050); color: var(--teal-600); font-weight: 800; }
+.excl-info h3 { font-weight: 900; }
+.excl-actions .btn-primary { background: var(--teal); color: #17181a; }
+
+/* ── ABOUT / CONTACT → bold + orange ────────────────────────────────────── */
+.about-card { border-radius: 18px; }
+.about-card .ic { background: #17181a; color: var(--teal); border-radius: 12px; }
+.about-card b { font-weight: 900; }
+.about-band { background: #17181a; border-radius: 22px; }
+.contact-detail { border-radius: 14px; }
+.contact-detail .ic { background: #17181a; color: var(--teal); border-radius: 12px; }
+.contact-form { border-radius: 20px; }
+
+/* ── CART DRAWER + checkout → orange primary ────────────────────────────── */
+.cd-checkout { background: var(--teal); color: #17181a; font-weight: 800; }
+.cd-checkout:hover { background: var(--teal-600); }
+.pill.cart { background: #17181a; border-color: #17181a; }
+.pill.cart .badge, .pill .badge { background: var(--teal); color: #17181a; }
+
+/* ── CLUB band → bold ───────────────────────────────────────────────────── */
+.club h2 { font-weight: 900; }
+.club-card { background: var(--teal); }
+.club-card b { color: #17181a; }
