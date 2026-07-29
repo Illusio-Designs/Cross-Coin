@@ -58,7 +58,7 @@ export default async function PolicyPage({ params }) {
         <h1>{title}</h1>
       </div>
 
-      <div className="article-body" style={{ marginTop: 20, maxWidth: 780 }}>
+      <div className="article-body" style={{ marginTop: 20 }}>
         {content ? (
           <div dangerouslySetInnerHTML={{ __html: sanitize(content) }} />
         ) : (

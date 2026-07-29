@@ -1895,3 +1895,11 @@ input[type="password"], input[type="number"], textarea, select,
 /* Justify body paragraphs everywhere; keep short centered intros centered. */
 p { text-align: justify; text-justify: inter-word; }
 .page-hero p, .section-head p, .excl-panel-head p, .about-band p, .club p, .vq-foot-tag, .empty, .hero-desc, .vq-hero-desc { text-align: center; }
+
+/* Policy / article body — full page width with readable rhythm */
+.article-body { font-size: 15px; line-height: 1.85; color: var(--ink-soft); }
+.article-body p { margin: 0 0 16px; }
+.article-body h1, .article-body h2, .article-body h3 { font-family: var(--font-serif); font-weight: 600; color: var(--ink); margin: 26px 0 12px; }
+.article-body ul, .article-body ol { margin: 0 0 16px; padding-left: 22px; }
+.article-body li { margin-bottom: 8px; }
+.article-body a { color: var(--gold-deep); text-decoration: underline; text-underline-offset: 2px; }
