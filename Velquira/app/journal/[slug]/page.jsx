@@ -28,9 +28,10 @@ export default async function JournalArticlePage({ params }) {
       </nav>
 
       <article className="article">
-        <div className="blog-meta" style={{ justifyContent: 'center' }}>
+        <div className="article-meta">
           {post.category && <span className="blog-cat">{post.category}</span>}
-          {post.date && <><span>·</span><span>{post.date}</span></>}
+          {post.author && <><span className="article-meta-dot">·</span><span>By {post.author}</span></>}
+          {post.date && <><span className="article-meta-dot">·</span><span>{post.date}</span></>}
         </div>
         <h1 className="article-title">{post.title}</h1>
 
@@ -52,6 +53,13 @@ export default async function JournalArticlePage({ params }) {
             <p>{post.excerpt}</p>
           )}
         </div>
+
+        {post.tags?.length > 0 && (
+          <div className="article-tags">
+            <span className="article-tags-label">Tags</span>
+            {post.tags.map((t) => <span className="article-tag" key={t}>{t}</span>)}
+          </div>
+        )}
 
         <Link href="/journal" className="link-more" style={{ marginTop: 24 }}>
           <Icon name="ArrowRight" size={14} /> Back to all articles

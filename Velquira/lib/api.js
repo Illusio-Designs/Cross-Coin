@@ -505,10 +505,15 @@ function mapBlog(p) {
   // fall back to other common fields, then to the first image in the body.
   const image = imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
     || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections);
+  const tags = Array.isArray(p.Tags) ? p.Tags
+    : Array.isArray(p.tags) ? p.tags
+      : Array.isArray(p.BlogTags) ? p.BlogTags : [];
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',
     date: fmtDate(p.published_at || p.publishedAt || p.created_at || p.createdAt),
+    author: p.author_name || p.author?.name || p.author || '',
+    tags: tags.map((t) => (typeof t === 'string' ? t : (t?.name || t?.slug || ''))).filter(Boolean),
     title: p.title,
     excerpt,
     image,
