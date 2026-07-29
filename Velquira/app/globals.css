@@ -2044,10 +2044,21 @@ p { text-align: justify; text-justify: inter-word; }
 .pdp-buycard .pdp-features { grid-template-columns: 1fr; margin-top: 16px; }
 
 /* Specifications — drop the separate "certificate" card frame (it lives inside
-   the main box now); keep the centred label + heading + spec rows. */
+   the main box now) and left-align the label + heading so the whole details
+   area reads down one edge, consistent with About. */
 .pdp-buycard .pdp-specs { position: static; top: auto; margin-top: 22px; padding: 22px 0 0;
   background: transparent; border: 0; border-top: 1px solid rgba(191,139,46,.3);
-  border-radius: 0; box-shadow: none; }
+  border-radius: 0; box-shadow: none; text-align: left; }
+.pdp-buycard .pdp-specs::before { text-align: left; }
+.pdp-buycard .pdp-specs h3 { text-align: left; }
+.pdp-buycard .pdp-specs h3::after { margin: 12px 0 0; }
+
+/* Desktop: keep the gallery pinned while the details scroll past, so the image
+   stays in view until the full right-column panel has been read. */
+@media (min-width: 901px) {
+  .pdp { align-items: start; }
+  .pdp-gallery { position: sticky; top: 96px; align-self: start; }
+}
 
 @media (max-width: 900px) {
   .pdp-head { margin-bottom: 24px; }

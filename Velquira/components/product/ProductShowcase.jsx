@@ -244,12 +244,6 @@ export default function ProductShowcase({ product }) {
           </div>
         </div>
 
-        <div className="pdp-trust">
-          <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
-          <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
-          <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
-        </div>
-
         {/* About + Specs sit INSIDE the same card, below the buy options, so the
             whole right side reads as one arranged panel. */}
         <div className="pdp-about">
@@ -276,6 +270,13 @@ export default function ProductShowcase({ product }) {
             ))}
           </dl>
         </aside>
+
+        {/* Trust row sits last, after the specifications. */}
+        <div className="pdp-trust">
+          <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
+          <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
+          <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
+        </div>
         </div>
       </div>
     </div>
