@@ -40,12 +40,12 @@ export default function SearchClient({ initialQuery = '' }) {
         <h1>{trimmed ? `Results for “${trimmed}”` : 'Search products'}</h1>
       </div>
 
-      <div className="search-input" style={{ margin: '20px 0 8px', maxWidth: 520 }}>
+      <div className="search-input" style={{ margin: '20px auto 8px', maxWidth: 520 }}>
         <Icon name="Search" size={18} color="#6a7186" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by style, size or technology…"
+          placeholder="Search by style, metal or gemstone…"
           aria-label="Search products"
           autoFocus
         />
