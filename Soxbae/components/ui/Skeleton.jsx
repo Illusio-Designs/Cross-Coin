@@ -3,7 +3,7 @@
  * per-route loading.jsx screens. Pass width/height (any CSS length), an
  * optional `radius`, and `className` for layout.
  */
-export function Skeleton({ width = '100%', height = 16, radius = 8, className = '', style = {} }) {
+export function Skeleton({ width = '100%', height = 16, radius = 12, className = '', style = {} }) {
   return (
     <span
       className={`shimmer${className ? ' ' + className : ''}`}
@@ -16,9 +16,9 @@ export function Skeleton({ width = '100%', height = 16, radius = 8, className = 
 /** A product-card shaped skeleton for grid loading states. */
 export function ProductCardSkeleton() {
   return (
-    <div className="soxp" aria-hidden="true">
-      <div className="soxp-media" style={{ aspectRatio: '1 / 1' }}>
-        <Skeleton width="100%" height="100%" radius={20} />
+    <div className="sxp" aria-hidden="true">
+      <div className="sxp-media" style={{ aspectRatio: '3 / 4' }}>
+        <Skeleton width="100%" height="100%" radius={12} />
       </div>
     </div>
   );
