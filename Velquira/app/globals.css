@@ -2059,7 +2059,7 @@ p { text-align: justify; text-justify: inter-word; }
    plus a little breathing room, so the image never tucks under the header. */
 @media (min-width: 901px) {
   .pdp { align-items: start; }
-  .pdp-gallery { position: sticky; top: 132px; align-self: start; }
+  .pdp-gallery { position: sticky; top: 180px; align-self: start; }
 }
 
 @media (max-width: 900px) {
