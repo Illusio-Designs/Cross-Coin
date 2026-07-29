@@ -13,29 +13,31 @@ const NAV = [
   { label: 'Contact', href: '/contact' },
 ];
 
-// Soxbae header — a NEW structure (not Morbix's centered-nav row):
-// a black announcement ticker on top, then a bar with the logo + LEFT-aligned
-// nav, and a solid orange "Cart" button anchoring the right.
+// Soxbae header — refined editorial layout: a slim understated announcement
+// line, then a clean three-column bar (logo left · centred nav · minimal icons)
+// with a thin hairline underline. Orange is used only as a small accent.
 export default function Header() {
   return (
-    <header className="sox-header">
-      <div className="sox-annc">
-        <span>Free shipping over ₹499</span><b>◆</b>
-        <span>Happiness in Feet</span><b>◆</b>
+    <header className="shx-header">
+      <div className="shx-annc">
+        <span>Free shipping over ₹499</span>
+        <span className="shx-dot" aria-hidden>—</span>
+        <span>Happiness in Feet</span>
+        <span className="shx-dot" aria-hidden>—</span>
         <span>15-day easy returns</span>
       </div>
-      <div className="sox-bar container">
-        <div className="sox-bar-l">
+      <div className="shx-bar container">
+        <div className="shx-left">
           <MobileNav items={NAV} />
-          <Link href="/" className="sox-logo" aria-label="Soxbae home"><BrandLogo height={34} /></Link>
+          <Link href="/" className="shx-logo" aria-label="Soxbae home"><BrandLogo height={30} /></Link>
         </div>
-        <nav className="sox-nav">
+        <nav className="shx-nav">
           {NAV.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
         </nav>
-        <div className="sox-bar-r">
-          <Link href="/search" className="sox-icon" aria-label="Search"><Icon name="Search" size={18} /></Link>
-          <WishlistLink />
-          <Link href="/account" className="sox-icon" aria-label="Account"><Icon name="User" size={18} /></Link>
+        <div className="shx-actions">
+          <Link href="/search" className="shx-icon" aria-label="Search"><Icon name="Search" size={18} /></Link>
+          <span className="shx-desk"><WishlistLink /></span>
+          <Link href="/account" className="shx-icon shx-desk" aria-label="Account"><Icon name="User" size={18} /></Link>
           <CartButton />
         </div>
       </div>
