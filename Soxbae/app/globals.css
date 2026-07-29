@@ -1248,3 +1248,46 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .club h2 { font-weight: 900; }
 .club-card { background: var(--teal); }
 .club-card b { color: #17181a; }
+
+/* ── HEADER → bold Soxbae bar ────────────────────────────────────────────── */
+.header { background: rgba(255,255,255,.92); backdrop-filter: saturate(120%) blur(10px); border-bottom: 1px solid var(--line); }
+.nav a { font-weight: 700; font-size: 14px; color: var(--ink); opacity: 1; }
+.nav a:hover { color: var(--teal); opacity: 1; }
+.header-actions .pill:hover { border-color: #17181a; color: #17181a; }
+.pill.sign-in { font-weight: 800; letter-spacing: .01em; }
+.pill.sign-in:hover { border-color: #17181a; color: #17181a; }
+
+/* ============================================================================
+   SOXBAE HEADER — new structure (ticker + left nav + orange cart button)
+   ========================================================================== */
+.sox-header { position: sticky; top: 0; z-index: 50; }
+.sox-annc { background: #17181a; color: #fff; text-align: center; font-size: 11.5px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 9px 16px; display: flex; gap: 14px; align-items: center; justify-content: center; }
+.sox-annc b { color: var(--teal); }
+.sox-bar { display: flex; align-items: center; gap: 34px; height: 68px;
+  background: rgba(255,255,255,.94); backdrop-filter: saturate(120%) blur(10px); border-bottom: 1px solid var(--line); }
+.sox-bar-l { display: flex; align-items: center; gap: 10px; }
+.sox-nav { display: flex; gap: 26px; }
+.sox-nav a { font-weight: 800; font-size: 14px; letter-spacing: -.01em; color: var(--ink); position: relative; }
+.sox-nav a::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -6px; height: 2px; background: var(--teal); transition: right .25s ease; }
+.sox-nav a:hover { color: var(--teal); } .sox-nav a:hover::after { right: 0; }
+.sox-bar-r { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.sox-icon { width: 42px; height: 42px; border-radius: 999px; display: grid; place-items: center; color: var(--ink); transition: background .15s, color .15s; }
+.sox-icon:hover { background: var(--teal-050); color: var(--teal-600); }
+/* restyle the ported pill components inside the new header */
+.sox-bar-r .wl-link { position: relative; width: 42px; height: 42px; border-radius: 999px; border: 0; background: transparent; color: var(--ink); padding: 0; box-shadow: none; }
+.sox-bar-r .wl-link:hover { background: var(--teal-050); color: var(--teal-600); border: 0; }
+.sox-bar-r .wl-count { position: absolute; top: 4px; right: 4px; background: var(--teal); color: #17181a; font-size: 10px; font-weight: 800; min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; }
+.sox-bar-r .pill.cart { background: var(--teal); color: #17181a; border: 0; border-radius: 999px; font-weight: 800; text-transform: uppercase; font-size: 13px; letter-spacing: .04em; padding: 11px 18px; margin-left: 6px; }
+.sox-bar-r .pill.cart:hover { background: var(--teal-600); }
+.sox-bar-r .pill.cart .badge { background: #17181a; color: #fff; }
+.sox-header .hamburger { display: none; }
+@media (max-width: 940px) {
+  .sox-nav { display: none; }
+  .sox-header .hamburger { display: grid; }
+  .sox-bar { gap: 12px; }
+}
+@media (max-width: 560px) {
+  .sox-icon, .sox-bar-r .wl-link { display: none; }  /* live in the mobile drawer */
+  .sox-annc b + span, .sox-annc span:last-child { display: none; }
+}
