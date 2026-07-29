@@ -9,9 +9,9 @@
   --navy:        #17181a;   /* primary — the black wordmark / monogram */
   --navy-700:    #050505;
   --navy-900:    #000000;
-  --teal:        #ee7c2b;   /* accent — the orange "X" */
-  --teal-600:    #d76717;
-  --teal-050:    #fdf0e3;
+  --teal:        #f59a4e;   /* accent — soft, lighter orange */
+  --teal-600:    #e07d2f;   /* deeper for hover/text */
+  --teal-050:    #fef2e6;   /* light orange tint */
 
   /* Neutrals */
   --bg:          #fafafa;   /* clean white page */
@@ -1291,3 +1291,94 @@ h1, h2, h3 { letter-spacing: -0.015em; }
   .sox-icon, .sox-bar-r .wl-link { display: none; }  /* live in the mobile drawer */
   .sox-annc b + span, .sox-annc span:last-child { display: none; }
 }
+
+/* ============================================================================
+   SOXBAE HERO — new full-bleed black structure (oversized headline + framed visual)
+   ========================================================================== */
+.sox-hero { background: #17181a; color: #fff; }
+.sox-hero-in { display: grid; grid-template-columns: 1.08fr .92fr; gap: 44px; align-items: center; padding: 62px 0 40px; }
+.sox-hero-tag { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); border: 1px solid rgba(238,124,43,.4); border-radius: 999px; padding: 7px 15px; }
+.sox-hero-tag i { width: 7px; height: 7px; border-radius: 999px; background: var(--teal); display: block; }
+.sox-hero-title { font-size: clamp(40px, 6vw, 72px); font-weight: 900; line-height: .98; letter-spacing: -.02em; margin: 22px 0 0; color: #fff; }
+.sox-hero-desc { color: #b7b8bd; font-size: 16px; line-height: 1.6; max-width: 460px; margin: 20px 0 28px; }
+.sox-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.sox-hero-cta .btn-ghost { color: #fff; border-color: rgba(255,255,255,.32); background: transparent; }
+.sox-hero-cta .btn-ghost:hover { background: #fff; color: #17181a; border-color: #fff; }
+.sox-hero-dots { display: flex; gap: 8px; margin-top: 26px; }
+.sox-hero-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; background: rgba(255,255,255,.3); cursor: pointer; padding: 0; transition: width .2s, background .2s; }
+.sox-hero-dots button.active { background: var(--teal); width: 22px; }
+.sox-hero-visual { position: relative; aspect-ratio: 1 / 1; border-radius: 26px; overflow: hidden; border: 3px solid var(--teal); background: linear-gradient(135deg,#ffd9b3,#ee7c2b 72%,#c85e12); }
+.sox-hero-slider { position: absolute; inset: 0; }
+.sox-hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
+.sox-hero-img.active { opacity: 1; }
+.sox-hero-ph { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; color: rgba(23,24,26,.35); }
+.sox-hero-ph span { font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #17181a; }
+.sox-hero-badge { position: absolute; top: 16px; right: 16px; background: #fff; color: #17181a; font-weight: 800; font-size: 12px; padding: 8px 14px; border-radius: 999px; transform: rotate(6deg); }
+.sox-hero-trust { display: flex; gap: 28px; flex-wrap: wrap; padding-bottom: 34px; padding-top: 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #93949a; }
+.sox-hero-trust-item { display: inline-flex; align-items: center; gap: 8px; }
+.sox-hero-trust-item svg { color: var(--teal); }
+@media (max-width: 860px) { .sox-hero-in { grid-template-columns: 1fr; gap: 26px; padding: 40px 0 28px; } .sox-hero-visual { max-width: 420px; } }
+
+/* ============================================================================
+   SOXBAE — LIGHT + PREMIUM override (soft orange, no heavy black blocks).
+   Flips the dark hero/footer/features/bands to light. Appended last → wins.
+   ========================================================================== */
+
+/* Announcement ticker → soft warm bar (not black) */
+.sox-annc { background: #fff6ee; color: var(--ink); border-bottom: 1px solid var(--line); font-weight: 700; }
+.sox-annc b { color: var(--teal-600); }
+
+/* HERO → light, premium */
+.sox-hero { background: linear-gradient(180deg,#fff8f1 0%, #fafafa 100%); color: var(--ink); }
+.sox-hero-tag { color: var(--teal-600); border-color: rgba(245,154,78,.5); background: #fff; }
+.sox-hero-title { color: var(--ink); }
+.sox-hero-desc { color: var(--ink-soft); }
+.sox-hero-cta .btn-ghost { color: var(--ink); border-color: var(--line); background: #fff; }
+.sox-hero-cta .btn-ghost:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+.sox-hero-dots button { background: rgba(23,24,26,.2); }
+.sox-hero-dots button.active { background: var(--teal); }
+.sox-hero-visual { border: 2px solid var(--teal); box-shadow: 0 30px 60px -30px rgba(245,154,78,.5); }
+.sox-hero-trust { color: var(--ink-soft); }
+
+/* FOOTER → light, premium */
+.footer { background: #fff; color: var(--ink-soft); border-top: 1px solid var(--line); }
+.footer h4 { color: var(--ink); }
+.footer a { color: var(--ink-soft); opacity: 1; } .footer a:hover { color: var(--teal-600); }
+.footer .brand-col p { color: var(--ink-soft); }
+.footer .brand-col img { filter: none; }
+.footer .socials a { border: 1px solid var(--line); color: var(--ink); }
+.footer .socials a:hover { background: var(--teal); border-color: var(--teal); color: #fff; }
+.footer-contacts svg { color: var(--teal-600); }
+.footer-contacts .footer-addr { color: var(--ink-soft); }
+.footer-bottom { border-top: 1px solid var(--line); color: var(--ink-soft); }
+.footer-bottom a { color: var(--ink-soft); } .footer-credit a { color: var(--teal-600); }
+
+/* FEATURES → light cards */
+.tech { background: #fff; border: 1px solid var(--line); }
+.tech b { color: var(--ink); }
+.tech span { color: var(--ink-soft); }
+.tech .ic { background: var(--teal-050); color: var(--teal-600); }
+
+/* Buttons — soft orange primary keeps dark text readable */
+.btn-primary { background: var(--teal); color: #17181a; }
+.btn-primary:hover { background: var(--teal-600); color: #fff; }
+
+/* ABOUT band + CLUB band → soft warm (not black) */
+.about-band { background: linear-gradient(135deg,#fff3e6,#ffe8d2); color: var(--ink); }
+.about-band h2 { color: var(--ink); } .about-band p { color: var(--ink-soft); }
+.about-card .ic { background: var(--teal-050); color: var(--teal-600); }
+.club { background: linear-gradient(135deg,#fff3e6,#ffe8d2); color: var(--ink); }
+.club h2 { color: var(--ink); } .club p { color: var(--ink-soft); }
+.club-card { background: var(--teal); } .club-card b { color: #17181a; }
+.club-perks div, .club-perks b { color: var(--ink); }
+.club-cta small { color: var(--ink-soft); }
+
+/* Product/collection overlay gradients — a touch lighter for a premium feel */
+.soxp-cap { background: linear-gradient(to top, rgba(15,15,16,.86) 0%, rgba(15,15,16,.42) 52%, transparent 100%); }
+
+/* Cart button in header — soft orange with dark text */
+.sox-bar-r .pill.cart { color: #17181a; }
+.sox-bar-r .pill.cart .badge { background: #17181a; color: #fff; }
+
+/* PDP add / spotlight buttons keep dark text on the soft orange */
+.buy .btn-primary, .excl-actions .btn-primary, .cd-checkout { color: #17181a; }
