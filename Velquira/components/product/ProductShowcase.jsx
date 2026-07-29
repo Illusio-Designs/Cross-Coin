@@ -250,36 +250,35 @@ export default function ProductShowcase({ product }) {
           <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
         </div>
         </div>
+
+        {/* About + Specs live in the buy column now, so the right side fills out
+            beside the tall gallery instead of being just price + options. */}
+        <div className="pdp-about">
+          <span className="eyebrow">Details</span>
+          <h2>About this product</h2>
+          {product.description
+            ? <p>{product.description}</p>
+            : <p className="muted">No description available for this product yet.</p>}
+
+          {product.features?.length > 0 && (
+            <ul className="pdp-features">
+              {product.features.map((f) => (
+                <li key={f.text}><span className="ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <aside className="pdp-specs">
+          <h3>Specifications</h3>
+          <dl>
+            {specs.map(([k, v]) => (
+              <div className="spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
+            ))}
+          </dl>
+        </aside>
       </div>
     </div>
-
-    {/* ── About + Specifications (specs track the selected variation) ── */}
-    <section className="pdp-details">
-      <div className="pdp-about">
-        <span className="eyebrow">Details</span>
-        <h2>About this product</h2>
-        {product.description
-          ? <p>{product.description}</p>
-          : <p className="muted">No description available for this product yet.</p>}
-
-        {product.features?.length > 0 && (
-          <ul className="pdp-features">
-            {product.features.map((f) => (
-              <li key={f.text}><span className="ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <aside className="pdp-specs">
-        <h3>Specifications</h3>
-        <dl>
-          {specs.map(([k, v]) => (
-            <div className="spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
-          ))}
-        </dl>
-      </aside>
-    </section>
     </>
   );
 }
