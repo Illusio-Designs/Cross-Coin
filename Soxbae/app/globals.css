@@ -1437,29 +1437,37 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 @keyframes sxTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .sx-ticker-track { animation: none; } }
 
-/* One-row bar: left nav · centred logo · right nav + utilities */
-.sx-hd-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 18px; padding-bottom: 18px; gap: 20px; }
-.sx-hd-nav { display: flex; align-items: center; gap: 30px; }
-.sx-hd-nav-l { justify-self: start; }
-.sx-hd-nav-r { justify-self: end; gap: 22px; }
-.sx-hd-logo { justify-self: center; display: inline-flex; }
-.sx-hd-nav > a { position: relative; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink); padding: 2px 0; white-space: nowrap; }
-.sx-hd-nav > a::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -5px; height: 1px; background: var(--accent); transition: right .25s ease; }
-.sx-hd-nav > a:hover { color: var(--accent-600); } .sx-hd-nav > a:hover::after { right: 0; }
-.sx-hd-div { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
-.sx-hd-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: var(--ink); transition: background .15s, color .15s; }
-.sx-hd-ic:hover { background: var(--accent-050); color: var(--accent-600); }
-/* Cart + wishlist rendered minimal (no chunky orange pill) */
-.sx-hd .pill.cart { background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 999px;
-  font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; padding: 9px 15px; }
-.sx-hd .pill.cart:hover { background: var(--ink); color: #fff; }
+/* One-row bar: logo left · boxed segmented nav centre · boxed utilities right */
+.sx-hd-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 16px; padding-bottom: 16px; gap: 20px; }
+.sx-hd-l { justify-self: start; display: flex; align-items: center; gap: 10px; }
+.sx-hd-logo { display: inline-flex; }
+.sx-hd-r { justify-self: end; display: flex; align-items: center; gap: 8px; }
+
+/* Framed segmented nav — an outlined pill holding chip links */
+.sx-navbox { justify-self: center; display: inline-flex; align-items: center; gap: 2px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px; background: var(--card); }
+.sx-navbox a { font-size: 11.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+  padding: 9px 17px; border-radius: 999px; transition: background .18s ease, color .18s ease; white-space: nowrap; }
+.sx-navbox a:hover { background: var(--ink); color: #fff; }
+
+/* Outlined square utility buttons */
+.sx-hd-box { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--card); color: var(--ink); transition: border-color .15s, color .15s, background .15s; }
+.sx-hd-box:hover { border-color: var(--ink); color: var(--accent-600); }
+/* Wishlist rendered as a boxed button too */
+.sx-hd .wl-link { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); padding: 0; }
+.sx-hd .wl-link:hover { border-color: var(--ink); color: var(--accent-600); }
+.sx-hd .wl-count { position: absolute; top: -5px; right: -5px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; border: 1.5px solid var(--bg); }
+/* Cart — the one solid box, anchoring the right */
+.sx-hd .pill.cart { background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: 12px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; padding: 12px 16px; gap: 8px; }
+.sx-hd .pill.cart:hover { background: #000; }
 .sx-hd .pill.cart .badge { background: var(--accent); color: #fff; }
-.sx-hd .wl-link { width: 40px; height: 40px; border: 0; background: transparent; color: var(--ink); }
-.sx-hd .wl-link:hover { background: var(--accent-050); color: var(--accent-600); }
-.sx-hd .wl-count { position: absolute; top: 5px; right: 5px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; }
-.sx-hd .hamburger { display: none; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 10px; }
+/* Hamburger — boxed to match */
+.sx-hd .hamburger { display: none; width: 42px; height: 42px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; }
+.sx-hd .hamburger:hover { border-color: var(--ink); }
 @media (max-width: 900px) {
-  .sx-hd-nav-l > a, .sx-hd-desk { display: none; }
+  .sx-hd-desk { display: none; }
   .sx-hd .hamburger { display: grid; }
   .sx-hd-row { padding-top: 12px; padding-bottom: 12px; }
 }

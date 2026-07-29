@@ -13,20 +13,9 @@ const NAV = [
   { label: 'Contact', href: '/contact' },
 ];
 
-// Soxbae header — a single-row SPLIT-NAV structure (unique to Soxbae, not the
-// stacked centred-nav layout): the nav wraps around the centred wordmark —
-// three links on the left, two links + the utility icons on the right — all in
-// one line. A slim running-benefit strip sits above it.
-const NAV_L = [
-  { label: 'Shop', href: '/products' },
-  { label: 'Collections', href: '/collections' },
-  { label: 'Journal', href: '/journal' },
-];
-const NAV_R = [
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-];
-
+// Soxbae header — a BOXED / FRAMED structure (unique to Soxbae): the nav lives
+// inside an outlined segmented pill, the utility icons are individual outlined
+// square buttons, and the cart is a solid ink box. Architectural + tactile.
 export default function Header() {
   return (
     <header className="sx-hd">
@@ -44,21 +33,21 @@ export default function Header() {
       </div>
 
       <div className="sx-hd-row container">
-        <nav className="sx-hd-nav sx-hd-nav-l">
+        <div className="sx-hd-l">
           <MobileNav items={NAV} />
-          {NAV_L.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
+          <Link href="/" className="sx-hd-logo" aria-label="Soxbae home"><BrandLogo height={32} /></Link>
+        </div>
+
+        <nav className="sx-navbox sx-hd-desk">
+          {NAV.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
         </nav>
 
-        <Link href="/" className="sx-hd-logo" aria-label="Soxbae home"><BrandLogo height={32} /></Link>
-
-        <nav className="sx-hd-nav sx-hd-nav-r">
-          {NAV_R.map((item) => <Link key={item.label} href={item.href} className="sx-hd-desk">{item.label}</Link>)}
-          <span className="sx-hd-div sx-hd-desk" aria-hidden="true" />
-          <Link href="/search" className="sx-hd-ic sx-hd-desk" aria-label="Search"><Icon name="Search" size={18} /></Link>
+        <div className="sx-hd-r">
+          <Link href="/search" className="sx-hd-box sx-hd-desk" aria-label="Search"><Icon name="Search" size={17} /></Link>
           <span className="sx-hd-desk"><WishlistLink /></span>
-          <Link href="/account" className="sx-hd-ic sx-hd-desk" aria-label="Account"><Icon name="User" size={18} /></Link>
+          <Link href="/account" className="sx-hd-box sx-hd-desk" aria-label="Account"><Icon name="User" size={17} /></Link>
           <CartButton />
-        </nav>
+        </div>
       </div>
     </header>
   );
