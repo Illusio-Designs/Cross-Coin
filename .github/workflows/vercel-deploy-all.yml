@@ -197,7 +197,9 @@ jobs:
 
       - name: Deploy Velquira to Vercel
         env:
-          DEPLOY_HOOK: ${{ secrets.VELQUIRA_DEPLOY_HOOK }}
+          # Accept the Deploy Hook URL from either a Secret OR a Variable, under
+          # any of the common names — whichever the operator actually created.
+          DEPLOY_HOOK: ${{ secrets.VELQUIRA_DEPLOY_HOOK || vars.VELQUIRA_DEPLOY_HOOK || secrets.VERCEL_DEPLOY_HOOK || vars.VERCEL_DEPLOY_HOOK || secrets.DEPLOY_HOOK || vars.DEPLOY_HOOK }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.JEWELLERY_VERCEL_PROJECT }}
