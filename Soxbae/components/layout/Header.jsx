@@ -21,7 +21,9 @@ export default function Header() {
     <header className="sx-hd">
       <div className="sx-ticker" aria-hidden="true">
         <div className="sx-ticker-track">
-          {Array.from({ length: 2 }).map((_, r) => (
+          {/* Four identical runs so one repeat unit (half the track) is always
+              wider than the viewport — the -50% loop never shows a gap. */}
+          {Array.from({ length: 4 }).map((_, r) => (
             <div className="sx-ticker-run" key={r}>
               <span>Free shipping over ₹499</span><i>✦</i>
               <span>Cushioned comfort knit</span><i>✦</i>
