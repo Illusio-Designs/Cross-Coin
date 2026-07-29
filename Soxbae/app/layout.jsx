@@ -1,4 +1,4 @@
-import { Inter } from 'next/font/google';
+import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
 import SmoothScroll from '@/components/SmoothScroll';
 import Msg91Loader from '@/components/Msg91Loader';
@@ -12,6 +12,7 @@ import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['400', '500', '600'], style: ['normal', 'italic'] });
 
 export const metadata = {
   metadataBase: new URL('https://www.soxbaesocks.com'),
@@ -41,7 +42,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body>
         <Msg91Loader />
         <AuthProvider>
