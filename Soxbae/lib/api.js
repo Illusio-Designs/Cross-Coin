@@ -39,7 +39,7 @@ export async function getBestsellers() {
   try {
     const data = await brandFetch('/api/products/best-sellers?limit=10', 300);
     const list = data?.data?.products || data?.products || data?.data || [];
-    if (Array.isArray(list) && list.length) return groupColorVariants(list.map(mapProduct).filter(Boolean));
+    if (Array.isArray(list) && list.length) return explodeColorVariants(list.map(mapProduct).filter(Boolean));
     // Nothing flagged as a best-seller yet — fall back to the live catalog so
     // the home page still shows real products (same behaviour as Knitwink).
     return getAllProducts();
@@ -50,7 +50,7 @@ export async function getAllProducts() {
   try {
     const data = await brandFetch('/api/products/catalog?limit=48');
     const list = data?.data?.products || data?.products || data?.data || [];
-    return groupColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
+    return explodeColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
   } catch { return []; }
 }
 
@@ -108,7 +108,7 @@ export async function getProductsByCategory(handle) {
   // Fallback: products embedded in the category record.
   const cat = await getCategoryByName(handle);
   const list = cat?.products || cat?.data?.products || [];
-  return groupColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
+  return explodeColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
 }
 
 // Lightweight product search — used by /search.
@@ -124,7 +124,7 @@ export async function searchProducts(query) {
       p.name?.toLowerCase().includes(lower) || p.category?.toLowerCase().includes(lower)
     );
     // Group colourways AFTER filtering so a colour search still finds its card.
-    return groupColorVariants(filtered.length ? filtered : mapped);
+    return explodeColorVariants(filtered.length ? filtered : mapped);
   } catch { return []; }
 }
 
@@ -443,66 +443,44 @@ function mapProduct(p) {
   };
 }
 
-// ── Group same-style products that differ only by colour into ONE card ──────
-// This store lists each colourway as its OWN product, with the colour written
-// into the product name (e.g. "Court Crew Blaze", "Court Crew Navy"). We strip
-// the trailing colour — taken from the product's own colour attribute, or a
-// recognised colour word — to get the base style, then merge same-base products
-// (in the same category) into a single card that carries every colourway as a
-// swatch. Only products with a real colour suffix merge; everything else passes
-// through untouched, so unrelated items are never wrongly combined.
-const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-function colorTokensFor(p) {
-  const tokens = (Array.isArray(p.colorNames) ? p.colorNames : []).map((c) => String(c).trim()).filter(Boolean);
-  if (tokens.length) return tokens;
-  // No colour attribute — fall back to a trailing *recognised* colour word.
-  const words = String(p.name || '').trim().split(/\s+/);
-  for (let n = Math.min(2, words.length - 1); n >= 1; n--) {
-    const tail = words.slice(words.length - n).join(' ');
-    if (getColorHex(tail.toLowerCase()) !== tail.toLowerCase()) return [tail];
-  }
-  return [];
-}
-
-function baseStyleName(p) {
-  let name = String(p.name || '').trim();
-  const tokens = colorTokensFor(p).slice().sort((a, b) => b.length - a.length);
-  for (const c of tokens) {
-    const re = new RegExp('[\\s\\-–—|:/(]+' + escapeRe(c) + '[)\\s]*$', 'i');
-    if (re.test(name)) { name = name.replace(re, '').trim(); break; }
-  }
-  return name.replace(/[\s\-–—|:/(]+$/, '').trim();
-}
-
-function colorLabelFor(p, base) {
-  const c = (Array.isArray(p.colorNames) && p.colorNames[0]) ? String(p.colorNames[0]).trim() : '';
-  if (c) return c;
-  const rest = String(p.name || '').trim().slice(base.length).replace(/^[\s\-–—|:/(]+/, '').replace(/[)\s]+$/, '').trim();
-  return rest || 'Default';
-}
-
-export function groupColorVariants(products) {
-  if (!Array.isArray(products) || products.length < 2) return products || [];
-  const groups = new Map();
-  for (const p of products) {
-    const base = baseStyleName(p) || String(p.name || '');
-    const key = base.toLowerCase() + '' + String(p.categorySlug || '');
-    if (!groups.has(key)) groups.set(key, { base, members: [] });
-    groups.get(key).members.push(p);
-  }
+// Soxbae shows EVERY colour as its own product card. Explode a product that has
+// more than one colour variation into one card per colour — each with that
+// colour's own image, price and size set, linking to the product page with the
+// colour preselected. Single-colour products pass through unchanged.
+export function explodeColorVariants(products) {
+  if (!Array.isArray(products)) return [];
   const out = [];
-  for (const { base, members } of groups.values()) {
-    if (members.length < 2) { out.push(members[0]); continue; }
-    // The cheapest colourway leads the card.
-    const rep = members.reduce((a, b) => (num(b.price) < num(a.price) ? b : a), members[0]);
-    const swatches = members.map((m) => {
-      const label = colorLabelFor(m, base);
-      return { name: label, hex: getColorHex(label), slug: m.slug, image: m.image, price: num(m.price), oldPrice: m.oldPrice };
+  for (const p of products) {
+    const names = (Array.isArray(p.colorNames) ? p.colorNames : []).map((c) => str(c).trim()).filter(Boolean);
+    if (names.length <= 1) { out.push(p); continue; }
+    const colorImages = Array.isArray(p.colorImages) ? p.colorImages : [];
+    const variants = Array.isArray(p.variants) ? p.variants : [];
+    names.forEach((cn, i) => {
+      const imgs = colorImages[i];
+      const image = (Array.isArray(imgs) && imgs[0]) || p.image;
+      const cvars = variants.filter((v) => str(v.color).trim().toLowerCase() === cn.toLowerCase());
+      const csizes = [...new Set(cvars.map((v) => v.size).filter(Boolean))];
+      const prices = cvars.map((v) => num(v.price)).filter((n) => n > 0);
+      const price = prices.length ? Math.min(...prices) : num(p.price);
+      const cheap = cvars.find((v) => num(v.price) === price) || cvars[0] || null;
+      const oldPrice = cheap && cheap.oldPrice != null ? num(cheap.oldPrice) : p.oldPrice;
+      out.push({
+        ...p,
+        uid: `${p.id}:${i}`,
+        name: `${p.name} — ${cn}`,
+        colorNames: [cn],
+        colors: [getColorHex(cn)],
+        colorImages: [Array.isArray(imgs) ? imgs : []],
+        image,
+        images: (Array.isArray(imgs) && imgs.length) ? imgs : p.images,
+        price,
+        oldPrice: oldPrice || undefined,
+        sizes: csizes.length ? csizes : p.sizes,
+        variants: cvars.length ? cvars : p.variants,
+        colorParam: cn,
+        group: undefined,
+      });
     });
-    const colorNames = [];
-    swatches.forEach((s) => { if (s.name && !colorNames.includes(s.name)) colorNames.push(s.name); });
-    out.push({ ...rep, name: base, colorNames, colors: colorNames.map((c) => getColorHex(c)), group: swatches });
   }
   return out;
 }

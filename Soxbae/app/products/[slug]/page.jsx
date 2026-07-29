@@ -15,8 +15,9 @@ export async function generateMetadata({ params }) {
   return p ? { title: p.name, description: p.description } : { title: 'Product' };
 }
 
-export default async function ProductPage({ params }) {
+export default async function ProductPage({ params, searchParams }) {
   const { slug } = await params;
+  const sp = (await searchParams) || {};
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
@@ -32,7 +33,7 @@ export default async function ProductPage({ params }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} />
+      <ProductShowcase product={product} initialColor={sp.color} />
 
       {/* ── Reviews (real stats + write-a-review) ── */}
       <ProductReviews
@@ -46,7 +47,7 @@ export default async function ProductPage({ params }) {
         <section className="section" style={{ paddingBottom: 0 }}>
           <div className="section-head"><h2>You might also like</h2></div>
           <div className="product-grid">
-            {related.map((p) => <ProductCard key={p.id} product={p} />)}
+            {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
           </div>
         </section>
       )}

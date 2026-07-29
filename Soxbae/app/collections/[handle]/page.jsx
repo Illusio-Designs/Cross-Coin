@@ -37,7 +37,7 @@ export default async function CollectionPage({ params }) {
         </div>
       ) : (
         <div className="product-grid" style={{ marginTop: 24 }}>
-          {products.map((p) => <ProductCard key={p.id} product={p} />)}
+          {products.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
         </div>
       )}
     </div>

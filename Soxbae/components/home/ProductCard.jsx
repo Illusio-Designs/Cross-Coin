@@ -8,8 +8,8 @@ import WishlistButton from '@/components/product/WishlistButton';
 // that overlaps its bottom edge (category · name + price on one row · colour
 // swatches + a small add button). Distinctive and premium.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames } = product;
-  const href = `/products/${slug}`;
+  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames, colorParam } = product;
+  const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
   // Colour dots come from EITHER a merged group (separate products, each linking
   // to its own page) OR a single product's own colour variations (dots link to

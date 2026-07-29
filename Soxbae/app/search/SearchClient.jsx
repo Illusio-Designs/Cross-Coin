@@ -68,7 +68,7 @@ export default function SearchClient({ initialQuery = '' }) {
         <>
           <p className="muted" style={{ margin: '18px 0' }}>{results.length} result{results.length === 1 ? '' : 's'}</p>
           <div className="product-grid">
-            {results.map((p) => <ProductCard key={p.id} product={p} />)}
+            {results.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
           </div>
         </>
       )}

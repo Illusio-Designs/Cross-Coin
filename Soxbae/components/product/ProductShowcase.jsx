@@ -8,12 +8,19 @@ import { toast } from '@/lib/toast';
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
 // and Add to cart sends that precise variation to the backend.
-export default function ProductShowcase({ product }) {
+export default function ProductShowcase({ product, initialColor }) {
   const { add } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
 
-  const [color, setColor] = useState(0);           // index into product.colors
+  // Preselect the colour named in ?color (when a card linked straight to it).
+  const initialColorIndex = (() => {
+    if (!initialColor) return 0;
+    const want = String(initialColor).trim().toLowerCase();
+    const i = colorNames.findIndex((c) => String(c).trim().toLowerCase() === want);
+    return i >= 0 ? i : 0;
+  })();
+  const [color, setColor] = useState(initialColorIndex); // index into product.colors
   const [active, setActive] = useState(0);         // active gallery image
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);

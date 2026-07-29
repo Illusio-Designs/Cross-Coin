@@ -11,7 +11,7 @@ export default function Bestsellers({ products = [] }) {
       </div>
       {products.length > 0 ? (
         <div className="product-grid">
-          {products.map((p) => <ProductCard key={p.id} product={p} />)}
+          {products.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
         </div>
       ) : (
         <div className="empty">No products yet — check back soon.</div>
