@@ -214,7 +214,9 @@ jobs:
           elif [ -n "$VERCEL_PROJECT_ID" ]; then
             echo "Deploying via Vercel CLI…"
             npm install --global vercel@latest
-            cd Velquira
+            # Deploy from the REPO ROOT — the Vercel project's Root Directory is
+            # already set to "Velquira", so cd-ing in would double the path to
+            # Velquira/Velquira (which doesn't exist).
             vercel deploy --prod --token="$VERCEL_TOKEN"
             echo "✅ Velquira deployed via CLI."
           else
