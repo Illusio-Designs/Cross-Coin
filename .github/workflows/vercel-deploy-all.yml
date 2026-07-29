@@ -195,17 +195,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy Velquira (jewellery) to Vercel
-        run: |
-          cd Velquira
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy Velquira to Vercel
         env:
+          DEPLOY_HOOK: ${{ secrets.VELQUIRA_DEPLOY_HOOK }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          # Must hold the Velquira Vercel project ID.
           VERCEL_PROJECT_ID: ${{ secrets.JEWELLERY_VERCEL_PROJECT }}
-
-      - name: Notify Success
-        run: echo "✅ Velquira deployed to Vercel successfully!"
+        run: |
+          set -e
+          if [ -n "$DEPLOY_HOOK" ]; then
+            # Simplest + most reliable: POST the Vercel Deploy Hook. No project
+            # ID needed; Vercel builds the latest main from the project's own
+            # Git settings. Add secret VELQUIRA_DEPLOY_HOOK = the hook URL.
+            echo "Triggering Vercel Deploy Hook…"
+            curl -fsS -X POST "$DEPLOY_HOOK" && echo "✅ Deploy hook triggered."
+          elif [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "Deploying via Vercel CLI…"
+            npm install --global vercel@latest
+            cd Velquira
+            vercel deploy --prod --token="$VERCEL_TOKEN"
+            echo "✅ Velquira deployed via CLI."
+          else
+            echo "::error::No deploy method configured. Add repo secret VELQUIRA_DEPLOY_HOOK (a Vercel Deploy Hook URL) OR JEWELLERY_VERCEL_PROJECT (the Velquira Vercel project ID)."
+            exit 1
+          fi
