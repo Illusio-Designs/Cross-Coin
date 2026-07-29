@@ -2054,10 +2054,12 @@ p { text-align: justify; text-justify: inter-word; }
 .pdp-buycard .pdp-specs h3::after { margin: 12px 0 0; }
 
 /* Desktop: keep the gallery pinned while the details scroll past, so the image
-   stays in view until the full right-column panel has been read. */
+   stays in view until the full right-column panel has been read. The offset
+   clears the full sticky header (announcement bar + logo row + nav ≈ 120px)
+   plus a little breathing room, so the image never tucks under the header. */
 @media (min-width: 901px) {
   .pdp { align-items: start; }
-  .pdp-gallery { position: sticky; top: 96px; align-self: start; }
+  .pdp-gallery { position: sticky; top: 132px; align-self: start; }
 }
 
 @media (max-width: 900px) {
