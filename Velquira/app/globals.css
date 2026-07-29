@@ -1471,3 +1471,98 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .vqp-fav { width: 32px; height: 32px; }
 }
 @media (max-width: 400px)  { .product-grid { gap: 18px 12px; } }
+
+/* ============================================================================
+   VELQUIRA — SECTION REDESIGN LAYER 2 (craft · reviews · journal · circle · search)
+   Restructures the remaining home sections away from the ported boxed grids
+   into an heirloom editorial system. Appended last → wins.
+   ========================================================================== */
+
+/* ── THE VELQUIRA CRAFT → open editorial "pillars", no white box ─────────── */
+.tech-grid { background: transparent; border: 0; border-radius: 0; padding: 30px 0 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  grid-template-columns: repeat(6, 1fr); }
+.tech { border-right: 1px solid var(--line); padding: 8px 16px 30px; }
+.tech .ic { width: 52px; height: 52px; border-radius: 999px; background: transparent;
+  border: 1px solid var(--gold); color: var(--gold-deep); margin-bottom: 16px; }
+.tech b { font-family: var(--font-serif); font-size: 17px; font-weight: 600; letter-spacing: 0; }
+.tech span { margin-top: 8px; }
+
+/* ── IN THEIR WORDS → serif testimonials with a gold quote mark ──────────── */
+.review-grid { grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.review-grid .review { background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+  padding: 30px 26px 24px; position: relative; }
+.review-grid .review::before { content: '\201C'; position: absolute; top: 6px; left: 22px;
+  font-family: var(--font-serif); font-size: 68px; line-height: 1; color: var(--gold); opacity: .32; }
+.review-grid .review:hover { box-shadow: 0 20px 44px -30px rgba(143,102,32,.5); transform: translateY(-3px); border-color: var(--gold); }
+.review-grid .review .review-stars { position: relative; z-index: 1; margin-bottom: 14px !important; }
+.review-title { font-family: var(--font-serif); font-weight: 600; font-size: 17px; }
+.review-grid .review p { font-family: var(--font-serif); font-style: italic; font-size: 15.5px; line-height: 1.7; color: var(--ink); }
+.review-grid .review .review-head { border-top: 1px solid var(--line); padding-top: 14px; }
+.review-av { background: transparent; border: 1px solid var(--gold); color: var(--gold-deep); font-family: var(--font-serif); }
+.reviews-badge { border: 1px solid var(--line); background: var(--card); box-shadow: none; border-radius: 3px; }
+.reviews-badge b { color: var(--gold-deep); font-family: var(--font-serif); }
+
+/* ── STORIES & GUIDES → framed editorial article cards ──────────────────── */
+.blog-grid { grid-template-columns: repeat(3, 1fr); gap: 26px; }
+.blog-card { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+.blog-card:hover { box-shadow: none; transform: none; }
+.blog-media { height: 260px; border: 1px solid var(--line); border-radius: 3px; background: linear-gradient(160deg,#fffdf7,#f2e7cf); position: relative; overflow: hidden; }
+.blog-media img { object-fit: cover; transition: transform .6s cubic-bezier(.16,1,.3,1); }
+.blog-card:hover .blog-media img { transform: scale(1.05); }
+.blog-media::after { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(191,139,46,.3); pointer-events: none; }
+.blog-body { padding: 18px 2px 0; gap: 10px; }
+.blog-meta { text-transform: uppercase; letter-spacing: .14em; font-size: 10px; font-weight: 600; color: var(--gold-deep); }
+.blog-meta .blog-cat { color: var(--gold-deep); }
+.blog-card h3 { font-family: var(--font-serif); font-weight: 600; font-size: 22px; line-height: 1.25; color: var(--ink); }
+.blog-card:hover h3 { color: var(--gold-deep); }
+.blog-read { margin-top: 4px; display: inline-flex; align-items: center; gap: 8px; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; font-weight: 600; color: var(--gold-deep); border-bottom: 1px solid var(--gold); padding-bottom: 3px; width: fit-content; }
+
+/* ── THE VELQUIRA CIRCLE → full-width heritage invitation band ───────────── */
+.club { display: block; text-align: center; background: linear-gradient(180deg,#2f2519,#221a10);
+  border: 1px solid var(--gold-deep); border-radius: 6px; padding: 56px 40px; color: #e9d8b4; position: relative; }
+.club::before { content: ''; position: absolute; inset: 12px; border: 1px solid rgba(191,139,46,.35); border-radius: 3px; pointer-events: none; }
+.club-card { display: inline-flex; justify-content: center; height: auto; background: transparent; box-shadow: none; padding: 0; margin-bottom: 14px; }
+.club-card b { font-family: var(--font-body); font-size: 11px; letter-spacing: .34em; text-transform: uppercase; color: var(--gold); opacity: 1; }
+.club h2 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(28px,3.4vw,42px); color: #fff8ec; }
+.club h2::after { content: ''; display: block; width: 52px; height: 1px; background: var(--gold); margin: 16px auto 0; }
+.club p { color: #c3b088; max-width: 540px; margin: 16px auto 0; }
+.club-perks { justify-content: center; gap: 0; margin-top: 22px; }
+.club-perks div { padding: 0 22px; border-right: 1px solid rgba(191,139,46,.3); color: #c3b088; }
+.club-perks div:last-child { border-right: 0; }
+.club-perks b { color: var(--gold-lite); font-family: var(--font-serif); font-weight: 600; }
+.club-cta { margin-top: 30px; }
+.club .btn-primary { background: linear-gradient(180deg,#c8922f,#a5741f); }
+.club-cta small { color: #a8977a; }
+
+/* ── SEARCH → slim gold-underline field + understated links ─────────────── */
+.searchbar { flex-direction: column; align-items: center; gap: 20px; }
+.search-input { flex: none; width: min(560px,100%); background: transparent; border: 0;
+  border-bottom: 1px solid var(--gold); border-radius: 0; box-shadow: none; padding: 10px 4px; }
+.search-input input { text-align: center; font-family: var(--font-serif); font-size: 17px; font-style: italic; }
+.search-input .go { width: 40px; height: 40px; background: transparent; color: var(--gold-deep); }
+.chips { justify-content: center; gap: 8px; }
+.chip { background: transparent; border: 1px solid var(--line); border-radius: 2px; padding: 9px 16px;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; color: var(--ink); }
+.chip:hover { border-color: var(--gold); color: var(--gold-deep); }
+.chip svg { color: var(--gold); }
+
+/* ── MARQUEE → gold ring icons on espresso ──────────────────────────────── */
+.marquee-item { letter-spacing: .06em; }
+.marquee-ic { background: transparent; border: 1px solid rgba(191,139,46,.5); color: var(--gold-lite); }
+
+/* ── Responsive for the redesigned sections ─────────────────────────────── */
+@media (max-width: 1000px) {
+  .tech-grid { grid-template-columns: repeat(3, 1fr); }
+  .tech:nth-child(3n) { border-right: 0; }
+  .review-grid, .blog-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+  .tech:nth-child(3n) { border-right: 1px solid var(--line); }
+  .tech:nth-child(2n) { border-right: 0; }
+  .review-grid, .blog-grid { grid-template-columns: 1fr; }
+  .club { padding: 40px 22px; }
+  .club-perks div { border-right: 0; padding: 6px 0; }
+  .blog-media { height: 220px; }
+}
