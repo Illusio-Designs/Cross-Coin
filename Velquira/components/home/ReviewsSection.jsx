@@ -1,4 +1,5 @@
 import Icon from '@/components/Icon';
+import ReviewCard from '@/components/product/ReviewCard';
 
 export default function ReviewsSection({ reviews = [] }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
@@ -28,21 +29,7 @@ export default function ReviewsSection({ reviews = [] }) {
       )}
 
       <div className="review-grid">
-        {reviews.slice(0, 6).map((r, i) => (
-          <div className="review" key={i}>
-            <div className="review-stars" style={{ marginBottom: 10 }}>
-              {[0, 1, 2, 3, 4].map((n) => (
-                <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--star)' : '#dce2e6'} />
-              ))}
-            </div>
-            {r.title && <b className="review-title">{r.title}</b>}
-            <p>{r.text}</p>
-            <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
-              <div className="review-av">{(r.author || '?').charAt(0)}</div>
-              <div><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
-            </div>
-          </div>
-        ))}
+        {reviews.slice(0, 6).map((r, i) => <ReviewCard review={r} key={i} />)}
       </div>
     </section>
   );

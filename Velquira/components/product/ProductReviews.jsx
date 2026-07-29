@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
+import ReviewCard from '@/components/product/ReviewCard';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
 
@@ -62,8 +63,20 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
 
   return (
     <section className="pdp-reviews section" id="reviews">
-      <div className="section-head" style={{ justifyContent: 'space-between' }}>
-        <h2>Customer reviews</h2>
+      <div className="pdp-rev-head">
+        <div className="pdp-rev-headL">
+          <span className="eyebrow">Reviews</span>
+          <h2>Customer reviews</h2>
+          <div className="pdp-rev-sum">
+            <b>{total ? avg.toFixed(1) : '—'}</b>
+            <span className="pdp-rev-stars">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Icon key={i} name="Star" size={14} color={i < Math.round(avg) ? 'var(--star)' : '#e2d3b4'} />
+              ))}
+            </span>
+            <span className="muted">{total ? `${total} review${total === 1 ? '' : 's'}` : 'No reviews yet'}</span>
+          </div>
+        </div>
         <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>
           Write a review <Icon name="Star" size={15} />
         </button>
@@ -107,51 +120,13 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
 
       {status.state === 'success' && !open && <p className="form-msg success">{status.msg}</p>}
 
-      <div className="reviews-layout">
-        <div className="reviews-summary">
-          <div className="rs-score">{total ? avg.toFixed(1) : '—'}</div>
-          <div className="rs-stars">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Icon key={i} name="Star" size={16} color={i < Math.round(avg) ? 'var(--star)' : '#d7dde2'} />
-            ))}
-          </div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {total ? `Based on ${total} review${total === 1 ? '' : 's'}` : 'No reviews yet'}
-          </div>
-          <div className="rs-bars">
-            {dist.map((d) => (
-              <div className="rs-bar" key={d.s}>
-                <span>{d.s}★</span>
-                <div className="rs-track"><div className="rs-fill" style={{ width: `${d.pct}%` }} /></div>
-                <span className="muted">{d.pct}%</span>
-              </div>
-            ))}
-          </div>
+      {reviews.length === 0 ? (
+        <div className="empty" style={{ margin: 0 }}>No reviews yet — be the first to review this product.</div>
+      ) : (
+        <div className="review-grid">
+          {reviews.map((r, i) => <ReviewCard review={r} key={i} />)}
         </div>
-
-        <div className="reviews-list">
-          {reviews.length === 0 ? (
-            <div className="empty" style={{ margin: 0 }}>No reviews yet — be the first to review this product.</div>
-          ) : reviews.map((r, i) => (
-            <div className="review" key={i}>
-              <div className="review-head">
-                <div className="review-av">{(r.author || '?').charAt(0)}</div>
-                <div>
-                  <b>{r.author}</b>
-                  <div className="review-stars">
-                    {[0, 1, 2, 3, 4].map((n) => (
-                      <Icon key={n} name="Star" size={12} color={n < r.rating ? 'var(--star)' : '#d7dde2'} />
-                    ))}
-                    {r.date && <span className="muted" style={{ fontSize: 12, marginLeft: 6 }}>{r.date}</span>}
-                  </div>
-                </div>
-              </div>
-              {r.title && <b className="review-title">{r.title}</b>}
-              <p>{r.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </section>
   );
 }
