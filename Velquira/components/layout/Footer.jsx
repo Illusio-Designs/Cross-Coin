@@ -25,19 +25,22 @@ const COLS = [
 
 export default function Footer() {
   return (
-    <footer className="footer">
+    <footer className="footer vq-footer">
       <div className="container">
-        <div className="footer-cols">
-          <div className="brand-col">
-            <BrandLogo height={42} />
-            <p>Fine handmade jewellery in hallmarked gold and certified stones — designed in our Morbi studio to be treasured for a lifetime.</p>
-            <div className="socials">
-              <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
-              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
-              <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
-            </div>
+        {/* Centred brand crest — a maison sign-off, not a left-aligned column */}
+        <div className="vq-foot-crest">
+          <BrandLogo height={48} />
+          <p className="vq-foot-tag">Fine handmade jewellery in hallmarked gold and certified stones — designed in our Morbi studio to be treasured for a lifetime.</p>
+          <div className="socials">
+            <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
+            <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
+            <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
           </div>
+          <span className="vq-foot-flourish" aria-hidden />
+        </div>
 
+        {/* Link columns + contacts, centred beneath the crest */}
+        <div className="vq-foot-links">
           {COLS.map((col) => (
             <div key={col.title}>
               <h4>{col.title}</h4>
