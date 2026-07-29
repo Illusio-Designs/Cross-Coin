@@ -4,9 +4,9 @@ import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
 
-// Soxbae product card — premium editorial: a calm framed image with the details
-// set quietly BELOW on the ivory (category · name · price). A discreet add
-// button fades in over the image on hover.
+// Soxbae product card — "plate": a full framed image with a floating info plate
+// that overlaps its bottom edge (category · name + price on one row · colour
+// swatches + a small add button). Distinctive and premium.
 export default function ProductCard({ product }) {
   const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group } = product;
   const href = `/products/${slug}`;
@@ -29,27 +29,30 @@ export default function ProductCard({ product }) {
           {oldPrice && <span className="sxp-tag sale">-{off}%</span>}
         </div>
         <WishlistButton productId={id} className="sxp-fav" />
-
-        <div className="sxp-add">
-          <AddToCart product={product} display="icon" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
-        </div>
       </div>
 
       <div className="sxp-info">
         {category && <span className="sxp-cat">{category}</span>}
-        <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
-        <div className="sxp-price">
-          {swatches ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+        <div className="sxp-plate-row">
+          <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
+          <span className="sxp-price">
+            {swatches ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+          </span>
         </div>
-        {swatches && (
-          <div className="sxp-swatches" aria-label={`${swatches.length} colours`}>
-            {swatches.slice(0, 6).map((s) => (
-              <Link key={s.slug} href={`/products/${s.slug}`} className="sxp-sw"
-                style={{ background: s.hex }} title={s.name} aria-label={s.name} />
-            ))}
-            {swatches.length > 6 && <span className="sxp-sw-more">+{swatches.length - 6}</span>}
+        <div className="sxp-plate-foot">
+          {swatches ? (
+            <div className="sxp-swatches" aria-label={`${swatches.length} colours`}>
+              {swatches.slice(0, 5).map((s) => (
+                <Link key={s.slug} href={`/products/${s.slug}`} className="sxp-sw"
+                  style={{ background: s.hex }} title={s.name} aria-label={s.name} />
+              ))}
+              {swatches.length > 5 && <span className="sxp-sw-more">+{swatches.length - 5}</span>}
+            </div>
+          ) : <span />}
+          <div className="sxp-add">
+            <AddToCart product={product} display="icon" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
           </div>
-        )}
+        </div>
       </div>
     </article>
   );
