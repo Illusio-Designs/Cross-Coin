@@ -1,5 +1,5 @@
 /* Tiny toast pub/sub. Call toast.success('…') etc. from any client component;
- * <ToastHost /> (mounted in the layout) renders them. Themed to Morbix colours.
+ * <ToastHost /> (mounted in the layout) renders them. Themed to Velquira colours.
  */
 let listeners = [];
 let counter = 0;

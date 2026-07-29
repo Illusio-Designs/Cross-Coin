@@ -1,10 +1,10 @@
-/* Morbix client-side API helpers.
+/* Velquira client-side API helpers.
  *
  * These talk to the same Cross-Coin backend the server-side lib/api.js uses,
- * scoped by the `X-Brand-Name: morbix` header, but from the browser — they
+ * scoped by the `X-Brand-Name: velquira` header, but from the browser — they
  * attach the logged-in user's bearer token (localStorage `token`) and are
  * used by the cart / checkout / account flows. Mirrors the Knitwink
- * lib/api/* modules, adapted to the Morbix brand.
+ * lib/api/* modules, adapted to the Velquira brand.
  */
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';

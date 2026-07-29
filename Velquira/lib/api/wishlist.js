@@ -1,4 +1,4 @@
-/* Wishlist API — mirrors Knitwink/lib/api/wishlist.js for the Morbix brand.
+/* Wishlist API — mirrors Knitwink/lib/api/wishlist.js for the Velquira brand.
  * Works for both signed-in users (Bearer token) and guests (X-Guest-Token).
  * Endpoints under /api/wishlist.
  */
@@ -64,7 +64,7 @@ function resolveImageUrl(raw) {
   return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
-/** Normalise a backend wishlist row into the Morbix product-card shape. */
+/** Normalise a backend wishlist row into the Velquira product-card shape. */
 function normalize(row) {
   if (!row) return null;
   const p = row.Product || row.product || row;

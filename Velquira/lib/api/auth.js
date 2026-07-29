@@ -1,4 +1,4 @@
-/* Auth API — mirrors Knitwink/lib/api/auth.js for the Morbix brand.
+/* Auth API — mirrors Knitwink/lib/api/auth.js for the Velquira brand.
  *
  * Consumer auth is phone + OTP based (MSG91 access_token verified by the
  * backend). Email/password register + admin login are available too. The

@@ -1,4 +1,4 @@
-/* Cart API — mirrors Knitwink/lib/api/cart.js for the Morbix brand.
+/* Cart API — mirrors Knitwink/lib/api/cart.js for the Velquira brand.
  * Server-side cart for logged-in users. Guests use a localStorage cart
  * (see context/CartContext.jsx). Endpoints: /api/cart, /api/cart/items.
  */

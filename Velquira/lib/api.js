@@ -1,7 +1,7 @@
-/* Morbix data layer.
+/* Velquira data layer.
  *
- * The Morbix storefront shares the same backend API as the other brands,
- * scoped by the `X-Brand-Name: morbix` header. It fetches LIVE data only —
+ * The Velquira storefront shares the same backend API as the other brands,
+ * scoped by the `X-Brand-Name: velquira` header. It fetches LIVE data only —
  * there is no mock/sample fallback. When a request fails or returns nothing,
  * these functions return an empty value ([] / null) and the UI renders a real
  * empty state.
@@ -236,7 +236,7 @@ export { sendMessage } from './api/contact';
 export const getHeroFeatures = () => heroFeatures;
 export const getTechnologies = () => technologies;
 
-// ---- Backend → Morbix shape mappers ---------------------------------------
+// ---- Backend → Velquira shape mappers ---------------------------------------
 
 // Parse a variation's attributes (backend stores them as a JSON string or object).
 function parseAttrs(v) {
@@ -321,7 +321,7 @@ function normalizeFeatures(raw) {
     .filter((f) => f.text);
 }
 
-// Backend product -> Morbix shape. REAL DATA ONLY: sizes/colors/material come
+// Backend product -> Velquira shape. REAL DATA ONLY: sizes/colors/material come
 // from the actual variation attributes, sku from the variation/product; fields
 // the backend doesn't provide are left empty (the PDP spec table hides empty
 // rows) — no fabricated/placeholder values. Every rendered field is coerced to
