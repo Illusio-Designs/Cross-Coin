@@ -15,7 +15,7 @@ function HeartIcon({ filled }) {
   );
 }
 
-const LS_KEY = 'morbix_wishlist_ids';
+const LS_KEY = 'velquira_wishlist_ids';
 
 function readLocal() {
   if (typeof window === 'undefined') return [];
@@ -50,7 +50,7 @@ export default function WishlistButton({ productId, className = 'pcard-fav' }) {
       toast.wishlist('Removed from wishlist');
       try { await removeFromWishlist(productId); } catch {}
     }
-    window.dispatchEvent(new Event('morbix-wishlist-change'));
+    window.dispatchEvent(new Event('velquira-wishlist-change'));
   };
 
   return (

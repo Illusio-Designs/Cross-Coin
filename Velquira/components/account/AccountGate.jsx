@@ -31,7 +31,7 @@ export default function AccountGate({ title = 'Your account', children }) {
         <div className="auth-wrap">
           <div className="page-hero" style={{ textAlign: 'center', margin: '0 auto 22px' }}>
             <span className="eyebrow">Account</span>
-            <h1>Sign in to Morbix</h1>
+            <h1>Sign in to Velquira</h1>
             <p>Track orders, save favourites and check out faster.</p>
           </div>
           <div className="contact-form auth-form" style={{ textAlign: 'center', gap: 12 }}>
@@ -39,7 +39,7 @@ export default function AccountGate({ title = 'Your account', children }) {
               Sign in <Icon name="ArrowRight" size={16} />
             </Link>
             <p className="muted" style={{ fontSize: 13 }}>
-              New to Morbix? <Link href="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create an account</Link>
+              New to Velquira? <Link href="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create an account</Link>
             </p>
           </div>
         </div>

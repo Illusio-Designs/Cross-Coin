@@ -392,7 +392,7 @@ export default function CartDrawer() {
                 {items.map((i) => (
                   <div className="cd-item" key={i.key}>
                     <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
-                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Footprints" size={26} />}
+                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Sparkles" size={26} />}
                     </Link>
                     <div className="cd-item-main">
                       <div className="cd-item-top">

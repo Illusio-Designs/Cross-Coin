@@ -111,7 +111,7 @@ function Dashboard() {
         <div className="page-hero">
           <span className="eyebrow">Account</span>
           <h1>Hi{user?.username ? `, ${user.username}` : ''}</h1>
-          <p>{user?.email || user?.phone || 'Welcome back to Morbix.'}</p>
+          <p>{user?.email || user?.phone || 'Welcome back to Velquira.'}</p>
         </div>
       </div>
 

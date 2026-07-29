@@ -136,7 +136,7 @@ export default function LoginClient() {
                 {loading ? 'Please wait…' : <>Send OTP <Icon name="ArrowRight" size={16} /></>}
               </button>
               <p className="muted" style={{ textAlign: 'center', fontSize: 13 }}>
-                New to Morbix? <Link href="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create an account</Link>
+                New to Velquira? <Link href="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create an account</Link>
               </p>
             </>
           ) : (

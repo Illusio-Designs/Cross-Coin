@@ -174,7 +174,7 @@ export default function ProductShowcase({ product }) {
         <div className="pdp-main" ref={mainRef}>
           {mainSrc
             ? <img src={mainSrc} alt={product.name} />
-            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={72} /></span>}
+            : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Sparkles" size={72} /></span>}
           {product.badge === 'new' && <span className="pcard-badge new" style={{ top: 16, left: 16 }}>New</span>}
         </div>
       </div>

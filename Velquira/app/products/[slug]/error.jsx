@@ -10,7 +10,7 @@ export default function ProductError({ error, reset }) {
   return (
     <div className="container" style={{ paddingTop: 60, paddingBottom: 80 }}>
       <div className="cart-empty">
-        <Icon name="Footprints" size={44} color="#c3ccd2" />
+        <Icon name="Sparkles" size={44} color="#c3ccd2" />
         <b style={{ fontSize: 18 }}>We couldn’t load this product</b>
         <p className="muted">It may be unavailable right now. Please try again in a moment.</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>

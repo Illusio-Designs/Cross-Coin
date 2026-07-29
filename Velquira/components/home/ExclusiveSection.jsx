@@ -123,7 +123,7 @@ export default function ExclusiveSection({ products = [] }) {
             <div className="excl-main" ref={mainRef}>
               {mainSrc
                 ? <img src={mainSrc} alt={product.name} />
-                : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}
+                : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Sparkles" size={64} /></span>}
               {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function ExclusiveSection({ products = [] }) {
               {list.map((p, i) => (
                 <button key={p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
                   onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
+                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Sparkles" size={20} />}
                 </button>
               ))}
             </div>

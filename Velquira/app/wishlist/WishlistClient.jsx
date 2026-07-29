@@ -32,8 +32,8 @@ export default function WishlistClient() {
   useEffect(() => {
     load();
     const onChange = () => load();
-    window.addEventListener('morbix-wishlist-change', onChange);
-    return () => window.removeEventListener('morbix-wishlist-change', onChange);
+    window.addEventListener('velquira-wishlist-change', onChange);
+    return () => window.removeEventListener('velquira-wishlist-change', onChange);
   }, [load]);
 
   return (

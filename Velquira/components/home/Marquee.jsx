@@ -14,7 +14,7 @@ export default function Marquee() {
   // Duplicate the list so the -50% keyframe loops seamlessly.
   const row = [...ITEMS, ...ITEMS];
   return (
-    <section className="marquee-wrap" aria-label="Why shop Morbix">
+    <section className="marquee-wrap" aria-label="Why shop Velquira">
       <div className="marquee-track">
         {row.map((it, i) => (
           <span className="marquee-item" key={i} aria-hidden={i >= ITEMS.length}>

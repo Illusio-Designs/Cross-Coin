@@ -55,7 +55,7 @@ export default function SearchClient({ initialQuery = '' }) {
       </div>
 
       {!trimmed ? (
-        <div className="empty">Type something to search the Morbix catalog.</div>
+        <div className="empty">Type something to search the Velquira catalogue.</div>
       ) : loading ? (
         <div className="product-grid" style={{ marginTop: 18 }}>
           {Array.from({ length: 4 }).map((_, i) => (

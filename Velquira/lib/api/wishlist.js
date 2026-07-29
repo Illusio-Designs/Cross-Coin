@@ -4,7 +4,7 @@
  */
 import { API_URL, BRAND, getToken } from './client';
 
-const GUEST_TOKEN_KEY = 'morbix:guestToken';
+const GUEST_TOKEN_KEY = 'velquira:guestToken';
 
 function getOrCreateGuestToken() {
   if (typeof window === 'undefined') return '';
