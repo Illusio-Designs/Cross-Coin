@@ -8,12 +8,18 @@ import WishlistButton from '@/components/product/WishlistButton';
 // that overlaps its bottom edge (category · name + price on one row · colour
 // swatches + a small add button). Distinctive and premium.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group } = product;
+  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames } = product;
   const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
-  // When this card represents several colourways (merged from separate products),
-  // show a swatch per colour — each links straight to that colour's page.
-  const swatches = Array.isArray(group) && group.length > 1 ? group : null;
+  // Colour dots come from EITHER a merged group (separate products, each linking
+  // to its own page) OR a single product's own colour variations (dots link to
+  // this product's page). Show whenever there's more than one colour.
+  const swatches = Array.isArray(group) && group.length > 1
+    ? group
+    : (Array.isArray(colors) && colors.length > 1
+        ? colors.map((hex, i) => ({ name: (colorNames && colorNames[i]) || '', hex, slug: null }))
+        : null);
+  const isGroup = Array.isArray(group) && group.length > 1;
 
   return (
     <article className="sxp">
@@ -36,17 +42,17 @@ export default function ProductCard({ product }) {
         <div className="sxp-plate-row">
           <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
           <span className="sxp-price">
-            {swatches ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+            {isGroup ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </span>
         </div>
         <div className="sxp-plate-foot">
           {swatches ? (
             <div className="sxp-swatches" aria-label={`${swatches.length} colours`}>
-              {swatches.slice(0, 5).map((s) => (
-                <Link key={s.slug} href={`/products/${s.slug}`} className="sxp-sw"
-                  style={{ background: s.hex }} title={s.name} aria-label={s.name} />
+              {swatches.slice(0, 6).map((s, i) => (
+                <Link key={s.slug || i} href={s.slug ? `/products/${s.slug}` : href} className="sxp-sw"
+                  style={{ background: s.hex }} title={s.name || 'colour'} aria-label={s.name || 'colour'} />
               ))}
-              {swatches.length > 5 && <span className="sxp-sw-more">+{swatches.length - 5}</span>}
+              {swatches.length > 6 && <span className="sxp-sw-more">+{swatches.length - 6}</span>}
             </div>
           ) : <span />}
           <div className="sxp-add">
