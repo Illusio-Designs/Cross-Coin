@@ -29,7 +29,7 @@ on:
       - 'Gripzus/**'
       - 'Knitwink/**'
       - 'Velmique/**'
-      - 'jewellery/**'
+      - 'Velquira/**'
       - '.github/workflows/vercel-deploy-all.yml'
   workflow_dispatch:
     inputs:
@@ -81,7 +81,7 @@ jobs:
             echo "gripzus=$(echo "$CHANGED_FILES" | grep -q "^Gripzus/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
             echo "knitwink=$(echo "$CHANGED_FILES" | grep -q "^Knitwink/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
             echo "velmique=$(echo "$CHANGED_FILES" | grep -q "^Velmique/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-            echo "jewellery=$(echo "$CHANGED_FILES" | grep -q "^jewellery/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "jewellery=$(echo "$CHANGED_FILES" | grep -q "^Velquira/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
           fi
 
   # Deploy Crosscoin
@@ -198,13 +198,14 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Deploy jewellery to Vercel
+      - name: Deploy Velquira (jewellery) to Vercel
         run: |
-          cd jewellery
+          cd Velquira
           vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          # Must hold the Velquira Vercel project ID.
           VERCEL_PROJECT_ID: ${{ secrets.JEWELLERY_VERCEL_PROJECT }}
 
       - name: Notify Success
-        run: echo "✅ jewellery deployed to Vercel successfully!"
+        run: echo "✅ Velquira deployed to Vercel successfully!"
