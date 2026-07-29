@@ -29,10 +29,17 @@ export default function ProductCard({ product }) {
         </div>
         <WishlistButton productId={id} className="vqp-fav" />
 
+        {/* Touch devices: a small bag icon bottom-right instead of the full bar. */}
+        <div className="vqp-mob">
+          <AddToCart product={product} display="icon" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />
+        </div>
+
         <div className="vqp-cap">
-          <h3 className="vqp-name">{name}</h3>
-          <div className="vqp-price">
-            ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+          <div className="vqp-tbg">
+            <h3 className="vqp-name">{name}</h3>
+            <div className="vqp-price">
+              ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
+            </div>
           </div>
           <div className="vqp-add">
             <AddToCart product={product} display="bar" size={Array.isArray(sizes) ? (sizes[1] || sizes[0]) : 'M'} />

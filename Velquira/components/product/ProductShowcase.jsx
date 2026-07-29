@@ -142,6 +142,17 @@ export default function ProductShowcase({ product }) {
 
   return (
     <>
+    {/* Editorial title band — sits full-width above the gallery/buy split. */}
+    <div className="pdp-head">
+      <span className="eyebrow">{product.category}</span>
+      <h1>{product.name}</h1>
+      <div className="pdp-meta">
+        <span className="rating"><Icon name="Star" size={14} /> {product.rating}</span>
+        <a href="#reviews" className="muted">{product.reviews} reviews</a>
+        {sku && <span className="muted">SKU: {sku}</span>}
+      </div>
+    </div>
+
     <div className="pdp">
       <div className="pdp-gallery" style={railH ? { '--rail-h': `${railH}px` } : undefined}>
         {shown.length > 1 && (
@@ -180,13 +191,7 @@ export default function ProductShowcase({ product }) {
       </div>
 
       <div className="pdp-info">
-        <span className="eyebrow">{product.category}</span>
-        <h1>{product.name}</h1>
-        <div className="pdp-meta">
-          <span className="rating"><Icon name="Star" size={14} /> {product.rating}</span>
-          <a href="#reviews" className="muted">{product.reviews} reviews</a>
-          {sku && <span className="muted">SKU: {sku}</span>}
-        </div>
+        <div className="pdp-buycard">
         <div className="pdp-price">
           ₹{Number(price).toFixed(0)}
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
@@ -243,6 +248,7 @@ export default function ProductShowcase({ product }) {
           <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
           <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
           <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
+        </div>
         </div>
       </div>
     </div>

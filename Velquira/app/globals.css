@@ -1182,8 +1182,11 @@ button { font-family: inherit; cursor: pointer; }
    Generous rhythm, gold focus states, serif accents, sharp refined radii.
    ========================================================================== */
 
-/* Rhythm + eyebrows */
-.section { padding: 74px 0; }
+/* Rhythm + eyebrows — vertical only, so it never clobbers the horizontal
+   padding that `.container` sets (a `padding: 74px 0` shorthand here was
+   zeroing the side padding on every `.section.container`, which made the card
+   grids run edge-to-edge on phones). */
+.section { padding-top: 74px; padding-bottom: 74px; }
 .eyebrow { color: var(--teal-600); letter-spacing: .26em; font-weight: 600; }
 .container { max-width: var(--maxw); }
 
@@ -1949,3 +1952,81 @@ p { text-align: justify; text-justify: inter-word; }
 .article-tags-label { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); font-weight: 600; margin-right: 4px; }
 .article-tag { font-size: 12px; color: var(--ink); border: 1px solid var(--line); border-radius: 3px; padding: 6px 12px; transition: border-color .15s; }
 .article-tag:hover { border-color: var(--gold); }
+
+/* ============================================================================
+   VELQUIRA — PDP image sizing + mobile card tweaks (per feedback)
+   ========================================================================== */
+
+/* PDP main image → box fits the actual image (no fixed aspect / no letterbox) */
+.pdp-main { aspect-ratio: auto; height: auto; min-height: 0; display: block; }
+.pdp-main img { width: 100%; height: auto; object-fit: contain; display: block; }
+
+/* Small mobile bag icon (bottom-right) — replaces the full add bar on phones */
+.vqp-mob { display: none; position: absolute; right: 10px; bottom: 10px; z-index: 5; }
+.vqp-mob .pcard-add { width: 38px; height: 38px; border-radius: 999px; background: rgba(30,24,14,.62); backdrop-filter: blur(3px);
+  color: #fff8ec; border: 1px solid var(--gold); display: grid; place-items: center; }
+.vqp-mob .pcard-add svg { width: 15px; height: 15px; }
+.vqp-mob .pcard-add.added, .vqp-mob .pcard-add:active { background: linear-gradient(180deg,#c8922f,#a5741f); color: #fff; }
+
+@media (max-width: 700px) {
+  /* Product card: hide the full add bar, show the small bag icon, smaller text.
+     Left-align the caption and reserve room on the right for the bag icon so
+     the name never runs under it. */
+  .vqp-add { display: none !important; }
+  .vqp-mob { display: block; }
+  .vqp-cap { text-align: left; padding: 28px 12px 12px 12px; }
+  .vqp-tbg { max-width: calc(100% - 44px); padding: 7px 11px 8px; }
+  .vqp-name { font-size: 14px; line-height: 1.2; }
+  .vqp-price { font-size: 12px; margin-top: 3px; }
+  .vqp-price .old { font-size: 10.5px; }
+  /* Collection card: no "View collection" button on mobile */
+  .collection-card-cta { display: none !important; }
+  .collection-card-text h3 { font-size: 15px; }
+  .collection-card-overlay { padding-bottom: 16px; }
+}
+
+/* ── Product-card title backdrop — same blurred plate the collection-card title
+   uses, so the name + price stay readable over any product photo. */
+.vqp-tbg {
+  display: inline-block;
+  background: rgba(30,24,14,.44);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(229,200,144,.26);
+  border-radius: 4px;
+  padding: 9px 14px 10px;
+}
+.vqp-tbg .vqp-name { margin: 0; }
+/* The plate carries readability now, so the full-height cap gradient can be
+   lighter (no double-darkening of the photo). */
+.vqp-cap { background: linear-gradient(to top, rgba(28,22,14,.5) 0%, rgba(28,22,14,.1) 46%, transparent 74%); }
+
+/* ============================================================================
+   VELQUIRA — PDP restructured (new "atelier" layout, from scratch)
+   Editorial centred title band on top → gallery + a sticky bordered purchase
+   card → about + certificate below. The name/rating no longer live inside the
+   right column; they open the page full-width.
+   ========================================================================== */
+.pdp-head { max-width: 780px; margin: 0 auto 34px; text-align: center; }
+.pdp-head .eyebrow { color: var(--gold-deep); letter-spacing: .24em; font-size: 12px; }
+.pdp-head h1 { font-family: var(--font-serif); font-weight: 600; font-size: clamp(30px, 4.4vw, 52px);
+  line-height: 1.06; letter-spacing: 0; margin: 13px 0 15px; color: var(--ink); }
+.pdp-head .pdp-meta { display: flex; justify-content: center; align-items: center; gap: 16px;
+  margin: 0; padding: 0; border: 0; font-size: 13px; flex-wrap: wrap; }
+.pdp-head .pdp-meta .rating { display: inline-flex; align-items: center; gap: 6px; color: var(--gold-deep); font-weight: 600; }
+.pdp-head .pdp-meta .rating svg { color: var(--gold); }
+.pdp-head::after { content: ''; display: block; width: 56px; height: 1px; background: var(--gold); opacity: .7; margin: 20px auto 0; }
+
+/* The buy column becomes a self-contained, sticky purchase card. */
+.pdp-info { display: block; }
+.pdp-buycard { position: sticky; top: 96px; border: 1px solid var(--gold); border-radius: 4px;
+  background: linear-gradient(180deg, #fffdf7, #f9f1de); padding: 26px 24px 24px;
+  box-shadow: 0 24px 60px -46px rgba(143,102,32,.55); }
+.pdp-buycard .pdp-price { padding-top: 0; margin-bottom: 12px; }
+.pdp-buycard .buy { padding-top: 20px; border-top: 1px solid rgba(191,139,46,.3); }
+.pdp-buycard .pdp-trust { border-top: 1px dashed rgba(191,139,46,.35); }
+
+@media (max-width: 900px) {
+  .pdp-head { margin-bottom: 24px; }
+  .pdp-buycard { position: static; box-shadow: none; padding: 22px 18px; }
+}
