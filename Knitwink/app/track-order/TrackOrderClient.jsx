@@ -7,10 +7,19 @@ import { trackOrder } from '@/lib/api/orders'
 
 const STATUS_STEPS = ['confirmed', 'processing', 'shipped', 'delivered']
 
+// Item images arrive host-relative from the backend — prefix the API host.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
+function resolveImg(raw) {
+  if (!raw || typeof raw !== 'string') return ''
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw
+  return `${API_URL}${raw.startsWith('/') ? '' : '/'}${raw}`
+}
+
 // Client subtree for /track-order — see app/track-order/page.jsx for the server shell.
 export default function TrackOrderClient() {
   const [orderNumber, setOrderNumber] = useState('')
   const [order, setOrder] = useState(null)
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,9 +29,14 @@ export default function TrackOrderClient() {
     setLoading(true)
     setError('')
     setOrder(null)
+    setItems([])
     try {
-      const data = await trackOrder(orderNumber.trim())
-      setOrder(data.order || data)
+      const res = await trackOrder(orderNumber.trim())
+      // Backend wraps the payload: { success, data: { order, items, ... } }
+      const payload = res && res.data ? res.data : res
+      const ord = payload.order || payload
+      setOrder(ord)
+      setItems(payload.items || ord.OrderItems || ord.items || [])
     } catch {
       setError('Order not found. Please check the order number.')
     } finally {
@@ -94,6 +108,32 @@ export default function TrackOrderClient() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Order items with thumbnails */}
+              {items.length > 0 && (
+                <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-4">
+                  {items.map((it, i) => {
+                    const name = it.name || it.product?.name || it.Product?.name || it.product_name || 'Item'
+                    const img = resolveImg(it.image || it.product?.image || it.Product?.image || it.image_url || '')
+                    const qty = it.quantity || it.qty || 1
+                    const price = Number(it.price || it.unit_price || 0)
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
+                          {img
+                            ? <img src={img} alt={name} className="h-full w-full object-cover" />
+                            : <Package size={18} className="text-gray-300" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-brand-black">{name}</p>
+                          <p className="text-[11px] text-gray-400">{it.size ? `Size ${it.size} · ` : ''}Qty {qty}</p>
+                        </div>
+                        {price > 0 && <span className="text-xs font-semibold text-brand-black">₹{(price * qty).toFixed(0)}</span>}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 

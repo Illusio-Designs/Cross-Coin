@@ -30,8 +30,9 @@ export default function TrackOrderClient() {
     setData(null);
     try {
       const res = await trackOrder(num.trim());
-      // Backend returns { order, items, tracking }
-      setData(res && res.order ? res : { order: res });
+      // Backend wraps the payload: { success, data: { order, items, shipping_address, ... } }
+      const payload = res && res.data ? res.data : res;
+      setData(payload && payload.order ? payload : { order: payload });
     } catch {
       setError('Order not found. Please check the order number.');
       toast.error('Order not found. Please check the order number.');

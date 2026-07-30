@@ -909,6 +909,8 @@ button { font-family: inherit; cursor: pointer; }
 .track-step-label { font-size: 11px; text-transform: capitalize; color: var(--ink-soft); }
 .track-details { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 8px; }
 .track-details .row { display: flex; justify-content: space-between; font-size: 14px; }
+/* Track-order: items list (reuses .order-item styling) */
+.track-items { display: grid; gap: 6px; margin: 18px 0 4px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 
 /* ============================================================================
    ARTICLE (journal detail / policies)

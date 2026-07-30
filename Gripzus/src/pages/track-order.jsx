@@ -21,17 +21,34 @@ const STATUS_TO_STEP = {
   delivered: 4, completed: 4,
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+
+// Item images arrive host-relative from the backend — prefix the API host.
+function resolveImg(rawImg) {
+  if (!rawImg || typeof rawImg !== 'string') return '';
+  if (rawImg.startsWith('http://') || rawImg.startsWith('https://')) return rawImg;
+  return `${API_URL}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`;
+}
+
 /* Normalise the API order into the shape the page renders. */
 function mapOrder(raw, fallbackId) {
-  const o = raw?.order || raw || {};
-  const addr = o.shipping_address || o.ShippingAddress || o.shippingAddress || {};
-  const itemsArr = o.OrderItems || o.items || o.order_items || [];
+  // Backend wraps the payload: { success, data: { order, items, shipping_address, ... } }
+  const src = raw?.data || raw || {};
+  const o = src.order || src || {};
+  const addr = src.shipping_address || o.shipping_address || o.ShippingAddress || o.shippingAddress || {};
+  const itemsArr = src.items || o.OrderItems || o.items || o.order_items || [];
   const itemCount = Array.isArray(itemsArr)
     ? itemsArr.reduce((s, it) => s + (Number(it.quantity) || 1), 0)
     : Number(o.item_count || 0);
   const placed = o.created_at || o.createdAt || o.placed_at;
   const addrLine = [addr.city || addr.City, addr.state || addr.State].filter(Boolean).join(', ');
   const pin = addr.postal_code || addr.pincode || addr.postalCode || '';
+  const lineItems = (Array.isArray(itemsArr) ? itemsArr : []).map((it) => ({
+    name: it.name || it.product?.name || it.Product?.name || it.product_name || 'Item',
+    image: resolveImg(it.image || it.product?.image || it.Product?.image || it.image_url || ''),
+    qty: Number(it.quantity || it.qty || 1),
+    price: Number(it.price || it.unit_price || 0),
+  }));
   return {
     orderNumber: o.order_number || o.orderNumber || fallbackId,
     placedAt: placed
@@ -39,6 +56,7 @@ function mapOrder(raw, fallbackId) {
       : '',
     status: String(o.status || 'pending').toLowerCase(),
     items: itemCount,
+    lineItems,
     total: Number(o.final_amount || o.total_amount || o.total || 0),
     paymentType: String(o.payment_type || o.paymentType || '').toUpperCase(),
     address: [addrLine, pin].filter(Boolean).join(' · '),
@@ -179,6 +197,32 @@ export default function TrackOrderPage() {
                         );
                       })}
                     </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Items */}
+              {data.lineItems?.length > 0 && (
+                <section className="bg-paper-deep border border-line p-6 md:p-7">
+                  <p className="eyebrow mb-1">In this order</p>
+                  <h3 className="font-display text-ink text-2xl uppercase mb-4">Items</h3>
+                  <div className="flex flex-col divide-y divide-line">
+                    {data.lineItems.map((it, i) => (
+                      <div key={i} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="w-16 h-16 shrink-0 border border-line bg-paper overflow-hidden flex items-center justify-center">
+                          {it.image
+                            ? <img src={it.image} alt={it.name} className="w-full h-full object-cover" />
+                            : <span className="text-[10px] uppercase tracking-widest text-ink-muted">GZ</span>}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-ink text-sm font-semibold truncate">{it.name}</p>
+                          <p className="text-ink-muted text-xs mt-1 tracking-wider">Qty {it.qty}</p>
+                        </div>
+                        {it.price > 0 && (
+                          <span className="text-ink text-sm font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </section>
               )}

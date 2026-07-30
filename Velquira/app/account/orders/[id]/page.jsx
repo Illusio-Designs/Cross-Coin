@@ -8,6 +8,15 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
+import { API_URL } from '@/lib/api/client';
+
+// Order-item images come from the backend, often as a host-relative path
+// (e.g. "/uploads/..") — prefix the API host, same as Crosscoin's tracking page.
+function resolveOrderImg(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  return `${API_URL}${raw.startsWith('/') ? '' : '/'}${raw}`;
+}
 
 function statusClass(s) {
   const v = (s || '').toLowerCase();
@@ -87,8 +96,11 @@ function OrderDetail({ id }) {
         <div className="order-items-card">
           <h3>Items</h3>
           {items.length === 0 ? <p className="muted">No item details available.</p> : items.map((it, i) => {
-            const name = it.name || it.Product?.name || it.product_name || 'Item';
-            const img = it.image || it.image_url || it.Product?.ProductImages?.[0]?.image_url || '';
+            const name = it.name || it.product?.name || it.Product?.name || it.product_name || 'Item';
+            const rawImg = it.image || it.image_url || it.product?.image || it.Product?.image
+              || it.product?.ProductImages?.[0]?.image_url || it.Product?.ProductImages?.[0]?.image_url
+              || it.variation?.VariationImages?.[0]?.image_url || it.ProductVariation?.VariationImages?.[0]?.image_url || '';
+            const img = resolveOrderImg(rawImg);
             const price = Number(it.price || it.unit_price || 0);
             const qty = it.quantity || it.qty || 1;
             return (
