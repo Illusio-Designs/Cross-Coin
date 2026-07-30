@@ -1209,7 +1209,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
    ════════════════════════════════════════════════════════════════════════ */
 .pdx { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: clamp(28px,4vw,60px); align-items: start; }
 /* Gallery: big image + horizontal thumbnail strip beneath */
-.pdx-gallery { position: sticky; top: 92px; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+.pdx-gallery { position: sticky; top: 130px; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
 .pdx-rail { display: flex; flex-direction: column; gap: 10px; width: 82px; flex-shrink: 0; max-height: var(--pdx-rail-h, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; scroll-behavior: smooth; }
 .pdx-rail::-webkit-scrollbar { display: none; }
 .pdx-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
@@ -1253,23 +1253,21 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-add { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: var(--accent); color: #fff; border: 0; border-radius: 999px; font-size: 14.5px; font-weight: 600; padding: 0 24px; min-height: 54px; cursor: pointer; transition: background .18s ease, transform .18s ease; }
 .pdx-add:hover:not(:disabled) { background: var(--accent-600); transform: translateY(-1px); }
 .pdx-add:disabled { background: var(--line); color: var(--ink-soft); cursor: not-allowed; }
-.pdx-stock { margin-top: 16px; font-size: 13.5px; }
-.pdx-stock .on { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); }
-.pdx-stock .dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9b5e; box-shadow: 0 0 0 3px rgba(74,155,94,.16); }
-.pdx-stock .off { display: inline-flex; align-items: center; gap: 6px; color: var(--sale, #c0492b); }
-.pdx-assure { list-style: none; margin: 22px 0 0; padding: 20px; display: grid; gap: 13px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
-.pdx-assure li { display: flex; align-items: center; gap: 11px; font-size: 13.5px; color: var(--ink); }
+/* Specifications inside the buy panel (after the size + add-to-cart) */
+.pdx-panel-specs { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.pdx-panel-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-600); margin-bottom: 12px; }
+.pdx-panel-specs dl { margin: 0; }
+/* Assurances — one wrapping row of trust signals */
+.pdx-assure { list-style: none; margin: 22px 0 0; padding: 18px 0 0; display: flex; flex-wrap: wrap; gap: 10px 22px; border-top: 1px solid var(--line); }
+.pdx-assure li { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
 .pdx-assure svg { color: var(--accent-600); flex-shrink: 0; }
 /* Details band */
+/* Highlights — full-width benefit strip below the buy area */
 .pdx-details { margin-top: clamp(40px,5vw,64px); padding-top: clamp(32px,4vw,48px); border-top: 1px solid var(--line); }
-.pdx-details-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: clamp(28px,4vw,56px); align-items: start; }
-.pdx-story > .eyebrow, .pdx-specs > .eyebrow { display: block; color: var(--accent-600); margin-bottom: 18px; }
-.pdx-story p { color: var(--ink-soft); font-size: 16px; line-height: 1.8; margin: 0 0 18px; }
-.pdx-features { list-style: none; padding: 0; margin: 22px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.pdx-features li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink); }
+.pdx-details > .eyebrow { display: block; color: var(--accent-600); margin-bottom: 20px; }
+.pdx-features { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.pdx-features li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-box); padding: 16px; }
 .pdx-feature-ic { width: 40px; height: 40px; border-radius: 11px; background: var(--accent-050); color: var(--accent-600); display: grid; place-items: center; flex-shrink: 0; }
-.pdx-specs { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
-.pdx-specs h3 { font-family: var(--serif); font-weight: 400; font-size: 20px; color: var(--ink); margin-bottom: 6px; }
 .pdx-spec-row { display: grid; grid-template-columns: 108px 1fr; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
 .pdx-spec-row:last-child { border-bottom: 0; }
 .pdx-spec-row dt { color: var(--ink-soft); }
@@ -1277,9 +1275,9 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 @media (max-width: 900px) {
   .pdx { grid-template-columns: 1fr; gap: 26px; }
   .pdx-gallery { position: static; }
-  .pdx-details-grid { grid-template-columns: 1fr; gap: 26px; }
-  .pdx-features { grid-template-columns: 1fr; }
+  .pdx-features { grid-template-columns: 1fr 1fr; }
 }
+@media (max-width: 560px) { .pdx-features { grid-template-columns: 1fr; } }
 
 /* ── PDP → warm editorial (serif titles, accent actions, sticky buy) ─────── */
 .pdp { align-items: start; }
@@ -1908,7 +1906,8 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-footer-social { display: flex; gap: 10px; margin-top: 22px; }
 .sx-footer-social a { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink-soft); transition: color .15s ease, border-color .15s ease, background .15s ease; }
 .sx-footer-social a:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
-.sx-footer-bottom a:hover { color: var(--accent-600); }
+.sx-footer-bottom a { color: var(--accent-600); font-weight: 700; }
+.sx-footer-bottom a:hover { color: var(--accent); }
 @media (max-width: 860px) { .sx-footer-top { grid-template-columns: 1fr; gap: 36px; } }
 @media (max-width: 560px) { .sx-footer-cols { grid-template-columns: 1fr 1fr; } .sx-footer-bottom { flex-direction: column; align-items: flex-start; gap: 10px; } }
 

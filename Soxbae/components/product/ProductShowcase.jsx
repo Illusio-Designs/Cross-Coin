@@ -232,44 +232,36 @@ export default function ProductShowcase({ product, initialColor }) {
             </button>
           </div>
 
-          <div className="pdx-stock">
-            {inStock
-              ? <span className="on"><span className="dot" /> {stock != null && stock <= 5 ? `Only ${stock} left in stock` : 'In stock, ready to ship'}</span>
-              : <span className="off"><Icon name="X" size={13} /> Out of stock</span>}
-          </div>
+          {specs.length > 0 && (
+            <div className="pdx-panel-specs">
+              <span className="pdx-panel-label">Specifications</span>
+              <dl>
+                {specs.map(([k, v]) => (
+                  <div className="pdx-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
+                ))}
+              </dl>
+            </div>
+          )}
 
           <ul className="pdx-assure">
             {ASSURANCES.map(([icon, text]) => (
-              <li key={text}><Icon name={icon} size={17} /> {text}</li>
+              <li key={text}><Icon name={icon} size={16} /> {text}</li>
             ))}
           </ul>
         </div>
       </div>
 
-      {/* Details — minimal: highlights + specifications (no repeated copy) */}
-      <section className="pdx-details">
-        <div className="pdx-details-grid">
-          {product.features?.length > 0 && (
-            <div className="pdx-story">
-              <span className="eyebrow">Highlights</span>
-              <ul className="pdx-features">
-                {product.features.map((f) => (
-                  <li key={f.text}><span className="pdx-feature-ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <aside className="pdx-specs">
-            <span className="eyebrow">Specifications</span>
-            <dl>
-              {specs.map(([k, v]) => (
-                <div className="pdx-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
-              ))}
-            </dl>
-          </aside>
-        </div>
-      </section>
+      {/* Highlights — the benefit-led "read more" strip, full width */}
+      {product.features?.length > 0 && (
+        <section className="pdx-details">
+          <span className="eyebrow">Highlights</span>
+          <ul className="pdx-features">
+            {product.features.map((f) => (
+              <li key={f.text}><span className="pdx-feature-ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }
