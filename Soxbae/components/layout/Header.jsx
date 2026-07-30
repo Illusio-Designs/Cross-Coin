@@ -37,7 +37,7 @@ export default function Header() {
       <div className="sx-hd-row container">
         <div className="sx-hd-l">
           <MobileNav items={NAV} />
-          <Link href="/" className="sx-hd-logo" aria-label="Soxbae home"><BrandLogo height={32} /></Link>
+          <Link href="/" className="sx-hd-logo" aria-label="Soxbae home"><BrandLogo height={40} /></Link>
         </div>
 
         <nav className="sx-navbox sx-hd-desk">

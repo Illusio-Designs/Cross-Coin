@@ -2045,3 +2045,9 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
   .sx-reviews-head { align-items: flex-start; }
   .excl-panel-head { align-items: flex-start; }
 }
+
+/* ── Header logo — larger + legible on phones (override the inline height) ── */
+.sx-hd-logo { display: inline-flex; align-items: center; }
+.sx-hd-logo img { height: 40px !important; width: auto; }
+@media (max-width: 900px) { .sx-hd-logo img { height: 46px !important; } }
+@media (max-width: 420px) { .sx-hd-logo img { height: 42px !important; } }
