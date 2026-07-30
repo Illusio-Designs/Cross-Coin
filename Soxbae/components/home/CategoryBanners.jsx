@@ -1,30 +1,31 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 
-// Same image-forward collection card as the /collections page (minus the
-// product count), so the home "Shop by collection" section matches exactly.
-const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles'];
-
+// Soxbae collections — warm editorial: large calm image blocks with the label
+// set BELOW the image (not overlaid), generous spacing.
 export default function CategoryBanners({ items = [] }) {
+  if (!items.length) return null;
   return (
-    <section className="section container">
+    <section className="section container sx-collections">
       <div className="section-head">
         <div>
           <span className="eyebrow">Collections</span>
-          <h2 style={{ marginTop: 8 }}>Shop by collection</h2>
+          <h2>Shop by style</h2>
         </div>
-        <Link href="/collections" className="link-more">All collections <Icon name="ArrowRight" size={14} /></Link>
+        <Link href="/collections" className="link-more">All collections</Link>
       </div>
 
-      <div className="cat-grid">
-        {items.map((c, i) => (
-          <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
-            {c.image
-              ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
-              : <span className="collection-card-fallback" aria-hidden><Icon name={ICONS[i % ICONS.length]} size={76} /></span>}
-            <div className="collection-card-overlay">
-              <div className="collection-card-text"><h3>{c.label}</h3></div>
-              <span className="collection-card-cta" aria-hidden><Icon name="ArrowRight" size={16} /></span>
+      <div className="sx-collections-grid">
+        {items.map((c) => (
+          <Link href={`/collections/${c.slug}`} className="sx-col-card" key={c.slug}>
+            <div className="sx-col-media">
+              {c.image
+                ? <img src={c.image} alt={c.label} loading="lazy" />
+                : <span className="sx-col-ph" aria-hidden><Icon name="Sparkles" size={44} /></span>}
+            </div>
+            <div className="sx-col-cap">
+              <h3>{c.label}</h3>
+              <span className="sx-col-shop">Shop <Icon name="ArrowRight" size={14} /></span>
             </div>
           </Link>
         ))}
