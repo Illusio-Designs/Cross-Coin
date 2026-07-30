@@ -6,7 +6,6 @@ const DETAILS = [
   { icon: 'Phone', label: 'Phone', value: '+91 97128 91700' },
   { icon: 'Mail', label: 'Email', value: 'support@soxbaesocks.com' },
   { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
-  { icon: 'Clock', label: 'Hours', value: 'Mon – Sat, 9:00 – 21:00' },
 ];
 
 export default function ContactPage() {

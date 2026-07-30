@@ -26,6 +26,20 @@ export default function ProductShowcase({ product, initialColor }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const stripRef = useRef(null);
+  const mainRef = useRef(null);
+  const [railH, setRailH] = useState(0);
+
+  // Match the left thumbnail rail's height to the main image so it never runs
+  // taller than the photo — extra thumbnails scroll inside it instead.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const selectedColorName = colorNames[color] || '';
 
@@ -77,16 +91,22 @@ export default function ProductShowcase({ product, initialColor }) {
     return () => clearInterval(t);
   }, [shown.length, color]);
 
-  // Keep the active thumbnail in view by scrolling ONLY the strip (horizontal).
+  // Keep the active thumbnail in view by scrolling ONLY the rail (vertical on
+  // desktop, horizontal when it wraps to a row on mobile) — never the page.
   useEffect(() => {
     const rail = stripRef.current;
     if (!rail) return;
     const el = rail.querySelector(`[data-thumb="${active}"]`);
-    if (!el || rail.scrollWidth <= rail.clientWidth + 1) return;
+    if (!el) return;
     const railRect = rail.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
-    const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
-    rail.scrollBy({ left: delta, behavior: 'smooth' });
+    if (rail.scrollHeight > rail.clientHeight + 1) {
+      const delta = (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2;
+      rail.scrollBy({ top: delta, behavior: 'smooth' });
+    } else if (rail.scrollWidth > rail.clientWidth + 1) {
+      const delta = (elRect.left - railRect.left) - (rail.clientWidth - el.clientWidth) / 2;
+      rail.scrollBy({ left: delta, behavior: 'smooth' });
+    }
   }, [active]);
 
   const pickColor = (i) => { setColor(i); setActive(0); };
@@ -126,18 +146,10 @@ export default function ProductShowcase({ product, initialColor }) {
   return (
     <>
       <div className="pdx">
-        {/* Gallery */}
-        <div className="pdx-gallery">
-          <div className="pdx-main">
-            {mainSrc
-              ? <img src={mainSrc} alt={product.name} />
-              : <span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5 }}><Icon name="Footprints" size={80} /></span>}
-            {product.badge === 'new' && <span className="pdx-badge">New</span>}
-            {off > 0 && <span className="pdx-badge pdx-badge-off">{off}% off</span>}
-          </div>
-
+        {/* Gallery — fixed vertical thumbnail rail on the LEFT of the image */}
+        <div className="pdx-gallery" style={railH ? { '--pdx-rail-h': `${railH}px` } : undefined}>
           {shown.length > 1 && (
-            <div className="pdx-strip" ref={stripRef} data-lenis-prevent>
+            <div className="pdx-rail" ref={stripRef} data-lenis-prevent>
               {shown.map((src, i) => (
                 <button key={src + i} type="button" data-thumb={i}
                   className={`pdx-thumb${i === active ? ' active' : ''}`}
@@ -147,6 +159,14 @@ export default function ProductShowcase({ product, initialColor }) {
               ))}
             </div>
           )}
+
+          <div className="pdx-main" ref={mainRef}>
+            {mainSrc
+              ? <img src={mainSrc} alt={product.name} />
+              : <span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5 }}><Icon name="Footprints" size={80} /></span>}
+            {product.badge === 'new' && <span className="pdx-badge">New</span>}
+            {off > 0 && <span className="pdx-badge pdx-badge-off">{off}% off</span>}
+          </div>
         </div>
 
         {/* Buy panel */}
@@ -226,26 +246,22 @@ export default function ProductShowcase({ product, initialColor }) {
         </div>
       </div>
 
-      {/* Details band */}
+      {/* Details — minimal: highlights + specifications (no repeated copy) */}
       <section className="pdx-details">
-        <div className="pdx-details-head">
-          <span className="eyebrow">The details</span>
-          <h2>Made to disappear on your feet</h2>
-        </div>
         <div className="pdx-details-grid">
-          <div className="pdx-story">
-            <p>{product.description || 'A considered everyday sock — cushioned where it counts, breathable through the day and built to keep its shape wash after wash.'}</p>
-            {product.features?.length > 0 && (
+          {product.features?.length > 0 && (
+            <div className="pdx-story">
+              <span className="eyebrow">Highlights</span>
               <ul className="pdx-features">
                 {product.features.map((f) => (
                   <li key={f.text}><span className="pdx-feature-ic"><Icon name={f.icon} size={18} /></span>{f.text}</li>
                 ))}
               </ul>
-            )}
-          </div>
+            </div>
+          )}
 
           <aside className="pdx-specs">
-            <h3>Specifications</h3>
+            <span className="eyebrow">Specifications</span>
             <dl>
               {specs.map(([k, v]) => (
                 <div className="pdx-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
