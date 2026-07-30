@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
-import ProductReviews from '@/components/product/ProductReviews';
+import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
 
@@ -40,13 +40,8 @@ export default async function ProductPage({ params, searchParams }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={sp.color} />
 
-      {/* ── Reviews (real stats + write-a-review) ── */}
-      <ProductReviews
-        productId={product.id}
-        initialReviews={reviews}
-        fallbackRating={product.rating}
-        fallbackCount={product.reviews}
-      />
+      {/* ── Reviews (same component as the home page + a Write-a-review button) ── */}
+      <Reviews reviews={reviews} title="Customer reviews" productId={product.id} showWrite />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
