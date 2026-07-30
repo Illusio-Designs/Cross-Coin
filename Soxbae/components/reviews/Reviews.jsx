@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -29,6 +29,34 @@ export default function Reviews({
 
   const shown = limit ? list.slice(0, limit) : list;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Auto-scroll (infinite marquee) once there are more reviews than fit nicely:
+  // more than 3 on desktop, more than 1 on mobile.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 700px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const scroll = shown.length > (isMobile ? 1 : 3);
+
+  const ReviewCard = (r, i) => (
+    <article className="sx-review" key={i}>
+      <span className="sx-review-stars">
+        {[0, 1, 2, 3, 4].map((n) => (
+          <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--accent)' : 'var(--line)'} />
+        ))}
+      </span>
+      {r.title && <h3 className="sx-review-title">{r.title}</h3>}
+      <p className="sx-review-text">{r.text}</p>
+      <div className="sx-review-by">
+        <span className="sx-review-av">{(r.author || '?').charAt(0)}</span>
+        <span><b>{r.author}</b>{r.date && <em>{r.date}</em>}</span>
+      </div>
+    </article>
+  );
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -85,23 +113,15 @@ export default function Reviews({
 
       {shown.length === 0 ? (
         <div className="empty">No reviews yet — {showWrite ? 'be the first to review this product.' : 'your feedback will appear here.'}</div>
+      ) : scroll ? (
+        <div className="sx-reviews-marquee" aria-label="Customer reviews, auto-scrolling">
+          <div className="sx-reviews-track">
+            {[...shown, ...shown].map((r, i) => ReviewCard(r, i))}
+          </div>
+        </div>
       ) : (
         <div className="sx-reviews-grid">
-          {shown.map((r, i) => (
-            <article className="sx-review" key={i}>
-              <span className="sx-review-stars">
-                {[0, 1, 2, 3, 4].map((n) => (
-                  <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--accent)' : 'var(--line)'} />
-                ))}
-              </span>
-              {r.title && <h3 className="sx-review-title">{r.title}</h3>}
-              <p className="sx-review-text">{r.text}</p>
-              <div className="sx-review-by">
-                <span className="sx-review-av">{(r.author || '?').charAt(0)}</span>
-                <span><b>{r.author}</b>{r.date && <em>{r.date}</em>}</span>
-              </div>
-            </article>
-          ))}
+          {shown.map((r, i) => ReviewCard(r, i))}
         </div>
       )}
 

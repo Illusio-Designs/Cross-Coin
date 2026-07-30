@@ -1887,6 +1887,18 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-review-by em { font-style: normal; font-size: 12px; color: var(--ink-soft); }
 @media (max-width: 900px) { .sx-reviews-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .sx-reviews-grid { grid-template-columns: 1fr; } }
+/* Infinite auto-scroll carousel (used when reviews exceed the fit threshold) */
+.sx-reviews-marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.sx-reviews-track { display: flex; gap: 20px; width: max-content; animation: sxReviewScroll 45s linear infinite; }
+.sx-reviews-marquee:hover .sx-reviews-track { animation-play-state: paused; }
+.sx-reviews-track .sx-review { width: 340px; flex: 0 0 340px; }
+@keyframes sxReviewScroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 10px)); } }
+@media (prefers-reduced-motion: reduce) { .sx-reviews-track { animation: none; } }
+@media (max-width: 700px) {
+  .sx-reviews-track { animation-duration: 26s; gap: 14px; }
+  .sx-reviews-track .sx-review { width: 78vw; flex-basis: 78vw; }
+  @keyframes sxReviewScroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 7px)); } }
+}
 
 /* ── Footer (warm editorial) ─────────────────────────────────────────────── */
 .sx-footer { background: var(--bg); border-top: 1px solid var(--line); padding: clamp(44px,5vw,60px) 0 26px; overflow: hidden; }
@@ -1964,7 +1976,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 
 /* ── Hero → immersive cover stage (image + overlaid headline) ────────────── */
 .sx-hero { padding-top: 20px; padding-bottom: 8px; }
-.sxh-stage { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 16 / 8.6; min-height: 460px; max-height: 720px; background: linear-gradient(150deg,#efe9dd,#e0d4bd); }
+.sxh-stage { position: relative; width: 100%; border-radius: 18px; overflow: hidden; aspect-ratio: 16 / 8.6; min-height: 460px; max-height: 720px; background: linear-gradient(150deg,#efe9dd,#e0d4bd); }
 .sxh-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; }
 .sxh-img.active { opacity: 1; }
 .sxh-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent-600); opacity: .45; }
@@ -2025,3 +2037,11 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .about-band p { text-align: justify; }
 /* keep genuinely centred copy centred */
 .sx-ab-mission-line, .sx-ab-close h2, .pdx-details .eyebrow { text-align: inherit; }
+
+/* ── Mobile: force section headers to stack + left-align (beats the later
+   .section-head { align-items: flex-end } Soxbae override) ───────────────── */
+@media (max-width: 760px) {
+  .section-head { flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; }
+  .sx-reviews-head { align-items: flex-start; }
+  .excl-panel-head { align-items: flex-start; }
+}
