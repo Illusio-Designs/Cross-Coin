@@ -1273,7 +1273,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-spec-row dt { color: var(--ink-soft); }
 .pdx-spec-row dd { margin: 0; font-weight: 500; color: var(--ink); }
 @media (max-width: 900px) {
-  .pdx { grid-template-columns: 1fr; gap: 26px; }
+  .pdx { grid-template-columns: 1fr; gap: 24px; }
   .pdx-gallery { position: static; }
   .pdx-features { grid-template-columns: 1fr 1fr; }
 }
@@ -1385,7 +1385,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 }
 
 /* ── Journal article → full-width editorial (header + hero + body/aside) ──── */
-.sx-article-head { max-width: 860px; margin: 22px 0 0; }
+.sx-article-head { max-width: none; margin: 22px 0 0; }
 .sx-article-cat { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-600); }
 .sx-article-title { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.06; font-size: clamp(30px, 4.6vw, 54px); color: var(--ink); margin: 14px 0 18px; }
 .sx-article-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13.5px; color: var(--ink-soft); }
@@ -1909,7 +1909,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-footer-bottom a { color: var(--accent-600); font-weight: 700; }
 .sx-footer-bottom a:hover { color: var(--accent); }
 @media (max-width: 860px) { .sx-footer-top { grid-template-columns: 1fr; gap: 36px; } }
-@media (max-width: 560px) { .sx-footer-cols { grid-template-columns: 1fr 1fr; } .sx-footer-bottom { flex-direction: column; align-items: flex-start; gap: 10px; } }
+@media (max-width: 560px) { .sx-footer-cols { grid-template-columns: 1fr; gap: 26px; } .sx-footer-bottom { flex-direction: column; align-items: flex-start; gap: 10px; } }
 
 /* ── Collections (editorial index cards: numbered, floating caption) ──────── */
 .sx-collections-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 22px; }
@@ -1953,6 +1953,9 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .exclusive .excl-actions .btn-primary:hover { background: var(--accent-600); color: #fff; box-shadow: 0 14px 30px -16px rgba(208,105,42,.55); }
 .exclusive .excl-actions .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
 .exclusive .excl-actions .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+/* Equal height for qty / Add to cart / View so the row lines up */
+.excl-actions { align-items: stretch; }
+.excl-actions .qty, .excl-actions .btn-primary, .excl-actions .btn-ghost { height: 52px; min-height: 52px; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; justify-content: center; }
 @media (max-width: 700px) { .excl-panel-head { flex-direction: column; align-items: flex-start; gap: 12px; } .excl-panel-head p { text-align: left; max-width: none; } }
 
 /* ── Hero → immersive cover stage (image + overlaid headline) ────────────── */
