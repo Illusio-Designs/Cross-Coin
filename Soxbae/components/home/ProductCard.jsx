@@ -37,7 +37,6 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="sxp-info">
-        {category && <span className="sxp-cat">{category}</span>}
         <div className="sxp-plate-row">
           <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
           <span className="sxp-price">
