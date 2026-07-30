@@ -33,7 +33,7 @@ export default function ProductCard({ product }) {
           {badge && <span className={`sxp-tag b-${badgeKey || 'default'}`}>{badge}</span>}
           {oldPrice && <span className="sxp-tag sale">-{off}%</span>}
         </div>
-        <WishlistButton productId={id} className="sxp-fav" />
+        <WishlistButton productId={id} product={product} className="sxp-fav" />
       </div>
 
       <div className="sxp-info">

@@ -5,8 +5,12 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
-import { getWishlist } from '@/lib/api/wishlist';
 import { getAllProducts } from '@/lib/api';
+
+function readSaved() {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem('soxbae_wishlist_items') || '[]'); } catch { return []; }
+}
 
 export default function WishlistClient() {
   const [items, setItems] = useState([]);
@@ -14,19 +18,21 @@ export default function WishlistClient() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    // The saved snapshots already hold the exact colour/image the customer
+    // picked. Enrich each with the live catalog card (matched by colour-variant
+    // uid) when available, but never lose the saved variant if the backend is
+    // unreachable — this is why a saved "baby pink" no longer shows as white.
+    const saved = readSaved();
+    let byUid = new Map();
     try {
-      // Pull the FULL catalog product for each wishlist item so the cards are
-      // identical to the rest of the site (image, category, rating, colours,
-      // sizes). Fall back to the wishlist row itself if it's not in the catalog.
-      const [all, wl] = await Promise.all([getAllProducts(), getWishlist()]);
-      const byId = new Map(all.map((p) => [String(p.id), p]));
-      const merged = (Array.isArray(wl) ? wl : []).map((w) => byId.get(String(w.id)) || w).filter(Boolean);
-      setItems(merged);
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
+      const all = await getAllProducts();
+      byUid = new Map(all.map((p) => [String(p.uid ?? p.id), p]));
+    } catch { /* offline / no backend — fall back to snapshots */ }
+    const merged = saved
+      .map((s) => byUid.get(String(s.uid ?? s.key ?? s.id)) || s)
+      .filter(Boolean);
+    setItems(merged);
+    setLoading(false);
   }, []);
 
   useEffect(() => {

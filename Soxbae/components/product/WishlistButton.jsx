@@ -15,38 +15,57 @@ function HeartIcon({ filled }) {
   );
 }
 
-const LS_KEY = 'soxbae_wishlist_ids';
+const LS_KEY = 'soxbae_wishlist_ids';     // list of keys (uid per colour variant)
+const LS_ITEMS = 'soxbae_wishlist_items'; // snapshots so the saved card renders exactly
 
-function readLocal() {
+function readKeys() {
   if (typeof window === 'undefined') return [];
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
 }
-function writeLocal(ids) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(ids)); } catch {}
+function readItems() {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(LS_ITEMS) || '[]'); } catch { return []; }
+}
+function write(keys, items) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(keys));
+    localStorage.setItem(LS_ITEMS, JSON.stringify(items));
+  } catch {}
 }
 
-/** Heart toggle. Optimistically updates a localStorage id set + calls the
- *  backend wishlist API (which accepts a guest token for anonymous users). */
-export default function WishlistButton({ productId, className = 'pcard-fav' }) {
+// Snapshot only the fields ProductCard needs, so the wishlist shows the exact
+// colour/image that was saved even without a backend round-trip.
+function snapshot(key, product, productId) {
+  if (!product) return { key, id: productId };
+  const { id, uid, slug, name, category, price, oldPrice, image, badge, badgeKey,
+    colors, colorNames, colorParam, sizes, group } = product;
+  return { key, id, uid, slug, name, category, price, oldPrice: oldPrice ?? null, image,
+    badge, badgeKey, colors, colorNames, colorParam, sizes, group };
+}
+
+/** Heart toggle. Keyed by the colour-variant uid so each exploded card is
+ *  independent; stores a card snapshot + calls the backend (guest-token) API. */
+export default function WishlistButton({ productId, product, className = 'pcard-fav' }) {
   const [active, setActive] = useState(false);
+  const key = String(product?.uid ?? productId);
 
   useEffect(() => {
-    setActive(readLocal().includes(String(productId)));
-  }, [productId]);
+    setActive(readKeys().includes(key));
+  }, [key]);
 
   const toggle = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const id = String(productId);
-    const ids = readLocal();
+    const keys = readKeys();
+    const items = readItems();
     const next = !active;
     setActive(next);
     if (next) {
-      writeLocal([...new Set([...ids, id])]);
+      write([...new Set([...keys, key])], [...items.filter((i) => String(i.key) !== key), snapshot(key, product, productId)]);
       toast.wishlist('Added to wishlist');
       try { await addToWishlist(productId); } catch {}
     } else {
-      writeLocal(ids.filter((x) => x !== id));
+      write(keys.filter((x) => x !== key), items.filter((i) => String(i.key) !== key));
       toast.wishlist('Removed from wishlist');
       try { await removeFromWishlist(productId); } catch {}
     }
