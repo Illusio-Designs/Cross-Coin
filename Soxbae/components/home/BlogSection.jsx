@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import Icon from '@/components/Icon';
+import BlogCard from '@/components/BlogCard';
 
-// Soxbae journal — an image-forward card grid: each post is a tall image with a
-// category tag tucked over its lower edge, a serif title and a date underneath.
+// Soxbae journal strip on the home page — uses the shared BlogCard.
 export default function BlogSection({ posts = [] }) {
   if (!posts.length) return null;
   const list = posts.slice(0, 3);
@@ -18,22 +17,7 @@ export default function BlogSection({ posts = [] }) {
       </div>
 
       <div className="sx-jr-grid">
-        {list.map((p) => (
-          <Link href={`/journal/${p.slug}`} className="sx-jr-card" key={p.slug}>
-            <div className="sx-jr-media">
-              {p.image
-                ? <img src={p.image} alt={p.title} loading="lazy" />
-                : <span aria-hidden><Icon name="Sparkles" size={30} /></span>}
-              {p.category && <span className="sx-jr-tag">{p.category}</span>}
-            </div>
-            <div className="sx-jr-body">
-              <span className="sx-jr-date">{p.date}</span>
-              <h3>{p.title}</h3>
-              {p.excerpt && <p>{p.excerpt}</p>}
-              <span className="sx-jr-more">Read article <Icon name="ArrowRight" size={14} /></span>
-            </div>
-          </Link>
-        ))}
+        {list.map((p) => <BlogCard key={p.slug} post={p} />)}
       </div>
     </section>
   );

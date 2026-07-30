@@ -1241,6 +1241,30 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .contact-detail .ic { background: var(--accent-050); color: var(--accent-600); border-radius: 11px; }
 .contact-detail .muted { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-600); }
 .contact-detail b { color: var(--ink); font-weight: 500; margin-top: 2px; }
+
+/* Shared inner-page header — warm serif title (applies to About, Contact,
+   Journal, Collections, Search, etc.) */
+.page-hero { max-width: 680px; }
+.page-hero h1 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.05; font-size: clamp(30px, 4.4vw, 50px); }
+.page-hero p { font-size: 15.5px; line-height: 1.7; }
+
+/* ── About → warm editorial (numbered principles + closing statement) ─────── */
+.sx-about-hero { max-width: 760px; padding-top: 8px; }
+.sx-about-hero h1 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.04; font-size: clamp(34px, 5.2vw, 62px); margin: 14px 0 18px; }
+.sx-about-lead { font-size: clamp(16px, 1.7vw, 19px); line-height: 1.65; color: var(--ink-soft); }
+.sx-about-principles { margin: clamp(44px,6vw,76px) 0; border-top: 1px solid var(--line); }
+.sx-about-row { display: grid; grid-template-columns: auto minmax(0,1fr); gap: clamp(20px,5vw,72px); align-items: baseline; padding: clamp(26px,3.4vw,40px) 0; border-bottom: 1px solid var(--line); }
+.sx-about-num { font-family: var(--serif); font-size: clamp(22px,2.6vw,32px); color: var(--accent-600); line-height: 1; }
+.sx-about-row h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(21px,2.4vw,28px); line-height: 1.14; color: var(--ink); }
+.sx-about-row p { color: var(--ink-soft); font-size: 15px; line-height: 1.7; margin-top: 10px; max-width: 62ch; }
+.sx-about-close { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: clamp(32px,5vw,64px); text-align: center; }
+.sx-about-close-eyebrow { display: inline-block; margin-bottom: 16px; }
+.sx-about-close h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(24px,3.2vw,40px); line-height: 1.2; color: var(--ink); max-width: 720px; margin: 0 auto 22px; }
+.sx-about-close .sx-footer-shop, .sx-about-close .sx-cta-btn { display: inline-flex; align-items: center; gap: 9px; background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 600; padding: 15px 28px; border-radius: 999px; transition: background .18s ease, transform .18s ease; }
+.sx-about-close .sx-cta-btn:hover { background: var(--accent-600); transform: translateY(-2px); }
+.sx-about-close .sx-cta-btn svg { transition: transform .2s ease; }
+.sx-about-close .sx-cta-btn:hover svg { transform: translateX(3px); }
+@media (max-width: 640px) { .sx-about-row { grid-template-columns: 1fr; gap: 8px; } }
 .contact-form { border-radius: 12px; }
 
 /* ── CART DRAWER + checkout → orange primary ────────────────────────────── */
@@ -1650,8 +1674,8 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-jr-more svg { transition: transform .2s ease; }
 .sx-jr-card:hover .sx-jr-more svg { transform: translateX(3px); }
 .sx-jr-card:hover .sx-jr-more { color: var(--accent-600); }
-@media (max-width: 860px) { .sx-jr-grid { grid-template-columns: 1fr 1fr; gap: 24px 18px; } .sx-jr-grid .sx-jr-card:nth-child(3) { display: none; } }
-@media (max-width: 560px) { .sx-jr-grid { grid-template-columns: 1fr; gap: 26px; } .sx-jr-grid .sx-jr-card:nth-child(3) { display: block; } }
+@media (max-width: 860px) { .sx-jr-grid { grid-template-columns: 1fr 1fr; gap: 24px 18px; } .sx-journal .sx-jr-grid .sx-jr-card:nth-child(3) { display: none; } }
+@media (max-width: 560px) { .sx-jr-grid { grid-template-columns: 1fr; gap: 26px; } .sx-journal .sx-jr-grid .sx-jr-card:nth-child(3) { display: block; } }
 
 /* ============================================================================
    SOXBAE — MINIMAL PREMIUM SECTIONS (quieter, more air)
