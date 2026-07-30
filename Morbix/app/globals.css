@@ -311,10 +311,13 @@ button { font-family: inherit; cursor: pointer; }
 .excl-desc { font-size: 14px; line-height: 1.6; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .excl-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .excl-actions .btn-ghost { padding-left: 18px; padding-right: 18px; }
-.excl-switch { grid-area: switch; display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; scrollbar-width: none; }
+.excl-switch-wrap { grid-area: switch; display: flex; flex-direction: column; gap: 12px; align-self: start; }
+.excl-switch-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.excl-switch { display: flex; flex-direction: column; gap: 12px; padding: 3px; scrollbar-width: none; }
 .excl-switch::-webkit-scrollbar { display: none; }
-.excl-switch-thumb { width: 66px; height: 66px; border-radius: 14px; overflow: hidden; border: 2px solid var(--line-soft); background: #eef1f4; cursor: pointer; padding: 0; opacity: .55; display: grid; place-items: center; color: var(--ink-soft); flex-shrink: 0; transition: opacity .15s ease, border-color .15s ease, transform .15s ease; }
-.excl-switch-thumb.active { opacity: 1; border-color: var(--navy); transform: scale(1.04); }
+.excl-switch-thumb { width: 66px; height: 66px; border-radius: 14px; overflow: hidden; border: 2px solid var(--line-soft); background: #eef1f4; cursor: pointer; padding: 0; opacity: .6; display: grid; place-items: center; color: var(--ink-soft); flex-shrink: 0; transition: opacity .15s ease, border-color .15s ease; }
+.excl-switch-thumb.active { opacity: 1; border-color: var(--navy); }
+.excl-switch-thumb:hover { opacity: 1; }
 .excl-switch-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Tablet — gallery + info side by side, product switcher as a strip below */

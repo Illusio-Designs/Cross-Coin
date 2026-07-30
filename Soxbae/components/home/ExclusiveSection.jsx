@@ -10,7 +10,12 @@ import { toast } from '@/lib/toast';
 // brands' Exclusive section). Pick a product on the right rail, browse its
 // images on the left, choose a colour and add it straight to the cart.
 export default function ExclusiveSection({ products = [] }) {
-  const list = Array.isArray(products) ? products.slice(0, 6) : [];
+  // Distinct products only (colour variants share a slug) — capped at 4 so the
+  // "Other products" rail stays short.
+  const seen = new Set();
+  const list = (Array.isArray(products) ? products : [])
+    .filter((p) => { const k = p.slug || p.id; if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, 4);
   const { add } = useCart();
   const [active, setActive] = useState(0);
   const [thumb, setThumb] = useState(0);
@@ -166,15 +171,18 @@ export default function ExclusiveSection({ products = [] }) {
             </div>
           </div>
 
-          {/* Product switcher */}
+          {/* Other products */}
           {list.length > 1 && (
-            <div className="excl-switch" data-lenis-prevent>
-              {list.map((p, i) => (
-                <button key={p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
-                  onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
-                </button>
-              ))}
+            <div className="excl-switch-wrap">
+              <span className="excl-switch-title">Other products</span>
+              <div className="excl-switch" data-lenis-prevent>
+                {list.map((p, i) => (
+                  <button key={p.uid ?? p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
+                    onClick={() => pick(i)} aria-label={p.name} title={p.name}>
+                    {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
