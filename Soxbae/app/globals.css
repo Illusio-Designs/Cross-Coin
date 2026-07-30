@@ -2049,11 +2049,13 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* ── Header logo — larger + legible on phones (override the inline height) ── */
 .sx-hd-logo { display: inline-flex; align-items: center; min-width: 0; }
 .sx-hd-logo img { height: 40px !important; width: auto; max-width: none; }
-/* Phones: use a simple flex row (hamburger + logo on the left, cart on the
-   right) so the cart keeps its right-edge gap and the wide logo has room. */
+/* Phones: hamburger, logo and cart as three evenly-spaced items across the row
+   (promote the left group's children so all three share equal gaps). */
 @media (max-width: 900px) {
-  .sx-hd-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .sx-hd-l { display: contents; }
+  .sx-hd-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .sx-hd-logo { flex: 0 1 auto; min-width: 0; }
   .sx-hd-logo img { height: 38px !important; }
-  .sx-hd .pill.cart { padding: 11px 14px; font-size: 10px; letter-spacing: .08em; }
+  .sx-hd .pill.cart { padding: 11px 14px; font-size: 10px; letter-spacing: .08em; flex-shrink: 0; }
 }
-@media (max-width: 380px) { .sx-hd-logo img { height: 34px !important; } }
+@media (max-width: 380px) { .sx-hd-logo img { height: 32px !important; } }
