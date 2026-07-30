@@ -21,26 +21,32 @@ export default async function JournalArticlePage({ params }) {
   const post = await getBlogBySlug(slug);
   if (!post) notFound();
 
+  const initial = (post.author || 'S').trim().charAt(0).toUpperCase();
+
   return (
-    <div className="container" style={{ paddingTop: 24, paddingBottom: 50 }}>
+    <div className="container sx-article" style={{ paddingTop: 24, paddingBottom: 56 }}>
       <nav className="crumbs">
         <Link href="/">Home</Link> <span>/</span> <Link href="/journal">Journal</Link> <span>/</span> <b>{post.title}</b>
       </nav>
 
-      <article className="article">
-        <div className="blog-meta" style={{ justifyContent: 'center' }}>
-          {post.category && <span className="blog-cat">{post.category}</span>}
-          {post.date && <><span>·</span><span>{post.date}</span></>}
+      <header className="sx-article-head">
+        {post.category && <span className="sx-article-cat">{post.category}</span>}
+        <h1 className="sx-article-title">{post.title}</h1>
+        <div className="sx-article-meta">
+          <span className="sx-article-author"><span className="sx-article-avatar" aria-hidden>{initial}</span>{post.author}</span>
+          {post.date && <><i>·</i><span>{post.date}</span></>}
+          {post.readTime && <><i>·</i><span>{post.readTime}</span></>}
         </div>
-        <h1 className="article-title">{post.title}</h1>
+      </header>
 
-        {post.image && (
-          <div className="article-hero">
-            <img src={post.image} alt={post.title} />
-          </div>
-        )}
+      {post.image && (
+        <div className="sx-article-hero">
+          <img src={post.image} alt={post.title} />
+        </div>
+      )}
 
-        <div className="article-body">
+      <div className="sx-article-grid">
+        <div className="sx-article-body">
           {post.sections && post.sections.length > 0 ? (
             post.sections.map((s, i) => (
               <section key={i}>
@@ -51,12 +57,28 @@ export default async function JournalArticlePage({ params }) {
           ) : (
             <p>{post.excerpt}</p>
           )}
+
+          <Link href="/journal" className="sx-article-back">
+            <Icon name="ArrowRight" size={14} /> Back to all articles
+          </Link>
         </div>
 
-        <Link href="/journal" className="link-more" style={{ marginTop: 24 }}>
-          <Icon name="ArrowRight" size={14} /> Back to all articles
-        </Link>
-      </article>
+        <aside className="sx-article-aside">
+          <div className="sx-article-card">
+            <span className="sx-article-card-label">Written by</span>
+            <div className="sx-article-author big"><span className="sx-article-avatar" aria-hidden>{initial}</span>{post.author}</div>
+          </div>
+
+          {post.tags?.length > 0 && (
+            <div className="sx-article-card">
+              <span className="sx-article-card-label">Tags</span>
+              <div className="sx-article-tags">
+                {post.tags.map((t) => <span className="sx-article-tag" key={t}>{t}</span>)}
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

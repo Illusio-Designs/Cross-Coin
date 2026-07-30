@@ -551,6 +551,16 @@ function mapBlog(p) {
   const firstContent = sections[0]?.content || p.excerpt || '';
   const plain = String(firstContent).replace(/<[^>]+>/g, '').trim();
   const excerpt = plain ? plain.substring(0, 160) + (plain.length > 160 ? '…' : '') : (p.title || '');
+  // Author, tags and an estimated read time (fields the backend may or may not
+  // provide — fall back sensibly so the article page always has them).
+  const author = p.author?.name || p.author_name || p.author || p.writer || 'The Soxbae Team';
+  const rawTags = p.tags ?? p.Tags ?? p.tag_list ?? '';
+  const tags = (Array.isArray(rawTags)
+    ? rawTags.map((t) => t?.name || t)
+    : String(rawTags).split(','))
+    .map((t) => String(t).trim()).filter(Boolean).slice(0, 6);
+  const wordCount = sections.reduce((n, s) => n + String(s.content || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, 0);
+  const readTime = Math.max(1, Math.round(wordCount / 200)) + ' min read';
   // Cover image: backend stores it as `hero_image` (same as the other brands);
   // fall back to other common fields, then to the first image in the body.
   const image = fullImage(imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
@@ -562,6 +572,9 @@ function mapBlog(p) {
     title: p.title,
     excerpt,
     image,
+    author,
+    tags,
+    readTime,
     // Full article body: each section's heading + sanitised HTML content.
     sections: sections.map((s) => ({
       heading: s.heading || s.title || '',
