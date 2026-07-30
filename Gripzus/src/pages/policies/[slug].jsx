@@ -51,7 +51,7 @@ export default function PolicyPage() {
             {loading && (
               <div className="space-y-3.5">
                 {[95, 80, 90, 65, 88, 72, 92, 60].map((w, i) => (
-                  <div key={i} className="h-3.5 bg-paper-deep animate-pulse" style={{ width: `${w}%` }} />
+                  <div key={i} className="h-3.5 rounded bg-gray-200 animate-pulse" style={{ width: `${w}%` }} />
                 ))}
               </div>
             )}
@@ -59,7 +59,7 @@ export default function PolicyPage() {
             {/* Not found / error */}
             {!loading && error && (
               <div className="text-center py-16">
-                <p className="h-mark text-2xl md:text-3xl text-ink mb-3">POLICY UNAVAILABLE</p>
+                <p className="h-display text-2xl text-ink mb-2">Policy unavailable</p>
                 <p className="prose-body text-sm">
                   We couldn&apos;t load this policy right now. Email{' '}
                   <a href="mailto:support@gripzus.com" className="text-ink underline underline-offset-4">support@gripzus.com</a>.
@@ -74,7 +74,7 @@ export default function PolicyPage() {
 
             {/* Footer line */}
             {!loading && !error && (
-              <p className="eyebrow mt-14 pt-8 border-t-2 border-ink">
+              <p className="eyebrow mt-14 pt-8 border-t border-line">
                 Questions?{' '}
                 <a href="mailto:support@gripzus.com" className="text-ink underline underline-offset-4 hover:text-ink-soft">
                   support@gripzus.com

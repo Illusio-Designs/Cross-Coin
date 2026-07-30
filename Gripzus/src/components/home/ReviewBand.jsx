@@ -22,7 +22,7 @@ function Stars({ n = 5 }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <svg key={i} width="13" height="13" viewBox="0 0 24 24"
           fill={i < n ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4"
-          className={i < n ? 'text-ink' : 'text-line'}>
+          className={i < n ? 'text-clay' : 'text-line'}>
           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
         </svg>
       ))}
@@ -32,13 +32,13 @@ function Stars({ n = 5 }) {
 
 function ReviewCard({ r }) {
   return (
-    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper border-2 border-ink p-6 mx-2.5">
+    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper-warm border border-line rounded-lg p-6 mx-2.5">
       <Stars n={r.rating} />
       <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mt-4 mb-5">
         “{r.quote}”
       </blockquote>
-      <figcaption className="text-[11px] font-bold tracking-[0.16em] uppercase">
-        <span className="text-ink">{r.name}</span>
+      <figcaption className="text-sm">
+        <span className="text-ink font-medium">{r.name}</span>
         <span className="text-ink-muted"> · {r.role}</span>
       </figcaption>
     </figure>
@@ -67,12 +67,12 @@ export default function ReviewBand({ reviews: reviewsProp }) {
   const rowB = reviews.slice(half).length ? reviews.slice(half) : rowA;
 
   return (
-    <section className="section-y border-y-2 border-ink overflow-hidden">
+    <section className="section-y border-y border-line overflow-hidden">
       <div className="wrap">
-        <div className="flex flex-col items-center text-center mb-12">
-          <span className="kicker mb-4">Worn &amp; Reviewed</span>
-          <h2 className="h-mark text-ink text-4xl sm:text-5xl md:text-7xl">
-            Loved By Thousands.
+        <div className="text-center mb-12">
+          <p className="eyebrow mb-3">Worn &amp; reviewed</p>
+          <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">
+            Loved by <span className="h-italic">thousands.</span>
           </h2>
         </div>
       </div>

@@ -26,22 +26,22 @@ function SortDropdown({ value, onChange, options }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2.5 border-2 border-ink pl-4 pr-3 py-2 text-[11px] font-bold tracking-[0.14em] uppercase bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
+        className="flex items-center gap-2.5 border border-line hover:border-ink rounded-full pl-4 pr-3 py-2 text-[12px] bg-paper transition-colors"
       >
-        <span className="opacity-60">Sort</span>
-        <span>{current.label}</span>
+        <span className="text-ink-muted">Sort</span>
+        <span className="text-ink">{current.label}</span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          className={`transition-transform ${open ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9" /></svg>
+          className={`text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9" /></svg>
       </button>
       {open && (
-        <div className="absolute left-0 mt-2 w-48 bg-paper border-2 border-ink shadow-card py-0 z-30">
+        <div className="absolute left-0 mt-2 w-48 bg-paper border border-line rounded-lg shadow-card py-1.5 z-30">
           {options.map((o) => (
             <button
               key={o.value}
               type="button"
               onClick={() => { onChange(o.value); setOpen(false); }}
-              className={`flex w-full items-center justify-between px-4 py-2.5 text-[11px] font-bold tracking-[0.12em] uppercase text-left transition-colors ${
-                o.value === value ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-paper-warm hover:text-ink'
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-[13px] text-left transition-colors ${
+                o.value === value ? 'text-ink bg-paper-warm' : 'text-ink-soft hover:bg-paper-warm hover:text-ink'
               }`}
             >
               {o.label}
@@ -185,12 +185,12 @@ export default function ProductsPage() {
         <div className="wrap">
 
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-10 pb-5 border-b-2 border-ink">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-10 pb-5 border-b border-line">
             {/* Collection chips — desktop only (mobile uses the Refine drawer) */}
             <div className="hidden lg:flex flex-wrap items-center gap-2">
               <button
                 onClick={() => selectChip('all')}
-                className={`px-4 py-2 text-[11px] font-bold tracking-[0.14em] uppercase border-2 transition-colors ${
+                className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
                   activeCat === 'all' ? 'bg-ink text-paper border-ink' : 'border-line text-ink-soft hover:border-ink hover:text-ink'
                 }`}
               >
@@ -202,7 +202,7 @@ export default function ProductsPage() {
                   <button
                     key={c.id ?? key}
                     onClick={() => selectChip(key)}
-                    className={`px-4 py-2 text-[11px] font-bold tracking-[0.14em] uppercase border-2 transition-colors ${
+                    className={`px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border transition-colors ${
                       activeCat === key ? 'bg-ink text-paper border-ink' : 'border-line text-ink-soft hover:border-ink hover:text-ink'
                     }`}
                   >
@@ -216,12 +216,12 @@ export default function ProductsPage() {
               <SortDropdown value={sort} onChange={setSort} options={SORTS} />
               <button
                 onClick={openDrawer}
-                className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold tracking-[0.14em] uppercase border-2 border-ink bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-[12px] tracking-[0.06em] rounded-full border border-ink hover:bg-ink hover:text-paper transition-colors"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" /></svg>
                 Refine
                 {activeFilterCount > 0 && (
-                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 bg-ink text-paper text-[10px] font-bold flex items-center justify-center">
+                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-paper text-[10px] font-semibold flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}
@@ -231,22 +231,22 @@ export default function ProductsPage() {
 
           {/* Grid */}
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i}>
-                  <div className="aspect-square border-2 border-line bg-paper-deep animate-pulse" />
-                  <div className="mt-4 h-3 w-1/3 bg-paper-deep animate-pulse" />
-                  <div className="mt-2 h-4 w-2/3 bg-paper-deep animate-pulse" />
+                  <div className="aspect-[4/5] rounded-lg bg-gray-200 animate-pulse" />
+                  <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
+                  <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
                 </div>
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-24 border-2 border-ink">
-              <p className="h-mark text-3xl md:text-4xl mb-5">No Pairs Found</p>
+            <div className="text-center py-24 border border-line rounded-lg">
+              <p className="h-display text-3xl mb-3">No pairs found</p>
               <button onClick={() => { selectChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
               {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}

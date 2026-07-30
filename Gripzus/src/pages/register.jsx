@@ -128,25 +128,25 @@ export default function RegisterPage() {
       <main className="bg-paper">
 
         {/* Hero */}
-        <section className="bg-ink text-center px-6 py-20 md:py-24">
-          <span className="kicker kicker-light mb-5 justify-center inline-flex">Account · Register</span>
-          <h1 className="h-mark text-paper text-5xl md:text-7xl mt-2">
-            START THE CIRCLE.
+        <section className="bg-ink text-center px-6 py-16 md:py-20">
+          <p className="eyebrow text-paper/55 mb-4">Account · Register</p>
+          <h1 className="h-display text-paper text-4xl md:text-5xl">
+            Start the <span className="h-italic">circle.</span>
           </h1>
-          <p className="text-paper/55 text-sm mt-5 tracking-wide">
+          <p className="text-paper/55 text-sm mt-4">
             {step === 'details' ? 'Register with your phone number — no password' : `Enter the code sent to +91 ${digits}`}
           </p>
         </section>
 
         {/* Form */}
         <section className="px-6 py-14 md:py-16">
-          <div className="mx-auto w-full max-w-sm border-2 border-ink p-7 md:p-8">
+          <div className="mx-auto w-full max-w-sm">
             {step === 'details' ? (
               <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
                 <Field label="Full name" value={form.name} onChange={(v) => set('name', v)} placeholder="Anika Sharma" />
                 <div>
                   <label className="eyebrow block mb-2">Phone number</label>
-                  <div className="field flex items-center gap-2 !py-0">
+                  <div className="flex items-center gap-2 bg-paper-deep border border-line focus-within:border-ink px-4 transition-colors">
                     <span className="text-ink-muted text-sm">+91</span>
                     <input
                       type="tel" value={form.phone}
@@ -157,13 +157,13 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <Field label="Email (optional)" type="email" value={form.email} onChange={(v) => set('email', v)} placeholder="you@example.com" optional />
-                {error && <p className="border-2 border-ink px-3 py-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink">{error}</p>}
-                <button type="submit" disabled={!form.name.trim() || digits.length !== 10} className="btn w-full justify-center !py-4 disabled:opacity-50">
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <button type="submit" disabled={!form.name.trim() || digits.length !== 10} className="cta w-full justify-center !py-4 disabled:opacity-50">
                   Send OTP
                 </button>
                 <p className="text-center eyebrow">
                   Have an account?{' '}
-                  <Link href="/login" className="text-ink font-bold hover:text-ink-soft underline underline-offset-4">Sign in</Link>
+                  <Link href="/login" className="text-clay-deep hover:text-ink underline underline-offset-4">Sign in</Link>
                 </p>
               </form>
             ) : (
@@ -176,12 +176,12 @@ export default function RegisterPage() {
                       type="text" maxLength={1} inputMode="numeric" value={d}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="h-14 w-14 text-center bg-paper border-2 border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
+                      className="h-14 w-14 text-center bg-paper-deep border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
                     />
                   ))}
                 </div>
-                {error && <p className="border-2 border-ink px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.1em] text-ink">{error}</p>}
-                <button type="submit" disabled={loading} className="btn w-full justify-center !py-4 disabled:opacity-50">
+                {error && <p className="text-center text-sm text-red-600">{error}</p>}
+                <button type="submit" disabled={loading} className="cta w-full justify-center !py-4 disabled:opacity-50">
                   {loading ? 'Creating account…' : 'Verify & Create Account'}
                 </button>
                 <button
@@ -207,7 +207,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', optional })
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         required={!optional}
-        className="field !text-base"
+        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );

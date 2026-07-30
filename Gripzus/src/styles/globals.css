@@ -1,35 +1,31 @@
 /* ===================================================================
-   GRIPZUS — Athletic / Performance design system
-   High-contrast monochrome (per the GRIPZUS wordmark): true black on
-   white, heavy condensed display type, aggressive layout, motion.
-   Energy comes from composition and type — not colour.
+   GRIPZUS — Refined Minimal design system
+   White space, warm neutrals, elegant serif headings. Premium & calm.
    =================================================================== */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Archivo+Expanded:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Monochrome — pushed to true black/white for athletic contrast */
-  --ink:        #0A0A0A;
-  --ink-soft:   #4A4A4A;
-  --ink-muted:  #8A8A8A;
+  /* Strict black & white / greyscale */
+  --ink:        #111111;
+  --ink-soft:   #555555;
+  --ink-muted:  #999999;
 
   --paper:      #FFFFFF;
-  --paper-warm: #F4F4F2;
-  --paper-deep: #ECECEC;
-  --line:       #E4E4E4;
-  --line-dark:  #262626;
+  --paper-warm: #F4F4F4;
+  --paper-deep: #EAEAEA;
+  --line:       #E2E2E2;
 
   /* Accent token kept for legacy classes — collapses to black */
-  --clay:       #0A0A0A;
+  --clay:       #111111;
   --clay-deep:  #000000;
 
-  --font-display:  'Archivo Expanded', 'Archivo', system-ui, sans-serif;
-  --font-heavy:    'Archivo', system-ui, sans-serif;
-  --font-body:     'Inter', system-ui, sans-serif;
+  --font-display: 'Archivo', 'Inter', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -43,6 +39,8 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Off-canvas drawers sit past the right edge — clip so they never
+     widen the page or expose a blank strip. */
   overflow-x: hidden;
   max-width: 100%;
 }
@@ -57,61 +55,39 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 
 /* ── Type utilities ───────────────────────────────────────────────── */
 
-/* Heavy display — athletic, tight, uppercase-friendly */
+/* Elegant serif display headline — inherits colour so it works on
+   both light and dark sections (use text-ink / text-paper to set). */
 .h-display {
-  font-family: var(--font-heavy);
+  font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 0.92;
+  line-height: 0.94;
 }
 /* Oversized uppercase wordmark-style heading (echoes the GRIPZUS logo) */
 .h-mark {
   font-family: var(--font-display);
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 0.86;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
 }
-/* Condensed athletic accent — replaces the old serif italic.
-   Kept the class name so existing markup still resolves. */
+
+/* Serif italic accent */
 .h-italic {
   font-family: var(--font-display);
-  font-weight: 800;
   font-style: italic;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
+  font-weight: 400;
 }
 
 /* Small uppercase label */
 .eyebrow {
   font-family: var(--font-body);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.28em;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-muted);
 }
-
-/* Kicker — label with a leading bar; the athletic section tag */
-.kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--ink);
-}
-.kicker::before {
-  content: '';
-  width: 26px;
-  height: 2px;
-  background: var(--ink);
-}
-.kicker-light { color: var(--paper); }
-.kicker-light::before { background: var(--paper); }
 
 /* Body prose */
 .prose-body {
@@ -120,66 +96,67 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   line-height: 1.75;
 }
 
-/* ── Buttons — sharp, uppercase, aggressive ───────────────────────── */
+/* ── Buttons ──────────────────────────────────────────────────────────
+   Refined rectangular buttons — sharp 2px radius, clean tracking,
+   clay on hover. Premium without shouting. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 9px;
   background: var(--ink);
   color: var(--paper);
-  padding: 15px 32px;
+  padding: 13px 30px;
   font-family: var(--font-body);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  border: 2px solid var(--ink);
-  border-radius: 0;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
-.btn:hover { background: var(--paper); color: var(--ink); }
-.btn:active { transform: translateY(1px); }
+.btn:hover { background: var(--ink-soft); border-color: var(--ink-soft); color: var(--paper); }
 
+/* Outline — hairline on paper */
 .btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 13px 30px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: transparent;
-  color: var(--ink);
-  border: 2px solid var(--ink);
-  border-radius: 0;
-  padding: 15px 32px;
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  gap: 9px;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
 .btn-outline:hover { background: var(--ink); color: var(--paper); }
-.btn-outline:active { transform: translateY(1px); }
 
+/* Light — for dark surfaces */
 .btn-light {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 9px;
   background: var(--paper);
   color: var(--ink);
-  padding: 15px 32px;
+  padding: 13px 30px;
   font-family: var(--font-body);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  border: 2px solid var(--paper);
-  border-radius: 0;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--paper);
+  border-radius: 2px;
+  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
-.btn-light:hover { background: transparent; color: var(--paper); }
-.btn-light:active { transform: translateY(1px); }
+.btn-light:hover { background: var(--paper-deep); color: var(--ink); border-color: var(--paper-deep); }
 
 /* Legacy aliases so older markup keeps working during the rebuild */
 .cta        { @apply btn; }
@@ -189,22 +166,9 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .pill-cta-light { @apply btn-outline; }
 .pill-cta-dark  { @apply btn-light; }
 
-/* ── Forms ────────────────────────────────────────────────────────── */
-.field {
-  width: 100%;
-  background: var(--paper);
-  border: 2px solid var(--line);
-  border-radius: 0;
-  padding: 14px 16px;
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--ink);
-  transition: border-color 0.18s ease;
-}
-.field:focus { outline: none; border-color: var(--ink); }
-.field::placeholder { color: var(--ink-muted); }
-
 /* ── Layout ───────────────────────────────────────────────────────── */
+/* One container, used by EVERY page section — identical L/R padding
+   site-wide. Change it here and the whole site updates. */
 .wrap {
   width: 100%;
   max-width: 1440px;
@@ -220,48 +184,10 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   .wrap { padding-left: 64px; padding-right: 64px; }
 }
 
-.section-y { padding-top: 68px; padding-bottom: 68px; }
+/* Standard vertical rhythm for a section block */
+.section-y { padding-top: 64px; padding-bottom: 64px; }
 @media (min-width: 768px) {
-  .section-y { padding-top: 104px; padding-bottom: 104px; }
-}
-
-/* Hairline dividers */
-.hairline { height: 1px; background: var(--line); }
-.rule-ink { height: 2px; background: var(--ink); }
-
-/* ── Marquee / ticker — athletic motion ───────────────────────────── */
-.marquee {
-  display: flex;
-  overflow: hidden;
-  white-space: nowrap;
-  user-select: none;
-}
-.marquee__track {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0;
-  min-width: 100%;
-  animation: marquee 26s linear infinite;
-}
-.marquee:hover .marquee__track { animation-play-state: paused; }
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-100%); }
-}
-
-/* Media hover-zoom for cards */
-.media-zoom { overflow: hidden; }
-.media-zoom img { transition: transform 0.7s cubic-bezier(0.22,1,0.36,1); }
-.media-zoom:hover img { transform: scale(1.06); }
-
-/* Big outlined index number */
-.num-index {
-  font-family: var(--font-display);
-  font-weight: 900;
-  -webkit-text-stroke: 1.5px var(--ink);
-  color: transparent;
-  line-height: 1;
+  .section-y { padding-top: 96px; padding-bottom: 96px; }
 }
 
 /* ── Policy / rich-text content (from the policies API) ───────────── */
@@ -270,20 +196,24 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   color: var(--ink-soft);
   font-size: 15px;
   line-height: 1.8;
+  text-align: justify;
+  hyphens: auto;
 }
 .policy-content h1,
 .policy-content h2,
 .policy-content h3,
+.policy-content h4 { text-align: left; }
+.policy-content h1,
+.policy-content h2,
+.policy-content h3,
 .policy-content h4 {
-  font-family: var(--font-heavy);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-weight: 500;
   color: var(--ink);
-  line-height: 1.1;
-  margin: 1.8em 0 0.6em;
+  line-height: 1.2;
+  margin: 2em 0 0.6em;
 }
-.policy-content h1 { font-size: 2rem; }
+.policy-content h1 { font-size: 1.9rem; }
 .policy-content h2 { font-size: 1.5rem; }
 .policy-content h3 { font-size: 1.2rem; }
 .policy-content h4 { font-size: 1.05rem; }
@@ -295,20 +225,23 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .policy-content li { margin-bottom: 0.45em; }
 .policy-content a  { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .policy-content a:hover { color: var(--ink-soft); }
-.policy-content strong { color: var(--ink); font-weight: 700; }
+.policy-content strong { color: var(--ink); font-weight: 600; }
 .policy-content hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
 .policy-content table { width: 100%; border-collapse: collapse; margin: 0 0 1.2em; }
 .policy-content th,
 .policy-content td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
 
 /* ── Misc ─────────────────────────────────────────────────────────── */
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.rise-in { animation: riseIn 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+.hairline { height: 1px; background: var(--line); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 @media (min-width: 768px) {
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 0; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
 }

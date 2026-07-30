@@ -15,7 +15,7 @@ function Stars({ n = 5, size = 13, interactive, onSelect }) {
         const star = (
           <svg width={size} height={size} viewBox="0 0 24 24"
             fill={i < n ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4"
-            className={i < n ? 'text-ink' : 'text-line'}>
+            className={i < n ? 'text-clay' : 'text-line'}>
             <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
           </svg>
         );
@@ -33,13 +33,13 @@ function Stars({ n = 5, size = 13, interactive, onSelect }) {
 
 function ReviewCard({ r }) {
   return (
-    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper-warm border-2 border-ink p-6 mx-2.5">
+    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper-warm border border-line rounded-lg p-6 mx-2.5">
       <Stars n={r.rating} />
       <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mt-4 mb-5">
         “{r.quote}”
       </blockquote>
-      <figcaption className="text-[11px] font-bold tracking-[0.14em] uppercase">
-        <span className="text-ink">{r.name}</span>
+      <figcaption className="text-sm">
+        <span className="text-ink font-medium">{r.name}</span>
         <span className="text-ink-muted"> · {r.role}</span>
       </figcaption>
     </figure>
@@ -108,8 +108,8 @@ export default function ProductTestimonials({ productId, productName }) {
     <section data-product-id={productId} className="section-y border-y border-line overflow-hidden">
       <div className="wrap">
         <div className="text-center mb-12">
-          <p className="kicker justify-center mb-4">Worn &amp; reviewed</p>
-          <h2 className="h-mark text-3xl md:text-5xl">
+          <p className="eyebrow mb-3">Worn &amp; reviewed</p>
+          <h2 className="h-display text-3xl md:text-5xl">
             What buyers <span className="h-italic">say.</span>
           </h2>
           <button onClick={() => setOpen(true)} className="btn mt-7 !py-3.5 !px-7">
@@ -147,7 +147,7 @@ export default function ProductTestimonials({ productId, productName }) {
       {open && mounted && createPortal(
         <div className="fixed inset-0 z-[9000] flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="absolute inset-0 bg-ink/55 backdrop-blur-sm" onClick={close} />
-          <div className="relative z-10 w-full max-w-md border-2 border-ink bg-paper p-7 shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-xl bg-paper p-7 shadow-2xl">
             <button onClick={close} aria-label="Close" className="absolute right-4 top-4 text-ink-muted transition-colors hover:text-ink">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -155,8 +155,8 @@ export default function ProductTestimonials({ productId, productName }) {
               </svg>
             </button>
 
-            <p className="kicker mb-3">Share your experience</p>
-            <h3 className="h-mark text-2xl leading-tight">Write a Review</h3>
+            <p className="eyebrow mb-2">Share your experience</p>
+            <h3 className="h-display text-2xl leading-tight">Write a Review</h3>
             {productName && <p className="mt-1 mb-6 text-[13px] text-ink-muted">for {productName}</p>}
 
             <form onSubmit={submit} className="flex flex-col gap-5">
@@ -171,7 +171,7 @@ export default function ProductTestimonials({ productId, productName }) {
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="Your name"
-                    className="field"
+                    className="w-full rounded-sm border border-line px-3.5 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-ink focus:outline-none"
                   />
                 </div>
                 <div>
@@ -181,7 +181,7 @@ export default function ProductTestimonials({ productId, productName }) {
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     placeholder="you@email.com"
-                    className="field"
+                    className="w-full rounded-sm border border-line px-3.5 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-ink focus:outline-none"
                   />
                 </div>
               </div>
@@ -192,7 +192,7 @@ export default function ProductTestimonials({ productId, productName }) {
                   value={form.text}
                   onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
                   placeholder="What did you think of this pair?"
-                  className="field resize-none"
+                  className="w-full resize-none rounded-sm border border-line px-3.5 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-ink focus:outline-none"
                 />
               </div>
               <button type="submit" disabled={submitting} className="btn w-full justify-center !py-4 disabled:opacity-50">

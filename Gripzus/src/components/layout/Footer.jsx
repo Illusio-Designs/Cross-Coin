@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
-/* Gripzus footer — athletic. Ink ground · newsletter call-out ·
-   Care/House/Contact columns · massive split GRIPZUS wordmark · bottom bar. */
+/* Gripzus footer — cinematic editorial, refined palette.
+   Dark ink ground · newsletter call-out · Care/House/Contact columns ·
+   massive split GRIPZUS wordmark · slim bottom bar. */
 
 const CARE_LINKS = [
   { label: 'Privacy Policy',        href: '/policies/privacy-policy' },
@@ -34,17 +35,17 @@ export default function Footer() {
   return (
     <footer className="bg-ink text-paper">
       {/* Newsletter + columns */}
-      <div className="wrap pt-20 md:pt-28 pb-14 md:pb-20 border-b border-paper/10">
+      <div className="max-w-site mx-auto px-6 md:px-10 lg:px-14 pt-20 md:pt-28 pb-14 md:pb-20 border-b border-paper/10">
         <div className="grid grid-cols-12 gap-10 md:gap-14">
 
           {/* Newsletter */}
           <div className="col-span-12 md:col-span-6">
-            <span className="kicker kicker-light mb-6">The Inner Sole</span>
-            <h3 className="h-mark text-paper leading-[0.86] mt-4" style={{ fontSize: 'clamp(2.6rem, 6vw, 4.5rem)' }}>
-              STAY IN<br />STEP.
+            <p className="eyebrow text-paper/50 mb-5">The Inner Sole</p>
+            <h3 className="h-display text-paper leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
+              Stay <span className="h-italic">in step.</span>
             </h3>
-            <p className="text-paper/60 text-base leading-relaxed max-w-[22rem] mt-6 mb-7">
-              Field notes, early drops, and 10% off your first pair. No spam — twice a month, on Fridays.
+            <p className="text-paper/60 text-base leading-relaxed max-w-[21rem] mt-5 mb-7">
+              Field notes, early drops, and a 10% welcome from us. No spam — twice a month, on Fridays.
             </p>
             <form
               onSubmit={(e) => {
@@ -57,16 +58,16 @@ export default function Footer() {
                 toastSubscribed();
                 e.target.reset();
               }}
-              className="flex items-stretch max-w-[24rem] border-2 border-paper/25"
+              className="flex items-center border border-paper/20 max-w-[21rem] rounded-full overflow-hidden"
             >
               <input
                 type="email"
                 name="email"
-                placeholder="YOUR EMAIL ADDRESS"
-                className="flex-1 bg-transparent text-paper placeholder:text-paper/40 text-xs tracking-[0.14em] uppercase px-5 py-4 outline-none"
+                placeholder="Your email address"
+                className="flex-1 bg-transparent text-paper placeholder:text-paper/40 text-sm px-5 py-3.5 outline-none"
               />
-              <button type="submit" className="bg-paper text-ink px-6 text-[11px] tracking-[0.16em] uppercase font-bold hover:bg-paper/80 transition-colors">
-                Join →
+              <button type="submit" className="bg-paper text-ink m-1 px-6 py-3 rounded-full text-[11px] tracking-[0.16em] uppercase font-medium hover:bg-paper/80 transition-colors">
+                Subscribe
               </button>
             </form>
           </div>
@@ -74,7 +75,7 @@ export default function Footer() {
           {/* Columns */}
           <div className="col-span-12 md:col-span-6 grid grid-cols-2 sm:grid-cols-3 gap-8 md:pl-10 md:border-l md:border-paper/10">
             <div>
-              <p className="text-[10px] font-bold tracking-[0.26em] uppercase text-paper/40 mb-5">Care</p>
+              <p className="eyebrow text-paper/40 mb-5">Care</p>
               <ul className="space-y-3">
                 {CARE_LINKS.map((l) => (
                   <li key={l.label}><Link href={l.href} className="text-sm text-paper/70 hover:text-paper transition-colors">{l.label}</Link></li>
@@ -82,7 +83,7 @@ export default function Footer() {
               </ul>
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-[0.26em] uppercase text-paper/40 mb-5">House</p>
+              <p className="eyebrow text-paper/40 mb-5">House</p>
               <ul className="space-y-3">
                 {HOUSE_LINKS.map((l) => (
                   <li key={l.label}><Link href={l.href} className="text-sm text-paper/70 hover:text-paper transition-colors">{l.label}</Link></li>
@@ -90,7 +91,7 @@ export default function Footer() {
               </ul>
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-[0.26em] uppercase text-paper/40 mb-5">Contact</p>
+              <p className="eyebrow text-paper/40 mb-5">Contact</p>
               <ul className="space-y-3.5">
                 <li>
                   <a href="mailto:support@gripzus.com" className="flex items-start gap-2.5 text-sm text-paper/70 hover:text-paper transition-colors">
@@ -112,22 +113,22 @@ export default function Footer() {
       </div>
 
       {/* Massive split wordmark */}
-      <div className="wrap py-12 md:py-16 overflow-hidden">
+      <div className="max-w-site mx-auto px-6 md:px-10 lg:px-14 py-12 md:py-16">
         <h2
-          className="h-mark text-paper text-center leading-[0.82]"
-          style={{ fontSize: 'clamp(4rem, 15vw, 14rem)' }}
+          className="h-display text-paper text-center leading-[0.85]"
+          style={{ fontSize: 'clamp(4rem, 13vw, 12rem)' }}
         >
-          GRIP<span style={{ WebkitTextStroke: '1.5px rgba(255,255,255,0.45)', color: 'transparent' }}>ZUS</span>
+          GRIP<span style={{ WebkitTextStroke: '1px rgba(255,255,255,0.5)', color: 'transparent' }}>ZUS</span>
         </h2>
       </div>
 
       {/* Bottom bar */}
       <div className="border-t border-paper/10">
-        <div className="wrap py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-paper/45">
+        <div className="max-w-site mx-auto px-6 md:px-10 lg:px-14 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-paper/45">
           <p className="tracking-wider">© {year} Gripzus. All rights reserved.</p>
           <div className="flex items-center gap-5">
             {SOCIALS.map((s) => (
-              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-paper transition-colors tracking-[0.16em] uppercase font-bold text-[11px]">
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="hover:text-paper transition-colors tracking-wider uppercase">
                 {s.label}
               </a>
             ))}

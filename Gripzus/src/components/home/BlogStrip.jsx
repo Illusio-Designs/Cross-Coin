@@ -25,12 +25,12 @@ export default function BlogStrip({ posts: postsProp }) {
   const list = posts.slice(0, 3);
 
   return (
-    <section className="section-y bg-paper-warm border-y-2 border-ink">
+    <section className="section-y bg-paper-warm border-y border-line">
       <div className="wrap">
-        <div className="flex flex-col items-start gap-5 mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <div className="flex flex-col items-start gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
           <div>
-            <span className="kicker mb-4">From The Thread</span>
-            <h2 className="h-mark text-ink text-4xl sm:text-5xl md:text-7xl">Notes From The Atelier.</h2>
+            <p className="eyebrow mb-3">From The Thread</p>
+            <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">Notes from <span className="h-italic">the atelier.</span></h2>
           </div>
           <Link href="/journal" className="btn-outline shrink-0">All stories</Link>
         </div>

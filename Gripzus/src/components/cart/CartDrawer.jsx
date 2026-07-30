@@ -486,7 +486,7 @@ export default function CartDrawer() {
                   <div className="cd-summary-row"><span>Subtotal</span><span>₹{cartTotal.toFixed(0)}</span></div>
                   <div className="cd-summary-row">
                     <span>Shipping</span>
-                    <span style={shippingFee === 0 ? { fontWeight: 800 } : {}}>{shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}</span>
+                    <span style={shippingFee === 0 ? { color: '#16a34a', fontWeight: 700 } : {}}>{shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}</span>
                   </div>
                   <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(0)}</span></div>
                 </div>
@@ -619,7 +619,7 @@ export default function CartDrawer() {
                           <div className="cd-delivery-info">
                             <p className="cd-delivery-name">{fee.orderType === 'cod' ? 'Cash on Delivery' : 'Pay Online (UPI / Card)'}</p>
                             {fee.orderType === 'cod' && !blocked && <span className="cd-delivery-popular">⭐ Most Popular</span>}
-                            {blocked && <p className="cd-delivery-desc" style={{ fontWeight: 700 }}>Not available for this pincode</p>}
+                            {blocked && <p className="cd-delivery-desc" style={{ color: '#dc2626' }}>Not available for this pincode</p>}
                             <p className="cd-delivery-desc">Delivery by {getDeliveryDateStr()}</p>
                           </div>
                           <div className="cd-delivery-fee-wrap">
