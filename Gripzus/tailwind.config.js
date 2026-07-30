@@ -27,7 +27,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        display: ['Newsreader', 'Georgia', 'serif'],
+        display: ['Archivo', 'Inter', 'system-ui', 'sans-serif'],
         body:    ['Inter', 'system-ui', 'sans-serif'],
       },
       letterSpacing: {

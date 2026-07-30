@@ -7,7 +7,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Strict black & white / greyscale */
@@ -24,7 +24,7 @@
   --clay:       #111111;
   --clay-deep:  #000000;
 
-  --font-display: 'Newsreader', Georgia, serif;
+  --font-display: 'Archivo', 'Inter', system-ui, sans-serif;
   --font-body:    'Inter', system-ui, sans-serif;
 }
 
@@ -59,9 +59,17 @@ img, picture, video, canvas { max-width: 100%; display: block; }
    both light and dark sections (use text-ink / text-paper to set). */
 .h-display {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 0.94;
+}
+/* Oversized uppercase wordmark-style heading (echoes the GRIPZUS logo) */
+.h-mark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
 }
 
 /* Serif italic accent */
