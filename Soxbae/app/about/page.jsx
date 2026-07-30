@@ -3,13 +3,6 @@ import Icon from '@/components/Icon';
 
 export const metadata = { title: 'About' };
 
-const STATS = [
-  { n: '2019', l: 'Founded in Gujarat' },
-  { n: '40+', l: 'Knit & fibre iterations' },
-  { n: '1M+', l: 'Pairs on happy feet' },
-  { n: '4.8★', l: 'Average customer rating' },
-];
-
 const PROCESS = [
   { icon: 'Layers', title: 'Knit', text: 'We start at the yarn — combed cotton and recycled fibres knit on fine-gauge machines for a smooth, dense feel.' },
   { icon: 'Wind', title: 'Engineer', text: 'Ventilation zones, a locking arch band and cushioned zones are mapped to the pressure points of a real foot.' },
@@ -30,15 +23,6 @@ export default function AboutPage() {
         <h1>Happiness, one pair at a time.</h1>
         <p className="sx-about-lead">Soxbae began with a simple frustration — socks that slip, bunch and wear thin after a month. So we set out to fix every one of those small annoyances, properly, and make the most overlooked thing you wear the most comfortable thing you own.</p>
       </header>
-
-      <section className="sx-about-stats">
-        {STATS.map((s) => (
-          <div className="sx-about-stat" key={s.l}>
-            <b>{s.n}</b>
-            <span>{s.l}</span>
-          </div>
-        ))}
-      </section>
 
       <section className="sx-about-process">
         <div className="sx-about-section-head">
