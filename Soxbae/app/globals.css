@@ -705,7 +705,7 @@ button { font-family: inherit; cursor: pointer; }
      sideways on phones. Use `clip` (not `hidden`) so it does NOT create a
      scroll container — `hidden` would break the sticky header. */
   html, body { overflow-x: clip; }
-  .container { padding: 0 26px; }
+  .container { padding: 0 18px; }
   .account-layout { grid-template-columns: 1fr; gap: 16px; }
   .account-nav { flex-direction: row; overflow-x: auto; position: static; }
   .account-nav-btn { white-space: nowrap; }
@@ -1932,7 +1932,9 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 
 /* ── Spotlight → framed warm module, left-aligned editorial head ─────────── */
 .exclusive { padding-top: 0; }
-.excl-panel { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: clamp(24px, 3.4vw, 46px); box-shadow: 0 40px 90px -60px rgba(28,27,25,.5); }
+/* No card inset — the spotlight aligns to the same left/right gutter as every
+   other section (title starts at the container edge, like the rest). */
+.excl-panel { background: transparent; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
 .excl-panel::before { display: none; }
 .excl-panel-head { text-align: left; max-width: none; margin: 0 0 34px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
 .excl-head-left { min-width: 0; }
@@ -1953,9 +1955,11 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .exclusive .excl-actions .btn-primary:hover { background: var(--accent-600); color: #fff; box-shadow: 0 14px 30px -16px rgba(208,105,42,.55); }
 .exclusive .excl-actions .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
 .exclusive .excl-actions .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
-/* Equal height for qty / Add to cart / View so the row lines up */
-.excl-actions { align-items: stretch; }
-.excl-actions .qty, .excl-actions .btn-primary, .excl-actions .btn-ghost { height: 52px; min-height: 52px; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; justify-content: center; }
+/* Equal height for qty / Add to cart / View — sized to the natural button
+   height (View shrinks to match; Add-to-cart and qty are not enlarged). */
+.excl-actions { align-items: center; }
+.excl-actions .qty, .excl-actions .btn-primary, .excl-actions .btn-ghost { height: 46px; min-height: 46px; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; justify-content: center; }
+.excl-actions .btn-ghost { flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }
 @media (max-width: 700px) { .excl-panel-head { flex-direction: column; align-items: flex-start; gap: 12px; } .excl-panel-head p { text-align: left; max-width: none; } }
 
 /* ── Hero → immersive cover stage (image + overlaid headline) ────────────── */
