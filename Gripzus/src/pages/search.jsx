@@ -77,12 +77,12 @@ export default function SearchPage() {
         {/* Hero — title + search field */}
         <section className="bg-paper-warm border-b border-line">
           <div className="max-w-site mx-auto px-6 lg:px-10 py-14 md:py-20 text-center">
-            <p className="eyebrow mb-4">Find a pair</p>
-            <h1 className="h-display text-4xl md:text-6xl">
+            <p className="kicker justify-center mb-5">Find a pair</p>
+            <h1 className="h-mark text-4xl md:text-6xl">
               {hasQuery ? 'Results' : 'Search'}{' '}
               <span className="h-italic">{hasQuery ? `“${query}”` : 'the archive.'}</span>
             </h1>
-            <p className="prose-body text-sm md:text-base mt-4">
+            <p className="prose-body text-sm md:text-base mt-5">
               {hasQuery
                 ? `${results.length} pair${results.length === 1 ? '' : 's'} found`
                 : 'Type a name, collection or material — like “merino” or “trail”.'}
@@ -90,8 +90,8 @@ export default function SearchPage() {
 
             {/* Search field */}
             <div className="relative max-w-xl mx-auto mt-8">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-ink-muted">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                className="absolute left-5 top-1/2 -translate-y-1/2 text-ink">
                 <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
               </svg>
               <input
@@ -99,15 +99,15 @@ export default function SearchPage() {
                 type="text"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Search socks, colours, packs…"
-                className="w-full rounded-full border border-line bg-paper py-4 pl-12 pr-12 text-sm text-ink placeholder:text-ink-muted outline-none transition-colors focus:border-ink"
+                placeholder="SEARCH SOCKS, COLOURS, PACKS…"
+                className="field !border-ink !py-4 !pl-12 !pr-12 !text-xs !tracking-[0.14em] uppercase"
               />
               {value && (
                 <button
                   type="button"
                   onClick={() => setValue('')}
                   aria-label="Clear search"
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-ink text-paper transition-opacity hover:opacity-80"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center bg-ink text-paper transition-opacity hover:opacity-80"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
@@ -125,9 +125,9 @@ export default function SearchPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i}>
-                      <div className="aspect-[4/5] rounded-xl bg-gray-200 animate-pulse" />
-                      <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
-                      <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                      <div className="aspect-[4/5] bg-paper-deep animate-pulse" />
+                      <div className="mt-3.5 h-3 w-1/3 bg-paper-deep animate-pulse" />
+                      <div className="mt-2 h-4 w-2/3 bg-paper-deep animate-pulse" />
                     </div>
                   ))}
                 </div>
@@ -136,8 +136,8 @@ export default function SearchPage() {
                   {results.map((p) => <ProductCard key={p.id} product={p} />)}
                 </div>
               ) : (
-                <div className="text-center py-20 border border-line rounded-lg max-w-xl mx-auto">
-                  <p className="h-display text-3xl text-ink mb-3">No matches</p>
+                <div className="text-center py-20 border-2 border-ink max-w-xl mx-auto px-6">
+                  <p className="h-mark text-3xl md:text-4xl text-ink mb-4">No matches</p>
                   <p className="prose-body text-sm mb-7">
                     Nothing found for &ldquo;{query}&rdquo;. Try a different word, or open the full catalogue.
                   </p>
@@ -149,7 +149,7 @@ export default function SearchPage() {
             {/* NO QUERY — one pair per collection */}
             {!hasQuery && browse.length > 0 && (
               <>
-                <p className="eyebrow text-center mb-10">A pair from every collection</p>
+                <p className="kicker justify-center mb-10">A pair from every collection</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
                   {browse.map((p) => <ProductCard key={p.id} product={p} />)}
                 </div>

@@ -23,18 +23,18 @@ export default function WishlistPage() {
 
         <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
           {!hydrated ? null : empty ? (
-            <div className="text-center py-24 border border-line max-w-xl mx-auto">
-              <p className="h-display text-3xl uppercase mb-3">Nothing saved yet</p>
+            <div className="text-center py-24 border-2 border-ink max-w-xl mx-auto px-6">
+              <p className="h-mark text-3xl md:text-4xl mb-4">Nothing saved yet</p>
               <p className="prose-body text-sm mb-7">Start with a pair from the catalogue.</p>
-              <Link href="/products" className="cta inline-flex">Open the catalogue</Link>
+              <Link href="/products" className="btn inline-flex">Open the catalogue</Link>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-8">
-                <p className="eyebrow">{count} saved</p>
+              <div className="flex items-center justify-between mb-8 pb-5 border-b-2 border-ink">
+                <p className="kicker">{count} saved</p>
                 <button
                   onClick={clear}
-                  className="text-[12px] tracking-[0.12em] uppercase text-ink-muted transition-colors hover:text-ink"
+                  className="text-[11px] font-bold tracking-[0.14em] uppercase text-ink-muted transition-colors hover:text-ink"
                 >
                   Clear wishlist
                 </button>
