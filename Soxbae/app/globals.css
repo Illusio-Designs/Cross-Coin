@@ -1756,7 +1756,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
   .sxp-price { font-size: 12px; }
   /* Narrow 2-up cards: stack name over price so neither gets crushed. */
   .sxp-plate-row { flex-direction: column; align-items: flex-start; gap: 3px; }
-  .sxp-plate-foot { margin-top: 10px; }
+  .sxp-plate-foot { margin-top: 0px; }
   .sxp-add .pcard-add { width: 34px; height: 34px; }
 }
 
@@ -2047,7 +2047,12 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 }
 
 /* ── Header logo — larger + legible on phones (override the inline height) ── */
-.sx-hd-logo { display: inline-flex; align-items: center; }
-.sx-hd-logo img { height: 40px !important; width: auto; }
-@media (max-width: 900px) { .sx-hd-logo img { height: 46px !important; } }
-@media (max-width: 420px) { .sx-hd-logo img { height: 42px !important; } }
+.sx-hd-logo { display: inline-flex; align-items: center; min-width: 0; }
+.sx-hd-logo img { height: 40px !important; width: auto; max-width: none; }
+/* Phones: bigger logo + a compact cart so the wide wordmark has room to fill. */
+@media (max-width: 900px) {
+  .sx-hd-logo img { height: 48px !important; }
+  .sx-hd-row { gap: 10px; }
+  .sx-hd .pill.cart { padding: 11px 13px; font-size: 10px; letter-spacing: .08em; }
+}
+@media (max-width: 380px) { .sx-hd-logo img { height: 42px !important; } }
