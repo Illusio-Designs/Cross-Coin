@@ -22,7 +22,12 @@ export default async function ProductPage({ params, searchParams }) {
   if (!product) notFound();
 
   const [all, reviews] = await Promise.all([getAllProducts(), getProductReviews(product.id)]);
-  const related = all.filter((p) => p.categorySlug === product.categorySlug && p.slug !== product.slug).slice(0, 5);
+  // One card per product (not every colour variation) in "You might also like".
+  const seenRel = new Set();
+  const related = all
+    .filter((p) => p.categorySlug === product.categorySlug && p.slug !== product.slug)
+    .filter((p) => { if (seenRel.has(p.slug)) return false; seenRel.add(p.slug); return true; })
+    .slice(0, 5);
 
   return (
     <div className="container" style={{ paddingTop: 24, paddingBottom: 20 }}>

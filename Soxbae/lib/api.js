@@ -255,6 +255,13 @@ function cleanUrl(url) {
   return u;
 }
 
+// Drop an ImageKit resize transform (…?tr=w-900,h-900,q-82,f-auto) so the FULL
+// original image is served instead of a square-cropped 900×900 version. Used for
+// blog hero images, where the whole picture should show.
+function fullImage(url) {
+  return String(url || '').split(/[?&]tr=/)[0];
+}
+
 // Pull a usable URL string out of a backend image (string or object shape).
 // Backends differ on the field name, so check every common one.
 function imgUrl(img) {
@@ -546,8 +553,8 @@ function mapBlog(p) {
   const excerpt = plain ? plain.substring(0, 160) + (plain.length > 160 ? '…' : '') : (p.title || '');
   // Cover image: backend stores it as `hero_image` (same as the other brands);
   // fall back to other common fields, then to the first image in the body.
-  const image = imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
-    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections);
+  const image = fullImage(imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
+    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections));
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',

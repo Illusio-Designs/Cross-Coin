@@ -11,8 +11,8 @@ export default function Bestsellers({ products = [] }) {
       </div>
       {products.length > 0 ? (
         <div className="product-grid">
-          {/* One row only — "View all" leads to the full shop grid. */}
-          {products.slice(0, 4).map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+          {/* Two rows — "View all" leads to the full shop grid. */}
+          {products.slice(0, 8).map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
         </div>
       ) : (
         <div className="empty">No products yet — check back soon.</div>

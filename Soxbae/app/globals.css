@@ -1542,7 +1542,8 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
   box-shadow: 0 20px 44px -30px rgba(28,27,25,.4); }
 .sxp-cat { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-600); margin-bottom: 6px; }
 .sxp-plate-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.sxp-name { font-family: var(--serif); font-weight: 400; font-size: 17px; line-height: 1.2; color: var(--ink); }
+.sxp-name { font-family: var(--serif); font-weight: 400; font-size: 17px; line-height: 1.25; color: var(--ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sxp-name a { color: inherit; }
 .sxp:hover .sxp-name a { color: var(--accent-600); }
 .sxp-price { flex-shrink: 0; font-size: 14.5px; font-weight: 600; letter-spacing: .01em; color: var(--ink); white-space: nowrap; }

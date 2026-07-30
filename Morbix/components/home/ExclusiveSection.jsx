@@ -13,9 +13,11 @@ export default function ExclusiveSection({ products = [] }) {
   // Distinct products only (colour variants share a slug) — capped at 4 so the
   // "Other products" rail stays short.
   const seen = new Set();
-  const list = (Array.isArray(products) ? products : [])
-    .filter((p) => { const k = p.slug || p.id; if (seen.has(k)) return false; seen.add(k); return true; })
-    .slice(0, 4);
+  const distinct = (Array.isArray(products) ? products : [])
+    .filter((p) => { const k = p.slug || p.id; if (seen.has(k)) return false; seen.add(k); return true; });
+  // Prefer distinct products; if fewer than 2 exist, fall back to the raw list so
+  // the "Other products" rail is never empty.
+  const list = (distinct.length >= 2 ? distinct : (Array.isArray(products) ? products : [])).slice(0, 4);
   const { add } = useCart();
   const [active, setActive] = useState(0);
   const [thumb, setThumb] = useState(0);

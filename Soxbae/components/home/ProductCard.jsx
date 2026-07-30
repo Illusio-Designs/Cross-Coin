@@ -11,12 +11,11 @@ export default function ProductCard({ product }) {
   const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames, colorParam } = product;
   const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
-  // Colour dots come from EITHER a merged group (separate products, each linking
-  // to its own page) OR a single product's own colour variations (dots link to
-  // this product's page). Show whenever there's more than one colour.
+  // Colour dot(s): a merged group links each dot to its own page; otherwise show
+  // this card's colour(s) — including a single dot for an exploded colour card.
   const swatches = Array.isArray(group) && group.length > 1
     ? group
-    : (Array.isArray(colors) && colors.length > 1
+    : (Array.isArray(colors) && colors.length >= 1
         ? colors.map((hex, i) => ({ name: (colorNames && colorNames[i]) || '', hex, slug: null }))
         : null);
   const isGroup = Array.isArray(group) && group.length > 1;
