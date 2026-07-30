@@ -1,22 +1,27 @@
 import Icon from '@/components/Icon';
 
+// Soxbae reviews — an editorial layout (not Morbix's uniform 3-col card grid):
+// one large featured pull-quote, then a slim rail of compact quotes beneath.
 export default function ReviewsSection({ reviews = [] }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
   const avg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) : 0;
   const total = reviews.length;
+  const withText = reviews.filter((r) => (r.text || '').trim());
+  const lead = withText[0] || reviews[0];
+  const rest = (withText[0] ? withText.slice(1) : reviews.slice(1)).slice(0, 3);
 
   return (
-    <section className="section container">
-      <div className="section-head">
+    <section className="section container sx-rev">
+      <div className="sx-rev-head">
         <div>
-          <span className="eyebrow">Reviews</span>
-          <h2 style={{ marginTop: 8 }}>What our customers say</h2>
+          <span className="eyebrow">Happy feet</span>
+          <h2>What our customers say</h2>
         </div>
-        <div className="reviews-badge">
+        <div className="sx-rev-score">
           <b>{avg ? avg.toFixed(1) : '—'}</b>
-          <span className="reviews-badge-stars">
+          <span className="sx-rev-stars">
             {[0, 1, 2, 3, 4].map((i) => (
-              <Icon key={i} name="Star" size={13} color={i < Math.round(avg) ? 'var(--star)' : '#dce2e6'} />
+              <Icon key={i} name="Star" size={14} color={i < Math.round(avg) ? 'var(--accent)' : 'var(--line)'} />
             ))}
           </span>
           <small>{total} review{total === 1 ? '' : 's'}</small>
@@ -27,23 +32,33 @@ export default function ReviewsSection({ reviews = [] }) {
         <div className="empty" style={{ marginTop: 8 }}>No reviews yet — your feedback will appear here.</div>
       )}
 
-      <div className="review-grid">
-        {reviews.slice(0, 6).map((r, i) => (
-          <div className="review" key={i}>
-            <div className="review-stars" style={{ marginBottom: 10 }}>
-              {[0, 1, 2, 3, 4].map((n) => (
-                <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--star)' : '#dce2e6'} />
-              ))}
+      {lead && (
+        <figure className="sx-rev-lead">
+          <span className="sx-rev-mark" aria-hidden>“</span>
+          <blockquote>{lead.text || lead.title}</blockquote>
+          <figcaption>
+            <span className="sx-rev-av">{(lead.author || '?').charAt(0)}</span>
+            <span><b>{lead.author}</b><em>{lead.date}</em></span>
+          </figcaption>
+        </figure>
+      )}
+
+      {rest.length > 0 && (
+        <div className="sx-rev-row">
+          {rest.map((r, i) => (
+            <div className="sx-rev-mini" key={i}>
+              <span className="sx-rev-mini-stars">
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <Icon key={n} name="Star" size={12} color={n < r.rating ? 'var(--accent)' : 'var(--line)'} />
+                ))}
+              </span>
+              {r.title && <b>{r.title}</b>}
+              <p>{r.text}</p>
+              <span className="sx-rev-by">{r.author}</span>
             </div>
-            {r.title && <b className="review-title">{r.title}</b>}
-            <p>{r.text}</p>
-            <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
-              <div className="review-av">{(r.author || '?').charAt(0)}</div>
-              <div><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
