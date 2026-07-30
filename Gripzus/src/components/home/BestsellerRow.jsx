@@ -15,13 +15,13 @@ export default function BestsellerRow({
   const skeleton = !products.length;
 
   return (
-    <section className="section-y bg-paper-warm border-y border-line">
+    <section className="section-y bg-paper-warm border-y-2 border-ink">
       <div className="wrap">
-        <div className="flex flex-col items-start gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <div className="flex flex-col items-start gap-5 mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
           <div>
-            <p className="eyebrow mb-3">{eyebrow}</p>
-            <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">
-              {title} <span className="h-italic">{accent}</span>
+            <span className="kicker mb-4">{eyebrow}</span>
+            <h2 className="h-mark text-ink text-4xl sm:text-5xl md:text-7xl">
+              {title} {accent}
             </h2>
           </div>
           <Link href={ctaHref} className="btn-outline shrink-0">See all</Link>
@@ -31,9 +31,9 @@ export default function BestsellerRow({
           {skeleton
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i}>
-                  <div className="aspect-[4/5] rounded-lg bg-gray-200 animate-pulse" />
-                  <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
-                  <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                  <div className="aspect-[4/5] bg-paper-deep animate-pulse" />
+                  <div className="mt-3.5 h-3 w-1/3 bg-paper-deep animate-pulse" />
+                  <div className="mt-2 h-4 w-2/3 bg-paper-deep animate-pulse" />
                 </div>
               ))
             : products.slice(0, 4).map((p) => <ProductCard key={p.id} product={p} />)}

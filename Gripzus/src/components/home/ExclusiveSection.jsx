@@ -66,15 +66,15 @@ export default function ExclusiveSection({ products = [] }) {
     return (
       <section className="section-y bg-ink">
         <div className="wrap">
-          <div className="mb-10 h-4 w-44 rounded bg-paper/10 animate-pulse" />
+          <div className="mb-10 h-4 w-44 bg-paper/10 animate-pulse" />
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.35fr_1fr]">
-            <div className="aspect-[4/3] rounded-xl bg-paper/10 animate-pulse" />
+            <div className="aspect-[4/3] bg-paper/10 animate-pulse" />
             <div className="space-y-4 pt-4">
-              <div className="h-3 w-1/3 rounded bg-paper/10 animate-pulse" />
-              <div className="h-9 w-3/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-7 w-1/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-20 w-full rounded bg-paper/10 animate-pulse" />
-              <div className="h-12 w-full rounded bg-paper/10 animate-pulse" />
+              <div className="h-3 w-1/3 bg-paper/10 animate-pulse" />
+              <div className="h-9 w-3/4 bg-paper/10 animate-pulse" />
+              <div className="h-7 w-1/4 bg-paper/10 animate-pulse" />
+              <div className="h-20 w-full bg-paper/10 animate-pulse" />
+              <div className="h-12 w-full bg-paper/10 animate-pulse" />
             </div>
           </div>
         </div>
@@ -112,14 +112,11 @@ export default function ExclusiveSection({ products = [] }) {
       <div className="wrap">
 
         {/* Heading */}
-        <div className="flex flex-col gap-4 mb-10 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 mb-10 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-3">
-              <span className="w-10 h-px bg-paper/50" />
-              <p className="eyebrow text-paper/70">The Reserve</p>
-            </div>
-            <h2 className="h-display text-paper text-3xl md:text-5xl tracking-[-0.03em]">
-              A curated edit of <span className="h-italic">rare pairs.</span>
+            <span className="kicker kicker-light mb-4">The Reserve</span>
+            <h2 className="h-mark text-paper text-4xl sm:text-5xl md:text-7xl">
+              A Curated Edit Of Rare Pairs.
             </h2>
           </div>
           <Link href="/products?sort=bestsellers" className="hidden sm:inline-flex btn-light">View all</Link>
@@ -137,10 +134,10 @@ export default function ExclusiveSection({ products = [] }) {
                   key={i}
                   onClick={() => setThumb(i)}
                   aria-label={`Image ${i + 1}`}
-                  className={`h-[3.75rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-paper/5 transition-all sm:h-[4.75rem] sm:w-[4.75rem] ${
+                  className={`h-[3.75rem] w-[3.75rem] shrink-0 overflow-hidden bg-paper/5 transition-all sm:h-[4.75rem] sm:w-[4.75rem] border-2 ${
                     i === thumbIndex
-                      ? 'ring-1 ring-paper ring-offset-2 ring-offset-ink'
-                      : 'opacity-40 hover:opacity-100'
+                      ? 'border-paper'
+                      : 'border-transparent opacity-40 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt="" className="h-full w-full object-cover" />
@@ -149,7 +146,7 @@ export default function ExclusiveSection({ products = [] }) {
             </div>
 
             {/* Main image — natural height, never cropped */}
-            <div className="relative flex-1 overflow-hidden rounded-xl bg-paper/5 border border-paper/10">
+            <div className="relative flex-1 overflow-hidden bg-paper/5 border border-paper/15">
               <img
                 key={thumbIndex}
                 src={p.images[thumbIndex]}
@@ -157,7 +154,7 @@ export default function ExclusiveSection({ products = [] }) {
                 className="block w-full h-auto animate-[fadeIn_0.5s_ease-out]"
               />
               {p.badge && (
-                <span className="absolute top-4 left-4 bg-paper text-ink text-[10px] tracking-[0.16em] uppercase px-3 py-1 rounded-full">
+                <span className="absolute top-4 left-4 bg-paper text-ink text-[10px] font-bold tracking-[0.16em] uppercase px-3 py-1.5">
                   {p.badge}
                 </span>
               )}
@@ -171,8 +168,8 @@ export default function ExclusiveSection({ products = [] }) {
           {/* RIGHT — info + numbered pair list */}
           <div className="flex flex-col">
             <p className="eyebrow text-paper/55 mb-2">{p.collection}</p>
-            <h3 className="h-display text-paper text-2xl md:text-3xl leading-tight line-clamp-2">{p.name}</h3>
-            {p.sku && <p className="text-xs text-paper/45 mt-1">SKU: {p.sku}</p>}
+            <h3 className="font-display text-paper text-2xl md:text-3xl uppercase leading-none tracking-tight line-clamp-2" style={{ fontWeight: 900 }}>{p.name}</h3>
+            {p.sku && <p className="text-xs text-paper/45 mt-2">SKU: {p.sku}</p>}
 
             <div className="flex items-baseline gap-3 mt-4 mb-5">
               <span className="h-display text-paper text-2xl md:text-3xl">₹{p.price.toLocaleString('en-IN')}</span>
@@ -180,7 +177,7 @@ export default function ExclusiveSection({ products = [] }) {
                 <span className="text-paper/45 text-base line-through">₹{p.compareAtPrice.toLocaleString('en-IN')}</span>
               )}
               {discount > 0 && (
-                <span className="text-[10px] tracking-[0.14em] uppercase bg-paper text-ink px-2.5 py-1 rounded-sm">{discount}% Off</span>
+                <span className="text-[10px] font-bold tracking-[0.14em] uppercase bg-paper text-ink px-2.5 py-1">{discount}% Off</span>
               )}
             </div>
 
@@ -199,9 +196,9 @@ export default function ExclusiveSection({ products = [] }) {
                         title={c.name}
                         onClick={() => setColor(i)}
                         aria-label={`Pack of ${c.packColors.length}`}
-                        className={`flex h-9 items-center gap-1.5 rounded-sm border px-2.5 transition-all ${
+                        className={`flex h-9 items-center gap-1.5 border-2 px-2.5 transition-all ${
                           i === color
-                            ? 'border-paper ring-1 ring-paper ring-offset-2 ring-offset-ink'
+                            ? 'border-paper'
                             : 'border-paper/30 hover:border-paper/60'
                         }`}
                       >
@@ -209,7 +206,7 @@ export default function ExclusiveSection({ products = [] }) {
                           <span
                             key={pc.name}
                             title={pc.name}
-                            className="h-5 w-5 rounded-full border border-paper/40"
+                            className="h-5 w-5 border border-paper/40"
                             style={{ backgroundColor: pc.hex || '#ddd' }}
                           />
                         ))}
@@ -219,8 +216,8 @@ export default function ExclusiveSection({ products = [] }) {
                         key={c.name}
                         title={c.name}
                         onClick={() => setColor(i)}
-                        className={`h-6 w-6 rounded-full ring-1 ring-offset-2 ring-offset-ink transition-all ${
-                          i === color ? 'ring-paper' : 'ring-paper/25 hover:ring-paper/60'
+                        className={`h-7 w-7 border-2 transition-all ${
+                          i === color ? 'border-paper' : 'border-paper/25 hover:border-paper/60'
                         }`}
                         style={{ backgroundColor: c.hex || '#ddd' }}
                       />
@@ -234,7 +231,7 @@ export default function ExclusiveSection({ products = [] }) {
 
             {/* Qty + CTA — qty + Add on one row, View below */}
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex shrink-0 items-center gap-3 rounded-full border border-paper/25 px-4 py-3">
+              <div className="flex shrink-0 items-center gap-3 border-2 border-paper/25 px-4 py-3">
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="text-paper/60 hover:text-paper">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 </button>
@@ -259,19 +256,19 @@ export default function ExclusiveSection({ products = [] }) {
             </Link>
 
             {/* Numbered pair list */}
-            <div className="mt-8 border-t border-paper/15">
+            <div className="mt-8 border-t-2 border-paper/20">
               {list.map((item, i) => (
                 <button
                   key={item.id}
                   onClick={() => selectProduct(i)}
                   className="group flex w-full items-center gap-4 border-b border-paper/10 py-3.5 text-left"
                 >
-                  <span className={`h-display text-sm tracking-[0.1em] transition-colors ${
+                  <span className={`h-display text-sm tracking-[0.1em] tabular-nums transition-colors ${
                     i === activeIndex ? 'text-paper' : 'text-paper/35'
                   }`}>
                     {num(i)}
                   </span>
-                  <span className={`flex-1 truncate text-sm transition-colors ${
+                  <span className={`flex-1 truncate text-sm font-bold uppercase tracking-[0.04em] transition-colors ${
                     i === activeIndex ? 'text-paper' : 'text-paper/45 group-hover:text-paper/80'
                   }`}>
                     {item.name}
@@ -281,7 +278,7 @@ export default function ExclusiveSection({ products = [] }) {
                   }`}>
                     ₹{item.price.toLocaleString('en-IN')}
                   </span>
-                  {i === activeIndex && <span className="h-1.5 w-1.5 rounded-full bg-paper" />}
+                  {i === activeIndex && <span className="h-1.5 w-1.5 bg-paper" />}
                 </button>
               ))}
             </div>
