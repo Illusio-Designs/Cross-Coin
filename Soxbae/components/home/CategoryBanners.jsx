@@ -16,10 +16,9 @@ export default function CategoryBanners({ items = [] }) {
       </div>
 
       <div className="sx-collections-grid">
-        {items.map((c, i) => (
+        {items.map((c) => (
           <Link href={`/collections/${c.slug}`} className="sx-col-card" key={c.slug}>
             <div className="sx-col-media">
-              <span className="sx-col-index" aria-hidden>{String(i + 1).padStart(2, '0')}</span>
               {c.image
                 ? <img src={c.image} alt={c.label} loading="lazy" />
                 : <span className="sx-col-ph" aria-hidden><Icon name="Sparkles" size={44} /></span>}

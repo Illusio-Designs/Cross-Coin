@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 
-// Soxbae journal — an editorial "contents index": numbered rows with big serif
-// titles, meta and a small thumbnail on the right, separated by hairline rules.
-// Distinct from the equal-grid other brands use.
+// Soxbae journal — an image-forward card grid: each post is a tall image with a
+// category tag tucked over its lower edge, a serif title and a date underneath.
 export default function BlogSection({ posts = [] }) {
   if (!posts.length) return null;
-  const list = posts.slice(0, 4);
+  const list = posts.slice(0, 3);
 
   return (
     <section className="section container sx-journal">
@@ -18,22 +17,20 @@ export default function BlogSection({ posts = [] }) {
         <Link href="/journal" className="link-more">All articles</Link>
       </div>
 
-      <div className="sx-jr-list">
-        {list.map((p, i) => (
-          <Link href={`/journal/${p.slug}`} className="sx-jr-row" key={p.slug}>
-            <span className="sx-jr-num" aria-hidden>{String(i + 1).padStart(2, '0')}</span>
-            <div className="sx-jr-main">
-              <div className="sx-jr-meta">
-                <span>{p.category}</span><i>·</i><span>{p.date}</span>
-              </div>
-              <h3>{p.title}</h3>
-              {p.excerpt && <p>{p.excerpt}</p>}
-              <span className="sx-jr-read">Read article <Icon name="ArrowRight" size={14} /></span>
-            </div>
-            <div className="sx-jr-thumb">
+      <div className="sx-jr-grid">
+        {list.map((p) => (
+          <Link href={`/journal/${p.slug}`} className="sx-jr-card" key={p.slug}>
+            <div className="sx-jr-media">
               {p.image
                 ? <img src={p.image} alt={p.title} loading="lazy" />
-                : <span aria-hidden><Icon name="Sparkles" size={24} /></span>}
+                : <span aria-hidden><Icon name="Sparkles" size={30} /></span>}
+              {p.category && <span className="sx-jr-tag">{p.category}</span>}
+            </div>
+            <div className="sx-jr-body">
+              <span className="sx-jr-date">{p.date}</span>
+              <h3>{p.title}</h3>
+              {p.excerpt && <p>{p.excerpt}</p>}
+              <span className="sx-jr-more">Read article <Icon name="ArrowRight" size={14} /></span>
             </div>
           </Link>
         ))}
