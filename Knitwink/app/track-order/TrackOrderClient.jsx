@@ -27,6 +27,13 @@ function pickItemImage(it) {
   return resolveImg(p.image || p.ProductImages?.[0]?.image_url || p.images?.[0]?.image_url
     || v.VariationImages?.[0]?.image_url || it.image || it.image_url || '')
 }
+function pickColor(it) {
+  const raw = it.variation?.attributes || it.ProductVariation?.attributes || it.attributes
+  if (!raw) return it.color || ''
+  const a = typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return {} } })() : raw
+  const val = a.color || a.Color || a.colour || a.Colour || ''
+  return Array.isArray(val) ? val.join(', ') : (val || '')
+}
 
 const fmtDateTime = (v) => {
   if (!v) return ''
@@ -157,6 +164,7 @@ export default function TrackOrderClient() {
                     const qty = it.quantity || it.qty || 1
                     const price = Number(it.total_price || (Number(it.price || it.unit_price || 0) * qty))
                     const sku = it.variation?.sku || it.ProductVariation?.sku
+                    const color = pickColor(it)
                     return (
                       <div key={i} className="flex items-center gap-3">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -166,7 +174,7 @@ export default function TrackOrderClient() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-semibold text-brand-black">{name}</p>
-                          <p className="text-[11px] text-gray-400">{sku ? `SKU ${String(sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')} · ` : ''}{it.size ? `Size ${it.size} · ` : ''}Qty {qty}</p>
+                          <p className="text-[11px] text-gray-400">{sku ? `SKU ${String(sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')} · ` : ''}{color ? `Color ${color} · ` : ''}Qty {qty}</p>
                         </div>
                         {price > 0 && <span className="text-xs font-semibold text-brand-black">₹{price.toFixed(0)}</span>}
                       </div>

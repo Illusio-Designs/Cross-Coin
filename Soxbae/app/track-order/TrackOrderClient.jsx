@@ -33,14 +33,15 @@ function pickItemImage(it) {
   return resolveImg(raw);
 }
 
-function fmtAttrs(attrs) {
-  if (!attrs) return '';
-  const a = typeof attrs === 'string'
-    ? (() => { try { return JSON.parse(attrs); } catch { return {}; } })()
-    : attrs;
-  return Object.entries(a)
-    .map(([k, v]) => { const val = Array.isArray(v) ? v.join(', ') : v; return val ? `${k}: ${val}` : ''; })
-    .filter(Boolean).join(' · ');
+// Pull just the colour out of the variation attributes (skip the rest).
+function pickColor(it) {
+  const raw = it.variation?.attributes || it.ProductVariation?.attributes || it.attributes;
+  if (!raw) return it.color || '';
+  const a = typeof raw === 'string'
+    ? (() => { try { return JSON.parse(raw); } catch { return {}; } })()
+    : raw;
+  const val = a.color || a.Color || a.colour || a.Colour || '';
+  return Array.isArray(val) ? val.join(', ') : (val || '');
 }
 
 const fmtDate = (v) => {
@@ -169,7 +170,7 @@ export default function TrackOrderClient() {
                   const qty = it.quantity || it.qty || 1;
                   const price = Number(it.total_price || (Number(it.price || it.unit_price || 0) * qty));
                   const sku = it.variation?.sku || it.ProductVariation?.sku;
-                  const attrs = fmtAttrs(it.variation?.attributes || it.ProductVariation?.attributes) || (it.size ? `Size: ${it.size}` : '');
+                  const color = pickColor(it);
                   return (
                     <div className="order-item" key={i}>
                       <div className="order-item-thumb">
@@ -178,7 +179,7 @@ export default function TrackOrderClient() {
                       <div className="order-item-info">
                         <b>{name}</b>
                         {sku && <span className="muted">SKU {String(sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')}</span>}
-                        {attrs && <span className="muted">{attrs}</span>}
+                        {color && <span className="muted">Color: {color}</span>}
                         <span className="muted">Qty {qty}</span>
                       </div>
                       {price > 0 && <b>₹{price.toFixed(0)}</b>}

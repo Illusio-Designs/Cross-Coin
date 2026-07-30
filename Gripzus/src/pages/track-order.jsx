@@ -41,6 +41,13 @@ const fmtDateTime = (v) => {
   try { return new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }); }
   catch { return ''; }
 };
+function pickColor(it) {
+  const raw = it.variation?.attributes || it.ProductVariation?.attributes || it.attributes;
+  if (!raw) return it.color || '';
+  const a = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : raw;
+  const val = a.color || a.Color || a.colour || a.Colour || '';
+  return Array.isArray(val) ? val.join(', ') : (val || '');
+}
 function buildTimeline(src, finalStatus) {
   const fship = src?.fship_data?.tracking_history;
   if (Array.isArray(fship) && fship.length) {
@@ -69,9 +76,12 @@ function mapOrder(raw, fallbackId) {
   const pin = addr.postal_code || addr.pincode || addr.postalCode || '';
   const lineItems = (Array.isArray(itemsArr) ? itemsArr : []).map((it) => ({
     name: it.name || it.product?.name || it.Product?.name || it.product_name || 'Item',
-    image: resolveImg(it.image || it.product?.image || it.Product?.image || it.image_url || ''),
+    image: resolveImg(it.image || it.product?.image || it.Product?.image
+      || it.ProductVariation?.VariationImages?.[0]?.image_url || it.Product?.ProductImages?.[0]?.image_url || it.image_url || ''),
+    sku: it.variation?.sku || it.ProductVariation?.sku || '',
+    color: pickColor(it),
     qty: Number(it.quantity || it.qty || 1),
-    price: Number(it.price || it.unit_price || 0),
+    price: Number(it.total_price || (Number(it.price || it.unit_price || 0) * Number(it.quantity || it.qty || 1))),
   }));
   const status = String(o.status || 'pending').toLowerCase();
   return {
@@ -263,10 +273,13 @@ export default function TrackOrderPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-ink text-sm font-semibold truncate">{it.name}</p>
-                          <p className="text-ink-muted text-xs mt-1 tracking-wider">Qty {it.qty}</p>
+                          <p className="text-ink-muted text-xs mt-1 tracking-wider">
+                            {it.sku ? `SKU ${String(it.sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')} · ` : ''}
+                            {it.color ? `Color ${it.color} · ` : ''}Qty {it.qty}
+                          </p>
                         </div>
                         {it.price > 0 && (
-                          <span className="text-ink text-sm font-semibold">₹{(it.price * it.qty).toLocaleString('en-IN')}</span>
+                          <span className="text-ink text-sm font-semibold">₹{it.price.toLocaleString('en-IN')}</span>
                         )}
                       </div>
                     ))}

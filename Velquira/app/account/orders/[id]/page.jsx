@@ -25,6 +25,15 @@ function resolveOrderImg(raw) {
   return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+// Pull just the colour out of the variation attributes (skip the rest).
+function pickColor(it) {
+  const raw = it.ProductVariation?.attributes || it.variation?.attributes || it.attributes;
+  if (!raw) return it.color || '';
+  const a = typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : raw;
+  const val = a.color || a.Color || a.colour || a.Colour || '';
+  return Array.isArray(val) ? val.join(', ') : (val || '');
+}
+
 function statusClass(s) {
   const v = (s || '').toLowerCase();
   if (v === 'delivered') return 'ok';
@@ -110,12 +119,14 @@ function OrderDetail({ id }) {
             const img = resolveOrderImg(rawImg);
             const price = Number(it.price || it.unit_price || 0);
             const qty = it.quantity || it.qty || 1;
+            const sku = it.ProductVariation?.sku || it.variation?.sku;
+            const color = pickColor(it);
             return (
               <div className="order-item" key={i}>
                 <div className="order-item-thumb">
                   {img ? <ShimmerImg src={img} alt="" /> : <Icon name="Sparkles" size={22} color="#c3ccd2" />}
                 </div>
-                <div className="order-item-info"><b>{name}</b>{it.size && <span className="muted">Size {it.size}</span>}<span className="muted">Qty {qty}</span></div>
+                <div className="order-item-info"><b>{name}</b>{sku && <span className="muted">SKU {sku}</span>}{color && <span className="muted">Color: {color}</span>}<span className="muted">Qty {qty}</span></div>
                 <b>₹{(price * qty).toFixed(0)}</b>
               </div>
             );
