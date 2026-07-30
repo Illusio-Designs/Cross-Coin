@@ -21,13 +21,37 @@ const STATUS_TO_STEP = {
   delivered: 4, completed: 4,
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
-
-// Item images arrive host-relative from the backend — prefix the API host.
+// Order-item images are ImageKit assets. Absolute URLs pass through; relative
+// paths get the ImageKit endpoint (NOT the API host, which 404s on these paths).
+const IK_ENDPOINT = process.env.NEXT_PUBLIC_IMAGEKIT_URL
+  ?? process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+  ?? 'https://ik.imagekit.io/wp2oatzmf';
 function resolveImg(rawImg) {
   if (!rawImg || typeof rawImg !== 'string') return '';
-  if (rawImg.startsWith('http://') || rawImg.startsWith('https://')) return rawImg;
-  return `${API_URL}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`;
+  let url = rawImg;
+  if (url.includes('https://') && url.indexOf('https://') !== url.lastIndexOf('https://')) {
+    url = url.substring(url.lastIndexOf('https://'));
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+const fmtDateTime = (v) => {
+  if (!v) return '';
+  try { return new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }); }
+  catch { return ''; }
+};
+function buildTimeline(src, finalStatus) {
+  const fship = src?.fship_data?.tracking_history;
+  if (Array.isArray(fship) && fship.length) {
+    return [...fship].reverse().map((h) => ({ status: h.status, note: h.location || h.description || '', time: h.timestamp || h.created_at || '' }));
+  }
+  const sh = src?.status_history;
+  if (Array.isArray(sh) && sh.length) {
+    const filtered = String(finalStatus).toLowerCase() !== 'cancelled' ? sh.filter((h) => h.status !== 'cancelled') : sh;
+    return [...filtered].reverse().map((h) => ({ status: h.status, note: h.notes || '', time: h.created_at || h.createdAt || '' })).filter((i) => i.status);
+  }
+  return [];
 }
 
 /* Normalise the API order into the shape the page renders. */
@@ -49,17 +73,22 @@ function mapOrder(raw, fallbackId) {
     qty: Number(it.quantity || it.qty || 1),
     price: Number(it.price || it.unit_price || 0),
   }));
+  const status = String(o.status || 'pending').toLowerCase();
   return {
     orderNumber: o.order_number || o.orderNumber || fallbackId,
     placedAt: placed
       ? new Date(placed).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
       : '',
-    status: String(o.status || 'pending').toLowerCase(),
+    status,
     items: itemCount,
     lineItems,
     total: Number(o.final_amount || o.total_amount || o.total || 0),
     paymentType: String(o.payment_type || o.paymentType || '').toUpperCase(),
+    paymentLabel: String(o.payment_type || '').toLowerCase() === 'cod' ? 'Cash on Delivery' : (String(o.payment_type || o.paymentType || '').toUpperCase() || '—'),
+    awb: o.tracking_number || src.tracking?.tracking_number || '',
+    trackUrl: o.tracking_url || src.tracking?.tracking_url || '',
     address: [addrLine, pin].filter(Boolean).join(' · '),
+    timeline: buildTimeline(src, status),
   };
 }
 
@@ -201,6 +230,24 @@ export default function TrackOrderPage() {
                 </section>
               )}
 
+              {/* Timeline */}
+              {data.timeline?.length > 0 && (
+                <section className="bg-paper-deep border border-line p-6 md:p-7">
+                  <p className="eyebrow mb-1">Tracking</p>
+                  <h3 className="font-display text-ink text-2xl uppercase mb-5">Timeline</h3>
+                  <ol className="relative border-l border-line ml-1 space-y-4">
+                    {data.timeline.map((ev, i) => (
+                      <li key={i} className="pl-5 relative">
+                        <span className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 ${i === 0 ? 'bg-ink border-ink' : 'bg-paper border-line'}`} />
+                        <p className="text-ink text-sm font-medium capitalize">{String(ev.status).replace(/_/g, ' ')}</p>
+                        {ev.note && <p className="text-ink-soft text-xs mt-0.5">{ev.note}</p>}
+                        {ev.time && <p className="text-ink-muted text-[10px] tracking-[0.2em] uppercase mt-1">{fmtDateTime(ev.time)}</p>}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+
               {/* Items */}
               {data.lineItems?.length > 0 && (
                 <section className="bg-paper-deep border border-line p-6 md:p-7">
@@ -234,6 +281,33 @@ export default function TrackOrderPage() {
                   <h3 className="font-display text-ink text-2xl uppercase mb-3">Address</h3>
                   <p className="text-ink-soft text-sm">{data.address}</p>
                 </section>
+              )}
+
+              {/* Payment summary */}
+              <section className="bg-paper-deep border border-line p-6 md:p-7">
+                <p className="eyebrow mb-1">Payment</p>
+                <h3 className="font-display text-ink text-2xl uppercase mb-4">Summary</h3>
+                <dl className="divide-y divide-line">
+                  <div className="flex items-center justify-between py-2.5 first:pt-0 text-sm">
+                    <dt className="text-ink-muted text-[10px] tracking-[0.3em] uppercase">Method</dt>
+                    <dd className="text-ink">{data.paymentLabel}</dd>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 text-sm">
+                    <dt className="text-ink-muted text-[10px] tracking-[0.3em] uppercase">AWB</dt>
+                    <dd className="text-ink font-mono text-xs">{data.awb || 'Not assigned'}</dd>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 last:pb-0 text-sm">
+                    <dt className="text-ink-muted text-[10px] tracking-[0.3em] uppercase">Total</dt>
+                    <dd className="text-ink font-semibold">₹{data.total.toLocaleString('en-IN')}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* Live courier tracking */}
+              {data.trackUrl && (
+                <a href={data.trackUrl} target="_blank" rel="noopener noreferrer" className="pill-cta justify-center w-full">
+                  Track Shipment
+                </a>
               )}
             </div>
           )}

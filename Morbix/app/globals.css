@@ -1087,3 +1087,15 @@ button { font-family: inherit; cursor: pointer; }
 @media (max-width: 700px) {
   #bestsellers .product-grid > *:nth-child(n+3) { display: none; }
 }
+
+/* Track-order: header meta + tracking timeline */
+.track-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12.5px; color: var(--ink-soft); }
+.track-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.track-timeline { list-style: none; margin: 18px 0 4px; padding: 16px 0 4px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.track-timeline li { position: relative; padding-left: 20px; display: grid; gap: 2px; }
+.track-timeline li::before { content: ''; position: absolute; left: 2px; top: 5px; width: 9px; height: 9px; border-radius: 999px; background: var(--line); }
+.track-timeline li.first::before { background: var(--ink); }
+.track-timeline .tl-status { font-size: 13px; font-weight: 600; text-transform: capitalize; }
+.track-timeline .tl-note { font-size: 12px; color: var(--ink-soft); }
+.track-timeline .tl-time { font-size: 11px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
+.order-address .muted { display: inline-flex; align-items: center; gap: 5px; }

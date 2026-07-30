@@ -8,14 +8,21 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
-import { API_URL } from '@/lib/api/client';
 
-// Order-item images come from the backend, often as a host-relative path
-// (e.g. "/uploads/..") — prefix the API host, same as Crosscoin's tracking page.
+// Order-item images are ImageKit assets. Absolute URLs pass through; relative
+// paths get the ImageKit endpoint (NOT the API host, which 404s on these paths
+// and left the order thumbnails blank).
+const IK_ENDPOINT = process.env.NEXT_PUBLIC_IMAGEKIT_URL
+  || process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+  || 'https://ik.imagekit.io/wp2oatzmf';
 function resolveOrderImg(raw) {
   if (!raw || typeof raw !== 'string') return '';
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-  return `${API_URL}${raw.startsWith('/') ? '' : '/'}${raw}`;
+  let url = raw;
+  if (url.includes('https://') && url.indexOf('https://') !== url.lastIndexOf('https://')) {
+    url = url.substring(url.lastIndexOf('https://'));
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${IK_ENDPOINT}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
 function statusClass(s) {
