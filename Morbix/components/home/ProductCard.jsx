@@ -5,8 +5,8 @@ import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
 
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image } = product;
-  const href = `/products/${slug}`;
+  const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image, colorParam } = product;
+  const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   return (

@@ -190,7 +190,7 @@ export default function CatalogClient({ products = [], chips: rawChips = [], ini
 
       {list.length > 0 ? (
         <div className="product-grid" style={{ marginTop: 20 }}>
-          {list.map((p) => <ProductCard key={p.id} product={p} />)}
+          {list.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
         </div>
       ) : (
         <div className="empty">No products match these filters.</div>

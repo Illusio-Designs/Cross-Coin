@@ -39,7 +39,7 @@ export async function getBestsellers() {
   try {
     const data = await brandFetch('/api/products/best-sellers?limit=10', 300);
     const list = data?.data?.products || data?.products || data?.data || [];
-    if (Array.isArray(list) && list.length) return list.map(mapProduct).filter(Boolean);
+    if (Array.isArray(list) && list.length) return explodeColorVariants(list.map(mapProduct).filter(Boolean));
     // Nothing flagged as a best-seller yet — fall back to the live catalog so
     // the home page still shows real products (same behaviour as Knitwink).
     return getAllProducts();
@@ -50,7 +50,7 @@ export async function getAllProducts() {
   try {
     const data = await brandFetch('/api/products/catalog?limit=48');
     const list = data?.data?.products || data?.products || data?.data || [];
-    return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
+    return explodeColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
   } catch { return []; }
 }
 
@@ -108,7 +108,7 @@ export async function getProductsByCategory(handle) {
   // Fallback: products embedded in the category record.
   const cat = await getCategoryByName(handle);
   const list = cat?.products || cat?.data?.products || [];
-  return Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : [];
+  return explodeColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
 }
 
 // Lightweight product search — used by /search.
@@ -123,7 +123,7 @@ export async function searchProducts(query) {
     const filtered = mapped.filter((p) =>
       p.name?.toLowerCase().includes(lower) || p.category?.toLowerCase().includes(lower)
     );
-    return filtered.length ? filtered : mapped;
+    return explodeColorVariants(filtered.length ? filtered : mapped);
   } catch { return []; }
 }
 
@@ -252,6 +252,13 @@ function cleanUrl(url) {
   const u = String(url || '');
   if (u.indexOf('https://') !== u.lastIndexOf('https://')) return u.substring(u.lastIndexOf('https://'));
   return u;
+}
+
+// Drop an ImageKit resize transform (…?tr=w-900,h-900,q-82,f-auto) so the FULL
+// original image is served instead of a square-cropped 900×900 version. Used for
+// blog hero images, where the whole picture should show.
+function fullImage(url) {
+  return String(url || '').split(/[?&]tr=/)[0];
 }
 
 // Pull a usable URL string out of a backend image (string or object shape).
@@ -442,6 +449,48 @@ function mapProduct(p) {
   };
 }
 
+// Show EVERY colour as its own product card: explode a product that has more
+// than one colour variation into one card per colour — each with that colour's
+// own image, price and size set, and a name suffixed with the colour. Cards
+// link to the product page with ?color= preselected. Single-colour products
+// pass through unchanged.
+export function explodeColorVariants(products) {
+  if (!Array.isArray(products)) return [];
+  const out = [];
+  for (const p of products) {
+    const names = (Array.isArray(p.colorNames) ? p.colorNames : []).map((c) => str(c).trim()).filter(Boolean);
+    if (names.length <= 1) { out.push(p); continue; }
+    const colorImages = Array.isArray(p.colorImages) ? p.colorImages : [];
+    const variants = Array.isArray(p.variants) ? p.variants : [];
+    names.forEach((cn, i) => {
+      const imgs = colorImages[i];
+      const image = (Array.isArray(imgs) && imgs[0]) || p.image;
+      const cvars = variants.filter((v) => str(v.color).trim().toLowerCase() === cn.toLowerCase());
+      const csizes = [...new Set(cvars.map((v) => v.size).filter(Boolean))];
+      const prices = cvars.map((v) => num(v.price)).filter((n) => n > 0);
+      const price = prices.length ? Math.min(...prices) : num(p.price);
+      const cheap = cvars.find((v) => num(v.price) === price) || cvars[0] || null;
+      const oldPrice = cheap && cheap.oldPrice != null ? num(cheap.oldPrice) : p.oldPrice;
+      out.push({
+        ...p,
+        uid: `${p.id}:${i}`,
+        name: `${p.name} — ${cn}`,
+        colorNames: [cn],
+        colors: [getColorHex(cn)],
+        colorImages: [Array.isArray(imgs) ? imgs : []],
+        image,
+        images: (Array.isArray(imgs) && imgs.length) ? imgs : p.images,
+        price,
+        oldPrice: oldPrice || undefined,
+        sizes: csizes.length ? csizes : p.sizes,
+        variants: cvars.length ? cvars : p.variants,
+        colorParam: cn,
+      });
+    });
+  }
+  return out;
+}
+
 function mapCategoryChip(c) {
   const count = Array.isArray(c.products) ? c.products.length
     : num(c.product_count ?? c.products_count ?? c.count);
@@ -503,8 +552,8 @@ function mapBlog(p) {
   const excerpt = plain ? plain.substring(0, 160) + (plain.length > 160 ? '…' : '') : (p.title || '');
   // Cover image: backend stores it as `hero_image` (same as the other brands);
   // fall back to other common fields, then to the first image in the body.
-  const image = imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
-    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections);
+  const image = fullImage(imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
+    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections));
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',
