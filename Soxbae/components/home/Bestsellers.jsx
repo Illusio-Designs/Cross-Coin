@@ -6,7 +6,10 @@ export default function Bestsellers({ products = [] }) {
   return (
     <section className="section container" id="bestsellers">
       <div className="section-head">
-        <h2>Bestsellers</h2>
+        <div>
+          <span className="eyebrow">Crowd favourites</span>
+          <h2>The most-loved</h2>
+        </div>
         <Link href="/products" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
       </div>
       {products.length > 0 ? (

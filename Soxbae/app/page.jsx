@@ -1,5 +1,4 @@
 import Hero from '@/components/home/Hero';
-import Marquee from '@/components/home/Marquee';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
@@ -32,12 +31,11 @@ export default async function HomePage() {
   return (
     <>
       <Hero features={getHeroFeatures()} slides={slides} />
-      <Marquee />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
-      <Reveal as="section"><Reviews reviews={reviews} title="What our customers say" limit={6} /></Reveal>
+      <Reveal as="section"><Reviews reviews={reviews} title="In their words" limit={6} /></Reveal>
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
     </>
   );

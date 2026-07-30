@@ -13,7 +13,7 @@ export default function BlogSection({ posts = [] }) {
       <div className="section-head">
         <div>
           <span className="eyebrow">Journal</span>
-          <h2>Stories &amp; guides</h2>
+          <h2>Notes &amp; know-how</h2>
         </div>
         <Link href="/journal" className="link-more">All articles</Link>
       </div>

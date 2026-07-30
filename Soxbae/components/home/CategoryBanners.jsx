@@ -9,8 +9,8 @@ export default function CategoryBanners({ items = [] }) {
     <section className="section container sx-collections">
       <div className="section-head">
         <div>
-          <span className="eyebrow">Collections</span>
-          <h2>Shop by style</h2>
+          <span className="eyebrow">The range</span>
+          <h2>Find your fit</h2>
         </div>
         <Link href="/collections" className="link-more">All collections</Link>
       </div>

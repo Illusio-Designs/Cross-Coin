@@ -110,7 +110,7 @@ export default function ExclusiveSection({ products = [] }) {
         <div className="excl-panel">
           <div className="excl-panel-head">
             <span className="excl-ribbon"><Icon name="Sparkles" size={13} /> Spotlight</span>
-            <h2>The Soxbae Edit</h2>
+            <h2>Pick of the week</h2>
             <p>One standout pair, chosen this week — worth a closer look.</p>
           </div>
 
