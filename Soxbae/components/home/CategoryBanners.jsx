@@ -16,16 +16,17 @@ export default function CategoryBanners({ items = [] }) {
       </div>
 
       <div className="sx-collections-grid">
-        {items.map((c) => (
+        {items.map((c, i) => (
           <Link href={`/collections/${c.slug}`} className="sx-col-card" key={c.slug}>
             <div className="sx-col-media">
+              <span className="sx-col-index" aria-hidden>{String(i + 1).padStart(2, '0')}</span>
               {c.image
                 ? <img src={c.image} alt={c.label} loading="lazy" />
                 : <span className="sx-col-ph" aria-hidden><Icon name="Sparkles" size={44} /></span>}
             </div>
             <div className="sx-col-cap">
               <h3>{c.label}</h3>
-              <span className="sx-col-shop">Shop <Icon name="ArrowRight" size={14} /></span>
+              <span className="sx-col-arrow" aria-hidden><Icon name="ArrowRight" size={16} /></span>
             </div>
           </Link>
         ))}

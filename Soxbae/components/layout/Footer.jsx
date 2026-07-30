@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import BrandLogo from '@/components/BrandLogo';
+import Icon from '@/components/Icon';
 
 const COLS = [
   { title: 'Shop', links: [
@@ -26,12 +27,16 @@ export default function Footer() {
   return (
     <footer className="sx-footer">
       <div className="container">
-        <div className="sx-footer-head">
-          <Link href="/" className="sx-footer-logo" aria-label="Soxbae home"><BrandLogo height={38} /></Link>
-          <p className="sx-footer-tag">Happiness in feet — considered socks, cushioned and made to last.</p>
+        <div className="sx-footer-cta">
+          <p className="sx-footer-cta-text">Happiness starts at your feet.</p>
+          <Link href="/products" className="sx-footer-cta-btn">Shop all socks <Icon name="ArrowRight" size={16} /></Link>
         </div>
 
-        <div className="sx-footer-cols">
+        <div className="sx-footer-main">
+          <div className="sx-footer-brand">
+            <Link href="/" className="sx-footer-logo" aria-label="Soxbae home"><BrandLogo height={36} /></Link>
+            <p className="sx-footer-tag">Considered socks — cushioned, breathable and made to last, for sport, street and everything between.</p>
+          </div>
           {COLS.map((col) => (
             <div className="sx-footer-col" key={col.title}>
               <h4>{col.title}</h4>
