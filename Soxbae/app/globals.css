@@ -1584,3 +1584,9 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .marquee-item { color: var(--ink-soft); font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
 .marquee-ic { color: var(--accent-600); }
 .marquee-sep { color: var(--accent); }
+
+/* Bestsellers on phones: one row only — the mobile grid is 2 columns, so show
+   just the first 2 cards. "View all" leads to the full shop grid. */
+@media (max-width: 700px) {
+  #bestsellers .product-grid > *:nth-child(n+3) { display: none; }
+}
