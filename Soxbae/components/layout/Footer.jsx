@@ -31,7 +31,11 @@ export default function Footer() {
           <div className="sx-footer-intro">
             <Link href="/" className="sx-footer-logo" aria-label="Soxbae home"><BrandLogo height={34} /></Link>
             <p className="sx-footer-tag">Considered socks — cushioned, breathable and made to last, for sport, street and everything between.</p>
-            <Link href="/products" className="sx-footer-shop">Shop all socks <Icon name="ArrowRight" size={15} /></Link>
+            <div className="sx-footer-social">
+              <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
+              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
+              <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
+            </div>
           </div>
           <div className="sx-footer-cols">
             {COLS.map((col) => (
@@ -43,23 +47,16 @@ export default function Footer() {
             <div className="sx-footer-col">
               <h4>Contact</h4>
               <ul className="sx-footer-contact">
-                <li><a href="tel:+919712891700">+91 97128 91700</a></li>
-                <li><a href="mailto:support@soxbaesocks.com">support@soxbaesocks.com</a></li>
-                <li>Royal Plaza, Panchasar Road,<br />Morbi 363641, Gujarat, India</li>
+                <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
+                <li><a href="mailto:support@soxbaesocks.com"><Icon name="Mail" size={15} /><span>support@soxbaesocks.com</span></a></li>
+                <li><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi 363641, Gujarat, India</span></li>
               </ul>
             </div>
           </div>
         </div>
 
-        <div className="sx-footer-word" aria-hidden>Soxbae</div>
-
         <div className="sx-footer-bottom">
           <span>© {new Date().getFullYear()} Soxbae — Happiness in feet</span>
-          <div className="sx-footer-social">
-            <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
-            <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
-            <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
-          </div>
           <span>Made by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
         </div>
       </div>
