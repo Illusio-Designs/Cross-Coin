@@ -1315,7 +1315,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .sx-article-body img { border-radius: 12px; margin: 20px 0; width: 100%; height: auto; }
 .sx-article-back { display: inline-flex; align-items: center; gap: 8px; margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--ink); }
 .sx-article-back:hover { color: var(--accent-600); }
-.sx-article-aside { position: sticky; top: 96px; display: flex; flex-direction: column; gap: 16px; }
+.sx-article-aside { position: sticky; top: 120px; display: flex; flex-direction: column; gap: 16px; }
 .sx-article-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
 .sx-article-card-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-600); margin-bottom: 12px; }
 .sx-article-author.big { font-size: 15px; }
