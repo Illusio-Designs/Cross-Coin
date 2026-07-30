@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import Icon from '@/components/Icon';
+import CollectionCard from '@/components/CollectionCard';
 import { getCategories, getAllProducts } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -31,19 +30,9 @@ export default async function CollectionsPage() {
       {enriched.length === 0 ? (
         <div className="empty">No collections yet — check back soon.</div>
       ) : (
-        <div className="cat-grid" style={{ marginTop: 26 }}>
+        <div className="sx-collections-grid" style={{ marginTop: 26 }}>
           {enriched.map((c, i) => (
-            <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
-              {c.image
-                ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
-                : <span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>}
-              <div className="collection-card-overlay">
-                <div className="collection-card-text">
-                  <h3>{c.label}</h3>
-                </div>
-                <span className="collection-card-cta" aria-hidden><Icon name="ArrowRight" size={16} /></span>
-              </div>
-            </Link>
+            <CollectionCard key={c.slug} href={`/collections/${c.slug}`} image={c.image} label={c.label} icon={c.icon || ICONS[i % ICONS.length]} />
           ))}
         </div>
       )}

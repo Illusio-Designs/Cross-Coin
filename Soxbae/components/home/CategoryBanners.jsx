@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import Icon from '@/components/Icon';
+import CollectionCard from '@/components/CollectionCard';
 
-// Soxbae collections — warm editorial: large calm image blocks with the label
-// set BELOW the image (not overlaid), generous spacing.
+// Soxbae collections strip on the home page — uses the shared CollectionCard.
 export default function CategoryBanners({ items = [] }) {
   if (!items.length) return null;
   return (
@@ -17,17 +16,7 @@ export default function CategoryBanners({ items = [] }) {
 
       <div className="sx-collections-grid">
         {items.map((c) => (
-          <Link href={`/collections/${c.slug}`} className="sx-col-card" key={c.slug}>
-            <div className="sx-col-media">
-              {c.image
-                ? <img src={c.image} alt={c.label} loading="lazy" />
-                : <span className="sx-col-ph" aria-hidden><Icon name="Sparkles" size={44} /></span>}
-            </div>
-            <div className="sx-col-cap">
-              <h3>{c.label}</h3>
-              <span className="sx-col-arrow" aria-hidden><Icon name="ArrowRight" size={16} /></span>
-            </div>
-          </Link>
+          <CollectionCard key={c.slug} href={`/collections/${c.slug}`} image={c.image} label={c.label} icon={c.icon} />
         ))}
       </div>
     </section>
