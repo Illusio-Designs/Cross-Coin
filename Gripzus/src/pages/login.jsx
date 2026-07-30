@@ -128,24 +128,24 @@ export default function LoginPage() {
       <main className="bg-paper">
 
         {/* Hero */}
-        <section className="bg-ink text-center px-6 py-16 md:py-20">
-          <p className="eyebrow text-paper/55 mb-4">Account · Sign In</p>
-          <h1 className="h-display text-paper text-4xl md:text-5xl">
-            Welcome <span className="h-italic">back.</span>
+        <section className="bg-ink text-center px-6 py-20 md:py-24">
+          <span className="kicker kicker-light mb-5 justify-center inline-flex">Account · Sign In</span>
+          <h1 className="h-mark text-paper text-5xl md:text-7xl mt-2">
+            WELCOME BACK.
           </h1>
-          <p className="text-paper/55 text-sm mt-4">
+          <p className="text-paper/55 text-sm mt-5 tracking-wide">
             {step === 'phone' ? 'Sign in with your phone number' : `Enter the code sent to +91 ${digits}`}
           </p>
         </section>
 
         {/* Form */}
         <section className="px-6 py-14 md:py-16">
-          <div className="mx-auto w-full max-w-sm">
+          <div className="mx-auto w-full max-w-sm border-2 border-ink p-7 md:p-8">
             {step === 'phone' ? (
               <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
                 <div>
                   <label className="eyebrow block mb-2">Phone number</label>
-                  <div className="flex items-center gap-2 bg-paper-deep border border-line focus-within:border-ink px-4 transition-colors">
+                  <div className="field flex items-center gap-2 !py-0">
                     <span className="text-ink-muted text-sm">+91</span>
                     <input
                       type="tel" value={phone}
@@ -155,13 +155,13 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <button type="submit" disabled={loading || digits.length !== 10} className="cta w-full justify-center !py-4 disabled:opacity-50">
+                {error && <p className="border-2 border-ink px-3 py-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink">{error}</p>}
+                <button type="submit" disabled={loading || digits.length !== 10} className="btn w-full justify-center !py-4 disabled:opacity-50">
                   {loading ? 'Please wait…' : 'Send OTP'}
                 </button>
                 <p className="text-center eyebrow">
                   New here?{' '}
-                  <Link href="/register" className="text-clay-deep hover:text-ink underline underline-offset-4">Create an account</Link>
+                  <Link href="/register" className="text-ink font-bold hover:text-ink-soft underline underline-offset-4">Create an account</Link>
                 </p>
               </form>
             ) : (
@@ -174,12 +174,12 @@ export default function LoginPage() {
                       type="text" maxLength={1} inputMode="numeric" value={d}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="h-14 w-14 text-center bg-paper-deep border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
+                      className="h-14 w-14 text-center bg-paper border-2 border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
                     />
                   ))}
                 </div>
-                {error && <p className="text-center text-sm text-red-600">{error}</p>}
-                <button type="submit" disabled={loading} className="cta w-full justify-center !py-4 disabled:opacity-50">
+                {error && <p className="border-2 border-ink px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.1em] text-ink">{error}</p>}
+                <button type="submit" disabled={loading} className="btn w-full justify-center !py-4 disabled:opacity-50">
                   {loading ? 'Verifying…' : 'Verify & Sign In'}
                 </button>
                 <button

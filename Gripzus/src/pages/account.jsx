@@ -136,7 +136,7 @@ export default function AccountPage() {
   if (loading) {
     return (
       <main className="bg-paper min-h-[60vh] flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-line border-t-ink animate-spin" />
+        <div className="h-8 w-8 border-2 border-line border-t-ink animate-spin" />
       </main>
     );
   }
@@ -145,9 +145,9 @@ export default function AccountPage() {
     return (
       <SeoWrapper pageName="profile">
         <main className="bg-paper min-h-[60vh] flex flex-col items-center justify-center text-center px-6 gap-5">
-          <p className="h-display text-3xl text-ink">Please sign in</p>
+          <p className="h-mark text-3xl md:text-4xl text-ink">PLEASE SIGN IN</p>
           <p className="prose-body text-sm">Sign in to view your orders, addresses and details.</p>
-          <Link href="/login" className="cta">Go to Sign In</Link>
+          <Link href="/login" className="btn">Go to Sign In</Link>
         </main>
       </SeoWrapper>
     );
@@ -164,17 +164,17 @@ export default function AccountPage() {
       <main className="bg-paper">
 
         {/* Hero */}
-        <section className="bg-ink text-center px-6 py-14 md:py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-paper/10 text-paper font-display font-bold text-xl">
+        <section className="bg-ink text-center px-6 py-16 md:py-20">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center border-2 border-paper text-paper font-display text-xl" style={{ fontWeight: 900 }}>
             {getInitials(user.username)}
           </div>
-          <p className="eyebrow text-paper/45">My Account</p>
-          <h1 className="h-display text-paper text-3xl md:text-4xl mt-2">{user.username || 'Gripzus member'}</h1>
-          <p className="text-paper/55 text-sm mt-2">{user.email}</p>
+          <span className="kicker kicker-light justify-center inline-flex">My Account</span>
+          <h1 className="h-mark text-paper text-4xl md:text-5xl mt-4">{user.username || 'Gripzus member'}</h1>
+          <p className="text-paper/55 text-sm mt-3">{user.email}</p>
           {user.phone && <p className="text-paper/35 text-xs mt-1">+91 {user.phone}</p>}
           <button
             onClick={async () => { await logout(); window.location.replace('/'); }}
-            className="mt-5 inline-flex items-center gap-2 border border-paper/25 px-5 py-2 text-[11px] tracking-[0.14em] uppercase text-paper/75 transition-colors hover:border-paper hover:text-paper"
+            className="mt-6 inline-flex items-center gap-2 border-2 border-paper/40 px-5 py-2.5 text-[11px] font-bold tracking-[0.16em] uppercase text-paper/80 transition-colors hover:bg-paper hover:text-ink hover:border-paper"
           >
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
             Sign Out
@@ -182,8 +182,8 @@ export default function AccountPage() {
         </section>
 
         {/* Section nav — these three are the tabs */}
-        <div className="border-b border-line">
-          <div className="max-w-site mx-auto grid grid-cols-3 divide-x divide-line">
+        <div className="border-b-2 border-ink">
+          <div className="max-w-site mx-auto grid grid-cols-3 divide-x-2 divide-ink">
             {NAV.map((n) => {
               const active = tab === n.key;
               return (
@@ -193,14 +193,14 @@ export default function AccountPage() {
                   className={`relative py-6 text-center transition-colors ${active ? 'bg-paper-warm' : 'hover:bg-paper-warm/50'}`}
                 >
                   {n.value !== null ? (
-                    <p className={`h-display text-2xl md:text-3xl ${active ? 'text-ink' : 'text-ink-muted'}`}>{n.value}</p>
+                    <p className={`font-display text-3xl md:text-4xl leading-none ${active ? 'text-ink' : 'text-ink-muted'}`} style={{ fontWeight: 900 }}>{n.value}</p>
                   ) : (
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={`mx-auto ${active ? 'text-ink' : 'text-ink-muted'}`}>
                       <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" />
                     </svg>
                   )}
                   <p className={`eyebrow mt-1.5 ${active ? 'text-ink' : ''}`}>{n.label}</p>
-                  {active && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-ink" />}
+                  {active && <span className="absolute bottom-0 inset-x-0 h-[3px] bg-ink" />}
                 </button>
               );
             })}
@@ -214,13 +214,13 @@ export default function AccountPage() {
             {/* ORDERS */}
             {tab === 'orders' && (
               <div>
-                <h2 className="h-display text-2xl text-ink mb-6">My Orders</h2>
+                <h2 className="h-mark text-2xl md:text-3xl text-ink mb-6">MY ORDERS</h2>
                 {loadingOrders ? (
                   <p className="py-12 text-center eyebrow">Loading orders…</p>
                 ) : orders.length === 0 ? (
-                  <div className="py-16 text-center border border-line">
-                    <p className="h-display text-2xl text-ink mb-3">No orders yet</p>
-                    <Link href="/products" className="eyebrow text-clay-deep hover:text-ink">Start shopping →</Link>
+                  <div className="py-16 text-center border-2 border-ink">
+                    <p className="h-mark text-2xl md:text-3xl text-ink mb-3">NO ORDERS YET</p>
+                    <Link href="/products" className="eyebrow text-ink font-bold hover:text-ink-soft">Start shopping →</Link>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,22 +228,22 @@ export default function AccountPage() {
                       const status = (o.status || '').toLowerCase();
                       const canCancel = ['pending', 'confirmed', 'processing'].includes(status);
                       return (
-                        <div key={o.id} className="border border-line p-5 md:p-6">
+                        <div key={o.id} className="border-2 border-ink p-5 md:p-6">
                           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
                             <div>
-                              <p className="font-display uppercase text-ink text-base tracking-[-0.01em]" style={{ fontWeight: 700 }}>#{o.order_number}</p>
+                              <p className="font-display uppercase text-ink text-base tracking-[-0.01em]" style={{ fontWeight: 800 }}>#{o.order_number}</p>
                               <p className="eyebrow mt-1">{formatDate(o.createdAt)}</p>
                             </div>
-                            <span className={`font-mono text-[10px] tracking-[0.2em] uppercase px-2.5 py-1 ${
+                            <span className={`text-[10px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 ${
                               status === 'delivered' ? 'bg-ink text-paper' :
-                              status === 'cancelled' ? 'border border-line text-ink-muted' :
-                              'bg-clay text-paper'
+                              status === 'cancelled' ? 'border-2 border-line text-ink-muted' :
+                              'bg-ink text-paper'
                             }`}>{(o.status || '').replace(/_/g, ' ')}</span>
                           </div>
 
                           {o.OrderItems?.map((item) => (
                             <div key={item.id} className="flex items-center gap-3 py-3 border-b border-line">
-                              <div className="w-14 h-14 bg-paper-deep border border-line overflow-hidden shrink-0">
+                              <div className="w-14 h-14 bg-paper-deep border-2 border-ink overflow-hidden shrink-0">
                                 {getOrderImage(item) && <img src={getOrderImage(item)} alt="" className="w-full h-full object-cover" />}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -257,12 +257,12 @@ export default function AccountPage() {
                           <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
                             <p className="font-display font-bold text-ink">Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}</p>
                             <div className="flex items-center gap-4">
-                              <Link href={`/track-order?order=${o.order_number}`} className="eyebrow text-clay-deep hover:text-ink">Track Order →</Link>
+                              <Link href={`/track-order?order=${o.order_number}`} className="eyebrow text-ink font-bold hover:text-ink-soft">Track Order →</Link>
                               {canCancel && (
                                 <button
                                   onClick={() => handleCancelOrder(o.id)}
                                   disabled={cancellingId === o.id}
-                                  className="eyebrow text-clay-deep hover:text-ink disabled:opacity-50"
+                                  className="eyebrow text-ink font-bold hover:text-ink-soft disabled:opacity-50"
                                 >
                                   {cancellingId === o.id ? 'Cancelling…' : 'Cancel'}
                                 </button>
@@ -281,22 +281,22 @@ export default function AccountPage() {
             {tab === 'addresses' && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="h-display text-2xl text-ink">Saved Addresses</h2>
-                  <button onClick={openAddAddr} className="cta !py-2.5 !px-4 text-[11px]">+ Add Address</button>
+                  <h2 className="h-mark text-2xl md:text-3xl text-ink">SAVED ADDRESSES</h2>
+                  <button onClick={openAddAddr} className="btn !py-2.5 !px-4 text-[11px]">+ Add Address</button>
                 </div>
                 {loadingAddresses ? (
                   <p className="py-12 text-center eyebrow">Loading addresses…</p>
                 ) : addresses.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-line">
+                  <div className="py-16 text-center border-2 border-dashed border-line">
                     <p className="eyebrow">No addresses saved.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {addresses.map((a) => (
-                      <div key={a.id} className={`border p-6 ${a.is_default ? 'border-ink' : 'border-line'}`}>
+                      <div key={a.id} className={`border-2 p-6 ${a.is_default ? 'border-ink' : 'border-line'}`}>
                         <div className="flex items-start justify-between mb-3">
-                          <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 700 }}>{a.full_name}</p>
-                          {a.is_default && <span className="font-mono text-[9px] tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
+                          <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 800 }}>{a.full_name}</p>
+                          {a.is_default && <span className="text-[9px] font-bold tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
                         </div>
                         <p className="prose-body text-sm">
                           {a.address}<br />
@@ -306,7 +306,7 @@ export default function AccountPage() {
                         <div className="flex gap-4 mt-4 pt-4 border-t border-line">
                           {!a.is_default && <button onClick={() => handleSetDefault(a.id)} className="eyebrow hover:text-ink">Set default</button>}
                           <button onClick={() => openEditAddr(a)} className="eyebrow hover:text-ink">Edit</button>
-                          <button onClick={() => handleDeleteAddr(a.id)} className="eyebrow hover:text-clay-deep">Delete</button>
+                          <button onClick={() => handleDeleteAddr(a.id)} className="eyebrow hover:text-ink">Delete</button>
                         </div>
                       </div>
                     ))}
@@ -318,19 +318,19 @@ export default function AccountPage() {
             {/* DETAILS */}
             {tab === 'details' && (
               <div>
-                <h2 className="h-display text-2xl text-ink mb-6">Account Details</h2>
-                <form onSubmit={handleProfileUpdate} className="border border-line p-7 md:p-8 max-w-2xl">
+                <h2 className="h-mark text-2xl md:text-3xl text-ink mb-6">ACCOUNT DETAILS</h2>
+                <form onSubmit={handleProfileUpdate} className="border-2 border-ink p-7 md:p-8 max-w-2xl">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Field label="Name" value={profile.username} onChange={(v) => setProfile({ ...profile, username: v })} />
                     <Field label="Email" type="email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
                     {user.phone && (
                       <div>
                         <p className="eyebrow mb-2">Phone</p>
-                        <input value={`+91 ${user.phone}`} readOnly className="w-full bg-paper-deep border border-line px-4 py-3 text-sm text-ink-muted" />
+                        <input value={`+91 ${user.phone}`} readOnly className="field !text-ink-muted" />
                       </div>
                     )}
                   </div>
-                  <button type="submit" disabled={savingProfile} className="cta mt-8 disabled:opacity-50">
+                  <button type="submit" disabled={savingProfile} className="btn mt-8 disabled:opacity-50">
                     {savingProfile ? 'Saving…' : 'Update Profile'}
                   </button>
                 </form>
@@ -343,9 +343,9 @@ export default function AccountPage() {
         {/* Address modal */}
         {showAddrModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/50 backdrop-blur-[2px] px-4" onClick={() => setShowAddrModal(false)}>
-            <div className="bg-paper w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between border-b border-line px-6 py-5">
-                <h3 className="h-display text-xl text-ink">{editingAddr ? 'Edit address' : 'Add address'}</h3>
+            <div className="bg-paper w-full max-w-lg max-h-[90vh] overflow-y-auto border-2 border-ink" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b-2 border-ink px-6 py-5">
+                <h3 className="h-mark text-xl text-ink">{editingAddr ? 'EDIT ADDRESS' : 'ADD ADDRESS'}</h3>
                 <button onClick={() => setShowAddrModal(false)} aria-label="Close" className="text-ink hover:text-ink-soft">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
@@ -364,7 +364,7 @@ export default function AccountPage() {
                     value={addrForm.state}
                     onChange={(e) => setAddrForm({ ...addrForm, state: e.target.value })}
                     required
-                    className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors"
+                    className="field"
                   >
                     <option value="">Select state</option>
                     {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -381,7 +381,7 @@ export default function AccountPage() {
                 </label>
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowAddrModal(false)} className="btn-outline flex-1 justify-center">Cancel</button>
-                  <button type="submit" className="cta flex-1 justify-center">{editingAddr ? 'Update' : 'Save'}</button>
+                  <button type="submit" className="btn flex-1 justify-center">{editingAddr ? 'Update' : 'Save'}</button>
                 </div>
               </form>
             </div>
@@ -398,7 +398,7 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
       <label className="eyebrow block mb-2">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required
-        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink placeholder:text-ink-muted transition-colors"
+        className="field"
       />
     </div>
   );
