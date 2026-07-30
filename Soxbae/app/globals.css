@@ -2059,3 +2059,6 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
   .sx-hd .pill.cart { padding: 11px 14px; font-size: 10px; letter-spacing: .08em; flex-shrink: 0; }
 }
 @media (max-width: 380px) { .sx-hd-logo img { height: 32px !important; } }
+
+/* Track-order: items list (reuses .order-item styling) */
+.track-items { display: grid; gap: 6px; margin: 18px 0 4px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
