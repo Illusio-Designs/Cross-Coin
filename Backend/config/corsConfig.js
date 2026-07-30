@@ -92,6 +92,12 @@ const staticAllowedOrigins = [
     'http://velmique.co.in',
     'http://www.velmique.co.in',
 
+    // Brand Vercel deployments (also covered by the *.vercel.app suffix check
+    // below, listed explicitly so they work regardless of that rule)
+    'https://soxbae.vercel.app',
+    'https://morbix.vercel.app',
+    'https://velquira.vercel.app',
+    'https://gripzus.vercel.app',
 
     // Environment variables
     process.env.API_URL,
