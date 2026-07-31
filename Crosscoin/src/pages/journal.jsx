@@ -7,8 +7,7 @@ import { getBlogImageSrc } from '../utils/imageUtils';
 import Skeleton from '../components/common/Skeleton';
 import Pagination from '../components/common/Pagination';
 
-// Deploy trigger: first build shipped via the fixed GitHub Actions pipeline.
-const LIMIT = 12;
+const LIMIT = 6;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
 async function fetchJson(url) {
@@ -120,7 +119,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTotalPages = 1 }) => {
               <div
                 key={post.id}
                 className="blog-card-home"
-                onClick={() => router.push(`/blog/${post.slug}`)}
+                onClick={() => router.push(`/journal/${post.slug}`)}
               >
                 <div className="bc-img-wrap">
                   {post.hero_image

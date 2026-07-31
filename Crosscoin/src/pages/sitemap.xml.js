@@ -4,7 +4,7 @@ const STATIC_ROUTES = [
   { path: '/',                  priority: '1.0', changefreq: 'daily' },
   { path: '/Products',          priority: '0.9', changefreq: 'daily' },
   { path: '/Collections',       priority: '0.8', changefreq: 'weekly' },
-  { path: '/blog',              priority: '0.7', changefreq: 'weekly' },
+  { path: '/journal',              priority: '0.7', changefreq: 'weekly' },
   { path: '/About',             priority: '0.6', changefreq: 'monthly' },
   { path: '/Contact',           priority: '0.6', changefreq: 'monthly' },
   { path: '/OrderTracking',     priority: '0.5', changefreq: 'monthly' },
@@ -58,7 +58,7 @@ export async function getServerSideProps({ res }) {
       blogs.forEach(b => {
         if (b.slug) {
           dynamicRoutes.push({
-            path: `/blog/${b.slug}`,
+            path: `/journal/${b.slug}`,
             priority: '0.6',
             changefreq: 'monthly',
           });

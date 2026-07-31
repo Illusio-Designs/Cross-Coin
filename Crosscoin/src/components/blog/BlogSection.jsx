@@ -43,7 +43,7 @@ const BlogSection = () => {
             <div
               key={post.id}
               className="blog-card-home"
-              onClick={() => router.push(`/blog/${post.slug}`)}
+              onClick={() => router.push(`/journal/${post.slug}`)}
             >
               <div className="bc-img-wrap">
                 {post.hero_image
@@ -102,7 +102,7 @@ const BlogSection = () => {
       </div>
 
       <div className="blog-view-all-home">
-        <button className="view-all-btn-home" onClick={() => router.push('/blog')}>
+        <button className="view-all-btn-home" onClick={() => router.push('/journal')}>
           View All Articles
         </button>
       </div>

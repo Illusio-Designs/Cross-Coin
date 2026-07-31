@@ -1,5 +1,5 @@
 /**
- * Clean-slug blog route: /blog/<slug>
+ * Clean-slug journal route: /journal/<slug>
  *
  * Fetches the blog post + global FAQs server-side so Google indexes
  * the correct title, description, OG image, canonical, and JSON-LD
@@ -72,7 +72,7 @@ export default function BlogSlugPage({ slug, initialPost, globalFaqs }) {
     seo.meta_description || seo.metaDescription || initialPost?.excerpt || initialPost?.content || '',
     160,
   );
-  const canonical = seo.canonical_url || seo.canonicalUrl || `${SITE_URL}/blog/${slug}`;
+  const canonical = seo.canonical_url || seo.canonicalUrl || `${SITE_URL}/journal/${slug}`;
   const ogTitle = seo.og_title || seo.ogTitle || title;
   const ogDescription = seo.og_description || seo.ogDescription || description;
   const ogImage = seo.og_image || seo.ogImage
@@ -108,7 +108,7 @@ export default function BlogSlugPage({ slug, initialPost, globalFaqs }) {
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home',  item: `${SITE_URL}/` },
-      { '@type': 'ListItem', position: 2, name: 'Blog',  item: `${SITE_URL}/blog` },
+      { '@type': 'ListItem', position: 2, name: 'Journal',  item: `${SITE_URL}/journal` },
       { '@type': 'ListItem', position: 3, name: initialPost?.title || 'Post', item: canonical },
     ],
   };

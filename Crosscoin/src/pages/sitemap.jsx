@@ -89,16 +89,16 @@ const Sitemap = ({ seoData }) => {
 
           {/* ══════════════ CONTENT ══════════════ */}
           <div className="section-block">
-            <Link href="/blog" className="section-heading">Content</Link>
+            <Link href="/journal" className="section-heading">Content</Link>
             <p className="section-desc">Explore our blog, guides and resources to learn more about fashion, style tips and product care.</p>
             <div className="category-grid">
               <div className="cat-col">
-                <Link href="/blog" className="cat-heading">Blog</Link>
+                <Link href="/journal" className="cat-heading">Blog</Link>
                 <ul className="cat-links">
-                  <li><Link href="/blog">All Articles</Link></li>
-                  <li><Link href="/blog">Lifestyle</Link></li>
-                  <li><Link href="/blog">Fashion Tips</Link></li>
-                  <li><Link href="/blog">Style Guide</Link></li>
+                  <li><Link href="/journal">All Articles</Link></li>
+                  <li><Link href="/journal">Lifestyle</Link></li>
+                  <li><Link href="/journal">Fashion Tips</Link></li>
+                  <li><Link href="/journal">Style Guide</Link></li>
                 </ul>
               </div>
 
@@ -108,17 +108,17 @@ const Sitemap = ({ seoData }) => {
                   <li><Link href="/About">Size Guide</Link></li>
                   <li><Link href="/policy/shipping-policy">Care Instructions</Link></li>
                   <li><Link href="/About">Fabric Guide</Link></li>
-                  <li><Link href="/blog">Style Tips</Link></li>
+                  <li><Link href="/journal">Style Tips</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/blog" className="cat-heading">Popular Topics</Link>
+                <Link href="/journal" className="cat-heading">Popular Topics</Link>
                 <ul className="cat-links">
-                  <li><Link href="/blog">Winter Fashion</Link></li>
-                  <li><Link href="/blog">Summer Collection</Link></li>
-                  <li><Link href="/blog">Comfort Wear</Link></li>
-                  <li><Link href="/blog">Sustainable Fashion</Link></li>
+                  <li><Link href="/journal">Winter Fashion</Link></li>
+                  <li><Link href="/journal">Summer Collection</Link></li>
+                  <li><Link href="/journal">Comfort Wear</Link></li>
+                  <li><Link href="/journal">Sustainable Fashion</Link></li>
                 </ul>
               </div>
             </div>
@@ -265,10 +265,10 @@ const Sitemap = ({ seoData }) => {
               </div>
 
               <div className="cat-col">
-                <Link href="/blog" className="cat-heading">Other Pages</Link>
+                <Link href="/journal" className="cat-heading">Other Pages</Link>
                 <ul className="cat-links">
                   <li><Link href="/thank-you">Thank You</Link></li>
-                  <li><Link href="/blog">Blog</Link></li>
+                  <li><Link href="/journal">Blog</Link></li>
                   <li><Link href="/sitemap">Sitemap</Link></li>
                 </ul>
               </div>

@@ -129,11 +129,23 @@ const nextConfig = {
         destination: '/products/:slug',
         permanent: true,
       },
-      // Legacy blog detail URL → clean /blog/<slug>.
+      // Legacy blog detail URL → clean /journal/<slug>.
       {
         source: '/blog-details',
         has: [{ type: 'query', key: 'slug', value: '(?<slug>.+)' }],
-        destination: '/blog/:slug',
+        destination: '/journal/:slug',
+        permanent: true,
+      },
+      // Journal was formerly served at /blog — keep old links + indexed URLs
+      // working by 301-ing the listing and every post to their /journal path.
+      {
+        source: '/blog',
+        destination: '/journal',
+        permanent: true,
+      },
+      {
+        source: '/blog/:slug*',
+        destination: '/journal/:slug*',
         permanent: true,
       },
       // Legacy collection URL filtered via /Products?category=X →

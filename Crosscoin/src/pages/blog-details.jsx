@@ -122,7 +122,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
       <SeoWrapper pageName="blog-details">
         <div className="blog-details-page" style={{ textAlign: 'center', padding: 80 }}>
           <h2>Article not found</h2>
-          <button className="back-btn" onClick={() => router.push('/blog')}>← Back to Blog</button>
+          <button className="back-btn" onClick={() => router.push('/journal')}>← Back to Blog</button>
         </div>
       </SeoWrapper>
     );
@@ -147,7 +147,7 @@ const BlogDetails = ({ initialPost = null, initialSlug = null } = {}) => {
 
         {/* Top Bar */}
         <div className="top-bar">
-          <button className="back-btn" onClick={() => router.push('/blog')}>
+          <button className="back-btn" onClick={() => router.push('/journal')}>
             <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" /></svg>
             Back to Blog
           </button>
