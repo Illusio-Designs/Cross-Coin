@@ -27,6 +27,39 @@ const { getAddressHash } = require('../services/addressQualityService.js');
 const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
 const { auditLog: orderAuditLog } = require('../services/orderService.js');
 
+// ── Shipping sync retry policy ──────────────────────────────────────────────
+// A transient failure (provider timeout / 5xx / auth blip) is worth retrying.
+// A PERMANENT failure (bad address, non-serviceable pincode, no serviceable
+// courier) will NEVER succeed on retry — retrying it just burns courier API
+// calls + DB connections and, worse, re-fires the admin alert every cron cycle.
+// So we detect permanent failures and "park" the order past the retry cap in a
+// single attempt instead of grinding through 5 pointless retries forever.
+const MAX_SYNC_ATTEMPTS = 5;      // transient failures retry up to this many times
+const PARKED_ATTEMPTS = 999;      // sentinel: give up + admin already alerted, never retry/alert again
+
+// Signatures of failures that cannot be fixed by retrying — they need a human
+// (fix the address, or the customer's pincode simply isn't serviceable).
+// NOTE: deliberately does NOT include the aggregate "no courier available / all
+// couriers failed" message — that one is ambiguous (a transient provider outage
+// produces it too). Whether an all-couriers-failed outcome is permanent is
+// decided by autoSelectCourierWithFallback, which inspects each courier's own
+// error and only flags permanent when EVERY attempt failed permanently.
+const PERMANENT_FAILURE_PATTERNS = [
+  /serviceab/i,                 // "not serviceable", "pincode serviceability failed"
+  /not\s+deliverable/i,
+  /pincode/i,                   // "pincode is missing", "pincode must be 6 digits", "invalid pincode"
+  /is\s+missing/i,              // validation: address/name/city/state/phone missing
+  /must\s+be\s+(a\s+valid|exactly)/i, // validation: phone/pincode format
+  /no\s+items/i,
+  /no\s+customer/i,
+];
+function isPermanentShippingFailure(message) {
+  if (!message) return false;
+  const text = String(message);
+  return PERMANENT_FAILURE_PATTERNS.some((re) => re.test(text));
+}
+module.exports.isPermanentShippingFailure = isPermanentShippingFailure;
+
 /**
  * Pick the right shipping service for an order.
  *  - If the order already has a shipment row, reuse that provider (you can't
@@ -75,7 +108,12 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
   const couriers = ['delhivery', 'amazon', 'xpressbees'];
   logger.debug(`🔄 Auto-selecting courier with fallback: ${couriers.join(' → ')}`);
 
+  let lastError = null;
+  let allPermanent = true;   // stays true only if EVERY courier failed permanently
+  let attempted = false;
+
   for (const courier of couriers) {
+    let attemptError;
     try {
       logger.debug(`📦 Attempting sync with ${courier}...`);
       const syncResult = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', courier, 'surface');
@@ -83,19 +121,28 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
       if (syncResult.success) {
         logger.info(`✅ Courier auto-selected: ${courier}`);
         return { success: true, courier, result: syncResult };
-      } else {
-        logger.warn(`⚠️  ${courier} failed: ${syncResult.error}`);
       }
+      attemptError = syncResult.error;
+      logger.warn(`⚠️  ${courier} failed: ${syncResult.error}`);
     } catch (error) {
+      attemptError = error.message;
       logger.warn(`⚠️  ${courier} error: ${error.message}`);
     }
+    attempted = true;
+    lastError = attemptError || lastError;
+    // A single transient failure among the couriers means the aggregate is
+    // transient — don't permanently park an order over a passing provider blip.
+    if (!isPermanentShippingFailure(attemptError)) allPermanent = false;
   }
 
   logger.error(`❌ All couriers failed (delhivery, amazon, xpressbees)`);
   return {
     success: false,
     courier: null,
-    error: 'No courier available — all failed (delhivery, amazon, xpressbees)'
+    // Permanent only when every courier rejected for a permanent reason
+    // (e.g. the destination pincode isn't serviceable by any of them).
+    permanent: attempted && allPermanent,
+    error: lastError || 'No courier available — all failed (delhivery, amazon, xpressbees)'
   };
 }
 
@@ -569,7 +616,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
         status: { [Op.notIn]: ['awaiting_confirmation', 'pending', 'cancelled', 'delivered', 'rto delivered'] }, // Only sync confirmed+ orders, skip unconfirmed and final states
         order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
         fship_sync_status: { [Op.in]: ['pending', 'failed'] },
-        fship_sync_attempts: { [Op.lt]: 5 }
+        fship_sync_attempts: { [Op.lt]: MAX_SYNC_ATTEMPTS }
       },
       include: [
         {
@@ -637,11 +684,20 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
             message: syncResult.message
           });
         } else {
-          await order.update({ fship_sync_status: 'failed' }, { transaction: orderTransaction });
+          const permanent = isPermanentShippingFailure(syncResult.error);
+          await order.update({
+            fship_sync_status: 'failed',
+            fship_sync_error: syncResult.error || null,
+            // Permanent failures can't succeed on retry — jump straight to the
+            // attempt cap so the next cron cycle skips this order instead of
+            // re-calling the courier API for a pincode that isn't serviceable.
+            ...(permanent && { fship_sync_attempts: MAX_SYNC_ATTEMPTS }),
+          }, { transaction: orderTransaction });
           results.errors++;
           results.errors_list.push({
             order_number: order.order_number,
-            error: syncResult.error
+            error: syncResult.error,
+            permanent,
           });
         }
 
@@ -649,28 +705,43 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       } catch (error) {
         await orderTransaction.rollback();
         logger.error(`❌ Error processing order ${order.order_number}:`, error.message);
-        await order.update({ fship_sync_status: 'failed' }).catch(() => {});
+        const permanent = isPermanentShippingFailure(error.message);
+        await order.update({
+          fship_sync_status: 'failed',
+          fship_sync_error: error.message || null,
+          ...(permanent && { fship_sync_attempts: MAX_SYNC_ATTEMPTS }),
+        }).catch(() => {});
         results.errors++;
         results.errors_list.push({
           order_number: order.order_number,
-          error: error.message
+          error: error.message,
+          permanent,
         });
       }
     }
 
-    // Warn about orders that have exhausted all sync attempts
+    // Warn about orders that JUST exhausted all sync attempts — exactly once.
+    // Previously this alerted on every cron cycle for the same stuck orders,
+    // producing an endless every-2-hours alert loop. We now alert only for
+    // orders in the [MAX_SYNC_ATTEMPTS, PARKED_ATTEMPTS) window, then bump them
+    // to the PARKED sentinel so they are never retried nor re-alerted again.
     const exhaustedOrders = await Order.findAll({
       where: {
         fship_sync_status: 'failed',
-        fship_sync_attempts: { [Op.gte]: 5 },
+        fship_sync_attempts: { [Op.gte]: MAX_SYNC_ATTEMPTS, [Op.lt]: PARKED_ATTEMPTS },
         status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }
       },
-      attributes: ['order_number', 'fship_sync_attempts']
+      attributes: ['id', 'order_number', 'fship_sync_attempts', 'fship_sync_error']
     });
     if (exhaustedOrders.length > 0) {
-      logger.warn(`⚠️ ADMIN ALERT: ${exhaustedOrders.length} order(s) have exhausted all FShip sync attempts (>= 5):`,
-        exhaustedOrders.map(o => o.order_number).join(', ')
+      logger.warn(`⚠️ ADMIN ALERT: ${exhaustedOrders.length} order(s) need manual shipping attention (giving up auto-sync): ` +
+        exhaustedOrders.map(o => `${o.order_number}${o.fship_sync_error ? ` (${o.fship_sync_error})` : ''}`).join(', ')
       );
+      // Park them so this alert fires once per order, not every cron run.
+      await Order.update(
+        { fship_sync_attempts: PARKED_ATTEMPTS },
+        { where: { id: { [Op.in]: exhaustedOrders.map(o => o.id) } } }
+      ).catch((e) => logger.warn(`Failed to park exhausted orders: ${e.message}`));
     }
 
     logger.debug("\n=== SYNC SUMMARY ===");

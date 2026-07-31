@@ -55,7 +55,7 @@ function registerWorkers() {
       const autoResult = await orderShippingController.autoSelectCourierWithFallback(fullOrder, provider);
       result = autoResult.success
         ? autoResult.result
-        : { success: false, error: autoResult.error || 'auto courier selection failed' };
+        : { success: false, error: autoResult.error || 'auto courier selection failed', permanent: autoResult.permanent };
     } else {
       result = await orderShippingController.enhancedSyncSingleOrder(
         fullOrder, null, null, null, logistics, serviceType || 'surface'
@@ -63,8 +63,22 @@ function registerWorkers() {
     }
 
     if (!result.success) {
+      const err = result.error || 'sync returned success=false';
+      // Permanent failures (bad address / non-serviceable pincode / no courier)
+      // will never succeed on retry. Park the order and return WITHOUT throwing,
+      // so Bull does not schedule 5 doomed retries. Transient failures still
+      // throw and get the exponential-backoff retry they deserve.
+      if (result.permanent || orderShippingController.isPermanentShippingFailure(err)) {
+        await fullOrder.update({
+          fship_sync_status: 'failed',
+          fship_sync_error: err,
+          fship_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
+        }).catch(() => {});
+        logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
+        return { success: false, permanent: true, error: err };
+      }
       // Throw so Bull schedules another attempt per backoff policy.
-      throw new Error(result.error || 'sync returned success=false');
+      throw new Error(err);
     }
     logger.info(`[queue] shipping:sync-order ok — ${fullOrder.order_number} AWB ${result.waybill || 'N/A'}`);
     return result;
