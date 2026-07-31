@@ -7,6 +7,7 @@ import { getBlogImageSrc } from '../utils/imageUtils';
 import Skeleton from '../components/common/Skeleton';
 import Pagination from '../components/common/Pagination';
 
+// Deploy trigger: first build shipped via the fixed GitHub Actions pipeline.
 const LIMIT = 12;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 

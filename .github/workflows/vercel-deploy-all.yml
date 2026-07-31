@@ -99,8 +99,10 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Deploy Crosscoin to Vercel
+        # Deploy from the REPO ROOT — the Vercel project's Root Directory is
+        # already set to "Crosscoin", so cd-ing in doubles the path to
+        # Crosscoin/Crosscoin (which doesn't exist) and the deploy fails.
         run: |
-          cd Crosscoin
           vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -124,8 +126,8 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Deploy Gripzus to Vercel
+        # Deploy from the repo root — Vercel's Root Directory is already "Gripzus".
         run: |
-          cd Gripzus
           vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -149,8 +151,8 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Deploy Knitwink to Vercel
+        # Deploy from the repo root — Vercel's Root Directory is already "Knitwink".
         run: |
-          cd Knitwink
           vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -174,8 +176,8 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Deploy Velmique to Vercel
+        # Deploy from the repo root — Vercel's Root Directory is already "Velmique".
         run: |
-          cd Velmique
           vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
