@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import SeoWrapper from '../console/SeoWrapper';
-import { getPublicBlogs, getPublicBlogTags } from '../services/publicApi';
+import { getPublicBlogs } from '../services/publicApi';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { getBlogImageSrc } from '../utils/imageUtils';
 import Skeleton from '../components/common/Skeleton';
+import Pagination from '../components/common/Pagination';
 
 const LIMIT = 12;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -20,77 +21,37 @@ async function fetchJson(url) {
 }
 
 export async function getServerSideProps(ctx) {
-  // Fetch the first page of posts + tags on the server so the blog grid ships
-  // in the initial HTML instead of after a client-side useEffect. The edge
-  // cache header set by fetchPageSeo keeps repeat requests cheap.
-  const [seoData, postsJson, tagsJson] = await Promise.all([
+  // First page rendered on the server so the grid ships in the initial HTML.
+  const [seoData, postsJson] = await Promise.all([
     fetchPageSeo('blog', ctx),
     fetchJson(`${API_URL}/api/blogs/listing?page=1&limit=${LIMIT}`),
-    fetchJson(`${API_URL}/api/blogs/tags`),
   ]);
-
-  const initialPosts = postsJson?.data || [];
-  const initialTags = tagsJson?.data || [];
 
   return {
     props: {
       seoData,
-      initialPosts,
-      initialTags,
-      initialHasMore: initialPosts.length === LIMIT,
+      initialPosts: postsJson?.data || [],
+      initialTotalPages: postsJson?.pagination?.totalPages || 1,
     },
   };
 }
 
 const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '') : '';
 
-const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore = false }) => {
+const BlogPage = ({ seoData, initialPosts = [], initialTotalPages = 1 }) => {
   const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
-  const [tags, setTags] = useState(initialTags);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeTag, setActiveTag] = useState('');
-  const [loading, setLoading] = useState(initialPosts.length === 0);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-
-  // The first page + tags are seeded from getServerSideProps, so only run the
-  // client fetch as a fallback when the server didn't provide them.
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [loading, setLoading] = useState(initialPosts.length === 0);
   const seededRef = useRef(initialPosts.length > 0);
 
-  useEffect(() => {
-    if (seededRef.current) return;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [postsRes, tagsRes] = await Promise.all([
-          getPublicBlogs({ page: 1, limit: LIMIT }),
-          getPublicBlogTags(),
-        ]);
-        const list = postsRes?.data || [];
-        setPosts(list);
-        setHasMore(list.length === LIMIT);
-        setTags(tagsRes?.data || []);
-      } catch {
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const applyFilter = async (category, tag, nextPage = 1) => {
+  const load = async (nextPage) => {
     setLoading(true);
     try {
-      const params = { page: nextPage, limit: LIMIT };
-      if (category && category !== 'all') params.category = category;
-      if (tag) params.tag = tag;
-      const res = await getPublicBlogs(params);
-      const list = res?.data || [];
-      if (nextPage === 1) setPosts(list);
-      else setPosts(prev => [...prev, ...list]);
-      setHasMore(list.length === LIMIT);
+      const res = await getPublicBlogs({ page: nextPage, limit: LIMIT });
+      setPosts(res?.data || []);
+      setTotalPages(res?.pagination?.totalPages || 1);
       setPage(nextPage);
     } catch {
       if (nextPage === 1) setPosts([]);
@@ -99,27 +60,22 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
     }
   };
 
-  const handleCategoryChange = (cat) => {
-    setActiveCategory(cat);
-    setActiveTag('');
-    applyFilter(cat, '', 1);
-  };
+  useEffect(() => {
+    if (seededRef.current) return;
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleTagChange = (tag) => {
-    const next = activeTag === tag ? '' : tag;
-    setActiveTag(next);
-    applyFilter(activeCategory, next, 1);
+  const goToPage = (n) => {
+    if (n < 1 || n > totalPages || n === page || loading) return;
+    load(n);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const handleLoadMore = () => applyFilter(activeCategory, activeTag, page + 1);
 
   const formatDate = (d) => {
     if (!d) return '';
     return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
-
-  // Unique categories from posts
-  const categories = ['all', ...Array.from(new Set(posts.map(p => p.BlogCategory?.slug).filter(Boolean)))];
 
   return (
     <SeoWrapper pageName="blog" seoData={seoData}>
@@ -130,19 +86,6 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
             <h1 className="section-header-h2">Crosscoin <strong>Journal</strong></h1>
             <p className="section-header-sub">Stories, Tips & Style</p>
           </div>
-        </div>
-
-        {/* Category Filter */}
-        <div className="blog-category-filter">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              className={`filter-btn ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(cat)}
-            >
-              {cat === 'all' ? 'All Articles' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-            </button>
-          ))}
         </div>
 
         {/* Blog Grid */}
@@ -224,13 +167,7 @@ const BlogPage = ({ seoData, initialPosts = [], initialTags = [], initialHasMore
           <div className="blog-no-results"><p>No articles found.</p></div>
         )}
 
-        {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <button className="view-all-btn-home" onClick={handleLoadMore} disabled={loading}>
-              {loading ? '…' : 'Load More'}
-            </button>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={loading} />
       </div>
     </SeoWrapper>
   );
