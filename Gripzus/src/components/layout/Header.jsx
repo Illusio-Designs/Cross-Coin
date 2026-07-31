@@ -6,10 +6,9 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 
-/* Gripzus header — a refined, animated bar.
-   • Hides on scroll-down, reveals on scroll-up.
-   • A single sliding indicator glides under the hovered/active nav item.
-   • Count badges pop on change; mobile drawer reveals nav items in sequence. */
+/* Gripzus header — a premium floating pill bar.
+   A rounded, inset bar with a soft shadow; a sliding highlight glides
+   behind the hovered/active nav item; icon actions with count badges. */
 
 const NAV = [
   { label: 'Shop',        href: '/products' },
@@ -27,39 +26,29 @@ export default function Header() {
   const accountHref = isAuthenticated || authLoading ? '/account' : '/login';
 
   const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden]     = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const lastY = useRef(0);
 
   const navRef = useRef(null);
   const linkRefs = useRef([]);
-  const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 });
+  const [hi, setHi] = useState({ left: 0, width: 0, opacity: 0 });
 
   const isActive = (href) => (href === '/' ? router.pathname === '/' : router.pathname.startsWith(href));
   const activeIdx = NAV.findIndex((l) => isActive(l.href));
 
-  // Position the sliding indicator under a given nav element.
-  const moveInd = useCallback((el) => {
+  const moveHi = useCallback((el) => {
     if (!el || !navRef.current) return;
     const nav = navRef.current.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    setInd({ left: r.left - nav.left, width: r.width, opacity: 1 });
+    setHi({ left: r.left - nav.left, width: r.width, opacity: 1 });
   }, []);
-  const resetInd = useCallback(() => {
-    if (activeIdx >= 0 && linkRefs.current[activeIdx]) moveInd(linkRefs.current[activeIdx]);
-    else setInd((s) => ({ ...s, opacity: 0 }));
-  }, [activeIdx, moveInd]);
+  const resetHi = useCallback(() => {
+    if (activeIdx >= 0 && linkRefs.current[activeIdx]) moveHi(linkRefs.current[activeIdx]);
+    else setHi((s) => ({ ...s, opacity: 0 }));
+  }, [activeIdx, moveHi]);
+  useEffect(() => { resetHi(); }, [resetHi, router.pathname]);
 
-  useEffect(() => { resetInd(); }, [resetInd, router.pathname]);
-
-  // Scroll behaviour: shadow + hide-on-down / reveal-on-up.
   useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 8);
-      setHidden(y > 120 && y > lastY.current);
-      lastY.current = y;
-    };
+    const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -76,57 +65,55 @@ export default function Header() {
 
   return (
     <>
-      <header
-        className={`sticky top-0 z-40 bg-paper/90 backdrop-blur-md transition-[transform,box-shadow] duration-500 ${
-          hidden ? '-translate-y-full' : 'translate-y-0'
-        } ${scrolled ? 'shadow-[0_1px_0_0_var(--line)]' : ''}`}
-      >
-        <div className="wrap">
-          <div className="h-[58px] md:h-[68px] flex items-center gap-6">
+      <header className="sticky top-3 md:top-4 z-40">
+        <div className="mx-auto w-full max-w-[1560px] px-3 md:px-6">
+          <div className={`flex items-center gap-4 h-[54px] md:h-[60px] px-3 md:px-5 rounded-full border bg-paper/80 backdrop-blur-xl transition-all duration-300 ${
+            scrolled ? 'border-line shadow-[0_10px_30px_-12px_rgba(0,0,0,0.18)]' : 'border-line/70 shadow-[0_4px_16px_-10px_rgba(0,0,0,0.10)]'
+          }`}>
 
-            <button onClick={() => setMobileOpen(true)} className="lg:hidden w-8 h-8 -ml-1.5 flex flex-col items-center justify-center gap-[5px] group" aria-label="Open menu">
-              <span className="block w-5 h-px bg-ink transition-transform group-hover:translate-x-0.5" />
-              <span className="block w-5 h-px bg-ink" />
-              <span className="block w-3.5 h-px bg-ink transition-all group-hover:w-5" />
+            <button onClick={() => setMobileOpen(true)} className="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-[5px] group" aria-label="Open menu">
+              <span className="block w-4.5 h-px bg-ink" style={{ width: 18 }} />
+              <span className="block h-px bg-ink" style={{ width: 18 }} />
+              <span className="block h-px bg-ink transition-all group-hover:w-[18px]" style={{ width: 12 }} />
             </button>
 
-            <Link href="/" aria-label="Gripzus home" className="shrink-0 transition-opacity hover:opacity-70">
-              <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={150} height={40} priority className="h-5 md:h-6 w-auto object-contain" />
+            <Link href="/" aria-label="Gripzus home" className="shrink-0 pl-1 transition-opacity hover:opacity-70">
+              <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={150} height={40} priority className="h-5 md:h-[22px] w-auto object-contain" />
             </Link>
 
-            {/* Nav with sliding indicator */}
-            <nav ref={navRef} onMouseLeave={resetInd} className="relative hidden lg:flex items-center gap-8 ml-8 h-full">
+            {/* Nav with sliding pill highlight */}
+            <nav ref={navRef} onMouseLeave={resetHi} className="relative hidden lg:flex items-center gap-1 mx-auto">
+              <span
+                className="pointer-events-none absolute top-1/2 -translate-y-1/2 h-8 rounded-full bg-ink/[0.06] transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)]"
+                style={{ left: hi.left, width: hi.width, opacity: hi.opacity }}
+              />
               {NAV.map((l, i) => (
                 <Link
                   key={l.href}
                   href={l.href}
                   ref={(el) => (linkRefs.current[i] = el)}
-                  onMouseEnter={(e) => moveInd(e.currentTarget)}
-                  className={`relative text-[11px] tracking-[0.14em] uppercase py-1 transition-colors ${
+                  onMouseEnter={(e) => moveHi(e.currentTarget)}
+                  className={`relative z-10 px-3.5 py-2 text-[11px] tracking-[0.12em] uppercase rounded-full transition-colors ${
                     isActive(l.href) ? 'text-ink' : 'text-ink-soft hover:text-ink'
                   }`}
                 >
                   {l.label}
                 </Link>
               ))}
-              <span
-                className="pointer-events-none absolute -bottom-0.5 h-px bg-ink transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)]"
-                style={{ left: ind.left, width: ind.width, opacity: ind.opacity }}
-              />
             </nav>
 
-            <div className="flex items-center gap-1 ml-auto">
+            <div className="flex items-center gap-0.5 ml-auto lg:ml-0">
               <IconBtn as={Link} href="/search" ariaLabel="Search">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
               </IconBtn>
               <IconBtn as={Link} href={accountHref} ariaLabel={isAuthenticated ? 'Account' : 'Sign in'}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
               </IconBtn>
               <IconBtn as={Link} href="/wishlist" ariaLabel="Wishlist" badge={wishCount}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
               </IconBtn>
               <IconBtn ariaLabel="Bag" onClick={openCart} badge={count}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" strokeLinecap="round" /></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" strokeLinecap="round" /></svg>
               </IconBtn>
             </div>
           </div>
@@ -140,8 +127,8 @@ export default function Header() {
           <aside className="fixed inset-y-0 left-0 z-[51] w-[88%] max-w-sm bg-paper lg:hidden flex flex-col gz-drawer">
             <div className="px-5 h-[58px] border-b border-line flex items-center justify-between">
               <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={120} height={32} className="h-5 w-auto object-contain" />
-              <button onClick={() => setMobileOpen(false)} className="w-8 h-8 flex items-center justify-center text-ink hover:rotate-90 transition-transform" aria-label="Close menu">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              <button onClick={() => setMobileOpen(false)} className="w-9 h-9 flex items-center justify-center text-ink hover:rotate-90 transition-transform" aria-label="Close menu">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto py-2">
@@ -174,10 +161,10 @@ export default function Header() {
 
 function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, ...rest }) {
   return (
-    <Comp aria-label={ariaLabel} className="relative w-9 h-9 flex items-center justify-center text-ink hover:opacity-55 transition-opacity" {...rest}>
+    <Comp aria-label={ariaLabel} className="relative w-9 h-9 flex items-center justify-center rounded-full text-ink hover:bg-ink/[0.06] transition-colors" {...rest}>
       {children}
       {Number(badge) > 0 && (
-        <span key={badge} className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-1 rounded-full bg-ink text-paper text-[9px] font-medium flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
+        <span key={badge} className="absolute top-0 right-0 min-w-[15px] h-[15px] px-1 rounded-full bg-ink text-paper text-[9px] font-medium flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
           {badge}
         </span>
       )}
