@@ -43,6 +43,7 @@ async function getTrackingConfig() {
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
           adsId: d.google_ads_id || null,
+          adsLabel: d.google_ads_conversion_label || null,
         }
       : null;
     _cfgCache = { at: now, value };
@@ -55,7 +56,7 @@ async function getTrackingConfig() {
 }
 
 export default function Document({ tracking }) {
-  const { gaId, fbId, clarityId, adsId } = tracking || {};
+  const { gaId, fbId, clarityId, adsId, adsLabel } = tracking || {};
 
   return (
     <Html lang="en">
@@ -88,7 +89,11 @@ export default function Document({ tracking }) {
                   "dataLayer.push(arguments);}" +
                   "gtag('js', new Date());" +
                   (gaId ? `gtag('config', '${gaId}');` : "") +
-                  (adsId ? `gtag('config', '${adsId}');` : ""),
+                  (adsId ? `gtag('config', '${adsId}');` : "") +
+                  // Expose the Ads id + purchase label so the order-success page
+                  // can fire a Google Ads conversion (no-op until a label is set).
+                  (adsId ? `window.__gAdsId='${adsId}';` : "") +
+                  (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : ""),
               }}
             />
           </>

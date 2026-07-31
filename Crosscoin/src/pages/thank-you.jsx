@@ -4,6 +4,7 @@ import { getUserOrders } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import { fbqTrack } from "../utils/fbqTrack";
 import { gtagTrack } from "../utils/gtagTrack";
+import { gtagAdsPurchase } from "../utils/gtagAdsConversion";
 import SeoWrapper from "../console/SeoWrapper";
 import { fetchPageSeo } from "../utils/fetchPageSeo";
 
@@ -99,6 +100,12 @@ export default function ThankYou({ seoData }) {
                     quantity: i.quantity || 1,
                     price: parseFloat(i.price || 0),
                   })),
+                });
+                // Google Ads purchase conversion (no-op until a label is set)
+                gtagAdsPurchase({
+                  transaction_id: order_number,
+                  value: purchaseData.value,
+                  currency: 'INR',
                 });
                 sessionStorage.setItem(trackingKey, 'true');
               }
