@@ -41,14 +41,18 @@ export default function ExclusiveSection({ products = [] }) {
 
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const p = list[activeIndex];
-  const thumbIndex = p ? Math.min(thumb, p.images.length - 1) : 0;
+  // Only the SELECTED variation's images (fall back to the product images
+  // if a colour has none of its own) — never all variations mixed together.
+  const activeColEarly = p && p.colors.length ? p.colors[Math.min(color, p.colors.length - 1)] : null;
+  const displayImages = (activeColEarly?.images?.length ? activeColEarly.images : p?.images) || [];
+  const thumbIndex = displayImages.length ? Math.min(thumb, displayImages.length - 1) : 0;
 
-  // Every 3s step to the next image of the pair; once past the last image,
-  // roll on to the next pair. Pauses on hover.
+  // Every 3s step to the next image of the selected variation; once past the
+  // last image, roll on to the next pair. Pauses on hover.
   useEffect(() => {
     if (list.length === 0 || paused) return;
     const id = setTimeout(() => {
-      const count = list[activeIndex].images.length;
+      const count = displayImages.length;
       if (thumbIndex + 1 < count) {
         setThumb(thumbIndex + 1);
       } else if (list.length > 1) {
@@ -59,7 +63,7 @@ export default function ExclusiveSection({ products = [] }) {
       }
     }, 3000);
     return () => clearTimeout(id);
-  }, [list, activeIndex, thumbIndex, paused]);
+  }, [list, activeIndex, thumbIndex, paused, color, displayImages.length]);
 
   // Skeleton until the API products arrive.
   if (list.length === 0) {
@@ -95,7 +99,7 @@ export default function ExclusiveSection({ products = [] }) {
 
   const handleAdd = () => {
     addItem({
-      id: p.id, name: p.name, slug: p.slug, image: p.images[thumbIndex] || p.images[0],
+      id: p.id, name: p.name, slug: p.slug, image: displayImages[thumbIndex] || displayImages[0] || p.images[0],
       price: p.price, collection: p.collection, qty,
       size: p.sizes[0] || '', color: activeCol?.name || '',
     });
@@ -132,7 +136,7 @@ export default function ExclusiveSection({ products = [] }) {
 
             {/* Thumbnail rail — every image of the active pair */}
             <div className="flex shrink-0 flex-col gap-3">
-              {p.images.map((img, i) => (
+              {displayImages.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setThumb(i)}
@@ -152,7 +156,7 @@ export default function ExclusiveSection({ products = [] }) {
             <div className="relative flex-1 overflow-hidden rounded-[24px] bg-paper/5 border border-paper/10">
               <img
                 key={thumbIndex}
-                src={p.images[thumbIndex]}
+                src={displayImages[thumbIndex]}
                 alt={p.name}
                 className="block w-full h-auto animate-[fadeIn_0.5s_ease-out]"
               />
@@ -163,7 +167,7 @@ export default function ExclusiveSection({ products = [] }) {
               )}
               {/* Image counter */}
               <span className="absolute bottom-4 right-4 h-display text-paper/85 text-sm tracking-[0.2em]">
-                {num(thumbIndex)} <span className="text-paper/40">/ {num(p.images.length - 1)}</span>
+                {num(thumbIndex)} <span className="text-paper/40">/ {num(displayImages.length - 1)}</span>
               </span>
             </div>
           </div>
@@ -197,7 +201,7 @@ export default function ExclusiveSection({ products = [] }) {
                       <button
                         key={c.name}
                         title={c.name}
-                        onClick={() => setColor(i)}
+                        onClick={() => { setColor(i); setThumb(0); }}
                         aria-label={`Pack of ${c.packColors.length}`}
                         className={`flex h-9 items-center gap-1.5 rounded-full border px-2.5 transition-all ${
                           i === color
@@ -218,7 +222,7 @@ export default function ExclusiveSection({ products = [] }) {
                       <button
                         key={c.name}
                         title={c.name}
-                        onClick={() => setColor(i)}
+                        onClick={() => { setColor(i); setThumb(0); }}
                         className={`h-6 w-6 rounded-full ring-1 ring-offset-2 ring-offset-ink transition-all ${
                           i === color ? 'ring-paper' : 'ring-paper/25 hover:ring-paper/60'
                         }`}

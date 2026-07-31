@@ -65,6 +65,11 @@ export function mapProduct(p) {
   variations.forEach((v) => {
     totalStock += Number(v.stock || 0);
     const attrs = safeParse(v.attributes);
+    // This variation's own images (so the UI can show only the selected
+    // variation's photos instead of every image mixed together).
+    const vImages = (v.VariationImages || v.variationImages || v.images || [])
+      .map((img) => (typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || '')))
+      .filter(Boolean);
     const colorArr = toArr(attrs.color).map((c) => String(c).trim()).filter(Boolean);
     if (colorArr.length > 1) {
       // Multi-colour pack — keep every colour together as one swatch group
@@ -76,11 +81,12 @@ export function mapProduct(p) {
           name: key,
           hex: getColorHex(colorArr[0]),
           packColors: colorArr.map((c) => ({ name: c, hex: getColorHex(c) })),
+          images: vImages,
         });
       }
     } else {
       colorArr.forEach((c) => {
-        if (!colorSeen.has(c)) { colorSeen.add(c); colors.push({ name: c, hex: getColorHex(c) }); }
+        if (!colorSeen.has(c)) { colorSeen.add(c); colors.push({ name: c, hex: getColorHex(c), images: vImages }); }
       });
     }
     toArr(attrs.size).forEach((s) => {
