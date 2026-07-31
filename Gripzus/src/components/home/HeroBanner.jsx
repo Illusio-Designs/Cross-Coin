@@ -63,36 +63,34 @@ export default function HeroBanner({ slides = [] }) {
                   {s.description}
                 </p>
               )}
+              {/* Left-side CTA */}
+              <div className="mt-7 gz-fade" style={{ animationDelay: `${0.22 + words.length * 0.08}s` }}>
+                <Link href={s.buttonLink || '/products'} className="inline-flex items-center gap-2 rounded-full bg-paper text-ink px-7 py-3.5 text-[11px] tracking-[0.12em] uppercase hover:opacity-85 transition-opacity">
+                  {s.buttonText || 'Order now'} <span>→</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Floating glass control pill — bottom-right */}
-        <div className="absolute left-6 right-6 md:left-12 md:right-12 lg:left-16 lg:right-16 bottom-6 md:bottom-8 z-20 flex justify-between items-end gap-4">
-          {/* index (left) */}
-          <span className="hidden sm:block text-paper/70 text-[10px] tracking-[0.16em] tabular-nums pb-2">
-            {String(current + 1).padStart(2, '0')} — {String(slides.length).padStart(2, '0')}
-          </span>
-
-          <div className="flex items-center gap-1.5 rounded-full border border-paper/20 bg-ink/35 backdrop-blur-md p-1.5 ml-auto">
-            {slides.length > 1 && (
-              <>
-                <button onClick={() => go(current - 1)} aria-label="Previous" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">‹</button>
-                <div className="hidden sm:flex items-center gap-1 px-1">
-                  {slides.map((_, i) => (
-                    <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-paper' : 'w-1.5 bg-paper/40 hover:bg-paper/70'}`} />
-                  ))}
-                </div>
-                <button onClick={() => go(current + 1)} aria-label="Next" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">›</button>
-                <span className="w-px h-5 bg-paper/20 mx-1" />
-              </>
-            )}
-            <Link href={s.buttonLink || '/products'} className="inline-flex items-center gap-2 rounded-full bg-paper text-ink pl-5 pr-4 h-9 text-[11px] tracking-[0.1em] uppercase hover:opacity-85 transition-opacity">
-              {s.buttonText || 'Shop the edit'} <span>→</span>
-            </Link>
+        {/* Floating glass nav pill — bottom-right */}
+        {slides.length > 1 && (
+          <div className="absolute left-6 right-6 md:left-12 md:right-12 lg:left-16 lg:right-16 bottom-6 md:bottom-8 z-20 flex justify-between items-center gap-4">
+            <span className="hidden sm:block text-paper/70 text-[10px] tracking-[0.16em] tabular-nums">
+              {String(current + 1).padStart(2, '0')} — {String(slides.length).padStart(2, '0')}
+            </span>
+            <div className="flex items-center gap-1.5 rounded-full border border-paper/20 bg-ink/35 backdrop-blur-md p-1.5 ml-auto">
+              <button onClick={() => go(current - 1)} aria-label="Previous" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">‹</button>
+              <div className="hidden sm:flex items-center gap-1 px-1">
+                {slides.map((_, i) => (
+                  <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-paper' : 'w-1.5 bg-paper/40 hover:bg-paper/70'}`} />
+                ))}
+              </div>
+              <button onClick={() => go(current + 1)} aria-label="Next" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">›</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <style jsx>{`

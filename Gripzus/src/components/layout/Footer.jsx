@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
 /* Gripzus footer — premium dark panel with a rounded top. Icon socials,
@@ -59,7 +58,10 @@ export default function Footer() {
         {/* Top — brand + newsletter */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pb-12 border-b border-paper/10">
           <div>
-            <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={150} height={40} className="h-6 w-auto object-contain" style={{ filter: 'invert(1) brightness(2)' }} />
+            <span className="flex items-center gap-2.5">
+              <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 w-auto object-contain" style={{ filter: 'invert(1)' }} />
+              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 w-auto object-contain" style={{ filter: 'invert(1)' }} />
+            </span>
             <p className="text-paper/55 text-[13px] leading-relaxed max-w-xs mt-5">
               Engineered grip socks, made for movement. Considered pairs, built to last.
             </p>
