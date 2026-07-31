@@ -1167,3 +1167,5 @@ body.cd-drawer-open-body .wachat-greet {
     grid-template-columns: 1fr;
   }
 }
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */

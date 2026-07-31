@@ -245,3 +245,5 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
 }
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */

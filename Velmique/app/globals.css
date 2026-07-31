@@ -527,3 +527,5 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   .wachat-fab svg { width: 26px; height: 26px; }
   .wachat-greet { bottom: 84px; right: 16px; font-size: 12.5px; max-width: 220px; padding: 9px 12px 9px 10px; }
 }
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */

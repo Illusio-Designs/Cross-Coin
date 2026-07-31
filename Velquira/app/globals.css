@@ -2080,3 +2080,5 @@ p { text-align: justify; text-justify: inter-word; }
 .track-timeline .tl-note { font-size: 12px; color: var(--ink-soft); }
 .track-timeline .tl-time { font-size: 11px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
 .order-address .muted { display: inline-flex; align-items: center; gap: 5px; }
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */

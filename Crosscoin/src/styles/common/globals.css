@@ -347,3 +347,5 @@ body:has(.pdt-sticky.visible) .back-to-top {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */

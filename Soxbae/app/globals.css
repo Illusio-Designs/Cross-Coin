@@ -2076,3 +2076,5 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .order-address .muted { display: inline-flex; align-items: center; gap: 5px; }
 
 /* deploy-refresh 2026-07-31: force Vercel rebuild (track-order + order-detail) */
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */
