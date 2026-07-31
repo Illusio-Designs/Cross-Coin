@@ -10,9 +10,9 @@ function Stars({ n = 5 }) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} width="13" height="13" viewBox="0 0 24 24"
+        <svg key={i} width="11" height="11" viewBox="0 0 24 24"
           fill={i < n ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4"
-          className={i < n ? 'text-accent' : 'text-line'}>
+          className={i < n ? 'text-ink' : 'text-line'}>
           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
         </svg>
       ))}
@@ -22,18 +22,14 @@ function Stars({ n = 5 }) {
 
 function ReviewCard({ r }) {
   return (
-    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper border border-line rounded-[16px] shadow-soft p-7 mx-2.5">
-      <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
-        <Stars n={r.rating} />
-        <span className="spec text-ink-muted">{String(r.rating).padStart(2, '0')}.0 / 5</span>
-      </div>
-      <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mb-5">
+    <figure className="shrink-0 w-[300px] md:w-[360px] px-7 mx-2.5 border-l border-line">
+      <Stars n={r.rating} />
+      <blockquote className="text-ink text-[15px] leading-relaxed mt-4 mb-5">
         “{r.quote}”
       </blockquote>
-      <figcaption className="flex items-center gap-2.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-        <span className="text-ink font-medium text-sm">{r.name}</span>
-        <span className="spec text-ink-muted">/ {r.role}</span>
+      <figcaption className="flex items-baseline gap-2">
+        <span className="text-[13px] text-ink">{r.name}</span>
+        <span className="eyebrow text-ink-muted">{r.role}</span>
       </figcaption>
     </figure>
   );
@@ -63,15 +59,9 @@ export default function ReviewBand({ reviews: reviewsProp }) {
   return (
     <section className="section-y border-y border-line overflow-hidden">
       <div className="wrap">
-        <div className="flex items-center justify-between border-t border-ink pt-3 mb-8">
-          <span className="spec text-ink">FIELD REPORTS — VERIFIED</span>
-          <span className="spec text-ink-muted hidden sm:inline">RATING AVG 5.0</span>
-        </div>
-        <div className="text-center mb-12">
-          <p className="kicker justify-center mb-4">Worn &amp; reviewed</p>
-          <h2 className="h-mark text-3xl sm:text-4xl md:text-5xl">
-            Loved by thousands.
-          </h2>
+        <div className="mb-12">
+          <p className="eyebrow text-ink-muted mb-3">Worn &amp; reviewed</p>
+          <h2 className="h-display text-2xl md:text-3xl">Loved by thousands</h2>
         </div>
       </div>
 

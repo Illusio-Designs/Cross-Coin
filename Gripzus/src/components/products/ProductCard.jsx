@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 
-/* Gripzus ProductCard — techwear / performance-luxe.
-   Gentle-radius image framed by a hairline, a mono spec row (collection +
-   stock index), Space Grotesk name, monospace price-as-data, a squared
-   steel Add action and a minimal wishlist tick. Shared component —
-   identical wherever it renders. */
+/* Gripzus ProductCard — editorial gallery (SSENSE-inspired).
+   A clean image on white — no border, no shadow, no radius — with a quiet
+   hover (2nd image or gentle zoom), a subtle wishlist mark and a tiny
+   caption below: name + price in small type. Shared component — identical
+   wherever it renders. */
 
 const MAX_DOTS = 5;
 
@@ -52,9 +52,9 @@ export default function ProductCard({ product }) {
   return (
     <article className="group flex flex-col">
 
-      {/* ── Image + floating action ───────────────────────────── */}
+      {/* ── Image — clean, sharp, edge-to-edge ─────────────────── */}
       <div className="relative">
-        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden rounded-[16px] bg-paper-warm border border-line shadow-soft">
+        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden bg-paper-warm">
           <img
             src={primary}
             alt={name}
@@ -64,97 +64,77 @@ export default function ProductCard({ product }) {
             <img
               src={secondary}
               alt={name}
-              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
             />
           )}
 
-          {/* Badge — mono spec chip */}
+          {/* Badge — quiet uppercase label, no block */}
           {badge && (
-            <span className="spec absolute top-3 left-3 bg-paper/95 backdrop-blur-sm text-ink border border-line px-2 py-0.5 rounded sm:top-3.5 sm:left-3.5">
+            <span className="eyebrow absolute top-3 left-3 text-ink z-10">
               {badge}
             </span>
           )}
 
-          {/* Wishlist tick */}
+          {/* Wishlist — minimal mark, no frame */}
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); toggle(product); }}
             aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
-            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded border border-line bg-paper/85 backdrop-blur-sm transition-all hover:bg-paper hover:border-accent sm:top-3 sm:right-3 sm:w-9 sm:h-9"
+            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center text-ink transition-opacity hover:opacity-55 z-10"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24"
-                 fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6"
-                 className={wished ? 'text-accent' : 'text-ink'}>
+            <svg width="15" height="15" viewBox="0 0 24 24"
+                 fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
               <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
             </svg>
           </button>
 
           {!inStock && (
-            <div className="absolute inset-0 bg-paper/75 flex items-center justify-center">
-              <span className="spec text-ink border border-ink px-4 py-1.5 rounded bg-paper shadow-soft">
-                SOLD OUT
-              </span>
+            <div className="absolute inset-0 bg-paper/60 flex items-center justify-center">
+              <span className="eyebrow text-ink">Sold out</span>
             </div>
           )}
         </Link>
 
-        {/* Squared Add-to-Bag — tucked at the image corner */}
+        {/* Add to bag — quiet underlined link, reveals on hover */}
         {inStock && (
           <button
             type="button"
             onClick={handleAdd}
             aria-label={added ? 'Added to bag' : 'Add to bag'}
-            className={`absolute -bottom-4 right-3.5 w-10 h-10 rounded-lg flex items-center justify-center shadow-card transition-all duration-200 hover:scale-105 sm:-bottom-5 sm:right-4 sm:w-12 sm:h-12 ${
-              added ? 'bg-accent text-paper' : 'bg-ink text-paper hover:bg-accent'
-            }`}
+            className="link-line absolute bottom-3 left-3 bg-paper/95 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
           >
-            {added ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" /></svg>
-            )}
+            {added ? 'Added' : 'Add to bag'}
           </button>
         )}
       </div>
 
-      {/* ── Info — datasheet block ────────────────────────────── */}
-      <div className="pt-6 pr-1">
-        {/* mono spec row: collection + stock state */}
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          <span className="spec uppercase tracking-[0.14em] truncate">{collection}</span>
-          <span className={`spec inline-flex items-center gap-1.5 shrink-0 ${inStock ? 'text-ink-soft' : 'text-ink-muted'}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-accent' : 'bg-line'}`} />
-            {inStock ? 'IN STOCK' : 'OUT'}
-          </span>
-        </div>
+      {/* ── Caption — tiny name + price below ──────────────────── */}
+      <div className="pt-3.5">
+        <span className="eyebrow text-ink-muted">{collection}</span>
 
-        <Link href={`/products/${slug}`} className="block">
-          <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1 transition-colors group-hover:text-accent-deep">{name}</h3>
+        <Link href={`/products/${slug}`} className="block mt-1.5">
+          <h3 className="text-[13px] text-ink leading-snug line-clamp-1">{name}</h3>
 
-          {/* price-as-data — mono, on a hairline */}
-          <div className="mt-2.5 flex items-baseline justify-between gap-3 border-t border-line pt-2.5">
-            <span className="spec text-ink-muted">PRICE</span>
-            <div className="flex items-baseline gap-1.5">
-              {compare && compare > price && (
-                <span className="font-mono text-ink-muted text-[12px] line-through">₹{compare.toLocaleString('en-IN')}</span>
-              )}
-              <span className="font-mono text-ink text-[15px] font-bold">₹{price.toLocaleString('en-IN')}</span>
-            </div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-[13px] text-ink">₹{price.toLocaleString('en-IN')}</span>
+            {compare && compare > price && (
+              <span className="text-[12px] text-ink-muted line-through">₹{compare.toLocaleString('en-IN')}</span>
+            )}
           </div>
         </Link>
 
         {colors.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-3">
+          <div className="flex items-center gap-1.5 mt-2.5">
             {visibleColors.map((c) => (
               <span
                 key={c.name}
                 title={c.name}
-                className="w-3.5 h-3.5 rounded-full ring-1 ring-line ring-offset-1 ring-offset-paper"
+                className="w-2.5 h-2.5 rounded-full ring-1 ring-line"
                 style={{ backgroundColor: c.hex }}
               />
             ))}
             {extraColors > 0 && (
-              <span className="spec text-ink-muted ml-0.5">+{extraColors}</span>
+              <span className="text-[11px] text-ink-muted ml-0.5">+{extraColors}</span>
             )}
           </div>
         )}
