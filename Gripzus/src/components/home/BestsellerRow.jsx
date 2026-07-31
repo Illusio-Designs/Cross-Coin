@@ -31,9 +31,9 @@ export default function BestsellerRow({
           {skeleton
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i}>
-                  <div className="aspect-[4/5] rounded-lg bg-gray-200 animate-pulse" />
-                  <div className="mt-3.5 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
-                  <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                  <div className="aspect-[4/5] rounded-[22px] bg-paper-deep animate-pulse" />
+                  <div className="mt-4 h-3 w-1/3 rounded-full bg-paper-deep animate-pulse" />
+                  <div className="mt-2.5 h-4 w-2/3 rounded-full bg-paper-deep animate-pulse" />
                 </div>
               ))
             : products.slice(0, 4).map((p) => <ProductCard key={p.id} product={p} />)}

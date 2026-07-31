@@ -43,10 +43,15 @@ export default function TrustStrip() {
   return (
     <section className="section-y border-t border-line">
       <div className="wrap">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
           {ITEMS.map((it) => (
-            <div key={it.title} className="flex flex-col items-center text-center">
-              <div className="text-ink mb-4">{it.icon}</div>
+            <div
+              key={it.title}
+              className="flex flex-col items-center text-center rounded-[24px] border border-line bg-paper-warm px-5 py-9 shadow-soft transition-colors hover:border-accent/40"
+            >
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent-deep">
+                {it.icon}
+              </div>
               <h3 className="h-display text-lg md:text-xl mb-1.5">{it.title}</h3>
               <p className="prose-body text-sm max-w-[200px]">{it.note}</p>
             </div>

@@ -66,15 +66,15 @@ export default function ExclusiveSection({ products = [] }) {
     return (
       <section className="section-y bg-ink">
         <div className="wrap">
-          <div className="mb-10 h-4 w-44 rounded bg-paper/10 animate-pulse" />
+          <div className="mb-10 h-4 w-44 rounded-full bg-paper/10 animate-pulse" />
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.35fr_1fr]">
-            <div className="aspect-[4/3] rounded-xl bg-paper/10 animate-pulse" />
+            <div className="aspect-[4/3] rounded-[24px] bg-paper/10 animate-pulse" />
             <div className="space-y-4 pt-4">
-              <div className="h-3 w-1/3 rounded bg-paper/10 animate-pulse" />
-              <div className="h-9 w-3/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-7 w-1/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-20 w-full rounded bg-paper/10 animate-pulse" />
-              <div className="h-12 w-full rounded bg-paper/10 animate-pulse" />
+              <div className="h-3 w-1/3 rounded-full bg-paper/10 animate-pulse" />
+              <div className="h-9 w-3/4 rounded-full bg-paper/10 animate-pulse" />
+              <div className="h-7 w-1/4 rounded-full bg-paper/10 animate-pulse" />
+              <div className="h-20 w-full rounded-[20px] bg-paper/10 animate-pulse" />
+              <div className="h-12 w-full rounded-full bg-paper/10 animate-pulse" />
             </div>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function ExclusiveSection({ products = [] }) {
                   key={i}
                   onClick={() => setThumb(i)}
                   aria-label={`Image ${i + 1}`}
-                  className={`h-[3.75rem] w-[3.75rem] shrink-0 overflow-hidden rounded-md bg-paper/5 transition-all sm:h-[4.75rem] sm:w-[4.75rem] ${
+                  className={`h-[3.75rem] w-[3.75rem] shrink-0 overflow-hidden rounded-2xl bg-paper/5 transition-all sm:h-[4.75rem] sm:w-[4.75rem] ${
                     i === thumbIndex
                       ? 'ring-1 ring-paper ring-offset-2 ring-offset-ink'
                       : 'opacity-40 hover:opacity-100'
@@ -149,7 +149,7 @@ export default function ExclusiveSection({ products = [] }) {
             </div>
 
             {/* Main image — natural height, never cropped */}
-            <div className="relative flex-1 overflow-hidden rounded-xl bg-paper/5 border border-paper/10">
+            <div className="relative flex-1 overflow-hidden rounded-[24px] bg-paper/5 border border-paper/10">
               <img
                 key={thumbIndex}
                 src={p.images[thumbIndex]}
@@ -180,7 +180,7 @@ export default function ExclusiveSection({ products = [] }) {
                 <span className="text-paper/45 text-base line-through">₹{p.compareAtPrice.toLocaleString('en-IN')}</span>
               )}
               {discount > 0 && (
-                <span className="text-[10px] tracking-[0.14em] uppercase bg-paper text-ink px-2.5 py-1 rounded-sm">{discount}% Off</span>
+                <span className="text-[10px] tracking-[0.14em] uppercase bg-accent text-paper px-2.5 py-1 rounded-full">{discount}% Off</span>
               )}
             </div>
 
@@ -199,7 +199,7 @@ export default function ExclusiveSection({ products = [] }) {
                         title={c.name}
                         onClick={() => setColor(i)}
                         aria-label={`Pack of ${c.packColors.length}`}
-                        className={`flex h-9 items-center gap-1.5 rounded-sm border px-2.5 transition-all ${
+                        className={`flex h-9 items-center gap-1.5 rounded-full border px-2.5 transition-all ${
                           i === color
                             ? 'border-paper ring-1 ring-paper ring-offset-2 ring-offset-ink'
                             : 'border-paper/30 hover:border-paper/60'

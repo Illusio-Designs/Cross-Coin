@@ -21,20 +21,23 @@ export default function CategoryCards({ categories = [] }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {list.map((c, i) => (
             skeleton ? (
-              <div key={i} className="aspect-[3/4] rounded-xl bg-gray-200 animate-pulse" />
+              <div key={i} className="aspect-[3/4] rounded-[24px] bg-paper-deep animate-pulse" />
             ) : (
               <Link
                 key={c.id ?? i}
                 href={`/products?collection=${encodeURIComponent(c.slug || (c.name || '').trim())}`}
-                className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-paper-warm"
+                className="media-zoom group relative aspect-[3/4] overflow-hidden rounded-[24px] bg-paper-warm border border-line shadow-soft"
               >
                 {c.image
                   ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
                   : <div className="absolute inset-0 bg-paper-deep" />}
-                <div className="absolute inset-0 bg-ink/15 group-hover:bg-ink/40 transition-colors" />
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
-                  <span className="font-display text-paper text-2xl md:text-3xl">{c.name}</span>
-                  <span className="eyebrow text-paper/0 group-hover:text-paper/90 transition-colors">Shop now →</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent group-hover:from-ink/65 transition-colors" />
+                <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2.5 px-4 pb-6 text-center">
+                  <span className="h-display text-paper text-2xl md:text-3xl">{c.name}</span>
+                  <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-paper/70 group-hover:text-paper transition-colors">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                    Shop now
+                  </span>
                 </div>
               </Link>
             )

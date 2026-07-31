@@ -54,11 +54,11 @@ export default function ProductCard({ product }) {
 
       {/* ── Image + floating action ───────────────────────────── */}
       <div className="relative">
-        <Link href={`/products/${slug}`} className="relative block overflow-hidden rounded-xl bg-gray-100">
+        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden rounded-[22px] bg-paper-warm border border-line shadow-soft">
           <img
             src={primary}
             alt={name}
-            className="block w-full h-auto transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
+            className="block w-full h-auto"
           />
           {secondary && (
             <img
@@ -91,7 +91,7 @@ export default function ProductCard({ product }) {
 
           {!inStock && (
             <div className="absolute inset-0 bg-paper/75 flex items-center justify-center">
-              <span className="text-ink text-[11px] tracking-[0.2em] uppercase border border-ink px-4 py-1.5 rounded-sm bg-paper">
+              <span className="text-ink text-[11px] tracking-[0.2em] uppercase border border-line px-4 py-1.5 rounded-full bg-paper shadow-soft">
                 Sold Out
               </span>
             </div>
@@ -105,7 +105,7 @@ export default function ProductCard({ product }) {
             onClick={handleAdd}
             aria-label={added ? 'Added to bag' : 'Add to bag'}
             className={`absolute -bottom-4 right-3.5 w-10 h-10 rounded-full flex items-center justify-center shadow-card transition-all duration-200 hover:scale-110 sm:-bottom-5 sm:right-4 sm:w-12 sm:h-12 ${
-              added ? 'bg-ink-soft text-paper' : 'bg-ink text-paper hover:bg-ink-soft'
+              added ? 'bg-accent text-paper' : 'bg-ink text-paper hover:bg-accent'
             }`}
           >
             {added ? (
@@ -122,9 +122,9 @@ export default function ProductCard({ product }) {
         <Link href={`/products/${slug}`} className="block">
           <p className="text-[10px] tracking-[0.24em] uppercase text-ink-muted mb-2">{collection}</p>
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-            <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1">{name}</h3>
+            <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1 transition-colors group-hover:text-accent-deep">{name}</h3>
             <div className="shrink-0 flex items-baseline gap-1.5">
-              <span className="h-display text-ink text-[17px] sm:text-[19px] leading-none">₹{price.toLocaleString('en-IN')}</span>
+              <span className="h-display text-accent-deep text-[17px] sm:text-[19px] leading-none">₹{price.toLocaleString('en-IN')}</span>
               {compare && compare > price && (
                 <span className="text-ink-muted text-[12px] line-through">₹{compare.toLocaleString('en-IN')}</span>
               )}

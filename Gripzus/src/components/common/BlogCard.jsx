@@ -14,16 +14,16 @@ export default function BlogCard({ post }) {
   return (
     <Link href={`/journal/${post.slug}`} className="group flex flex-col">
       {/* Cover */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100">
-        <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        <span className="absolute top-3 left-3 bg-paper/95 backdrop-blur-sm text-ink text-[10px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-sm">
+      <div className="media-zoom relative aspect-[4/3] overflow-hidden rounded-[22px] bg-paper-warm border border-line shadow-soft">
+        <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
+        <span className="absolute top-3.5 left-3.5 bg-paper/95 backdrop-blur-sm text-ink text-[10px] tracking-[0.16em] uppercase px-3 py-1 rounded-full shadow-soft">
           {post.category}
         </span>
       </div>
 
       {/* Body */}
-      <div className="pt-4 flex flex-col flex-1">
-        <h3 className="h-display text-xl md:text-[1.4rem] leading-snug text-ink group-hover:underline underline-offset-4 line-clamp-2">
+      <div className="pt-5 flex flex-col flex-1">
+        <h3 className="h-display text-xl md:text-[1.4rem] leading-snug text-ink transition-colors group-hover:text-accent-deep line-clamp-2">
           {post.title}
         </h3>
         <p className="prose-body text-sm mt-2 line-clamp-2 flex-1 text-justify">{post.excerpt}</p>

@@ -141,8 +141,8 @@ export default function Header() {
                 </Link>
               ))}
               <div className="mt-5 grid grid-cols-2 gap-3">
-                <Link href={accountHref} onClick={() => setMobileOpen(false)} className="eyebrow text-center py-3 border border-line hover:border-ink transition-colors">{isAuthenticated ? 'Account' : 'Sign In'}</Link>
-                <Link href="/track-order" onClick={() => setMobileOpen(false)} className="eyebrow text-center py-3 border border-line hover:border-ink transition-colors">Track Order</Link>
+                <Link href={accountHref} onClick={() => setMobileOpen(false)} className="eyebrow !text-ink text-center py-3 rounded-full border border-line hover:border-ink transition-colors">{isAuthenticated ? 'Account' : 'Sign In'}</Link>
+                <Link href="/track-order" onClick={() => setMobileOpen(false)} className="eyebrow !text-ink text-center py-3 rounded-full border border-line hover:border-ink transition-colors">Track Order</Link>
               </div>
             </nav>
           </aside>
@@ -154,7 +154,7 @@ export default function Header() {
 
 function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, ...rest }) {
   return (
-    <Comp aria-label={ariaLabel} className="relative w-9 h-9 flex items-center justify-center text-ink hover:text-clay transition-colors" {...rest}>
+    <Comp aria-label={ariaLabel} className="relative w-9 h-9 flex items-center justify-center rounded-full text-ink hover:bg-paper-warm hover:text-accent transition-colors" {...rest}>
       {children}
       {Number(badge) > 0 && (
         <span className="absolute top-0.5 right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-clay text-paper text-[9px] font-semibold flex items-center justify-center">

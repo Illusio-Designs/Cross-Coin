@@ -22,7 +22,7 @@ function Stars({ n = 5 }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <svg key={i} width="13" height="13" viewBox="0 0 24 24"
           fill={i < n ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4"
-          className={i < n ? 'text-clay' : 'text-line'}>
+          className={i < n ? 'text-accent' : 'text-line'}>
           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
         </svg>
       ))}
@@ -32,14 +32,15 @@ function Stars({ n = 5 }) {
 
 function ReviewCard({ r }) {
   return (
-    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper-warm border border-line rounded-lg p-6 mx-2.5">
+    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper border border-line rounded-[24px] shadow-soft p-7 mx-2.5">
       <Stars n={r.rating} />
       <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mt-4 mb-5">
         “{r.quote}”
       </blockquote>
-      <figcaption className="text-sm">
+      <figcaption className="flex items-center gap-2.5 text-sm">
+        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
         <span className="text-ink font-medium">{r.name}</span>
-        <span className="text-ink-muted"> · {r.role}</span>
+        <span className="text-ink-muted">· {r.role}</span>
       </figcaption>
     </figure>
   );
