@@ -7,51 +7,52 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Gripzus — Soft Luxe Editorial (warm bone + espresso + sage)
+        // Gripzus — Techwear / Performance-Luxe (graphite + concrete + steel)
         ink: {
-          DEFAULT: '#1C1A17',
-          soft:    '#6B655C',
-          muted:   '#A69F92',
+          DEFAULT: '#17191C',
+          soft:    '#565C63',
+          muted:   '#9198A0',
         },
         paper: {
-          DEFAULT: '#FBFAF6',
-          warm:    '#F4F1E9',
-          deep:    '#ECE7DB',
+          DEFAULT: '#F2F3F4',
+          warm:    '#E9EBED',
+          deep:    '#E0E3E6',
         },
         line: {
-          DEFAULT: '#E6E0D3',
-          dark:    '#2A2822',
+          DEFAULT: '#D6DADE',
+          dark:    '#2A2D31',
         },
-        // Signature sage accent
+        // restrained steel accent
         accent: {
-          DEFAULT: '#5E6B54',
-          deep:    '#454F3D',
-          soft:    '#EAEBE2',
+          DEFAULT: '#47566A',
+          deep:    '#333F4E',
+          soft:    '#E1E5EA',
         },
-        // legacy alias → sage so old `clay` classes render on-brand
         clay: {
-          DEFAULT: '#5E6B54',
-          deep:    '#454F3D',
+          DEFAULT: '#47566A',
+          deep:    '#333F4E',
         },
       },
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'serif'],
+        display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
         body:    ['Inter', 'system-ui', 'sans-serif'],
+        mono:    ['Space Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       letterSpacing: {
         wider: '0.05em',
-        widest: '0.24em',
+        widest: '0.2em',
       },
       borderRadius: {
+        DEFAULT: '10px',
+        lg: '16px',
         xl2: '20px',
-        xl3: '28px',
       },
       maxWidth: {
         site: '1440px',
       },
       boxShadow: {
-        card: '0 24px 60px -28px rgba(28,26,23,0.30)',
-        soft: '0 8px 30px -18px rgba(28,26,23,0.22)',
+        card: '0 20px 50px -26px rgba(23,25,28,0.28)',
+        soft: '0 6px 24px -14px rgba(23,25,28,0.20)',
       },
       keyframes: {
         riseIn: {

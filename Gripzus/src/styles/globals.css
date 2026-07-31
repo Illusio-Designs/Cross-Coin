@@ -1,41 +1,43 @@
 /* ===================================================================
-   GRIPZUS — Soft Luxe Editorial design system
-   Warm bone canvas, espresso ink, a restrained sage accent, elegant
-   Fraunces serif display, generous whitespace, soft rounded UI.
-   Premium & calm — distinct from the sibling brands.
+   GRIPZUS — Techwear / Performance-Luxe design system
+   Cool graphite + concrete greys, engineered grid layouts, Space Grotesk
+   display, monospace technical labels, restrained steel accent, gentle
+   radius. Precise, premium, understated — unlike the sibling brands.
    =================================================================== */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Warm neutral canvas */
-  --ink:        #1C1A17;   /* warm espresso near-black */
-  --ink-soft:   #6B655C;
-  --ink-muted:  #A69F92;
+  /* Cool graphite / concrete neutrals */
+  --ink:        #17191C;   /* graphite near-black */
+  --ink-soft:   #565C63;
+  --ink-muted:  #9198A0;
 
-  --paper:      #FBFAF6;   /* warm bone */
-  --paper-warm: #F4F1E9;   /* light sand surface */
-  --paper-deep: #ECE7DB;   /* deeper sand surface */
-  --line:       #E6E0D3;   /* warm hairline */
+  --paper:      #F2F3F4;   /* cool light concrete */
+  --paper-warm: #E9EBED;   /* cool surface */
+  --paper-deep: #E0E3E6;   /* deeper cool surface */
+  --line:       #D6DADE;   /* cool hairline */
+  --line-dark:  #2A2D31;
 
-  /* Sage accent — the signature Gripzus colour, used sparingly */
-  --accent:      #5E6B54;  /* muted sage */
-  --accent-deep: #454F3D;  /* deep sage for hover */
-  --accent-soft: #EAEBE2;  /* pale sage wash */
+  /* Restrained steel accent — used sparingly for active/utility states */
+  --accent:      #47566A;  /* muted steel blue-grey */
+  --accent-deep: #333F4E;
+  --accent-soft: #E1E5EA;
 
-  /* Legacy aliases kept so older markup resolves */
-  --clay:       #5E6B54;
-  --clay-deep:  #454F3D;
+  /* Legacy aliases */
+  --clay:       #47566A;
+  --clay-deep:  #333F4E;
 
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  --radius:      14px;   /* card / control radius */
-  --radius-lg:   24px;   /* large surfaces */
+  --radius:      10px;
+  --radius-lg:   16px;
 }
 
 * { box-sizing: border-box; }
@@ -53,70 +55,66 @@ html, body {
   max-width: 100%;
 }
 
-body { font-size: 15px; line-height: 1.65; }
+body { font-size: 15px; line-height: 1.6; }
 
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 img, picture, video, canvas { max-width: 100%; display: block; }
 
-::selection { background: var(--accent); color: var(--paper); }
+::selection { background: var(--ink); color: var(--paper); }
 
 /* ── Type ─────────────────────────────────────────────────────────── */
 
-/* Elegant serif display — the premium voice */
+/* Engineered display — Space Grotesk, tight */
 .h-display {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 1.02;
 }
 .h-mark {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 0.96;
 }
-/* Serif italic accent */
+/* Italic accent kept for legacy markup — becomes a grotesk medium accent */
 .h-italic {
   font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 400;
+  font-weight: 500;
+  font-style: normal;
 }
 
-/* Small uppercase label */
-.eyebrow {
-  font-family: var(--font-body);
+/* Technical label — monospace, the techwear signature */
+.eyebrow,
+.mono-label {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
+  font-weight: 400;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-soft);
 }
+.spec { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; color: var(--ink-soft); }
 
-/* Kicker — sage dot + label */
+/* Kicker — mono label with a leading tick + index feel */
 .kicker {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent);
 }
-.kicker::before {
-  content: '';
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: var(--accent);
-}
+.kicker::before { content: '›'; color: var(--accent); font-weight: 700; }
 .kicker-light { color: var(--paper); }
-.kicker-light::before { background: var(--paper); }
+.kicker-light::before { color: var(--paper); }
 
-.prose-body { font-family: var(--font-body); color: var(--ink-soft); line-height: 1.8; }
+.prose-body { font-family: var(--font-body); color: var(--ink-soft); line-height: 1.75; }
 
-/* ── Buttons — soft pill, rounded ─────────────────────────────────── */
+/* ── Buttons — engineered rounded-rect, gentle radius ─────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -124,15 +122,15 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   gap: 9px;
   background: var(--ink);
   color: var(--paper);
-  padding: 14px 30px;
-  font-family: var(--font-body);
+  padding: 14px 26px;
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   border: 1px solid var(--ink);
-  border-radius: 999px;
-  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
+  border-radius: var(--radius);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .btn:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
 .btn:active { transform: translateY(1px); }
@@ -145,14 +143,13 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   background: transparent;
   color: var(--ink);
   border: 1px solid var(--ink);
-  border-radius: 999px;
-  padding: 14px 30px;
-  font-family: var(--font-body);
+  border-radius: var(--radius);
+  padding: 14px 26px;
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .btn-outline:hover { background: var(--ink); color: var(--paper); }
 .btn-outline:active { transform: translateY(1px); }
@@ -164,20 +161,19 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   gap: 9px;
   background: var(--paper);
   color: var(--ink);
-  padding: 14px 30px;
-  font-family: var(--font-body);
+  padding: 14px 26px;
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   border: 1px solid var(--paper);
-  border-radius: 999px;
-  transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+  border-radius: var(--radius);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
-.btn-light:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.btn-light:hover { background: transparent; color: var(--paper); border-color: var(--paper); }
 .btn-light:active { transform: translateY(1px); }
 
-/* Legacy aliases so older markup keeps working */
+/* Legacy aliases */
 .cta        { @apply btn; }
 .cta-ghost  { @apply btn-outline; }
 .cta-dark   { @apply btn-light; }
@@ -191,7 +187,7 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 13px 15px;
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--ink);
@@ -209,40 +205,43 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   padding-left: 20px;
   padding-right: 20px;
 }
-@media (min-width: 768px) {
-  .wrap { padding-left: 40px; padding-right: 40px; }
-}
-@media (min-width: 1024px) {
-  .wrap { padding-left: 64px; padding-right: 64px; }
-}
+@media (min-width: 768px) { .wrap { padding-left: 40px; padding-right: 40px; } }
+@media (min-width: 1024px) { .wrap { padding-left: 56px; padding-right: 56px; } }
 
-.section-y { padding-top: 64px; padding-bottom: 64px; }
-@media (min-width: 768px) {
-  .section-y { padding-top: 100px; padding-bottom: 100px; }
-}
+.section-y { padding-top: 60px; padding-bottom: 60px; }
+@media (min-width: 768px) { .section-y { padding-top: 92px; padding-bottom: 92px; } }
 
 .hairline { height: 1px; background: var(--line); }
+.rule-ink { height: 1px; background: var(--ink); }
 
-/* Soft card + hover-zoom media */
-.card-soft {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
+/* Engineered surfaces */
+.card-soft { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
 .media-zoom { overflow: hidden; }
 .media-zoom img { transition: transform 0.8s cubic-bezier(0.22,1,0.36,1); }
-.media-zoom:hover img { transform: scale(1.05); }
+.media-zoom:hover img { transform: scale(1.04); }
+
+/* Big index number — mono, outlined */
+.num-index { font-family: var(--font-mono); font-weight: 700; color: var(--ink-muted); }
+
+/* Dotted engineering grid background */
+.grid-dot {
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+/* Corner tick marks for framed panels */
+.ticked { position: relative; }
+.ticked::before, .ticked::after {
+  content: ''; position: absolute; width: 10px; height: 10px;
+  border-color: var(--ink); border-style: solid; border-width: 0;
+}
+.ticked::before { top: 10px; left: 10px; border-top-width: 1px; border-left-width: 1px; }
+.ticked::after  { bottom: 10px; right: 10px; border-bottom-width: 1px; border-right-width: 1px; }
 
 /* ── Policy / rich-text content ───────────────────────────────────── */
-.policy-content { font-family: var(--font-body); color: var(--ink-soft); font-size: 15px; line-height: 1.85; }
+.policy-content { font-family: var(--font-body); color: var(--ink-soft); font-size: 15px; line-height: 1.8; }
 .policy-content h1, .policy-content h2, .policy-content h3, .policy-content h4 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  color: var(--ink);
-  line-height: 1.15;
-  margin: 1.8em 0 0.55em;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display); font-weight: 600; color: var(--ink);
+  line-height: 1.15; margin: 1.8em 0 0.55em; letter-spacing: -0.01em;
 }
 .policy-content h1 { font-size: 2rem; }
 .policy-content h2 { font-size: 1.5rem; }

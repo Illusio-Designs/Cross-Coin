@@ -86,7 +86,7 @@ export default function Header() {
                   <Link
                     key={l.href}
                     href={l.href}
-                    className={`group relative text-[12px] tracking-[0.1em] uppercase font-medium transition-colors ${
+                    className={`group relative font-mono text-[11px] tracking-[0.08em] uppercase transition-colors ${
                       active ? 'text-ink' : 'text-ink-soft hover:text-ink'
                     }`}
                   >
@@ -136,8 +136,9 @@ export default function Header() {
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               {NAV.map((l) => (
                 <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-                  className="block py-3.5 border-b border-line text-[13px] tracking-[0.12em] uppercase font-medium text-ink">
-                  {l.label}
+                  className="flex items-center justify-between py-3.5 border-b border-line font-mono text-[12px] tracking-[0.08em] uppercase text-ink">
+                  <span>{l.label}</span>
+                  <span className="text-ink-muted text-[10px]">{String(NAV.indexOf(l) + 1).padStart(2, '0')}</span>
                 </Link>
               ))}
               <div className="mt-5 grid grid-cols-2 gap-3">

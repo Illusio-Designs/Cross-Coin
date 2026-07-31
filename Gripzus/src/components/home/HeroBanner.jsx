@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-/* Gripzus hero — soft luxe editorial.
-   Full-bleed image, gentle warm scrim, elegant Fraunces serif headline
-   set low-left, a slim rounded slide index bottom-right.
+/* Gripzus hero — techwear spec-sheet.
+   Full-bleed image inside a gently-radiused frame, engineering grid + corner
+   ticks, monospace spec callouts, Space Grotesk headline, and a mono slide
+   index. Structured like a product datasheet, not a fashion cover.
    slide shape: { id, eyebrow, title, description, image, buttonText, buttonLink } */
+
+const SPECS = [
+  ['GRIP', '360°'],
+  ['FIT', 'LOCKED'],
+  ['YARN', 'COMBED'],
+];
 
 export default function HeroBanner({ slides = [] }) {
   const [current, setCurrent] = useState(0);
@@ -17,8 +24,8 @@ export default function HeroBanner({ slides = [] }) {
 
   if (!slides.length) {
     return (
-      <section className="wrap pt-6">
-        <div className="h-[80vh] min-h-[540px] rounded-[28px] bg-paper-deep animate-pulse" />
+      <section className="wrap pt-4">
+        <div className="h-[82vh] min-h-[560px] rounded-lg bg-paper-deep animate-pulse" />
       </section>
     );
   }
@@ -27,8 +34,15 @@ export default function HeroBanner({ slides = [] }) {
 
   return (
     <section className="wrap pt-4 md:pt-6">
-      <div className="relative overflow-hidden rounded-[24px] md:rounded-[32px] bg-ink">
-        <div className="relative h-[82vh] md:h-[88vh] min-h-[560px]">
+      {/* top datasheet strip */}
+      <div className="flex items-center justify-between border-y border-ink py-2 mb-4">
+        <span className="spec text-ink">GRIPZUS™ / GRIP SYSTEM</span>
+        <span className="spec hidden sm:inline text-ink">ENGINEERED FOR MOVEMENT</span>
+        <span className="spec text-ink">EST. 2026 · IN</span>
+      </div>
+
+      <div className="ticked relative overflow-hidden rounded-lg bg-ink">
+        <div className="relative h-[80vh] md:h-[86vh] min-h-[560px]">
           {/* Stacked images (cross-fade) */}
           {slides.map((sl, i) => (
             <img
@@ -40,48 +54,57 @@ export default function HeroBanner({ slides = [] }) {
             />
           ))}
 
-          {/* Soft warm scrim */}
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-transparent pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink/40 to-transparent pointer-events-none" />
+          {/* engineering grid + scrim */}
+          <div className="absolute inset-0 grid-dot opacity-[0.12] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-ink/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/55 to-transparent pointer-events-none" />
 
-          {/* Content */}
+          {/* top-left index tag */}
+          <div className="absolute top-4 left-4 md:top-6 md:left-6 flex items-center gap-3">
+            <span className="spec text-paper/80 border border-paper/25 rounded px-2 py-1">MOD.{String(current + 1).padStart(2, '0')}</span>
+            <span className="spec text-paper/50">/ {String(slides.length).padStart(2, '0')}</span>
+          </div>
+
+          {/* content */}
           <div className="absolute inset-0 flex items-end">
-            <div className="w-full px-6 md:px-12 lg:px-16 pb-12 md:pb-16">
-              <div className="max-w-3xl">
-                <span className="kicker kicker-light mb-5">{s.eyebrow || 'Socks, engineered'}</span>
-                <h1 className="h-display text-paper mt-4 text-[13vw] leading-[0.98] sm:text-[10vw] md:text-[5.5rem] lg:text-[6.5rem]">
-                  {s.title || 'Hold your\nground.'}
-                </h1>
-                {s.description && (
-                  <p className="text-paper/75 text-[15px] md:text-base mt-6 max-w-lg leading-8">
-                    {s.description}
-                  </p>
-                )}
-                <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <Link href={s.buttonLink || '/products'} className="btn-light">
-                    {s.buttonText || 'Shop the collection'}
-                  </Link>
-                  <Link href="/collections" className="group inline-flex items-center gap-2 text-paper/85 text-xs uppercase tracking-[0.2em] hover:text-paper transition-colors">
-                    New arrivals
-                    <span className="w-7 h-px bg-paper/50 group-hover:w-11 transition-all duration-300" />
-                  </Link>
-                </div>
+            <div className="w-full px-5 md:px-10 pb-8 md:pb-12">
+              <span className="kicker kicker-light mb-4">{s.eyebrow || 'Socks · Engineered'}</span>
+              <h1 className="h-mark text-paper mt-3 text-[13vw] leading-[0.92] sm:text-[9.5vw] md:text-[6rem] lg:text-[7rem] whitespace-pre-line">
+                {s.title || 'Hold your\nground.'}
+              </h1>
+
+              {s.description && (
+                <p className="text-paper/75 text-[14px] md:text-[15px] mt-5 max-w-md leading-7">{s.description}</p>
+              )}
+
+              {/* spec row */}
+              <div className="mt-6 flex flex-wrap gap-x-8 gap-y-2 border-t border-paper/20 pt-4 max-w-xl">
+                {SPECS.map(([k, v]) => (
+                  <div key={k} className="flex items-baseline gap-2">
+                    <span className="spec text-paper/50">{k}</span>
+                    <span className="font-mono text-paper text-sm font-bold">{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link href={s.buttonLink || '/products'} className="btn-light">
+                  {s.buttonText || 'Shop the system'}
+                </Link>
+                <Link href="/collections" className="btn-outline !border-paper/40 !text-paper hover:!bg-paper hover:!text-ink">
+                  Collections
+                </Link>
               </div>
             </div>
           </div>
 
-          {/* Numbered slide index, bottom-right */}
+          {/* slide selector — bottom-right, mono */}
           {slides.length > 1 && (
-            <div className="absolute right-5 md:right-10 bottom-12 md:bottom-16 z-20 flex items-center gap-4">
-              <div className="flex flex-col gap-2">
-                {slides.map((_, i) => (
-                  <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
-                    className={`h-[3px] rounded-full transition-all duration-300 ${i === current ? 'w-10 bg-paper' : 'w-5 bg-paper/40 hover:bg-paper/70'}`} />
-                ))}
-              </div>
-              <span className="text-paper/70 text-xs tracking-[0.18em] tabular-nums">
-                {String(current + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
-              </span>
+            <div className="absolute right-4 md:right-6 bottom-5 md:bottom-7 z-20 flex items-center gap-2">
+              {slides.map((_, i) => (
+                <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
+                  className={`h-6 rounded transition-all duration-300 ${i === current ? 'w-8 bg-paper' : 'w-6 bg-paper/25 hover:bg-paper/50'}`} />
+              ))}
             </div>
           )}
         </div>

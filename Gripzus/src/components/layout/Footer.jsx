@@ -58,15 +58,15 @@ export default function Footer() {
                 toastSubscribed();
                 e.target.reset();
               }}
-              className="flex items-center border border-paper/20 max-w-[21rem] rounded-full overflow-hidden"
+              className="flex items-center border border-paper/25 max-w-[22rem] rounded-lg overflow-hidden"
             >
               <input
                 type="email"
                 name="email"
-                placeholder="Your email address"
-                className="flex-1 bg-transparent text-paper placeholder:text-paper/40 text-sm px-5 py-3.5 outline-none"
+                placeholder="name@domain.com"
+                className="flex-1 bg-transparent text-paper placeholder:text-paper/40 font-mono text-[13px] px-4 py-3.5 outline-none"
               />
-              <button type="submit" className="bg-paper text-ink m-1 px-6 py-3 rounded-full text-[11px] tracking-[0.16em] uppercase font-medium hover:bg-paper/80 transition-colors">
+              <button type="submit" className="bg-paper text-ink m-1 px-5 py-3 rounded text-[11px] tracking-[0.12em] uppercase font-mono hover:bg-accent hover:text-paper transition-colors">
                 Subscribe
               </button>
             </form>
