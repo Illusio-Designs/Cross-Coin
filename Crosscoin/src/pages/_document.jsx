@@ -42,6 +42,7 @@ async function getTrackingConfig() {
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
+          adsId: d.google_ads_id || null,
         }
       : null;
     _cfgCache = { at: now, value };
@@ -54,7 +55,7 @@ async function getTrackingConfig() {
 }
 
 export default function Document({ tracking }) {
-  const { gaId, fbId, clarityId } = tracking || {};
+  const { gaId, fbId, clarityId, adsId } = tracking || {};
 
   return (
     <Html lang="en">
@@ -71,11 +72,13 @@ export default function Document({ tracking }) {
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
         <link rel="dns-prefetch" href="https://verify.msg91.com" />
 
-        {/* ── Google Analytics 4 (server-rendered so it's detectable) ── */}
-        {gaId && (
+        {/* ── Google tag: GA4 + Google Ads (server-rendered so it's detectable) ──
+            gtag.js is shared by Analytics (G-…) and Ads (AW-…), so we load the
+            library once and issue a config() per configured destination. */}
+        {(gaId || adsId) && (
           <>
             {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}`} />
             <script
               dangerouslySetInnerHTML={{
                 __html:
@@ -84,7 +87,8 @@ export default function Document({ tracking }) {
                   "if(_p.indexOf('/dashboard')===0||_p.indexOf('/auth')===0)return;" +
                   "dataLayer.push(arguments);}" +
                   "gtag('js', new Date());" +
-                  `gtag('config', '${gaId}');`,
+                  (gaId ? `gtag('config', '${gaId}');` : "") +
+                  (adsId ? `gtag('config', '${adsId}');` : ""),
               }}
             />
           </>

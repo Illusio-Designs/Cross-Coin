@@ -73,10 +73,14 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
     // every brand received Crosscoin's tracking IDs instead of their own.
     const brandId = req.brandId || parseInt(req.query.brandId, 10) || 1;
     const settingsHelper = require('../services/settingsHelper');
-    const [ga, fb, clarity] = await Promise.all([
+    const [ga, fb, clarity, googleAds] = await Promise.all([
       settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID'),
       settingsHelper.getSetting(brandId, 'FB_PIXEL_ID'),
       settingsHelper.getSetting(brandId, 'CLARITY_ID'),
+      // Google Ads conversion tag (AW-…). Defaults to Crosscoin's account so
+      // the tag is live immediately; override per-brand via a GOOGLE_ADS_ID
+      // setting (Brand Settings → Analytics), exactly like the FB pixel above.
+      settingsHelper.getSetting(brandId, 'GOOGLE_ADS_ID', 'AW-18359689810'),
     ]);
     // Cache at the CDN/edge for 5 min — these IDs change rarely.
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
@@ -85,6 +89,7 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
       ga_measurement_id: ga || null,
       fb_pixel_id: fb || null,
       clarity_id: clarity || null,
+      google_ads_id: googleAds || null,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
