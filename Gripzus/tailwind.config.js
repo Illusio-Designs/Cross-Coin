@@ -7,56 +7,53 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Gripzus — Techwear / Performance-Luxe (graphite + concrete + steel)
+        // Gripzus — Editorial Gallery (stark white + near-black)
         ink: {
-          DEFAULT: '#17191C',
-          soft:    '#565C63',
-          muted:   '#9198A0',
+          DEFAULT: '#0A0A0A',
+          soft:    '#6E6E6E',
+          muted:   '#A6A6A6',
         },
         paper: {
-          DEFAULT: '#F2F3F4',
-          warm:    '#E9EBED',
-          deep:    '#E0E3E6',
+          DEFAULT: '#FFFFFF',
+          warm:    '#F6F6F4',
+          deep:    '#EFEFED',
         },
         line: {
-          DEFAULT: '#D6DADE',
-          dark:    '#2A2D31',
+          DEFAULT: '#E8E8E6',
+          dark:    '#1E1E1E',
         },
-        // restrained steel accent
         accent: {
-          DEFAULT: '#47566A',
-          deep:    '#333F4E',
-          soft:    '#E1E5EA',
+          DEFAULT: '#0A0A0A',
+          deep:    '#000000',
+          soft:    '#F2F2F0',
         },
         clay: {
-          DEFAULT: '#47566A',
-          deep:    '#333F4E',
+          DEFAULT: '#0A0A0A',
+          deep:    '#000000',
         },
       },
       fontFamily: {
-        display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
-        body:    ['Inter', 'system-ui', 'sans-serif'],
-        mono:    ['Space Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        display: ['Inter', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        body:    ['Inter', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
       },
       letterSpacing: {
         wider: '0.05em',
-        widest: '0.2em',
+        widest: '0.16em',
       },
       borderRadius: {
-        DEFAULT: '10px',
-        lg: '16px',
-        xl2: '20px',
+        DEFAULT: '8px',
+        lg: '12px',
       },
       maxWidth: {
-        site: '1440px',
+        site: '1600px',
       },
       boxShadow: {
-        card: '0 20px 50px -26px rgba(23,25,28,0.28)',
-        soft: '0 6px 24px -14px rgba(23,25,28,0.20)',
+        card: '0 20px 60px -30px rgba(0,0,0,0.22)',
+        soft: '0 4px 20px -14px rgba(0,0,0,0.14)',
       },
       keyframes: {
         riseIn: {
-          '0%':   { opacity: '0', transform: 'translateY(14px)' },
+          '0%':   { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'none' },
         },
       },
