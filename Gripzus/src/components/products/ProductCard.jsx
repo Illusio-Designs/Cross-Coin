@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 
-/* Gripzus ProductCard — premium editorial.
-   Auto-height image, a circular Add-to-Bag action tucked at the image
-   corner, refined chip badge, minimal heart, collection eyebrow, and a
-   serif name + price on one baseline. Shared component — identical
-   wherever it renders. */
+/* Gripzus ProductCard — techwear / performance-luxe.
+   Gentle-radius image framed by a hairline, a mono spec row (collection +
+   stock index), Space Grotesk name, monospace price-as-data, a squared
+   steel Add action and a minimal wishlist tick. Shared component —
+   identical wherever it renders. */
 
 const MAX_DOTS = 5;
 
@@ -54,7 +54,7 @@ export default function ProductCard({ product }) {
 
       {/* ── Image + floating action ───────────────────────────── */}
       <div className="relative">
-        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden rounded-[22px] bg-paper-warm border border-line shadow-soft">
+        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden rounded-[16px] bg-paper-warm border border-line shadow-soft">
           <img
             src={primary}
             alt={name}
@@ -68,43 +68,43 @@ export default function ProductCard({ product }) {
             />
           )}
 
-          {/* Badge — light frosted chip */}
+          {/* Badge — mono spec chip */}
           {badge && (
-            <span className="absolute top-3 left-3 bg-paper/95 backdrop-blur-sm text-ink text-[8px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full shadow-soft sm:top-3.5 sm:left-3.5 sm:text-[10px] sm:tracking-[0.16em] sm:px-2.5 sm:py-1">
+            <span className="spec absolute top-3 left-3 bg-paper/95 backdrop-blur-sm text-ink border border-line px-2 py-0.5 rounded sm:top-3.5 sm:left-3.5">
               {badge}
             </span>
           )}
 
-          {/* Wishlist heart */}
+          {/* Wishlist tick */}
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); toggle(product); }}
             aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
-            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full bg-paper/85 backdrop-blur-sm transition-all hover:bg-paper hover:scale-105 sm:top-3 sm:right-3 sm:w-9 sm:h-9"
+            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded border border-line bg-paper/85 backdrop-blur-sm transition-all hover:bg-paper hover:border-accent sm:top-3 sm:right-3 sm:w-9 sm:h-9"
           >
             <svg width="14" height="14" viewBox="0 0 24 24"
                  fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6"
-                 className="text-ink">
+                 className={wished ? 'text-accent' : 'text-ink'}>
               <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
             </svg>
           </button>
 
           {!inStock && (
             <div className="absolute inset-0 bg-paper/75 flex items-center justify-center">
-              <span className="text-ink text-[11px] tracking-[0.2em] uppercase border border-line px-4 py-1.5 rounded-full bg-paper shadow-soft">
-                Sold Out
+              <span className="spec text-ink border border-ink px-4 py-1.5 rounded bg-paper shadow-soft">
+                SOLD OUT
               </span>
             </div>
           )}
         </Link>
 
-        {/* Circular Add-to-Bag — tucked at the image corner */}
+        {/* Squared Add-to-Bag — tucked at the image corner */}
         {inStock && (
           <button
             type="button"
             onClick={handleAdd}
             aria-label={added ? 'Added to bag' : 'Add to bag'}
-            className={`absolute -bottom-4 right-3.5 w-10 h-10 rounded-full flex items-center justify-center shadow-card transition-all duration-200 hover:scale-110 sm:-bottom-5 sm:right-4 sm:w-12 sm:h-12 ${
+            className={`absolute -bottom-4 right-3.5 w-10 h-10 rounded-lg flex items-center justify-center shadow-card transition-all duration-200 hover:scale-105 sm:-bottom-5 sm:right-4 sm:w-12 sm:h-12 ${
               added ? 'bg-accent text-paper' : 'bg-ink text-paper hover:bg-accent'
             }`}
           >
@@ -117,17 +117,28 @@ export default function ProductCard({ product }) {
         )}
       </div>
 
-      {/* ── Info ──────────────────────────────────────────────── */}
-      <div className="pt-7 pr-1">
+      {/* ── Info — datasheet block ────────────────────────────── */}
+      <div className="pt-6 pr-1">
+        {/* mono spec row: collection + stock state */}
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <span className="spec uppercase tracking-[0.14em] truncate">{collection}</span>
+          <span className={`spec inline-flex items-center gap-1.5 shrink-0 ${inStock ? 'text-ink-soft' : 'text-ink-muted'}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-accent' : 'bg-line'}`} />
+            {inStock ? 'IN STOCK' : 'OUT'}
+          </span>
+        </div>
+
         <Link href={`/products/${slug}`} className="block">
-          <p className="text-[10px] tracking-[0.24em] uppercase text-ink-muted mb-2">{collection}</p>
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-            <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1 transition-colors group-hover:text-accent-deep">{name}</h3>
-            <div className="shrink-0 flex items-baseline gap-1.5">
-              <span className="h-display text-accent-deep text-[17px] sm:text-[19px] leading-none">₹{price.toLocaleString('en-IN')}</span>
+          <h3 className="h-display text-ink text-[17px] sm:text-[19px] leading-snug line-clamp-2 sm:line-clamp-1 transition-colors group-hover:text-accent-deep">{name}</h3>
+
+          {/* price-as-data — mono, on a hairline */}
+          <div className="mt-2.5 flex items-baseline justify-between gap-3 border-t border-line pt-2.5">
+            <span className="spec text-ink-muted">PRICE</span>
+            <div className="flex items-baseline gap-1.5">
               {compare && compare > price && (
-                <span className="text-ink-muted text-[12px] line-through">₹{compare.toLocaleString('en-IN')}</span>
+                <span className="font-mono text-ink-muted text-[12px] line-through">₹{compare.toLocaleString('en-IN')}</span>
               )}
+              <span className="font-mono text-ink text-[15px] font-bold">₹{price.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </Link>
@@ -143,7 +154,7 @@ export default function ProductCard({ product }) {
               />
             ))}
             {extraColors > 0 && (
-              <span className="text-[11px] text-ink-muted ml-0.5">+{extraColors}</span>
+              <span className="spec text-ink-muted ml-0.5">+{extraColors}</span>
             )}
           </div>
         )}

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 
-/* BlogCard — used by the journal list and the home BlogStrip.
-   Shows cover, category, title, excerpt and an author/date byline. */
+/* BlogCard — techwear datasheet card. Used by the journal list and the home
+   BlogStrip. Shows cover, mono category tag, Space Grotesk title, excerpt and
+   an author/date byline on a hairline. */
 
 export default function BlogCard({ post }) {
   const initials = (post.author || 'G')
@@ -14,9 +15,9 @@ export default function BlogCard({ post }) {
   return (
     <Link href={`/journal/${post.slug}`} className="group flex flex-col">
       {/* Cover */}
-      <div className="media-zoom relative aspect-[4/3] overflow-hidden rounded-[22px] bg-paper-warm border border-line shadow-soft">
+      <div className="media-zoom relative aspect-[4/3] overflow-hidden rounded-[16px] bg-paper-warm border border-line shadow-soft transition-colors group-hover:border-accent">
         <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
-        <span className="absolute top-3.5 left-3.5 bg-paper/95 backdrop-blur-sm text-ink text-[10px] tracking-[0.16em] uppercase px-3 py-1 rounded-full shadow-soft">
+        <span className="spec absolute top-3.5 left-3.5 bg-paper/95 backdrop-blur-sm text-ink border border-line px-2.5 py-1 rounded shadow-soft">
           {post.category}
         </span>
       </div>
@@ -30,12 +31,12 @@ export default function BlogCard({ post }) {
 
         {/* Byline */}
         <div className="flex items-center gap-2.5 mt-4 pt-4 border-t border-line">
-          <span className="w-8 h-8 rounded-full bg-ink text-paper text-[11px] font-medium flex items-center justify-center shrink-0">
+          <span className="w-8 h-8 rounded-lg bg-ink text-paper text-[11px] font-mono font-medium flex items-center justify-center shrink-0">
             {initials}
           </span>
           <div className="min-w-0">
             <p className="text-[13px] text-ink leading-tight truncate">{post.author}</p>
-            <p className="text-[11px] text-ink-muted leading-tight">{post.date} · {post.readTime}</p>
+            <p className="spec text-ink-muted leading-tight">{post.date} · {post.readTime}</p>
           </div>
         </div>
       </div>

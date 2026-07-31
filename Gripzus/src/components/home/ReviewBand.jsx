@@ -32,15 +32,18 @@ function Stars({ n = 5 }) {
 
 function ReviewCard({ r }) {
   return (
-    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper border border-line rounded-[24px] shadow-soft p-7 mx-2.5">
-      <Stars n={r.rating} />
-      <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mt-4 mb-5">
+    <figure className="shrink-0 w-[300px] md:w-[360px] bg-paper border border-line rounded-[16px] shadow-soft p-7 mx-2.5">
+      <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
+        <Stars n={r.rating} />
+        <span className="spec text-ink-muted">{String(r.rating).padStart(2, '0')}.0 / 5</span>
+      </div>
+      <blockquote className="h-display text-ink text-lg md:text-xl leading-snug mb-5">
         “{r.quote}”
       </blockquote>
-      <figcaption className="flex items-center gap-2.5 text-sm">
+      <figcaption className="flex items-center gap-2.5">
         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-        <span className="text-ink font-medium">{r.name}</span>
-        <span className="text-ink-muted">· {r.role}</span>
+        <span className="text-ink font-medium text-sm">{r.name}</span>
+        <span className="spec text-ink-muted">/ {r.role}</span>
       </figcaption>
     </figure>
   );
@@ -70,10 +73,14 @@ export default function ReviewBand({ reviews: reviewsProp }) {
   return (
     <section className="section-y border-y border-line overflow-hidden">
       <div className="wrap">
+        <div className="flex items-center justify-between border-t border-ink pt-3 mb-8">
+          <span className="spec text-ink">FIELD REPORTS — VERIFIED</span>
+          <span className="spec text-ink-muted hidden sm:inline">RATING AVG 5.0</span>
+        </div>
         <div className="text-center mb-12">
-          <p className="eyebrow mb-3">Worn &amp; reviewed</p>
-          <h2 className="h-display text-2xl sm:text-3xl md:text-5xl">
-            Loved by <span className="h-italic">thousands.</span>
+          <p className="kicker justify-center mb-4">Worn &amp; reviewed</p>
+          <h2 className="h-mark text-3xl sm:text-4xl md:text-5xl">
+            Loved by thousands.
           </h2>
         </div>
       </div>
