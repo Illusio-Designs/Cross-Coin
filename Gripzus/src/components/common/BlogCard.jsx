@@ -7,9 +7,9 @@ import Link from 'next/link';
 export default function BlogCard({ post }) {
   return (
     <Link href={`/journal/${post.slug}`} className="group flex flex-col">
-      {/* Cover — clean, sharp */}
-      <div className="media-zoom relative aspect-[4/3] overflow-hidden bg-paper-warm">
-        <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
+      {/* Cover — full image, not cropped; rounded for structure */}
+      <div className="media-zoom overflow-hidden rounded-xl border border-line bg-paper-warm">
+        <img src={post.image} alt={post.title} className="w-full h-auto" />
       </div>
 
       {/* Body */}

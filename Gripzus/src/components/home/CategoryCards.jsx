@@ -28,8 +28,8 @@ export default function CategoryCards({ categories = [] }) {
           {list.map((c, i) => (
             skeleton ? (
               <div key={i}>
-                <div className={`${ratios[i % ratios.length]} bg-paper-deep animate-pulse`} />
-                <div className="mt-3 h-2.5 w-1/2 bg-paper-deep animate-pulse" />
+                <div className={`${ratios[i % ratios.length]} rounded-2xl bg-paper-deep animate-pulse`} />
+                <div className="mt-3 h-2.5 w-1/2 rounded bg-paper-deep animate-pulse" />
               </div>
             ) : (
               <Link
@@ -37,7 +37,7 @@ export default function CategoryCards({ categories = [] }) {
                 href={`/products?collection=${encodeURIComponent(c.slug || (c.name || '').trim())}`}
                 className="group block md:[&:nth-child(even)]:mt-10"
               >
-                <div className={`media-zoom relative ${ratios[i % ratios.length]} overflow-hidden bg-paper-warm`}>
+                <div className={`media-zoom relative ${ratios[i % ratios.length]} overflow-hidden rounded-2xl border border-line bg-paper-warm`}>
                   {c.image
                     ? <img src={c.image} alt={c.name} className="absolute inset-0 w-full h-full object-cover" />
                     : <div className="absolute inset-0 bg-paper-deep" />}

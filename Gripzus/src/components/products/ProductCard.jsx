@@ -52,13 +52,13 @@ export default function ProductCard({ product }) {
   return (
     <article className="group flex flex-col">
 
-      {/* ── Image — clean, sharp, edge-to-edge ─────────────────── */}
+      {/* ── Image — rounded, consistent aspect, structured ─────── */}
       <div className="relative">
-        <Link href={`/products/${slug}`} className="media-zoom relative block overflow-hidden bg-paper-warm">
+        <Link href={`/products/${slug}`} className="media-zoom relative block aspect-[4/5] overflow-hidden rounded-2xl border border-line bg-paper-warm">
           <img
             src={primary}
             alt={name}
-            className="block w-full h-auto"
+            className="absolute inset-0 w-full h-full object-cover"
           />
           {secondary && (
             <img
