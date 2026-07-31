@@ -192,6 +192,9 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .hairline { height: 1px; background: var(--line); }
 .rule-ink { height: 1px; background: var(--ink); }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Media hover — quiet zoom for gallery imagery */
 .media-zoom { overflow: hidden; }
 .media-zoom img { transition: transform 0.9s cubic-bezier(0.22,1,0.36,1); }

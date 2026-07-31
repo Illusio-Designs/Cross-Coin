@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 
-/* "The Reserve" — Gripzus exclusive showcase.
-   Structured dark band: a single large rounded image of the SELECTED
-   variation on the left, the pair's info + a numbered pair-list on the
-   right. Selecting a colour swaps the one image; it auto-rotates through
-   colours then rolls on to the next pair. Pauses on hover. */
+/* "Hand-Picked" — a featured-product spotlight, modelled on the other
+   Cross-Coin brands' Exclusive section. Pick a product from the switcher
+   rail, browse ONLY the selected colour's images on the left, choose a
+   colour and add straight to the cart. */
 
 const FALLBACK_IMG = '/assets/Gripzus.JPG.jpeg';
 
@@ -16,15 +15,15 @@ function normalize(p) {
     id:    p.id,
     name:  p.name || 'Gripzus Pair',
     slug:  p.slug || p.handle || String(p.id),
-    collection: p.collection || p.collectionName || 'The Reserve',
+    category: p.collection || p.collectionName || 'Gripzus',
     sku:   p.sku || '',
     price: Number(p.salePrice ?? p.price ?? 0),
-    compareAtPrice: p.compareAtPrice ? Number(p.compareAtPrice) : null,
+    oldPrice: p.compareAtPrice ? Number(p.compareAtPrice) : (p.oldPrice ? Number(p.oldPrice) : null),
     badge: p.badge || '',
     images: imgs.length ? imgs : [p.image || FALLBACK_IMG],
     colors: Array.isArray(p.colors) ? p.colors.filter((c) => c?.name) : [],
     sizes: Array.isArray(p.sizes) ? p.sizes : [],
-    description: p.description || p.note || '',
+    description: p.description || '',
   };
 }
 
@@ -32,188 +31,211 @@ export default function ExclusiveSection({ products = [] }) {
   const list = (Array.isArray(products) ? products : []).slice(0, 4).map(normalize);
 
   const [active, setActive] = useState(0);
+  const [thumb, setThumb]   = useState(0);
   const [color, setColor]   = useState(0);
   const [qty, setQty]       = useState(1);
   const [added, setAdded]   = useState(false);
-  const [paused, setPaused] = useState(false);
   const { addItem } = useCart();
+  const thumbsRef = useRef(null);
+  const mainRef   = useRef(null);
+  const [railH, setRailH] = useState(0);
 
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
-  const p = list[activeIndex];
-  const colorIndex = p && p.colors.length ? Math.min(color, p.colors.length - 1) : 0;
-  const activeCol = p && p.colors.length ? p.colors[colorIndex] : null;
-  // ONE image for the selected variation: its own image if it has one, else
-  // the product image at the colour's index, else the first image. Never a
-  // rail of every image.
-  const mainImg = activeCol?.images?.[0]
-    || (p ? (p.images[Math.min(colorIndex, p.images.length - 1)] || p.images[0]) : '');
+  const product = list[activeIndex];
 
-  // Auto-rotate through the pair's colours, then roll to the next pair.
+  // ONLY the selected colour's images (fall back to product images).
+  const gallery = useMemo(() => {
+    if (!product) return [];
+    const perColor = product.colors[color]?.images;
+    const g = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
+    return g.length ? g : [FALLBACK_IMG];
+  }, [product, color]);
+
+  const thumbIndex = Math.min(thumb, gallery.length - 1);
+
+  // Match the vertical thumb rail height to the main image.
   useEffect(() => {
-    if (list.length === 0 || paused) return;
-    const id = setTimeout(() => {
-      const colorCount = list[activeIndex]?.colors?.length || 0;
-      if (colorIndex + 1 < colorCount) {
-        setColor(colorIndex + 1);
-      } else if (list.length > 1) {
-        setActive((activeIndex + 1) % list.length);
-        setColor(0); setQty(1);
-      } else {
-        setColor(0);
-      }
-    }, 3200);
-    return () => clearTimeout(id);
-  }, [list, activeIndex, colorIndex, paused]);
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  // Skeleton until the API products arrive.
-  if (list.length === 0) {
-    return (
-      <section className="section-y bg-ink">
-        <div className="wrap">
-          <div className="mb-10 h-3 w-44 rounded bg-paper/10 animate-pulse" />
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-            <div className="aspect-[4/5] rounded-2xl bg-paper/10 animate-pulse" />
-            <div className="space-y-4 pt-4">
-              <div className="h-3 w-1/3 rounded bg-paper/10 animate-pulse" />
-              <div className="h-9 w-3/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-7 w-1/4 rounded bg-paper/10 animate-pulse" />
-              <div className="h-12 w-full rounded-xl bg-paper/10 animate-pulse" />
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  // Auto-advance the spotlight image through the selected colour's gallery.
+  useEffect(() => {
+    if (gallery.length <= 1) return;
+    const t = setInterval(() => setThumb((i) => (i + 1) % gallery.length), 3000);
+    return () => clearInterval(t);
+  }, [gallery.length, activeIndex, color]);
 
-  const discount = p.compareAtPrice && p.compareAtPrice > p.price
-    ? Math.round((1 - p.price / p.compareAtPrice) * 100) : 0;
+  // Keep the active thumbnail centred by scrolling only the rail.
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector(`[data-thumb="${thumbIndex}"]`);
+    if (!el) return;
+    const railRect = rail.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    if (rail.scrollHeight > rail.clientHeight + 1) {
+      rail.scrollBy({ top: (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2, behavior: 'smooth' });
+    }
+  }, [thumbIndex]);
 
-  const colorLabel = activeCol?.packColors
-    ? `Pack of ${activeCol.packColors.length}`
-    : (activeCol?.name || '');
+  if (!product) return null;
 
-  const selectProduct = (i) => { setActive(i); setColor(0); setQty(1); setAdded(false); };
-  const num = (n) => String(n + 1).padStart(2, '0');
+  const activeCol = product.colors[Math.min(color, Math.max(0, product.colors.length - 1))];
+  const colorLabel = activeCol?.packColors ? `Pack of ${activeCol.packColors.length}` : (activeCol?.name || '');
+  const mainSrc = gallery[thumbIndex] || product.images[0];
+  const off = product.oldPrice && product.oldPrice > product.price
+    ? Math.round((1 - product.price / product.oldPrice) * 100) : 0;
 
-  const handleAdd = () => {
+  const pick = (i) => { setActive(i); setThumb(0); setColor(0); setQty(1); setAdded(false); };
+  const pickColor = (i) => { setColor(i); setThumb(0); };
+
+  const onAdd = () => {
     addItem({
-      id: p.id, name: p.name, slug: p.slug, image: mainImg || p.images[0],
-      price: p.price, collection: p.collection, qty,
-      size: p.sizes[0] || '', color: activeCol?.name || '',
+      id: product.id, name: product.name, slug: product.slug,
+      image: gallery[0] || product.images[0],
+      price: product.price, collection: product.category, qty,
+      size: product.sizes[0] || '', color: activeCol?.name || '',
     });
     setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+    setTimeout(() => setAdded(false), 1600);
   };
 
   return (
-    <section
-      className="section-y bg-ink text-paper"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <section className="section-y">
       <div className="wrap">
+        <div className="rounded-2xl border border-line bg-paper-warm/50 p-5 md:p-8 lg:p-10">
 
-        {/* Heading */}
-        <div className="flex items-end justify-between mb-8 md:mb-12 border-b border-paper/15 pb-6">
-          <div>
-            <p className="kicker kicker-light mb-3">The Reserve</p>
-            <h2 className="h-display text-paper text-2xl md:text-4xl">A curated edit of rare pairs.</h2>
-          </div>
-          <Link href="/products?sort=bestsellers" className="link-line hidden sm:inline-flex"
-            style={{ color: 'var(--paper)', borderColor: 'var(--paper)' }}>
-            View all
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-14 items-start">
-
-          {/* LEFT — single large rounded image of the selected variation */}
-          <div className="relative overflow-hidden rounded-2xl border border-paper/10 bg-paper/[0.04]">
-            <div className="aspect-[4/5]">
-              <img
-                key={mainImg}
-                src={mainImg}
-                alt={p.name}
-                className="h-full w-full object-cover animate-[fadeIn_0.5s_ease-out]"
-              />
+          {/* Head */}
+          <div className="flex flex-col gap-3 mb-8 md:flex-row md:items-end md:justify-between">
+            <div>
+              <span className="eyebrow text-ink-muted">Currently obsessed</span>
+              <h2 className="h-display text-2xl md:text-4xl mt-2.5">The pair on repeat.</h2>
             </div>
-            {p.badge && <span className="eyebrow absolute top-4 left-4 text-paper z-10">{p.badge}</span>}
+            <p className="text-ink-soft text-[13px] max-w-sm leading-relaxed">
+              The one we keep reaching for — swatched, styled and ready to slip into the bag.
+            </p>
           </div>
 
-          {/* RIGHT — info + numbered pair list */}
-          <div className="flex flex-col">
-            <span className="eyebrow text-paper/50 mb-2.5">{p.collection}</span>
-            <h3 className="h-display text-paper text-xl md:text-2xl leading-tight line-clamp-2">{p.name}</h3>
-            {p.sku && <p className="text-[11px] tracking-[0.1em] text-paper/40 mt-2">SKU / {p.sku}</p>}
+          {/* Gallery + Info */}
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:gap-12 items-start">
 
-            <div className="flex items-baseline gap-3 mt-4 mb-6 border-t border-paper/15 pt-4">
-              <span className="text-paper text-[15px]">₹{p.price.toLocaleString('en-IN')}</span>
-              {p.compareAtPrice && p.compareAtPrice > p.price && (
-                <span className="text-paper/40 text-[13px] line-through">₹{p.compareAtPrice.toLocaleString('en-IN')}</span>
-              )}
-              {discount > 0 && <span className="eyebrow text-paper/60">-{discount}%</span>}
-            </div>
-
-            {/* Colour selector — swaps the single image */}
-            {p.colors.length > 0 && (
-              <div className="mb-6">
-                <p className="eyebrow text-paper/50 mb-3">Colour — <span className="text-paper">{colorLabel}</span></p>
-                <div className="flex flex-wrap gap-2.5">
-                  {p.colors.map((c, i) =>
-                    c.packColors ? (
-                      <button key={c.name} title={c.name} onClick={() => setColor(i)} aria-label={`Pack of ${c.packColors.length}`}
-                        className={`flex h-9 items-center gap-1.5 rounded-lg border px-2.5 transition-all ${
-                          i === colorIndex ? 'border-paper' : 'border-paper/25 hover:border-paper/60'
-                        }`}>
-                        {c.packColors.map((pc) => (
-                          <span key={pc.name} title={pc.name} className="h-4 w-4 rounded-full" style={{ backgroundColor: pc.hex || '#ddd' }} />
-                        ))}
-                      </button>
-                    ) : (
-                      <button key={c.name} title={c.name} onClick={() => setColor(i)}
-                        className={`h-6 w-6 rounded-full transition-all ${
-                          i === colorIndex ? 'ring-1 ring-paper ring-offset-2 ring-offset-ink' : 'opacity-55 hover:opacity-90'
-                        }`}
-                        style={{ backgroundColor: c.hex || '#ddd' }} />
-                    )
-                  )}
+            {/* Gallery */}
+            <div className="flex gap-3">
+              {gallery.length > 1 && (
+                <div
+                  ref={thumbsRef}
+                  className="flex shrink-0 flex-col gap-2.5 overflow-y-auto no-scrollbar"
+                  style={railH ? { maxHeight: railH } : undefined}
+                >
+                  {gallery.map((src, i) => (
+                    <button
+                      key={src + i}
+                      data-thumb={i}
+                      type="button"
+                      onClick={() => setThumb(i)}
+                      aria-label={`View image ${i + 1}`}
+                      className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all ${
+                        i === thumbIndex ? 'border-ink' : 'border-line opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
                 </div>
+              )}
+              <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-xl border border-line bg-paper">
+                <div className="aspect-[4/5]">
+                  <img key={mainSrc} src={mainSrc} alt={product.name} className="h-full w-full object-cover animate-[fadeIn_0.4s_ease-out]" />
+                </div>
+                {product.badge && <span className="eyebrow absolute top-3 left-3 text-ink z-10">{product.badge}</span>}
               </div>
-            )}
-
-            {p.description && <p className="text-paper/60 text-[13px] leading-relaxed mb-7 line-clamp-3">{p.description}</p>}
-
-            {/* Qty + CTA */}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex shrink-0 items-center gap-3 rounded-lg border border-paper/25 px-4 py-3">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="text-paper/60 hover:text-paper">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                </button>
-                <span className="w-5 text-center text-[13px] text-paper">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="text-paper/60 hover:text-paper">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                </button>
-              </div>
-              <button onClick={handleAdd} className={`btn-light flex-1 justify-center whitespace-nowrap ${added ? 'opacity-70' : ''}`}>
-                {added ? 'Added' : 'Add to Bag'}
-              </button>
             </div>
-            <Link href={`/products/${p.slug}`} className="link-line" style={{ color: 'var(--paper)', borderColor: 'var(--paper)' }}>
-              View details
-            </Link>
 
-            {/* Numbered pair list */}
-            <div className="mt-10 border-t border-paper/15">
-              {list.map((item, i) => (
-                <button key={item.id} onClick={() => selectProduct(i)}
-                  className="group flex w-full items-center gap-4 border-b border-paper/10 py-4 text-left">
-                  <span className={`text-[11px] tracking-[0.12em] tabular-nums transition-colors ${i === activeIndex ? 'text-paper' : 'text-paper/35'}`}>{num(i)}</span>
-                  <span className={`flex-1 truncate text-[13px] transition-colors ${i === activeIndex ? 'text-paper' : 'text-paper/45 group-hover:text-paper/80'}`}>{item.name}</span>
-                  <span className={`text-[13px] tabular-nums transition-colors ${i === activeIndex ? 'text-paper' : 'text-paper/35'}`}>₹{item.price.toLocaleString('en-IN')}</span>
+            {/* Info */}
+            <div className="flex flex-col">
+              <span className="eyebrow text-ink-muted">{product.category}</span>
+              <h3 className="h-display text-xl md:text-2xl mt-2 leading-snug">{product.name}</h3>
+
+              <div className="flex items-baseline gap-3 mt-4">
+                <span className="text-[17px] text-ink">₹{product.price.toLocaleString('en-IN')}</span>
+                {product.oldPrice && product.oldPrice > product.price && (
+                  <span className="text-[14px] text-ink-muted line-through">₹{product.oldPrice.toLocaleString('en-IN')}</span>
+                )}
+                {off > 0 && <span className="eyebrow text-ink-soft">{off}% off</span>}
+              </div>
+
+              {/* Colour swatches — swap the gallery */}
+              {product.colors.length > 0 && (
+                <div className="mt-6">
+                  <p className="eyebrow text-ink-muted mb-2.5">Colour{colorLabel ? ` — ${colorLabel}` : ''}</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {product.colors.map((c, i) =>
+                      c.packColors ? (
+                        <button key={c.name} type="button" onClick={() => pickColor(i)} title={c.name} aria-label={`Pack of ${c.packColors.length}`}
+                          className={`flex h-9 items-center gap-1.5 rounded-lg border px-2.5 transition-colors ${i === color ? 'border-ink' : 'border-line hover:border-ink-muted'}`}>
+                          {c.packColors.map((pc) => (
+                            <span key={pc.name} className="h-4 w-4 rounded-full ring-1 ring-line" style={{ backgroundColor: pc.hex || '#ddd' }} />
+                          ))}
+                        </button>
+                      ) : (
+                        <button key={c.name} type="button" onClick={() => pickColor(i)} title={c.name} aria-label={c.name}
+                          className={`h-7 w-7 rounded-full ring-1 ring-offset-2 ring-offset-paper transition-all ${i === color ? 'ring-ink' : 'ring-line hover:ring-ink-muted'}`}
+                          style={{ backgroundColor: c.hex || '#ddd' }} />
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {product.description && <p className="text-ink-soft text-[13px] leading-relaxed mt-6 line-clamp-3">{product.description}</p>}
+
+              {/* Qty + Add + View */}
+              <div className="flex items-center gap-3 mt-7">
+                <div className="flex shrink-0 items-center gap-3 rounded-lg border border-line px-3.5 py-3">
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="text-ink-soft hover:text-ink">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  </button>
+                  <span className="w-5 text-center text-[13px]">{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="text-ink-soft hover:text-ink">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  </button>
+                </div>
+                <button type="button" onClick={onAdd} className="btn flex-1 justify-center whitespace-nowrap">
+                  {added ? 'Added ✓' : 'Add to Bag'}
                 </button>
-              ))}
+                <Link href={`/products/${product.slug}`} className="btn-outline whitespace-nowrap">View</Link>
+              </div>
             </div>
           </div>
+
+          {/* Other products switcher */}
+          {list.length > 1 && (
+            <div className="mt-8 pt-6 border-t border-line">
+              <p className="eyebrow text-ink-muted mb-3">Other products</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                {list.map((p, i) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => pick(i)}
+                    title={p.name}
+                    aria-label={p.name}
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all ${
+                      i === activeIndex ? 'border-ink' : 'border-line opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
