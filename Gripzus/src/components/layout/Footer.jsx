@@ -58,9 +58,10 @@ export default function Footer() {
         {/* Top — brand + newsletter */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pb-12 border-b border-paper/10">
           <div>
-            <span className="flex items-center gap-2.5">
-              <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 w-auto object-contain" style={{ filter: 'invert(1)' }} />
-              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 w-auto object-contain" style={{ filter: 'invert(1)' }} />
+            {/* invert makes the black art white; screen drops the (now-black) bg into the dark panel */}
+            <span className="flex items-center gap-0.5">
+              <img src="/Gripzusfavicon.jpeg" alt="" className="h-12 w-auto object-contain invert mix-blend-screen" />
+              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-5 w-auto object-contain invert mix-blend-screen" />
             </span>
             <p className="text-paper/55 text-[13px] leading-relaxed max-w-xs mt-5">
               Engineered grip socks, made for movement. Considered pairs, built to last.

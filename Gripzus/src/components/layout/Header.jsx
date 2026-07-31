@@ -66,7 +66,7 @@ export default function Header() {
     <>
       <header className="fixed top-3 md:top-4 inset-x-0 z-40">
         <div className="mx-auto w-full max-w-[1180px] px-3 md:px-5">
-          <div className={`flex items-center gap-4 h-[52px] md:h-[58px] px-3 md:px-5 rounded-full border bg-paper/90 backdrop-blur-xl transition-all duration-300 ${
+          <div className={`flex items-center gap-4 h-[58px] md:h-[64px] px-3 md:px-5 rounded-full border bg-paper/95 backdrop-blur-xl transition-all duration-300 ${
             scrolled ? 'border-line shadow-[0_10px_30px_-12px_rgba(0,0,0,0.18)]' : 'border-line/70 shadow-[0_4px_16px_-10px_rgba(0,0,0,0.10)]'
           }`}>
 
@@ -76,10 +76,10 @@ export default function Header() {
               <span className="block h-px bg-ink transition-all group-hover:w-[18px]" style={{ width: 12 }} />
             </button>
 
-            <Link href="/" aria-label="Gripzus home" className="shrink-0 pl-1 flex items-center gap-2 transition-opacity hover:opacity-70">
-              {/* sock-G mark + wordmark, white bg removed via multiply on the light pill */}
-              <img src="/Gripzusfavicon.jpeg" alt="" className="h-7 md:h-8 w-auto object-contain mix-blend-multiply" />
-              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-3.5 md:h-4 w-auto object-contain mix-blend-multiply" />
+            <Link href="/" aria-label="Gripzus home" className="shrink-0 pl-1 flex items-center gap-0.5 transition-opacity hover:opacity-70">
+              {/* sock-G mark + wordmark, white bg knocked out via multiply on the light pill */}
+              <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 md:h-11 w-auto object-contain mix-blend-multiply" />
+              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 md:h-[19px] w-auto object-contain mix-blend-multiply" />
             </Link>
 
             {/* Nav with sliding pill highlight */}
@@ -127,9 +127,9 @@ export default function Header() {
           <div className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-[1px] lg:hidden animate-[fadeIn_.25s_ease]" onClick={() => setMobileOpen(false)} aria-hidden />
           <aside className="fixed inset-y-0 left-0 z-[51] w-[88%] max-w-sm bg-paper lg:hidden flex flex-col gz-drawer">
             <div className="px-5 h-[58px] border-b border-line flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <img src="/Gripzusfavicon.jpeg" alt="" className="h-7 w-auto object-contain mix-blend-multiply" />
-                <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-3.5 w-auto object-contain mix-blend-multiply" />
+              <span className="flex items-center gap-0.5">
+                <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 w-auto object-contain mix-blend-multiply" />
+                <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 w-auto object-contain mix-blend-multiply" />
               </span>
               <button onClick={() => setMobileOpen(false)} className="w-9 h-9 flex items-center justify-center text-ink hover:rotate-90 transition-transform" aria-label="Close menu">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
