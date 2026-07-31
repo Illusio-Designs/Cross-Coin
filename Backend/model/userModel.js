@@ -25,7 +25,16 @@ const User = sequelize.define('User', {
     role: {
         type: DataTypes.ENUM('admin', 'product_manager', 'order_manager', 'whatsapp_manager', 'consumer'),
         defaultValue: 'consumer',
-        allowNull: false
+        allowNull: false,
+        comment: 'Primary role (kept for backward-compat). Effective access = role ∪ roles.'
+    },
+    // Additional staff roles beyond the primary one, so a user can hold e.g.
+    // Product Manager + Order Manager. Nullable → existing users keep working
+    // with just their primary `role`. Effective permissions are the union.
+    roles: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: null
     },
     profileImage: {
         type: DataTypes.STRING,

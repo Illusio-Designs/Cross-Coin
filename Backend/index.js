@@ -427,7 +427,27 @@ const startServer = async () => {
         logger.info('Testing database connection...');
         await sequelize.authenticate();
         logger.info('✓ Database connection successful');
-        
+
+        // ── Idempotent migration: users.roles (multi-role support) ─────────
+        // Production doesn't run sequelize sync, so ensure the column exists
+        // here. Guarded by information_schema → a no-op once applied and safe
+        // on every boot. Runs BEFORE the server accepts requests, so the User
+        // model's `roles` field never references a missing column (which would
+        // otherwise break authentication).
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'roles'`
+            );
+            if (!cols.length) {
+                logger.info('Migrating: adding users.roles column…');
+                await sequelize.query(`ALTER TABLE users ADD COLUMN roles JSON NULL AFTER role`);
+                logger.info('✓ users.roles column added');
+            }
+        } catch (err) {
+            logger.error('users.roles column migration failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

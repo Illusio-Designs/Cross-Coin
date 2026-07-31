@@ -4,6 +4,24 @@ const { User } = require('../model/userModel.js');
 // All non-consumer staff roles
 const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
 
+// A user's effective role set = primary `role` ∪ additional `roles` (JSON array).
+// This is the single source of truth for every permission check below, so a
+// user with multiple assigned roles is granted the union of their access.
+function effectiveRoles(user) {
+    if (!user) return [];
+    const set = new Set();
+    if (user.role) set.add(user.role);
+    if (Array.isArray(user.roles)) user.roles.forEach((r) => r && set.add(r));
+    return [...set];
+}
+// True if the user holds ANY of the allowed roles.
+function hasAnyRole(user, allowed) {
+    return effectiveRoles(user).some((r) => allowed.includes(r));
+}
+module.exports.effectiveRoles = effectiveRoles;
+module.exports.hasAnyRole = hasAnyRole;
+module.exports.STAFF_ROLES = STAFF_ROLES;
+
 // Token blacklist check via Redis
 async function isTokenBlacklisted(token) {
     try {
@@ -99,7 +117,7 @@ module.exports.authorize = (roles) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required' });
         }
-        if (!roles.includes(req.user.role)) {
+        if (!hasAnyRole(req.user, roles)) {
             return res.status(403).json({ message: 'Access denied' });
         }
         next();
@@ -111,7 +129,7 @@ module.exports.isAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-    if (req.user.role !== 'admin') {
+    if (!hasAnyRole(req.user, ['admin'])) {
         return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
     next();
@@ -122,7 +140,7 @@ module.exports.isStaff = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-    if (!STAFF_ROLES.includes(req.user.role)) {
+    if (!hasAnyRole(req.user, STAFF_ROLES)) {
         return res.status(403).json({ message: 'Access denied. Staff only.' });
     }
     next();
@@ -133,7 +151,7 @@ module.exports.isProductManager = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-    if (!['admin', 'product_manager'].includes(req.user.role)) {
+    if (!hasAnyRole(req.user, ['admin', 'product_manager'])) {
         return res.status(403).json({ message: 'Access denied. Product manager role required.' });
     }
     next();
@@ -144,7 +162,7 @@ module.exports.isOrderManager = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-    if (!['admin', 'order_manager'].includes(req.user.role)) {
+    if (!hasAnyRole(req.user, ['admin', 'order_manager'])) {
         return res.status(403).json({ message: 'Access denied. Order manager role required.' });
     }
     next();
@@ -155,7 +173,7 @@ module.exports.isWhatsappManager = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
     }
-    if (!['admin', 'whatsapp_manager'].includes(req.user.role)) {
+    if (!hasAnyRole(req.user, ['admin', 'whatsapp_manager'])) {
         return res.status(403).json({ message: 'Access denied. WhatsApp manager role required.' });
     }
     next();

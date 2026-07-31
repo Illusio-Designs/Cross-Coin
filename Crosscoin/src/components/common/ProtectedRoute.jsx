@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth, STAFF_ROLES } from "../../context/AuthContext";
+import { useAuth, STAFF_ROLES, getEffectiveRoles } from "../../context/AuthContext";
 
 // allowedRoles: array of roles that can access this route
 // if omitted, any authenticated staff can access
@@ -20,15 +20,17 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       return;
     }
 
-    // Must be a staff role to access dashboard
-    if (!STAFF_ROLES.includes(user.role)) {
+    const roles = getEffectiveRoles(user);
+
+    // Must hold a staff role to access dashboard
+    if (!roles.some((r) => STAFF_ROLES.includes(r))) {
       setRedirecting(true);
       router.replace("/");
       return;
     }
 
-    // If specific roles required, check them
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // If specific roles required, the user needs at least one of them
+    if (allowedRoles && !roles.some((r) => allowedRoles.includes(r))) {
       setRedirecting(true);
       router.replace("/dashboard");
     }

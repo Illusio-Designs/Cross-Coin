@@ -794,18 +794,31 @@ module.exports.refreshToken = async (req, res) => {
 module.exports.updateUserRole = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role, password } = req.body;
+        const { role, roles, password } = req.body;
 
         const VALID_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager', 'consumer'];
-        if (role && !VALID_ROLES.includes(role)) {
-            return res.status(400).json({ message: 'Invalid role' });
+
+        // Accept either a single `role` (legacy) or a `roles` array (multi-role).
+        // Normalise to a deduped, validated list; the primary `role` column is
+        // set to 'admin' when present (widest access), else the first role.
+        let roleList = null;
+        if (Array.isArray(roles)) roleList = roles;
+        else if (role) roleList = [role];
+        if (roleList) {
+            roleList = [...new Set(roleList)].filter((r) => VALID_ROLES.includes(r));
+            if (roleList.length === 0) {
+                return res.status(400).json({ message: 'Invalid role' });
+            }
         }
 
         const user = await User.findByPk(id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const updates = {};
-        if (role) updates.role = role;
+        if (roleList) {
+            updates.role = roleList.includes('admin') ? 'admin' : roleList[0];
+            updates.roles = roleList;
+        }
         if (password) {
             const strengthCheck = validatePasswordStrength(password);
             if (!strengthCheck.valid) return res.status(400).json({ message: strengthCheck.message });
@@ -826,12 +839,17 @@ module.exports.updateUserRole = async (req, res) => {
 // **Create Staff User (admin only)**
 module.exports.createStaffUser = async (req, res) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password, role, roles } = req.body;
 
         const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
-        if (!STAFF_ROLES.includes(role)) {
-            return res.status(400).json({ message: 'Invalid staff role' });
+
+        // Accept a `roles` array (multi-role) or a single `role` (legacy).
+        let roleList = Array.isArray(roles) ? roles : (role ? [role] : []);
+        roleList = [...new Set(roleList)].filter((r) => STAFF_ROLES.includes(r));
+        if (roleList.length === 0) {
+            return res.status(400).json({ message: 'At least one valid staff role is required' });
         }
+        const primaryRole = roleList.includes('admin') ? 'admin' : roleList[0];
 
         if (!username || !email || !password) {
             return res.status(400).json({ message: 'Username, email and password are required' });
@@ -844,7 +862,7 @@ module.exports.createStaffUser = async (req, res) => {
         if (existing) return res.status(400).json({ message: 'Email already exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ username, email, password: hashedPassword, role });
+        const user = await User.create({ username, email, password: hashedPassword, role: primaryRole, roles: roleList });
 
         const userResponse = user.toJSON();
         delete userResponse.password;

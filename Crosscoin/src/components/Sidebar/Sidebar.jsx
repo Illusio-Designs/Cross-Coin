@@ -82,25 +82,29 @@ const ALL_MENU = [
   { label: 'Logout',       icon: IC.logout,     view: 'logout' },
 ];
 
-function filterMenu(menu, role) {
+// userRoles is the user's effective role set — an item shows if the user holds
+// ANY role the item allows (null = visible to all staff).
+function filterMenu(menu, userRoles) {
+  const canSee = (allowed) => !allowed || allowed.some(r => userRoles.includes(r));
   return menu
-    .filter(item => !item.roles || item.roles.includes(role))
+    .filter(item => canSee(item.roles))
     .map(item => {
       if (!item.submenu) return item;
-      const filteredSub = item.submenu.filter(s => !s.roles || s.roles.includes(role));
+      const filteredSub = item.submenu.filter(s => canSee(s.roles));
       return filteredSub.length ? { ...item, submenu: filteredSub } : null;
     })
     .filter(Boolean);
 }
 
 export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, currentView, isMobileMenuOpen, onMobileMenuToggle }) {
-  const { user, role } = useAuth();
+  const { user, roles } = useAuth();
   const [openMenu, setOpenMenu] = React.useState(null);
   const [tooltip, setTooltip] = React.useState(null);
   const [isMobile, setIsMobile] = React.useState(false);
   const hideTimeoutRef = React.useRef(null);
 
-  const MENU = React.useMemo(() => filterMenu(ALL_MENU, role), [role]);
+  const roleKey = (roles || []).join(',');
+  const MENU = React.useMemo(() => filterMenu(ALL_MENU, roles || []), [roleKey]);
 
   React.useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 900);
@@ -146,20 +150,23 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
 
   const expanded = !isCollapsed || (isMobile && isMobileMenuOpen);
 
+  // Badge reflects the widest role the user holds (admin ⇒ admin, else first).
+  const primaryRole = (roles || []).includes('admin') ? 'admin' : (roles || [])[0];
+
   // Role badge color
   const roleBadgeColor = {
     admin:            '#ef4444',
     product_manager:  '#8b5cf6',
     order_manager:    '#f59e0b',
     whatsapp_manager: '#10b981',
-  }[role] || '#6b7280';
+  }[primaryRole] || '#6b7280';
 
   const roleLabel = {
     admin:            'Admin',
     product_manager:  'Product Manager',
     order_manager:    'Order Manager',
     whatsapp_manager: 'WhatsApp Manager',
-  }[role] || role;
+  }[primaryRole] || primaryRole;
 
   return (
     <>

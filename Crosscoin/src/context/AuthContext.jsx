@@ -14,6 +14,17 @@ const AuthContext = globalThis.__AUTH_CONTEXT__ || (globalThis.__AUTH_CONTEXT__ 
 // All non-consumer staff roles
 export const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
 
+// A user's effective role set = primary `role` ∪ additional `roles` (array).
+// Everything that gates on role should use this so a multi-role user gets the
+// union of their access.
+export const getEffectiveRoles = (user) => {
+  if (!user) return [];
+  const set = new Set();
+  if (user.role) set.add(user.role);
+  if (Array.isArray(user.roles)) user.roles.forEach((r) => r && set.add(r));
+  return [...set];
+};
+
 // Role display labels
 export const ROLE_LABELS = {
   admin:             'Admin',
@@ -146,13 +157,16 @@ function AuthProvider({ children }) {
         }
     }, []);
 
-    // Helper: can this user access a given view?
+    // Helper: can this user access a given view? Union of every effective role's
+    // allowed views (admin ⇒ all).
     const canAccessView = useCallback((view) => {
         if (!user) return false;
-        const allowed = ROLE_VIEWS[user.role];
-        if (allowed === null) return true; // admin
-        return allowed?.includes(view) ?? false;
+        const roles = getEffectiveRoles(user);
+        if (roles.includes('admin')) return true;
+        return roles.some((r) => ROLE_VIEWS[r]?.includes(view));
     }, [user]);
+
+    const roles = getEffectiveRoles(user);
 
     const value = {
         user,
@@ -164,9 +178,12 @@ function AuthProvider({ children }) {
         checkAuth,
         canAccessView,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
-        isStaff: STAFF_ROLES.includes(user?.role),
+        isAdmin: roles.includes('admin'),
+        isStaff: roles.some((r) => STAFF_ROLES.includes(r)),
         role: user?.role ?? null,
+        roles,
+        hasRole: (r) => roles.includes(r),
+        hasAnyRole: (list) => roles.some((r) => list.includes(r)),
     };
 
     return (

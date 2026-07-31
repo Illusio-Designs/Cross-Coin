@@ -22,6 +22,14 @@ const IC = {
   eyeOff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.06 10.06 0 0112 20c-5.52 0-10-8-10-8a17.7 17.7 0 013.07-4.11"/><path d="M1 1l22 22"/><path d="M9.53 9.53A3 3 0 0012 15a3 3 0 002.47-5.47"/></svg>,
 };
 
+// A user's effective roles = primary `role` ∪ additional `roles` array.
+const getUserRoles = (u) => {
+  const set = new Set();
+  if (u?.role) set.add(u.role);
+  if (Array.isArray(u?.roles)) u.roles.forEach(r => r && set.add(r));
+  return [...set];
+};
+
 function RoleBadge({ role }) {
   const r = ROLES.find(x => x.value === role);
   if (!r) return <span style={{ fontSize: 12, color: '#9ca3af' }}>{role}</span>;
@@ -33,7 +41,18 @@ function RoleBadge({ role }) {
   );
 }
 
-const EMPTY_FORM = { username: '', email: '', password: '', role: 'product_manager' };
+// Renders every role a user holds.
+function RoleBadges({ roles }) {
+  const list = (roles || []).filter(Boolean);
+  if (!list.length) return <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>;
+  return (
+    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+      {list.map(role => <RoleBadge key={role} role={role} />)}
+    </span>
+  );
+}
+
+const EMPTY_FORM = { username: '', email: '', password: '', roles: ['product_manager'] };
 
 export default function StaffUsers() {
   const [users, setUsers] = useState([]);
@@ -69,7 +88,12 @@ export default function StaffUsers() {
   useEffect(() => { setCurrentPage(1); }, [search, filterRole]);
 
   const filtered = users
-    .filter(u => filterRole === 'all' ? STAFF_ROLE_VALUES.includes(u.role) : u.role === filterRole)
+    .filter(u => {
+      const roles = getUserRoles(u);
+      return filterRole === 'all'
+        ? roles.some(r => STAFF_ROLE_VALUES.includes(r))
+        : roles.includes(filterRole);
+    })
     .filter(u => {
       if (!search) return true;
       const s = search.toLowerCase();
@@ -81,7 +105,7 @@ export default function StaffUsers() {
   const pageItems = filtered.slice(start, start + itemsPerPage).map((u, i) => ({ ...u, _sn: start + i + 1 }));
 
   const counts = ROLES.reduce((acc, r) => {
-    acc[r.value] = users.filter(u => u.role === r.value).length;
+    acc[r.value] = users.filter(u => getUserRoles(u).includes(r.value)).length;
     return acc;
   }, {});
 
@@ -95,7 +119,8 @@ export default function StaffUsers() {
 
   const openEdit = (user) => {
     setEditUser(user);
-    setForm({ username: user.username, email: user.email, password: '', role: user.role });
+    const roles = getUserRoles(user);
+    setForm({ username: user.username, email: user.email, password: '', roles: roles.length ? roles : ['product_manager'] });
     setFormError('');
     setShowPw(false);
     setModalOpen(true);
@@ -105,15 +130,16 @@ export default function StaffUsers() {
     e.preventDefault();
     setFormError('');
     if (!form.username.trim() || !form.email.trim()) { setFormError('Username and email are required.'); return; }
+    if (!form.roles?.length) { setFormError('Select at least one role.'); return; }
     if (!editUser && !form.password.trim()) { setFormError('Password is required for new users.'); return; }
     setSaving(true);
     try {
       if (editUser) {
-        const payload = { role: form.role };
+        const payload = { roles: form.roles };
         if (form.password.trim()) payload.password = form.password;
         await userService.updateUser(editUser.id, payload);
       } else {
-        await userService.createStaffUser({ username: form.username, email: form.email, password: form.password, role: form.role });
+        await userService.createStaffUser({ username: form.username, email: form.email, password: form.password, roles: form.roles });
       }
       setModalOpen(false);
       fetchUsers();
@@ -128,7 +154,7 @@ export default function StaffUsers() {
     { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: '#9ca3af', fontSize: 13 }}>{r._sn}</span> },
     { header: 'Name',    accessor: 'username',  cell: r => <span style={{ fontWeight: 600, color: '#111827' }}>{r.username}</span> },
     { header: 'Email',   accessor: 'email',     cell: r => <span style={{ color: '#6b7280', fontSize: 13 }}>{r.email}</span> },
-    { header: 'Role',    accessor: 'role',      cell: r => <RoleBadge role={r.role} /> },
+    { header: 'Roles',   accessor: 'role',      cell: r => <RoleBadges roles={getUserRoles(r)} /> },
     { header: 'Joined',  accessor: 'createdAt', cell: r => <span style={{ fontSize: 13, color: '#9ca3af' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '—'}</span> },
     {
       header: 'Actions', accessor: 'actions',
@@ -257,16 +283,24 @@ export default function StaffUsers() {
                   <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#111827' }}>{editUser.username}</p>
                   <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{editUser.email}</p>
                 </div>
-                <RoleBadge role={editUser.role} />
+                <RoleBadges roles={getUserRoles(editUser)} />
               </div>
             )}
 
-            {/* Role selector */}
+            {/* Role selector — assign one or more roles */}
             <div className="dm-field">
-              <label className="dm-label">Role <span className="dm-required">*</span></label>
+              <label className="dm-label">Roles <span className="dm-required">*</span>
+                <span className="dm-hint"> — select one or more</span>
+              </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
                 {ROLES.map(r => {
-                  const selected = form.role === r.value;
+                  const selected = form.roles.includes(r.value);
+                  const toggle = () => setForm(f => ({
+                    ...f,
+                    roles: f.roles.includes(r.value)
+                      ? f.roles.filter(x => x !== r.value)
+                      : [...f.roles, r.value],
+                  }));
                   return (
                     <label
                       key={r.value}
@@ -279,9 +313,9 @@ export default function StaffUsers() {
                       }}
                     >
                       <input
-                        type="radio" name="role" value={r.value}
+                        type="checkbox" name="roles" value={r.value}
                         checked={selected}
-                        onChange={() => setForm(f => ({ ...f, role: r.value }))}
+                        onChange={toggle}
                         style={{ accentColor: r.color, width: 15, height: 15, flexShrink: 0 }}
                       />
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
