@@ -13,6 +13,7 @@ import ProductFaqSection from '../components/common/ProductFaqSection';
 import { AlertTriangle, Users, ShoppingBag } from 'lucide-react';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
+import { gtagAdsConversion } from '../utils/gtagAdsConversion';
 import { richHtml } from '../utils/sanitizeHtml';
 import { ikTransform } from '../utils/imageUtils';
 export default function ProductDetails({ initialProduct = null, initialSlug = null, productFaqs = [], globalFaqs = [] } = {}) {
@@ -128,6 +129,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
               value: parseFloat(firstVar.price || api.price || 0),
               items: [{ item_id: String(api.id), item_name: api.name || '', price: parseFloat(firstVar.price || api.price || 0) }],
             });
+            gtagAdsConversion('view_item', { value: parseFloat(firstVar.price || api.price || 0), currency: 'INR' });
           }
         } else {
           setError('Product not found');
@@ -256,6 +258,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
       value: productData.price * quantity,
       items: [{ item_id: String(productData.id), item_name: productData.title, price: productData.price, quantity }],
     });
+    gtagAdsConversion('add_to_cart', { value: productData.price * quantity, currency: 'INR' });
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2200);
   };
@@ -289,6 +292,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
         price: parseFloat(productData.price || 0),
       }],
     });
+    gtagAdsConversion('begin_checkout', { value: productData.price * quantity, currency: 'INR' });
 
     if (item) {
       setIsDrawerOpen(true);

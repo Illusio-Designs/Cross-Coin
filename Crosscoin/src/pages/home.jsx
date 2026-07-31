@@ -12,6 +12,7 @@ import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
 import { fbqTrack } from '../utils/fbqTrack';
 import { gtagTrack } from '../utils/gtagTrack';
+import { gtagAdsConversion } from '../utils/gtagAdsConversion';
 
 // Lazy load CouponStrip to prevent module-level side effects
 const CouponStrip = dynamic(() => import("../components/common/CouponStrip"), {
@@ -349,6 +350,7 @@ const Home = ({ initialData = {} }) => {
                         value: parseFloat(prod.price || 0),
                         items: [{ item_id: String(prod.id), item_name: prod.name, price: parseFloat(prod.price || 0), quantity: 1 }],
                       });
+                      gtagAdsConversion('add_to_cart', { value: parseFloat(prod.price || 0), currency: 'INR' });
                     }}
                   />
                 );

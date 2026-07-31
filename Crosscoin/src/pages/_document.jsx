@@ -44,6 +44,7 @@ async function getTrackingConfig() {
           clarityId: d.clarity_id || null,
           adsId: d.google_ads_id || null,
           adsLabel: d.google_ads_conversion_label || null,
+          adsLabels: d.google_ads_labels || null,
         }
       : null;
     _cfgCache = { at: now, value };
@@ -56,7 +57,7 @@ async function getTrackingConfig() {
 }
 
 export default function Document({ tracking }) {
-  const { gaId, fbId, clarityId, adsId, adsLabel } = tracking || {};
+  const { gaId, fbId, clarityId, adsId, adsLabel, adsLabels } = tracking || {};
 
   return (
     <Html lang="en">
@@ -90,10 +91,11 @@ export default function Document({ tracking }) {
                   "gtag('js', new Date());" +
                   (gaId ? `gtag('config', '${gaId}');` : "") +
                   (adsId ? `gtag('config', '${adsId}');` : "") +
-                  // Expose the Ads id + purchase label so the order-success page
-                  // can fire a Google Ads conversion (no-op until a label is set).
+                  // Expose the Ads id + conversion labels so funnel pages can
+                  // fire Google Ads conversions (no-op until a label is set).
                   (adsId ? `window.__gAdsId='${adsId}';` : "") +
-                  (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : ""),
+                  (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
+                  (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : ""),
               }}
             />
           </>

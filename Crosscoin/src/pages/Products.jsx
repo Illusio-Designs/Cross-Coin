@@ -24,6 +24,7 @@ import { getProductImageSrc } from "../utils/imageUtils";
 import SeoWrapper from "../console/SeoWrapper";
 import { fbqTrack } from "../utils/fbqTrack";
 import { gtagTrack } from "../utils/gtagTrack";
+import { gtagAdsConversion } from "../utils/gtagAdsConversion";
 import colorMap from "../components/products/colorMap";
 import { Pagination } from "../components/ui";
 import { showSuccess } from "../utils/toastNotification";
@@ -450,6 +451,7 @@ const Products = ({
       value: parseFloat(product.price || 0),
       items: [{ item_id: String(product.id), item_name: product.name, price: parseFloat(product.price || 0), quantity: 1 }],
     });
+    gtagAdsConversion('add_to_cart', { value: parseFloat(product.price || 0), currency: 'INR' });
   };
 
   // Handle page change

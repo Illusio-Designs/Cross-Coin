@@ -26,6 +26,7 @@ import {
 } from '../../utils/toast';
 import { fbqTrack } from '../../utils/fbqTrack';
 import { gtagTrack } from '../../utils/gtagTrack';
+import { gtagAdsConversion } from '../../utils/gtagAdsConversion';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -336,6 +337,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         price: parseFloat(getPrice(i) || 0),
       })),
     });
+    gtagAdsConversion('begin_checkout', { value: activeTotal, currency: 'INR' });
     // Intentionally only when isOpen flips; cart snapshot is current at open time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -780,6 +782,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           price: parseFloat(getPrice(i) || 0),
         })),
       });
+      gtagAdsConversion('purchase', { transaction_id: orderNumber, value: Number(value.toFixed(2)), currency: 'INR' });
       sessionStorage.setItem(trackingKey, 'true');
     } catch (_) { }
   };
@@ -798,6 +801,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         price: parseFloat(getPrice(i) || 0),
       })),
     });
+    gtagAdsConversion('add_shipping_info', { value: finalTotal, currency: 'INR' });
     gtagTrack('add_payment_info', {
       currency: 'INR',
       value: finalTotal,
@@ -809,6 +813,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
         price: parseFloat(getPrice(i) || 0),
       })),
     });
+    gtagAdsConversion('add_payment_info', { value: finalTotal, currency: 'INR' });
     try {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
@@ -883,6 +888,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
           price: parseFloat(getPrice(i) || 0),
         })),
       });
+      gtagAdsConversion('add_shipping_info', { value: prepaidPayable, currency: 'INR' });
 
       try {
         const scriptLoaded = await loadRazorpay();
@@ -949,6 +955,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             price: parseFloat(getPrice(i) || 0),
           })),
         });
+        gtagAdsConversion('add_payment_info', { value: prepaidPayable, currency: 'INR' });
 
         // Step 2: Open Razorpay checkout
         const options = {
@@ -1083,6 +1090,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                       const reservationId = retryResult.reservation_id;
 
                       // GA4: add_payment_info on retry
+                      gtagAdsConversion('add_payment_info', { value: prepaidPayable, currency: 'INR' });
                       gtagTrack('add_payment_info', {
                         currency: 'INR',
                         value: prepaidPayable,
