@@ -1,20 +1,10 @@
 /* Customer reviews — infinite slider. Two rows scroll in opposite
    directions and pause on hover. Pulls every approved review from the
-   API on mount; falls back to seed data so it is never empty. */
+   API on mount. Renders nothing until real reviews are available — no
+   placeholder/seed data. */
 
 import { useEffect, useState } from 'react';
 import { getAllReviews } from '../../services/reviews';
-
-const SEED = [
-  { id: 1, quote: 'Held a ten-day Himalayan trek and came back the exact same shape.', name: 'Anika S.', role: 'Trail editor', rating: 5 },
-  { id: 2, quote: 'The dress pair genuinely disappears once it is on. No ridges, no slipping.', name: 'Rahul M.', role: 'Verified buyer', rating: 5 },
-  { id: 3, quote: 'Bought one to test, then four more the next week. The cotton is another level.', name: 'Priya K.', role: 'Verified buyer', rating: 5 },
-  { id: 4, quote: 'Three years of daily wear and zero holes. These just do not wear out.', name: 'Vikram T.', role: 'Verified buyer', rating: 5 },
-  { id: 5, quote: 'Finally a sock that fits the arch. My runs feel completely different.', name: 'Sneha R.', role: 'Marathon runner', rating: 5 },
-  { id: 6, quote: 'The merino pair kept me warm through a Manali winter without a single sweaty moment.', name: 'Arjun D.', role: 'Verified buyer', rating: 5 },
-  { id: 7, quote: 'Gift-wrapped beautifully and the quality speaks for itself. Repeat customer now.', name: 'Meera J.', role: 'Verified buyer', rating: 5 },
-  { id: 8, quote: 'You can feel the hand-linked toe — no lumpy seam digging in all day.', name: 'Karan P.', role: 'Verified buyer', rating: 5 },
-];
 
 function Stars({ n = 5 }) {
   return (
@@ -50,7 +40,7 @@ function ReviewCard({ r }) {
 }
 
 export default function ReviewBand({ reviews: reviewsProp }) {
-  const [reviews, setReviews] = useState(reviewsProp || SEED);
+  const [reviews, setReviews] = useState(reviewsProp || []);
 
   useEffect(() => {
     if (reviewsProp) return; // parent supplied reviews — don't override

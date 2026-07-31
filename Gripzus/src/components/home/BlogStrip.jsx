@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { JOURNAL_POSTS } from '../../data/journal';
 import { getPosts } from '../../services/blog';
 import BlogCard from '../common/BlogCard';
 
-/* Journal teaser strip — latest three posts.
-   Pulls from the blog API on mount; falls back to the local seed data
-   (also used when posts are passed in explicitly by a parent). */
+/* Journal teaser strip — latest three posts, from the blog API.
+   Renders nothing until real posts are available — no seed/dummy data. */
 
 export default function BlogStrip({ posts: postsProp }) {
-  const [posts, setPosts] = useState(postsProp || JOURNAL_POSTS);
+  const [posts, setPosts] = useState(postsProp || []);
 
   useEffect(() => {
     if (postsProp) return; // parent supplied posts — don't override
@@ -23,6 +21,7 @@ export default function BlogStrip({ posts: postsProp }) {
   }, [postsProp]);
 
   const list = posts.slice(0, 3);
+  if (!list.length) return null;
 
   return (
     <section className="section-y bg-paper-warm border-y border-line">

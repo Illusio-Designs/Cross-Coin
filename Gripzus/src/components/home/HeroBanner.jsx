@@ -7,12 +7,6 @@ import Link from 'next/link';
    index. Structured like a product datasheet, not a fashion cover.
    slide shape: { id, eyebrow, title, description, image, buttonText, buttonLink } */
 
-const SPECS = [
-  ['GRIP', '360°'],
-  ['FIT', 'LOCKED'],
-  ['YARN', 'COMBED'],
-];
-
 export default function HeroBanner({ slides = [] }) {
   const [current, setCurrent] = useState(0);
 
@@ -76,16 +70,6 @@ export default function HeroBanner({ slides = [] }) {
               {s.description && (
                 <p className="text-paper/75 text-[14px] md:text-[15px] mt-5 max-w-md leading-7">{s.description}</p>
               )}
-
-              {/* spec row */}
-              <div className="mt-6 flex flex-wrap gap-x-8 gap-y-2 border-t border-paper/20 pt-4 max-w-xl">
-                {SPECS.map(([k, v]) => (
-                  <div key={k} className="flex items-baseline gap-2">
-                    <span className="spec text-paper/50">{k}</span>
-                    <span className="font-mono text-paper text-sm font-bold">{v}</span>
-                  </div>
-                ))}
-              </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Link href={s.buttonLink || '/products'} className="btn-light">
