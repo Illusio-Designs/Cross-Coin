@@ -21,6 +21,10 @@ async function fetchJson(url) {
 }
 
 export async function getServerSideProps(ctx) {
+  // Always serve fresh HTML — the journal updates often and we never want a
+  // browser or CDN holding an old copy of this listing.
+  ctx.res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+
   // First page rendered on the server so the grid ships in the initial HTML.
   const [seoData, postsJson] = await Promise.all([
     fetchPageSeo('blog', ctx),

@@ -455,6 +455,9 @@ module.exports.createProduct = async (req, res) => {
 
     await transaction.commit();
 
+    // Drop cached storefront product lists so the new product shows immediately
+    await cacheManager.invalidate('products:*');
+
     // Fetch the complete product with all relations
     const completeProduct = await Product.findByPk(product.id, {
       include: [
@@ -509,7 +512,18 @@ module.exports.getAllProducts = async (req, res) => {
       brandFilter = req.brand.id;
     }
     // If no brand header, admin sees all products with their brand assignments
-    
+
+    // Cache only public (brand-scoped) list reads — admin views bypass the cache
+    // so they always see live data. Short TTL keeps the storefront snappy under
+    // load while staying fresh within a minute of catalog edits.
+    const cacheKey = brandFilter
+      ? `products:list:${brandFilter}:${(search || '').toLowerCase()}:${page}:${limit}`
+      : null;
+    if (cacheKey) {
+      const cached = await cacheManager.get(cacheKey);
+      if (cached) return res.json(cached);
+    }
+
     if (search) {
       // Escape SQL wildcards to prevent search manipulation
       const escapedSearch = search.toLowerCase().replace(/[%_]/g, '\\$&');
@@ -560,12 +574,16 @@ module.exports.getAllProducts = async (req, res) => {
       return formatted;
     });
 
-    res.json({
+    const payload = {
       products: formattedProducts,
       totalProducts: count,
       currentPage: parseInt(page, 10),
       totalPages: Math.ceil(count / parseInt(limit, 10)),
-    });
+    };
+
+    if (cacheKey) await cacheManager.set(cacheKey, payload, 60);
+
+    res.json(payload);
   } catch (error) {
     logger.error("Error getting products:", error);
     res
@@ -1006,6 +1024,9 @@ module.exports.updateProduct = async (req, res) => {
 
     await transaction.commit();
 
+    // Drop cached storefront product lists so edits (price, stock, etc.) show immediately
+    await cacheManager.invalidate('products:*');
+
     // Fetch updated product
     const updatedProduct = await Product.findByPk(id, {
       include: [
@@ -1411,6 +1432,9 @@ module.exports.deleteProduct = async (req, res) => {
 
     await transaction.commit();
 
+    // Drop cached storefront product lists so the deletion shows immediately
+    await cacheManager.invalidate('products:*');
+
     res.json({
       success: true,
       message: "Product and all associated data deleted successfully",
@@ -1430,10 +1454,18 @@ module.exports.deleteProduct = async (req, res) => {
 module.exports.getBestSellers = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    
+
+    // Best sellers change slowly (only as orders complete) — cache briefly to
+    // shed repeated homepage load. Keyed by brand so per-brand storefronts stay
+    // isolated even if brand scoping is added to this query later.
+    const brandScope = req.brand && req.brand.id ? req.brand.id : 'all';
+    const cacheKey = `products:bestsellers:${brandScope}:${page}:${limit}`;
+    const cached = await cacheManager.get(cacheKey);
+    if (cached) return res.json(cached);
+
     // Pagination
     const offset = (page - 1) * limit;
-    
+
     const bestSellers = await Product.findAndCountAll({
       where: { total_sold: { [Op.gt]: 0 } },
       order: [["total_sold", "DESC"]],
@@ -1443,7 +1475,7 @@ module.exports.getBestSellers = async (req, res) => {
 
     const totalPages = Math.ceil(bestSellers.count / limit);
 
-    res.json({
+    const payload = {
       success: true,
       data: bestSellers.rows,
       pagination: {
@@ -1454,7 +1486,11 @@ module.exports.getBestSellers = async (req, res) => {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1
       }
-    });
+    };
+
+    await cacheManager.set(cacheKey, payload, 120);
+
+    res.json(payload);
   } catch (error) {
     logger.error("Error fetching best sellers:", error);
     res.status(500).json({
