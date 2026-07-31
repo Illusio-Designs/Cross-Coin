@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 
-/* "Hand-Picked" — a featured-product spotlight, modelled on the other
-   Cross-Coin brands' Exclusive section. Pick a product from the switcher
-   rail, browse ONLY the selected colour's images on the left, choose a
-   colour and add straight to the cart. */
+/* "Hand-Picked" — a cinematic animated spotlight.
+   One large hero image of the SELECTED colour that cross-fades on change,
+   staggered text reveals, an auto-advancing progress bar through the
+   featured pairs, and a scaling product filmstrip. Pauses on hover. */
 
 const FALLBACK_IMG = '/assets/Gripzus.JPG.jpeg';
+const ROTATE_MS = 5200;
 
 function normalize(p) {
   const imgs = (Array.isArray(p.images) ? p.images : []).filter(Boolean);
@@ -16,7 +17,6 @@ function normalize(p) {
     name:  p.name || 'Gripzus Pair',
     slug:  p.slug || p.handle || String(p.id),
     category: p.collection || p.collectionName || 'Gripzus',
-    sku:   p.sku || '',
     price: Number(p.salePrice ?? p.price ?? 0),
     oldPrice: p.compareAtPrice ? Number(p.compareAtPrice) : (p.oldPrice ? Number(p.oldPrice) : null),
     badge: p.badge || '',
@@ -28,77 +28,54 @@ function normalize(p) {
 }
 
 export default function ExclusiveSection({ products = [] }) {
-  const list = (Array.isArray(products) ? products : []).slice(0, 4).map(normalize);
+  const list = (Array.isArray(products) ? products : []).slice(0, 5).map(normalize);
 
   const [active, setActive] = useState(0);
-  const [thumb, setThumb]   = useState(0);
   const [color, setColor]   = useState(0);
   const [qty, setQty]       = useState(1);
   const [added, setAdded]   = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [shown, setShown]   = useState(false);
   const { addItem } = useCart();
-  const thumbsRef = useRef(null);
-  const mainRef   = useRef(null);
-  const [railH, setRailH] = useState(0);
+  const sectionRef = useRef(null);
 
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const product = list[activeIndex];
 
-  // ONLY the selected colour's images (fall back to product images).
-  const gallery = useMemo(() => {
-    if (!product) return [];
+  // ONLY the selected colour's first image (fall back to the product image).
+  const heroImg = useMemo(() => {
+    if (!product) return FALLBACK_IMG;
     const perColor = product.colors[color]?.images;
-    const g = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
-    return g.length ? g : [FALLBACK_IMG];
+    if (Array.isArray(perColor) && perColor.length) return perColor[0];
+    return product.images[Math.min(color, product.images.length - 1)] || product.images[0] || FALLBACK_IMG;
   }, [product, color]);
 
-  const thumbIndex = Math.min(thumb, gallery.length - 1);
-
-  // Match the vertical thumb rail height to the main image.
+  // Reveal on scroll into view.
   useEffect(() => {
-    const el = mainRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const update = () => setRailH(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setShown(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
-  // Auto-advance the spotlight image through the selected colour's gallery.
+  // Auto-advance through the featured pairs.
   useEffect(() => {
-    if (gallery.length <= 1) return;
-    const t = setInterval(() => setThumb((i) => (i + 1) % gallery.length), 3000);
-    return () => clearInterval(t);
-  }, [gallery.length, activeIndex, color]);
-
-  // Keep the active thumbnail centred by scrolling only the rail.
-  useEffect(() => {
-    const rail = thumbsRef.current;
-    if (!rail) return;
-    const el = rail.querySelector(`[data-thumb="${thumbIndex}"]`);
-    if (!el) return;
-    const railRect = rail.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    if (rail.scrollHeight > rail.clientHeight + 1) {
-      rail.scrollBy({ top: (elRect.top - railRect.top) - (rail.clientHeight - el.clientHeight) / 2, behavior: 'smooth' });
-    }
-  }, [thumbIndex]);
+    if (list.length <= 1 || paused) return;
+    const t = setTimeout(() => { setActive((i) => (i + 1) % list.length); setColor(0); setQty(1); }, ROTATE_MS);
+    return () => clearTimeout(t);
+  }, [list.length, activeIndex, paused]);
 
   if (!product) return null;
 
   const activeCol = product.colors[Math.min(color, Math.max(0, product.colors.length - 1))];
   const colorLabel = activeCol?.packColors ? `Pack of ${activeCol.packColors.length}` : (activeCol?.name || '');
-  const mainSrc = gallery[thumbIndex] || product.images[0];
   const off = product.oldPrice && product.oldPrice > product.price
     ? Math.round((1 - product.price / product.oldPrice) * 100) : 0;
 
-  const pick = (i) => { setActive(i); setThumb(0); setColor(0); setQty(1); setAdded(false); };
-  const pickColor = (i) => { setColor(i); setThumb(0); };
-
   const onAdd = () => {
     addItem({
-      id: product.id, name: product.name, slug: product.slug,
-      image: gallery[0] || product.images[0],
+      id: product.id, name: product.name, slug: product.slug, image: heroImg,
       price: product.price, collection: product.category, qty,
       size: product.sizes[0] || '', color: activeCol?.name || '',
     });
@@ -107,137 +84,159 @@ export default function ExclusiveSection({ products = [] }) {
   };
 
   return (
-    <section className="section-y">
+    <section
+      ref={sectionRef}
+      className={`excl3 ${shown ? 'is-shown' : ''}`}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
       <div className="wrap">
-        <div className="rounded-2xl border border-line bg-paper-warm/50 p-5 md:p-8 lg:p-10">
-
-          {/* Head */}
-          <div className="flex flex-col gap-3 mb-8 md:flex-row md:items-end md:justify-between">
-            <div>
-              <span className="eyebrow text-ink-muted">Currently obsessed</span>
-              <h2 className="h-display text-2xl md:text-4xl mt-2.5">The pair on repeat.</h2>
-            </div>
-            <p className="text-ink-soft text-[13px] max-w-sm leading-relaxed">
-              The one we keep reaching for — swatched, styled and ready to slip into the bag.
-            </p>
-          </div>
-
-          {/* Gallery + Info */}
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:gap-12 items-start">
-
-            {/* Gallery */}
-            <div className="flex gap-3">
-              {gallery.length > 1 && (
-                <div
-                  ref={thumbsRef}
-                  className="flex shrink-0 flex-col gap-2.5 overflow-y-auto no-scrollbar"
-                  style={railH ? { maxHeight: railH } : undefined}
-                >
-                  {gallery.map((src, i) => (
-                    <button
-                      key={src + i}
-                      data-thumb={i}
-                      type="button"
-                      onClick={() => setThumb(i)}
-                      aria-label={`View image ${i + 1}`}
-                      className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all ${
-                        i === thumbIndex ? 'border-ink' : 'border-line opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-xl border border-line bg-paper">
-                <div className="aspect-[4/5]">
-                  <img key={mainSrc} src={mainSrc} alt={product.name} className="h-full w-full object-cover animate-[fadeIn_0.4s_ease-out]" />
-                </div>
-                {product.badge && <span className="eyebrow absolute top-3 left-3 text-ink z-10">{product.badge}</span>}
-              </div>
-            </div>
-
-            {/* Info */}
-            <div className="flex flex-col">
-              <span className="eyebrow text-ink-muted">{product.category}</span>
-              <h3 className="h-display text-xl md:text-2xl mt-2 leading-snug">{product.name}</h3>
-
-              <div className="flex items-baseline gap-3 mt-4">
-                <span className="text-[17px] text-ink">₹{product.price.toLocaleString('en-IN')}</span>
-                {product.oldPrice && product.oldPrice > product.price && (
-                  <span className="text-[14px] text-ink-muted line-through">₹{product.oldPrice.toLocaleString('en-IN')}</span>
-                )}
-                {off > 0 && <span className="eyebrow text-ink-soft">{off}% off</span>}
-              </div>
-
-              {/* Colour swatches — swap the gallery */}
-              {product.colors.length > 0 && (
-                <div className="mt-6">
-                  <p className="eyebrow text-ink-muted mb-2.5">Colour{colorLabel ? ` — ${colorLabel}` : ''}</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {product.colors.map((c, i) =>
-                      c.packColors ? (
-                        <button key={c.name} type="button" onClick={() => pickColor(i)} title={c.name} aria-label={`Pack of ${c.packColors.length}`}
-                          className={`flex h-9 items-center gap-1.5 rounded-lg border px-2.5 transition-colors ${i === color ? 'border-ink' : 'border-line hover:border-ink-muted'}`}>
-                          {c.packColors.map((pc) => (
-                            <span key={pc.name} className="h-4 w-4 rounded-full ring-1 ring-line" style={{ backgroundColor: pc.hex || '#ddd' }} />
-                          ))}
-                        </button>
-                      ) : (
-                        <button key={c.name} type="button" onClick={() => pickColor(i)} title={c.name} aria-label={c.name}
-                          className={`h-7 w-7 rounded-full ring-1 ring-offset-2 ring-offset-paper transition-all ${i === color ? 'ring-ink' : 'ring-line hover:ring-ink-muted'}`}
-                          style={{ backgroundColor: c.hex || '#ddd' }} />
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {product.description && <p className="text-ink-soft text-[13px] leading-relaxed mt-6 line-clamp-3">{product.description}</p>}
-
-              {/* Qty + Add + View */}
-              <div className="flex items-center gap-3 mt-7">
-                <div className="flex shrink-0 items-center gap-3 rounded-lg border border-line px-3.5 py-3">
-                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease" className="text-ink-soft hover:text-ink">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                  </button>
-                  <span className="w-5 text-center text-[13px]">{qty}</span>
-                  <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase" className="text-ink-soft hover:text-ink">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                  </button>
-                </div>
-                <button type="button" onClick={onAdd} className="btn flex-1 justify-center whitespace-nowrap">
-                  {added ? 'Added ✓' : 'Add to Bag'}
-                </button>
-                <Link href={`/products/${product.slug}`} className="btn-outline whitespace-nowrap">View</Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Other products switcher */}
-          {list.length > 1 && (
-            <div className="mt-8 pt-6 border-t border-line">
-              <p className="eyebrow text-ink-muted mb-3">Other products</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                {list.map((p, i) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => pick(i)}
-                    title={p.name}
-                    aria-label={p.name}
-                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all ${
-                      i === activeIndex ? 'border-ink' : 'border-line opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={p.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="excl3-head">
+          <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.55)' }}>Hand-Picked</span>
+          <h2 className="h-display excl3-title">The pair on repeat.</h2>
         </div>
+
+        <div className="excl3-grid">
+          {/* Stage */}
+          <div className="excl3-stage">
+            <span className="excl3-ghost" aria-hidden>{String(activeIndex + 1).padStart(2, '0')}</span>
+            <div className="excl3-frame">
+              <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
+              {product.badge && <span className="excl3-badge">{product.badge}</span>}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="excl3-info" key={product.id}>
+            <span className="excl3-cat i0">{product.category}</span>
+            <h3 className="h-display excl3-name i1">{product.name}</h3>
+            <div className="excl3-price i2">
+              <span className="now">₹{product.price.toLocaleString('en-IN')}</span>
+              {product.oldPrice && product.oldPrice > product.price && (
+                <span className="was">₹{product.oldPrice.toLocaleString('en-IN')}</span>
+              )}
+              {off > 0 && <span className="off">{off}% OFF</span>}
+            </div>
+
+            {product.colors.length > 0 && (
+              <div className="excl3-colors i3">
+                <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.55)' }}>Colour — <em style={{ color: '#fff', fontStyle: 'normal' }}>{colorLabel}</em></span>
+                <div className="excl3-swatches">
+                  {product.colors.map((c, i) =>
+                    c.packColors ? (
+                      <button key={c.name} type="button" onClick={() => setColor(i)} title={c.name} aria-label={`Pack of ${c.packColors.length}`}
+                        className={`excl3-pack ${i === color ? 'on' : ''}`}>
+                        {c.packColors.map((pc) => <span key={pc.name} style={{ backgroundColor: pc.hex || '#ddd' }} />)}
+                      </button>
+                    ) : (
+                      <button key={c.name} type="button" onClick={() => setColor(i)} title={c.name} aria-label={c.name}
+                        className={`excl3-dot ${i === color ? 'on' : ''}`} style={{ backgroundColor: c.hex || '#ddd' }} />
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            {product.description && <p className="excl3-desc i4">{product.description}</p>}
+
+            <div className="excl3-actions i5">
+              <div className="excl3-qty">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              </div>
+              <button type="button" className="excl3-add" onClick={onAdd}>{added ? 'Added ✓' : 'Add to Bag'}</button>
+              <Link href={`/products/${product.slug}`} className="excl3-view">View</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Filmstrip */}
+        {list.length > 1 && (
+          <div className="excl3-strip">
+            {list.map((p, i) => (
+              <button key={p.id} type="button" onClick={() => { setActive(i); setColor(0); setQty(1); }}
+                className={`excl3-cell ${i === activeIndex ? 'on' : ''}`} aria-label={p.name} title={p.name}>
+                <img src={p.images[0]} alt="" loading="lazy" />
+                {i === activeIndex && !paused && <span className="excl3-progress" key={`p-${activeIndex}`} />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        .excl3 { background: #0A0A0A; color: #fff; padding: 72px 0; overflow: hidden; }
+        @media (min-width: 768px) { .excl3 { padding: 104px 0; } }
+        .excl3-head { margin-bottom: 40px; opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+        .is-shown .excl3-head { opacity: 1; transform: none; }
+        .excl3-title { color: #fff; font-size: clamp(1.8rem, 4vw, 3.2rem); margin: 10px 0 0; }
+
+        .excl3-grid { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: center; }
+        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: 1.15fr 1fr; gap: 64px; } }
+
+        .excl3-stage { position: relative; }
+        .excl3-ghost {
+          position: absolute; top: -8%; left: -2%; z-index: 0; font-family: var(--font-display);
+          font-weight: 600; font-size: clamp(9rem, 26vw, 22rem); line-height: 1; color: transparent;
+          -webkit-text-stroke: 1px rgba(255,255,255,0.08); pointer-events: none; user-select: none;
+        }
+        .excl3-frame {
+          position: relative; z-index: 1; overflow: hidden; border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);
+          aspect-ratio: 4 / 5; opacity: 0; transform: translateY(24px) scale(.98);
+          transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
+        }
+        .is-shown .excl3-frame { opacity: 1; transform: none; }
+        .excl3-img { width: 100%; height: 100%; object-fit: cover; animation: excl3-reveal .8s cubic-bezier(.22,1,.36,1); }
+        .excl3-frame:hover .excl3-img { transform: scale(1.04); transition: transform 1s cubic-bezier(.22,1,.36,1); }
+        @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.07); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+        .excl3-badge { position: absolute; top: 16px; left: 16px; z-index: 2; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 10px; border-radius: 999px; }
+
+        .excl3-info > * { opacity: 0; transform: translateY(14px); animation: excl3-up .6s cubic-bezier(.22,1,.36,1) forwards; }
+        .excl3-info .i0 { animation-delay: .05s; } .excl3-info .i1 { animation-delay: .12s; }
+        .excl3-info .i2 { animation-delay: .19s; } .excl3-info .i3 { animation-delay: .26s; }
+        .excl3-info .i4 { animation-delay: .33s; } .excl3-info .i5 { animation-delay: .4s; }
+        @keyframes excl3-up { to { opacity: 1; transform: none; } }
+
+        .excl3-cat { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+        .excl3-name { color: #fff; font-size: clamp(1.5rem, 3vw, 2.4rem); margin: 12px 0 0; line-height: 1.05; }
+        .excl3-price { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 0; }
+        .excl3-price .now { font-size: 20px; } .excl3-price .was { color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 15px; }
+        .excl3-price .off { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 3px 8px; }
+
+        .excl3-colors { margin: 26px 0 0; }
+        .excl3-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .excl3-dot { width: 26px; height: 26px; border-radius: 999px; cursor: pointer; transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; box-shadow: 0 0 0 1px rgba(255,255,255,0.2); }
+        .excl3-dot:hover { transform: scale(1.12); }
+        .excl3-dot.on { transform: scale(1.15); box-shadow: 0 0 0 2px #0A0A0A, 0 0 0 4px #fff; }
+        .excl3-pack { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); cursor: pointer; transition: border-color .2s ease, transform .2s ease; }
+        .excl3-pack:hover { transform: translateY(-1px); } .excl3-pack.on { border-color: #fff; }
+        .excl3-pack span { width: 16px; height: 16px; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); }
+
+        .excl3-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.7; margin: 24px 0 0; max-width: 34rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .excl3-actions { display: flex; align-items: center; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
+        .excl3-qty { display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 11px 16px; }
+        .excl3-qty button { color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1; } .excl3-qty button:hover { color: #fff; } .excl3-qty span { min-width: 18px; text-align: center; font-size: 14px; }
+        .excl3-add { flex: 1; min-width: 160px; background: #fff; color: #0A0A0A; border-radius: 12px; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
+        .excl3-add:hover { transform: translateY(-2px); } .excl3-add:active { transform: none; }
+        .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
+        .excl3-view:hover { background: #fff; color: #0A0A0A; }
+
+        .excl3-strip { display: flex; gap: 12px; margin-top: 48px; overflow-x: auto; padding-bottom: 4px; }
+        .excl3-strip::-webkit-scrollbar { display: none; }
+        .excl3-cell { position: relative; width: 76px; height: 76px; flex: 0 0 auto; border-radius: 12px; overflow: hidden; opacity: .45; filter: grayscale(0.2); transition: opacity .3s ease, transform .3s cubic-bezier(.22,1,.36,1); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+        .excl3-cell:hover { opacity: .8; } .excl3-cell.on { opacity: 1; transform: scale(1.06); filter: none; box-shadow: 0 0 0 2px #fff; }
+        .excl3-cell img { width: 100%; height: 100%; object-fit: cover; }
+        .excl3-progress { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff; width: 0; animation: excl3-fill ${ROTATE_MS}ms linear forwards; }
+        @keyframes excl3-fill { from { width: 0; } to { width: 100%; } }
+
+        @media (prefers-reduced-motion: reduce) {
+          .excl3-head, .excl3-frame, .excl3-info > *, .excl3-img { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+          .excl3-progress { display: none; }
+        }
+      `}</style>
     </section>
   );
 }
