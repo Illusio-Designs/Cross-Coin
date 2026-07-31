@@ -142,6 +142,13 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Opens leftward when the trigger is close to the viewport's right edge,
+   so the calendar half is never clipped off-screen. */
+.drp-dropdown--right {
+  left: auto;
+  right: 0;
+}
+
 .drp-dropdown-body {
   display: flex;
 }

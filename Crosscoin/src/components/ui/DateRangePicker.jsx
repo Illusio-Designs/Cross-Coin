@@ -138,8 +138,13 @@ const DateRangePicker = ({
   const [selecting, setSelecting] = useState('start'); // 'start' | 'end'
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
+  const [alignRight, setAlignRight] = useState(false); // flip open direction near the viewport's right edge
   const ref = useRef(null);
   const hasValue = startDate || endDate;
+
+  // Approx. dropdown width (presets sidebar + calendar). Used to decide which
+  // way to open so the calendar half never gets clipped off-screen.
+  const DROPDOWN_WIDTH = 480;
 
   // Close on outside click
   useEffect(() => {
@@ -156,6 +161,13 @@ const DateRangePicker = ({
       setCalYear(d.year);
       setCalMonth(d.month);
       setSelecting('start');
+      // If a left-anchored dropdown would spill past the right edge (e.g. the
+      // trigger sits at the top-right of the dashboard), open it rightward so
+      // the whole presets + calendar panel stays on-screen.
+      if (typeof window !== 'undefined' && ref.current) {
+        const rect = ref.current.getBoundingClientRect();
+        setAlignRight(rect.left + DROPDOWN_WIDTH > window.innerWidth);
+      }
     }
     setOpen(!open);
   };
@@ -242,7 +254,7 @@ const DateRangePicker = ({
       </div>
 
       {open && (
-        <div className="drp-dropdown">
+        <div className={`drp-dropdown${alignRight ? ' drp-dropdown--right' : ''}`}>
           <div className="drp-dropdown-body">
             {/* Presets */}
             <div className="drp-presets">
