@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
@@ -6,8 +6,10 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 
-/* Gripzus header — editorial gallery. Quiet slim bar: logo left, tiny
-   uppercase nav, minimal actions right, faint hairline. Lots of air. */
+/* Gripzus header — a refined, animated bar.
+   • Hides on scroll-down, reveals on scroll-up.
+   • A single sliding indicator glides under the hovered/active nav item.
+   • Count badges pop on change; mobile drawer reveals nav items in sequence. */
 
 const NAV = [
   { label: 'Shop',        href: '/products' },
@@ -22,9 +24,46 @@ export default function Header() {
   const { count, openCart } = useCart();
   const { count: wishCount } = useWishlist();
   const { isAuthenticated, loading: authLoading } = useAuth();
-
   const accountHref = isAuthenticated || authLoading ? '/account' : '/login';
+
+  const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden]     = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const lastY = useRef(0);
+
+  const navRef = useRef(null);
+  const linkRefs = useRef([]);
+  const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 });
+
+  const isActive = (href) => (href === '/' ? router.pathname === '/' : router.pathname.startsWith(href));
+  const activeIdx = NAV.findIndex((l) => isActive(l.href));
+
+  // Position the sliding indicator under a given nav element.
+  const moveInd = useCallback((el) => {
+    if (!el || !navRef.current) return;
+    const nav = navRef.current.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    setInd({ left: r.left - nav.left, width: r.width, opacity: 1 });
+  }, []);
+  const resetInd = useCallback(() => {
+    if (activeIdx >= 0 && linkRefs.current[activeIdx]) moveInd(linkRefs.current[activeIdx]);
+    else setInd((s) => ({ ...s, opacity: 0 }));
+  }, [activeIdx, moveInd]);
+
+  useEffect(() => { resetInd(); }, [resetInd, router.pathname]);
+
+  // Scroll behaviour: shadow + hide-on-down / reveal-on-up.
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 8);
+      setHidden(y > 120 && y > lastY.current);
+      lastY.current = y;
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -35,55 +74,47 @@ export default function Header() {
     }
   }, [mobileOpen]);
 
-  const isActive = (href) =>
-    href === '/' ? router.pathname === '/' : router.pathname.startsWith(href);
-
   return (
     <>
-      <header className="sticky top-0 z-40 bg-paper/95 backdrop-blur-[2px]">
+      <header
+        className={`sticky top-0 z-40 bg-paper/90 backdrop-blur-md transition-[transform,box-shadow] duration-500 ${
+          hidden ? '-translate-y-full' : 'translate-y-0'
+        } ${scrolled ? 'shadow-[0_1px_0_0_var(--line)]' : ''}`}
+      >
         <div className="wrap">
-          <div className="h-[56px] md:h-[64px] flex items-center gap-6">
+          <div className="h-[58px] md:h-[68px] flex items-center gap-6">
 
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="lg:hidden w-8 h-8 -ml-1.5 flex items-center justify-center text-ink"
-              aria-label="Open menu"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                <line x1="3" y1="8" x2="21" y2="8" /><line x1="3" y1="16" x2="21" y2="16" />
-              </svg>
+            <button onClick={() => setMobileOpen(true)} className="lg:hidden w-8 h-8 -ml-1.5 flex flex-col items-center justify-center gap-[5px] group" aria-label="Open menu">
+              <span className="block w-5 h-px bg-ink transition-transform group-hover:translate-x-0.5" />
+              <span className="block w-5 h-px bg-ink" />
+              <span className="block w-3.5 h-px bg-ink transition-all group-hover:w-5" />
             </button>
 
-            {/* Logo */}
-            <Link href="/" aria-label="Gripzus home" className="shrink-0">
-              <Image
-                src="/assets/Gripzus.JPG.jpeg"
-                alt="Gripzus"
-                width={150} height={40} priority
-                className="h-5 md:h-6 w-auto object-contain"
-              />
+            <Link href="/" aria-label="Gripzus home" className="shrink-0 transition-opacity hover:opacity-70">
+              <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={150} height={40} priority className="h-5 md:h-6 w-auto object-contain" />
             </Link>
 
-            {/* Nav — tiny uppercase, quiet */}
-            <nav className="hidden lg:flex items-center gap-8 ml-8">
-              {NAV.map((l) => {
-                const active = isActive(l.href);
-                return (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className={`text-[11px] tracking-[0.12em] uppercase transition-opacity ${
-                      active ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                    }`}
-                  >
-                    {l.label}
-                  </Link>
-                );
-              })}
+            {/* Nav with sliding indicator */}
+            <nav ref={navRef} onMouseLeave={resetInd} className="relative hidden lg:flex items-center gap-8 ml-8 h-full">
+              {NAV.map((l, i) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  ref={(el) => (linkRefs.current[i] = el)}
+                  onMouseEnter={(e) => moveInd(e.currentTarget)}
+                  className={`relative text-[11px] tracking-[0.14em] uppercase py-1 transition-colors ${
+                    isActive(l.href) ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <span
+                className="pointer-events-none absolute -bottom-0.5 h-px bg-ink transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)]"
+                style={{ left: ind.left, width: ind.width, opacity: ind.opacity }}
+              />
             </nav>
 
-            {/* Actions */}
             <div className="flex items-center gap-1 ml-auto">
               <IconBtn as={Link} href="/search" ariaLabel="Search">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
@@ -100,25 +131,26 @@ export default function Header() {
             </div>
           </div>
         </div>
-        <div className="hairline" />
       </header>
 
       {/* Mobile drawer */}
       {mobileOpen && (
         <>
-          <div className="fixed inset-0 z-50 bg-ink/30 lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
-          <aside className="fixed inset-y-0 left-0 z-[51] w-[86%] max-w-sm bg-paper shadow-card lg:hidden flex flex-col">
-            <div className="px-5 h-[56px] border-b border-line flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-[1px] lg:hidden animate-[fadeIn_.25s_ease]" onClick={() => setMobileOpen(false)} aria-hidden />
+          <aside className="fixed inset-y-0 left-0 z-[51] w-[88%] max-w-sm bg-paper lg:hidden flex flex-col gz-drawer">
+            <div className="px-5 h-[58px] border-b border-line flex items-center justify-between">
               <Image src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" width={120} height={32} className="h-5 w-auto object-contain" />
-              <button onClick={() => setMobileOpen(false)} className="w-8 h-8 flex items-center justify-center text-ink" aria-label="Close menu">
+              <button onClick={() => setMobileOpen(false)} className="w-8 h-8 flex items-center justify-center text-ink hover:rotate-90 transition-transform" aria-label="Close menu">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto">
-              {NAV.map((l) => (
+            <nav className="flex-1 overflow-y-auto py-2">
+              {NAV.map((l, i) => (
                 <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-                  className="block px-5 py-4 border-b border-line text-[13px] tracking-[0.1em] uppercase text-ink">
-                  {l.label}
+                  className="gz-drawer-item flex items-baseline gap-3 px-5 py-3.5 border-b border-line group"
+                  style={{ animationDelay: `${0.05 + i * 0.05}s` }}>
+                  <span className="text-[10px] text-ink-muted tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-lg text-ink group-hover:translate-x-1 transition-transform">{l.label}</span>
                 </Link>
               ))}
               <div className="p-5 grid grid-cols-2 gap-3">
@@ -129,6 +161,13 @@ export default function Header() {
           </aside>
         </>
       )}
+
+      <style jsx>{`
+        .gz-drawer { animation: gz-slide .38s cubic-bezier(.22,1,.36,1); box-shadow: 0 20px 60px -30px rgba(0,0,0,.35); }
+        @keyframes gz-slide { from { transform: translateX(-100%); } to { transform: none; } }
+        .gz-drawer-item { opacity: 0; transform: translateX(-10px); animation: gz-item .4s cubic-bezier(.22,1,.36,1) forwards; }
+        @keyframes gz-item { to { opacity: 1; transform: none; } }
+      `}</style>
     </>
   );
 }
@@ -138,10 +177,11 @@ function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, ...rest }) {
     <Comp aria-label={ariaLabel} className="relative w-9 h-9 flex items-center justify-center text-ink hover:opacity-55 transition-opacity" {...rest}>
       {children}
       {Number(badge) > 0 && (
-        <span className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-1 rounded-full bg-ink text-paper text-[9px] font-medium flex items-center justify-center">
+        <span key={badge} className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-1 rounded-full bg-ink text-paper text-[9px] font-medium flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
           {badge}
         </span>
       )}
+      <style jsx>{`@keyframes gzpop { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }`}</style>
     </Comp>
   );
 }
