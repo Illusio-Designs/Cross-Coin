@@ -1,18 +1,44 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getPosts } from '@/lib/api/blog'
+import { getBlogPage } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
+import Pagination from '@/components/common/Pagination'
 import SeoWrapper from '@/components/SeoWrapper'
+
+const LIMIT = 12
 
 // Client subtree for /journal — see app/journal/page.jsx for the server shell.
 export default function JournalClient() {
   const [posts, setPosts] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
 
+  const load = async (nextPage) => {
+    setLoading(true)
+    try {
+      const res = await getBlogPage({ page: nextPage, limit: LIMIT })
+      setPosts(res.posts)
+      setTotalPages(res.totalPages)
+      setPage(nextPage)
+    } catch {
+      if (nextPage === 1) setPosts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    getPosts().then(setPosts).catch(() => setPosts([])).finally(() => setLoading(false))
+    load(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const goToPage = (n) => {
+    if (n < 1 || n > totalPages || n === page || loading) return
+    load(n)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
     <SeoWrapper pageName="blog">
@@ -47,9 +73,12 @@ export default function JournalClient() {
         ) : posts.length === 0 ? (
           <p className="py-20 text-center text-sm text-gray-400">No posts yet. Check back soon.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {posts.map((post) => <BlogCard key={post.id} post={post} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {posts.map((post) => <BlogCard key={post.id} post={post} />)}
+            </div>
+            <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={loading} />
+          </>
         )}
       </section>
     </SeoWrapper>

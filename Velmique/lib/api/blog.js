@@ -43,6 +43,18 @@ export async function getPosts() {
   return Array.isArray(posts) ? posts.map(mapPost) : []
 }
 
+// Paginated listing for the journal list page. Returns mapped posts plus
+// pagination metadata; keeps getPosts() (home BlogStrip) untouched.
+export async function getBlogPage({ page = 1, limit = 12 } = {}) {
+  const data = await apiFetch(`/api/blogs/listing?page=${page}&limit=${limit}`)
+  const posts = data?.data || data?.posts || data || []
+  return {
+    posts: Array.isArray(posts) ? posts.map(mapPost) : [],
+    totalPages: data?.pagination?.totalPages || 1,
+    page: data?.pagination?.page || page,
+  }
+}
+
 export async function getPost(slug) {
   const data = await apiFetch(`/api/blogs/by-slug/${slug}`)
   const post = data?.data || data

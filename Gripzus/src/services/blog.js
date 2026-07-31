@@ -119,6 +119,23 @@ export async function getPosts() {
   }
 }
 
+/* Paginated listing — GET /api/blogs/listing?page=&limit=
+   Returns mapped posts plus pagination metadata for the journal list page.
+   getPosts() (home BlogStrip) still returns a plain array. */
+export async function getPostsPage({ page = 1, limit = 12 } = {}) {
+  try {
+    const data = await brandFetch(`/api/blogs/listing?page=${page}&limit=${limit}`);
+    const posts = data?.data || data?.posts || data || [];
+    return {
+      posts: (Array.isArray(posts) ? posts : []).map(mapPost).filter(Boolean),
+      totalPages: data?.pagination?.totalPages || 1,
+      page: data?.pagination?.page || page,
+    };
+  } catch {
+    return { posts: [], totalPages: 1, page };
+  }
+}
+
 /* Single post by slug — GET /api/blogs/by-slug/:slug */
 export async function getPostBySlug(slug) {
   if (!slug) return null;

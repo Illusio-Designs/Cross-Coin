@@ -185,6 +185,21 @@ export async function getBlogPosts() {
   } catch { return []; }
 }
 
+// Paged blog listing for the Journal page. Reads the backend's pagination
+// block and returns the mapped posts alongside totalPages. Fetched fresh so a
+// page change always reflects the live listing. getBlogPosts() (home strip) is
+// left untouched and keeps returning a plain array.
+export async function getBlogPage({ page = 1, limit = 12 } = {}) {
+  try {
+    const data = await brandFetch(`/api/blogs/listing?page=${page}&limit=${limit}`);
+    const list = data?.data?.posts || data?.posts || data?.data || (Array.isArray(data) ? data : []);
+    const posts = Array.isArray(list) ? list.map(mapBlog) : [];
+    return { posts, totalPages: data?.pagination?.totalPages || 1, page };
+  } catch {
+    return { posts: [], totalPages: 1, page };
+  }
+}
+
 export async function getBlogBySlug(slug) {
   try {
     const data = await brandFetch(`/api/blogs/by-slug/${slug}`, 300);

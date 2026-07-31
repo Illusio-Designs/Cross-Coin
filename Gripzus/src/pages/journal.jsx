@@ -1,11 +1,36 @@
+import { useState } from 'react';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
 import BlogCard from '../components/common/BlogCard';
+import Pagination from '../components/common/Pagination';
 import SeoWrapper from '../components/SeoWrapper';
 import { JOURNAL_POSTS } from '../data/journal';
-import { getPosts } from '../services/blog';
+import { getPostsPage } from '../services/blog';
 
-export default function JournalPage({ posts }) {
+const LIMIT = 12;
+
+export default function JournalPage({ initialPosts = [], initialTotalPages = 1 }) {
+  const [posts, setPosts] = useState(initialPosts);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [loading, setLoading] = useState(false);
+
+  const goToPage = async (n) => {
+    if (n < 1 || n > totalPages || n === page || loading) return;
+    setLoading(true);
+    try {
+      const res = await getPostsPage({ page: n, limit: LIMIT });
+      setPosts(res.posts);
+      setTotalPages(res.totalPages);
+      setPage(n);
+    } catch {
+      /* keep current page on failure */
+    } finally {
+      setLoading(false);
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   // Use live API posts; fall back to local seed data if the API has none.
   const list = posts && posts.length ? posts : JOURNAL_POSTS;
   const [feature, ...rest] = list;
@@ -47,6 +72,8 @@ export default function JournalPage({ posts }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
             {rest.map((p) => <BlogCard key={p.slug} post={p} />)}
           </div>
+
+          <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={loading} />
         </div>
       </section>
     </SeoWrapper>
@@ -54,6 +81,6 @@ export default function JournalPage({ posts }) {
 }
 
 export async function getServerSideProps() {
-  const posts = await getPosts();
-  return { props: { posts } };
+  const { posts, totalPages } = await getPostsPage({ page: 1, limit: LIMIT });
+  return { props: { initialPosts: posts, initialTotalPages: totalPages } };
 }
