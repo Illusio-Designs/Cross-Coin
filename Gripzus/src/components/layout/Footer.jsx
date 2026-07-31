@@ -51,7 +51,6 @@ function Column({ title, links }) {
 
 export default function Footer() {
   const year = new Date().getFullYear();
-  const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
     <footer className="bg-ink text-paper rounded-t-[32px] md:rounded-t-[44px] mt-8">
@@ -127,11 +126,10 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-paper/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-paper/45">
           <p className="tracking-wide">© {year} Gripzus. All rights reserved.</p>
-          <p className="tracking-wide">By <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" className="text-paper/70 hover:text-paper">Finvera.solutions</a></p>
-          <button onClick={toTop} className="group inline-flex items-center gap-2 tracking-wide uppercase text-paper/60 hover:text-paper transition-colors">
-            Back to top
-            <span className="inline-flex w-7 h-7 items-center justify-center rounded-full border border-paper/20 group-hover:border-paper group-hover:-translate-y-0.5 transition-all">↑</span>
-          </button>
+          <p className="tracking-wide inline-flex items-center gap-1.5">
+            Made with <span className="text-paper/90">♥</span> by
+            <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" className="text-paper/75 hover:text-paper transition-colors">Finvera.solutions</a>
+          </p>
         </div>
       </div>
     </footer>

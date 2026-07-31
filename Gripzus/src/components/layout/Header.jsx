@@ -65,7 +65,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-3 md:top-4 z-40">
+      <header className="fixed top-3 md:top-4 inset-x-0 z-40">
         <div className="mx-auto w-full max-w-[1560px] px-3 md:px-6">
           <div className={`flex items-center gap-4 h-[54px] md:h-[60px] px-3 md:px-5 rounded-full border bg-paper/80 backdrop-blur-xl transition-all duration-300 ${
             scrolled ? 'border-line shadow-[0_10px_30px_-12px_rgba(0,0,0,0.18)]' : 'border-line/70 shadow-[0_4px_16px_-10px_rgba(0,0,0,0.10)]'

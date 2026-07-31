@@ -23,7 +23,10 @@ function MyApp({ Component, pageProps }) {
           <WishlistProvider>
             <div className="flex min-h-screen flex-col">
               <Header />
-              <main className="flex-1">
+              {/* Fixed header overlays content; default top clearance so normal
+                  pages sit below it. Full-bleed heros opt out with a negative
+                  top margin so they start behind the header. */}
+              <main className="flex-1 pt-[76px] md:pt-[84px]">
                 <Component {...pageProps} />
               </main>
               <Footer />
