@@ -46,7 +46,9 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  /* clip (not hidden) so the page can't scroll sideways WITHOUT turning the
+     body into a scroll container — which would break `position: sticky`. */
+  overflow-x: clip;
   max-width: 100%;
 }
 
