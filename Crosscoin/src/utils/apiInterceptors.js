@@ -90,7 +90,12 @@ export function installApiInterceptors() {
         if (cfg.silentError) return Promise.reject(error);
 
         const msg = buildErrorMessage(error);
-        toast.error(msg, { autoClose: 4000, hideProgressBar: false });
+        // Dedupe: a single slow/unreachable backend makes a page fire several
+        // requests at once (and react-query retries each), which used to stack
+        // one identical toast per failure. Keying the toastId to the message
+        // means react-toastify collapses them into a single visible toast —
+        // the same pattern src/utils/toast.js already uses.
+        toast.error(msg, { toastId: `api-error:${msg}`, autoClose: 4000, hideProgressBar: false });
       } catch { /* never let the interceptor itself throw */ }
       return Promise.reject(error);
     },
