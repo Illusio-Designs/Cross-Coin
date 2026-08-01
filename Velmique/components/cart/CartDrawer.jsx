@@ -533,6 +533,7 @@ export default function CartDrawer() {
     if (!selectedAddress) { setErrorMsg('Please add a delivery address.'); return; }
     const errs = validateAddress(selectedAddress);
     if (errs.length) { setErrorMsg(errs[0]); return; }
+    if (pincodeInfo && pincodeInfo.serviceable === false) { setErrorMsg("Sorry, we don’t deliver to this PIN code yet. Please try a different address."); return; }
     if (!selectedFee) { setErrorMsg('Please pick a delivery method.'); return; }
     if (!isAuthenticated) {
       if (!String(guestInfo.fullName || '').trim()) { setErrorMsg('Please enter your full name.'); return; }
@@ -855,8 +856,8 @@ export default function CartDrawer() {
                 {errorMsg}
               </div>
             )}
-            <button onClick={onPlaceOrder} disabled={isProcessing}
-              className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing ? 'opacity-60 cursor-not-allowed' : ''}`}>
+            <button onClick={onPlaceOrder} disabled={isProcessing || (pincodeInfo && pincodeInfo.serviceable === false)}
+              className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || (pincodeInfo && pincodeInfo.serviceable === false) ? 'opacity-60 cursor-not-allowed' : ''}`}>
               {isProcessing
                 ? <><Loader2 size={14} className="animate-spin" /> Processing…</>
                 : <>{isCod ? 'Place COD Order' : 'Pay & Place Order'} · {fmt(finalPayable)} <ArrowRight size={13} /></>

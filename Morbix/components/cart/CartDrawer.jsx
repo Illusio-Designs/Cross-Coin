@@ -303,6 +303,7 @@ export default function CartDrawer() {
     setError('');
     const addrErr = validateAddress(selectedAddress);
     if (addrErr) { setError(addrErr); return; }
+    if (serviceability && serviceability.serviceable === false) { setError("Sorry, we don’t deliver to this PIN code yet. Please try a different address."); return; }
     if (!selectedFee) { setError('Please select a payment method.'); return; }
     if (!isAuthenticated && (!String(guest.fullName).trim() || !isValidEmail(guest.email) || !isValidMobile(guest.phone))) {
       setError('Please complete your contact details (name, valid email and 10-digit phone).');
@@ -477,6 +478,9 @@ export default function CartDrawer() {
                     </div>
                     <div className="cd-form-grid2">
                       <label className="cd-label">PIN code<input className="cd-input" name="postalCode" value={form.postalCode} onChange={onFormChange} onBlur={(e) => checkPin(e.target.value)} required placeholder="6-digit PIN" /></label>
+                      {serviceability && serviceability.serviceable === false && (
+                        <p role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '6px 0 0' }}>Sorry, we don’t deliver to this PIN code yet.</p>
+                      )}
                       <label className="cd-label">Country<input className="cd-input" name="country" value={form.country} onChange={onFormChange} placeholder="Country" /></label>
                     </div>
                     {isAuthenticated && (
@@ -527,9 +531,16 @@ export default function CartDrawer() {
               {retryState && retryState.count < 3 ? (
                 <button className="cd-checkout" onClick={doRetry} disabled={processing}>{processing ? 'Please wait…' : `Retry payment (${3 - retryState.count} left)`}</button>
               ) : (
-                <button className="cd-checkout" onClick={placeOrder} disabled={processing || authLoading}>
+                <>
+                {serviceability && serviceability.serviceable === false && (
+                  <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+                    We don’t deliver to this PIN code yet — please try a different delivery address.
+                  </div>
+                )}
+                <button className="cd-checkout" onClick={placeOrder} disabled={processing || authLoading || (serviceability && serviceability.serviceable === false)}>
                   {processing ? 'Processing…' : isPrepaid ? `Pay ₹${prepaidPayable.toFixed(0)}` : isCod ? `Place order · ₹${total.toFixed(0)}` : 'Place order'}
                 </button>
+                </>
               )}
 
               <a className="cd-whatsapp" href="https://wa.me/919712891700?text=Hi%2C%20I%20need%20help%20with%20my%20Morbix%20order" target="_blank" rel="noopener noreferrer">
