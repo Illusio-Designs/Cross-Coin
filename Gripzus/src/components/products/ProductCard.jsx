@@ -58,10 +58,11 @@ export default function ProductCard({ product }) {
       <div className="relative">
         <Link
           href={`/products/${slug}`}
-          className="media-zoom relative block aspect-[4/5] overflow-hidden rounded-xl border border-line bg-paper-warm"
+          className="relative block overflow-hidden rounded-xl border border-line bg-paper-warm"
         >
+          {/* Full image — natural ratio, never cropped */}
           <img src={primary} alt={name} loading="lazy"
-               className="absolute inset-0 w-full h-full object-cover" />
+               className="block w-full h-auto" />
 
           {/* subtle darkening on hover to lift the image off the page */}
           <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/[0.04] transition-colors duration-500" />

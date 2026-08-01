@@ -43,14 +43,17 @@ export default function ExclusiveSection({ products = [] }) {
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const product = list[activeIndex];
 
-  // Gallery for the selected variation (colour) — its own images if present,
-  // otherwise the product's images. The thumbnails + main image both read
-  // from this, so switching colour swaps the whole gallery.
+  // Gallery for the selected variation (colour) — STRICTLY that colour's own
+  // images. If the colour has no dedicated images we show a single main image
+  // rather than the whole mixed-colour gallery, so selecting a colour never
+  // surfaces other colours' photos. (Upload images per colour/variation in
+  // the admin to give each colour its own thumbnail set.)
   const gallery = useMemo(() => {
     if (!product) return [FALLBACK_IMG];
-    const perColor = product.colors[color]?.images;
-    const g = (Array.isArray(perColor) && perColor.length) ? perColor : product.images;
-    return (g && g.length ? g : [FALLBACK_IMG]).filter(Boolean);
+    const perColor = (product.colors[color]?.images || []).filter(Boolean);
+    if (perColor.length) return perColor;
+    const first = (product.images || []).filter(Boolean)[0];
+    return [first || FALLBACK_IMG];
   }, [product, color]);
   const heroImg = gallery[Math.min(imgIdx, gallery.length - 1)] || FALLBACK_IMG;
 

@@ -49,9 +49,9 @@ export default function JournalPage({ initialPosts = [], initialTotalPages = 1 }
         <div className="wrap">
 
           {/* Featured */}
-          <Link href={`/journal/${feature.slug}`} className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 md:mb-20">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-100">
-              <img src={feature.image} alt={feature.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+          <Link href={`/journal/${feature.slug}`} className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 md:mb-20 md:items-center">
+            <div className="relative overflow-hidden rounded-xl bg-gray-100 self-start">
+              <img src={feature.image} alt={feature.title} className="w-full h-auto transition-transform duration-700 group-hover:scale-[1.03]" />
               <span className="absolute top-5 left-5 bg-paper/95 text-ink eyebrow px-3 py-1.5 rounded-sm">Featured · {feature.category}</span>
             </div>
             <div className="flex flex-col justify-center">
