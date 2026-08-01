@@ -17,6 +17,7 @@ import PaymentChart from '../../../components/Dashboard/PaymentChart';
 import ShippingChart from '../../../components/Dashboard/ShippingChart';
 import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
+import CourierSelectionModal from '../../../components/Dashboard/CourierSelectionModal';
 import { PageHeader, Panel, StatGrid, StatTile, FilterBar } from '../../../components/Dashboard/primitives';
 
 const Orders = () => {
@@ -70,6 +71,9 @@ const Orders = () => {
     // under the admin while they work.
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [liveUpdates, setLiveUpdates] = useState(true);
+    // Manual courier picker — opened directly or auto-opened when an
+    // auto-sync comes back failed (no serviceable courier).
+    const [courierModal, setCourierModal] = useState(null);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -222,34 +226,56 @@ const Orders = () => {
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
     };
 
+    const openCourierSelection = (orderId, orderNumber, autoFailedReason = null) =>
+        setCourierModal({ orderId, orderNumber, autoFailedReason });
+
+    // The sync now runs in a background worker, so the queue endpoint returns
+    // immediately. Poll the order a few times to learn the outcome: on success
+    // refresh; on failure, open the manual courier picker with the reason.
+    const pollSyncOutcome = async (orderId, orderNumber) => {
+        const waits = [4000, 5000, 6000];
+        for (const wait of waits) {
+            await new Promise(r => setTimeout(r, wait));
+            try {
+                const o = await orderService.getOrderById(orderId);
+                const ship = o?.Shipment || {};
+                const status = ship.sync_status || o?.fship_sync_status;
+                const waybill = ship.waybill || o?.fship_waybill;
+                if (status === 'synced' || waybill) {
+                    showSuccess('orderSynced', `✅ Order ${orderNumber} synced. AWB: ${waybill || 'generated'}`);
+                    highlightRow(orderId);
+                    await fetchOrders(); fetchAllOrdersForStats();
+                    return;
+                }
+                if (status === 'failed') {
+                    const reason = ship.sync_error || o?.fship_sync_error || 'No serviceable courier for this order';
+                    await fetchOrders();
+                    openCourierSelection(orderId, orderNumber, reason);
+                    return;
+                }
+            } catch { /* keep polling */ }
+        }
+        // Still pending after the window — refresh; the background poll or the
+        // row's "Select courier" button will pick it up.
+        fetchOrders();
+    };
+
     const syncOrderDirectly = async (orderId, orderNumber) => {
         if (syncingOrders.has(orderId) || syncingAll) { showError('syncInProgress'); return; }
         setSyncingOrders(prev => new Set(prev).add(orderId));
         try {
             const result = await orderService.syncOrderWithCourier(orderId, { auto: true });
             if (result.success) {
-                const courierUsed = result.data?.logistics || 'Auto-selected Courier';
-                const awb = result.data?.order?.waybill || 'Generated';
-                const labelUrl = result.data?.label?.pdfUrl;
-                showSuccess('orderSynced', `✅ Order ${orderNumber} synced with ${courierUsed}! AWB: ${awb}`);
-                highlightRow(orderId);
-                if (labelUrl) {
-                    setTimeout(() => {
-                        try {
-                            window.open(labelUrl, '_blank');
-                        } catch (e) {
-                            // Failed to open label in new window
-                        }
-                    }, 500);
-                }
-                await fetchOrders();
-                fetchAllOrdersForStats();
+                showSuccess('orderSynced', result.message || `Sync queued for ${orderNumber}. Checking status…`);
+                await pollSyncOutcome(orderId, orderNumber);
             } else {
-                const errorMsg = result.error || 'Auto-sync failed for all couriers (tried: Delhivery, Amazon, Xpressbees)';
+                // Up-front validation/queue failure — let the admin pick manually.
+                const errorMsg = result.error || result.message || 'Auto-sync failed';
                 showError('autoSyncFailed', `❌ ${errorMsg}`);
+                openCourierSelection(orderId, orderNumber, errorMsg);
             }
         } catch (error) {
-            showError('syncFailed', `❌ ${error.message || 'Failed to sync order with courier'}`);
+            showError('syncFailed', `❌ ${error.message || error.error || 'Failed to sync order with courier'}`);
         } finally {
             setSyncingOrders(prev => { const s = new Set(prev); s.delete(orderId); return s; });
         }
@@ -640,6 +666,13 @@ const Orders = () => {
                             )}
                         </button>
                         </Tooltip>
+                        {!isFinal && !(row.Shipment?.waybill || row.fship_waybill) && (
+                            <Tooltip text="Pick a courier manually from the provider list" position="top">
+                                <button className="order-action-btn order-courier-btn" onClick={() => openCourierSelection(row.id, row.order_number)}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                </button>
+                            </Tooltip>
+                        )}
                         {(row.Shipment?.waybill || row.fship_waybill) && (
                             <Tooltip text="Refresh tracking information from courier" position="top">
                                 <button className="order-action-btn order-update-btn" onClick={() => updateSingleOrder(row.id)}>
@@ -697,6 +730,14 @@ const Orders = () => {
                 isOpen={isManualOrderOpen}
                 onClose={() => setIsManualOrderOpen(false)}
                 onOrderCreated={() => { fetchOrders(1); fetchAllOrdersForStats(); }}
+            />
+            <CourierSelectionModal
+                isOpen={!!courierModal}
+                orderId={courierModal?.orderId}
+                orderNumber={courierModal?.orderNumber}
+                autoFailedReason={courierModal?.autoFailedReason}
+                onClose={() => setCourierModal(null)}
+                onSynced={() => { fetchOrders(); fetchAllOrdersForStats(); }}
             />
             <PromptModal
                 message={cancelPrompt ? `Enter cancellation reason for order ${cancelPrompt.orderNumber}:` : null}
