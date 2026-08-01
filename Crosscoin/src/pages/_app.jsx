@@ -91,29 +91,20 @@ import "../styles/dashboard/ui-badge.css";
 import "../styles/dashboard/ui-select.css";
 import "../styles/dashboard/ui-switch.css";
 import "../styles/dashboard/dateRangePicker.css";
-import "../styles/dashboard/manualOrder.css";
 
-// Additional dashboard CSS
-import "../styles/dashboard/layout.css";
-import "../styles/dashboard/tables.css";
-import "../styles/dashboard/Card.css";
-import "../styles/dashboard/payments.css";
-import "../styles/dashboard/products.css";
-import "../styles/dashboard/orders.css";
-import "../styles/dashboard/media.css";
-import "../styles/dashboard/utmAnalytics.css";
-import "../styles/dashboard/attributes.css";
-import "../styles/dashboard/slider.css";
-import "../styles/dashboard/pages.css";
-import "../styles/dashboard/brands.css";
-import "../styles/dashboard/brandSettings.css";
-import "../styles/dashboard/brandTags.css";
-import "../styles/dashboard/brandAssignment.css";
-import "../styles/dashboard/seo.css";
+// ── Admin-PAGE dashboard CSS is intentionally NOT imported here. ──
+// manualOrder, layout, tables, Card, payments, products, orders, media,
+// utmAnalytics, attributes, slider, pages, brands, brandSettings, brandTags,
+// brandAssignment, seo, social, whatsapp, analytics were ~226KB of
+// render-blocking CSS that EVERY storefront page downloaded (Pages-Router
+// bundles all _app global CSS into one stylesheet) but only /dashboard uses.
+// They are now bundled into /public/dashboard.css by
+// scripts/build-dashboard-css.mjs and loaded via a <link> only on /dashboard
+// routes (see AppContent). This removes that weight from the storefront's
+// FCP/LCP critical path. The shared UI kit above (tokens / primitives / ui-* /
+// dateRangePicker) STAYS global — storefront Products/SearchResults use
+// Pagination + Modal from components/ui, which those styles back.
 import "../styles/components/WhatsAppChat.css";
-import "../styles/dashboard/social.css";
-import "../styles/dashboard/whatsapp.css";
-import "../styles/dashboard/analytics.css";
 // Additional page CSS
 import "../styles/pages/Lookbook.css";
 import "../styles/pages/Reels.css";
@@ -148,6 +139,15 @@ function AppContent({ Component, pageProps, progressRef }) {
 
   return (
     <>
+      {/* Admin-page dashboard CSS — loaded ONLY on /dashboard routes so the
+          ~226KB bundle never touches the storefront's critical path. Rendered
+          into <head> server-side (via next/head) so there's no flash of
+          unstyled dashboard. Built by scripts/build-dashboard-css.mjs. */}
+      {isDashboard && (
+        <Head>
+          <link rel="stylesheet" href="/dashboard.css" />
+        </Head>
+      )}
       {/* Global reading progress bar */}
       <div className="custom-scrollbar-progress">
         <div
