@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import PageHero from '../components/common/PageHero';
 import { useAuth } from '../context/AuthContext';
 import { toastRegisterSuccess, toastRegisterError } from '../utils/toast';
 
@@ -127,20 +128,18 @@ export default function RegisterPage() {
       <Head><title>Create Account — Gripzus</title></Head>
       <main className="bg-paper">
 
-        {/* Hero */}
-        <section className="bg-ink text-center px-6 py-16 md:py-20">
-          <p className="eyebrow text-paper/55 mb-4">Account · Register</p>
-          <h1 className="h-display text-paper text-4xl md:text-5xl">
-            Start the <span className="h-italic">circle.</span>
-          </h1>
-          <p className="text-paper/55 text-sm mt-4">
-            {step === 'details' ? 'Register with your phone number — no password' : `Enter the code sent to +91 ${digits}`}
-          </p>
-        </section>
+        {/* Hero — shared PageHero, consistent with the rest of the site */}
+        <PageHero
+          eyebrow="Account"
+          title="Start the"
+          accent="circle."
+          intro={step === 'details' ? 'Register with your phone number — no password.' : `Enter the code sent to +91 ${digits}`}
+        />
 
         {/* Form */}
-        <section className="px-6 py-14 md:py-16">
-          <div className="mx-auto w-full max-w-sm">
+        <section className="section-y">
+          <div className="wrap">
+           <div className="mx-auto w-full max-w-sm">
             {step === 'details' ? (
               <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
                 <Field label="Full name" value={form.name} onChange={(v) => set('name', v)} placeholder="Anika Sharma" />
@@ -193,6 +192,7 @@ export default function RegisterPage() {
                 </button>
               </form>
             )}
+           </div>
           </div>
         </section>
       </main>

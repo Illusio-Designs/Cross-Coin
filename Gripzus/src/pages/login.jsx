@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import PageHero from '../components/common/PageHero';
 import { useAuth } from '../context/AuthContext';
 import { toastLoginSuccess, toastLoginError } from '../utils/toast';
 
@@ -127,20 +128,18 @@ export default function LoginPage() {
       <Head><title>Sign In — Gripzus</title></Head>
       <main className="bg-paper">
 
-        {/* Hero */}
-        <section className="bg-ink text-center px-6 py-16 md:py-20">
-          <p className="eyebrow text-paper/55 mb-4">Account · Sign In</p>
-          <h1 className="h-display text-paper text-4xl md:text-5xl">
-            Welcome <span className="h-italic">back.</span>
-          </h1>
-          <p className="text-paper/55 text-sm mt-4">
-            {step === 'phone' ? 'Sign in with your phone number' : `Enter the code sent to +91 ${digits}`}
-          </p>
-        </section>
+        {/* Hero — shared PageHero, consistent with the rest of the site */}
+        <PageHero
+          eyebrow="Account"
+          title="Welcome"
+          accent="back."
+          intro={step === 'phone' ? 'Sign in with your phone number.' : `Enter the code sent to +91 ${digits}`}
+        />
 
         {/* Form */}
-        <section className="px-6 py-14 md:py-16">
-          <div className="mx-auto w-full max-w-sm">
+        <section className="section-y">
+          <div className="wrap">
+           <div className="mx-auto w-full max-w-sm">
             {step === 'phone' ? (
               <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
                 <div>
@@ -191,6 +190,7 @@ export default function LoginPage() {
                 </button>
               </form>
             )}
+           </div>
           </div>
         </section>
       </main>

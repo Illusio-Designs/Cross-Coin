@@ -13,14 +13,13 @@ export default function ContactPage() {
     <SeoWrapper pageName="contact">
       <main className="bg-paper">
         <PageHero
-          chapter="07"
           eyebrow="Say hello"
           title="Get in"
           accent="touch."
           intro="We read every message ourselves and reply within one business day. Pick the fastest channel, or write below."
         />
 
-        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        <div className="wrap section-y grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
 
           {/* Channels */}
           <aside className="lg:col-span-5">

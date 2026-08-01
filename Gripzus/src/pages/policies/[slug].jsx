@@ -51,7 +51,7 @@ export default function PolicyPage() {
             {loading && (
               <div className="space-y-3.5">
                 {[95, 80, 90, 65, 88, 72, 92, 60].map((w, i) => (
-                  <div key={i} className="h-3.5 rounded bg-gray-200 animate-pulse" style={{ width: `${w}%` }} />
+                  <div key={i} className="h-3.5 rounded bg-paper-deep animate-pulse" style={{ width: `${w}%` }} />
                 ))}
               </div>
             )}

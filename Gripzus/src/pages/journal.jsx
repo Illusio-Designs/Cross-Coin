@@ -50,13 +50,13 @@ export default function JournalPage({ initialPosts = [], initialTotalPages = 1 }
 
           {/* Featured */}
           <Link href={`/journal/${feature.slug}`} className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 md:mb-20 md:items-center">
-            <div className="relative overflow-hidden rounded-xl bg-gray-100 self-start">
+            <div className="relative overflow-hidden rounded-xl bg-paper-deep self-start">
               <img src={feature.image} alt={feature.title} className="w-full h-auto transition-transform duration-700 group-hover:scale-[1.03]" />
               <span className="absolute top-5 left-5 bg-paper/95 text-ink eyebrow px-3 py-1.5 rounded-sm">Featured · {feature.category}</span>
             </div>
             <div className="flex flex-col justify-center">
               <h2 className="h-display text-3xl md:text-5xl mb-5 leading-[1.05]">{feature.title}</h2>
-              <p className="prose-body text-base md:text-lg max-w-xl mb-6 text-justify">{feature.excerpt}</p>
+              <p className="prose-body text-base md:text-lg max-w-xl mb-6">{feature.excerpt}</p>
               <div className="flex items-center gap-3 mb-7">
                 <span className="w-9 h-9 rounded-full bg-ink text-paper text-[12px] font-medium flex items-center justify-center">{featureInitials}</span>
                 <div>

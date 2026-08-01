@@ -34,10 +34,10 @@ export default function CollectionsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16">
               <div className="space-y-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-20 rounded bg-gray-200 animate-pulse" />
+                  <div key={i} className="h-20 rounded bg-paper-deep animate-pulse" />
                 ))}
               </div>
-              <div className="hidden lg:block h-[60vh] rounded-xl bg-gray-200 animate-pulse" />
+              <div className="hidden lg:block h-[60vh] rounded-xl bg-paper-deep animate-pulse" />
             </div>
           ) : collections.length === 0 ? (
             <div className="text-center py-20">
@@ -73,7 +73,7 @@ export default function CollectionsPage() {
                         )}
                       </div>
                       {c.image && (
-                        <div className="lg:hidden w-20 h-24 shrink-0 overflow-hidden rounded bg-gray-200">
+                        <div className="lg:hidden w-20 h-24 shrink-0 overflow-hidden rounded bg-paper-deep">
                           <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
                         </div>
                       )}
@@ -87,7 +87,7 @@ export default function CollectionsPage() {
 
               {/* Preview pane — sticky, screen-height */}
               <div className="hidden lg:block sticky top-[88px]">
-                <div className="relative h-[calc(100vh-120px)] overflow-hidden rounded-xl bg-gray-200">
+                <div className="relative h-[calc(100vh-120px)] overflow-hidden rounded-xl bg-paper-deep">
                   {collections.map((c, i) => (
                     c.image ? (
                       <img

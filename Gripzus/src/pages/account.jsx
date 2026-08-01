@@ -163,18 +163,18 @@ export default function AccountPage() {
     <SeoWrapper pageName="profile">
       <main className="bg-paper">
 
-        {/* Hero */}
-        <section className="bg-ink text-center px-6 py-14 md:py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center bg-paper/10 text-paper font-display font-bold text-xl">
+        {/* Hero — light, consistent with the site's PageHero header */}
+        <section className="bg-paper-warm border-b border-line text-center px-6 py-14 md:py-16">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-ink text-paper font-display font-bold text-xl">
             {getInitials(user.username)}
           </div>
-          <p className="eyebrow text-paper/45">My Account</p>
-          <h1 className="h-display text-paper text-3xl md:text-4xl mt-2">{user.username || 'Gripzus member'}</h1>
-          <p className="text-paper/55 text-sm mt-2">{user.email}</p>
-          {user.phone && <p className="text-paper/35 text-xs mt-1">+91 {user.phone}</p>}
+          <p className="eyebrow text-ink-muted">My Account</p>
+          <h1 className="h-display text-ink text-3xl md:text-4xl mt-2">{user.username || 'Gripzus member'}</h1>
+          <p className="text-ink-soft text-sm mt-2">{user.email}</p>
+          {user.phone && <p className="text-ink-muted text-xs mt-1">+91 {user.phone}</p>}
           <button
             onClick={async () => { await logout(); window.location.replace('/'); }}
-            className="mt-5 inline-flex items-center gap-2 border border-paper/25 px-5 py-2 text-[11px] tracking-[0.14em] uppercase text-paper/75 transition-colors hover:border-paper hover:text-paper"
+            className="mt-5 inline-flex items-center gap-2 border border-line px-5 py-2 text-[11px] tracking-[0.14em] uppercase text-ink-soft transition-colors hover:border-ink hover:text-ink"
           >
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
             Sign Out
@@ -208,7 +208,7 @@ export default function AccountPage() {
         </div>
 
         {/* Body */}
-        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-10 md:py-12">
+        <div className="wrap py-10 md:py-12">
           <div>
 
             {/* ORDERS */}

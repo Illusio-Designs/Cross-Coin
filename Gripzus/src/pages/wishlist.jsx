@@ -12,7 +12,6 @@ export default function WishlistPage() {
     <SeoWrapper pageName="wishlist">
       <main className="bg-paper">
         <PageHero
-          chapter="06"
           eyebrow="Saved for later"
           title="Your"
           accent="wishlist."
@@ -21,7 +20,7 @@ export default function WishlistPage() {
             : `${count} pair${count === 1 ? '' : 's'} kept aside.`}
         />
 
-        <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
+        <div className="wrap section-y">
           {!hydrated ? null : empty ? (
             <div className="text-center py-24 border border-line max-w-xl mx-auto">
               <p className="h-display text-3xl uppercase mb-3">Nothing saved yet</p>

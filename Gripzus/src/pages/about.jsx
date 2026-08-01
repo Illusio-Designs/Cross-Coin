@@ -34,7 +34,7 @@ export default function AboutPage() {
               <h1 className="h-display text-ink text-4xl md:text-6xl lg:text-7xl leading-[1.02]">
                 Knit with <span className="h-italic text-clay">intention.</span>
               </h1>
-              <p className="prose-body text-base md:text-lg mt-6 max-w-xl text-justify">
+              <p className="prose-body text-base md:text-lg mt-6 max-w-xl">
                 Gripzus is a small atelier in Morbi, Gujarat, obsessed with one quiet question —
                 how should a sock hold the foot? Three fibres, hand-linked toes, runs of five
                 hundred. Sold while they last, then knit again, slowly.
@@ -44,7 +44,7 @@ export default function AboutPage() {
                 <Link href="/journal" className="btn-outline">Read The Thread</Link>
               </div>
             </div>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-gray-100">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-paper-deep">
               <img
                 src="https://images.unsplash.com/photo-1604644401890-0bd678c83788?w=1100&q=85&auto=format&fit=crop"
                 alt="The Gripzus atelier"
@@ -79,12 +79,12 @@ export default function AboutPage() {
             </h2>
           </div>
           <div className="space-y-5">
-            <p className="prose-body text-base md:text-lg text-justify">
+            <p className="prose-body text-base md:text-lg">
               Gripzus began as a quiet idea — that a sock should be allowed to be a considered
               object. That the arch band, the cuff, and the toe should each earn their place.
               That a pair worn for a year should be more interesting at the end of it, not less.
             </p>
-            <p className="prose-body text-base md:text-lg text-justify">
+            <p className="prose-body text-base md:text-lg">
               We knit on circular machines in a Morbi workshop, finish every pair by hand,
               and ship them in batches small enough that we still know the names of the people
               on the floor. We do not chase seasons. We make the same pair better, every run.
@@ -125,7 +125,7 @@ export default function AboutPage() {
                 <p className="h-display text-clay text-2xl md:text-3xl">{m.y}</p>
                 <div>
                   <h3 className="h-display text-ink text-xl md:text-2xl mb-2">{m.t}</h3>
-                  <p className="prose-body text-sm md:text-base max-w-2xl text-justify">{m.e}</p>
+                  <p className="prose-body text-sm md:text-base max-w-2xl">{m.e}</p>
                 </div>
               </div>
             ))}

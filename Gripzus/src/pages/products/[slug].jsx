@@ -95,13 +95,13 @@ export default function ProductDetail() {
       <main className="bg-paper">
         <div className="wrap py-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-14">
-            <div className="md:col-span-7 aspect-square rounded-lg bg-gray-200 animate-pulse" />
+            <div className="md:col-span-7 aspect-square rounded-lg bg-paper-deep animate-pulse" />
             <div className="md:col-span-5 space-y-4 pt-4">
-              <div className="h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
-              <div className="h-10 w-3/4 rounded bg-gray-200 animate-pulse" />
-              <div className="h-8 w-1/3 rounded bg-gray-200 animate-pulse" />
-              <div className="h-24 w-full rounded bg-gray-200 animate-pulse" />
-              <div className="h-12 w-full rounded bg-gray-200 animate-pulse" />
+              <div className="h-3 w-1/3 rounded bg-paper-deep animate-pulse" />
+              <div className="h-10 w-3/4 rounded bg-paper-deep animate-pulse" />
+              <div className="h-8 w-1/3 rounded bg-paper-deep animate-pulse" />
+              <div className="h-24 w-full rounded bg-paper-deep animate-pulse" />
+              <div className="h-12 w-full rounded bg-paper-deep animate-pulse" />
             </div>
           </div>
         </div>
@@ -329,7 +329,7 @@ export default function ProductDetail() {
               {product.description && (
                 <div className="mb-8">
                   <p className="eyebrow mb-3">About this pair</p>
-                  <p className="prose-body text-sm md:text-base text-justify">{product.description}</p>
+                  <p className="prose-body text-sm md:text-base">{product.description}</p>
                 </div>
               )}
 

@@ -153,7 +153,7 @@ export default function TrackOrderPage() {
         />
 
         <div className="wrap">
-          <div className="max-w-site mx-auto px-6 md:px-12 lg:px-20 py-12 md:py-16">
+          <div className="py-12 md:py-16">
 
           {/* Search form */}
           <form onSubmit={handleTrack} className="bg-paper-deep border border-line p-6 md:p-7 mb-8">
