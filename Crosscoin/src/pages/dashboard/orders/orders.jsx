@@ -76,14 +76,19 @@ const Orders = () => {
     // Drop stale responses when user types fast / changes filters quickly
     const requestIdRef = useRef(0);
 
-    const fetchOrders = useCallback(async (page = currentPage) => {
+    const fetchOrders = useCallback(async (page = currentPage, { silent = false } = {}) => {
         const reqId = ++requestIdRef.current;
-        setLoading(true);
         setError(null);
-        // Clear the visible rows so the previous page's data doesn't sit on
-        // screen during the fetch — otherwise switching pages briefly shows
-        // the old page's orders before the new ones arrive.
-        setOrders([]);
+        // Foreground fetches (page change, filter change, manual refresh) show the
+        // skeleton and clear the visible rows so the previous page's data doesn't
+        // sit on screen during the fetch. A *silent* fetch (the 30s background
+        // poll) keeps the current rows on screen and swaps in fresh data when it
+        // arrives — otherwise the whole table blanks out to a skeleton every 30s
+        // while the admin is working.
+        if (!silent) {
+            setLoading(true);
+            setOrders([]);
+        }
         try {
             const params = {
                 page, limit: itemsPerPage,
@@ -110,9 +115,10 @@ const Orders = () => {
             setTotalOrders(totalOrdersCount);
         } catch (err) {
             if (reqId !== requestIdRef.current) return;
-            setError(err.message || 'Failed to fetch orders');
+            // A failed background poll must not wipe the table the admin is using.
+            if (!silent) setError(err.message || 'Failed to fetch orders');
         } finally {
-            if (reqId === requestIdRef.current) setLoading(false);
+            if (reqId === requestIdRef.current && !silent) setLoading(false);
         }
     }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
@@ -294,9 +300,8 @@ const Orders = () => {
         setCancelPrompt({ orderId, orderNumber });
     };
 
-    const confirmOrder = async (orderId, orderNumber) => {
-        // For ALL orders: First confirm the order, THEN handle courier selection if needed
-        setConfirmPrompt({ orderId, orderNumber, needsCourier: true });
+    const confirmOrder = (orderId, orderNumber) => {
+        setConfirmPrompt({ orderId, orderNumber });
     };
 
     const handleConfirmOrder = async () => {
@@ -307,26 +312,13 @@ const Orders = () => {
             if (result.success) {
                 showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
                 highlightRow(orderId);
-                // Refresh orders to get updated status
+                // Refresh orders + stats to reflect the new status.
                 await fetchOrders();
                 await fetchAllOrdersForStats();
-
-                // After orders are refreshed, use setTimeout to check if courier selection is needed
-                // The small delay ensures React has time to process state updates
-                setTimeout(() => {
-                    // Look for the just-confirmed order in the orders list
-                    const updatedOrder = orders.find(o => o.id === orderId);
-                    if (updatedOrder) {
-                        const shipment = updatedOrder.Shipment || {};
-                        const provider = shipment.provider || (updatedOrder.fship_order_id || updatedOrder.fship_waybill ? 'fship' : null);
-                        const isSynced = (shipment.sync_status === 'synced') || updatedOrder.fship_order_id || updatedOrder.fship_waybill;
-
-                        // If iThink and NOT synced, open courier selection modal
-                        if (provider === 'ithink' && !isSynced) {
-                            openCourierSelection(orderId, orderNumber);
-                        }
-                    }
-                }, 300);
+                // Courier assignment is handled by the dedicated "Sync" action on
+                // each row (auto-selects the best available courier). We no longer
+                // try to auto-open a courier picker here — that path referenced an
+                // undefined handler and read a stale orders snapshot.
             }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
@@ -421,7 +413,9 @@ const Orders = () => {
     useEffect(() => {
         const timer = setInterval(() => {
             fetchLabelStats();
-            if (!loading) fetchOrders(currentPage);
+            // Silent background refresh — keeps the current rows visible instead of
+            // blanking the table to a skeleton every 30 seconds.
+            if (!loading) fetchOrders(currentPage, { silent: true });
         }, 30000);
         setLabelPollTimer(timer);
         return () => clearInterval(timer);

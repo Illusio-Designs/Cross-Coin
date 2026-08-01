@@ -293,6 +293,74 @@ function CardGrid() {
         )}
       </div>
 
+      {/* ═══ 6b. SALES BY BRAND ═══ */}
+      {stats.brandSales?.length > 0 && (
+        <div className="dc-two-col">
+          <Panel title="Sales by Brand" flush>
+            <ResponsiveTable
+              data={stats.brandSales}
+              rowKey="brandId"
+              emptyMessage="No brand sales yet"
+              columns={[
+                {
+                  key: 'brand',
+                  label: 'Brand',
+                  headerStyle: { minWidth: 140 },
+                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', whiteSpace: 'normal', overflowWrap: 'break-word', minWidth: 140 },
+                  render: (b) => (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: b.color, flexShrink: 0 }} />
+                      {b.name}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'orders',
+                  label: 'Orders',
+                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (b) => (b.orders || 0).toLocaleString('en-IN'),
+                },
+                {
+                  key: 'revenue',
+                  label: 'Revenue',
+                  cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (b) => `₹${(b.revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                },
+                {
+                  key: 'earned',
+                  label: 'Earned',
+                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (b) => `₹${(b.earned || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                },
+                {
+                  key: 'aov',
+                  label: 'Avg Order',
+                  cellStyle: { color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (b) => `₹${(b.avgOrderValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                },
+                {
+                  key: 'share',
+                  label: 'Share',
+                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  render: (b) => `${b.share || 0}%`,
+                },
+              ]}
+            />
+          </Panel>
+
+          <Panel>
+            <DonutChart
+              data={stats.brandSales.map((b) => ({ label: b.name, value: b.revenue, color: b.color }))}
+              title="Revenue by Brand"
+              subtitle="Share of total revenue"
+              totalValue={`₹${(revenue.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+              totalLabel="Total Revenue"
+              size={160} strokeWidth={22} showLegend={true}
+            />
+          </Panel>
+        </div>
+      )}
+
       {/* ═══ 7. RECENT ORDERS + TOP PRODUCTS (side-by-side on desktop, stacked + as cards on mobile) ═══ */}
       <div className="dc-two-col dc-two-col-tables">
         {stats.recentOrders?.length > 0 && (
