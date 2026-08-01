@@ -44,7 +44,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── Test gate ──────────────────────────────────────────────────────────────
+  # The deploy job below `needs: test`, so a red backend test suite BLOCKS the
+  # FTP upload — a broken critical path (order create/list/filter, shipping sync
+  # classification, redis config, csrf, webhook signatures, …) never reaches prod.
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - name: Install backend deps
+        working-directory: Backend
+        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+      - name: Run backend test suite
+        working-directory: Backend
+        run: npm test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

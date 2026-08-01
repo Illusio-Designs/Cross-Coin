@@ -1596,28 +1596,12 @@
       // end_date is normalised to 23:59:59.999 of the chosen day so orders placed
       // later that day are included (otherwise Op.between to YYYY-MM-DD 00:00:00
       // would cut off everything after midnight on the end date).
-      if (start_date || end_date) {
-        const range = {};
-        let hasRange = false;
-        if (start_date) {
-          const s = new Date(start_date);
-          if (!isNaN(s.getTime())) {
-            s.setHours(0, 0, 0, 0);
-            range[Op.gte] = s;
-            hasRange = true;
-          }
-        }
-        if (end_date) {
-          const e = new Date(end_date);
-          if (!isNaN(e.getTime())) {
-            e.setHours(23, 59, 59, 999);
-            range[Op.lte] = e;
-            hasRange = true;
-          }
-        }
-        // Track a flag: Object.keys() ignores Symbol keys (Op.gte/Op.lte), so
-        // the old `Object.keys(range).length` was ALWAYS 0 and the date filter
-        // silently never applied.
+      // Date range filter — via the shared helper so the Symbol-key gotcha
+      // (Object.keys ignores Op.gte/Op.lte → always 0) can't silently disable
+      // it again. See utils/dateRange.js.
+      {
+        const { buildCreatedAtRange } = require('../utils/dateRange.js');
+        const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
         if (hasRange) filter.createdAt = range;
       }
 

@@ -220,3 +220,5 @@ class RedisService {
 
 // Export singleton instance
 module.exports = new RedisService();
+// Exposed for tests — the REDIS_URL/discrete-vars resolver.
+module.exports.resolveRedis = resolveRedis;
