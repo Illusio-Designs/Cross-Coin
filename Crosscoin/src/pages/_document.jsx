@@ -42,6 +42,7 @@ async function getTrackingConfig() {
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
+          gtmId: d.gtm_id || null,
           adsId: d.google_ads_id || null,
           adsLabel: d.google_ads_conversion_label || null,
           adsLabels: d.google_ads_labels || null,
@@ -57,11 +58,25 @@ async function getTrackingConfig() {
 }
 
 export default function Document({ tracking }) {
-  const { gaId, fbId, clarityId, adsId, adsLabel, adsLabels } = tracking || {};
+  const { gaId, fbId, clarityId, gtmId, adsId, adsLabel, adsLabels } = tracking || {};
 
   return (
     <Html lang="en">
       <Head>
+        {/* ── Google Tag Manager — loaded as high as possible (server-rendered
+            so GTM's own preview / Tag Assistant detect it) ── */}
+        {gtmId && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});" +
+                "var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';" +
+                "j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;" +
+                "f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gtmId + "');",
+            }}
+          />
+        )}
+
         {/* Preconnect — critical image/API + font origins */}
         <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
@@ -179,6 +194,18 @@ export default function Document({ tracking }) {
 
       </Head>
       <body>
+        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
+        {gtmId && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
+        )}
+
         {/* Facebook Pixel <noscript> fallback */}
         {fbId && (
           <noscript>

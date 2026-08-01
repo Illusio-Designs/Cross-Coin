@@ -73,10 +73,14 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
     // every brand received Crosscoin's tracking IDs instead of their own.
     const brandId = req.brandId || parseInt(req.query.brandId, 10) || 1;
     const settingsHelper = require('../services/settingsHelper');
-    const [ga, fb, clarity, googleAds, googleAdsLabel, googleAdsLabels] = await Promise.all([
+    const [ga, fb, clarity, gtm, googleAds, googleAdsLabel, googleAdsLabels] = await Promise.all([
       settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID'),
       settingsHelper.getSetting(brandId, 'FB_PIXEL_ID'),
       settingsHelper.getSetting(brandId, 'CLARITY_ID'),
+      // Google Tag Manager container (GTM-…). Defaults to Crosscoin's container
+      // so it's live immediately; override per-brand via a GTM_ID setting
+      // (Brand Settings → Analytics).
+      settingsHelper.getSetting(brandId, 'GTM_ID', 'GTM-5JDP8MLF'),
       // Google Ads conversion tag (AW-…). Defaults to Crosscoin's account so
       // the tag is live immediately; override per-brand via a GOOGLE_ADS_ID
       // setting (Brand Settings → Analytics), exactly like the FB pixel above.
@@ -108,6 +112,7 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
       ga_measurement_id: ga || null,
       fb_pixel_id: fb || null,
       clarity_id: clarity || null,
+      gtm_id: gtm || null,
       google_ads_id: googleAds || null,
       google_ads_conversion_label: googleAdsLabel || null,
       google_ads_labels: adsLabels,
