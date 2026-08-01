@@ -1,6 +1,34 @@
 const Redis = require('ioredis');
 
 /**
+ * Resolve Redis connection details. Prefers discrete REDIS_HOST/PORT/PASSWORD,
+ * but falls back to REDIS_URL (redis://:pass@host:port/db) — managed hosts
+ * (cPanel, etc.) often only provide REDIS_URL, in which case the discrete
+ * defaults (localhost:6379) point at the wrong/no Redis and caching silently
+ * disables itself.
+ */
+function resolveRedis() {
+  if (!process.env.REDIS_HOST && process.env.REDIS_URL) {
+    try {
+      const u = new URL(process.env.REDIS_URL);
+      return {
+        host: u.hostname || 'localhost',
+        port: parseInt(u.port, 10) || 6379,
+        password: u.password ? decodeURIComponent(u.password) : undefined,
+        db: u.pathname && u.pathname.length > 1 ? (parseInt(u.pathname.slice(1), 10) || 0) : 0,
+        ...(u.protocol === 'rediss:' ? { tls: {} } : {}),
+      };
+    } catch { /* fall through to discrete/defaults */ }
+  }
+  return {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB, 10) || 0,
+  };
+}
+
+/**
  * Redis Connection Manager
  * Handles Redis client initialization with connection pooling,
  * error handling, and reconnection logic
@@ -23,10 +51,7 @@ class RedisService {
   async initialize() {
     try {
       this.client = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        password: process.env.REDIS_PASSWORD || undefined,
-        db: parseInt(process.env.REDIS_DB) || 0,
+        ...resolveRedis(),
         // Stop retrying after 5 attempts — don't spam logs forever
         retryStrategy: (times) => {
           if (times > 5) return null; // stop retrying
@@ -127,10 +152,11 @@ class RedisService {
    * @returns {Object} Connection info
    */
   getConnectionInfo() {
+    const c = resolveRedis();
     return {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      db: process.env.REDIS_DB || 0,
+      host: c.host,
+      port: c.port,
+      db: c.db,
       isConnected: this.isConnected,
       status: this.client ? this.client.status : 'not_initialized'
     };
