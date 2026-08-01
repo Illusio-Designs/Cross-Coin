@@ -44,9 +44,10 @@ export default function HeroBanner({ slides = [] }) {
         <div className="absolute inset-0 bg-gradient-to-b from-ink/40 via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent pointer-events-none" />
 
-        {/* Headline — low-left */}
+        {/* Headline — low-left, aligned to the site gutter (.wrap) so the
+            text line matches every other section's left edge. */}
         <div className="absolute inset-0 flex items-end">
-          <div className="w-full px-6 md:px-12 lg:px-16 pb-28 md:pb-32">
+          <div className="wrap w-full pb-28 md:pb-32">
             <div key={current} className="max-w-3xl">
               <span className="inline-block text-paper/70 text-[11px] tracking-[0.26em] uppercase gz-fade" style={{ animationDelay: '.05s' }}>
                 {s.eyebrow || 'Gripzus — SS26'}
@@ -75,7 +76,8 @@ export default function HeroBanner({ slides = [] }) {
 
         {/* Floating glass nav pill — bottom-right */}
         {slides.length > 1 && (
-          <div className="absolute left-6 right-6 md:left-12 md:right-12 lg:left-16 lg:right-16 bottom-6 md:bottom-8 z-20 flex justify-between items-center gap-4">
+          <div className="absolute inset-x-0 bottom-6 md:bottom-8 z-20">
+           <div className="wrap flex justify-between items-center gap-4">
             <span className="hidden sm:block text-paper/70 text-[10px] tracking-[0.16em] tabular-nums">
               {String(current + 1).padStart(2, '0')} — {String(slides.length).padStart(2, '0')}
             </span>
@@ -89,6 +91,7 @@ export default function HeroBanner({ slides = [] }) {
               </div>
               <button onClick={() => go(current + 1)} aria-label="Next" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">›</button>
             </div>
+           </div>
           </div>
         )}
       </div>

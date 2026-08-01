@@ -122,7 +122,7 @@ export default function SearchPage() {
             {/* WITH QUERY */}
             {hasQuery && (
               loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i}>
                       <div className="aspect-[4/5] rounded-xl bg-gray-200 animate-pulse" />
@@ -132,7 +132,7 @@ export default function SearchPage() {
                   ))}
                 </div>
               ) : results.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
                   {results.map((p) => <ProductCard key={p.id} product={p} />)}
                 </div>
               ) : (
@@ -150,7 +150,7 @@ export default function SearchPage() {
             {!hasQuery && browse.length > 0 && (
               <>
                 <p className="eyebrow text-center mb-10">A pair from every collection</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
                   {browse.map((p) => <ProductCard key={p.id} product={p} />)}
                 </div>
               </>

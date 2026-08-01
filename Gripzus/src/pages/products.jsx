@@ -231,7 +231,7 @@ export default function ProductsPage() {
 
           {/* Grid */}
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i}>
                   <div className="aspect-[4/5] rounded-lg bg-gray-200 animate-pulse" />
@@ -246,7 +246,7 @@ export default function ProductsPage() {
               <button onClick={() => { selectChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
               {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}

@@ -24,7 +24,6 @@ export default function ProductCard({ product }) {
   const compare = product.salePrice ? Number(product.price) : (product.compareAtPrice ? Number(product.compareAtPrice) : null);
   const images  = product.images || [];
   const primary   = images[0] || FALLBACK_IMG;
-  const secondary = images[1];
   const collection = product.collection || product.collectionName || 'Gripzus';
   const inStock   = product.inStock !== false;
   const badge     = product.badge;
@@ -63,10 +62,6 @@ export default function ProductCard({ product }) {
         >
           <img src={primary} alt={name} loading="lazy"
                className="absolute inset-0 w-full h-full object-cover" />
-          {secondary && (
-            <img src={secondary} alt="" aria-hidden loading="lazy"
-                 className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" />
-          )}
 
           {/* subtle darkening on hover to lift the image off the page */}
           <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/[0.04] transition-colors duration-500" />
@@ -97,9 +92,9 @@ export default function ProductCard({ product }) {
           type="button"
           onClick={(e) => { e.preventDefault(); toggle(product); }}
           aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
-          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-paper/85 backdrop-blur-sm text-ink shadow-soft transition-all duration-300 hover:bg-paper opacity-100 md:opacity-0 md:group-hover:opacity-100"
+          className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-paper/85 backdrop-blur-sm text-ink shadow-soft transition-all duration-300 hover:bg-paper opacity-100 md:opacity-0 md:group-hover:opacity-100"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24"
+          <svg width="13" height="13" viewBox="0 0 24 24"
                fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6">
             <path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" />
           </svg>
@@ -111,12 +106,12 @@ export default function ProductCard({ product }) {
             type="button"
             onClick={handleAdd}
             aria-label={added ? 'Added to bag' : 'Add to bag'}
-            className="absolute bottom-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-ink text-paper shadow-card transition-all duration-300 hover:scale-105 active:scale-95 opacity-100 translate-y-0 md:opacity-0 md:translate-y-1.5 md:group-hover:opacity-100 md:group-hover:translate-y-0"
+            className="absolute bottom-2.5 right-2.5 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-ink text-paper shadow-card transition-all duration-300 hover:scale-105 active:scale-95 opacity-100 translate-y-0 md:opacity-0 md:translate-y-1.5 md:group-hover:opacity-100 md:group-hover:translate-y-0"
           >
             {added ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             )}
           </button>
         )}

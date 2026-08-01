@@ -32,6 +32,7 @@ export default function ExclusiveSection({ products = [] }) {
 
   const [active, setActive] = useState(0);
   const [color, setColor]   = useState(0);
+  const [imgIdx, setImgIdx] = useState(0);
   const [qty, setQty]       = useState(1);
   const [added, setAdded]   = useState(false);
   const [paused, setPaused] = useState(false);
@@ -42,13 +43,19 @@ export default function ExclusiveSection({ products = [] }) {
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const product = list[activeIndex];
 
-  // ONLY the selected colour's first image (fall back to the product image).
-  const heroImg = useMemo(() => {
-    if (!product) return FALLBACK_IMG;
+  // Gallery for the selected variation (colour) — its own images if present,
+  // otherwise the product's images. The thumbnails + main image both read
+  // from this, so switching colour swaps the whole gallery.
+  const gallery = useMemo(() => {
+    if (!product) return [FALLBACK_IMG];
     const perColor = product.colors[color]?.images;
-    if (Array.isArray(perColor) && perColor.length) return perColor[0];
-    return product.images[Math.min(color, product.images.length - 1)] || product.images[0] || FALLBACK_IMG;
+    const g = (Array.isArray(perColor) && perColor.length) ? perColor : product.images;
+    return (g && g.length ? g : [FALLBACK_IMG]).filter(Boolean);
   }, [product, color]);
+  const heroImg = gallery[Math.min(imgIdx, gallery.length - 1)] || FALLBACK_IMG;
+
+  // Reset to the first image whenever the pair or colour changes.
+  const selectColor = (i) => { setColor(i); setImgIdx(0); };
 
   // Reveal on scroll into view.
   useEffect(() => {
@@ -62,7 +69,7 @@ export default function ExclusiveSection({ products = [] }) {
   // Auto-advance through the featured pairs.
   useEffect(() => {
     if (list.length <= 1 || paused) return;
-    const t = setTimeout(() => { setActive((i) => (i + 1) % list.length); setColor(0); setQty(1); }, ROTATE_MS);
+    const t = setTimeout(() => { setActive((i) => (i + 1) % list.length); setColor(0); setImgIdx(0); setQty(1); }, ROTATE_MS);
     return () => clearTimeout(t);
   }, [list.length, activeIndex, paused]);
 
@@ -97,12 +104,25 @@ export default function ExclusiveSection({ products = [] }) {
         </div>
 
         <div className="excl3-grid">
-          {/* Stage */}
+          {/* Stage — variation thumbnails + auto-height main image */}
           <div className="excl3-stage">
             <span className="excl3-ghost" aria-hidden>{String(activeIndex + 1).padStart(2, '0')}</span>
-            <div className="excl3-frame">
-              <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
-              {product.badge && <span className="excl3-badge">{product.badge}</span>}
+            <div className="excl3-stage-row">
+              {gallery.length > 1 && (
+                <div className="excl3-thumbs">
+                  {gallery.map((img, i) => (
+                    <button key={img + i} type="button" onClick={() => setImgIdx(i)}
+                      className={`excl3-thumb ${i === Math.min(imgIdx, gallery.length - 1) ? 'on' : ''}`}
+                      aria-label={`View image ${i + 1}`}>
+                      <img src={img} alt="" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="excl3-frame">
+                <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
+                {product.badge && <span className="excl3-badge">{product.badge}</span>}
+              </div>
             </div>
           </div>
 
@@ -124,12 +144,12 @@ export default function ExclusiveSection({ products = [] }) {
                 <div className="excl3-swatches">
                   {product.colors.map((c, i) =>
                     c.packColors ? (
-                      <button key={c.name} type="button" onClick={() => setColor(i)} title={c.name} aria-label={`Pack of ${c.packColors.length}`}
+                      <button key={c.name} type="button" onClick={() => selectColor(i)} title={c.name} aria-label={`Pack of ${c.packColors.length}`}
                         className={`excl3-pack ${i === color ? 'on' : ''}`}>
                         {c.packColors.map((pc) => <span key={pc.name} style={{ backgroundColor: pc.hex || '#ddd' }} />)}
                       </button>
                     ) : (
-                      <button key={c.name} type="button" onClick={() => setColor(i)} title={c.name} aria-label={c.name}
+                      <button key={c.name} type="button" onClick={() => selectColor(i)} title={c.name} aria-label={c.name}
                         className={`excl3-dot ${i === color ? 'on' : ''}`} style={{ backgroundColor: c.hex || '#ddd' }} />
                     )
                   )}
@@ -155,7 +175,7 @@ export default function ExclusiveSection({ products = [] }) {
         {list.length > 1 && (
           <div className="excl3-strip">
             {list.map((p, i) => (
-              <button key={p.id} type="button" onClick={() => { setActive(i); setColor(0); setQty(1); }}
+              <button key={p.id} type="button" onClick={() => { setActive(i); setColor(0); setImgIdx(0); setQty(1); }}
                 className={`excl3-cell ${i === activeIndex ? 'on' : ''}`} aria-label={p.name} title={p.name}>
                 <img src={p.images[0]} alt="" loading="lazy" />
                 {i === activeIndex && !paused && <span className="excl3-progress" key={`p-${activeIndex}`} />}
@@ -181,15 +201,24 @@ export default function ExclusiveSection({ products = [] }) {
           font-weight: 600; font-size: clamp(9rem, 26vw, 22rem); line-height: 1; color: transparent;
           -webkit-text-stroke: 1px rgba(255,255,255,0.08); pointer-events: none; user-select: none;
         }
+        .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
+        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+        .excl3-thumb { width: 58px; height: 58px; border-radius: 10px; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease, transform .25s ease; }
+        .excl3-thumb:hover { opacity: .85; }
+        .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
+        .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Auto-height main image (natural ratio), capped so it never dominates. */
         .excl3-frame {
           position: relative; z-index: 1; overflow: hidden; border-radius: 16px;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
-          aspect-ratio: 4 / 5; opacity: 0; transform: translateY(24px) scale(.98);
+          flex: 1; min-width: 0; max-width: 440px;
+          opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
         .is-shown .excl3-frame { opacity: 1; transform: none; }
-        .excl3-img { width: 100%; height: 100%; object-fit: cover; animation: excl3-reveal .8s cubic-bezier(.22,1,.36,1); }
+        .excl3-img { width: 100%; height: auto; display: block; animation: excl3-reveal .8s cubic-bezier(.22,1,.36,1); }
         .excl3-frame:hover .excl3-img { transform: scale(1.04); transition: transform 1s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.07); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
         .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 999px; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
