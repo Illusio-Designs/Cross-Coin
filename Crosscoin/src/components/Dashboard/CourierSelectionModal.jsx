@@ -15,14 +15,20 @@ import { showSuccess, showError } from '../../utils/toastNotification';
 
 const money = (n) => (n == null || n === '' ? null : `₹${Number(n).toLocaleString('en-IN')}`);
 
-// The provider list comes back in a few shapes — read defensively.
+// The provider list comes back in a few shapes — read defensively. iThink's
+// rate/check uses `logistic_name` (singular "logistic") for the courier name,
+// which is also the identifier the order-create call expects back as `logistics`.
 function normalizeCourier(c, i) {
-  const name = c.logistics_name || c.courier_name || c.courier || c.name || c.logistics || `Courier ${i + 1}`;
-  const id = c.logistics || c.courier_id || c.id || c.courier_name || c.logistics_name || name;
-  const rate = c.rate ?? c.total_charges ?? c.freight_charge ?? c.total_amount ?? c.price ?? null;
-  const days = c.estimated_delivery_days || c.edd || c.delivery_days || c.tat || null;
-  const rating = c.rating ?? c.courier_rating ?? null;
-  const sType = c.s_type || c.service_type || c.serviceType || 'surface';
+  const pick = (...keys) => {
+    for (const k of keys) { const v = c[k]; if (v != null && v !== '') return v; }
+    return null;
+  };
+  const name = pick('logistic_name', 'logistics_name', 'courier_name', 'courier_company', 'courier', 'name', 'logistic', 'logistics') || `Courier ${i + 1}`;
+  const id = pick('logistic_name', 'logistic', 'courier_id', 'logistic_id', 'courier_name', 'logistics') || name;
+  const rate = pick('rate', 'total_charges', 'freight_charge', 'total_amount', 'price', 'amount');
+  const days = pick('estimated_delivery_days', 'expected_delivery_days', 'edd', 'delivery_days', 'tat');
+  const rating = pick('rating', 'courier_rating');
+  const sType = pick('s_type', 'service_type', 'serviceType', 'service') || 'surface';
   return { key: `${id}-${sType}-${i}`, name, id, rate, days, rating, sType, raw: c };
 }
 
@@ -84,8 +90,8 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Select Courier — ${orderNumber || ''}`}>
-      <div style={{ minWidth: 'min(560px, 86vw)' }}>
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" title={`Select Courier — ${orderNumber || ''}`}>
+      <div style={{ width: '100%' }}>
         {/* Why the picker opened (auto-sync failed) */}
         {autoFailedReason && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 12 }}>
@@ -128,8 +134,8 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px',
               }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', textTransform: 'capitalize' }}>{c.name}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     <span style={{ textTransform: 'capitalize' }}>{c.sType}</span>
                     {c.days && <span>· ETA {c.days} day{String(c.days) === '1' ? '' : 's'}</span>}
