@@ -26,6 +26,7 @@ export const getPageTitle = (view) => {
     'slider': 'Slider',
     'media-gallery': 'Media Gallery',
     'utm-analytics': 'UTM Analytics',
+    'reports': 'Reports',
     'lookbooks': 'Lookbooks',
     'reels-admin': 'Reels',
     'instagram-admin': 'Instagram Feed',

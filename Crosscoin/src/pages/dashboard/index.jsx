@@ -33,6 +33,7 @@ import AdminReels from "./social/reels";
 import AdminInstagramFeed from "./social/instagram";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
+import Reports from "./reports/reports";
 import MonitoringDashboard from "./monitoring/index";
 
 const SB_EXPANDED = 260;
@@ -188,6 +189,7 @@ function Dashboard() {
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
       case 'utm-analytics':   return <UTMAnalytics />;
+      case 'reports':         return <Reports />;
       case 'staff-users':     return <StaffUsers />;
       // The main dashboard now also shows the monitoring panel below the
       // stat cards (the standalone Monitoring page was removed).
