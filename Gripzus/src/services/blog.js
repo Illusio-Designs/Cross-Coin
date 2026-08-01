@@ -6,6 +6,8 @@
    BlogCard expect (author string, formatted date, "N min read", and a
    body as an array of clean plain-text paragraphs). */
 
+import { ikFull } from '../utils/imagekit';
+
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus';
 
@@ -101,7 +103,7 @@ function mapPost(p) {
     excerpt,
     body:     body.length ? body : [{ type: 'paragraph', text: p.title || '' }],
     category: p.BlogCategory?.name || p.category?.name || p.category || 'Journal',
-    image:    p.hero_image || p.coverImage || p.image || '',
+    image:    ikFull(p.hero_image || p.coverImage || p.image || '', 1400),
     author:   p.author_name || p.author || 'Gripzus',
     date:     formatDate(p.published_at || p.created_at),
     readTime: `${minutes} min read`,

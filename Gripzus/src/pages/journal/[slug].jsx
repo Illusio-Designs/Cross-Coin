@@ -22,30 +22,25 @@ export default function JournalPost({ post, related }) {
   return (
     <SeoWrapper pageName={post.slug || 'blog-details'} seoData={post.seo || null}>
       <article>
-        {/* Full-bleed cover hero — the image spans the entire viewport width
-            with the title set over a scrim. No boxed square. */}
-        <header className="relative w-full overflow-hidden bg-ink">
-          <div className="relative w-full h-[58vh] min-h-[400px] md:h-[74vh]">
-            <img src={post.image} alt={post.title} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/35 to-ink/10 pointer-events-none" />
-            <div className="absolute inset-x-0 bottom-0">
-              <div className="wrap pb-10 md:pb-14">
-                <p className="eyebrow text-paper/80 mb-4">{post.category}</p>
-                <h1 className="h-display text-paper text-3xl md:text-5xl lg:text-6xl leading-[1.04] max-w-4xl">
-                  {post.title}
-                </h1>
-                {/* Byline */}
-                <div className="flex items-center gap-3 mt-6">
-                  <span className="w-10 h-10 rounded-full bg-paper text-ink text-[13px] font-medium flex items-center justify-center">{initials}</span>
-                  <div>
-                    <p className="text-[14px] text-paper leading-tight">{post.author}</p>
-                    <p className="text-[12px] text-paper/70 leading-tight">{post.date} · {post.readTime}</p>
-                  </div>
-                </div>
+        {/* Title block */}
+        <header className="bg-paper-warm border-b border-line">
+          <div className="wrap py-12 md:py-16 text-center">
+            <p className="eyebrow mb-4">{post.category}</p>
+            <h1 className="h-display text-3xl md:text-5xl lg:text-6xl leading-[1.05] max-w-4xl mx-auto">
+              {post.title}
+            </h1>
+            <div className="flex items-center justify-center gap-3 mt-7">
+              <span className="w-10 h-10 rounded-full bg-ink text-paper text-[13px] font-medium flex items-center justify-center">{initials}</span>
+              <div className="text-left">
+                <p className="text-[14px] text-ink leading-tight">{post.author}</p>
+                <p className="text-[12px] text-ink-muted leading-tight">{post.date} · {post.readTime}</p>
               </div>
             </div>
           </div>
         </header>
+
+        {/* Cover — full image, full viewport width, natural height (never cut) */}
+        <img src={post.image} alt={post.title} className="block w-full h-auto" />
 
         {/* Body — readable measure, centered inside the full-width wrap */}
         <div className="wrap py-12 md:py-16">

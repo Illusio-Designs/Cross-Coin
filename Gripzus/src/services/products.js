@@ -4,6 +4,7 @@
    greyscale colour swatches, price + compareAtPrice). */
 
 import { getColorHex } from '../utils/colorMap';
+import { ikFull } from '../utils/imagekit';
 
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus';
@@ -49,7 +50,8 @@ export function mapProduct(p) {
 
   const images = rawImages
     .map((img) => (typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || '')))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((u) => ikFull(u, 1100)); // full aspect, no square crop
 
   const firstVar = variations[0];
   const price = Number(firstVar?.price ?? p.price ?? 0);
@@ -69,7 +71,8 @@ export function mapProduct(p) {
     // variation's photos instead of every image mixed together).
     const vImages = (v.VariationImages || v.variationImages || v.images || [])
       .map((img) => (typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || '')))
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((u) => ikFull(u, 1100)); // full aspect, no square crop
     const colorArr = toArr(attrs.color).map((c) => String(c).trim()).filter(Boolean);
     if (colorArr.length > 1) {
       // Multi-colour pack — keep every colour together as one swatch group

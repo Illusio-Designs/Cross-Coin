@@ -43,17 +43,15 @@ export default function ExclusiveSection({ products = [] }) {
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const product = list[activeIndex];
 
-  // Gallery for the selected variation (colour) — STRICTLY that colour's own
-  // images. If the colour has no dedicated images we show a single main image
-  // rather than the whole mixed-colour gallery, so selecting a colour never
-  // surfaces other colours' photos. (Upload images per colour/variation in
-  // the admin to give each colour its own thumbnail set.)
+  // Full image gallery for the selected pair — the colour's own images if the
+  // variation has them, otherwise the product's whole gallery. All images show
+  // as thumbnails (like the sibling brand), never just one.
   const gallery = useMemo(() => {
     if (!product) return [FALLBACK_IMG];
     const perColor = (product.colors[color]?.images || []).filter(Boolean);
-    if (perColor.length) return perColor;
-    const first = (product.images || []).filter(Boolean)[0];
-    return [first || FALLBACK_IMG];
+    const all = (product.images || []).filter(Boolean);
+    const g = perColor.length ? perColor : all;
+    return g.length ? g : [FALLBACK_IMG];
   }, [product, color]);
   const heroImg = gallery[Math.min(imgIdx, gallery.length - 1)] || FALLBACK_IMG;
 
@@ -179,14 +177,15 @@ export default function ExclusiveSection({ products = [] }) {
           </div>
         </div>
 
-        {/* Pair pager — switch featured pairs. The gallery above stays on the
-            selected pair's chosen colour only; we never show other pairs'
-            imagery here. */}
+        {/* Product switcher — thumbnails of the other featured pairs (no counter). */}
         {list.length > 1 && (
-          <div className="excl3-pager">
-            <button type="button" onClick={() => goPair(activeIndex - 1)} aria-label="Previous pair">‹</button>
-            <span className="excl3-count">{String(activeIndex + 1).padStart(2, '0')} — {String(list.length).padStart(2, '0')}</span>
-            <button type="button" onClick={() => goPair(activeIndex + 1)} aria-label="Next pair">›</button>
+          <div className="excl3-pairs">
+            {list.map((p, i) => (
+              <button key={p.id} type="button" onClick={() => goPair(i)}
+                className={`excl3-pairbtn ${i === activeIndex ? 'on' : ''}`} aria-label={p.name} title={p.name}>
+                <img src={p.images?.[0]} alt="" loading="lazy" />
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -260,10 +259,11 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
         .excl3-view:hover { background: #fff; color: #0A0A0A; }
 
-        .excl3-pager { display: inline-flex; align-items: center; gap: 16px; margin-top: 44px; }
-        .excl3-pager button { width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; transition: background .2s ease, color .2s ease; }
-        .excl3-pager button:hover { background: #fff; color: #0A0A0A; }
-        .excl3-count { font-size: 11px; letter-spacing: .16em; color: rgba(255,255,255,0.7); font-variant-numeric: tabular-nums; }
+        .excl3-pairs { display: flex; gap: 10px; margin-top: 40px; flex-wrap: wrap; }
+        .excl3-pairbtn { width: 62px; height: 62px; border-radius: 12px; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease, transform .25s ease; }
+        .excl3-pairbtn:hover { opacity: .85; }
+        .excl3-pairbtn.on { opacity: 1; box-shadow: 0 0 0 2px #fff; transform: scale(1.04); }
+        .excl3-pairbtn img { width: 100%; height: 100%; object-fit: cover; }
 
         @media (prefers-reduced-motion: reduce) {
           .excl3-head, .excl3-frame, .excl3-info > *, .excl3-img { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
