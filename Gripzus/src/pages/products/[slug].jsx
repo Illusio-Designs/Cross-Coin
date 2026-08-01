@@ -7,6 +7,7 @@ import SeoWrapper from '../../components/SeoWrapper';
 import { getProductBySlug, getProductsByCategory, getPublicProducts } from '../../services/products';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { fbTrack } from '../../utils/pixel';
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -45,6 +46,15 @@ export default function ProductDetail() {
         setActiveImg(0);
         setSize(p.sizes?.[0] || '');
         setColor(p.colors?.[0]?.name || '');
+        // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+        fbTrack('ViewContent', {
+          content_ids: [String(p.id)],
+          content_type: 'product',
+          content_name: p.name || undefined,
+          value: Number(p.price ?? 0),
+          currency: 'INR',
+          contents: [{ id: String(p.id), quantity: 1 }],
+        });
       })
       .catch(() => { if (alive) setNotFound(true); })
       .finally(() => { if (alive) setLoading(false); });

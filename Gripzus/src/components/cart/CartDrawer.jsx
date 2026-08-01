@@ -21,6 +21,7 @@ import {
   toastOrderError,
   showError,
 } from '../../utils/toast';
+import { fbTrack } from '../../utils/pixel';
 
 /* Gripzus cart drawer — full in-drawer checkout, same flow & design as
    the Knitwink cart drawer (guest + signed-in). Styled via CartDrawer.css
@@ -165,6 +166,21 @@ export default function CartDrawer() {
     arr.sort((a, b) => (a.orderType === 'cod' ? -1 : b.orderType === 'cod' ? 1 : 0));
     return arr;
   }, [shippingFees]);
+
+  /* Meta funnel: InitiateCheckout — fire once when the drawer opens with items
+     (this drawer is the full in-drawer checkout). */
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map((i) => String(i.id)),
+      content_type: 'product',
+      contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
+      num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+      value: items.reduce((s, i) => s + getPrice(i) * i.qty, 0),
+      currency: 'INR',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   /* ── address handlers ─────────────────────────────────────────── */
   const handleAddrChange = (e) => {

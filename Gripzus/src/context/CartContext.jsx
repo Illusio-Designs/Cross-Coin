@@ -7,6 +7,7 @@ import {
   clearCart as apiClearCart,
 } from '../services/cart';
 import { toastAddedToCart, toastRemovedFromCart, toastCartCleared } from '../utils/toast';
+import { fbTrack } from '../utils/pixel';
 
 /* Gripzus cart — backend-synced (same model as Knitwink).
 
@@ -135,6 +136,18 @@ export function CartProvider({ children }) {
 
   const addItem = useCallback(async (item, { openDrawer = true } = {}) => {
     if (!item?.id) return;
+
+    // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
+    const qty = item.qty || 1;
+    const unitPrice = Number(item.salePrice ?? item.price ?? 0);
+    fbTrack('AddToCart', {
+      content_ids: [String(item.id)],
+      content_type: 'product',
+      content_name: item.name || undefined,
+      value: unitPrice * qty,
+      currency: 'INR',
+      contents: [{ id: String(item.id), quantity: qty }],
+    });
 
     if (isAuthed()) {
       try {
