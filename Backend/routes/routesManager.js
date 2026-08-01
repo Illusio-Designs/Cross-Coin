@@ -191,8 +191,9 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
 // Secure it with a token (CRON_TOKEN, or reuse ADMIN_METRICS_TOKEN). Without a
 // token set it refuses (never an open trigger).
 //
-// cPanel → Cron Jobs, e.g. every 15 min:
-//   curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=shipping-sync" >/dev/null 2>&1
+// cPanel → Cron Jobs — twice a day (keeps load light):
+//   0 6,18 * * *  curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=shipping-sync"   >/dev/null 2>&1
+//   30 6,18 * * * curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=status-refresh" >/dev/null 2>&1
 const CRON_JOBS = {
     'shipping-sync': 'cron:shipping-sync',
     'status-refresh': 'cron:shipping-status-refresh',
