@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const crypto = require("crypto");
 const settingsHelper = require("../services/settingsHelper");
+const Brand = require("../model/brandModel.js");
 
 /**
  * SHA256 hash a string (lowercase trimmed) — required by Facebook for PII fields
@@ -9,6 +10,26 @@ const settingsHelper = require("../services/settingsHelper");
 function sha256(value) {
   if (!value) return undefined;
   return crypto.createHash("sha256").update(String(value).toLowerCase().trim()).digest("hex");
+}
+
+/** Normalise an Indian phone to E.164 digits (country code, no symbols). */
+function normalizePhone(value) {
+  if (!value) return undefined;
+  let p = String(value).replace(/\D/g, "");
+  if (p.length === 10) p = "91" + p;
+  return p || undefined;
+}
+
+/** Resolve the brand id from the X-Brand-Name header (defaults to 1 = Crosscoin). */
+async function resolveBrandId(req) {
+  const slug = (req.headers["x-brand-name"] || "").toLowerCase();
+  if (!slug) return 1;
+  try {
+    const b = await Brand.findOne({ where: { slug } });
+    return b ? b.id : 1;
+  } catch {
+    return 1;
+  }
 }
 
 /**
@@ -90,6 +111,63 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
   }
 }
 
+/**
+ * Relay a browser pixel event to the Conversions API using the SAME event_id
+ * the browser used, so Meta deduplicates the pair. This lifts CAPI coverage to
+ * ~1:1 with the pixel for funnel events that previously had no server-side
+ * counterpart (ViewContent, AddToCart, InitiateCheckout, Search). The server
+ * enriches the event with the real client IP + user agent, the _fbp / _fbc
+ * cookies, and any signed-in-user PII the browser forwards (hashed here).
+ *
+ * @param {object} req  - the Express request (for IP / UA / brand header)
+ * @param {object} body - { event_name, event_id, event_source_url, custom_data, user_data, fbp, fbc }
+ */
+async function sendBrowserPixelEvent(req, body = {}) {
+  const brandId = await resolveBrandId(req);
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1313610943804396');
+  const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+
+  if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === 'YOUR_ACCESS_TOKEN') {
+    return { skipped: true, reason: 'no access token' };
+  }
+
+  const { event_name, event_id, event_source_url, custom_data = {}, user_data = {}, fbp, fbc } = body;
+  if (!event_name || !event_id) return { skipped: true, reason: 'missing event_name/event_id' };
+
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || req.socket?.remoteAddress || req.connection?.remoteAddress || null;
+  const ua = req.headers['user-agent'] || null;
+
+  const userData = {
+    client_ip_address: ip,
+    client_user_agent: ua,
+    em: sha256(user_data.em || user_data.email),
+    ph: sha256(normalizePhone(user_data.ph || user_data.phone)),
+    fn: sha256(user_data.fn || user_data.first_name),
+    ln: sha256(user_data.ln || user_data.last_name),
+    external_id: user_data.external_id ? sha256(user_data.external_id) : undefined,
+    fbp: fbp || null,
+    fbc: fbc || null,
+  };
+  Object.keys(userData).forEach((k) => (userData[k] == null) && delete userData[k]);
+
+  const eventData = {
+    event_name,
+    event_time: Math.floor(Date.now() / 1000),
+    event_source_url: event_source_url || undefined,
+    action_source: 'website',
+    event_id: String(event_id),
+    user_data: userData,
+    custom_data,
+  };
+
+  const response = await axios.post(
+    `https://graph.facebook.com/v22.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`,
+    { data: [eventData] }
+  );
+  return { events_received: response.data?.events_received };
+}
+
 const router = express.Router();
 
 router.post('/send-event', async (req, res) => {
@@ -102,5 +180,18 @@ router.post('/send-event', async (req, res) => {
   }
 });
 
+// Browser → CAPI relay. Always answers 200 so a tracking hiccup never surfaces
+// as an error in the storefront (analytics must never break the shopping flow).
+router.post('/track', async (req, res) => {
+  try {
+    const result = await sendBrowserPixelEvent(req, req.body);
+    res.json({ success: !result?.skipped, ...result });
+  } catch (error) {
+    console.error('❌ Facebook Pixel relay error:', error.response?.data || error.message);
+    res.json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
 module.exports.sendFacebookEvent = sendFacebookEvent;
+module.exports.sendBrowserPixelEvent = sendBrowserPixelEvent;

@@ -30,4 +30,14 @@ export function fbAdvancedMatching(user) {
   if (user.id) data.external_id = String(user.id);
 
   try { window.fbq('init', window._fbqId, data); } catch { /* non-fatal */ }
+
+  // Expose the same identifiers (raw) for the Conversions API relay in
+  // fbqTrack — the server hashes them. Improves server-event match quality.
+  window.__fbUser = {
+    em: email || undefined,
+    ph: phone || undefined,
+    fn: fn || undefined,
+    ln: rest.length ? rest.join(' ') : undefined,
+    external_id: user.id ? String(user.id) : undefined,
+  };
 }
