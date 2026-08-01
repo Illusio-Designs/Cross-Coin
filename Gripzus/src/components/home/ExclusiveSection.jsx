@@ -198,33 +198,29 @@ export default function ExclusiveSection({ products = [] }) {
               <button type="button" className="excl3-add" onClick={onAdd}>{added ? 'Added ✓' : 'Add to Bag'}</button>
               <Link href={`/products/${product.slug}`} className="excl3-view">View</Link>
             </div>
+
+            {/* Other products — one flex row each: image · title · price,
+                directly after the action buttons. */}
+            {others.length > 0 && (
+              <div className="excl3-others i6">
+                <span className="excl3-others-title">Other Products</span>
+                <div className="excl3-olist">
+                  {others.map((p) => {
+                    const idx = list.indexOf(p);
+                    const poff = p.oldPrice && p.oldPrice > p.price;
+                    return (
+                      <button key={p.id} type="button" className="excl3-orow" onClick={() => pick(idx)} title={p.name}>
+                        <span className="excl3-orow-img"><img src={p.images?.[0] || FALLBACK_IMG} alt={p.name} loading="lazy" /></span>
+                        <span className="excl3-orow-name">{p.name}</span>
+                        <span className="excl3-orow-price">₹{p.price.toLocaleString('en-IN')}{poff && <em>₹{p.oldPrice.toLocaleString('en-IN')}</em>}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Other products — image + title + price, after the buttons */}
-        {others.length > 0 && (
-          <div className="excl3-others">
-            <span className="excl3-others-title">Other Products</span>
-            <div className="excl3-others-row no-scrollbar">
-              {others.map((p) => {
-                const idx = list.indexOf(p);
-                const poff = p.oldPrice && p.oldPrice > p.price;
-                return (
-                  <button key={p.id} type="button" className="excl3-ocard" onClick={() => pick(idx)} title={p.name}>
-                    <span className="excl3-ocard-img">
-                      <img src={p.images?.[0] || FALLBACK_IMG} alt={p.name} loading="lazy" />
-                    </span>
-                    <span className="excl3-ocard-name">{p.name}</span>
-                    <span className="excl3-ocard-price">
-                      ₹{p.price.toLocaleString('en-IN')}
-                      {poff && <em>₹{p.oldPrice.toLocaleString('en-IN')}</em>}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       <style jsx>{`
@@ -292,18 +288,17 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
         .excl3-view:hover { background: #fff; color: #0A0A0A; }
 
-        /* Other products */
-        .excl3-others { margin-top: 56px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 32px; }
-        .excl3-others-title { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 18px; }
-        .excl3-others-row { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 6px; }
-        .excl3-ocard { flex: 0 0 auto; width: 150px; text-align: left; transition: transform .25s ease; }
-        .excl3-ocard:hover { transform: translateY(-3px); }
-        .excl3-ocard-img { display: block; aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
-        .excl3-ocard-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s cubic-bezier(.22,1,.36,1); }
-        .excl3-ocard:hover .excl3-ocard-img img { transform: scale(1.05); }
-        .excl3-ocard-name { display: block; margin-top: 10px; font-size: 13px; color: #fff; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .excl3-ocard-price { display: block; margin-top: 3px; font-size: 13px; color: rgba(255,255,255,0.75); }
-        .excl3-ocard-price em { font-style: normal; color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 12px; margin-left: 6px; }
+        /* Other products — one flex row each (image · title · price) */
+        .excl3-others { margin: 32px 0 0; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.12); }
+        .excl3-others-title { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 12px; }
+        .excl3-olist { display: flex; flex-direction: column; gap: 8px; }
+        .excl3-orow { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 8px; border-radius: 12px; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
+        .excl3-orow:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+        .excl3-orow-img { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+        .excl3-orow-img img { width: 100%; height: 100%; object-fit: cover; }
+        .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .excl3-orow-price { flex: 0 0 auto; font-size: 14px; color: rgba(255,255,255,0.8); }
+        .excl3-orow-price em { font-style: normal; color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 12px; margin-left: 6px; }
 
         @media (prefers-reduced-motion: reduce) {
           .excl3-head, .excl3-frame, .excl3-info > *, .excl3-img { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
