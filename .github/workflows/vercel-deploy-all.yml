@@ -12,25 +12,28 @@ name: Deploy Frontend Projects to Vercel (Multi-Project)
 #   - If Backend/** changed → skip all Vercel deployments
 #   - If multiple projects changed → deploy all that changed
 #
-# Required GitHub Secrets (Settings → Secrets and variables → Actions):
-#   VERCEL_TOKEN              → Vercel API token
-#   VERCEL_ORG_ID             → Vercel Organization ID
-#   CROSSCOIN_VERCEL_PROJECT  → Crosscoin project ID
-#   GRIPZUS_VERCEL_PROJECT    → Gripzus project ID
-#   KNITWINK_VERCEL_PROJECT   → Knitwink project ID
-#   VELMIQUE_VERCEL_PROJECT   → Velmique project ID
-#   JEWELLERY_VERCEL_PROJECT  → jewellery project ID
+# ⚠️ AUTO-DEPLOY ON PUSH IS DISABLED ON PURPOSE.
+#
+# All 7 storefronts are connected to Vercel via Vercel's own Git integration,
+# which already builds + deploys them on every push to `main` (production) and
+# every push to a branch (preview). Having this workflow ALSO run
+# `vercel deploy --prod` created a SECOND deployment per project per push —
+# double-counting against the Vercel Free plan's 100-deployments/day limit and
+# throwing `api-deployments-free-per-day`, which failed every run.
+#
+# So the `push:` trigger is removed. Vercel's Git integration is now the single
+# source of production deploys. Preview builds on feature branches are already
+# cancelled ~2s in by each project's `ignoreCommand` in vercel.json
+# (`if VERCEL_ENV != production → exit 0`), so they burn no build minutes.
+#
+# This workflow is kept as a MANUAL fallback only (Actions tab → Run workflow)
+# for the rare case you need to force a CLI deploy of a specific project.
+#
+# Required GitHub Secrets (only used by the manual fallback):
+#   VERCEL_TOKEN, VERCEL_ORG_ID, CROSSCOIN_VERCEL_PROJECT, GRIPZUS_VERCEL_PROJECT,
+#   KNITWINK_VERCEL_PROJECT, VELMIQUE_VERCEL_PROJECT, VELQUIRA_VERCEL_PROJECT
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'Crosscoin/**'
-      - 'Gripzus/**'
-      - 'Knitwink/**'
-      - 'Velmique/**'
-      - 'Velquira/**'
-      - '.github/workflows/vercel-deploy-all.yml'
   workflow_dispatch:
     inputs:
       project:
