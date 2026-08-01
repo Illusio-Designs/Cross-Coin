@@ -98,6 +98,7 @@ export default function CartDrawer() {
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [codAllowed, setCodAllowed] = useState(true);
+  const [pincodeServiceable, setPincodeServiceable] = useState(true);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -180,7 +181,8 @@ export default function CartDrawer() {
     try {
       const r = await checkPincodeServiceability(pin);
       setCodAllowed(r?.cod_allowed !== false);
-    } catch { setCodAllowed(true); }
+      setPincodeServiceable(r?.serviceable !== false);
+    } catch { setCodAllowed(true); setPincodeServiceable(true); }
   };
 
   const handleEditAddress = (a) => {
@@ -373,6 +375,7 @@ export default function CartDrawer() {
     if (!selectedAddress) { showError('Please add a delivery address.'); return; }
     const errs = validateAddress(selectedAddress);
     if (errs.length) { showError(errs[0]); return; }
+    if (!pincodeServiceable) { showError("Sorry, we don’t deliver to this PIN code yet. Please try a different address."); return; }
     if (!selectedFee) { showError('Please select a payment method.'); return; }
     if (!isAuthenticated) {
       if (!guestInfo.fullName.trim()) { showError('Please enter your full name.'); return; }
@@ -578,6 +581,9 @@ export default function CartDrawer() {
                           <div className="cd-form-group">
                             <label className="cd-label">PIN Code *</label>
                             <input className="cd-input" name="postalCode" inputMode="numeric" maxLength={6} value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} placeholder="6-digit PIN" autoComplete="postal-code" />
+                            {!pincodeServiceable && (
+                              <p role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '6px 0 0' }}>Sorry, we don’t deliver to this PIN code yet.</p>
+                            )}
                           </div>
                           <div className="cd-form-group">
                             <label className="cd-label">Country</label>
@@ -638,7 +644,12 @@ export default function CartDrawer() {
         {/* Footer */}
         {!orderSuccess && !paymentFailed && items.length > 0 && (
           <div className="cd-footer">
-            <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing}>
+            {!pincodeServiceable && (
+              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+                We don’t deliver to this PIN code yet — please try a different delivery address.
+              </div>
+            )}
+            <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing || !pincodeServiceable}>
               {isProcessing ? 'Processing…' : `Place Order — ₹${finalTotal.toFixed(0)}`}
             </button>
             <div className="cd-trust-bar">
