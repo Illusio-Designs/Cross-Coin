@@ -840,6 +840,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
       scrollDrawerTo('cd-section-address');
       return;
     }
+    // Block orders to a PIN code the courier can't service.
+    if (pincodeServiceability && pincodeServiceability.serviceable === false) {
+      showValidationErrorToast("Sorry, we don't deliver to this PIN code yet. Please try a different address.");
+      scrollDrawerTo('cd-section-address');
+      return;
+    }
     if (!selectedFee) {
       showValidationErrorToast('Please select a delivery method.');
       scrollDrawerTo('cd-section-delivery');
@@ -1429,6 +1435,11 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             <label className="cd-label">PIN Code *</label>
                             <input className={`cd-input ${fieldErrors.pincode ? 'cd-input-error' : ''}`} name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} required placeholder="6-digit PIN" autoComplete="postal-code" />
                             {fieldErrors.pincode && <p className="cd-field-error" role="alert">{fieldErrors.pincode}</p>}
+                            {isMounted && pincodeServiceability && pincodeServiceability.serviceable === false && (
+                              <p className="cd-field-error" role="alert" style={{ color: '#dc2626' }}>
+                                Sorry, we don’t deliver to this PIN code yet.
+                              </p>
+                            )}
                           </div>
                           <div className="cd-form-group">
                             <label className="cd-label">Country</label>
@@ -1535,11 +1546,18 @@ const CartDrawer = ({ isOpen, onClose }) => {
               );
             })()}
 
+            {/* Not-serviceable notice — blocks the order for this PIN code */}
+            {isMounted && pincodeServiceability && pincodeServiceability.serviceable === false && (
+              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+                We don’t deliver to this PIN code yet — please try a different delivery address.
+              </div>
+            )}
+
             {/* CTA button */}
             <button
               className="cd-btn-primary cd-btn-full"
               onClick={handlePlaceOrder}
-              disabled={isProcessing}
+              disabled={isProcessing || (isMounted && pincodeServiceability && pincodeServiceability.serviceable === false)}
             >
               {isProcessing
                 ? 'Processing...'
