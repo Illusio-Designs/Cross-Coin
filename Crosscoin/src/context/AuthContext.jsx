@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { userService, authService } from '../services';
+import { fbAdvancedMatching } from '../utils/fbAdvancedMatching';
 import { loginUser, registerUser, getCurrentUser as getPublicCurrentUser, logout as publicLogout } from '../services/publicApi';
 import { 
   showLoginSuccessToast, 
@@ -59,6 +60,9 @@ function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const apiCalledRef = useRef(false);
+
+    // Meta Pixel — feed the signed-in user's data into Advanced Matching.
+    useEffect(() => { fbAdvancedMatching(user); }, [user]);
 
     const checkAuth = useCallback(async () => {
         try {
