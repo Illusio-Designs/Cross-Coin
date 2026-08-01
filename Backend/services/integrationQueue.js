@@ -30,13 +30,34 @@ let bullAvailable = false;
 const inlineProcessors = new Map();
 
 function buildRedisConfig() {
+  const base = { maxRetriesPerRequest: null, enableReadyCheck: false };
+
+  // Prefer discrete vars, but fall back to REDIS_URL (redis://:pass@host:port/db).
+  // Managed hosts (cPanel, etc.) often only provide REDIS_URL — without this the
+  // queue defaulted to localhost:6379 (wrong Redis) and jobs sat unprocessed,
+  // leaving orders stuck at "Pending Sync".
+  if (!process.env.REDIS_HOST && process.env.REDIS_URL) {
+    try {
+      const u = new URL(process.env.REDIS_URL);
+      return {
+        ...base,
+        host: u.hostname || 'localhost',
+        port: parseInt(u.port, 10) || 6379,
+        password: u.password ? decodeURIComponent(u.password) : undefined,
+        db: u.pathname && u.pathname.length > 1 ? (parseInt(u.pathname.slice(1), 10) || 0) : 0,
+        ...(u.protocol === 'rediss:' ? { tls: {} } : {}),
+      };
+    } catch {
+      logger.warn('[integrationQueue] REDIS_URL is set but could not be parsed — using discrete vars/defaults');
+    }
+  }
+
   return {
+    ...base,
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT, 10) || 6379,
     password: process.env.REDIS_PASSWORD || undefined,
     db: parseInt(process.env.REDIS_DB, 10) || 0,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
   };
 }
 
