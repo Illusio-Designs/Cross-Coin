@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { fbAdvancedMatching } from "./fbAdvancedMatching";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
 
@@ -8,6 +9,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  useEffect(() => { fbAdvancedMatching(user); }, [user]);
   const [loading, setLoading] = useState(true)
   const checkedRef = useRef(false)
 

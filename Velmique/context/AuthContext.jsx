@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { fbAdvancedMatching } from "./fbAdvancedMatching";
 import { toastLogoutSuccess } from '@/lib/toast'
 import { getAuthToken, clearAuthToken } from '@/lib/authToken'
 
@@ -11,6 +12,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  useEffect(() => { fbAdvancedMatching(user); }, [user]);
   const [loading, setLoading] = useState(true)
   const checkedRef = useRef(false)
 

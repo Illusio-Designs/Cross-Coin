@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { fbAdvancedMatching } from "./fbAdvancedMatching";
 import { toastLogoutSuccess } from '../utils/toast';
 
 /* Auth state — backed by the live API (same flow as Knitwink).
@@ -12,6 +13,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  useEffect(() => { fbAdvancedMatching(user); }, [user]);
   const [loading, setLoading] = useState(true);
   const checkedRef = useRef(false);
 

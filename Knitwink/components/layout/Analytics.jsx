@@ -95,7 +95,7 @@ export default function Analytics() {
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '${fbPixelId}');
+              window._fbqId='${fbPixelId}';fbq('init', '${fbPixelId}');
               fbq('track', 'PageView');
             `,
           }}
