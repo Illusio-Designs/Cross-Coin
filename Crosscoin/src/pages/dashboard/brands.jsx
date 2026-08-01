@@ -41,6 +41,8 @@ export function BrandManager() {
   const [expanded, setExpanded] = useState(null);   // brand id whose settings are open
   const [draft, setDraft] = useState({});           // `${brandId}:${key}` -> value being edited
   const [savingKey, setSavingKey] = useState(null);
+  const [addRowFor, setAddRowFor] = useState(null); // brand id showing the add-setting row
+  const [newSetting, setNewSetting] = useState({ key: '', value: '', category: 'analytics' });
 
   const { data: brands = [], isLoading: loading } = useQuery({
     queryKey: queryKeys.brandsAdmin,
@@ -85,10 +87,10 @@ export function BrandManager() {
   };
   const totalPending = brands.reduce((sum, b) => sum + (pendingFor(b) || 0), 0);
 
-  const feedUrl = (brand) => {
-    const d = (brand.domain || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
-    return d ? `https://${d}/google-merchant.xml` : null;
-  };
+  const cleanDomain = (dom) => (dom || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const brandUrl = (brand, path) => { const d = cleanDomain(brand.domain); return d ? `https://${d}${path}` : null; };
+  const feedUrl = (brand) => brandUrl(brand, '/google-merchant.xml');
+  const sitemapUrlOf = (brand) => brandUrl(brand, '/sitemap.xml');
   const copyText = (t) => { if (!t) return; try { navigator.clipboard?.writeText(t); showSuccess('Copied to clipboard'); } catch { /* ignore */ } };
 
   // ── Brand CRUD ────────────────────────────────────────────────────
@@ -127,6 +129,25 @@ export function BrandManager() {
       setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
       queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
     } catch { showError('Failed to save setting'); }
+    finally { setSavingKey(null); }
+  };
+
+  // Add a brand-new custom setting (a key not in the predefined set — e.g.
+  // GTM_ID, GOOGLE_ADS_LABEL_PURCHASE, a new pixel token, etc.).
+  const addCustomSetting = async (brand) => {
+    const key = newSetting.key.trim();
+    if (!key) { showError('Enter a setting key'); return; }
+    setSavingKey(`add:${brand.id}`);
+    try {
+      await brandSettingsService.createSetting({
+        brand_id: brand.id, key, value: newSetting.value.trim(),
+        category: newSetting.category, description: null, is_encrypted: false,
+      });
+      showSuccess('Setting added');
+      setNewSetting({ key: '', value: '', category: 'analytics' });
+      setAddRowFor(null);
+      queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
+    } catch { showError('Failed to add setting'); }
     finally { setSavingKey(null); }
   };
 
@@ -193,6 +214,15 @@ export function BrandManager() {
               <div className="dm-field"><label className="dm-label">Contact Email</label><input className="dm-input" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" /></div>
               <div className="dm-field"><label className="dm-label">Contact Phone</label><input className="dm-input" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" /></div>
             </div>
+            {formData.domain?.trim() && (
+              <div className="dm-field">
+                <label className="dm-label">Sitemap URL <span style={{ fontWeight: 400, color: '#8a90a2' }}>— submit this in Google Search Console</span></label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input className="dm-input" readOnly value={`https://${cleanDomain(formData.domain)}/sitemap.xml`} style={{ flex: 1 }} onFocus={(e) => e.target.select()} />
+                  <Button type="button" variant="secondary" onClick={() => copyText(`https://${cleanDomain(formData.domain)}/sitemap.xml`)}>Copy</Button>
+                </div>
+              </div>
+            )}
             <div className="dm-field"><label className="dm-label">Logo URL</label><input className="dm-input" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" /></div>
             <div className="dm-field"><label className="dm-label">Status</label>
               <Dropdown value={formData.status} onChange={val => handleInputChange({ target: { name: 'status', value: val } })} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
@@ -233,6 +263,10 @@ export function BrandManager() {
                   const pending = pendingFor(brand);
                   const isOpen = expanded === brand.id;
                   const url = feedUrl(brand);
+                  // Settings this brand has that aren't in the predefined set (custom-added keys).
+                  const extraSettings = (settingsByBrand[brand.id] || [])
+                    .filter(s => !IGNORED_KEY.test(s.key) && !predefinedKeys.some(k => k.key === s.key))
+                    .sort((a, b) => a.key.localeCompare(b.key));
                   return (
                     <React.Fragment key={brand.id}>
                       <tr style={{ cursor: 'pointer', background: isOpen ? '#f7f8fb' : '#fff' }} onClick={() => setExpanded(isOpen ? null : brand.id)}>
@@ -257,9 +291,10 @@ export function BrandManager() {
                         </td>
                         <td style={cell} onClick={(e) => e.stopPropagation()}>
                           {url ? (
-                            <div style={{ display: 'flex', gap: 10, fontSize: 12 }}>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Google feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Facebook/Meta feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12 }}>
+                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
+                              <button type="button" onClick={() => copyText(url)} title="Copy Facebook/Meta feed URL (same product feed)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
+                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Sitemap</button>
                             </div>
                           ) : <span style={{ color: '#b3b8c4', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
                         </td>
@@ -306,9 +341,44 @@ export function BrandManager() {
                                         </tr>
                                       );
                                     })}
+                                    {extraSettings.map(s => {
+                                      const dk = `${brand.id}:${s.key}`;
+                                      const val = draft[dk] ?? s.value ?? '';
+                                      const keyObj = { key: s.key, category: s.category || 'general', description: s.description || '' };
+                                      return (
+                                        <tr key={s.key}>
+                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{s.key} <span style={{ fontSize: 10, color: '#2563eb', fontWeight: 600, background: '#eff4ff', borderRadius: 4, padding: '1px 5px' }}>custom</span></td>
+                                          <td style={{ ...cell, color: '#8a90a2', fontSize: 12 }}>{CATEGORY_LABEL[s.category] || s.category || '—'}</td>
+                                          <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
+                                          <td style={{ ...cell, textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                              <button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button>
+                                              <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               )}
+
+                              {/* Add a custom setting (a key beyond the predefined set) */}
+                              <div style={{ marginTop: 12 }}>
+                                {addRowFor === brand.id ? (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', background: '#fff', border: '1px solid #eef0f4', borderRadius: 8, padding: 10 }}>
+                                    <input className="dm-input" style={{ flex: '1 1 200px', fontSize: 13, fontFamily: 'monospace' }} placeholder="KEY — e.g. GTM_ID" value={newSetting.key} onChange={e => setNewSetting(p => ({ ...p, key: e.target.value }))} />
+                                    <div style={{ flex: '0 0 150px' }}>
+                                      <Dropdown value={newSetting.category} onChange={val => setNewSetting(p => ({ ...p, category: val }))} options={[{ value: 'analytics', label: 'Analytics' }, { value: 'general', label: 'General' }, { value: 'payment', label: 'Payment' }, { value: 'shipping', label: 'Shipping' }, { value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }, { value: 'social', label: 'Social' }, { value: 'security', label: 'Security' }, { value: 'api', label: 'API Keys' }]} />
+                                    </div>
+                                    <input className="dm-input" style={{ flex: '2 1 220px', fontSize: 13 }} placeholder="Value" value={newSetting.value} onChange={e => setNewSetting(p => ({ ...p, value: e.target.value }))} />
+                                    <Button type="button" variant="primary" disabled={savingKey === `add:${brand.id}`} onClick={() => addCustomSetting(brand)}>Save</Button>
+                                    <Button type="button" variant="secondary" onClick={() => { setAddRowFor(null); setNewSetting({ key: '', value: '', category: 'analytics' }); }}>Cancel</Button>
+                                  </div>
+                                ) : (
+                                  <Button type="button" variant="secondary" onClick={() => { setAddRowFor(brand.id); setNewSetting({ key: '', value: '', category: 'analytics' }); }}>+ Add setting</Button>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>

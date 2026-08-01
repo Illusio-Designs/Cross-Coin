@@ -1,4 +1,4 @@
-const { Product, Order, User, Review, OrderItem, ProductVariation, GuestUser, UTMTracking } = require("../model/associations.js");
+const { Product, Order, User, Review, OrderItem, ProductVariation, GuestUser, UTMTracking, Brand } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
 const { Op, QueryTypes } = require("sequelize");
 const cacheManager = require("./cacheManager.js");
@@ -52,7 +52,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
 
     // Get all orders for revenue calculation (optimized with aggregation)
     const allOrders = await Order.findAll({
-      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt'],
+      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt', 'brand_id'],
       where: orderWhere,
       order: [['createdAt', 'DESC']]
     });
@@ -540,6 +540,76 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       };
     });
 
+    // ─── Brand-wise sales ───────────────────────────────────────────
+    // The admin runs several storefronts (Crosscoin, Gripzus, Morbix …).
+    // When the dashboard is NOT scoped to a single brand, break the sales
+    // down per brand so the admin can see how each storefront performs.
+    // Built from the already-scoped `allOrders` set (respects the date
+    // filter and, if present, the single-brand scope).
+    let brandSales = [];
+    try {
+      const brandRows = await Brand.findAll({
+        attributes: ['id', 'name', 'display_name', 'slug', 'logo_url'],
+      });
+      const brandMap = new Map();
+      brandRows.forEach((b) => {
+        brandMap.set(b.id, {
+          brandId: b.id,
+          name: b.display_name || b.name,
+          slug: b.slug,
+          logo: b.logo_url || null,
+          orders: 0,
+          revenue: 0,   // total (all statuses)
+          earned: 0,    // delivered / completed only
+          lost: 0,      // cancelled + RTO
+        });
+      });
+
+      const bucketFor = (id) => {
+        if (!brandMap.has(id)) {
+          // Orders whose brand was deleted / unknown — group under "Other".
+          brandMap.set(id, {
+            brandId: id, name: id ? `Brand #${id}` : 'Unassigned', slug: null,
+            logo: null, orders: 0, revenue: 0, earned: 0, lost: 0,
+          });
+        }
+        return brandMap.get(id);
+      };
+
+      allOrders.forEach((order) => {
+        const b = bucketFor(order.brand_id || null);
+        const amt = parseFloat(order.final_amount || 0);
+        const st = order.status?.toLowerCase();
+        b.orders += 1;
+        b.revenue += amt;
+        if (st === 'delivered' || st === 'completed') b.earned += amt;
+        else if (st === 'cancelled' || st === 'order cancelled' ||
+                 st === 'rto' || st === 'rto delivered' ||
+                 st === 'return_initiated' || st === 'returned_rto') b.lost += amt;
+      });
+
+      const palette = ['#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#2563eb', '#db2777', '#65a30d'];
+      brandSales = [...brandMap.values()]
+        .filter((b) => b.orders > 0)              // only brands with activity
+        .sort((a, b) => b.revenue - a.revenue)
+        .map((b, i) => ({
+          brandId: b.brandId,
+          name: b.name,
+          slug: b.slug,
+          logo: b.logo,
+          orders: b.orders,
+          revenue: parseFloat(b.revenue.toFixed(2)),
+          earned: parseFloat(b.earned.toFixed(2)),
+          lost: parseFloat(b.lost.toFixed(2)),
+          avgOrderValue: b.orders > 0 ? parseFloat((b.revenue / b.orders).toFixed(2)) : 0,
+          share: totalRevenue > 0 ? parseFloat(((b.revenue / totalRevenue) * 100).toFixed(1)) : 0,
+          color: palette[i % palette.length],
+        }));
+    } catch (brandErr) {
+      console.error('Brand-wise sales aggregation failed:', brandErr.message);
+      brandSales = [];
+    }
+
     return {
       success: true,
       stats: {
@@ -643,6 +713,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
           chart: paymentStatusChart
         },
         rtoStats: rtoStats,
+        brandSales: brandSales,
         utmTracking: {
           topSources: formattedUTMStats,
           conversions: formattedUTMConversions,
