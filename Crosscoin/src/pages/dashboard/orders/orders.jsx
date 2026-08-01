@@ -575,7 +575,10 @@ const Orders = () => {
             header: "Shipment Status",
             cell: (row) => {
                 const s = row.Shipment || {};
-                const status = s.sync_status || (row.fship_order_id || row.fship_waybill ? 'synced' : 'pending');
+                // Prefer an explicit sync_status from either the Shipment row or
+                // the order's fship_sync_status (the worker writes 'failed' there
+                // when a sync gives up) so a failed sync shows as Failed, not Pending.
+                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || row.fship_waybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
                 return <ShipmentStatusBadge status={status} syncError={syncError} />;
             },
