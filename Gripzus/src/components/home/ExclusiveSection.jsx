@@ -56,6 +56,11 @@ export default function ExclusiveSection({ products = [] }) {
 
   // Reset to the first image whenever the pair or colour changes.
   const selectColor = (i) => { setColor(i); setImgIdx(0); };
+  const goPair = (n) => {
+    const len = list.length || 1;
+    setActive(((n % len) + len) % len);
+    setColor(0); setImgIdx(0); setQty(1);
+  };
 
   // Reveal on scroll into view.
   useEffect(() => {
@@ -171,16 +176,14 @@ export default function ExclusiveSection({ products = [] }) {
           </div>
         </div>
 
-        {/* Filmstrip */}
+        {/* Pair pager — switch featured pairs. The gallery above stays on the
+            selected pair's chosen colour only; we never show other pairs'
+            imagery here. */}
         {list.length > 1 && (
-          <div className="excl3-strip">
-            {list.map((p, i) => (
-              <button key={p.id} type="button" onClick={() => { setActive(i); setColor(0); setImgIdx(0); setQty(1); }}
-                className={`excl3-cell ${i === activeIndex ? 'on' : ''}`} aria-label={p.name} title={p.name}>
-                <img src={p.images[0]} alt="" loading="lazy" />
-                {i === activeIndex && !paused && <span className="excl3-progress" key={`p-${activeIndex}`} />}
-              </button>
-            ))}
+          <div className="excl3-pager">
+            <button type="button" onClick={() => goPair(activeIndex - 1)} aria-label="Previous pair">‹</button>
+            <span className="excl3-count">{String(activeIndex + 1).padStart(2, '0')} — {String(list.length).padStart(2, '0')}</span>
+            <button type="button" onClick={() => goPair(activeIndex + 1)} aria-label="Next pair">›</button>
           </div>
         )}
       </div>
@@ -254,17 +257,13 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
         .excl3-view:hover { background: #fff; color: #0A0A0A; }
 
-        .excl3-strip { display: flex; gap: 12px; margin-top: 48px; overflow-x: auto; padding-bottom: 4px; }
-        .excl3-strip::-webkit-scrollbar { display: none; }
-        .excl3-cell { position: relative; width: 76px; height: 76px; flex: 0 0 auto; border-radius: 12px; overflow: hidden; opacity: .45; filter: grayscale(0.2); transition: opacity .3s ease, transform .3s cubic-bezier(.22,1,.36,1); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
-        .excl3-cell:hover { opacity: .8; } .excl3-cell.on { opacity: 1; transform: scale(1.06); filter: none; box-shadow: 0 0 0 2px #fff; }
-        .excl3-cell img { width: 100%; height: 100%; object-fit: cover; }
-        .excl3-progress { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff; width: 0; animation: excl3-fill ${ROTATE_MS}ms linear forwards; }
-        @keyframes excl3-fill { from { width: 0; } to { width: 100%; } }
+        .excl3-pager { display: inline-flex; align-items: center; gap: 16px; margin-top: 44px; }
+        .excl3-pager button { width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; transition: background .2s ease, color .2s ease; }
+        .excl3-pager button:hover { background: #fff; color: #0A0A0A; }
+        .excl3-count { font-size: 11px; letter-spacing: .16em; color: rgba(255,255,255,0.7); font-variant-numeric: tabular-nums; }
 
         @media (prefers-reduced-motion: reduce) {
           .excl3-head, .excl3-frame, .excl3-info > *, .excl3-img { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
-          .excl3-progress { display: none; }
         }
       `}</style>
     </section>
