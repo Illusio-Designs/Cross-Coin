@@ -257,11 +257,14 @@ app.get('/api/health/db', async (req, res) => {
 // memory, uptime. Restricted to ADMIN_METRICS_TOKEN header so it's safe to
 // leave on a public host.
 app.get('/api/metrics', async (req, res) => {
-    const requiredToken = process.env.ADMIN_METRICS_TOKEN;
-    if (requiredToken) {
-        const presented = (req.headers['x-metrics-token'] || '').toString();
-        if (presented !== requiredToken) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
+    // Fail-closed token gate — never expose queue/memory/infra metrics publicly.
+    const { checkToken } = require('./middleware/adminAuth.js');
+    const gate = checkToken({
+        presented: (req.headers['x-metrics-token'] || req.query.token || '').toString(),
+        expected: process.env.ADMIN_METRICS_TOKEN,
+        isProduction: process.env.NODE_ENV === 'production',
+    });
+    if (!gate.ok) return res.status(gate.status).json({ success: false, message: gate.message });
     try {
         const integrationQueue = require('./services/integrationQueue.js');
         const queueStats = await integrationQueue.getStats();
@@ -509,6 +512,11 @@ const startServer = async () => {
             logger.info(`✓ Health check available at: http://localhost:${PORT}/api/v1/health`);
             logger.info(`✓ API base URL: http://localhost:${PORT}/api/v1`);
             logMemoryUsage(); // Log initial memory usage
+            // Nudge: internal endpoints fail closed in prod, so flag missing secrets.
+            if (process.env.NODE_ENV === 'production') {
+                if (!process.env.ADMIN_METRICS_TOKEN) logger.warn('⚠️  ADMIN_METRICS_TOKEN is not set — /api/metrics is locked (503) until you set it.');
+                if (!process.env.CRON_TOKEN && !process.env.ADMIN_METRICS_TOKEN) logger.warn('⚠️  CRON_TOKEN is not set — /api/cron/run will reject (401) until you set it.');
+            }
         });
         
         // Graceful shutdown
