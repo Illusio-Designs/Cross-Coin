@@ -44,44 +44,67 @@ function registerWorkers() {
 
     const orderShippingController = require('../controller/orderShippingController.js');
 
-    // Do the slow external courier call HERE (worker), never inside an HTTP
-    // request. Manual courier selection travels on the job payload; without it
-    // we auto-select with fallback. enhancedSyncSingleOrder/autoSelect open
-    // their own short transaction, so at most `concurrency` DB connections are
-    // ever pinned by shipping syncs at once.
-    let result;
-    if (auto || !logistics) {
-      const { service: provider } = await orderShippingController.resolveProviderForOrder(fullOrder);
-      const autoResult = await orderShippingController.autoSelectCourierWithFallback(fullOrder, provider);
-      result = autoResult.success
-        ? autoResult.result
-        : { success: false, error: autoResult.error || 'auto courier selection failed', permanent: autoResult.permanent };
-    } else {
-      result = await orderShippingController.enhancedSyncSingleOrder(
-        fullOrder, null, null, null, logistics, serviceType || 'surface'
-      );
-    }
+    // On the FINAL attempt (or a permanent failure) we flip the order to
+    // 'failed' with the reason, so it stops showing "Pending Sync" forever —
+    // the admin then sees the error and the manual courier picker takes over.
+    const attempts = job.opts?.attempts || 1;
+    const isLastAttempt = (job.attemptsMade || 0) >= (attempts - 1);
+    const markFailed = (reason) => fullOrder.update({
+      fship_sync_status: 'failed',
+      fship_sync_error: String(reason || 'sync failed').slice(0, 1000),
+    }).catch(() => {});
 
-    if (!result.success) {
-      const err = result.error || 'sync returned success=false';
-      // Permanent failures (bad address / non-serviceable pincode / no courier)
-      // will never succeed on retry. Park the order and return WITHOUT throwing,
-      // so Bull does not schedule 5 doomed retries. Transient failures still
-      // throw and get the exponential-backoff retry they deserve.
-      if (result.permanent || orderShippingController.isPermanentShippingFailure(err)) {
-        await fullOrder.update({
-          fship_sync_status: 'failed',
-          fship_sync_error: err,
-          fship_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
-        }).catch(() => {});
-        logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
-        return { success: false, permanent: true, error: err };
+    try {
+      // Do the slow external courier call HERE (worker), never inside an HTTP
+      // request. Manual courier selection travels on the job payload; without it
+      // we auto-select with fallback. enhancedSyncSingleOrder/autoSelect open
+      // their own short transaction, so at most `concurrency` DB connections are
+      // ever pinned by shipping syncs at once.
+      let result;
+      if (auto || !logistics) {
+        const { service: provider } = await orderShippingController.resolveProviderForOrder(fullOrder);
+        const autoResult = await orderShippingController.autoSelectCourierWithFallback(fullOrder, provider);
+        result = autoResult.success
+          ? autoResult.result
+          : { success: false, error: autoResult.error || 'auto courier selection failed', permanent: autoResult.permanent };
+      } else {
+        result = await orderShippingController.enhancedSyncSingleOrder(
+          fullOrder, null, null, null, logistics, serviceType || 'surface'
+        );
       }
-      // Throw so Bull schedules another attempt per backoff policy.
-      throw new Error(err);
+
+      if (!result.success) {
+        const err = result.error || 'sync returned success=false';
+        // Permanent failures (bad address / non-serviceable pincode / no courier)
+        // will never succeed on retry. Park the order and return WITHOUT throwing.
+        if (result.permanent || orderShippingController.isPermanentShippingFailure(err)) {
+          await fullOrder.update({
+            fship_sync_status: 'failed',
+            fship_sync_error: err,
+            fship_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
+          }).catch(() => {});
+          logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
+          return { success: false, permanent: true, error: err };
+        }
+        // Transient — retry with backoff, but surface it as failed on the last try.
+        if (isLastAttempt) {
+          await markFailed(err);
+          logger.warn(`[queue] shipping:sync-order FAILED after ${attempts} attempts — ${fullOrder.order_number}: ${err}`);
+        }
+        throw new Error(err);
+      }
+
+      logger.info(`[queue] shipping:sync-order ok — ${fullOrder.order_number} AWB ${result.waybill || 'N/A'}`);
+      return result;
+    } catch (err) {
+      // A thrown exception from the provider call (not a success:false result).
+      // Surface it on the final attempt so the order never stays stuck.
+      if (isLastAttempt && fullOrder.fship_sync_status !== 'failed') {
+        await markFailed(err.message || err);
+        logger.warn(`[queue] shipping:sync-order FAILED after ${attempts} attempts — ${fullOrder.order_number}: ${err.message || err}`);
+      }
+      throw err;
     }
-    logger.info(`[queue] shipping:sync-order ok — ${fullOrder.order_number} AWB ${result.waybill || 'N/A'}`);
-    return result;
   });
 
   // ── payment:reconcile-order ────────────────────────────────────────
