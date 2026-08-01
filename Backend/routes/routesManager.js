@@ -161,47 +161,19 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
 
         const raw = await provider.checkServiceability(src, pincode);
 
-        // Normalise across providers into a flat list of courier options.
-        // iThink → { data: { delhivery: {cod,prepaid,...}, … } } (its service may
-        // wrap that as [ {status,data} ]); FShip → an array of courier rows.
-        const unwrap = (Array.isArray(raw) && raw.length === 1 && raw[0] && raw[0].data) ? raw[0] : raw;
-        let couriers = [];
-        if (Array.isArray(unwrap)) couriers = unwrap;
-        else if (unwrap && unwrap.data) {
-            couriers = Array.isArray(unwrap.data)
-                ? unwrap.data
-                : (typeof unwrap.data === 'object' ? Object.entries(unwrap.data).map(([k, v]) => ({ logistic: k, ...(v || {}) })) : []);
-        } else if (unwrap && typeof unwrap === 'object') couriers = [unwrap];
-
-        const truthy = (v) => v === true || v === 1 || ['yes', '1', 'true', 'y'].includes(String(v).toLowerCase());
-
-        // No courier data at all → not serviceable.
-        if (couriers.length === 0) {
+        // Normalise + decide via the shared, unit-tested helper (handles the
+        // iThink vs FShip response shapes; never falsely blocks a real customer).
+        const { parseServiceability } = require('../utils/serviceability.js');
+        const decision = parseServiceability(raw);
+        if (!decision.serviceable) {
             return res.json({ success: true, serviceable: false, message: 'Delivery not available for this PIN code' });
         }
-        // If couriers expose delivery flags, require at least one positive; if the
-        // fields are unrecognisable, give the benefit of the doubt (serviceable)
-        // so we NEVER falsely block a real customer.
-        const flagKeys = ['prepaid', 'cod', 'delivery', 'serviceable', 'pickup', 'status', 'is_serviceable'];
-        const hasFlags = couriers.some(c => flagKeys.some(k => k in c));
-        const deliverable = couriers.some(c =>
-            truthy(c.prepaid) || truthy(c.cod) || truthy(c.delivery) || truthy(c.serviceable) || truthy(c.pickup) || truthy(c.is_serviceable) || c.status === true
-        );
-        const serviceable = hasFlags ? deliverable : true;
-        if (!serviceable) {
-            return res.json({ success: true, serviceable: false, message: 'Delivery not available for this PIN code' });
-        }
-
-        const cod = couriers.some(c => truthy(c.cod) || truthy(c.cod_available) || truthy(c.is_cod));
-        const edd = couriers[0].estimated_delivery_days || couriers[0].edd || couriers[0].tat || 5;
         return res.json({
             success: true,
             serviceable: true,
-            // Don't newly block COD from this check unless a courier explicitly
-            // exposes COD availability — provider field names vary.
-            cod_allowed: hasFlags ? cod : true,
-            cod_available: cod,
-            estimated_delivery_days: parseInt(edd) || 5,
+            cod_allowed: decision.cod_allowed,
+            cod_available: decision.cod_available,
+            estimated_delivery_days: decision.estimated_delivery_days || 5,
         });
     } catch (e) {
         // On ANY failure, never block checkout — report serviceable and let the
