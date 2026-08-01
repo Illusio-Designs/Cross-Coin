@@ -4,6 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <link rel="icon" href="/Gripzusfavicon.jpeg" />
         <link rel="shortcut icon" href="/Gripzusfavicon.jpeg" />
         <link rel="apple-touch-icon" href="/Gripzusfavicon.jpeg" />

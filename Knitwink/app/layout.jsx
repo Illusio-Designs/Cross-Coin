@@ -99,6 +99,8 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
+        {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
           <AuthProvider>
