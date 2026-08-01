@@ -48,18 +48,37 @@ export function mapProduct(p) {
   const variations = p.ProductVariations || p.variations || [];
   const rawImages  = p.ProductImages || p.images || [];
 
-  const images = rawImages
-    .map((img) => (typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || '')))
-    .filter(Boolean)
-    .map((u) => ikFull(u, 1100)); // full aspect, no square crop
+  const urlOf = (img) => ikFull(
+    typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || ''),
+    1100,
+  );
+
+  // Full gallery (every image) — general display fallback.
+  const images = rawImages.map(urlOf).filter(Boolean);
+
+  // Group images by the variation (colour) they belong to, and collect the
+  // "general" images that aren't tied to any variation. This lets each colour
+  // show ONLY its own photos instead of the whole mixed-colour gallery.
+  const imagesByVar = {};
+  const generalImages = [];
+  rawImages.forEach((img) => {
+    const u = urlOf(img);
+    if (!u) return;
+    const vid = (typeof img === 'object' && img) ? img.product_variation_id : null;
+    if (vid != null) (imagesByVar[vid] = imagesByVar[vid] || []).push(u);
+    else generalImages.push(u);
+  });
 
   const firstVar = variations[0];
   const price = Number(firstVar?.price ?? p.price ?? 0);
   const cmpRaw = firstVar?.comparePrice ?? p.comparePrice ?? p.compareAtPrice;
   const compareAtPrice = cmpRaw && Number(cmpRaw) > price ? Number(cmpRaw) : undefined;
 
-  const colors = [];
-  const colorSeen = new Set();
+  // A colour usually spans several size-variations (Baby Pink / S, M, L …),
+  // and photos may be tagged to any of them. Aggregate a colour's images across
+  // ALL variations that share it, so selecting Baby Pink shows every Baby Pink
+  // photo — not just the first variation's.
+  const colorMap = new Map(); // key → { name, hex, packColors?, varIds:Set, imgs:[] }
   const sizes = [];
   const sizeSeen = new Set();
   let totalStock = 0;
@@ -67,35 +86,41 @@ export function mapProduct(p) {
   variations.forEach((v) => {
     totalStock += Number(v.stock || 0);
     const attrs = safeParse(v.attributes);
-    // This variation's own images (so the UI can show only the selected
-    // variation's photos instead of every image mixed together).
     const vImages = (v.VariationImages || v.variationImages || v.images || [])
-      .map((img) => (typeof img === 'string' ? cleanUrl(img) : cleanUrl(img.large || img.image_url || img.medium || img.url || '')))
-      .filter(Boolean)
-      .map((u) => ikFull(u, 1100)); // full aspect, no square crop
+      .map(urlOf)
+      .filter(Boolean);
     const colorArr = toArr(attrs.color).map((c) => String(c).trim()).filter(Boolean);
-    if (colorArr.length > 1) {
-      // Multi-colour pack — keep every colour together as one swatch group
-      // so the detail page can show all of them inside a single box.
-      const key = colorArr.join(' + ');
-      if (!colorSeen.has(key)) {
-        colorSeen.add(key);
-        colors.push({
-          name: key,
-          hex: getColorHex(colorArr[0]),
-          packColors: colorArr.map((c) => ({ name: c, hex: getColorHex(c) })),
-          images: vImages,
-        });
-      }
-    } else {
-      colorArr.forEach((c) => {
-        if (!colorSeen.has(c)) { colorSeen.add(c); colors.push({ name: c, hex: getColorHex(c), images: vImages }); }
-      });
-    }
+
     toArr(attrs.size).forEach((s) => {
       const key = String(s).trim();
       if (key && !sizeSeen.has(key)) { sizeSeen.add(key); sizes.push(key); }
     });
+
+    if (!colorArr.length) return;
+    const isPack = colorArr.length > 1; // multi-colour pack → one swatch group
+    const key = isPack ? colorArr.join(' + ') : colorArr[0];
+    if (!colorMap.has(key)) {
+      colorMap.set(key, {
+        name: key,
+        hex: getColorHex(colorArr[0]),
+        packColors: isPack ? colorArr.map((c) => ({ name: c, hex: getColorHex(c) })) : undefined,
+        varIds: new Set(),
+        imgs: [],
+      });
+    }
+    const entry = colorMap.get(key);
+    entry.varIds.add(v.id);
+    entry.imgs.push(...vImages);
+  });
+
+  // Resolve each colour's full image set: every image tagged to any of its
+  // variations ∪ its VariationImages; falls back to shared images (never other
+  // colours') then the primary image.
+  const colors = [...colorMap.values()].map((e) => {
+    const tagged = [...e.varIds].flatMap((id) => imagesByVar[id] || []);
+    let own = [...new Set([...tagged, ...e.imgs])];
+    if (!own.length) own = generalImages.length ? generalImages : images.slice(0, 1);
+    return { name: e.name, hex: e.hex, ...(e.packColors ? { packColors: e.packColors } : {}), images: own };
   });
 
   const inStock = variations.length ? totalStock > 0 : p.badge !== 'out_of_stock';

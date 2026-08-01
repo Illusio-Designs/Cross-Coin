@@ -10,8 +10,8 @@ export default function CategoryCards({ categories = [] }) {
   const skeleton = !categories.length;
   const list = skeleton ? Array.from({ length: 4 }) : categories.slice(0, 4);
 
-  // Asymmetric aspect ratios for a gallery-wall rhythm.
-  const ratios = ['aspect-[3/4]', 'aspect-[4/5]', 'aspect-[4/5]', 'aspect-[3/4]'];
+  // One uniform aspect ratio so every collection card is the same size.
+  const RATIO = 'aspect-[4/5]';
 
   return (
     <section className="section-y">
@@ -30,14 +30,14 @@ export default function CategoryCards({ categories = [] }) {
           {list.map((c, i) => (
             skeleton ? (
               <div key={i} className={i >= 2 ? 'hidden md:block' : ''}>
-                <div className={`${ratios[i % ratios.length]} rounded-xl bg-paper-deep animate-pulse`} />
+                <div className={`${RATIO} rounded-xl bg-paper-deep animate-pulse`} />
               </div>
             ) : (
               <CollectionCard
                 key={c.id ?? i}
                 collection={c}
                 index={i}
-                ratio={ratios[i % ratios.length]}
+                ratio={RATIO}
                 className={i >= 2 ? 'hidden md:block' : ''}
               />
             )

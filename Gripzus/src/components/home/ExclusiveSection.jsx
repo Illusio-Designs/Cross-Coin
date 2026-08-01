@@ -43,15 +43,15 @@ export default function ExclusiveSection({ products = [] }) {
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
   const product = list[activeIndex];
 
-  // Full image gallery for the selected pair — the colour's own images if the
-  // variation has them, otherwise the product's whole gallery. All images show
-  // as thumbnails (like the sibling brand), never just one.
+  // Gallery for the SELECTED colour only — mapProduct resolves each colour to
+  // its own images (never other colours'), so switching colour swaps the whole
+  // set. Falls back to the product gallery only if a colour has nothing.
   const gallery = useMemo(() => {
     if (!product) return [FALLBACK_IMG];
     const perColor = (product.colors[color]?.images || []).filter(Boolean);
+    if (perColor.length) return perColor;
     const all = (product.images || []).filter(Boolean);
-    const g = perColor.length ? perColor : all;
-    return g.length ? g : [FALLBACK_IMG];
+    return all.length ? all : [FALLBACK_IMG];
   }, [product, color]);
   const heroImg = gallery[Math.min(imgIdx, gallery.length - 1)] || FALLBACK_IMG;
 
