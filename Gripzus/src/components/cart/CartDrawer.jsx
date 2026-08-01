@@ -21,7 +21,7 @@ import {
   toastOrderError,
   showError,
 } from '../../utils/toast';
-import { fbTrack } from '../../utils/pixel';
+import { fbTrack, fbPurchase } from '../../utils/pixel';
 
 /* Gripzus cart drawer — full in-drawer checkout, same flow & design as
    the Knitwink cart drawer (guest + signed-in). Styled via CartDrawer.css
@@ -261,6 +261,17 @@ export default function CartDrawer() {
       quantity: Number(it.qty) || 1,
     }));
 
+  /* Meta Purchase custom_data — captured from the cart BEFORE it is cleared. */
+  const buildPurchaseData = (orderNumber, value) => ({
+    content_ids: items.map((i) => String(i.id)),
+    content_type: 'product',
+    contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
+    num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+    value: Number(value) || 0,
+    currency: 'INR',
+    order_id: orderNumber,
+  });
+
   const guestParts = () => {
     const p = String(guestInfo.fullName || '').trim().split(/\s+/);
     return { firstName: p[0] || '', lastName: p.slice(1).join(' ') || '' };
@@ -291,9 +302,13 @@ export default function CartDrawer() {
         });
       }
       if (!result?.order) throw new Error('Order creation failed.');
+      const orderNumber = result.order.order_number;
+      // Meta Purchase (deduped with the backend's server-side event).
+      const purchaseData = buildPurchaseData(orderNumber, finalTotal);
       clearCart();
-      toastOrderPlaced(result.order.order_number);
-      setOrderSuccess({ orderNumber: result.order.order_number });
+      fbPurchase(orderNumber, purchaseData);
+      toastOrderPlaced(orderNumber);
+      setOrderSuccess({ orderNumber });
     } catch (err) {
       toastOrderError(err.message || 'Order placement failed.');
     } finally {
@@ -333,10 +348,14 @@ export default function CartDrawer() {
             razorpaySignature: resp.razorpay_signature,
             reservation_id: reservationId,
           });
+          const orderNumber = result.order?.order_number;
+          // Meta Purchase (deduped with the backend's server-side event).
+          const purchaseData = buildPurchaseData(orderNumber, finalTotal);
           clearCart();
           setPaymentFailed(null);
-          toastOrderPlaced(result.order?.order_number);
-          setOrderSuccess({ orderNumber: result.order?.order_number || '—' });
+          fbPurchase(orderNumber, purchaseData);
+          toastOrderPlaced(orderNumber);
+          setOrderSuccess({ orderNumber: orderNumber || '—' });
         } catch {
           clearCart();
           setOrderSuccess({ orderNumber: '—' });

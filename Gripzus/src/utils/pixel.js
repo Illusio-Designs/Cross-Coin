@@ -46,3 +46,18 @@ export function fbTrack(event, params = {}) {
     }).catch(() => {});
   } catch (_) { /* never throw */ }
 }
+
+// Purchase — fired browser-side on the order-confirmation (thank-you) view.
+//
+// The eventID is DETERMINISTIC (`Purchase_<order_number>`) and matches the
+// backend's server-side Purchase event id exactly, so Meta deduplicates the
+// two into one conversion instead of double-counting. Because the server
+// already sends Purchase via the Conversions API, this is intentionally NOT
+// relayed again here — the browser pixel is the second, deduped leg.
+export function fbPurchase(orderNumber, params = {}) {
+  if (typeof window === 'undefined' || !window.fbq) return;
+  if (!orderNumber || orderNumber === '—') return; // no real order → skip
+  try {
+    window.fbq('track', 'Purchase', params, { eventID: `Purchase_${orderNumber}` });
+  } catch (_) { /* never throw */ }
+}
