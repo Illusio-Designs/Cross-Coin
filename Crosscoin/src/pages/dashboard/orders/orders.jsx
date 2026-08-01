@@ -575,10 +575,16 @@ const Orders = () => {
             header: "Shipment Status",
             cell: (row) => {
                 const s = row.Shipment || {};
+                const hasWaybill = s.waybill || row.fship_waybill;
+                const orderStatus = (row.status || '').toLowerCase();
+                // Cancelled orders never ship — don't show a "Pending Sync" chip.
+                if ((orderStatus === 'cancelled' || orderStatus === 'order cancelled') && !hasWaybill) {
+                    return <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>;
+                }
                 // Prefer an explicit sync_status from either the Shipment row or
                 // the order's fship_sync_status (the worker writes 'failed' there
                 // when a sync gives up) so a failed sync shows as Failed, not Pending.
-                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || row.fship_waybill ? 'synced' : 'pending');
+                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || hasWaybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
                 return <ShipmentStatusBadge status={status} syncError={syncError} />;
             },

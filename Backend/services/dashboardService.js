@@ -20,7 +20,10 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     const orderDateWhere = {};
     if (dateFilter.startDate) orderDateWhere[Op.gte] = dateFilter.startDate;
     if (dateFilter.endDate) orderDateWhere[Op.lte] = dateFilter.endDate;
-    const hasDateFilter = Object.keys(orderDateWhere).length > 0;
+    // Object.keys() ignores Symbol keys (Op.gte/Op.lte), so checking the object's
+    // key count was always 0 and the dashboard/Reports date filter never applied.
+    // Check the inputs directly instead.
+    const hasDateFilter = !!(dateFilter.startDate || dateFilter.endDate);
     const orderWhere = {
       ...brandWhere,
       ...(hasDateFilter ? { createdAt: orderDateWhere } : {}),

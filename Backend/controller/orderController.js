@@ -1598,11 +1598,13 @@
       // would cut off everything after midnight on the end date).
       if (start_date || end_date) {
         const range = {};
+        let hasRange = false;
         if (start_date) {
           const s = new Date(start_date);
           if (!isNaN(s.getTime())) {
             s.setHours(0, 0, 0, 0);
             range[Op.gte] = s;
+            hasRange = true;
           }
         }
         if (end_date) {
@@ -1610,9 +1612,13 @@
           if (!isNaN(e.getTime())) {
             e.setHours(23, 59, 59, 999);
             range[Op.lte] = e;
+            hasRange = true;
           }
         }
-        if (Object.keys(range).length) filter.createdAt = range;
+        // Track a flag: Object.keys() ignores Symbol keys (Op.gte/Op.lte), so
+        // the old `Object.keys(range).length` was ALWAYS 0 and the date filter
+        // silently never applied.
+        if (hasRange) filter.createdAt = range;
       }
 
       // Search functionality

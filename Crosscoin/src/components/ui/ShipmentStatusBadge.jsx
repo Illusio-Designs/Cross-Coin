@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 const ShipmentStatusBadge = ({ status, syncError }) => {
   const statusConfig = {
@@ -28,16 +29,20 @@ const ShipmentStatusBadge = ({ status, syncError }) => {
         {config.label}
       </span>
       {syncError && status === 'failed' && (
-        <span
-          style={{
-            fontSize: '12px',
-            color: '#f44336',
-            title: syncError
-          }}
-          title={syncError}
-        >
-          ⓘ
-        </span>
+        // Real hover tooltip (the old native `title` was unreliable and never
+        // showed). Click reveals the full reason too, since a sync error can be
+        // long and the tooltip is single-line.
+        <Tooltip text={syncError} position="top">
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={() => { if (typeof window !== 'undefined') window.alert(syncError); }}
+            style={{ fontSize: '14px', color: '#f44336', cursor: 'help', fontWeight: 700, lineHeight: 1 }}
+            aria-label={`Sync error: ${syncError}`}
+          >
+            ⓘ
+          </span>
+        </Tooltip>
       )}
     </div>
   );
