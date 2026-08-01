@@ -182,8 +182,9 @@ export default function ExclusiveSection({ products = [] }) {
           -webkit-text-stroke: 1px rgba(255,255,255,0.08); pointer-events: none; user-select: none;
         }
         .excl3-frame {
-          position: relative; z-index: 1; overflow: hidden; border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);
+          position: relative; z-index: 1; overflow: hidden; border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
+          box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
           aspect-ratio: 4 / 5; opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
@@ -191,7 +192,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-img { width: 100%; height: 100%; object-fit: cover; animation: excl3-reveal .8s cubic-bezier(.22,1,.36,1); }
         .excl3-frame:hover .excl3-img { transform: scale(1.04); transition: transform 1s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.07); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
-        .excl3-badge { position: absolute; top: 16px; left: 16px; z-index: 2; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 10px; border-radius: 999px; }
+        .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 999px; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
         .excl3-info > * { opacity: 0; transform: translateY(14px); animation: excl3-up .6s cubic-bezier(.22,1,.36,1) forwards; }
         .excl3-info .i0 { animation-delay: .05s; } .excl3-info .i1 { animation-delay: .12s; }
