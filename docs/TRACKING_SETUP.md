@@ -45,7 +45,7 @@ Admin **Dashboard → Brand Settings**:
 | `GA_MEASUREMENT_ID` | Google Analytics 4 | Required | `G-XXXXXXXXXX` |
 | `GA_API_SECRET` | GA4 server events (optional) | Optional | `xxxxxxxx` |
 | `GOOGLE_ADS_ID` | Google Ads tag | If running Ads | `AW-XXXXXXXXX` |
-| `GOOGLE_ADS_CONVERSION_LABELS` | Google Ads conversions | If running Ads | `{"purchase":"AbC…"}` |
+| `GOOGLE_ADS_LABEL_PURCHASE` (+ per event) | Google Ads conversions | If running Ads | `AbC-D_efGh` |
 | `FB_PIXEL_ID` | Meta Pixel | Required for Meta | `15-digit id` |
 | `FB_ACCESS_TOKEN` | Meta Conversions API | Required for CAPI | long token |
 | `CLARITY_ID` | Microsoft Clarity | Optional | `xxxxxxxxxx` |
@@ -91,11 +91,18 @@ Admin **Dashboard → Brand Settings**:
 
 **Set:**
 - `GOOGLE_ADS_ID` = `AW-XXXXXXXXX`
-- `GOOGLE_ADS_CONVERSION_LABELS` = a JSON map of the labels you created, e.g.:
-  ```json
-  {"purchase":"AbC-D_efGh","add_to_cart":"XyZ-1_23aB","begin_checkout":"Qw9-E_rt45"}
-  ```
-  Supported keys: `view_item`, `add_to_cart`, `begin_checkout`, `add_shipping_info`, `add_payment_info`, `purchase`. Only the ones you add will fire.
+- **One simple setting per conversion — no JSON needed.** Add the label (the part after the slash) under the matching key; only the events you add will fire:
+
+  | Setting key | Fires on |
+  |---|---|
+  | `GOOGLE_ADS_LABEL_PURCHASE` | order confirmed |
+  | `GOOGLE_ADS_LABEL_ADD_TO_CART` | add to cart |
+  | `GOOGLE_ADS_LABEL_BEGIN_CHECKOUT` | checkout started |
+  | `GOOGLE_ADS_LABEL_ADD_SHIPPING_INFO` | shipping added |
+  | `GOOGLE_ADS_LABEL_ADD_PAYMENT_INFO` | payment added |
+  | `GOOGLE_ADS_LABEL_VIEW_ITEM` | product viewed |
+
+  e.g. `GOOGLE_ADS_LABEL_PURCHASE` = `AbC-D_efGh`. (A `GOOGLE_ADS_CONVERSION_LABELS` JSON map is still accepted, but you don't need it.)
 
 **Verify:** **Tag Assistant** → confirm the `AW-` tag loads; Ads → **Conversions** shows data 1–3 days after go-live.
 

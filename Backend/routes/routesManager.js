@@ -105,6 +105,15 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
     }
     if (googleAdsLabel && !adsLabels.purchase) adsLabels.purchase = googleAdsLabel;
 
+    // Auto-managed labels — read one simple setting per event so admins don't
+    // have to hand-write a JSON map. e.g. GOOGLE_ADS_LABEL_PURCHASE = AbC-D_efGh
+    // These take precedence over the JSON map above.
+    const ADS_EVENTS = ['view_item', 'add_to_cart', 'begin_checkout', 'add_shipping_info', 'add_payment_info', 'purchase'];
+    const perEventLabels = await Promise.all(
+      ADS_EVENTS.map((e) => settingsHelper.getSetting(brandId, 'GOOGLE_ADS_LABEL_' + e.toUpperCase()))
+    );
+    ADS_EVENTS.forEach((e, i) => { if (perEventLabels[i]) adsLabels[e] = perEventLabels[i]; });
+
     // Cache at the CDN/edge for 5 min — these IDs change rarely.
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     return res.json({
