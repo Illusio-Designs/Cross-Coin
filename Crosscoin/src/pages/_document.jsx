@@ -63,6 +63,21 @@ export default function Document({ tracking }) {
   return (
     <Html lang="en">
       <Head>
+        {/* Deploy resilience (no Vercel Pro / Skew Protection): if a Next.js CSS
+            chunk fails to load — deploy skew, or a flaky mobile connection — the
+            page renders unstyled ("raw HTML"). Reload ONCE to fetch the current
+            assets. Guarded by sessionStorage so it can never loop. Registered
+            first so the capture-phase listener is active before the CSS links. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var K='__cssReload';" +
+              "window.addEventListener('error',function(e){var t=e&&e.target;" +
+              "if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){" +
+              "if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);" +
+              "}catch(_){}})();",
+          }}
+        />
         {/* ── Google Tag Manager — loaded as high as possible (server-rendered
             so GTM's own preview / Tag Assistant detect it) ── */}
         {gtmId && (

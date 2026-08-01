@@ -182,4 +182,40 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
     }
 });
 
+// ── HTTP cron trigger (cPanel-friendly) ─────────────────────────────────────
+// On cPanel+Passenger the in-process node-cron / Bull worker pauses when the web
+// app idles, so scheduled jobs (shipping sync, status refresh) can stall. The
+// reliable fix is an OS-level cPanel cron that hits this endpoint — the HTTP
+// request wakes Passenger AND enqueues the job, which the worker then drains.
+//
+// Secure it with a token (CRON_TOKEN, or reuse ADMIN_METRICS_TOKEN). Without a
+// token set it refuses (never an open trigger).
+//
+// cPanel → Cron Jobs, e.g. every 15 min:
+//   curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=shipping-sync" >/dev/null 2>&1
+const CRON_JOBS = {
+    'shipping-sync': 'cron:shipping-sync',
+    'status-refresh': 'cron:shipping-status-refresh',
+    'loyalty-expiry': 'cron:loyalty-expiry',
+};
+router.all('/cron/run', async (req, res) => {
+    const token = process.env.CRON_TOKEN || process.env.ADMIN_METRICS_TOKEN;
+    const presented = (req.headers['x-cron-token'] || req.query.token || '').toString();
+    if (!token || presented !== token) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const job = (req.query.job || 'shipping-sync').toString();
+    const jobName = CRON_JOBS[job];
+    if (!jobName) {
+        return res.status(400).json({ success: false, message: 'Unknown job', allowed: Object.keys(CRON_JOBS) });
+    }
+    try {
+        const { enqueue } = require('../services/integrationQueue.js');
+        await enqueue(jobName, { via: 'http-cron', at: Date.now() });
+        return res.json({ success: true, enqueued: jobName });
+    } catch (e) {
+        return res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 module.exports = router;
