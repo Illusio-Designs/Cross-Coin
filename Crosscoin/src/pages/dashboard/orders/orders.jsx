@@ -65,6 +65,11 @@ const Orders = () => {
     const [generatingLabel, setGeneratingLabel] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
     const [labelPollTimer, setLabelPollTimer] = useState(null);
+    // UI: analytics charts are collapsed by default so the orders table sits
+    // near the top; live updates can be paused so the table never refreshes
+    // under the admin while they work.
+    const [showAnalytics, setShowAnalytics] = useState(false);
+    const [liveUpdates, setLiveUpdates] = useState(true);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -409,17 +414,19 @@ const Orders = () => {
         brandService.getAllBrands(true).then(r => { if (r.success) setBrands(r.data || []); }).catch(() => {});
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Real-time polling for label status (every 30 seconds)
+    // Real-time polling for label status (every 60 seconds) — only while
+    // "Live" is on. The refresh is silent (keeps the current rows visible
+    // instead of blanking the table to a skeleton), and the admin can pause
+    // it entirely with the Live toggle so nothing moves under them.
     useEffect(() => {
+        if (!liveUpdates) return;
         const timer = setInterval(() => {
             fetchLabelStats();
-            // Silent background refresh — keeps the current rows visible instead of
-            // blanking the table to a skeleton every 30 seconds.
             if (!loading) fetchOrders(currentPage, { silent: true });
-        }, 30000);
+        }, 60000);
         setLabelPollTimer(timer);
         return () => clearInterval(timer);
-    }, [currentPage, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentPage, loading, liveUpdates]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Stats panel re-fetches when its date range changes
     useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -606,6 +613,9 @@ const Orders = () => {
             cell: (row) => {
                 const isFinal = row.status === 'delivered' || row.status === 'cancelled';
                 const isSyncing = syncingOrders.has(row.id) || syncingAll;
+                const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
+                const canCancel = row.payment_type?.toLowerCase() === 'cod' && (row.status === 'pending' || row.status === 'awaiting_confirmation');
+                const divider = <span aria-hidden="true" style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 3px', flexShrink: 0 }} />;
                 return (
                     <div className="sl-actions">
                         <Tooltip text="View order details and customer information" position="top">
@@ -616,6 +626,7 @@ const Orders = () => {
                                 </svg>
                             </button>
                         </Tooltip>
+                        {divider}
                         <Tooltip text={isFinal ? `Order is ${row.status}` : 'Automatically sync with best available courier'} position="top">
                             <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
                                 onClick={() => syncOrderDirectly(row.id, row.order_number)}
@@ -654,14 +665,15 @@ const Orders = () => {
                                 </button>
                             </Tooltip>
                         )}
-                        {(['awaiting_confirmation', 'pending'].includes(row.status)) && (
+                        {(canConfirm || canCancel) && divider}
+                        {canConfirm && (
                             <Tooltip text="Confirm order and proceed to shipping" position="top">
                                 <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
                                     ✓
                                 </button>
                             </Tooltip>
                         )}
-                        {row.payment_type?.toLowerCase() === 'cod' && (row.status === 'pending' || row.status === 'awaiting_confirmation') && (
+                        {canCancel && (
                             <Tooltip text="Cancel this order permanently" position="top">
                                 <button className="sl-btn-delete" onClick={() => cancelOrder(row.id, row.order_number)}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
@@ -719,25 +731,35 @@ const Orders = () => {
                                         value={filterValue} onChange={handleSearchChange} />
                                 </div>
                                 <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
+                                    title="Pull new orders and create bookings with the shipping courier"
                                     onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    {syncingAll ? 'Syncing…' : 'Sync Orders'}
+                                    {syncingAll ? 'Syncing…' : 'Sync New Orders'}
                                 </button>
                                 <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
+                                    title="Update the tracking status of already-shipped, active orders"
                                     onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
                                     style={{ borderColor: '#2563eb', color: '#2563eb' }}
                                     onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
                                     onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
-                                    {refreshingStatus ? 'Refreshing…' : 'Refresh Status'}
+                                    {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
                                 </button>
                                 <button className="order-sync-main-btn"
+                                    title="Create a new order manually"
                                     onClick={() => setIsManualOrderOpen(true)}
                                     style={{ borderColor: '#16a34a', color: '#16a34a' }}
                                     onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#16a34a'; }}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                    Manual Order
+                                    New Order
+                                </button>
+                                <button className="order-sync-main-btn"
+                                    title={liveUpdates ? 'Live updates on — the list refreshes quietly in the background. Click to pause.' : 'Live updates paused — the list stays still until you refresh. Click to resume.'}
+                                    onClick={() => setLiveUpdates(v => !v)}
+                                    style={liveUpdates ? { borderColor: '#16a34a', color: '#16a34a' } : { borderColor: '#9ca3af', color: '#6b7280' }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: liveUpdates ? '#22c55e' : '#9ca3af', display: 'inline-block', flexShrink: 0 }} />
+                                    {liveUpdates ? 'Live' : 'Paused'}
                                 </button>
                             </>
                         }
@@ -757,7 +779,7 @@ const Orders = () => {
 
                     {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
                     <DateRangePicker
-                        label="Date Range"
+                        label="Filter by date — applies to the stats above and the orders list below"
                         startDate={statsStartDate}
                         endDate={statsEndDate}
                         onStartChange={setStatsStartDate}
@@ -766,12 +788,29 @@ const Orders = () => {
                         inline
                     />
 
-                    {/* ── Analytics Charts: each in its own Panel for consistent chrome ── */}
-                    <div className="orders-analytics">
-                        <Panel><PaymentChart allOrdersStats={allOrdersStats} /></Panel>
-                        <Panel><PaymentStatusChart allOrdersStats={allOrdersStats} /></Panel>
-                        <Panel><ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} /></Panel>
+                    {/* ── Analytics Charts: collapsed by default so the orders table
+                           sits near the top. Toggle to reveal the payment / shipping
+                           breakdown charts. ── */}
+                    <div className="orders-analytics-toggle-row">
+                        <button
+                            type="button"
+                            className="order-sync-main-btn"
+                            onClick={() => setShowAnalytics(v => !v)}
+                            aria-expanded={showAnalytics}
+                            style={{ borderColor: '#8b5cf6', color: '#8b5cf6' }}
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+                            {showAnalytics ? 'Hide analytics charts' : 'Show analytics charts'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAnalytics ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9" /></svg>
+                        </button>
                     </div>
+                    {showAnalytics && (
+                        <div className="orders-analytics">
+                            <Panel><PaymentChart allOrdersStats={allOrdersStats} /></Panel>
+                            <Panel><PaymentStatusChart allOrdersStats={allOrdersStats} /></Panel>
+                            <Panel><ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} /></Panel>
+                        </div>
+                    )}
 
                     {/* ── Filters + Sort: sticky FilterBar on desktop, wraps on phones ── */}
                     <FilterBar hideSearch>
