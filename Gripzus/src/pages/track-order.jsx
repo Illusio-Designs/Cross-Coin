@@ -156,7 +156,7 @@ export default function TrackOrderPage() {
           <div className="py-12 md:py-16">
 
           {/* Search form */}
-          <form onSubmit={handleTrack} className="bg-paper-deep border border-line p-6 md:p-7 mb-8">
+          <form onSubmit={handleTrack} className="bg-paper-deep rounded-xl border border-line p-6 md:p-7 mb-8">
             <label className="text-[10px] tracking-[0.3em] uppercase text-ink-muted block mb-3">Order number</label>
             <div className="flex flex-col sm:flex-row gap-3">
               <input
@@ -164,7 +164,7 @@ export default function TrackOrderPage() {
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 placeholder="e.g. GZ-2026-01284"
-                className="flex-1 bg-paper border border-line focus:border-ink outline-none px-5 py-3 text-base text-ink placeholder:text-ink-muted transition-colors"
+                className="flex-1 bg-paper rounded-lg border border-line focus:border-ink outline-none px-5 py-3 text-base text-ink placeholder:text-ink-muted transition-colors"
               />
               <button type="submit" disabled={loading} className="pill-cta justify-center disabled:opacity-50">
                 {loading ? 'Tracking…' : 'Track'}
@@ -177,7 +177,7 @@ export default function TrackOrderPage() {
             <div className="space-y-6">
 
               {/* Header card */}
-              <section className="bg-paper-deep border border-line p-6 md:p-7">
+              <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                   <div>
                     <p className="eyebrow mb-1">Order</p>
@@ -201,7 +201,7 @@ export default function TrackOrderPage() {
 
               {/* Stepper — hidden for cancelled orders */}
               {!cancelled && (
-                <section className="bg-paper-deep border border-line p-5 md:p-8">
+                <section className="bg-paper-deep rounded-xl border border-line p-5 md:p-8">
                   <p className="eyebrow mb-1">Shipment</p>
                   <h3 className="font-display text-ink uppercase tracking-tight text-2xl mb-7">Progress</h3>
 
@@ -242,7 +242,7 @@ export default function TrackOrderPage() {
 
               {/* Timeline */}
               {data.timeline?.length > 0 && (
-                <section className="bg-paper-deep border border-line p-6 md:p-7">
+                <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                   <p className="eyebrow mb-1">Tracking</p>
                   <h3 className="font-display text-ink text-2xl uppercase mb-5">Timeline</h3>
                   <ol className="relative border-l border-line ml-1 space-y-4">
@@ -260,7 +260,7 @@ export default function TrackOrderPage() {
 
               {/* Items */}
               {data.lineItems?.length > 0 && (
-                <section className="bg-paper-deep border border-line p-6 md:p-7">
+                <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                   <p className="eyebrow mb-1">In this order</p>
                   <h3 className="font-display text-ink text-2xl uppercase mb-4">Items</h3>
                   <div className="flex flex-col divide-y divide-line">
@@ -289,7 +289,7 @@ export default function TrackOrderPage() {
 
               {/* Address */}
               {data.address && (
-                <section className="bg-paper-deep border border-line p-6 md:p-7">
+                <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                   <p className="eyebrow mb-1">Deliver to</p>
                   <h3 className="font-display text-ink text-2xl uppercase mb-3">Address</h3>
                   <p className="text-ink-soft text-sm">{data.address}</p>
@@ -297,7 +297,7 @@ export default function TrackOrderPage() {
               )}
 
               {/* Payment summary */}
-              <section className="bg-paper-deep border border-line p-6 md:p-7">
+              <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                 <p className="eyebrow mb-1">Payment</p>
                 <h3 className="font-display text-ink text-2xl uppercase mb-4">Summary</h3>
                 <dl className="divide-y divide-line">

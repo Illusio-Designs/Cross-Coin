@@ -144,7 +144,7 @@ export default function LoginPage() {
               <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
                 <div>
                   <label className="eyebrow block mb-2">Phone number</label>
-                  <div className="flex items-center gap-2 bg-paper-deep border border-line focus-within:border-ink px-4 transition-colors">
+                  <div className="flex items-center gap-2 bg-paper-deep rounded-lg border border-line focus-within:border-ink px-4 transition-colors">
                     <span className="text-ink-muted text-sm">+91</span>
                     <input
                       type="tel" value={phone}
@@ -173,7 +173,7 @@ export default function LoginPage() {
                       type="text" maxLength={1} inputMode="numeric" value={d}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="h-14 w-14 text-center bg-paper-deep border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
+                      className="h-14 w-14 text-center bg-paper-deep rounded-lg border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
                     />
                   ))}
                 </div>

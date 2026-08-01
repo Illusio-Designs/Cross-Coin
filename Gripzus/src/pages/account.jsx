@@ -218,7 +218,7 @@ export default function AccountPage() {
                 {loadingOrders ? (
                   <p className="py-12 text-center eyebrow">Loading orders…</p>
                 ) : orders.length === 0 ? (
-                  <div className="py-16 text-center border border-line">
+                  <div className="py-16 text-center rounded-xl border border-line">
                     <p className="h-display text-2xl text-ink mb-3">No orders yet</p>
                     <Link href="/products" className="eyebrow text-clay-deep hover:text-ink">Start shopping →</Link>
                   </div>
@@ -228,7 +228,7 @@ export default function AccountPage() {
                       const status = (o.status || '').toLowerCase();
                       const canCancel = ['pending', 'confirmed', 'processing'].includes(status);
                       return (
-                        <div key={o.id} className="border border-line p-5 md:p-6">
+                        <div key={o.id} className="rounded-xl border border-line p-5 md:p-6">
                           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
                             <div>
                               <p className="font-display uppercase text-ink text-base tracking-[-0.01em]" style={{ fontWeight: 700 }}>#{o.order_number}</p>
@@ -243,7 +243,7 @@ export default function AccountPage() {
 
                           {o.OrderItems?.map((item) => (
                             <div key={item.id} className="flex items-center gap-3 py-3 border-b border-line">
-                              <div className="w-14 h-14 bg-paper-deep border border-line overflow-hidden shrink-0">
+                              <div className="w-14 h-14 rounded-lg bg-paper-deep border border-line overflow-hidden shrink-0">
                                 {getOrderImage(item) && <img src={getOrderImage(item)} alt="" className="w-full h-full object-cover" />}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -287,13 +287,13 @@ export default function AccountPage() {
                 {loadingAddresses ? (
                   <p className="py-12 text-center eyebrow">Loading addresses…</p>
                 ) : addresses.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-line">
+                  <div className="py-16 text-center rounded-xl border border-dashed border-line">
                     <p className="eyebrow">No addresses saved.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {addresses.map((a) => (
-                      <div key={a.id} className={`border p-6 ${a.is_default ? 'border-ink' : 'border-line'}`}>
+                      <div key={a.id} className={`rounded-xl border p-6 ${a.is_default ? 'border-ink' : 'border-line'}`}>
                         <div className="flex items-start justify-between mb-3">
                           <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 700 }}>{a.full_name}</p>
                           {a.is_default && <span className="font-mono text-[9px] tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
@@ -319,14 +319,14 @@ export default function AccountPage() {
             {tab === 'details' && (
               <div>
                 <h2 className="h-display text-2xl text-ink mb-6">Account Details</h2>
-                <form onSubmit={handleProfileUpdate} className="border border-line p-7 md:p-8 max-w-2xl">
+                <form onSubmit={handleProfileUpdate} className="rounded-xl border border-line p-7 md:p-8 max-w-2xl">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Field label="Name" value={profile.username} onChange={(v) => setProfile({ ...profile, username: v })} />
                     <Field label="Email" type="email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
                     {user.phone && (
                       <div>
                         <p className="eyebrow mb-2">Phone</p>
-                        <input value={`+91 ${user.phone}`} readOnly className="w-full bg-paper-deep border border-line px-4 py-3 text-sm text-ink-muted" />
+                        <input value={`+91 ${user.phone}`} readOnly className="w-full rounded-lg bg-paper-deep border border-line px-4 py-3 text-sm text-ink-muted" />
                       </div>
                     )}
                   </div>
@@ -343,7 +343,7 @@ export default function AccountPage() {
         {/* Address modal */}
         {showAddrModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/50 backdrop-blur-[2px] px-4" onClick={() => setShowAddrModal(false)}>
-            <div className="bg-paper w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-paper rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-line px-6 py-5">
                 <h3 className="h-display text-xl text-ink">{editingAddr ? 'Edit address' : 'Add address'}</h3>
                 <button onClick={() => setShowAddrModal(false)} aria-label="Close" className="text-ink hover:text-ink-soft">
@@ -364,7 +364,7 @@ export default function AccountPage() {
                     value={addrForm.state}
                     onChange={(e) => setAddrForm({ ...addrForm, state: e.target.value })}
                     required
-                    className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors"
+                    className="w-full bg-paper-deep rounded-lg border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors"
                   >
                     <option value="">Select state</option>
                     {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -398,7 +398,7 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
       <label className="eyebrow block mb-2">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required
-        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink placeholder:text-ink-muted transition-colors"
+        className="w-full bg-paper-deep rounded-lg border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );

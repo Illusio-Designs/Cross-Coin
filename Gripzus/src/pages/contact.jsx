@@ -81,10 +81,10 @@ function Field({ label, value, onChange, type = 'text', textarea = false, classN
       <label className="eyebrow">{label}</label>
       {textarea ? (
         <textarea rows={5} value={value} onChange={(e) => onChange(e.target.value)}
-          className="bg-paper border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink resize-none transition-colors" />
+          className="bg-paper rounded-lg border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink resize-none transition-colors" />
       ) : (
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-          className="bg-paper border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors" />
+          className="bg-paper rounded-lg border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink transition-colors" />
       )}
     </div>
   );

@@ -41,7 +41,7 @@ module.exports = {
         widest: '0.16em',
       },
       borderRadius: {
-        DEFAULT: '8px',
+        DEFAULT: '12px',
         lg: '12px',
       },
       maxWidth: {

@@ -145,7 +145,7 @@ export default function RegisterPage() {
                 <Field label="Full name" value={form.name} onChange={(v) => set('name', v)} placeholder="Anika Sharma" />
                 <div>
                   <label className="eyebrow block mb-2">Phone number</label>
-                  <div className="flex items-center gap-2 bg-paper-deep border border-line focus-within:border-ink px-4 transition-colors">
+                  <div className="flex items-center gap-2 bg-paper-deep rounded-lg border border-line focus-within:border-ink px-4 transition-colors">
                     <span className="text-ink-muted text-sm">+91</span>
                     <input
                       type="tel" value={form.phone}
@@ -175,7 +175,7 @@ export default function RegisterPage() {
                       type="text" maxLength={1} inputMode="numeric" value={d}
                       onChange={(e) => handleOtpChange(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="h-14 w-14 text-center bg-paper-deep border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
+                      className="h-14 w-14 text-center bg-paper-deep rounded-lg border border-line focus:border-ink outline-none font-display font-bold text-2xl text-ink transition-colors"
                     />
                   ))}
                 </div>
@@ -207,7 +207,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', optional })
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         required={!optional}
-        className="w-full bg-paper-deep border border-line focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
+        className="w-full bg-paper-deep rounded-lg border border-line focus:border-ink outline-none px-4 py-3.5 text-base text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );
