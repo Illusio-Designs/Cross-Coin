@@ -15,14 +15,56 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
 const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search']);
 
+// Meta event name → GA4 (gtag) ecommerce event name. Purchase is intentionally
+// absent: the backend already sends GA4 purchase server-side (Measurement
+// Protocol), and GA4 does not cleanly dedupe client + server purchases, so
+// firing it here too would double-count revenue.
+const GA4_EVENT = {
+  ViewContent: 'view_item',
+  AddToCart: 'add_to_cart',
+  InitiateCheckout: 'begin_checkout',
+  Search: 'search',
+};
+
 function readCookie(name) {
   if (typeof document === 'undefined') return undefined;
   const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
   return m ? decodeURIComponent(m[1]) : undefined;
 }
 
+// Map the Meta custom_data shape to GA4's items[] (item_id/quantity/name).
+function ga4Items(params) {
+  const contents = Array.isArray(params.contents) ? params.contents : null;
+  const rows = contents && contents.length
+    ? contents.map((c) => ({ item_id: String(c.id), quantity: c.quantity || 1 }))
+    : (Array.isArray(params.content_ids) ? params.content_ids : []).map((id) => ({ item_id: String(id), quantity: 1 }));
+  // Single-item events carry a name — attach it so GA4 shows a real product.
+  if (rows.length === 1 && params.content_name) rows[0].item_name = params.content_name;
+  return rows;
+}
+
+// Mirror a funnel event to GA4. Safe/no-op if gtag isn't present.
+function ga4Track(event, params) {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  const name = GA4_EVENT[event];
+  if (!name) return;
+  try {
+    window.gtag('event', name, {
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      items: ga4Items(params),
+    });
+  } catch (_) { /* never throw */ }
+}
+
 export function fbTrack(event, params = {}) {
-  if (typeof window === 'undefined' || !window.fbq) return;
+  if (typeof window === 'undefined') return;
+
+  // GA4 (Google) — mirror the funnel so Google sees shopping behaviour, not just
+  // pageviews. Independent of the Meta pixel below (either may be absent).
+  ga4Track(event, params);
+
+  if (!window.fbq) return;
   const eventID = `${event}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   try {
     window.fbq('track', event, params, { eventID });

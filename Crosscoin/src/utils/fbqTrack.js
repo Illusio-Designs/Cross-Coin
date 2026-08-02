@@ -21,6 +21,42 @@ const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'S
 
 const BLOCKED_EVENTS = ['SubscribedButtonClick'];
 
+// Meta event name → GA4 (gtag) event name, so Google sees the funnel (not just
+// pageviews). Purchase is intentionally absent — the backend sends GA4 purchase
+// server-side (Measurement Protocol) and GA4 doesn't cleanly dedupe client +
+// server purchases, so firing it here too would double-count revenue.
+const GA4_EVENT = {
+  ViewContent: 'view_item',
+  AddToCart: 'add_to_cart',
+  InitiateCheckout: 'begin_checkout',
+  Search: 'search',
+  AddToWishlist: 'add_to_wishlist',
+};
+
+// Map the Meta custom_data shape to GA4's items[] (item_id/quantity/name).
+function ga4Items(params) {
+  const contents = Array.isArray(params.contents) ? params.contents : null;
+  const rows = contents && contents.length
+    ? contents.map((c) => ({ item_id: String(c.id), quantity: c.quantity || 1 }))
+    : (Array.isArray(params.content_ids) ? params.content_ids : []).map((id) => ({ item_id: String(id), quantity: 1 }));
+  if (rows.length === 1 && params.content_name) rows[0].item_name = params.content_name;
+  return rows;
+}
+
+// Mirror a funnel event to GA4. Safe/no-op if gtag isn't present.
+function ga4Track(event, params) {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  const name = GA4_EVENT[event];
+  if (!name) return;
+  try {
+    window.gtag('event', name, {
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      items: ga4Items(params),
+    });
+  } catch (_) { /* never throw */ }
+}
+
 function makeEventId(event) {
   const rnd = Math.random().toString(36).slice(2, 10);
   return `${event}_${Date.now()}_${rnd}`;
@@ -59,9 +95,13 @@ function relayToCapi(event, eventID, params) {
 }
 
 export function fbqTrack(event, params = {}, options = {}) {
-  if (typeof window === 'undefined' || !window.fbq) return false;
+  if (typeof window === 'undefined') return false;
   if (BLOCKED_EVENTS.includes(event)) return false;
 
+  // GA4 (Google) mirror — independent of the Meta pixel (either may be absent).
+  ga4Track(event, params);
+
+  if (!window.fbq) return false;
   const eventID = options.eventID || makeEventId(event);
   try {
     // Always pass eventID so the browser event can be deduplicated server-side.
