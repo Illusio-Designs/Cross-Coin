@@ -86,11 +86,22 @@ const staticAllowedOrigins = [
     'http://knitwink.com',
     'http://www.knitwink.com',
 
-    // Velmique domain
+    // Velmique domain (real domain is .com; .co.in kept in case it's still pointed)
+    'https://velmique.com',
+    'https://www.velmique.com',
     'https://velmique.co.in',
     'https://www.velmique.co.in',
-    'http://velmique.co.in',
-    'http://www.velmique.co.in',
+
+    // Production brand domains — static fallback so these always work even if the
+    // DB Brand.domain isn't set/active. (Custom domains, not the *.vercel.app ones.)
+    'https://morbixsocks.com',
+    'https://www.morbixsocks.com',
+    'https://soxbaesocks.com',
+    'https://www.soxbaesocks.com',
+    'https://velquira.in',
+    'https://www.velquira.in',
+    'https://gripzus.com',
+    'https://www.gripzus.com',
 
     // Brand Vercel deployments (also covered by the *.vercel.app suffix check
     // below, listed explicitly so they work regardless of that rule)

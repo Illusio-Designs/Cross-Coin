@@ -49,6 +49,12 @@ function errorMiddleware(err, req, res, next) {
     err = AppError.badRequest('File too large', 'FILE_TOO_LARGE');
   }
 
+  // CORS rejections are a disallowed-origin client issue (403), not a server
+  // fault — map so they log at warn and don't flood Sentry with false 500s.
+  if (err.message === 'Not allowed by CORS') {
+    err = new AppError('Origin not allowed', 403, 'CORS_BLOCKED');
+  }
+
   // ── Build response ──────────────────────────────────────────────────────
 
   const statusCode = err.statusCode || 500;
