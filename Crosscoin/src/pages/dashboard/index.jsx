@@ -76,8 +76,43 @@ function NoAccess() {
   );
 }
 
+// Shown while auth/role is still resolving, so we never flash "Access Denied"
+// before the role API has responded (e.g. on a dashboard reload).
+function LoadingAccess() {
+  return (
+    <section
+      role="status"
+      aria-label="Loading"
+      aria-busy="true"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '60vh',
+        gap: 14,
+        color: '#6b7280'
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 34,
+          height: 34,
+          border: '3px solid #e5e7eb',
+          borderTopColor: '#2563eb',
+          borderRadius: '50%',
+          animation: 'dashSpin 0.7s linear infinite'
+        }}
+      />
+      <p style={{ fontSize: 14, margin: 0 }}>Loading…</p>
+      <style jsx>{`@keyframes dashSpin { to { transform: rotate(360deg); } }`}</style>
+    </section>
+  );
+}
+
 function Dashboard() {
-  const { role, canAccessView } = useAuth();
+  const { role, canAccessView, loading } = useAuth();
   const [currentView, setCurrentView] = useState('main');
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -223,7 +258,9 @@ function Dashboard() {
         </footer>
         <div className="dl-main">
           <main className="dl-content" role="main" aria-label="Dashboard main content">
-            {currentView !== 'main' && !canAccessView(currentView) ? (
+            {loading ? (
+              <LoadingAccess />
+            ) : currentView !== 'main' && !canAccessView(currentView) ? (
               <NoAccess />
             ) : (
               renderContent()

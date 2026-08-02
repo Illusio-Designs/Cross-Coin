@@ -90,6 +90,8 @@ export function BrandManager() {
   const cleanDomain = (dom) => (dom || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const brandUrl = (brand, path) => { const d = cleanDomain(brand.domain); return d ? `https://${d}${path}` : null; };
   const feedUrl = (brand) => brandUrl(brand, '/google-merchant.xml');
+  // Meta accepts the same product feed, served under a Facebook-friendly URL.
+  const fbFeedUrl = (brand) => brandUrl(brand, '/facebook-catalog.xml');
   const sitemapUrlOf = (brand) => brandUrl(brand, '/sitemap.xml');
   const copyText = (t) => { if (!t) return; try { navigator.clipboard?.writeText(t); showSuccess('Copied to clipboard'); } catch { /* ignore */ } };
 
@@ -293,7 +295,7 @@ export function BrandManager() {
                           {url ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12 }}>
                               <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Facebook/Meta feed URL (same product feed)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
+                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
                               <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Sitemap</button>
                             </div>
                           ) : <span style={{ color: '#b3b8c4', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
