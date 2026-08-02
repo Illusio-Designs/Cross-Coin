@@ -236,7 +236,11 @@ const Order = sequelize.define('Order', {
         { name: 'idx_fship_sync_status',  fields: ['fship_sync_status'] },
         { name: 'idx_orders_brand_id',    fields: ['brand_id'] },
         { name: 'idx_orders_fship_waybill', fields: ['fship_waybill'] },
-        { name: 'idx_orders_created_at',  fields: ['created_at'] }
+        { name: 'idx_orders_created_at',  fields: ['created_at'] },
+        // Composites for the hot dashboard/list path: filter by brand_id/status
+        // AND sort/range by created_at (see setupDatabase migration 012).
+        { name: 'idx_orders_brand_created',  fields: ['brand_id', 'created_at'] },
+        { name: 'idx_orders_status_created', fields: ['status', 'created_at'] }
     ]
 });
 

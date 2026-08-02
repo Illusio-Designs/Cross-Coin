@@ -1507,6 +1507,63 @@ const setupDatabase = async () => {
         console.log("⚠️ Migration 011 skipped:", e.message);
       }
 
+      // Migration 012: composite + lookup indexes matching the HOT query paths.
+      // The admin orders list and the dashboard both filter by brand_id / status
+      // AND sort/range by created_at — a single-column index can only serve one
+      // side of that, so add composites led by the filter column. idempotency_key
+      // is looked up on every order creation (retry-dedup) and needs an index.
+      // Column-sequence aware so it never duplicates an index that already covers
+      // the same columns (e.g. the unique idempotency_key index from the model).
+      console.log("Running migration 012: composite performance indexes on orders...");
+      try {
+        const [existing] = await sequelize.query(`
+          SELECT INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS cols
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
+          GROUP BY INDEX_NAME
+        `);
+        const haveCols = new Set(existing.map((r) => r.cols));
+        const wanted = [
+          { name: 'idx_orders_brand_created',   cols: ['brand_id', 'created_at'] },
+          { name: 'idx_orders_status_created',  cols: ['status', 'created_at'] },
+          { name: 'idx_orders_idempotency_key', cols: ['idempotency_key'] },
+        ];
+        for (const { name, cols } of wanted) {
+          const key = cols.join(',');
+          if (haveCols.has(key)) { console.log(`  ✓ index on (${key}) already exists`); continue; }
+          // INPLACE keeps the table readable/writable during the build on InnoDB.
+          await sequelize.query(`ALTER TABLE orders ADD INDEX ${name} (${cols.join(', ')})`);
+          haveCols.add(key);
+          console.log(`  ✓ Added ${name} (${key})`);
+        }
+        console.log("✓ Migration 012 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 012 skipped:", e.message);
+      }
+
+      // Migration 013: ensure products.slug is indexed. The product-detail page
+      // looks products up by slug on every PDP view — a full scan there is the
+      // single hottest read miss. Column-aware so it no-ops if already present.
+      console.log("Running migration 013: ensure products.slug index...");
+      try {
+        const [existing] = await sequelize.query(`
+          SELECT INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS cols
+          FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products'
+          GROUP BY INDEX_NAME
+        `);
+        const haveCols = new Set(existing.map((r) => r.cols));
+        if (!haveCols.has('slug')) {
+          await sequelize.query('ALTER TABLE products ADD INDEX idx_products_slug (slug)');
+          console.log('  ✓ Added idx_products_slug (slug)');
+        } else {
+          console.log('  ✓ products.slug index already exists');
+        }
+        console.log("✓ Migration 013 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 013 skipped:", e.message);
+      }
+
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Magic Checkout migration warning:", migrationError.message);
