@@ -90,11 +90,66 @@ Add HTTP monitors for:
 
 ---
 
+## APPENDIX — concrete setup (copy-paste, real values)
+
+Frontend Sentry is now wired via `@sentry/browser` + a `SentryInit` component in
+all 7 storefronts (no `NEXT_PUBLIC_SENTRY_DSN` env needed — the DSN is baked in,
+env still overrides). Backend Sentry is wired via `instrument.js`. So the only
+work left is **dashboard config**: alert rules + uptime monitors.
+
+### A. Sentry alert rules (do for BOTH projects: Express + Next.js)
+Sentry → select project → **Alerts → Create Alert → Issues**.
+
+**Rule 1 — new problem (the important one)**
+- WHEN: *A new issue is created*
+- IF: `environment` equals `production`
+- THEN: *Send a notification to* → email **illusiodesigns@gmail.com**
+- Name it `new-issue` → Save. (Fires the first time any never-seen error appears.)
+
+**Rule 2 — spike**
+- WHEN: *An issue is seen more than* `20` *times in* `1 hour`
+- IF: `environment` equals `production`
+- THEN: email → Save as `error-spike`.
+
+> The Next.js project is shared by all 7 storefronts; every issue carries a
+> `brand` tag (crosscoin/gripzus/…), so you can tell which store threw it. Add a
+> per-brand rule later only if one brand needs its own routing.
+
+### B. UptimeRobot monitors (free: 50 monitors, 5-min checks)
+Create account → add **HTTP(s)** monitors (for the 3 API ones use type **Keyword**,
+keyword `success`, "alert when keyword NOT exists"):
+
+| Monitor | URL | Type |
+|---|---|---|
+| API liveness | `https://api.crosscoin.in/api/health` | Keyword `success` |
+| API + DB | `https://api.crosscoin.in/api/health/db` | Keyword `success` |
+| API + Redis | `https://api.crosscoin.in/api/health/redis` | Keyword `success` |
+| Crosscoin | `https://crosscoin.in` | HTTP 200 |
+| Gripzus | `https://gripzus.com` | HTTP 200 |
+| Morbix | `https://www.morbixsocks.com` | HTTP 200 |
+| Soxbae | `https://www.soxbaesocks.com` | HTTP 200 |
+| Knitwink | `https://knitwink.com` | HTTP 200 |
+| Velmique | `https://velmique.com` | HTTP 200 |
+| Velquira | `https://www.velquira.in` | HTTP 200 |
+
+- Interval: 5 min. Alert contact: **email** (add a Slack/WhatsApp contact too if you want push).
+- Bonus: the 5-min ping on `/api/health` keeps cPanel Passenger warm, helping the
+  in-process queue worker stay alive.
+
+### C. (Optional) queue-health monitor
+UptimeRobot **Keyword** monitor on
+`https://api.crosscoin.in/api/metrics?token=<YOUR_ADMIN_METRICS_TOKEN>` — but
+keyword monitors can't do numeric thresholds, so this only catches the endpoint
+being down. For real "failed jobs climbing" alerting, use a Better Stack heartbeat
+(charts `integration_queue.counts`) — skip until Sentry + uptime are in place.
+
+---
+
 ## Definition of done
 - [x] `@sentry/node` wired on the backend (code shipped, no-op until DSN set)
-- [ ] `SENTRY_DSN` set in cPanel env → backend errors live
-- [ ] Frontend Sentry re-enabled via dynamic-import adapter, piloted on 1 brand, then all 7
-- [ ] `NEXT_PUBLIC_SENTRY_DSN` set on all 7 Vercel projects (frontend errors live)
-- [ ] Uptime monitors on `/api/health`, `/health/db`, `/health/redis`, + 7 storefronts
-- [ ] Alerts routed to email + team chat
-- [ ] (Optional) metrics/queue-health monitor on `/api/metrics`
+- [x] Frontend Sentry wired via `@sentry/browser` + `SentryInit` in all 7 storefronts
+- [ ] `SENTRY_DSN` set in cPanel env (or rely on baked-in) → verify via `/api/debug-sentry`
+- [ ] Verify a frontend test error lands in the Next.js project (with `brand` tag)
+- [ ] Sentry alert rules A (new-issue + spike) on both projects
+- [ ] UptimeRobot monitors B (3 API + 7 storefronts), alerting to email
+- [ ] (Optional) metrics/queue-health monitor C
