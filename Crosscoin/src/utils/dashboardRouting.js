@@ -31,7 +31,6 @@ export const getPageTitle = (view) => {
     'reels-admin': 'Reels',
     'instagram-admin': 'Instagram Feed',
     'staff-users': 'Staff Users',
-    'monitoring': 'Monitoring Dashboard',
   };
   return titles[view] || 'Dashboard';
 };

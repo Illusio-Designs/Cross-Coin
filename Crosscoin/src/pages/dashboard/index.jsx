@@ -34,7 +34,6 @@ import AdminInstagramFeed from "./social/instagram";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
-import MonitoringDashboard from "./monitoring/index";
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
@@ -191,9 +190,9 @@ function Dashboard() {
       case 'utm-analytics':   return <UTMAnalytics />;
       case 'reports':         return <Reports />;
       case 'staff-users':     return <StaffUsers />;
-      // The main dashboard now also shows the monitoring panel below the
-      // stat cards (the standalone Monitoring page was removed).
-      default:                return <><CardGrid /><MonitoringDashboard /></>;
+      // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the
+      // in-app System Monitoring panel (5s polling) was removed.
+      default:                return <CardGrid />;
     }
   };
 
