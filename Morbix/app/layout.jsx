@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
+import SentryInit from '@/components/SentryInit';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
@@ -46,6 +47,7 @@ export default function RootLayout({ children }) {
       <body>
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
+        <SentryInit />
         <Msg91Loader />
         <AuthProvider>
           <CartProvider>

@@ -20,6 +20,7 @@ import { installLinkHardening } from '../utils/sanitizeHtml';
 import { installApiInterceptors } from '../utils/apiInterceptors';
 import { installErrorReporter } from '../utils/errorReporter';
 import { tryInitSentry } from '../utils/sentryAdapter';
+import SentryInit from '../components/SentryInit';
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
@@ -139,6 +140,7 @@ function AppContent({ Component, pageProps, progressRef }) {
 
   return (
     <>
+      <SentryInit />
       {/* Admin-page dashboard CSS — loaded ONLY on /dashboard routes so the
           ~226KB bundle never touches the storefront's critical path. Rendered
           into <head> server-side (via next/head) so there's no flash of

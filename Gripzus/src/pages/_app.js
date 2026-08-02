@@ -11,6 +11,7 @@ import ToastViewport from '../components/ui/ToastViewport'
 import WhatsAppChat from '../components/ui/WhatsAppChat'
 import BackToTop from '../components/ui/BackToTop'
 import Analytics from '../components/common/Analytics'
+import SentryInit from '../components/SentryInit'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
@@ -36,6 +37,7 @@ function MyApp({ Component, pageProps }) {
             <WhatsAppChat />
             <BackToTop />
             <Analytics />
+            <SentryInit />
           </WishlistProvider>
         </CartProvider>
       </CurrencyProvider>
