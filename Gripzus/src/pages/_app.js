@@ -12,6 +12,7 @@ import WhatsAppChat from '../components/ui/WhatsAppChat'
 import BackToTop from '../components/ui/BackToTop'
 import Analytics from '../components/common/Analytics'
 import SentryInit from '../components/SentryInit'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
@@ -38,6 +39,7 @@ function MyApp({ Component, pageProps }) {
             <BackToTop />
             <Analytics />
             <SentryInit />
+            <SpeedInsights />
           </WishlistProvider>
         </CartProvider>
       </CurrencyProvider>

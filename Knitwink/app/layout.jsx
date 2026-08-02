@@ -16,6 +16,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import ClientProviders from '@/components/layout/ClientProviders';
 import SentryInit from '@/components/SentryInit';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import Analytics from '@/components/layout/Analytics';
 import { SITE_NAME } from '@/lib/constants';
 
@@ -103,6 +104,7 @@ export default function RootLayout({ children }) {
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
+        <SpeedInsights />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
           <AuthProvider>
