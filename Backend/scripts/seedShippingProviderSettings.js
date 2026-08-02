@@ -58,13 +58,6 @@ const SETTINGS = [
     description: 'iThink return address ID (defaults to pickup if empty)',
   },
   {
-    key: 'ITHINK_DEFAULT_LOGISTICS',
-    value: '',                            // Empty = no default. Admin picks per order. e.g. 'delhivery', 'bluedart', 'xpressbees', 'ecom', 'ekart', 'fedex'
-    is_encrypted: false,
-    category: 'shipping',
-    description: 'Default courier for iThink (empty = admin picks manually per order). Allowed: delhivery, bluedart, xpressbees, ecom, ekart, fedex',
-  },
-  {
     key: 'ITHINK_WAREHOUSE_PINCODE',
     value: '395006',                      // Your warehouse pincode for serviceability checks
     is_encrypted: false,

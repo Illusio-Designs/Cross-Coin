@@ -31,7 +31,6 @@ class IThinkService {
       this.secretKey = await settingsHelper.getSetting(this.brandId, 'ITHINK_SECRET_KEY');
       this.pickupAddressId = await settingsHelper.getSetting(this.brandId, 'ITHINK_PICKUP_ADDRESS_ID');
       this.returnAddressId = await settingsHelper.getSetting(this.brandId, 'ITHINK_RETURN_ADDRESS_ID', this.pickupAddressId);
-      this.defaultLogistics = await settingsHelper.getSetting(this.brandId, 'ITHINK_DEFAULT_LOGISTICS', '');
       this.env = env;
       this.baseURL = env === 'production' ? ITHINK_PRODUCTION_URL : ITHINK_STAGING_URL;
       // Tracking lives on a separate prod host; staging uses the same host as everything else.
