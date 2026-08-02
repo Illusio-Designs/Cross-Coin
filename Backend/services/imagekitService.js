@@ -1,4 +1,5 @@
 const ImageKit = require("imagekit");
+const { logger } = require('../config/logging.js');
 
 class ImageKitService {
   constructor() {
@@ -18,7 +19,7 @@ class ImageKitService {
   getOptimizedUrl(imagePath, size = 'medium') {
     if (!imagePath) return null;
 
-    console.log('🔍 ImageKit getOptimizedUrl input:', imagePath);
+    logger.debug('🔍 ImageKit getOptimizedUrl input:', imagePath);
 
     const sizeConfig = {
       thumbnail: { width: 200, height: 200, quality: 75 },
@@ -46,26 +47,26 @@ class ImageKitService {
       const fullUrl = `${urlEndpoint}${imagekitPath}`;
       const separator = fullUrl.includes('?') ? '&' : '?';
       const result = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
-      console.log('✅ ImageKit URL (legacy filename):', result);
+      logger.debug('✅ ImageKit URL (legacy filename):', result);
       return result;
     }
 
     // Fix legacy /uploads/ paths - convert to ImageKit format
     let cleanPath = imagePath;
     if (cleanPath.includes('/uploads/categories/')) {
-      console.log('🔧 Fixing /uploads/categories/ path');
+      logger.debug('🔧 Fixing /uploads/categories/ path');
       cleanPath = cleanPath.replace('/uploads/categories/', '/categories/');
     }
     if (cleanPath.includes('/uploads/sliders/')) {
-      console.log('🔧 Fixing /uploads/sliders/ path');
+      logger.debug('🔧 Fixing /uploads/sliders/ path');
       cleanPath = cleanPath.replace('/uploads/sliders/', '/sliders/');
     }
     if (cleanPath.includes('/uploads/products/')) {
-      console.log('🔧 Fixing /uploads/products/ path');
+      logger.debug('🔧 Fixing /uploads/products/ path');
       cleanPath = cleanPath.replace('/uploads/products/', '/products/');
     }
 
-    console.log('🔧 Clean path:', cleanPath);
+    logger.debug('🔧 Clean path:', cleanPath);
 
     // If path contains a full URL (even with leading slash), extract and use it directly
     if (cleanPath.includes('https://') || cleanPath.includes('http://')) {
@@ -80,7 +81,7 @@ class ImageKitService {
       try {
         const baseWithoutTr = cleanPath.split('?tr=')[0].split('&tr=')[0];
         const result = `${baseWithoutTr}?tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
-        console.log('✅ ImageKit URL (full URL input):', result);
+        logger.debug('✅ ImageKit URL (full URL input):', result);
         return result;
       } catch (e) {
         console.warn('⚠️ Could not parse URL:', cleanPath);
@@ -100,7 +101,7 @@ class ImageKitService {
     const separator = fullUrl.includes('?') ? '&' : '?';
     const optimizedUrl = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
     
-    console.log('✅ ImageKit URL generated:', optimizedUrl);
+    logger.debug('✅ ImageKit URL generated:', optimizedUrl);
     return optimizedUrl;
   }
 
@@ -157,7 +158,7 @@ class ImageKitService {
       const files = await this.imagekit.listFiles({ path: filePath });
       if (files && files.length > 0) {
         await this.imagekit.deleteFile(files[0].fileId);
-        console.log(`🗑️ Deleted ImageKit file: ${filePath}`);
+        logger.debug(`🗑️ Deleted ImageKit file: ${filePath}`);
       } else {
         console.warn(`⚠️ ImageKit file not found for deletion: ${filePath}`);
       }

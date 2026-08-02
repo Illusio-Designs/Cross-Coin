@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper');
 
 // FShip API Configuration
@@ -27,7 +28,7 @@ class FShipService {
             this.apiKey = await settingsHelper.getSetting(this.brandId, 'FSHIP_API_KEY');
             this.baseURL = FSHIP_ENVIRONMENT === 'production' ? FSHIP_PRODUCTION_URL : FSHIP_STAGING_URL;
             
-            console.log('FShip Configuration:', {
+            logger.debug('FShip Configuration:', {
                 brandId: this.brandId,
                 environment: FSHIP_ENVIRONMENT,
                 baseUrl: this.baseURL,
@@ -114,9 +115,9 @@ class FShipService {
     async getCourierList() {
         await this.initialize();
         try {
-            console.log('=== FShip Get Courier List ===');
+            logger.debug('=== FShip Get Courier List ===');
             const response = await this.axiosInstance.get('/api/getallcourier');
-            console.log('Couriers fetched successfully:', response.data.length);
+            logger.debug('Couriers fetched successfully:', response.data.length);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Get Courier List');
@@ -129,8 +130,8 @@ class FShipService {
     async addWarehouse(warehouseData) {
         await this.initialize();
         try {
-            console.log('=== FShip Add Warehouse ===');
-            console.log('Warehouse Data:', this._redactPII(warehouseData));
+            logger.debug('=== FShip Add Warehouse ===');
+            logger.debug('Warehouse Data:', this._redactPII(warehouseData));
 
             const payload = {
                 warehouseId: 0,
@@ -147,7 +148,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/addwarehouse', payload);
-            console.log('Warehouse added successfully:', response.data);
+            logger.debug('Warehouse added successfully:', response.data);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Add Warehouse');
@@ -160,9 +161,9 @@ class FShipService {
     async updateWarehouse(warehouseData) {
         await this.initialize();
         try {
-            console.log('=== FShip Update Warehouse ===');
+            logger.debug('=== FShip Update Warehouse ===');
             const response = await this.axiosInstance.post('/api/updatewarehouse', warehouseData);
-            console.log('Warehouse updated successfully:', response.data);
+            logger.debug('Warehouse updated successfully:', response.data);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Update Warehouse');
@@ -175,8 +176,8 @@ class FShipService {
     async createForwardOrder(orderData) {
         await this.initialize();
         try {
-            console.log('=== FShip Create Forward Order ===');
-            console.log('Order Data:', this._redactPII(orderData));
+            logger.debug('=== FShip Create Forward Order ===');
+            logger.debug('Order Data:', this._redactPII(orderData));
 
             // Validate required fields
             this.validateOrderData(orderData);
@@ -185,7 +186,7 @@ class FShipService {
             const fshipOrderData = this.formatOrderDataForFShip(orderData);
 
             const response = await this.axiosInstance.post('/api/createforwardorder', fshipOrderData);
-            console.log('FShip Create Order Response:', JSON.stringify(response.data, null, 2));
+            logger.debug('FShip Create Order Response:', JSON.stringify(response.data, null, 2));
             
             // Validate that FShip actually returned meaningful data
             const orderId = response.data.apiorderid || response.data.order_id || response.data.orderId || 0;
@@ -228,25 +229,25 @@ class FShipService {
     async createOrUpdateForwardOrder(orderData) {
         await this.initialize();
         try {
-            console.log('=== FShip Create or Update Forward Order ===');
-            console.log('Order ID:', orderData.orderId);
+            logger.debug('=== FShip Create or Update Forward Order ===');
+            logger.debug('Order ID:', orderData.orderId);
 
             // First check if order exists
             const existingOrder = await this.findOrderByIdFromAll(orderData.orderId);
             
             if (existingOrder.exists) {
-                console.log(`📋 Order ${orderData.orderId} already exists in FShip`);
-                console.log('Existing order details:', existingOrder.data);
+                logger.debug(`📋 Order ${orderData.orderId} already exists in FShip`);
+                logger.debug('Existing order details:', existingOrder.data);
                 
                 // Check if order is in a state that can be updated
                 const currentStatus = (existingOrder.data.order_status || existingOrder.data.status || '').toLowerCase();
                 const updatableStatuses = ['booked', 'pickup initiated', 'pickup pending', 'processing'];
                 
                 if (updatableStatuses.includes(currentStatus)) {
-                    console.log(`🔄 Order status '${currentStatus}' allows updates. Attempting to update...`);
+                    logger.debug(`🔄 Order status '${currentStatus}' allows updates. Attempting to update...`);
                     return await this.updateExistingOrder(orderData, existingOrder.data);
                 } else {
-                    console.log(`⚠️ Order status '${currentStatus}' cannot be updated. Returning existing order info.`);
+                    logger.debug(`⚠️ Order status '${currentStatus}' cannot be updated. Returning existing order info.`);
                     return {
                         success: true,
                         action: 'existing',
@@ -262,7 +263,7 @@ class FShipService {
                     };
                 }
             } else {
-                console.log(`✨ Order ${orderData.orderId} not found. Creating new order...`);
+                logger.debug(`✨ Order ${orderData.orderId} not found. Creating new order...`);
                 const result = await this.createForwardOrder(orderData);
                 return {
                     ...result,
@@ -281,24 +282,24 @@ class FShipService {
     async updateExistingOrder(orderData, existingOrderData) {
         await this.initialize();
         try {
-            console.log('=== FShip Update Existing Order ===');
+            logger.debug('=== FShip Update Existing Order ===');
             
             // Try to cancel the existing order first if it has a waybill
             const existingWaybill = existingOrderData.waybill || existingOrderData.awb_number;
             
             if (existingWaybill && existingWaybill !== 'N/A') {
                 try {
-                    console.log(`🗑️ Attempting to cancel existing order with waybill: ${existingWaybill}`);
+                    logger.debug(`🗑️ Attempting to cancel existing order with waybill: ${existingWaybill}`);
                     await this.cancelOrder(existingWaybill, 'Order updated - cancelling old version');
-                    console.log('✅ Existing order cancelled successfully');
+                    logger.debug('✅ Existing order cancelled successfully');
                 } catch (cancelError) {
-                    console.log(`⚠️ Could not cancel existing order: ${cancelError.message}`);
+                    logger.debug(`⚠️ Could not cancel existing order: ${cancelError.message}`);
                     // Continue with creating new order even if cancel fails
                 }
             }
             
             // Create new order with updated data
-            console.log('🆕 Creating new order with updated data...');
+            logger.debug('🆕 Creating new order with updated data...');
             const result = await this.createForwardOrder(orderData);
             
             return {
@@ -319,8 +320,8 @@ class FShipService {
     async bulkCreateOrUpdateOrders(ordersArray) {
         await this.initialize();
         try {
-            console.log('=== FShip Bulk Create/Update Orders ===');
-            console.log(`Processing ${ordersArray.length} orders...`);
+            logger.debug('=== FShip Bulk Create/Update Orders ===');
+            logger.debug(`Processing ${ordersArray.length} orders...`);
 
             const results = {
                 total: ordersArray.length,
@@ -336,16 +337,16 @@ class FShipService {
             const batchSize = 5;
             for (let i = 0; i < ordersArray.length; i += batchSize) {
                 const batch = ordersArray.slice(i, i + batchSize);
-                console.log(`\n📦 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(ordersArray.length/batchSize)}`);
+                logger.debug(`\n📦 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(ordersArray.length/batchSize)}`);
                 
                 const batchPromises = batch.map(async (orderData, index) => {
                     const globalIndex = i + index + 1;
                     try {
-                        console.log(`\n🔄 [${globalIndex}/${ordersArray.length}] Processing order: ${orderData.orderId}`);
+                        logger.debug(`\n🔄 [${globalIndex}/${ordersArray.length}] Processing order: ${orderData.orderId}`);
                         
                         const result = await this.createOrUpdateForwardOrder(orderData);
                         
-                        console.log(`✅ [${globalIndex}/${ordersArray.length}] ${result.action.toUpperCase()}: ${orderData.orderId}`);
+                        logger.debug(`✅ [${globalIndex}/${ordersArray.length}] ${result.action.toUpperCase()}: ${orderData.orderId}`);
                         
                         results[result.action]++;
                         results.details.push({
@@ -385,20 +386,20 @@ class FShipService {
                 
                 // Add delay between batches to avoid rate limiting
                 if (i + batchSize < ordersArray.length) {
-                    console.log('⏳ Waiting 2 seconds before next batch...');
+                    logger.debug('⏳ Waiting 2 seconds before next batch...');
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
 
             // Generate summary
-            console.log('\n📊 BULK OPERATION SUMMARY:');
-            console.log('='.repeat(40));
-            console.log(`📦 Total Orders: ${results.total}`);
-            console.log(`✨ Created: ${results.created}`);
-            console.log(`🔄 Updated: ${results.updated}`);
-            console.log(`📋 Existing: ${results.existing}`);
-            console.log(`❌ Failed: ${results.failed}`);
-            console.log(`✅ Success Rate: ${((results.total - results.failed) / results.total * 100).toFixed(1)}%`);
+            logger.debug('\n📊 BULK OPERATION SUMMARY:');
+            logger.debug('='.repeat(40));
+            logger.debug(`📦 Total Orders: ${results.total}`);
+            logger.debug(`✨ Created: ${results.created}`);
+            logger.debug(`🔄 Updated: ${results.updated}`);
+            logger.debug(`📋 Existing: ${results.existing}`);
+            logger.debug(`❌ Failed: ${results.failed}`);
+            logger.debug(`✅ Success Rate: ${((results.total - results.failed) / results.total * 100).toFixed(1)}%`);
 
             return results;
         } catch (error) {
@@ -575,8 +576,8 @@ class FShipService {
     async cancelOrder(waybill, reason = 'Order cancelled by customer') {
         await this.initialize();
         try {
-            console.log('=== FShip Cancel Order ===');
-            console.log('Waybill:', waybill, 'Reason:', reason);
+            logger.debug('=== FShip Cancel Order ===');
+            logger.debug('Waybill:', waybill, 'Reason:', reason);
 
             const payload = {
                 waybill: waybill,
@@ -584,7 +585,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/cancelorder', payload);
-            console.log('Order cancelled successfully:', response.data);
+            logger.debug('Order cancelled successfully:', response.data);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Cancel Order');
@@ -597,8 +598,8 @@ class FShipService {
     async shipOrder(apiOrderId, courierId = null) {
         await this.initialize();
         try {
-            console.log('=== FShip Ship Order ===');
-            console.log('API Order ID:', apiOrderId, 'Courier ID:', courierId);
+            logger.debug('=== FShip Ship Order ===');
+            logger.debug('API Order ID:', apiOrderId, 'Courier ID:', courierId);
 
             const payload = {
                 apiorderid: apiOrderId,
@@ -606,7 +607,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/shiporder', payload);
-            console.log('Order shipped successfully:', response.data);
+            logger.debug('Order shipped successfully:', response.data);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Ship Order');
@@ -619,15 +620,15 @@ class FShipService {
     async registerPickup(waybills) {
         await this.initialize();
         try {
-            console.log('=== FShip Register Pickup ===');
-            console.log('Waybills:', waybills);
+            logger.debug('=== FShip Register Pickup ===');
+            logger.debug('Waybills:', waybills);
 
             const payload = {
                 waybills: Array.isArray(waybills) ? waybills : [waybills]
             };
 
             const response = await this.axiosInstance.post('/api/registerpickup', payload);
-            console.log('Pickup registered successfully:', response.data);
+            logger.debug('Pickup registered successfully:', response.data);
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Register Pickup');
@@ -640,8 +641,8 @@ class FShipService {
     async getShippingLabel(waybills) {
         await this.initialize();
         try {
-            console.log('=== FShip Get Shipping Label ===');
-            console.log('Waybills:', waybills);
+            logger.debug('=== FShip Get Shipping Label ===');
+            logger.debug('Waybills:', waybills);
 
             const waybillString = Array.isArray(waybills) ? waybills.join(',') : waybills;
             const payload = {
@@ -649,7 +650,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/shippinglabel', payload);
-            console.log('Shipping label fetched successfully');
+            logger.debug('Shipping label fetched successfully');
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Get Shipping Label');
@@ -662,15 +663,15 @@ class FShipService {
     async getTrackingHistory(waybill) {
         await this.initialize();
         try {
-            console.log('=== FShip Get Tracking History ===');
-            console.log('Waybill:', waybill);
+            logger.debug('=== FShip Get Tracking History ===');
+            logger.debug('Waybill:', waybill);
 
             const payload = {
                 waybill: waybill
             };
 
             const response = await this.axiosInstance.post('/api/trackinghistory', payload);
-            console.log('Tracking history fetched successfully');
+            logger.debug('Tracking history fetched successfully');
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Get Tracking History');
@@ -683,15 +684,15 @@ class FShipService {
     async getShipmentStatus(waybill) {
         await this.initialize();
         try {
-            console.log('=== FShip Get Shipment Status ===');
-            console.log('Waybill:', waybill);
+            logger.debug('=== FShip Get Shipment Status ===');
+            logger.debug('Waybill:', waybill);
 
             const payload = {
                 waybill: waybill
             };
 
             const response = await this.axiosInstance.post('/api/shipmentsummary', payload);
-            console.log('Shipment status fetched successfully');
+            logger.debug('Shipment status fetched successfully');
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Get Shipment Status');
@@ -704,8 +705,8 @@ class FShipService {
     async calculateRates(rateData) {
         await this.initialize();
         try {
-            console.log('=== FShip Calculate Rates ===');
-            console.log('Rate Data:', JSON.stringify(rateData, null, 2));
+            logger.debug('=== FShip Calculate Rates ===');
+            logger.debug('Rate Data:', JSON.stringify(rateData, null, 2));
 
             const volumetricWeight = (
                 rateData.shipment_Length * 
@@ -727,7 +728,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/ratecalculator', payload);
-            console.log('Rates calculated successfully');
+            logger.debug('Rates calculated successfully');
             return response.data;
         } catch (error) {
             this.handleApiError(error, 'Calculate Rates');
@@ -740,8 +741,8 @@ class FShipService {
     async checkServiceability(sourcePincode, destinationPincode) {
         await this.initialize();
         try {
-            console.log('=== FShip Check Serviceability ===');
-            console.log('Source:', sourcePincode, 'Destination:', destinationPincode);
+            logger.debug('=== FShip Check Serviceability ===');
+            logger.debug('Source:', sourcePincode, 'Destination:', destinationPincode);
 
             const payload = {
                 source_Pincode: sourcePincode,
@@ -749,7 +750,7 @@ class FShipService {
             };
 
             const response = await this.axiosInstance.post('/api/pincodeserviceability', payload);
-            console.log('Serviceability response:', JSON.stringify(response.data, null, 2));
+            logger.debug('Serviceability response:', JSON.stringify(response.data, null, 2));
             // Normalize: FShip may return { data: [...] }, { response: [...] }, or a bare array
             const raw = response.data;
             if (Array.isArray(raw)) return raw;
@@ -789,7 +790,7 @@ class FShipService {
         ];
 
         if (validStatuses.includes(status)) {
-            console.log(`📊 Using FShip status directly: "${fshipStatus}"`);
+            logger.debug(`📊 Using FShip status directly: "${fshipStatus}"`);
             return status;
         }
         
@@ -803,11 +804,11 @@ class FShipService {
 
         const mappedStatus = legacyMapping[status];
         if (mappedStatus) {
-            console.log(`📊 Legacy status mapping: "${fshipStatus}" → "${mappedStatus}"`);
+            logger.debug(`📊 Legacy status mapping: "${fshipStatus}" → "${mappedStatus}"`);
             return mappedStatus;
         }
         
-        console.log(`⚠️ Unknown FShip status: "${fshipStatus}", defaulting to "processing"`);
+        logger.debug(`⚠️ Unknown FShip status: "${fshipStatus}", defaulting to "processing"`);
         return 'processing';
     }
 
@@ -833,9 +834,9 @@ class FShipService {
     async testConnection() {
         await this.initialize();
         try {
-            console.log('=== FShip Test Connection ===');
+            logger.debug('=== FShip Test Connection ===');
             const couriers = await this.getCourierList();
-            console.log('Connection test successful. Available couriers:', couriers.length);
+            logger.debug('Connection test successful. Available couriers:', couriers.length);
             return {
                 success: true,
                 message: 'FShip API connection successful',
@@ -856,8 +857,8 @@ class FShipService {
     async checkOrderExists(orderId) {
         await this.initialize();
         try {
-            console.log('=== FShip Check Order Exists ===');
-            console.log('Order ID:', orderId);
+            logger.debug('=== FShip Check Order Exists ===');
+            logger.debug('Order ID:', orderId);
 
             // Try to get order details - if it exists, we'll get data back
             const payload = {
@@ -867,7 +868,7 @@ class FShipService {
             const response = await this.axiosInstance.post('/api/getorderdetails', payload);
             
             if (response.data && response.data.data) {
-                console.log('Order exists in FShip:', response.data.data);
+                logger.debug('Order exists in FShip:', response.data.data);
                 return {
                     exists: true,
                     data: response.data.data
@@ -880,7 +881,7 @@ class FShipService {
             if (error.response?.status === 404 || 
                 error.response?.data?.message?.toLowerCase().includes('not found') ||
                 error.response?.data?.response?.toLowerCase().includes('not found')) {
-                console.log('Order does not exist in FShip');
+                logger.debug('Order does not exist in FShip');
                 return { exists: false };
             }
             
@@ -895,8 +896,8 @@ class FShipService {
     async findOrderByIdFromAll(orderId) {
         await this.initialize();
         try {
-            console.log('=== FShip Find Order by ID from All Orders ===');
-            console.log('Looking for Order ID:', orderId);
+            logger.debug('=== FShip Find Order by ID from All Orders ===');
+            logger.debug('Looking for Order ID:', orderId);
             
             // Try direct order search using checkOrderExists method
             const existsResult = await this.checkOrderExists(orderId);
@@ -908,7 +909,7 @@ class FShipService {
                 };
             }
             
-            console.log(`Order ${orderId} not found in FShip`);
+            logger.debug(`Order ${orderId} not found in FShip`);
             return { exists: false };
             
         } catch (error) {

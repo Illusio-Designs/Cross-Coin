@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper');
 
 const ITHINK_STAGING_URL = 'https://pre-alpha.ithinklogistics.com';
@@ -36,7 +37,7 @@ class IThinkService {
       // Tracking lives on a separate prod host; staging uses the same host as everything else.
       this.trackingBaseURL = env === 'production' ? ITHINK_TRACKING_PRODUCTION_URL : ITHINK_STAGING_URL;
 
-      console.log('iThink Configuration:', {
+      logger.debug('iThink Configuration:', {
         brandId: this.brandId,
         environment: env,
         baseUrl: this.baseURL,
@@ -114,7 +115,7 @@ class IThinkService {
   async getAvailableCouriers(params) {
     await this.initialize();
     try {
-      console.log('=== iThink Get Available Couriers ===');
+      logger.debug('=== iThink Get Available Couriers ===');
       const payload = {
         data: {
           ...this._authData(),
@@ -151,7 +152,7 @@ class IThinkService {
         if (firstArrayKey) couriers = raw[firstArrayKey];
       }
 
-      console.log(`Found ${couriers.length} courier options`);
+      logger.debug(`Found ${couriers.length} courier options`);
       return couriers;
     } catch (error) {
       this.handleApiError(error, 'Get Available Couriers');
@@ -169,12 +170,12 @@ class IThinkService {
   async createForwardOrder(orderData) {
     await this.initialize();
     try {
-      console.log('=== iThink Create Forward Order ===');
+      logger.debug('=== iThink Create Forward Order ===');
       this.validateOrderData(orderData);
 
       const payload = this.formatOrderDataForIThink(orderData);
       // PII-safe payload preview for diagnosing iThink rejections.
-      console.log('iThink order payload (preview):', JSON.stringify({
+      logger.debug('iThink order payload (preview):', JSON.stringify({
         logistics: payload.data?.logistics,
         s_type: payload.data?.s_type,
         shipment_count: payload.data?.shipments?.length,
@@ -186,8 +187,8 @@ class IThinkService {
         weight: payload.data?.shipments?.[0]?.weight,
         product_count: payload.data?.shipments?.[0]?.products?.length,
       }));
-      console.log('iThink API Request URL:', `${this.baseURL}/api_v3/order/add.json`);
-      console.log('iThink API Request Headers:', { 'Content-Type': 'application/json' });
+      logger.debug('iThink API Request URL:', `${this.baseURL}/api_v3/order/add.json`);
+      logger.debug('iThink API Request Headers:', { 'Content-Type': 'application/json' });
       const response = await this.axiosInstance.post('/api_v3/order/add.json', payload);
 
       let responseData = response.data;
@@ -242,7 +243,7 @@ class IThinkService {
         throw new Error(`iThink API returned status ${response.status}`);
       }
 
-      console.log('iThink order response:', JSON.stringify(responseData, null, 2));
+      logger.debug('iThink order response:', JSON.stringify(responseData, null, 2));
 
       // Handle case where iThink returns null — this is NOT success
       if (responseData === null) {
@@ -336,7 +337,7 @@ class IThinkService {
   async createOrUpdateForwardOrder(orderData) {
     await this.initialize();
     try {
-      console.log('=== iThink Create/Update Forward Order ===');
+      logger.debug('=== iThink Create/Update Forward Order ===');
       return await this.createForwardOrder(orderData);
     } catch (error) {
       console.error('iThink createOrUpdateForwardOrder error:', error.message);
@@ -398,9 +399,9 @@ class IThinkService {
     const pickupId = String(orderData.pick_Address_ID || this.pickupAddressId || '').trim();
     const returnId = String(orderData.return_Address_ID || this.returnAddressId || this.pickupAddressId || '').trim();
 
-    console.log(`📍 iThink Order Format - Order: ${orderData.orderId}, Logistics: ${selectedLogistics}`);
-    console.log(`   Warehouse Resolution: orderData.pick_Address_ID=${orderData.pick_Address_ID}, this.pickupAddressId=${this.pickupAddressId}, final=${pickupId}`);
-    console.log(`   Final Warehouse IDs: Pickup: ${pickupId || '(EMPTY - will default to 117173)'}, Return: ${returnId || '(EMPTY - will default to 117173)'}`);
+    logger.debug(`📍 iThink Order Format - Order: ${orderData.orderId}, Logistics: ${selectedLogistics}`);
+    logger.debug(`   Warehouse Resolution: orderData.pick_Address_ID=${orderData.pick_Address_ID}, this.pickupAddressId=${this.pickupAddressId}, final=${pickupId}`);
+    logger.debug(`   Final Warehouse IDs: Pickup: ${pickupId || '(EMPTY - will default to 117173)'}, Return: ${returnId || '(EMPTY - will default to 117173)'}`);
 
     return {
       data: {
@@ -478,7 +479,7 @@ class IThinkService {
   async getTrackingHistory(waybill) {
     await this.initialize();
     try {
-      console.log('=== iThink Track Order ===');
+      logger.debug('=== iThink Track Order ===');
       const awbList = Array.isArray(waybill) ? waybill.join(',') : waybill;
 
       const payload = {
@@ -492,7 +493,7 @@ class IThinkService {
       // in production — pass the full URL so axios ignores this.baseURL.
       const trackingUrl = `${this.trackingBaseURL}/api_v3/order/track.json`;
       const response = await this.axiosInstance.post(trackingUrl, payload);
-      console.log(`Tracking fetched successfully from ${this.trackingBaseURL}`);
+      logger.debug(`Tracking fetched successfully from ${this.trackingBaseURL}`);
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Track Order');
@@ -524,7 +525,7 @@ class IThinkService {
   async cancelOrder(waybill, _reason = 'Order cancelled') {
     await this.initialize();
     try {
-      console.log('=== iThink Cancel Order ===');
+      logger.debug('=== iThink Cancel Order ===');
       const awbStr = Array.isArray(waybill) ? waybill.join(',') : waybill;
 
       const payload = {
@@ -535,7 +536,7 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api/order/cancel.json', payload);
-      console.log('Cancel response:', JSON.stringify(response.data, null, 2));
+      logger.debug('Cancel response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Cancel Order');
@@ -547,7 +548,7 @@ class IThinkService {
   async calculateRates(rateData) {
     await this.initialize();
     try {
-      console.log('=== iThink Calculate Rates ===');
+      logger.debug('=== iThink Calculate Rates ===');
       const payload = {
         data: {
           ...this._authData(),
@@ -564,7 +565,7 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api_v3/rate/check.json', payload);
-      console.log('Rates calculated successfully');
+      logger.debug('Rates calculated successfully');
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Calculate Rates');
@@ -576,7 +577,7 @@ class IThinkService {
   async checkServiceability(sourcePincode, destinationPincode) {
     await this.initialize();
     try {
-      console.log('=== iThink Pincode Check ===');
+      logger.debug('=== iThink Pincode Check ===');
       const payload = {
         data: {
           ...this._authData(),
@@ -590,7 +591,7 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api_v3/pincode/check.json', payload);
-      console.log('Serviceability response:', JSON.stringify(response.data, null, 2));
+      logger.debug('Serviceability response:', JSON.stringify(response.data, null, 2));
 
       // Normalise — return an array (empty = not serviceable)
       const raw = response.data;
@@ -609,7 +610,7 @@ class IThinkService {
   async getShippingLabel(waybills) {
     await this.initialize();
     try {
-      console.log('=== iThink Print Label ===');
+      logger.debug('=== iThink Print Label ===');
       const awbStr = Array.isArray(waybills) ? waybills.join(',') : waybills;
 
       const payload = {
@@ -623,7 +624,7 @@ class IThinkService {
       // (https://docs.ithinklogistics.com/doc-print-shipment/3). The earlier
       // /api_v3/order/label.json path is invalid and returns no file_name.
       const response = await this.axiosInstance.post('/api_v3/shipping/label.json', payload);
-      console.log('Label fetched successfully');
+      logger.debug('Label fetched successfully');
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Print Label');
@@ -638,7 +639,7 @@ class IThinkService {
   async getLabel({ waybills }) {
     await this.initialize();
     try {
-      console.log('=== iThink Generate Label ===');
+      logger.debug('=== iThink Generate Label ===');
       if (!waybills || waybills.length === 0) {
         throw new Error('At least one waybill is required');
       }
@@ -654,7 +655,7 @@ class IThinkService {
       // Correct iThink V3 path is /api_v3/shipping/label.json. Response shape
       // per the docs: { status, status_code, file_name: "<pdf url>" }.
       const response = await this.axiosInstance.post('/api_v3/shipping/label.json', payload);
-      console.log('Label generated successfully for iThink');
+      logger.debug('Label generated successfully for iThink');
 
       // Extract PDF URL from response — try every shape we've seen iThink return.
       const root = response.data || {};
@@ -724,7 +725,7 @@ class IThinkService {
     let lastErr = null;
     for (const path of paths) {
       try {
-        console.log(`=== iThink Get Warehouse (${path}) ===`);
+        logger.debug(`=== iThink Get Warehouse (${path}) ===`);
         const response = await this.axiosInstance.post(path, payload);
         return response.data;
       } catch (e) {
@@ -738,7 +739,7 @@ class IThinkService {
   async addWarehouse(warehouseData) {
     await this.initialize();
     try {
-      console.log('=== iThink Add Warehouse ===');
+      logger.debug('=== iThink Add Warehouse ===');
       const payload = {
         data: {
           ...this._authData(),
@@ -755,7 +756,7 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api_v3/warehouse/add.json', payload);
-      console.log('Warehouse added:', response.data);
+      logger.debug('Warehouse added:', response.data);
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Add Warehouse');
@@ -767,7 +768,7 @@ class IThinkService {
   async ndrAction(awbNumber, action = 'reattempt') {
     await this.initialize();
     try {
-      console.log('=== iThink NDR Action ===');
+      logger.debug('=== iThink NDR Action ===');
       const payload = {
         data: {
           ...this._authData(),
@@ -777,7 +778,7 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api_v3/ndr/action.json', payload);
-      console.log('NDR action response:', response.data);
+      logger.debug('NDR action response:', response.data);
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'NDR Action');
@@ -813,11 +814,11 @@ class IThinkService {
 
     const mapped = mapping[s];
     if (mapped) {
-      console.log(`📊 iThink status mapping: "${iThinkStatus}" → "${mapped}"`);
+      logger.debug(`📊 iThink status mapping: "${iThinkStatus}" → "${mapped}"`);
       return mapped;
     }
 
-    console.log(`⚠️ Unknown iThink status: "${iThinkStatus}", defaulting to "processing"`);
+    logger.debug(`⚠️ Unknown iThink status: "${iThinkStatus}", defaulting to "processing"`);
     return 'processing';
   }
 
@@ -843,7 +844,7 @@ class IThinkService {
   async testConnection() {
     await this.initialize();
     try {
-      console.log('=== iThink Test Connection ===');
+      logger.debug('=== iThink Test Connection ===');
       // Use rate check as a lightweight connectivity test
       const payload = {
         data: {
@@ -879,7 +880,7 @@ class IThinkService {
   async registerPickup(_waybills) {
     // iThink handles pickup scheduling automatically on order creation.
     // This is a no-op stub to keep interface parity with FShipService.
-    console.log('iThink: Pickup is auto-scheduled on order creation — no separate call needed.');
+    logger.debug('iThink: Pickup is auto-scheduled on order creation — no separate call needed.');
     return { success: true, message: 'Pickup auto-scheduled by iThink' };
   }
 }
