@@ -1,5 +1,3 @@
-// @generated — DO NOT EDIT. Source: shared/frontend/pixel.js
-// Edit that file then run: node scripts/sync-frontend-shared.mjs
 // Guarded Meta Pixel event helper + Conversions API relay.
 //
 // Fires the browser pixel with a shared eventID and mirrors the funnel events to
@@ -12,7 +10,7 @@
 // server-side at order time.
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'knitwink';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '__BRAND__';
 const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search']);
 
 function readCookie(name) {

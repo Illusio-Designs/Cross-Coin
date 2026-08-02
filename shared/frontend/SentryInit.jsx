@@ -1,5 +1,3 @@
-// @generated — DO NOT EDIT. Source: shared/frontend/SentryInit.jsx
-// Edit that file then run: node scripts/sync-frontend-shared.mjs
 'use client';
 
 import { useEffect } from 'react';
@@ -20,7 +18,7 @@ import { useEffect } from 'react';
 const DSN =
   process.env.NEXT_PUBLIC_SENTRY_DSN ||
   'https://01cffa04db09960ab1d2d58f5ad3c08b@o4511839897387008.ingest.us.sentry.io/4511839922618368';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '__BRAND__';
 
 export default function SentryInit() {
   useEffect(() => {

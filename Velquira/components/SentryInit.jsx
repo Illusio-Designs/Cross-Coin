@@ -1,3 +1,5 @@
+// @generated — DO NOT EDIT. Source: shared/frontend/SentryInit.jsx
+// Edit that file then run: node scripts/sync-frontend-shared.mjs
 'use client';
 
 import { useEffect } from 'react';

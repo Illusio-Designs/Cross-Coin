@@ -1,4 +1,6 @@
-// Soxbae — guarded Meta Pixel event helper + Conversions API relay.
+// @generated — DO NOT EDIT. Source: shared/frontend/pixel.js
+// Edit that file then run: node scripts/sync-frontend-shared.mjs
+// Guarded Meta Pixel event helper + Conversions API relay.
 //
 // Fires the browser pixel with a shared eventID and mirrors the funnel events to
 // the shared backend CAPI endpoint (/api/facebook-pixel/track) so Meta
