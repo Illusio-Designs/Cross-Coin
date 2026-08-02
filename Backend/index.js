@@ -376,6 +376,12 @@ app.use('/api', routesManager);  // backward compat
 // Swagger API docs at /api/docs
 require('./docs/swagger.js')(app);
 
+// TEMPORARY — Sentry verification route. Hit /api/debug-sentry once after
+// setting up Sentry to confirm errors are captured, then remove this block.
+app.get('/api/debug-sentry', () => {
+    throw new Error('Sentry backend verification error — this is expected.');
+});
+
 // 404 handler for API routes only
 app.use(/^\/api\/v1\//, (req, res) => {
     res.status(404).json({
