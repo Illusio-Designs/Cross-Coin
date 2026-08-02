@@ -96,27 +96,6 @@ const categoryUpload = multer({
     }
 });
 
-// Reels upload (video + thumbnail image) — 50 MB for video, 5 MB for image (Requirement 4.3)
-const reelUpload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-        const allowedVideo = ['video/mp4', 'video/webm'];
-        const allowedImage = ['image/jpeg', 'image/png', 'image/webp'];
-        if (file.fieldname === 'video') {
-            if (allowedVideo.includes(file.mimetype)) return cb(null, true);
-            return cb(new Error('Invalid video type. Only MP4 and WebM are allowed.'), false);
-        }
-        if (file.fieldname === 'thumbnail') {
-            if (allowedImage.includes(file.mimetype)) return cb(null, true);
-            return cb(new Error('Invalid thumbnail type. Only JPG, PNG, and WebP are allowed.'), false);
-        }
-        return cb(new Error('Invalid reel upload field.'), false);
-    },
-    limits: {
-        fileSize: 50 * 1024 * 1024, // 50 MB max for video (Requirement 4.3)
-        files: 2
-    }
-});
 
 // Magic byte signatures for supported image types
 const MAGIC_BYTES = {
@@ -159,4 +138,4 @@ const validateMagicBytes = (req, res, next) => {
   }
 };
 
-module.exports = { upload, productUpload, categoryUpload, reelUpload, validateMagicBytes, ALLOWED_MIME_TYPES };
+module.exports = { upload, productUpload, categoryUpload, validateMagicBytes, ALLOWED_MIME_TYPES };

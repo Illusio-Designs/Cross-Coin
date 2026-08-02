@@ -54,8 +54,6 @@ const ALL_MENU = [
     label: 'Social Commerce', icon: IC.social, roles: ['admin','product_manager'],
     submenu: [
       { label: 'Lookbooks',      view: 'lookbooks' },
-      { label: 'Reels',          view: 'reels-admin' },
-      { label: 'Instagram Feed', view: 'instagram-admin' },
     ],
   },
   {

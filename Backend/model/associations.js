@@ -41,9 +41,6 @@ const { LoyaltyTransaction } = require("./loyaltyTransactionModel.js");
 const { Lookbook } = require("./lookbookModel.js");
 const { LookbookImage } = require("./lookbookImageModel.js");
 const { LookbookHotspot } = require("./lookbookHotspotModel.js");
-const { Reel } = require("./reelModel.js");
-const { ReelProduct } = require("./reelProductModel.js");
-const { InstagramPostProduct } = require("./instagramPostProductModel.js");
 const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
 const { OrderShipment } = require("./orderShipmentModel.js");
 const { Faq } = require("./faqModel.js");
@@ -93,9 +90,6 @@ module.exports = {
   Lookbook,
   LookbookImage,
   LookbookHotspot,
-  Reel,
-  ReelProduct,
-  InstagramPostProduct,
   WhatsappConversation,
   WhatsappMessage,
   OrderShipment,
@@ -598,72 +592,3 @@ LookbookHotspot.belongsTo(Product, {
   onDelete: "CASCADE",
 });
 
-// Reel Associations
-Brand.hasMany(Reel, {
-  foreignKey: "brand_id",
-  as: "Reels",
-  onDelete: "CASCADE",
-});
-Reel.belongsTo(Brand, {
-  foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
-});
-
-Reel.belongsToMany(Product, {
-  through: ReelProduct,
-  foreignKey: "reel_id",
-  otherKey: "product_id",
-  as: "Products",
-});
-Product.belongsToMany(Reel, {
-  through: ReelProduct,
-  foreignKey: "product_id",
-  otherKey: "reel_id",
-  as: "Reels",
-});
-
-Reel.hasMany(ReelProduct, {
-  foreignKey: "reel_id",
-  as: "ReelProducts",
-  onDelete: "CASCADE",
-});
-ReelProduct.belongsTo(Reel, {
-  foreignKey: "reel_id",
-  as: "Reel",
-  onDelete: "CASCADE",
-});
-
-Product.hasMany(ReelProduct, {
-  foreignKey: "product_id",
-  as: "ReelProducts",
-  onDelete: "CASCADE",
-});
-ReelProduct.belongsTo(Product, {
-  foreignKey: "product_id",
-  as: "Product",
-  onDelete: "CASCADE",
-});
-
-// Instagram feed tagged products
-Brand.hasMany(InstagramPostProduct, {
-  foreignKey: "brand_id",
-  as: "InstagramPostProducts",
-  onDelete: "CASCADE",
-});
-InstagramPostProduct.belongsTo(Brand, {
-  foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
-});
-
-Product.hasMany(InstagramPostProduct, {
-  foreignKey: "product_id",
-  as: "InstagramPostProducts",
-  onDelete: "CASCADE",
-});
-InstagramPostProduct.belongsTo(Product, {
-  foreignKey: "product_id",
-  as: "Product",
-  onDelete: "CASCADE",
-});

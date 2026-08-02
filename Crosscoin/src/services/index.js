@@ -2047,7 +2047,7 @@ export const blogService = {
   },
 };
 
-// Lookbook / Reels / Instagram Services (Admin + Public)
+// Lookbook Services (Admin + Public)
 export const lookbookService = {
   // Public
   getPublicLookbooks: async () => {
@@ -2096,66 +2096,6 @@ export const lookbookService = {
   },
   deleteHotspot: async (hotspotId) => {
     const response = await adminApi.delete(`/api/admin/lookbooks/hotspots/${hotspotId}`);
-    return response.data;
-  },
-};
-
-export const reelService = {
-  // Public
-  getPublicReels: async () => {
-    const response = await api.get("/api/reels");
-    return response.data;
-  },
-  incrementReelView: async (id) => {
-    const response = await api.post(`/api/reels/${id}/view`);
-    return response.data;
-  },
-
-  // Admin
-  getAdminReels: async () => {
-    const response = await adminApi.get("/api/reels");
-    return response.data;
-  },
-  createReel: async (formData) => {
-    const response = await adminApi.post("/api/admin/reels", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return response.data;
-  },
-  updateReel: async (id, formData) => {
-    const response = await adminApi.put(`/api/admin/reels/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return response.data;
-  },
-  deleteReel: async (id) => {
-    const response = await adminApi.delete(`/api/admin/reels/${id}`);
-    return response.data;
-  },
-  assignProducts: async (id, product_ids) => {
-    const response = await adminApi.post(`/api/admin/reels/${id}/products`, { product_ids });
-    return response.data;
-  },
-  removeProduct: async (id, productId) => {
-    const response = await adminApi.delete(`/api/admin/reels/${id}/products/${productId}`);
-    return response.data;
-  },
-};
-
-export const instagramService = {
-  // Public
-  getFeed: async () => {
-    const response = await api.get("/api/instagram/feed");
-    return response.data;
-  },
-
-  // Admin
-  refreshFeed: async () => {
-    const response = await adminApi.post("/api/instagram/refresh");
-    return response.data;
-  },
-  tagPost: async (payload) => {
-    const response = await adminApi.post("/api/instagram/tag", payload);
     return response.data;
   },
 };

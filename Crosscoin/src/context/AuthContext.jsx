@@ -45,7 +45,7 @@ export const ROLE_VIEWS = {
     // settings (which lives behind admin in the hub but is the one tab
     // the legacy permission system wants to gate separately).
     'seo', 'seo-health', 'seo-bulk', 'seo-pages', 'faqs',
-    'lookbooks', 'reels-admin', 'instagram-admin',
+    'lookbooks',
   ],
   order_manager: [
     'main', 'orders', 'reports', 'payments', 'coupons', 'shippingFees',

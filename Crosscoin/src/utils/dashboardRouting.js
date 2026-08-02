@@ -28,8 +28,6 @@ export const getPageTitle = (view) => {
     'utm-analytics': 'UTM Analytics',
     'reports': 'Reports',
     'lookbooks': 'Lookbooks',
-    'reels-admin': 'Reels',
-    'instagram-admin': 'Instagram Feed',
     'staff-users': 'Staff Users',
   };
   return titles[view] || 'Dashboard';

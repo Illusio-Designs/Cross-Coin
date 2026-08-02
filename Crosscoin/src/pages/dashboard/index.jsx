@@ -29,8 +29,6 @@ import UTMAnalytics from "./analytics/utmAnalytics";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
-import AdminReels from "./social/reels";
-import AdminInstagramFeed from "./social/instagram";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
@@ -213,8 +211,6 @@ function Dashboard() {
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
       case 'lookbooks':       return <AdminLookbooks />;
-      case 'reels-admin':     return <AdminReels />;
-      case 'instagram-admin': return <AdminInstagramFeed />;
       case 'whatsapp':        return <WhatsAppManager />;
       case 'whatsapp-chat':   return <WhatsAppManager />;
       // Brands and settings are now one combined page — both menu items open it.

@@ -32,21 +32,6 @@ export const getPublicLookbookBySlug = async (slug) => {
   catch (error) { throw error.response?.data || error.message; }
 };
 
-export const getPublicReels = async () => {
-  try { const r = await axios.get(`${API_URL}/api/reels`, addBrandHeader()); return r.data; }
-  catch (error) { throw error.response?.data || error.message; }
-};
-
-export const incrementReelView = async (reelId) => {
-  try { const r = await axios.post(`${API_URL}/api/reels/${reelId}/view`, {}, addBrandHeader()); return r.data; }
-  catch (error) { throw error.response?.data || error.message; }
-};
-
-export const getInstagramFeed = async () => {
-  try { const r = await axios.get(`${API_URL}/api/instagram/feed`, addBrandHeader()); return r.data; }
-  catch (error) { throw error.response?.data || error.message; }
-};
-
 export const getPublicProductBySlug = async (slug) => {
   try { const r = await axios.get(`${API_URL}/api/products/by-slug/${slug}`, addBrandHeader()); return r.data; }
   catch (error) { throw error.response?.data || error.message; }

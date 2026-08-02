@@ -69,7 +69,6 @@ import "../styles/components/TrustBadges.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
 import "../styles/components/blog-section.css";
-import "../styles/components/InstagramGallery.css";
 
 import "../styles/components/Sidebar.css";
 import "../styles/components/CartDrawer.css";
@@ -108,7 +107,6 @@ import "../styles/dashboard/dateRangePicker.css";
 import "../styles/components/WhatsAppChat.css";
 // Additional page CSS
 import "../styles/pages/Lookbook.css";
-import "../styles/pages/Reels.css";
 
 import Analytics from "../components/common/Analytics";
 import Msg91Loader from "../components/common/Msg91Loader";

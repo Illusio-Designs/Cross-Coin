@@ -22,7 +22,6 @@ router.use('/blogs',              optionalBrand, require('./blogRoutes.js'));
 router.use('/policies',           optionalBrand, require('./policyRoutes.js'));
 router.use('/seo',                optionalBrand, require('./seoRoutes.js'));
 router.use('/lookbooks',          optionalBrand, require('./lookbookRoutes.js'));
-router.use('/reels',              optionalBrand, require('./reelRoutes.js'));
 
 // ── User features ─────────────────────────────────────────────────────────
 router.use('/loyalty',            optionalBrand, require('./loyaltyRoutes.js'));
@@ -42,7 +41,6 @@ router.use('/whatsapp',           require('./whatsappRoutes.js'));
 // ── Admin ─────────────────────────────────────────────────────────────────
 router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.js'));
 router.use('/admin/lookbooks',    optionalBrand, require('./adminLookbookRoutes.js'));
-router.use('/admin/reels',        optionalBrand, require('./adminReelRoutes.js'));
 router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
 router.use('/admin',              require('./brandRoutes.js'));
 router.use('/admin',              require('./brandAssignmentRoutes.js'));
