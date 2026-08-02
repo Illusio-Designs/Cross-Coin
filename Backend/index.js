@@ -376,10 +376,32 @@ app.use('/api', routesManager);  // backward compat
 // Swagger API docs at /api/docs
 require('./docs/swagger.js')(app);
 
-// TEMPORARY — Sentry verification route. Hit /api/debug-sentry once after
-// setting up Sentry to confirm errors are captured, then remove this block.
-app.get('/api/debug-sentry', () => {
-    throw new Error('Sentry backend verification error — this is expected.');
+// TEMPORARY — Sentry diagnostic route. Reports the live Sentry state and
+// force-sends a test event, so we can see EXACTLY why capture is/isn't working.
+// Remove this block once verified.
+app.get('/api/debug-sentry', async (req, res) => {
+    const client = Sentry.getClient && Sentry.getClient();
+    const active = !!client;
+    let dsnConfigured = false;
+    try { dsnConfigured = !!(client && client.getDsn && client.getDsn()); } catch (_) {}
+
+    let eventId = null;
+    let flushed = null;
+    try {
+        eventId = Sentry.captureException(
+            new Error('Sentry backend verification error — this is expected.')
+        );
+        // Wait for the transport to actually deliver before responding.
+        flushed = await Sentry.flush(3000);
+    } catch (_) {}
+
+    res.json({
+        sentry_active: active,       // did Sentry.init() run? (gate passed)
+        node_env: process.env.NODE_ENV || null,
+        dsn_configured: dsnConfigured,
+        event_id: eventId || null,   // non-null = an event was queued
+        flushed,                     // true = transport delivered it to Sentry
+    });
 });
 
 // 404 handler for API routes only
