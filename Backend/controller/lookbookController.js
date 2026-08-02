@@ -13,8 +13,7 @@ const {
 const imagekitService = require('../services/imagekitService.js');
 const { logger } = require('../config/logging.js');
 
-const resolveBrandId = (req, explicitBrandId = null) =>
-  explicitBrandId || req.brandId || (req.brand && req.brand.id) || 1;
+const resolveBrandId = require('../utils/resolveBrandId.js');
 
 const withOptimizedImage = (imagePath) => imagekitService.getOptimizedUrl(imagePath, 'large');
 

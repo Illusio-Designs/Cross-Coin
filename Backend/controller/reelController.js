@@ -4,8 +4,7 @@ const { sequelize } = require('../config/db.js');
 const { Reel, ReelProduct, Product, ProductImage, ProductVariation } = require('../model/associations.js');
 const imagekitService = require('../services/imagekitService.js');
 
-const resolveBrandId = (req, explicitBrandId = null) =>
-  explicitBrandId || req.brandId || (req.brand && req.brand.id) || 1;
+const resolveBrandId = require('../utils/resolveBrandId.js');
 
 const toInt = (value, fallback = 0) => {
   const parsed = parseInt(value, 10);
