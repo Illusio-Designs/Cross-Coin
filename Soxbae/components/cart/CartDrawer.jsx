@@ -19,6 +19,7 @@ import {
   checkPincodeServiceability,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
+import { fbTrack, fbPurchase } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -175,6 +176,21 @@ export default function CartDrawer() {
     return arr;
   }, [fees]);
 
+  /* Meta funnel: InitiateCheckout — fire once when the drawer opens with items
+     (this drawer is the full in-drawer checkout). */
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map((i) => String(i.id)),
+      content_type: 'product',
+      contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
+      num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+      value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
+      currency: 'INR',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const onFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     let v = type === 'checkbox' ? checked : value;
@@ -253,12 +269,29 @@ export default function CartDrawer() {
     return { ...guestBlocks(), ...base };
   };
 
+  /* Meta Purchase custom_data — captured from the cart BEFORE it is cleared. */
+  const buildPurchaseData = (orderNumber, value) => ({
+    content_ids: items.map((i) => String(i.id)),
+    content_type: 'product',
+    contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
+    num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+    value: Number(value) || 0,
+    currency: 'INR',
+    order_id: orderNumber,
+  });
+
   const finishSuccess = (order) => {
+    const orderNumber = order?.order_number || order?.orderNumber || '—';
+    // Meta Purchase (deduped with the backend's server-side event) — build the
+    // custom_data from the cart BEFORE it is cleared, using the amount actually
+    // charged (prepaid payable, else the order total).
+    const purchaseData = buildPurchaseData(orderNumber, isPrepaid ? prepaidPayable : total);
     clear();
     setError('');
     setRetryState(null);
+    fbPurchase(orderNumber, purchaseData);
     setOrderSuccess({
-      orderNumber: order?.order_number || order?.orderNumber || '—',
+      orderNumber,
       id: order?.id || null,
     });
     toast.success('Order placed successfully!');

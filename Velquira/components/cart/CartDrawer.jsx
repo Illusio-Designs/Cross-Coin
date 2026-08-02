@@ -19,6 +19,7 @@ import {
   checkPincodeServiceability,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
+import { fbTrack, fbPurchase } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -123,6 +124,21 @@ export default function CartDrawer() {
 
   // Clear transient state whenever the drawer closes
   useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); } }, [open]);
+
+  // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
+  // (this drawer is the full in-drawer checkout).
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map((i) => String(i.productId ?? i.id)),
+      content_type: 'product',
+      contents: items.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.qty || 1 })),
+      num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+      value: items.reduce((s, i) => s + Number(i.price) * i.qty, 0),
+      currency: 'INR',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Load shipping fees + addresses as soon as the drawer opens (single view)
   useEffect(() => {
@@ -253,12 +269,28 @@ export default function CartDrawer() {
     return { ...guestBlocks(), ...base };
   };
 
-  const finishSuccess = (order) => {
+  // Meta Purchase custom_data — captured from the cart BEFORE it is cleared.
+  const buildPurchaseData = (orderNumber, value) => ({
+    content_ids: items.map((i) => String(i.productId ?? i.id)),
+    content_type: 'product',
+    contents: items.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.qty || 1 })),
+    num_items: items.reduce((s, i) => s + (i.qty || 1), 0),
+    value: Number(value) || 0,
+    currency: 'INR',
+    order_id: orderNumber,
+  });
+
+  const finishSuccess = (order, value) => {
+    const orderNumber = order?.order_number || order?.orderNumber || '—';
+    // Meta Purchase (deduped with the backend's server-side event) — build the
+    // custom_data from the cart BEFORE it is cleared.
+    const purchaseData = buildPurchaseData(orderNumber, value);
     clear();
     setError('');
     setRetryState(null);
+    fbPurchase(orderNumber, purchaseData);
     setOrderSuccess({
-      orderNumber: order?.order_number || order?.orderNumber || '—',
+      orderNumber,
       id: order?.id || null,
     });
     toast.success('Order placed successfully!');
@@ -288,8 +320,8 @@ export default function CartDrawer() {
             razorpaySignature: response.razorpay_signature,
             reservation_id: reservationId,
           });
-          finishSuccess(result.order);
-        } catch { finishSuccess(null); }
+          finishSuccess(result.order, prepaidPayable);
+        } catch { finishSuccess(null, prepaidPayable); }
         finally { setProcessing(false); }
       },
       modal: { ondismiss: () => { setError('Payment was cancelled. You can retry below.'); setRetryState({ reservationId, count: 0 }); setProcessing(false); } },
@@ -315,7 +347,7 @@ export default function CartDrawer() {
         const data = buildData('cod');
         const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
         if (!result?.order) throw new Error('Order creation failed.');
-        finishSuccess(result.order);
+        finishSuccess(result.order, total);
       } catch (e) { setError(e.message || 'Order placement failed.'); toast.error(e.message || 'Order placement failed'); setProcessing(false); }
       return;
     }

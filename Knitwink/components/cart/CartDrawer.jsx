@@ -25,6 +25,7 @@ import {
   showError,
   showWarning,
 } from '@/lib/toast';
+import { fbTrack, fbPurchase } from '@/utils/pixel';
 import '@/styles/CartDrawer.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -257,6 +258,22 @@ export function CartDrawer() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen, closeDrawer]);
+
+  // ── Meta funnel: InitiateCheckout ─────────────────────────────────────────
+  // Fire once when the drawer opens with items (this drawer is the full
+  // in-drawer checkout).
+  useEffect(() => {
+    if (!drawerOpen || items.length === 0) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map(i => String(i.productId)),
+      content_type: 'product',
+      contents: items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 })),
+      num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
+      value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
+      currency: 'INR',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerOpen]);
 
   // ── Shipping fees ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -547,6 +564,17 @@ export function CartDrawer() {
       quantity: Number(item.quantity) || 1,
     }));
 
+  // Meta Purchase custom_data — captured from the cart BEFORE it is cleared.
+  const buildPurchaseData = (orderNumber, value) => ({
+    content_ids: items.map(i => String(i.productId)),
+    content_type: 'product',
+    contents: items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 })),
+    num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
+    value: Number(value) || 0,
+    currency: 'INR',
+    order_id: orderNumber,
+  });
+
   const buildCodOrderData = (idempotencyKey) => {
     const base = {
       items: buildItemsPayload(),
@@ -629,9 +657,13 @@ export function CartDrawer() {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
       if (!result?.order) throw new Error('Order creation failed.');
+      const orderNumber = result.order.order_number;
+      // Meta Purchase (deduped with the backend's server-side event).
+      const purchaseData = buildPurchaseData(orderNumber, finalTotal);
       clearCart();
-      toastOrderPlaced(result.order.order_number);
-      setOrderSuccess({ orderNumber: result.order.order_number });
+      fbPurchase(orderNumber, purchaseData);
+      toastOrderPlaced(orderNumber);
+      setOrderSuccess({ orderNumber });
     } catch (err) {
       toastOrderError(err.message || 'Order placement failed. Please try again.');
     } finally {
@@ -663,8 +695,11 @@ export function CartDrawer() {
             reservation_id: reservationId,
           });
           const orderNumber = result.order?.order_number;
+          // Meta Purchase (deduped with the backend's server-side event).
+          const purchaseData = buildPurchaseData(orderNumber, prepaidPayable);
           clearCart();
           setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, reservationId: null });
+          fbPurchase(orderNumber, purchaseData);
           toastOrderPlaced(orderNumber);
           setOrderSuccess({ orderNumber });
         } catch {

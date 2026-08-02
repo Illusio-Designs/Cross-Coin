@@ -8,6 +8,7 @@ import {
   removeFromCart as apiRemoveFromCart,
   clearCart as apiClearCart,
 } from '@/lib/api/cart';
+import { fbTrack } from '@/utils/pixel';
 
 const CartContext = createContext(null);
 const KEY = 'soxbae_cart';
@@ -194,6 +195,19 @@ export function CartProvider({ children }) {
   });
 
   const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
+    if (!product?.id) return;
+
+    // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
+    const unitPrice = Number(product.price ?? 0);
+    fbTrack('AddToCart', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: unitPrice * qty,
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: qty }],
+    });
+
     // 1) Optimistic local insert — the item shows in the drawer INSTANTLY.
     const key = `${product.id}-${variationId ?? size}`;
     setItems((prev) => {

@@ -29,5 +29,9 @@ export function fbAdvancedMatching(user) {
   if (rest.length) data.ln = rest.join(' ');
   if (user.id) data.external_id = String(user.id);
 
+  // Expose to the CAPI relay (utils/pixel.js) so server-side events carry the
+  // same match keys and dedupe/attribution improve.
+  window.__fbUser = data;
+
   try { window.fbq('init', window._fbqId, data); } catch { /* non-fatal */ }
 }

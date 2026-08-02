@@ -6,9 +6,11 @@
 // Query's cache from initialProduct so there's no extra round-trip on
 // hydration. Subsequent navigations to the same slug hit the cache.
 
+import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { getProduct } from '@/lib/api/products'
+import { fbTrack } from '@/utils/pixel'
 import { ProductPageClient } from '@/components/product/ProductPageClient'
 import dynamic from 'next/dynamic'
 // Below-the-fold sections: code-split so the gallery + ATC render
@@ -78,6 +80,21 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
     enabled: !!handle,
     initialData: initialProduct ?? undefined,
   })
+
+  // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+  // Fires once the product is available, and again if the shopper navigates
+  // to a different product (keyed on product id).
+  useEffect(() => {
+    if (!product?.id) return
+    fbTrack('ViewContent', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(product.price ?? product.variations?.[0]?.price ?? 0),
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: 1 }],
+    })
+  }, [product?.id])
 
   if (loading) return <ProductSkeleton />
   if (!product) return (

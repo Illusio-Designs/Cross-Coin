@@ -9,6 +9,7 @@ import {
   clearCart as apiClearCart,
 } from '@/lib/api/cart';
 import { toastAddedToCart } from '@/lib/toast';
+import { fbTrack } from '@/utils/pixel';
 
 const GUEST_CART_KEY = 'knitwink_guest_cart';
 
@@ -168,7 +169,20 @@ export function CartProvider({ children }) {
   }, [cartItems, isHydrated, isCartLoading]);
 
   const addToCart = async (product, selectedColor, selectedSize, quantity = 1, variationId = null, imageUrl = null) => {
+    if (!product?.id) return;
     const authed = isAuthenticated();
+
+    // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
+    const qty = quantity || 1;
+    const unitPrice = parseFloat(product.price || 0);
+    fbTrack('AddToCart', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: unitPrice * qty,
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: qty }],
+    });
 
     if (authed) {
       try {

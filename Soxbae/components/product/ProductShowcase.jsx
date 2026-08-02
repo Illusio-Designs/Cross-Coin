@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
+import { fbTrack } from '@/utils/pixel';
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
 // strip beneath it (left), a calm serif buy panel (right, sticky), then a
@@ -40,6 +41,20 @@ export default function ProductShowcase({ product, initialColor }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+  useEffect(() => {
+    if (!product?.id) return;
+    fbTrack('ViewContent', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(product.price ?? 0),
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: 1 }],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   const selectedColorName = colorNames[color] || '';
 

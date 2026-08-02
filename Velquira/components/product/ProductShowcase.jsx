@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
+import { fbTrack } from '@/utils/pixel';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -17,6 +18,19 @@ export default function ProductShowcase({ product }) {
   const [active, setActive] = useState(0);         // active gallery image
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+  useEffect(() => {
+    if (!product?.id) return;
+    fbTrack('ViewContent', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(product.price ?? 0),
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: 1 }],
+    });
+  }, [product?.id]);
 
   // Match the thumbnail rail's height to the main image so it never runs longer
   // than the photo — extra thumbnails scroll inside it instead.
