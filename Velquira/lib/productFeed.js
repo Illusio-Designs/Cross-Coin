@@ -15,6 +15,12 @@ const IMAGEKIT = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.im
 const DEFAULT_BRAND = process.env.NEXT_PUBLIC_SITE_NAME || 'Velquira';
 // Broad, always-valid default; set NEXT_PUBLIC_GOOGLE_PRODUCT_CATEGORY per brand to narrow it.
 const GOOGLE_CATEGORY = process.env.NEXT_PUBLIC_GOOGLE_PRODUCT_CATEGORY || 'Apparel & Accessories > Clothing';
+// Emit one item per VARIATION (grouped by item_group_id) instead of one per
+// product — matches how the storefront sells each size/colour. Baked per brand
+// by the generator; NEXT_PUBLIC_FEED_VARIATIONS can override.
+const EMIT_VARIATIONS = process.env.NEXT_PUBLIC_FEED_VARIATIONS
+  ? process.env.NEXT_PUBLIC_FEED_VARIATIONS === 'true'
+  : false;
 const DEFAULT_GENDER = 'unisex';
 const DEFAULT_AGE_GROUP = 'adult';
 const CURRENCY = 'INR';
@@ -33,6 +39,19 @@ const stripHtml = (s) => String(s || '')
   .trim();
 
 const money = (n) => `${Number(n || 0).toFixed(2)} ${CURRENCY}`;
+
+// Read a variation attribute (size / colour) case-insensitively; values may be
+// a string or an array (the catalog stores attributes as a JSON blob).
+function attr(attrs, name) {
+  if (!attrs || typeof attrs !== 'object') return '';
+  for (const k of Object.keys(attrs)) {
+    if (k.toLowerCase() === name) {
+      const v = attrs[k];
+      return (Array.isArray(v) ? v.join(', ') : String(v == null ? '' : v)).trim();
+    }
+  }
+  return '';
+}
 
 function resolveImg(img) {
   if (!img) return null;
@@ -67,57 +86,85 @@ async function fetchAllProducts() {
   return all;
 }
 
-function buildItem(p) {
-  const slug = p.slug;
-  if (!slug) return null;
-
-  const variations = p.ProductVariations || p.variations || [];
-  const v0 = variations[0] || {};
-  const price = Number(v0.price || p.price || 0);
-  const compare = Number(v0.comparePrice || p.comparePrice || 0);
+// Render one <item>. `opts` carries the per-row fields (id, prices, stock,
+// variant attrs); `shared` is the product-level data reused across variants.
+function renderItem(p, shared, opts) {
+  const { id, price, compare, stock, image, size, color, itemGroupId, mpn } = opts;
   if (!price) return null;
-
-  const image = resolveImg((p.images && p.images[0]) || p.image);
   if (!image) return null;
-
-  const extraImages = (p.images || [])
-    .slice(1, 11)
-    .map(resolveImg)
-    .filter(Boolean);
-
-  const anyStock = variations.some((v) => Number(v.stock || 0) > 0) || Number(p.stock || 0) > 0;
-  const availability = anyStock ? 'in_stock' : 'out_of_stock';
-
   const onSale = compare > price;
   const regularPrice = onSale ? compare : price;
   const salePrice = onSale ? price : null;
-
-  const mpn = v0.sku || p.sku || `${BRAND.toUpperCase()}-${p.id}`;
-  const brand = p.brand || (p.Brand && p.Brand.name) || DEFAULT_BRAND;
-  const productType = p.category?.name || p.Category?.name || '';
-  const description = stripHtml(p.description || p.shortDescription || p.name).slice(0, 4900) || p.name;
+  const availability = stock > 0 ? 'in_stock' : 'out_of_stock';
 
   const lines = [
-    `<g:id>${xmlEscape(p.id)}</g:id>`,
+    `<g:id>${xmlEscape(id)}</g:id>`,
+    ...(itemGroupId != null ? [`<g:item_group_id>${xmlEscape(itemGroupId)}</g:item_group_id>`] : []),
     `<g:title>${xmlEscape(p.name)}</g:title>`,
-    `<g:description>${xmlEscape(description)}</g:description>`,
-    `<g:link>${xmlEscape(`${BASE_URL}/products/${slug}`)}</g:link>`,
+    `<g:description>${xmlEscape(shared.description)}</g:description>`,
+    `<g:link>${xmlEscape(shared.link)}</g:link>`,
     `<g:image_link>${xmlEscape(image)}</g:image_link>`,
-    ...extraImages.map((u) => `<g:additional_image_link>${xmlEscape(u)}</g:additional_image_link>`),
+    ...shared.extraImages.map((u) => `<g:additional_image_link>${xmlEscape(u)}</g:additional_image_link>`),
     `<g:availability>${availability}</g:availability>`,
     `<g:price>${money(regularPrice)}</g:price>`,
     ...(salePrice != null ? [`<g:sale_price>${money(salePrice)}</g:sale_price>`] : []),
     `<g:condition>new</g:condition>`,
-    `<g:brand>${xmlEscape(brand)}</g:brand>`,
+    `<g:brand>${xmlEscape(shared.brand)}</g:brand>`,
     `<g:mpn>${xmlEscape(mpn)}</g:mpn>`,
     `<g:identifier_exists>no</g:identifier_exists>`,
     `<g:google_product_category>${xmlEscape(GOOGLE_CATEGORY)}</g:google_product_category>`,
-    ...(productType ? [`<g:product_type>${xmlEscape(productType)}</g:product_type>`] : []),
+    ...(shared.productType ? [`<g:product_type>${xmlEscape(shared.productType)}</g:product_type>`] : []),
+    ...(size ? [`<g:size>${xmlEscape(size)}</g:size>`] : []),
+    ...(color ? [`<g:color>${xmlEscape(color)}</g:color>`] : []),
     `<g:gender>${DEFAULT_GENDER}</g:gender>`,
     `<g:age_group>${DEFAULT_AGE_GROUP}</g:age_group>`,
   ];
-
   return `    <item>\n      ${lines.join('\n      ')}\n    </item>`;
+}
+
+// One product → one or many <item>s (per-variation when EMIT_VARIATIONS is on).
+function buildItems(p) {
+  const slug = p.slug;
+  if (!slug) return [];
+  const image0 = resolveImg((p.images && p.images[0]) || p.image);
+  const shared = {
+    link: `${BASE_URL}/products/${slug}`,
+    brand: p.brand || (p.Brand && p.Brand.name) || DEFAULT_BRAND,
+    productType: p.category?.name || p.Category?.name || '',
+    description: stripHtml(p.description || p.shortDescription || p.name).slice(0, 4900) || p.name,
+    extraImages: (p.images || []).slice(1, 11).map(resolveImg).filter(Boolean),
+  };
+  const variations = p.ProductVariations || p.variations || [];
+
+  if (EMIT_VARIATIONS && variations.length > 0) {
+    return variations.map((v, i) => renderItem(p, shared, {
+      id: v.sku || `${p.id}-${v.id ?? i}`,
+      itemGroupId: p.id,
+      price: Number(v.price || p.price || 0),
+      compare: Number(v.comparePrice || p.comparePrice || 0),
+      stock: Number(v.stock || 0),
+      image: resolveImg(v.images && v.images[0]) || image0,
+      size: attr(v.attributes, 'size'),
+      color: attr(v.attributes, 'color'),
+      mpn: v.sku || `${BRAND.toUpperCase()}-${p.id}-${v.id ?? i}`,
+    })).filter(Boolean);
+  }
+
+  // One item per product (first variation's price; in-stock if any variation is).
+  const v0 = variations[0] || {};
+  const anyStock = variations.some((v) => Number(v.stock || 0) > 0) || Number(p.stock || 0) > 0;
+  const item = renderItem(p, shared, {
+    id: p.id,
+    itemGroupId: null,
+    price: Number(v0.price || p.price || 0),
+    compare: Number(v0.comparePrice || p.comparePrice || 0),
+    stock: anyStock ? 1 : 0,
+    image: image0,
+    size: '',
+    color: '',
+    mpn: v0.sku || p.sku || `${BRAND.toUpperCase()}-${p.id}`,
+  });
+  return item ? [item] : [];
 }
 
 function buildFeed(items) {
@@ -137,7 +184,7 @@ export async function feedResponse() {
   let items = [];
   try {
     const products = await fetchAllProducts();
-    items = products.map(buildItem).filter(Boolean);
+    items = products.flatMap(buildItems);
   } catch {
     items = [];
   }

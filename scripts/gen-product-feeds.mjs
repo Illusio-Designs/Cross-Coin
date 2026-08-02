@@ -23,8 +23,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const libTpl = readFileSync(join(ROOT, 'scripts/feed-templates/productFeed.template.js'), 'utf8');
 const pageTpl = readFileSync(join(ROOT, 'scripts/feed-templates/gm-page.template.js'), 'utf8');
 
-const sub = (tpl, slug, domain, name) =>
-  tpl.replaceAll('__SLUG__', slug).replaceAll('__DOMAIN__', domain).replaceAll('__NAME__', name);
+const sub = (tpl, slug, domain, name, variations = false) =>
+  tpl
+    .replaceAll('__SLUG__', slug)
+    .replaceAll('__DOMAIN__', domain)
+    .replaceAll('__NAME__', name)
+    .replaceAll('__VARIATIONS__', String(!!variations));
 
 const routeFile = (label, path) =>
   `// ${label} product feed → /${path}\n` +
@@ -41,13 +45,14 @@ const fbReexport =
   ` */\n` +
   `export { getServerSideProps, default } from './google-merchant.xml.js';\n`;
 
-// App-router brands: [dir, slug, domain, displayName]
+// App-router brands: [dir, slug, domain, displayName, emitVariations]
+// emitVariations=true → one feed item per size/colour variation (item_group_id).
 const APP = [
-  ['Morbix',   'morbix',   'www.morbixsocks.com', 'Morbix'],
-  ['Soxbae',   'soxbae',   'www.soxbaesocks.com', 'Soxbae'],
-  ['Knitwink', 'knitwink', 'knitwink.com',        'Knitwink'],
-  ['Velmique', 'velmique', 'velmique.com',        'Velmique'],
-  ['Velquira', 'velquira', 'www.velquira.in',     'Velquira'],
+  ['Morbix',   'morbix',   'www.morbixsocks.com', 'Morbix',   true],
+  ['Soxbae',   'soxbae',   'www.soxbaesocks.com', 'Soxbae',   true],
+  ['Knitwink', 'knitwink', 'knitwink.com',        'Knitwink', false],
+  ['Velmique', 'velmique', 'velmique.co.in',      'Velmique', false],
+  ['Velquira', 'velquira', 'www.velquira.in',     'Velquira', false],
 ];
 // Pages-router brands (Crosscoin is the hand-tuned reference — not generated).
 const PAGES = [
@@ -56,8 +61,8 @@ const PAGES = [
 
 const write = (p, c) => { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, c); console.log('wrote', p.replace(ROOT + '/', '')); };
 
-for (const [dir, slug, domain, name] of APP) {
-  write(join(ROOT, dir, 'lib/productFeed.js'), sub(libTpl, slug, domain, name));
+for (const [dir, slug, domain, name, variations] of APP) {
+  write(join(ROOT, dir, 'lib/productFeed.js'), sub(libTpl, slug, domain, name, variations));
   write(join(ROOT, dir, 'app/google-merchant.xml/route.js'), routeFile('Google Merchant', 'google-merchant.xml'));
   write(join(ROOT, dir, 'app/facebook-catalog.xml/route.js'), routeFile('Meta / Facebook catalog', 'facebook-catalog.xml'));
 }

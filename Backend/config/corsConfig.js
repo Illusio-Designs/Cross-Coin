@@ -86,9 +86,7 @@ const staticAllowedOrigins = [
     'http://knitwink.com',
     'http://www.knitwink.com',
 
-    // Velmique domain (real domain is .com; .co.in kept in case it's still pointed)
-    'https://velmique.com',
-    'https://www.velmique.com',
+    // Velmique domain
     'https://velmique.co.in',
     'https://www.velmique.co.in',
 
