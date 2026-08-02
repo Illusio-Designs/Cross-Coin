@@ -56,6 +56,29 @@ try {
     }
   });
 
+  // Register the consumer + one-time backlog clear. This queue previously had a
+  // producer (order creation enqueues jobs) but NO consumer registered, so jobs
+  // piled up in Redis and product badges never recalculated. On first boot after
+  // this fix we drain the stale backlog once (guarded by a Redis marker so later
+  // deploys never wipe live jobs), then process new jobs with bounded
+  // concurrency so the drain can't spike the small cPanel server.
+  const BADGE_CONCURRENCY = parseInt(process.env.BADGE_QUEUE_CONCURRENCY) || 2;
+  badgeQueue.isReady().then(async () => {
+    try {
+      const cleared = await badgeQueue.client.get('badge_queue_cleared_v1');
+      if (!cleared) {
+        await badgeQueue.empty(); // drop the stale no-consumer backlog (one-time)
+        await badgeQueue.client.set('badge_queue_cleared_v1', '1');
+        logger.info('[Badge] cleared stale backlog (one-time)');
+      }
+      const { processBadgeRecalculation } = require('./processors/badgeProcessor.js');
+      badgeQueue.process(BADGE_CONCURRENCY, processBadgeRecalculation);
+      logger.info(`[Badge] processor registered (concurrency ${BADGE_CONCURRENCY})`);
+    } catch (e) {
+      logger.warn('[Badge] processor registration failed: ' + e.message);
+    }
+  }).catch((e) => logger.warn('[Badge] queue not ready: ' + e.message));
+
 } catch (err) {
   logger.warn('Badge queue disabled — Redis not available: ' + err.message);
 }
