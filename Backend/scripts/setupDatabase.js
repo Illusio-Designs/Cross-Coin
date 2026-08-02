@@ -913,6 +913,18 @@ const setupDatabase = async () => {
       console.log("⚠️ Lookbook table creation skipped:", lookbookError.message);
     }
 
+    // Drop the removed Reels / Instagram-Feed feature tables (idempotent).
+    // Child tables first so foreign keys don't block the drop.
+    console.log("Dropping removed reel/instagram tables (if present)...");
+    try {
+      await sequelize.query(`DROP TABLE IF EXISTS reel_products`);
+      await sequelize.query(`DROP TABLE IF EXISTS reels`);
+      await sequelize.query(`DROP TABLE IF EXISTS instagram_post_products`);
+      console.log("✓ Reel/Instagram tables dropped");
+    } catch (dropError) {
+      console.log("⚠️ Reel/Instagram table drop skipped:", dropError.message);
+    }
+
     // Ensure WhatsApp chat tables exist.
     console.log("Ensuring WhatsApp conversation tables...");
     try {
