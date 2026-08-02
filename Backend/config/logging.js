@@ -81,6 +81,24 @@ function log(level, message, data) {
   // File output — plain text
   writeToFile(appStream, line);
   if (level === 'error' || level === 'warn') writeToFile(errorStream, line);
+
+  // Forward errors to Sentry (no-op unless SENTRY_DSN is set). Lazy-required
+  // so this file has no hard dependency on the SDK, and wrapped so logging can
+  // never throw.
+  if (level === 'error' && process.env.SENTRY_DSN) {
+    try {
+      const Sentry = require('@sentry/node');
+      if (data instanceof Error) {
+        Sentry.captureException(data, { extra: { message } });
+      } else if (data && data.stack) {
+        const err = new Error(data.message || message);
+        err.stack = data.stack;
+        Sentry.captureException(err, { extra: { message } });
+      } else {
+        Sentry.captureMessage(message, { level: 'error', extra: { data } });
+      }
+    } catch (_) { /* never let logging break the request */ }
+  }
 }
 
 const logger = {

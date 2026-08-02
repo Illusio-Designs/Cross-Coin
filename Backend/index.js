@@ -1,3 +1,6 @@
+// Sentry — must be first so the SDK instruments everything below it.
+// No-op unless SENTRY_DSN is set (see instrument.js).
+const Sentry = require('./instrument.js');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -386,6 +389,11 @@ app.use(/^\/api\/v1\//, (req, res) => {
 app.use((req, res) => {
     res.status(404).send('File not found');
 });
+
+// Sentry Express error handler — must be registered AFTER all routes but
+// BEFORE the centralized error middleware, so it sees every error the
+// controllers throw. No-op unless SENTRY_DSN is set.
+Sentry.setupExpressErrorHandler(app);
 
 // Centralized error handling — catches all AppError + Sequelize + unknown errors
 const errorMiddleware = require('./middleware/errorMiddleware.js');
