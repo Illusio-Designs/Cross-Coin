@@ -116,23 +116,27 @@ Sentry → select project → **Alerts → Create Alert → Issues**.
 > per-brand rule later only if one brand needs its own routing.
 
 ### B. UptimeRobot monitors (free: 50 monitors, 5-min checks)
-Create account → add **HTTP(s)** monitors (for the 3 API ones use type **Keyword**,
-keyword `success`, "alert when keyword NOT exists"):
+All 10 are plain **HTTP(s)** monitors. The API health routes already return
+**HTTP 503 when unhealthy** (DB down → `/api/health` + `/api/health/db` 503;
+Redis down → `/api/health/redis` 503) and **200** when ok, so a plain HTTP
+monitor (alert on non-200 / timeout) is all you need — no keyword required.
 
-| Monitor | URL | Type |
-|---|---|---|
-| API liveness | `https://api.crosscoin.in/api/health` | Keyword `success` |
-| API + DB | `https://api.crosscoin.in/api/health/db` | Keyword `success` |
-| API + Redis | `https://api.crosscoin.in/api/health/redis` | Keyword `success` |
-| Crosscoin | `https://crosscoin.in` | HTTP 200 |
-| Gripzus | `https://gripzus.com` | HTTP 200 |
-| Morbix | `https://www.morbixsocks.com` | HTTP 200 |
-| Soxbae | `https://www.soxbaesocks.com` | HTTP 200 |
-| Knitwink | `https://knitwink.com` | HTTP 200 |
-| Velmique | `https://velmique.com` | HTTP 200 |
-| Velquira | `https://www.velquira.in` | HTTP 200 |
+| Monitor | URL |
+|---|---|
+| API liveness (+DB) | `https://api.crosscoin.in/api/health` |
+| API + DB | `https://api.crosscoin.in/api/health/db` |
+| API + Redis | `https://api.crosscoin.in/api/health/redis` |
+| Crosscoin | `https://crosscoin.in` |
+| Gripzus | `https://gripzus.com` |
+| Morbix | `https://www.morbixsocks.com` |
+| Soxbae | `https://www.soxbaesocks.com` |
+| Knitwink | `https://knitwink.com` |
+| Velmique | `https://velmique.com` |
+| Velquira | `https://www.velquira.in` |
 
 - Interval: 5 min. Alert contact: **email** (add a Slack/WhatsApp contact too if you want push).
+- Optional extra on `/api/health`: a **Keyword** monitor with keyword `"status":"ok"`,
+  "alert when NOT present" — catches a `degraded` (200-ish) state too. Not required.
 - Bonus: the 5-min ping on `/api/health` keeps cPanel Passenger warm, helping the
   in-process queue worker stay alive.
 
