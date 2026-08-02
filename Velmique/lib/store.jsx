@@ -10,6 +10,7 @@ import {
   toastAddedToCart, toastRemovedFromCart, toastCartCleared,
   toastAddedToWishlist, toastRemovedFromWishlist,
 } from '@/lib/toast';
+import { fbTrack } from '@/utils/pixel';
 
 /**
  * Velmique global store.
@@ -58,6 +59,19 @@ export function StoreProvider({ children }) {
     });
     setCartOpen(true);
     toastAddedToCart(item.name);
+
+    // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
+    // Cart line ids are composite (`productId:variationId`); the real Meta
+    // catalogue id is the product id, so content_ids use item.productId.
+    const unitPrice = Number(item.price ?? 0);
+    fbTrack('AddToCart', {
+      content_ids: [String(item.productId ?? item.id)],
+      content_type: 'product',
+      content_name: item.name || undefined,
+      value: unitPrice * addQty,
+      currency: 'INR',
+      contents: [{ id: String(item.productId ?? item.id), quantity: addQty }],
+    });
   }, []);
 
   const removeFromCart = useCallback((id, size) => {

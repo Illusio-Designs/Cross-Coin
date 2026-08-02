@@ -10,6 +10,7 @@ import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug } from '@/lib/api/products';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import { fbTrack } from '@/utils/pixel';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
@@ -81,6 +82,21 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
   const displayCompare  = activeVariation?.comparePrice ?? product?.originalPrice;
   const displayInStock  = activeVariation ? activeVariation.inStock : !!product?.inStock;
   const displayStock    = activeVariation?.stock ?? null;
+
+  // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+  // Fires client-side once per product, once it's in state.
+  useEffect(() => {
+    if (!product?.id) return;
+    fbTrack('ViewContent', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(displayPrice ?? product.price ?? 0),
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: 1 }],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   if (loading && !product) return <ProductPageSkeleton />;
 

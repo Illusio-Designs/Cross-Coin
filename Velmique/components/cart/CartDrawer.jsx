@@ -25,6 +25,7 @@ import {
   toastAddressAdded, toastAddressUpdated, toastAddressError,
 } from '@/lib/toast';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { fbTrack, fbPurchase } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -195,6 +196,22 @@ export default function CartDrawer() {
     if (!selectedAddress) setShowAddrForm(true);
   }, [cartOpen, isAuthenticated, selectedAddress]);
 
+  // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
+  // (this drawer is the full in-drawer checkout). Cart line ids are composite,
+  // so content_ids use the real product id (item.productId).
+  useEffect(() => {
+    if (!cartOpen || items.length === 0) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map(i => String(i.productId ?? i.id)),
+      content_type: 'product',
+      contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
+      num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
+      value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
+      currency: 'INR',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartOpen]);
+
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal     = cartTotal;
   const shippingFee  = parseFloat(selectedFee?.fee || 0);
@@ -364,6 +381,18 @@ export default function CartDrawer() {
       quantity:     Number(i.quantity) || 1,
     }));
 
+  // Meta Purchase custom_data — captured from the cart BEFORE it is cleared.
+  // Cart line ids are composite, so content_ids use the real product id.
+  const buildPurchaseData = (orderNumber, value) => ({
+    content_ids: items.map(i => String(i.productId ?? i.id)),
+    content_type: 'product',
+    contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
+    num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
+    value: Number(value) || 0,
+    currency: 'INR',
+    order_id: orderNumber,
+  });
+
   const buildCodOrder = (idem) => {
     const base = {
       items: buildItems(),
@@ -440,9 +469,13 @@ export default function CartDrawer() {
       const data = buildCodOrder(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
       if (!result?.order) throw new Error('Order creation failed.');
+      const orderNumber = result.order.order_number;
+      // Meta Purchase (deduped with the backend's server-side event).
+      const purchaseData = buildPurchaseData(orderNumber, finalPayable);
       clearCart(true);
-      toastOrderPlaced(result.order.order_number);
-      setOrderSuccess({ orderNumber: result.order.order_number, paymentType: 'cod' });
+      fbPurchase(orderNumber, purchaseData);
+      toastOrderPlaced(orderNumber);
+      setOrderSuccess({ orderNumber, paymentType: 'cod' });
     } catch (err) {
       const msg = err.message || 'Order placement failed.';
       setErrorMsg(msg);
@@ -474,10 +507,14 @@ export default function CartDrawer() {
             razorpaySignature: resp.razorpay_signature,
             reservation_id:    reservationId,
           });
+          const orderNumber = result.order?.order_number;
+          // Meta Purchase (deduped with the backend's server-side event).
+          const purchaseData = buildPurchaseData(orderNumber, finalPayable);
           clearCart(true);
+          fbPurchase(orderNumber, purchaseData);
           toastPaymentSuccess();
-          toastOrderPlaced(result.order?.order_number);
-          setOrderSuccess({ orderNumber: result.order?.order_number, paymentType: 'prepaid' });
+          toastOrderPlaced(orderNumber);
+          setOrderSuccess({ orderNumber, paymentType: 'prepaid' });
         } catch (err) {
           const msg = err.message || 'Payment verification failed.';
           setErrorMsg(msg);
