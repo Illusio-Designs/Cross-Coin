@@ -173,7 +173,7 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         // ?debug=1 → append diagnostics so a "not serviceable" can be traced to
         // its cause (staging host / bad token → empty raw response) WITHOUT any
         // admin token and WITHOUT ever exposing credentials. Safe, read-only.
-        const debug = ['1', 'true', 'yes'].includes(String(req.query.debug || '').toLowerCase())
+        const debug = ['1', 'true', 'yes', 'probe'].includes(String(req.query.debug || '').toLowerCase())
             ? {
                 _debug: {
                     providerName,
@@ -185,6 +185,12 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
                     // Un-normalised iThink reply (url + credential-free request +
                     // exact response) — shows an error envelope vs an empty list.
                     ithink_raw: (provider && provider._lastPincodeRaw) || null,
+                    // ?debug=probe → hit BOTH prod + staging hosts to reveal which
+                    // environment the tokens belong to (empty on prod + data on
+                    // staging = staging credentials).
+                    host_probe: (String(req.query.debug).toLowerCase() === 'probe' && provider && provider.probePincode)
+                        ? await provider.probePincode(pincode).catch((e) => ({ error: e.message }))
+                        : undefined,
                     parsed_decision: decision,
                 },
             }

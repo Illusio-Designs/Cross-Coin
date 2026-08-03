@@ -622,6 +622,32 @@ class IThinkService {
     }
   }
 
+  /**
+   * DIAGNOSTIC: run the same Check Pincode request against BOTH the production
+   * and pre-alpha (staging) hosts with the brand's current credentials, and
+   * return each raw reply + HTTP status. Whichever host returns real data tells
+   * us which environment the tokens actually belong to. Credentials are never
+   * included in the return value.
+   */
+  async probePincode(destinationPincode) {
+    await this.initialize();
+    const payload = { data: { ...this._authData(), pincode: String(destinationPincode) } };
+    const hosts = { production: ITHINK_PRODUCTION_URL, staging: ITHINK_STAGING_URL };
+    const out = {};
+    for (const [name, host] of Object.entries(hosts)) {
+      try {
+        const r = await axios.post(`${host}/api/pincode/check.json`, payload, {
+          timeout: 15000,
+          headers: { 'Content-Type': 'application/json', 'cache-control': 'no-cache' },
+        });
+        out[name] = { http_status: r.status, response: r.data };
+      } catch (e) {
+        out[name] = { http_status: e.response?.status || null, error: e.message, response: e.response?.data ?? null };
+      }
+    }
+    return out;
+  }
+
   // ── Shipping Label ──────────────────────────────────────────────────────
 
   async getShippingLabel(waybills) {
