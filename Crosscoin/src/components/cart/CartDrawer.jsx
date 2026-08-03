@@ -463,6 +463,16 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => document.body.classList.remove('cd-drawer-open-body');
   }, [isOpen]);
 
+  // ── Buy Now is a one-shot express item ─────────────────────────────────
+  // Drop it whenever the drawer closes, so the next time the cart opens (Add to
+  // Bag, cart icon, etc.) it shows the real cart — not a stale single item.
+  // Without this, a closed-but-uncompleted Buy Now made Add to Bag look
+  // identical to Buy Now (both rendered the same lingering buyNowItem).
+  useEffect(() => {
+    if (!isOpen && buyNowItem) clearBuyNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   // ── Close dropdown on outside click ────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (event) => {

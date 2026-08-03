@@ -22,7 +22,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
   // The legacy /ProductDetails?slug=X route still reads from the query.
   const slug = initialSlug
     || (router.query?.slug ? decodeURIComponent(router.query.slug) : null);
-  const { addToCart, buyNow, setIsDrawerOpen } = useCart();
+  const { addToCart, buyNow, clearBuyNow, setIsDrawerOpen } = useCart();
   const { setCustomBreadcrumbs } = useBreadcrumb();
 
   const [showLightbox, setShowLightbox] = useState(false);
@@ -237,6 +237,9 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
 
   const handleAddToBag = async () => {
     if (!productData) return;
+    // Drop any lingering express "Buy Now" item so the drawer shows the real
+    // cart (a stale buyNowItem makes Add to Bag look identical to Buy Now).
+    clearBuyNow();
     const product = rawProduct || { id: productData.id, name: productData.title, price: productData.price, images: productData.images, variations: productData.variations || [] };
     await addToCart(
       product,
