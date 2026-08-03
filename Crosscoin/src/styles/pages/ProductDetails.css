@@ -1236,32 +1236,27 @@
     gap: 8px;
   }
 
-  /* On phones the horizontal-scroll feature strip looked cut off (only the
-     first card visible, the rest clipped past the edge). Wrap the cards into
-     full-width rows instead so all three are always fully visible — no scroll,
-     no clipping. */
+  /* Feature cards scroll horizontally on mobile too — same side-by-side row as
+     desktop/PC. Each card is a fixed slice of the viewport so ~1.4 cards show
+     and the next one peeks in, making it obvious the row swipes. (min-width:0
+     on the row keeps this scroller from stretching the whole column.) */
   .pdt-fit-row {
-    flex-wrap: wrap;
-    overflow-x: visible;
     max-width: 100%;
     width: 100%;
-    gap: 8px;
-    cursor: default;
+    gap: 10px;
   }
 
   .pdt-fit-item {
-    flex: 1 1 100%;
-    min-width: 0;
+    flex: 0 0 auto;
+    width: 70%;
   }
 
   .pdt-fit-text strong {
     font-size: 13px;
-    white-space: normal;
   }
 
   .pdt-fit-text span {
     font-size: 11px;
-    white-space: normal;
   }
 
   .pdt-mfg-row {
