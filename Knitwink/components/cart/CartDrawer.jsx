@@ -513,6 +513,45 @@ export function CartDrawer() {
     }
   };
 
+  // ── Auto-save address ─────────────────────────────────────────────────────
+  // Once every required field is valid, silently persist the address after a
+  // short debounce so the user never has to press a Save button. A signature
+  // of the current field values guards against re-saving unchanged data.
+  const lastAutoSaveSig = useRef('');
+  useEffect(() => {
+    if (!showAddressForm || addressSaving) return;
+
+    const name = String((isAuthenticated ? addressForm.fullName : guestInfo.fullName) || '').trim();
+    const phone = isAuthenticated ? addressForm.phoneNumber : guestInfo.phone;
+    const address = String(addressForm.address || '').trim();
+    const city = String(addressForm.city || '').trim();
+    const state = String(addressForm.state || '').trim();
+    const postalCode = String(addressForm.postalCode || '').trim();
+
+    const pincodeOk = /^\d{6}$/.test(postalCode);
+    const phoneOk = isValidIndianMobile(phone);
+    const basicsOk = !!name && !!address && !!city && !!state;
+    const emailOk = isAuthenticated ? true : isValidEmail(guestInfo.email);
+    const noErrors = Object.keys(fieldErrors).length === 0;
+    const serviceable = !(pincodeServiceability?.serviceable === false);
+
+    if (!(pincodeOk && phoneOk && basicsOk && emailOk && noErrors && serviceable)) return;
+
+    const sig = JSON.stringify({
+      name, phone, address, city, state, postalCode,
+      email: isAuthenticated ? '' : String(guestInfo.email || '').trim(),
+      editingAddressId,
+    });
+    if (sig === lastAutoSaveSig.current) return;
+
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      handleSaveAddress({ preventDefault() {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddressForm, addressSaving, addressForm, guestInfo, fieldErrors, pincodeServiceability, editingAddressId, isAuthenticated]);
+
   // ── Coupon ──────────────────────────────────────────────────────────────
   const handleApplyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -1128,9 +1167,7 @@ export function CartDrawer() {
                           )}
                         </div>
                         <div className="cd-form-actions">
-                          <button type="submit" className="cd-btn-primary" disabled={addressSaving || Object.keys(fieldErrors).length > 0}>
-                            {addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
-                          </button>
+                          <p className="cd-autosave-hint" aria-live="polite">{addressSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}</p>
                           <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); setFieldErrors({}); }}>Cancel</button>
                         </div>
                       </form>

@@ -108,12 +108,15 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
     background-color: #ffffff;
     color: #262626;
     overflow-x: hidden;
+    max-width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #0a0a0a #f0f0f0;
   }
@@ -1169,3 +1172,5 @@ body.cd-drawer-open-body .wachat-greet {
 }
 
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
+
+@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }

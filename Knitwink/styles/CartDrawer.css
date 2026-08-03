@@ -458,7 +458,7 @@
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .cd-drawer { width: 100vw; }
+  .cd-drawer { width: 100%; }
   .cd-single-view { padding: 12px 14px; }
   .cd-footer { padding: 8px 14px 12px; }
   .cd-header { padding: 12px 14px; }
