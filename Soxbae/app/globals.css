@@ -1258,9 +1258,36 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-panel-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-600); margin-bottom: 12px; }
 .pdx-panel-specs dl { margin: 0; }
 /* Assurances — one wrapping row of trust signals */
-.pdx-assure { list-style: none; margin: 22px 0 0; padding: 18px 0 0; display: flex; flex-wrap: wrap; gap: 10px 22px; border-top: 1px solid var(--line); }
-.pdx-assure li { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
-.pdx-assure svg { color: var(--accent-600); flex-shrink: 0; }
+/* Free-shipping + delivery ETA line */
+.pdx-ship { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13.5px; color: var(--ink); margin-top: 14px; }
+.pdx-ship svg { color: var(--accent-600); flex-shrink: 0; }
+.pdx-ship strong { color: var(--accent-600); font-weight: 700; }
+.pdx-ship .pdx-ship-eta { color: var(--ink-soft); }
+
+/* Honest low-stock pill */
+.pdx-low { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; font-weight: 700; color: var(--accent-600); background: var(--accent-050); padding: 5px 11px; border-radius: 999px; align-self: flex-start; }
+.pdx-low svg { flex-shrink: 0; }
+
+/* Delivery / pincode serviceability */
+.pdx-pin { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 15px 16px; margin: 0 0 4px; }
+.pdx-pin-label { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+.pdx-pin-row { display: flex; gap: 8px; }
+.pdx-pin-input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: #fff; outline: 0; }
+.pdx-pin-input:focus { border-color: var(--accent); }
+.pdx-pin-btn { border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .06em; padding: 10px 20px; cursor: pointer; white-space: nowrap; transition: background .15s ease; }
+.pdx-pin-btn:hover:not(:disabled) { background: var(--accent-600); }
+.pdx-pin-btn:disabled { opacity: .6; cursor: default; }
+.pdx-pin-result { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; font-size: 13px; font-weight: 600; }
+.pdx-pin-result svg { flex-shrink: 0; }
+.pdx-pin-result.ok { color: #1f7a4d; }
+.pdx-pin-result.fail, .pdx-pin-result:not(.ok):not(.fail) { color: var(--accent-600); }
+.pdx-cod { margin-left: 4px; font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; background: #e6f4ec; color: #1f7a4d; }
+
+/* Trust strip — 4 cells */
+.pdx-trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.pdx-trust div { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 7px; font-size: 12px; font-weight: 600; line-height: 1.25; color: var(--ink-soft); }
+.pdx-trust svg { width: 20px; height: 20px; color: var(--accent-600); }
+@media (max-width: 520px) { .pdx-trust { grid-template-columns: repeat(2, 1fr); gap: 16px 12px; } }
 /* Details band */
 /* Highlights — full-width benefit strip below the buy area */
 .pdx-details { margin-top: clamp(40px,5vw,64px); padding-top: clamp(32px,4vw,48px); border-top: 1px solid var(--line); }
