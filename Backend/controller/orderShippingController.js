@@ -1843,8 +1843,14 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
       errors_list: [],
     };
 
-    // STEP 4: Process each order with its own transaction, in batches of 10
-    const BATCH_SIZE = 10;
+    // STEP 4: Process each order with its own transaction, in bounded batches.
+    // Each order opens a transaction + several sub-queries + a courier API call,
+    // so a batch can hold up to BATCH_SIZE DB connections at once. Keep this a
+    // few UNDER the DB pool (DB_POOL_MAX, default 10) so a batch can never drain
+    // the whole pool — otherwise, on a slow/loaded DB, orders time out waiting
+    // for a connection ("Operation timeout"). Env-tunable: raise it once the DB
+    // is healthy (disk freed) for faster refreshes.
+    const BATCH_SIZE = Math.max(1, parseInt(process.env.SHIPPING_REFRESH_BATCH, 10) || 5);
     for (let i = 0; i < orders.length; i += BATCH_SIZE) {
       const batch = orders.slice(i, i + BATCH_SIZE);
 
