@@ -582,13 +582,14 @@ class IThinkService {
     await this.initialize();
     try {
       logger.debug('=== iThink Pincode Check ===');
-      // Domestic /api/pincode/check.json only needs auth + from/to pincode
-      // (same minimal { data: { ...auth, … } } shape as cancel/label/etc.).
+      // Per iThink's "Check Pincode" doc (doc-check-pincode/1), the domestic
+      // /api/pincode/check.json takes a SINGLE destination `pincode` — NOT
+      // from_pincode/to_pincode. Sending the wrong fields made iThink return an
+      // empty result so every PIN read as "not serviceable".
       const payload = {
         data: {
           ...this._authData(),
-          from_pincode: String(sourcePincode),
-          to_pincode: String(destinationPincode),
+          pincode: String(destinationPincode),
         },
       };
 
