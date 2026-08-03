@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -235,6 +235,29 @@ export default function CartDrawer() {
       setSavingAddr(false);
     }
   };
+
+  // Auto-save the delivery address once all details are valid (debounced), so the
+  // customer never has to hit a "Save" button. Signature guard prevents re-saving
+  // the same address repeatedly.
+  const lastAutoSaveSig = useRef('');
+  useEffect(() => {
+    if (!showForm || savingAddr) return;
+    const candidate = {
+      full_name: isAuthenticated ? form.fullName : guest.fullName.trim() || form.fullName,
+      address: form.address, city: form.city, state: form.state, postal_code: form.postalCode,
+      phone_number: isAuthenticated ? form.phoneNumber : guest.phone,
+    };
+    if (validateAddress(candidate)) return;
+    if (!isAuthenticated && !isValidEmail(guest.email)) return;
+    const sig = JSON.stringify(candidate);
+    if (sig === lastAutoSaveSig.current) return;
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      saveAddress({ preventDefault() {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, savingAddr, isAuthenticated, form, guest]);
 
 
   const buildItems = () => items
@@ -519,8 +542,8 @@ export default function CartDrawer() {
                     {isAuthenticated && (
                       <label className="cd-checkbox"><input type="checkbox" name="isDefault" checked={form.isDefault} onChange={onFormChange} /> Set as default</label>
                     )}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="submit" className="btn btn-primary" disabled={savingAddr}>{savingAddr ? 'Saving…' : 'Save address'}</button>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <p className="muted" style={{ fontSize: 12, margin: 0, flex: 1, minWidth: 180 }} aria-live="polite">{savingAddr ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}</p>
                       {(selectedAddress || (isAuthenticated && addresses.length > 0)) && <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>}
                     </div>
                   </form>

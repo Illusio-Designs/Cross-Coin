@@ -38,7 +38,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; } /* Lenis handles smoothing */
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; max-width: 100%; }
 body {
   background: var(--bg);
   color: var(--ink);
@@ -792,7 +792,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 /* Cart drawer — full-width and comfortably spaced on phones */
 @media (max-width: 520px) {
-  .cd-drawer { width: 100vw; max-width: 100vw; }
+  .cd-drawer { width: 100%; max-width: 100vw; }
   .cd-header { padding: 14px 16px; }
   .cd-body { padding: 8px 16px; }
   .cd-foot { padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
@@ -2105,3 +2105,5 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* deploy-refresh 2026-07-31: force Vercel rebuild (track-order + order-detail) */
 
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
+
+@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
