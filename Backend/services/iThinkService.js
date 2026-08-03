@@ -27,7 +27,10 @@ class IThinkService {
     if (this._initPromise) return this._initPromise;
 
     this._initPromise = (async () => {
-      const env = await settingsHelper.getSetting(this.brandId, 'ITHINK_ENVIRONMENT', 'staging');
+      // Default to PRODUCTION: an unset value must never silently fall back to
+      // pre-alpha staging (which returns empty data → every PIN reads as "not
+      // serviceable"). Set ITHINK_ENVIRONMENT='staging' explicitly to test.
+      const env = await settingsHelper.getSetting(this.brandId, 'ITHINK_ENVIRONMENT', 'production');
       this.accessToken = await settingsHelper.getSetting(this.brandId, 'ITHINK_ACCESS_TOKEN');
       this.secretKey = await settingsHelper.getSetting(this.brandId, 'ITHINK_SECRET_KEY');
       this.pickupAddressId = await settingsHelper.getSetting(this.brandId, 'ITHINK_PICKUP_ADDRESS_ID');

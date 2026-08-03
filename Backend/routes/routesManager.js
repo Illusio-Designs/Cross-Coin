@@ -166,8 +166,26 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         // iThink vs FShip response shapes; never falsely blocks a real customer).
         const { parseServiceability } = require('../utils/serviceability.js');
         const decision = parseServiceability(raw);
+
+        // ?debug=1 → append diagnostics so a "not serviceable" can be traced to
+        // its cause (staging host / bad token → empty raw response) WITHOUT any
+        // admin token and WITHOUT ever exposing credentials. Safe, read-only.
+        const debug = ['1', 'true', 'yes'].includes(String(req.query.debug || '').toLowerCase())
+            ? {
+                _debug: {
+                    providerName,
+                    ithink_environment: await settingsHelper.getSetting(brandId, 'ITHINK_ENVIRONMENT', 'production'),
+                    resolved_host: provider && provider.baseURL ? provider.baseURL : null,
+                    from_pincode: src,
+                    country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
+                    raw_response: raw,
+                    parsed_decision: decision,
+                },
+            }
+            : {};
+
         if (!decision.serviceable) {
-            return res.json({ success: true, serviceable: false, message: 'Delivery not available for this PIN code' });
+            return res.json({ success: true, serviceable: false, message: 'Delivery not available for this PIN code', ...debug });
         }
         return res.json({
             success: true,
@@ -175,6 +193,7 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
             cod_allowed: decision.cod_allowed,
             cod_available: decision.cod_available,
             estimated_delivery_days: decision.estimated_delivery_days || 5,
+            ...debug,
         });
     } catch (e) {
         // On ANY failure, never block checkout — report serviceable and let the
@@ -217,63 +236,6 @@ router.all('/cron/run', async (req, res) => {
         return res.json({ success: true, enqueued: jobName });
     } catch (e) {
         return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-// ── Serviceability DEBUG (token-gated) ──────────────────────────────────────
-// When a PIN "doesn't deliver" on the live site, the /serviceability route
-// hides WHY (it just says serviceable:false). This route exposes the full
-// picture for one PIN so we can tell a config problem (hitting pre-alpha /
-// wrong token → empty response) apart from a genuine not-serviceable PIN.
-//
-// Gated by the same token as /cron/run (CRON_TOKEN or ADMIN_METRICS_TOKEN).
-//   curl "https://api.crosscoin.in/api/serviceability-debug/400001?token=YOUR_TOKEN" \
-//        -H "X-Brand-Name: crosscoin"
-router.get('/serviceability-debug/:pincode', optionalBrand, async (req, res) => {
-    const token = process.env.CRON_TOKEN || process.env.ADMIN_METRICS_TOKEN;
-    const presented = (req.headers['x-cron-token'] || req.query.token || '').toString();
-    if (!token || presented !== token) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-    const { pincode } = req.params;
-    if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ success: false, message: 'Invalid pincode' });
-
-    const settingsHelper = require('../services/settingsHelper');
-    const brandId = req.brandId || 1;
-    const mask = (v) => (v ? String(v).slice(0, 4) + '…' + String(v).slice(-2) : null);
-    const out = { brandId, pincode };
-    try {
-        const factory = require('../services/shippingProviderFactory');
-        const providerName = await factory.getProviderName(brandId).catch(() => 'unknown');
-        const provider = await factory.getShippingProvider(brandId);
-
-        const env = await settingsHelper.getSetting(brandId, 'ITHINK_ENVIRONMENT', 'staging');
-        const src = await settingsHelper.getSetting(
-            brandId,
-            providerName === 'ithink' ? 'ITHINK_WAREHOUSE_PINCODE' : 'FSHIP_WAREHOUSE_PINCODE',
-            await settingsHelper.getSetting(brandId, 'DEFAULT_WAREHOUSE_PINCODE', '363641')
-        );
-        out.config = {
-            providerName,
-            ithink_environment: env,
-            resolved_host: env === 'production' ? 'https://my.ithinklogistics.com' : 'https://pre-alpha.ithinklogistics.com (STAGING — no real data!)',
-            from_pincode: src,
-            country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
-            access_token: mask(await settingsHelper.getSetting(brandId, 'ITHINK_ACCESS_TOKEN')),
-            secret_key: mask(await settingsHelper.getSetting(brandId, 'ITHINK_SECRET_KEY')),
-        };
-
-        let raw, rawErr = null;
-        try { raw = await provider.checkServiceability(src, pincode); }
-        catch (e) { rawErr = e.message; }
-        out.raw_response = raw;
-        out.raw_error = rawErr;
-
-        const { parseServiceability } = require('../utils/serviceability.js');
-        out.parsed_decision = raw != null ? parseServiceability(raw) : null;
-        return res.json({ success: true, ...out });
-    } catch (e) {
-        return res.status(500).json({ success: false, ...out, error: e.message });
     }
 });
 
