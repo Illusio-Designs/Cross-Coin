@@ -69,7 +69,8 @@ class RazorpayService {
       brandId = 1,
       line_items = null,
       line_items_total = null,
-      partial_payment = false
+      partial_payment = false,
+      one_click_checkout = false
     } = options;
 
     try {
@@ -97,6 +98,13 @@ class RazorpayService {
       if (line_items && Array.isArray(line_items) && line_items.length > 0) {
         orderOptions.line_items = line_items;
         orderOptions.line_items_total = line_items_total || amountInSmallestUnit;
+      }
+
+      // Magic (one-click) Checkout — Razorpay's modal collects the address from
+      // its cross-merchant network and calls our shipping/coupon callbacks.
+      if (one_click_checkout) {
+        orderOptions.line_items_total = orderOptions.line_items_total || amountInSmallestUnit;
+        orderOptions.one_click_checkout = true;
       }
 
       // Create order

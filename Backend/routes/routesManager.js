@@ -35,6 +35,9 @@ router.use('/auth',               optionalBrand, require('./checkoutRoutes.js'))
 // ── Checkout (payment-first flow) ─────────────────────────────────────────
 router.use('/checkout',           optionalBrand, require('./checkoutRoutes.js'));
 
+// ── Razorpay Magic (one-click) Checkout — test surface ────────────────────
+router.use('/magic',              optionalBrand, require('./magicRoutes.js'));
+
 // ── WhatsApp ──────────────────────────────────────────────────────────────
 router.use('/whatsapp',           require('./whatsappRoutes.js'));
 
