@@ -87,11 +87,17 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Tracker libraries are served from their own CDNs.
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://*.msg91.com",
+              // Razorpay Checkout / Magic Checkout is served from checkout.razorpay.com
+              // (+ *.razorpay.com for its sub-scripts). Without these the payment
+              // script is blocked by CSP → "Failed to load Razorpay script" and
+              // prepaid checkout can't open.
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://*.msg91.com https://checkout.razorpay.com https://*.razorpay.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Tracking beacons (1x1 pixels) and FB / GA pixel images.
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
+              // Razorpay renders its checkout / Magic modal inside an iframe.
+              "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com",
               // Beacon endpoints the trackers POST to.
               // GA4 sends collect beacons to www.google-analytics.com AND (for
               // Google Signals) to analytics.google.com and www.google.com, so
@@ -99,7 +105,7 @@ const nextConfig = {
               // stats.g.doubleclick.net is GA4's Google Signals / remarketing
               // beacon (demographics + audiences); without it those features
               // are refused even though basic page_view hits succeed.
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com",
+              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.razorpay.com https://lumberjack.razorpay.com",
               "frame-ancestors 'none'",
             ].join('; ') + ';'
           },

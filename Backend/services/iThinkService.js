@@ -583,6 +583,10 @@ class IThinkService {
           ...this._authData(),
           from_pincode: String(sourcePincode),
           to_pincode: String(destinationPincode),
+          // country_code is a REQUIRED field for iThink's pincode check — without
+          // it the API returns an empty result and EVERY pincode reads as
+          // "not serviceable". Default to India (domestic).
+          country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
           shipping_length_cms: '14',
           shipping_width_cms: '3',
           shipping_height_cms: '10',

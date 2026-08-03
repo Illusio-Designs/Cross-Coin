@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 /*
@@ -6,28 +6,21 @@ import Head from 'next/head';
  *
  * Route: /magic-checkout-test  (not linked anywhere; open it directly)
  *
- * It builds a small sample cart, asks our backend to create a Magic order
- * (line_items + one_click_checkout), opens Razorpay's Magic modal (which
- * collects phone → OTP → address from its network and calls our shipping /
- * coupon callbacks), then verifies the payment and shows exactly what came back
- * — including the address Magic returned. Nothing here touches the live cart.
+ * Loads REAL products from the live catalog, lets you pick one, then asks the
+ * backend to create a Magic order (line_items + one_click_checkout) and opens
+ * Razorpay's Magic modal (phone → OTP → address from its network, with our
+ * shipping/coupon callbacks). After payment it verifies and prints everything —
+ * including the address Magic returned. Nothing here touches the live cart.
  */
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = 'crosscoin';
 
-const DEFAULT_ITEMS = [
-  { sku: 'CC-1234', name: 'Five-Toe Cotton Socks', price: 999, offer_price: 499, quantity: 1, image_url: '' },
-  { sku: 'CC-5678', name: 'Ankle Socks — Pack of 3', price: 799, offer_price: 599, quantity: 2, image_url: '' },
-];
-
 function loadRazorpay() {
   return new Promise((resolve) => {
     if (typeof window !== 'undefined' && window.Razorpay) return resolve(true);
-    if (document.getElementById('rzp-magic-script')) {
-      document.getElementById('rzp-magic-script').addEventListener('load', () => resolve(true));
-      return;
-    }
+    const existing = document.getElementById('rzp-magic-script');
+    if (existing) { existing.addEventListener('load', () => resolve(true)); existing.addEventListener('error', () => resolve(false)); return; }
     const s = document.createElement('script');
     s.id = 'rzp-magic-script';
     s.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -37,26 +30,77 @@ function loadRazorpay() {
   });
 }
 
+// Normalise a catalogue product to what the Magic order needs, from its first
+// in-stock variation (falls back to product-level fields).
+function normalize(p) {
+  const vars = p.ProductVariations || p.variations || [];
+  const v = vars.find((x) => Number(x.stock) > 0) || vars[0] || {};
+  const imgs = p.ProductImages || p.images || [];
+  const img = imgs.find((i) => i.is_primary) || imgs[0] || {};
+  const sale = Number(v.price ?? p.price ?? 0);
+  const mrp = Number(v.comparePrice ?? p.comparePrice ?? sale);
+  return {
+    id: String(p.id),
+    name: p.name || 'Product',
+    sku: v.sku || p.sku || String(p.id),
+    variant_id: v.id != null ? String(v.id) : undefined,
+    price: mrp > sale ? mrp : sale,   // MRP
+    offer_price: sale,                // selling price
+    image_url: img.image_url || img.url || '',
+    stock: Number(v.stock ?? 0),
+  };
+}
+
 export default function MagicCheckoutTest() {
-  const [items, setItems] = useState(DEFAULT_ITEMS);
+  const [products, setProducts] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [qty, setQty] = useState(1);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [status, setStatus] = useState('Idle');
   const [log, setLog] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  const push = (label, data) =>
-    setLog((l) => [{ t: new Date().toLocaleTimeString(), label, data }, ...l]);
+  const push = (label, data) => setLog((l) => [{ t: new Date().toLocaleTimeString(), label, data }, ...l]);
 
-  const total = items.reduce((s, it) => s + Number(it.offer_price ?? it.price) * Number(it.quantity || 1), 0);
+  // Load real products from the live catalogue.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API}/api/products/catalog?limit=30`, { headers: { 'X-Brand-Name': BRAND } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        const list = d.products || d.data?.products || d.data || [];
+        const norm = (Array.isArray(list) ? list : []).map(normalize).filter((p) => p.offer_price > 0);
+        setProducts(norm);
+        if (norm[0]) setSelectedId(norm[0].id);
+        setLoadingProducts(false);
+        if (!norm.length) setStatus('No products returned by /api/products/catalog');
+      })
+      .catch((e) => { if (alive) { setLoadingProducts(false); setStatus('Failed to load products: ' + (e?.message || e)); } });
+    return () => { alive = false; };
+  }, []);
 
-  const updateItem = (i, key, val) =>
-    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [key]: val } : it)));
+  const selected = products.find((p) => p.id === selectedId) || null;
+  const lineTotal = selected ? selected.offer_price * qty : 0;
 
   const pay = async () => {
+    if (!selected) { setStatus('Pick a product first'); return; }
     setBusy(true);
     setStatus('Loading Razorpay…');
     try {
       const ok = await loadRazorpay();
-      if (!ok || !window.Razorpay) { setStatus('Failed to load Razorpay script'); setBusy(false); return; }
+      if (!ok || !window.Razorpay) { setStatus('Failed to load Razorpay script (check CSP / network)'); setBusy(false); return; }
+
+      const items = [{
+        sku: selected.sku,
+        variant_id: selected.variant_id,
+        name: selected.name,
+        price: selected.price,
+        offer_price: selected.offer_price,
+        quantity: qty,
+        image_url: selected.image_url,
+      }];
+      push('Cart sent to /api/magic/order', items);
 
       setStatus('Creating Magic order…');
       const orderRes = await fetch(`${API}/api/magic/order`, {
@@ -72,10 +116,11 @@ export default function MagicCheckoutTest() {
       const rzp = new window.Razorpay({
         key: order.key_id,
         order_id: order.order_id,
-        one_click_checkout: true,   // Magic modal (address from network + our callbacks)
-        show_coupons: true,         // surface coupons via our /api/magic/coupons + apply-coupon
+        one_click_checkout: true,
+        show_coupons: true,
         name: 'Cross Coin',
-        description: 'Magic Checkout Test',
+        description: selected.name,
+        image: selected.image_url || undefined,
         theme: { color: '#180D3E' },
         handler: async (response) => {
           push('Razorpay success payload', response);
@@ -106,7 +151,7 @@ export default function MagicCheckoutTest() {
   };
 
   const box = { border: '1px solid #e0e0e0', borderRadius: 10, padding: 16, marginBottom: 16, background: '#fff' };
-  const input = { border: '1px solid #ccc', borderRadius: 6, padding: '6px 8px', fontSize: 13, width: '100%' };
+  const ctl = { border: '1px solid #ccc', borderRadius: 6, padding: '8px 10px', fontSize: 14, fontFamily: 'inherit' };
 
   return (
     <>
@@ -114,39 +159,59 @@ export default function MagicCheckoutTest() {
       <div style={{ maxWidth: 820, margin: '0 auto', padding: 24, fontFamily: 'DM Sans, system-ui, sans-serif', color: '#1a1a1a' }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Razorpay Magic Checkout — Test</h1>
         <p style={{ color: '#777', fontSize: 13, marginTop: 0 }}>
-          Isolated test surface. Uses <code>/api/magic/*</code>. Set your Razorpay <b>test</b> keys in brand settings to test safely.
+          Real products from the live catalogue. Uses <code>/api/magic/*</code>. Use Razorpay <b>test</b> keys to test safely.
         </p>
 
         <div style={box}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Sample cart (editable)</h3>
-          {items.map((it, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.8fr 0.8fr 0.7fr', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-              <input style={input} value={it.name} onChange={(e) => updateItem(i, 'name', e.target.value)} placeholder="Name" />
-              <input style={input} value={it.sku} onChange={(e) => updateItem(i, 'sku', e.target.value)} placeholder="SKU" />
-              <input style={input} type="number" value={it.price} onChange={(e) => updateItem(i, 'price', Number(e.target.value))} placeholder="MRP" />
-              <input style={input} type="number" value={it.offer_price} onChange={(e) => updateItem(i, 'offer_price', Number(e.target.value))} placeholder="Sale" />
-              <input style={input} type="number" value={it.quantity} onChange={(e) => updateItem(i, 'quantity', Number(e.target.value))} placeholder="Qty" />
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Choose a real product</h3>
+          {loadingProducts ? (
+            <p style={{ color: '#999', fontSize: 14 }}>Loading products…</p>
+          ) : products.length === 0 ? (
+            <p style={{ color: '#c62828', fontSize: 14 }}>No products loaded — {status}</p>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} style={{ ...ctl, minWidth: 320, flex: 1 }}>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — ₹{p.offer_price.toLocaleString('en-IN')} ({p.sku}){p.stock <= 0 ? ' · out of stock' : ''}
+                  </option>
+                ))}
+              </select>
+              <label style={{ fontSize: 13, color: '#555' }}>Qty&nbsp;
+                <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value)))} style={{ ...ctl, width: 64 }} />
+              </label>
             </div>
-          ))}
-          <div style={{ fontWeight: 700, marginTop: 8 }}>Items total: ₹{total.toLocaleString('en-IN')}
-            <span style={{ fontWeight: 400, color: '#777', fontSize: 12, marginLeft: 8 }}>(+ shipping / − coupon are applied inside Magic via our callbacks)</span>
-          </div>
+          )}
+
+          {selected && (
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 14 }}>
+              {selected.image_url ? <img src={selected.image_url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #eee' }} /> : null}
+              <div style={{ fontSize: 14 }}>
+                <div style={{ fontWeight: 700 }}>{selected.name}</div>
+                <div style={{ color: '#555' }}>
+                  ₹{selected.offer_price.toLocaleString('en-IN')}
+                  {selected.price > selected.offer_price && <span style={{ color: '#999', textDecoration: 'line-through', marginLeft: 8 }}>₹{selected.price.toLocaleString('en-IN')}</span>}
+                  <span style={{ marginLeft: 10, color: '#777' }}>SKU {selected.sku}</span>
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto', fontWeight: 700 }}>Total: ₹{lineTotal.toLocaleString('en-IN')}</div>
+            </div>
+          )}
+          <p style={{ color: '#999', fontSize: 12, marginBottom: 0, marginTop: 12 }}>Shipping / coupon are applied inside Magic via our callbacks.</p>
         </div>
 
         <button
           onClick={pay}
-          disabled={busy}
-          style={{ background: '#180D3E', color: '#fff', border: 0, borderRadius: 8, padding: '14px 28px', fontSize: 14, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          disabled={busy || !selected}
+          style={{ background: '#180D3E', color: '#fff', border: 0, borderRadius: 8, padding: '14px 28px', fontSize: 14, fontWeight: 700, cursor: busy || !selected ? 'default' : 'pointer', opacity: busy || !selected ? 0.6 : 1 }}
         >
           {busy ? 'Working…' : 'Pay with Magic Checkout'}
         </button>
 
-        <div style={{ ...box, marginTop: 16 }}>
-          <strong>Status:</strong> {status}
-        </div>
+        <div style={{ ...box, marginTop: 16 }}><strong>Status:</strong> {status}</div>
 
         <h3 style={{ fontSize: 15 }}>Log (newest first)</h3>
-        {log.length === 0 && <p style={{ color: '#999', fontSize: 13 }}>Nothing yet — click Pay.</p>}
+        {log.length === 0 && <p style={{ color: '#999', fontSize: 13 }}>Nothing yet — pick a product and click Pay.</p>}
         {log.map((entry, i) => (
           <div key={i} style={{ ...box, marginBottom: 10 }}>
             <div style={{ fontSize: 12, color: '#777' }}>{entry.t} · <b>{entry.label}</b></div>
