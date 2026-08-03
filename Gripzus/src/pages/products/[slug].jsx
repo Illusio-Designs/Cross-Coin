@@ -8,6 +8,7 @@ import { getProductBySlug, getProductsByCategory, getPublicProducts } from '../.
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
+import { checkServiceability } from '../../services/serviceability';
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -27,6 +28,27 @@ export default function ProductDetail() {
   const [qty, setQty]     = useState(1);
   const [added, setAdded] = useState(false);
   const [paused, setPaused] = useState(false);
+
+  // Delivery / pincode serviceability check.
+  const [pincode, setPincode] = useState('');
+  const [serviceability, setServiceability] = useState(null);
+  const [checkingPin, setCheckingPin] = useState(false);
+  const handlePincodeCheck = async () => {
+    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return; }
+    setCheckingPin(true);
+    setServiceability(null);
+    try { setServiceability(await checkServiceability(pincode)); }
+    catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
+    finally { setCheckingPin(false); }
+  };
+  const eta = (() => {
+    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const day = d.getDate();
+    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
+  })();
 
   // Sticky bottom bar — shown once the Add-to-Bag / Buy-Now block scrolls away.
   const actionsRef = useRef(null);
@@ -244,10 +266,61 @@ export default function ProductDetail() {
 
               <h1 className="h-display text-2xl md:text-3xl mb-5">{product.name}</h1>
 
-              <div className="flex items-baseline gap-3 mb-8 pb-8 border-b border-line">
+              <div className="flex items-baseline gap-3 mb-5">
                 <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
                 {compare && compare > price && (
                   <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
+                )}
+              </div>
+
+              {/* Free shipping + delivery ETA */}
+              <div className="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span className="text-ink"><span className="font-semibold">Free shipping</span> over ₹499</span>
+                <span>· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
+              </div>
+
+              {/* Honest low-stock — only when total stock is genuinely low */}
+              {Number.isFinite(Number(product.stock)) && Number(product.stock) > 0 && Number(product.stock) <= 5 && (
+                <div className="inline-flex items-center gap-1.5 mb-5 rounded-full bg-paper-warm px-3 py-1 text-xs font-semibold text-ink">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Only {Number(product.stock)} left
+                </div>
+              )}
+
+              {/* Delivery / pincode serviceability */}
+              <div className="mb-8 rounded-lg border border-line bg-paper-warm/40 p-4">
+                <p className="eyebrow mb-3">Delivery Details</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="Enter Pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                    aria-label="Pincode"
+                    className="min-w-0 flex-1 rounded-sm border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePincodeCheck}
+                    disabled={checkingPin}
+                    className="btn shrink-0 !py-2.5 !px-6 whitespace-nowrap disabled:opacity-60"
+                  >
+                    {checkingPin ? '…' : 'Check'}
+                  </button>
+                </div>
+                {serviceability && (
+                  <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-sm font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
+                    {serviceability.error ? (
+                      <span>{serviceability.error}</span>
+                    ) : serviceability.serviceable ? (
+                      <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <span className="font-semibold">{pincode}</span>{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+                    ) : (
+                      <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Not deliverable to <span className="font-semibold">{pincode}</span></>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -337,7 +410,22 @@ export default function ProductDetail() {
                     </svg>
                   </button>
                 </div>
-                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 mb-9 whitespace-nowrap">Buy Now</button>
+                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 mb-6 whitespace-nowrap">Buy Now</button>
+              </div>
+
+              {/* Trust strip */}
+              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6 mb-9">
+                {[
+                  ['Secure Checkout', <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>],
+                  ['Cash on Delivery', <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>],
+                  ['7-Day Returns', <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>],
+                  ['100% Genuine', <><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></>],
+                ].map(([label, paths]) => (
+                  <div key={label} className="flex flex-col items-center gap-1.5 text-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink">{paths}</svg>
+                    <span className="text-[10px] font-semibold leading-tight text-ink-muted">{label}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Description */}

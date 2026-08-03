@@ -137,6 +137,9 @@ export function mapProduct(p) {
     sizes,
     badge:         BADGE[p.badge] || p.badge || undefined,
     inStock,
+    // Total real stock across variations (null when unknown) — powers the
+    // honest low-stock indicator on the product page.
+    stock:         variations.length ? totalStock : null,
     description:   p.description || '',
     sku:           firstVar?.sku || p.sku || '',
     variations,
