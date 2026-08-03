@@ -116,6 +116,7 @@ export default function CartDrawer() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const dropdownRef = useRef(null);
+  const lastAutoSaveSig = useRef('');
 
   // ── Reset on close ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -323,6 +324,33 @@ export default function CartDrawer() {
       setAddrSaving(false);
     }
   };
+
+  // ── Auto-save address once all details are valid ───────────────────────
+  // Debounced silent save — mirrors onSaveAddress's validation shape and
+  // guest name/phone fallback, then fires onSaveAddress with a no-op event.
+  useEffect(() => {
+    if (!showAddrForm || addrSaving) return;
+    const formForValidation = isAuthenticated
+      ? addrForm
+      : { ...addrForm, fullName: guestInfo.fullName.trim() || addrForm.fullName, phoneNumber: guestInfo.phone || addrForm.phoneNumber };
+    const validationInput = {
+      full_name:    formForValidation.fullName,
+      address:      formForValidation.address,
+      city:         formForValidation.city,
+      state:        formForValidation.state,
+      postal_code:  formForValidation.postalCode,
+      phone_number: isAuthenticated ? formForValidation.phoneNumber : guestInfo.phone,
+    };
+    if (validateAddress(validationInput).length) return;
+    const sig = JSON.stringify({ ...validationInput, editingAddrId });
+    if (sig === lastAutoSaveSig.current) return;
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      onSaveAddress({ preventDefault() {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddrForm, addrSaving, isAuthenticated, addrForm, guestInfo.fullName, guestInfo.phone, editingAddrId]);
 
   // ── Coupon ────────────────────────────────────────────────────────────
   const onApplyCoupon = async () => {
@@ -778,12 +806,10 @@ export default function CartDrawer() {
                       <input name="state" value={addrForm.state} onChange={onAddrField}
                         placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body rounded-md" />
                     </div>
-                    <div className="flex gap-2 pt-1">
-                      <button type="submit" disabled={addrSaving}
-                        className={`pill-cta justify-center flex-1 !py-2.5 !text-[10px] ${addrSaving ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                        {addrSaving && <Loader2 size={12} className="animate-spin" />}
-                        {editingAddrId ? 'Update' : 'Save'} Address
-                      </button>
+                    <div className="flex items-center gap-2 pt-1">
+                      <p className="text-xs text-neutral-500 flex-1">
+                        {addrSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}
+                      </p>
                       {selectedAddress && (
                         <button type="button" onClick={() => { setShowAddrForm(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); }}
                           className="text-[#8A7E6C] text-[10px] tracking-[0.3em] uppercase font-body hover:text-[#1A1612]">

@@ -85,6 +85,8 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -92,6 +94,7 @@ body {
   color: var(--ink);
   font-family: var(--font-jost), 'Jost', system-ui, sans-serif;
   overflow-x: hidden;
+  max-width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -529,3 +532,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 }
 
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
+
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}
