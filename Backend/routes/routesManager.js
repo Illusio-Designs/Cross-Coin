@@ -134,6 +134,9 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
 
 // ── Serviceability ────────────────────────────────────────────────────────
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
+    // Never let a CDN/browser cache a serviceability result — it's per-PIN,
+    // can change, and a stale cache masks fresh backend behaviour entirely.
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     try {
         const { pincode } = req.params;
         if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ success: false, message: 'Invalid pincode' });
