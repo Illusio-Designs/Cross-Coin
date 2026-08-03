@@ -128,9 +128,29 @@ class RazorpayService {
       }
 
       // Create order
-      const order = await razorpay.orders.create(orderOptions);
-
-      return order;
+      try {
+        return await razorpay.orders.create(orderOptions);
+      } catch (err) {
+        // If the account isn't provisioned for Magic (one-click) Checkout,
+        // Razorpay rejects one_click_checkout / line_items with
+        // "…is/are not required and should not be sent". Rather than fail the
+        // whole order, strip the Magic-only fields and create a standard order
+        // so payment still works (it just won't be the 1CC address flow).
+        const msg = rzpErrorMessage(err).toLowerCase();
+        const magicRejected = msg.includes('should not be sent')
+          && (msg.includes('one_click_checkout') || msg.includes('line_items'));
+        if (magicRejected && (orderOptions.one_click_checkout || orderOptions.line_items)) {
+          // eslint-disable-next-line no-console
+          console.warn('[Razorpay] Magic (1CC) not enabled on this account — retrying as a standard order.');
+          delete orderOptions.one_click_checkout;
+          delete orderOptions.line_items;
+          delete orderOptions.line_items_total;
+          const order = await razorpay.orders.create(orderOptions);
+          order._magic_disabled = true; // signal to callers that 1CC wasn't used
+          return order;
+        }
+        throw err;
+      }
     } catch (error) {
       throw new Error(`Failed to create Razorpay order: ${rzpErrorMessage(error)}`);
     }

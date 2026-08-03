@@ -116,13 +116,17 @@ exports.createMagicOrder = async (req, res) => {
     });
 
     const key_id = await settingsHelper.getSetting(brandId, 'RAZORPAY_KEY_ID');
-    logger.info(`[Magic] created order ${order.id} amount=${order.amount} brand=${brandId}`);
+    const magicEnabled = !order._magic_disabled;
+    logger.info(`[Magic] created order ${order.id} amount=${order.amount} brand=${brandId} magic=${magicEnabled}`);
     return res.json({
       success: true,
       key_id,
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
+      // false → the Razorpay account isn't provisioned for Magic (1CC); the
+      // frontend must open a STANDARD checkout (no one_click_checkout flag).
+      magic_enabled: magicEnabled,
     });
   } catch (e) {
     logger.error('[Magic] createMagicOrder failed: ' + e.message);

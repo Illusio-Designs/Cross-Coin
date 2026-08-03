@@ -112,12 +112,18 @@ export default function MagicCheckoutTest() {
       push('POST /api/magic/order → response', order);
       if (!order.success || !order.order_id) { setStatus('Order creation failed — see log'); setBusy(false); return; }
 
-      setStatus('Opening Magic Checkout…');
+      // magic_enabled === false → the Razorpay account isn't provisioned for
+      // Magic (1CC), so the backend created a STANDARD order. Opening the modal
+      // with one_click_checkout:true would then error — open normal checkout.
+      const magicOn = order.magic_enabled !== false;
+      if (!magicOn) push('⚠️ Magic (1CC) not enabled on this Razorpay account — opening STANDARD checkout instead', {});
+
+      setStatus(magicOn ? 'Opening Magic Checkout…' : 'Opening standard checkout (Magic not enabled)…');
       const rzp = new window.Razorpay({
         key: order.key_id,
         order_id: order.order_id,
-        one_click_checkout: true,
-        show_coupons: true,
+        one_click_checkout: magicOn,
+        show_coupons: magicOn,
         name: 'Cross Coin',
         description: selected.name,
         image: selected.image_url || undefined,
