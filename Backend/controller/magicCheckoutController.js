@@ -143,13 +143,17 @@ exports.shippingInfo = async (req, res) => {
     for (const a of addresses) {
       const zip = String(a.zipcode || a.pincode || a.postal_code || '');
       const s = await checkServiceable(brandId, zip);
+      // Razorpay charges `shipping_fee` on BOTH prepaid and COD, and `cod_fee`
+      // as an EXTRA only when COD is chosen. This system stores independent flat
+      // fees per mode, so COD's extra is the delta (cod − prepaid) — otherwise a
+      // brand with a non-zero prepaid fee would double-charge COD shipping.
       out.push({
         id: a.id,
         zipcode: zip,
         serviceable: s.serviceable,
         cod: s.serviceable && s.cod,
         shipping_fee: fees.prepaid,
-        cod_fee: fees.cod,
+        cod_fee: Math.max(0, fees.cod - fees.prepaid),
       });
     }
     return res.json({ addresses: out });
@@ -202,10 +206,15 @@ exports.applyCoupon = async (req, res) => {
     const { code, order_amount, contact, email } = req.body || {};
     const cartTotal = toRupees(order_amount);
 
-    // Invoke the real validator with a captured response.
+    // Invoke the real validator with a captured response. paymentMode is left
+    // undefined on purpose: Magic applies the coupon BEFORE the payment method
+    // is chosen, and validateCoupon only enforces the mode restriction when a
+    // mode is passed — so a COD-only (or prepaid-only) coupon isn't wrongly
+    // rejected here; that restriction is re-checked when the order is placed.
+    const paymentMode = req.body.payment_mode || req.body.payment_method || undefined;
     const validated = await new Promise((resolve) => {
       const fakeReq = {
-        body: { code, cartTotal, paymentMode: 'prepaid', cartItems: [], email, guest_email: email, contact },
+        body: { code, cartTotal, paymentMode, cartItems: [], email, guest_email: email, contact },
         brandId, brand: req.brand, headers: req.headers, query: req.query,
       };
       const fakeRes = {
