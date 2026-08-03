@@ -133,7 +133,7 @@ export default function SearchPage() {
                 </div>
               ) : results.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
-                  {results.map((p) => <ProductCard key={p.id} product={p} />)}
+                  {results.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
                 </div>
               ) : (
                 <div className="text-center py-20 border border-line rounded-lg max-w-xl mx-auto">
@@ -151,7 +151,7 @@ export default function SearchPage() {
               <>
                 <p className="eyebrow text-center mb-10">A pair from every collection</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
-                  {browse.map((p) => <ProductCard key={p.id} product={p} />)}
+                  {browse.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
                 </div>
               </>
             )}

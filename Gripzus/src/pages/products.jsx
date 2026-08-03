@@ -247,7 +247,7 @@ export default function ProductsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
-              {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
+              {filtered.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
             </div>
           )}
         </div>

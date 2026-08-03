@@ -29,9 +29,20 @@ function normalize(p) {
 }
 
 export default function ExclusiveSection({ products = [] }) {
-  // Spotlight one product + a short "Other Products" rail. Cap the pool at 4 so
-  // the rail shows at most 3 other pairs (never a long scroll list).
-  const list = (Array.isArray(products) ? products : []).slice(0, 4).map(normalize);
+  // Spotlight one product + a short "Other Products" rail. The incoming list is
+  // exploded into per-colour cards, so first collapse back to DISTINCT products
+  // (colour variants share a slug) — otherwise the rail would repeat the same
+  // pair in different colours. Cap at 4 so the rail shows at most 3 others.
+  const seen = new Set();
+  const distinct = (Array.isArray(products) ? products : []).filter((p) => {
+    const k = p.slug || p.id;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const list = (distinct.length >= 2 ? distinct : (Array.isArray(products) ? products : []))
+    .slice(0, 4)
+    .map(normalize);
 
   const [active, setActive] = useState(0);
   const [color, setColor]   = useState(0);

@@ -19,6 +19,10 @@ export default function ProductCard({ product }) {
   const [added, setAdded] = useState(false);
 
   const slug    = product.slug || product.handle || product.id;
+  // Colour-variant cards link to the PDP with the colour preselected.
+  const href    = product.colorParam
+    ? `/products/${slug}?color=${encodeURIComponent(product.colorParam)}`
+    : `/products/${slug}`;
   const name    = product.name || 'Gripzus Pair';
   const price   = Number(product.salePrice ?? product.price ?? 0);
   const compare = product.salePrice ? Number(product.price) : (product.compareAtPrice ? Number(product.compareAtPrice) : null);
@@ -57,7 +61,7 @@ export default function ProductCard({ product }) {
       {/* ── Image ───────────────────────────────────────────────── */}
       <div className="relative">
         <Link
-          href={`/products/${slug}`}
+          href={href}
           className="relative block aspect-[4/5] overflow-hidden bg-paper-warm"
         >
           {/* Uniform ratio so every card in a row is the same size */}
@@ -134,7 +138,7 @@ export default function ProductCard({ product }) {
           )}
         </div>
 
-        <Link href={`/products/${slug}`} className="block mt-1.5">
+        <Link href={href} className="block mt-1.5">
           <h3 className="text-[13px] text-ink leading-snug line-clamp-1">{name}</h3>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-[13px] text-ink">₹{price.toLocaleString('en-IN')}</span>

@@ -45,7 +45,12 @@ export default function ProductDetail() {
         setProduct(p);
         setActiveImg(0);
         setSize(p.sizes?.[0] || '');
-        setColor(p.colors?.[0]?.name || '');
+        // Preselect the colour from ?color= (set by the per-colour cards); fall
+        // back to the first colour when it's absent or doesn't match.
+        const wanted = Array.isArray(p.colors)
+          ? p.colors.find((c) => c.name === router.query.color)
+          : null;
+        setColor(wanted?.name || p.colors?.[0]?.name || '');
         // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
         fbTrack('ViewContent', {
           content_ids: [String(p.id)],
@@ -378,7 +383,7 @@ export default function ProductDetail() {
                 <Link href="/products" className="btn-outline">See all</Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
-                {related.map((p) => <ProductCard key={p.id} product={p} />)}
+                {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
               </div>
             </div>
           </section>

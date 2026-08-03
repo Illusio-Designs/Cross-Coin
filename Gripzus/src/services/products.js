@@ -143,6 +143,33 @@ export function mapProduct(p) {
   };
 }
 
+/* Show EVERY colour as its own product card — explode a product that has more
+   than one colour into one card per colour, each with that colour's own photos,
+   a single colour swatch, and a ?color= link to preselect it on the PDP. The
+   name is suffixed with the colour so the cards read as distinct. Single-colour
+   products pass through unchanged. Mirrors the Morbix / Soxbae behaviour. */
+export function explodeColorVariants(products) {
+  if (!Array.isArray(products)) return [];
+  const out = [];
+  for (const p of products) {
+    const colors = Array.isArray(p.colors) ? p.colors : [];
+    if (colors.length <= 1) { out.push(p); continue; }
+    colors.forEach((c, i) => {
+      const label = c.packColors ? `Pack of ${c.packColors.length}` : c.name;
+      const imgs = (Array.isArray(c.images) && c.images.length) ? c.images : p.images;
+      out.push({
+        ...p,
+        uid:        `${p.id}:${i}`,
+        name:       `${p.name} — ${label}`,
+        colors:     [c],
+        images:     imgs,
+        colorParam: c.name,
+      });
+    });
+  }
+  return out;
+}
+
 /* Catalogue list — GET /api/products/catalog (category / search / sort / paging) */
 export async function getPublicProducts(params = {}) {
   try {
@@ -155,7 +182,7 @@ export async function getPublicProducts(params = {}) {
 
     const data = await brandFetch(`/api/products/catalog?${qp.toString()}`);
     const products = data?.data?.products || data?.data || data?.products || [];
-    return (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
+    return explodeColorVariants((Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean));
   } catch {
     return [];
   }
@@ -167,7 +194,7 @@ export async function getBestsellers(limit = 8) {
     const data = await brandFetch(`/api/products/best-sellers?limit=${limit}`);
     const products = data?.data?.products || data?.data || data?.products || [];
     if (Array.isArray(products) && products.length) {
-      return products.map(mapProduct).filter(Boolean);
+      return explodeColorVariants(products.map(mapProduct).filter(Boolean));
     }
   } catch { /* fall through */ }
   return getPublicProducts({ limit });
@@ -181,7 +208,7 @@ export async function getProductsByCategory(name) {
     const { getCategoryByName } = await import('./categories');
     const cat = await getCategoryByName(name);
     const raw = cat?.products || cat?.Products || cat?.data?.products || [];
-    return (Array.isArray(raw) ? raw : []).map(mapProduct).filter(Boolean);
+    return explodeColorVariants((Array.isArray(raw) ? raw : []).map(mapProduct).filter(Boolean));
   } catch {
     return [];
   }
@@ -194,7 +221,7 @@ export async function searchProducts(query) {
   try {
     const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`);
     const products = data?.data?.products || data?.products || data?.data || [];
-    return (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
+    return explodeColorVariants((Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean));
   } catch {
     return [];
   }

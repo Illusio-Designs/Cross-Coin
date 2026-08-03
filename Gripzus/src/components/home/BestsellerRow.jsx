@@ -43,7 +43,7 @@ export default function BestsellerRow({
                 </div>
               ))
             : products.slice(0, 5).map((p, i) => (
-                <div key={p.id} className={rowVis(i)}><ProductCard product={p} /></div>
+                <div key={p.uid ?? p.id} className={rowVis(i)}><ProductCard product={p} /></div>
               ))}
         </div>
       </div>
