@@ -121,6 +121,7 @@ class IThinkService {
           ...this._authData(),
           from_pincode: String(params.sourcePincode),
           to_pincode: String(params.destinationPincode),
+          country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
           shipping_length_cms: String(params.length || 14),
           shipping_width_cms: String(params.width || 3),
           shipping_height_cms: String(params.height || 10),
@@ -594,7 +595,10 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api_v3/pincode/check.json', payload);
+      // Endpoint per iThink's pincode-check spec (the domestic /api_v3/pincode
+      // path was returning an empty 200, which read as "not serviceable" for
+      // every pincode). country_code is sent in the payload above.
+      const response = await this.axiosInstance.post('/api/pincode_intl/check.json', payload);
       logger.debug('Serviceability response:', JSON.stringify(response.data, null, 2));
 
       // Normalise — return an array (empty = not serviceable)
