@@ -582,32 +582,32 @@ class IThinkService {
     await this.initialize();
     try {
       logger.debug('=== iThink Pincode Check ===');
+      // Domestic /api/pincode/check.json only needs auth + from/to pincode
+      // (same minimal { data: { ...auth, … } } shape as cancel/label/etc.).
       const payload = {
         data: {
           ...this._authData(),
           from_pincode: String(sourcePincode),
           to_pincode: String(destinationPincode),
-          // country_code is a REQUIRED field for iThink's pincode check — without
-          // it the API returns an empty result and EVERY pincode reads as
-          // "not serviceable". Default to India (domestic).
-          country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
-          shipping_length_cms: '14',
-          shipping_width_cms: '3',
-          shipping_height_cms: '10',
-          shipping_weight_kg: '0.07',
         },
       };
 
-      // iThink domestic serviceability endpoint, pinned to the PRODUCTION host
-      // via an ABSOLUTE URL. Serviceability must always query real data — even
-      // if ITHINK_ENVIRONMENT is (stale) 'staging', pre-alpha returns an empty
-      // 200 that reads as "not serviceable" for every pincode. Passing the full
-      // URL overrides axios's baseURL for this one call only.
-      const response = await this.axiosInstance.post(
-        `${ITHINK_PRODUCTION_URL}/api/pincode/check.json`,
-        payload
-      );
+      // Domestic serviceability endpoint — called the SAME way every other
+      // iThink API here is: a relative path on this.baseURL (which is the
+      // production host now that ITHINK_ENVIRONMENT defaults to 'production').
+      // Matches /api/order/cancel.json, /api_v3/order/add.json, etc.
+      const response = await this.axiosInstance.post('/api/pincode/check.json', payload);
       logger.debug('Serviceability response:', JSON.stringify(response.data, null, 2));
+
+      // Stash the UN-normalised response so the ?debug=1 route can show exactly
+      // what iThink replied (an error envelope vs a truly empty courier list —
+      // the normaliser below collapses both to []).
+      const { access_token, secret_key, ...safeReq } = payload.data;
+      this._lastPincodeRaw = {
+        url: `${this.baseURL}/api/pincode/check.json`,
+        request: { ...safeReq, access_token: access_token ? 'set' : 'MISSING', secret_key: secret_key ? 'set' : 'MISSING' },
+        response: response.data,
+      };
 
       // Normalise — return an array (empty = not serviceable)
       const raw = response.data;

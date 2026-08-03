@@ -179,6 +179,9 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
                     from_pincode: src,
                     country_code: String(process.env.ITHINK_COUNTRY_CODE || 'IN'),
                     raw_response: raw,
+                    // Un-normalised iThink reply (url + credential-free request +
+                    // exact response) — shows an error envelope vs an empty list.
+                    ithink_raw: (provider && provider._lastPincodeRaw) || null,
                     parsed_decision: decision,
                 },
             }
