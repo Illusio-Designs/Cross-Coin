@@ -178,7 +178,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     background: rgba(0,0,0,0.45);
     z-index: 1099;
@@ -758,7 +758,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     background: rgba(0,0,0,0.45);
     z-index: 1099;
@@ -820,7 +820,7 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  width: 100vw;
+  width: 100%;
   background: white;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
