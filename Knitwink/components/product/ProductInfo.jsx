@@ -7,13 +7,8 @@ import { useWishlistStore } from '@/store/wishlistStore'
 import { StickyATCBar } from './StickyATCBar'
 import { formatPrice, cn } from '@/lib/utils'
 import { getProductReviews } from '@/lib/api/reviews'
-import { Minus, Plus, ShoppingBag, Zap, Eye, TrendingUp, Star, Heart } from 'lucide-react'
-
-function seedNum(id, min, max) {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = Math.imul(31, h) + id.charCodeAt(i) | 0
-  return min + Math.abs(h) % (max - min + 1)
-}
+import { checkServiceability } from '@/lib/api/serviceability'
+import { Minus, Plus, ShoppingBag, Zap, Star, Heart, Truck, AlertTriangle, Check, X, Lock, CreditCard, RotateCcw, ShieldCheck } from 'lucide-react'
 
 export function ProductInfo({ product, onColorChange }) {
   const [activeColor, setActiveColor] = useState(
@@ -29,6 +24,27 @@ export function ProductInfo({ product, onColorChange }) {
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
+
+  // Delivery / pincode serviceability check.
+  const [pincode, setPincode] = useState('')
+  const [serviceability, setServiceability] = useState(null)
+  const [checkingPin, setCheckingPin] = useState(false)
+  const handlePincodeCheck = async () => {
+    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return }
+    setCheckingPin(true)
+    setServiceability(null)
+    try { setServiceability(await checkServiceability(pincode)) }
+    catch { setServiceability({ error: 'Unable to check. Please try again.' }) }
+    finally { setCheckingPin(false) }
+  }
+  const eta = (() => {
+    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    const day = d.getDate()
+    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th'
+    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) }
+  })()
 
   /* Pull real review data so the rating row reflects actual customer
      reviews instead of a hardcoded score. */
@@ -102,10 +118,6 @@ export function ProductInfo({ product, onColorChange }) {
     }
   }
   const { ref: atcRef, isVisible: atcVisible } = useIntersectionObserver({ threshold: 0.5 })
-
-  const stockLeft = useMemo(() => seedNum(product.id, 2, 6), [product.id])
-  const viewing = useMemo(() => seedNum(product.id + 'v', 80, 220), [product.id])
-  const sold = useMemo(() => seedNum(product.id + 's', 800, 3200), [product.id])
 
   /* Resolve the variant matching the currently selected colour so the
      price + SKU + compareAtPrice all reflect that variation, not the
@@ -260,19 +272,57 @@ export function ProductInfo({ product, onColorChange }) {
         </div>
         <p className="mt-1 text-[10px] text-gray-500">MRP incl. of all taxes</p>
 
-        {/* Social proof strip */}
-        <div className="mt-4 flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="flex items-center gap-1 font-medium text-red-500">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-            Only {stockLeft} left
-          </span>
-          <span className="text-gray-200">·</span>
-          <span className="flex items-center gap-1"><Eye size={11} /> {viewing} viewing</span>
-          <span className="text-gray-200">·</span>
-          <span className="flex items-center gap-1">
-            <TrendingUp size={11} />
-            {sold >= 1000 ? `${(sold / 1000).toFixed(1)}k` : sold} sold
-          </span>
+        {/* Free shipping + delivery ETA */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-gray-600">
+          <Truck size={14} className="text-brand-black" />
+          <span><span className="font-semibold text-brand-black">Free shipping</span> over ₹499</span>
+          <span className="text-gray-400">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
+        </div>
+
+        {/* Honest low-stock — only when the selected variant is genuinely low */}
+        {Number.isFinite(Number(activeVariant?.stock)) && Number(activeVariant?.stock) > 0 && Number(activeVariant?.stock) <= 5 && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+            <AlertTriangle size={13} /> Only {Number(activeVariant.stock)} left
+          </div>
+        )}
+
+        {/* Delivery / pincode serviceability */}
+        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-widest text-brand-black">Delivery Details</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Enter Pincode"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+              aria-label="Pincode"
+              className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-brand-black outline-none focus:border-brand-black"
+            />
+            <button
+              type="button"
+              onClick={handlePincodeCheck}
+              disabled={checkingPin}
+              className="shrink-0 rounded-lg bg-brand-black px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {checkingPin ? '…' : 'Check'}
+            </button>
+          </div>
+          {serviceability && (
+            <div className={cn(
+              'mt-2.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold',
+              serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'
+            )}>
+              {serviceability.error ? (
+                <span>{serviceability.error}</span>
+              ) : serviceability.serviceable ? (
+                <><Check size={14} /> Delivery to <span className="font-bold">{pincode}</span>{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+              ) : (
+                <><X size={14} /> Not deliverable to <span className="font-bold">{pincode}</span></>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Divider */}
@@ -398,6 +448,21 @@ export function ProductInfo({ product, onColorChange }) {
               Buy Now
             </button>
           </div>
+        </div>
+
+        {/* Trust strip */}
+        <div className="mt-5 grid grid-cols-4 gap-2 border-t border-gray-100 pt-4">
+          {[
+            [Lock, 'Secure Checkout'],
+            [CreditCard, 'Cash on Delivery'],
+            [RotateCcw, '7-Day Returns'],
+            [ShieldCheck, '100% Genuine'],
+          ].map(([Ic, label]) => (
+            <div key={label} className="flex flex-col items-center gap-1.5 text-center">
+              <Ic size={18} className="text-brand-black" strokeWidth={1.8} />
+              <span className="text-[10px] font-semibold leading-tight text-gray-500">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
