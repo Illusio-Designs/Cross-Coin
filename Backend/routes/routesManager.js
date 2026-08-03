@@ -196,14 +196,26 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
             }
             : {};
 
-        if (!decision.serviceable) {
+        // KILL-SWITCH (brand-scoped): while iThink serviceability is broken, do
+        // NOT let it block checkout for listed brands — every PIN reads as
+        // deliverable so customers can place orders. Booking stays the real
+        // gate. Defaults to 'crosscoin'; override via SERVICEABILITY_BYPASS_BRANDS
+        // (comma-separated brand names, e.g. "crosscoin,gripzus"), or set it to
+        // an empty string to enforce for all brands again.
+        const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+        const candidates = [req.headers['x-brand-name'], req.brand?.name, req.brand?.slug].map(norm).filter(Boolean);
+        const bypassList = (process.env.SERVICEABILITY_BYPASS_BRANDS ?? 'crosscoin')
+            .split(',').map(norm).filter(Boolean);
+        const bypass = candidates.some((c) => bypassList.includes(c));
+
+        if (!bypass && !decision.serviceable) {
             return res.json({ success: true, serviceable: false, message: 'Delivery not available for this PIN code', ...debug });
         }
         return res.json({
             success: true,
             serviceable: true,
-            cod_allowed: decision.cod_allowed,
-            cod_available: decision.cod_available,
+            cod_allowed: bypass ? true : decision.cod_allowed,
+            cod_available: bypass ? true : decision.cod_available,
             estimated_delivery_days: decision.estimated_delivery_days || 5,
             ...debug,
         });
