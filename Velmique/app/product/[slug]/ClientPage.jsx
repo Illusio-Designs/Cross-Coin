@@ -4,11 +4,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ShoppingBag, Heart, ChevronRight, Star, Minus, Plus, Zap,
-  Truck, RotateCcw, ShieldCheck, Sparkles,
+  Truck, RotateCcw, ShieldCheck, Sparkles, Check, X, AlertTriangle,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug } from '@/lib/api/products';
+import { checkServiceability } from '@/lib/api/serviceability';
 import ProductReviews from '@/components/reviews/ProductReviews';
 import { fbTrack } from '@/utils/pixel';
 
@@ -28,6 +29,27 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
   const [activeImg,     setActiveImg]     = useState(0);
   const [qty,           setQty]           = useState(1);
   const [added,         setAdded]         = useState(false);
+
+  // Delivery / pincode serviceability check.
+  const [pincode, setPincode] = useState('');
+  const [serviceability, setServiceability] = useState(null);
+  const [checkingPin, setCheckingPin] = useState(false);
+  const handlePincodeCheck = async () => {
+    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return; }
+    setCheckingPin(true);
+    setServiceability(null);
+    try { setServiceability(await checkServiceability(pincode)); }
+    catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
+    finally { setCheckingPin(false); }
+  };
+  const eta = (() => {
+    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const day = d.getDate();
+    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
+  })();
 
   // Fetch live product
   useEffect(() => {
@@ -319,9 +341,53 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 )}
               </div>
               <p className="text-[var(--ink-muted)] text-xs font-body mt-2">Inclusive of 18% GST · Free shipping over ₹2,500</p>
+              <p className="flex items-center gap-1.5 text-[var(--ink-soft)] text-xs font-body mt-2">
+                <Truck size={13} className="text-[var(--gold-deep)]" /> Delivered by {eta.day}{eta.suffix} {eta.month}
+              </p>
+              {Number.isFinite(Number(displayStock)) && Number(displayStock) > 0 && Number(displayStock) <= 5 && (
+                <p className="inline-flex items-center gap-1.5 mt-3 rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs font-body font-medium text-[var(--gold-deep)]">
+                  <AlertTriangle size={12} /> Only {Number(displayStock)} left
+                </p>
+              )}
             </header>
 
             <div className="h-px bg-[var(--border)]" />
+
+            {/* Delivery / pincode serviceability */}
+            <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Delivery Details</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Enter Pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  aria-label="Pincode"
+                  className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-white px-4 h-11 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)]"
+                />
+                <button
+                  type="button"
+                  onClick={handlePincodeCheck}
+                  disabled={checkingPin}
+                  className="pill-cta pill-cta-dark shrink-0 !px-6 justify-center disabled:opacity-60"
+                >
+                  {checkingPin ? '…' : 'Check'}
+                </button>
+              </div>
+              {serviceability && (
+                <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-xs font-body font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
+                  {serviceability.error ? (
+                    <span>{serviceability.error}</span>
+                  ) : serviceability.serviceable ? (
+                    <><Check size={14} /> Delivery to <span className="font-semibold">{pincode}</span>{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+                  ) : (
+                    <><X size={14} /> Not deliverable to <span className="font-semibold">{pincode}</span></>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Colour swatches */}
             {product.colors?.length > 0 && (
