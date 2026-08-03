@@ -447,7 +447,14 @@ const getPublicCategoryByName = async (req, res) => {
         const decodedName = decodeURIComponent(name);
         logger.info('Original name:', name);
         logger.info('Decoded name:', decodedName);
-        
+
+        // Categories are SHARED across brands (Category ↔ Brand via CategoryBrand),
+        // and products attach to a category by categoryId. Without a brand filter
+        // a collection shared between brands would return every brand's products.
+        // When the storefront sends X-Brand-Name, only return products actually
+        // assigned to THIS brand. Admin (no brand header) still sees all.
+        const brandFilter = req.brand?.id || null;
+
         const category = await Category.findOne({
             where: {
                 name: decodedName,
@@ -465,21 +472,29 @@ const getPublicCategoryByName = async (req, res) => {
                     where: { status: 'active' },
                     required: false,
                     include: [
-                        { 
+                        {
                             model: ProductVariation,
                             as: 'ProductVariations',
                             attributes: ['id', 'price', 'comparePrice', 'stock']
                         },
-                        { 
+                        {
                             model: ProductImage,
                             as: 'ProductImages',
                             attributes: ['image_url', 'is_primary']
                         },
-                        { 
+                        {
                             model: ProductSEO,
                             as: 'ProductSEO',
                             attributes: ['meta_title', 'meta_description']
-                        }
+                        },
+                        ...(brandFilter ? [{
+                            model: Brand,
+                            as: 'Brands',
+                            attributes: [],
+                            through: { attributes: [] },
+                            where: { id: brandFilter },
+                            required: true,
+                        }] : [])
                     ]
                 }
             ],
@@ -583,6 +598,9 @@ const getPublicCategoryByName = async (req, res) => {
 const getPublicCategoryBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
+        // Only return products assigned to THIS brand (shared categories would
+        // otherwise leak other brands' products — see getPublicCategoryByName).
+        const brandFilter = req.brand?.id || null;
         const category = await Category.findOne({
             where: { slug: String(slug).trim(), status: 'active' },
             include: [
@@ -596,6 +614,14 @@ const getPublicCategoryBySlug = async (req, res) => {
                         { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price', 'comparePrice', 'stock'] },
                         { model: ProductImage,     as: 'ProductImages',     attributes: ['image_url', 'is_primary'] },
                         { model: ProductSEO,       as: 'ProductSEO',        attributes: ['meta_title', 'meta_description'] },
+                        ...(brandFilter ? [{
+                            model: Brand,
+                            as: 'Brands',
+                            attributes: [],
+                            through: { attributes: [] },
+                            where: { id: brandFilter },
+                            required: true,
+                        }] : []),
                     ],
                 },
             ],
