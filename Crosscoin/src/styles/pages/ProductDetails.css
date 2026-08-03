@@ -17,7 +17,24 @@
   font-size: 14px;
   line-height: 1.5;
   width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
+}
+
+/* Safety net: every element inside the PDP sizes with padding included, and no
+   media (image/video/infographic) can be wider than its column. Together with
+   .pdt-page overflow-x:hidden this makes horizontal overflow impossible on any
+   viewport, regardless of individual block padding. */
+.pdt-page *,
+.pdt-page *::before,
+.pdt-page *::after {
+  box-sizing: border-box;
+}
+
+.pdt-page img,
+.pdt-page video,
+.pdt-page svg {
+  max-width: 100%;
 }
 
 .pdt-loader {
@@ -1157,7 +1174,7 @@
 
 @media (max-width: 600px) {
   .pdt-wrapper {
-    padding: 28px;
+    padding: 16px;
   }
 
   /* Mobile-first gallery: full-width main image on top, thumbnails as a
