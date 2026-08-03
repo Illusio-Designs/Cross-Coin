@@ -453,6 +453,41 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => clearTimeout(t);
   }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);
 
+  // ── Auto-save the address once every field is valid — no button needed ──
+  // Shoppers were stalling at checkout: they'd fill the address form but never
+  // click "Save Address", so the address never became the selected one and the
+  // order couldn't proceed. Now it commits itself ~0.9s after the form is
+  // complete and valid (guests save locally; logged-in users persist to their
+  // account). The signature guard stops it from re-saving the same address.
+  const lastAutoSaveSig = useRef('');
+  useEffect(() => {
+    if (!showAddressForm || addressSaving) return;
+    const pinOk = /^\d{6}$/.test(String(addressForm.postalCode || ''));
+    const nameOk = isAuthenticated
+      ? !!String(addressForm.fullName || '').trim()
+      : !!String(guestInfo.firstName || '').trim();
+    const phoneOk = isAuthenticated
+      ? /^\d{10}$/.test(String(addressForm.phoneNumber || '').replace(/\D/g, ''))
+      : /^\d{10}$/.test(String(guestInfo.phone || '').replace(/\D/g, ''));
+    const filled = String(addressForm.address || '').trim() && String(addressForm.city || '').trim()
+      && String(addressForm.state || '').trim() && pinOk && nameOk && phoneOk;
+    const noErrors = Object.keys(fieldErrors).length === 0;
+    const serviceableOk = !(pincodeServiceability && pincodeServiceability.serviceable === false);
+    if (!filled || !noErrors || !serviceableOk) return;
+    const sig = JSON.stringify([
+      addressForm.address, addressForm.city, addressForm.state, addressForm.postalCode,
+      addressForm.fullName, addressForm.phoneNumber, addressForm.landmark, addressForm.country,
+      guestInfo.firstName, guestInfo.lastName, guestInfo.phone, editingAddressId,
+    ]);
+    if (sig === lastAutoSaveSig.current) return; // this exact address is already saved
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      handleSaveAddress({ preventDefault: () => {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddressForm, addressForm, guestInfo, fieldErrors, pincodeServiceability, addressSaving, isAuthenticated, editingAddressId]);
+
   // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
     if (isOpen) {
@@ -1460,7 +1495,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           )}
                         </div>
                         <div className="cd-form-actions">
-                          <button type="submit" className="cd-btn-primary" disabled={addressSaving || Object.keys(fieldErrors).length > 0}>{addressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}</button>
+                          <p className="cd-autosave-hint" aria-live="polite" style={{ flex: 1, margin: 0, fontSize: 12.5, color: addressSaving ? '#180D3E' : '#777', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {addressSaving ? (
+                              <><span className="cd-autosave-dot" aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: '#2e7d32', display: 'inline-block' }} /> Saving your address…</>
+                            ) : (
+                              <>Your address saves automatically once all details are filled.</>
+                            )}
+                          </p>
                           <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); setFieldErrors({}); }}>Cancel</button>
                         </div>
                       </form>
