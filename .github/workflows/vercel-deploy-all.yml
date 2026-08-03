@@ -1,230 +1,108 @@
-name: Deploy Frontend Projects to Vercel (Multi-Project)
+name: Deploy changed storefronts to Vercel
 
-# Smart deployment that detects which frontend project changed and deploys only that one.
-# Projects: Crosscoin, Gripzus, Knitwink, Velmique, jewellery
+# Fires a Vercel Deploy Hook ONLY for the brand folder(s) that changed in a push
+# to main. A backend-only push (Backend/**, .github/**, docs/**, scripts/**)
+# deploys NOTHING — so it no longer creates 7 "Canceled" deployments that eat
+# the Vercel Free plan's 100-deployments/day limit.
 #
-# Behavior:
-#   - If Crosscoin/** changed → deploy Crosscoin to Vercel
-#   - If Gripzus/** changed → deploy Gripzus to Vercel
-#   - If Knitwink/** changed → deploy Knitwink to Vercel
-#   - If Velmique/** changed → deploy Velmique to Vercel
-#   - If jewellery/** changed → deploy jewellery to Vercel
-#   - If Backend/** changed → skip all Vercel deployments
-#   - If multiple projects changed → deploy all that changed
+# ─────────────────────────────────────────────────────────────────────────────
+# ⚠️  PREREQUISITE — do this or you get DOUBLE deployments:
+#     Turn OFF Vercel's own Git auto-deploy for ALL 7 projects, so this workflow
+#     is the single source of deploys. Two ways:
+#       • Dashboard: each project → Settings → Git → disable Production AND
+#         Preview automatic deployments, OR
+#       • Config: add  "git": { "deploymentEnabled": { "main": false } }  to each
+#         brand's vercel.json (stops production auto-deploys; disable Preview in
+#         the dashboard to stop feature-branch preview builds too).
+#     Deploy Hooks keep working even with Git auto-deploy disabled.
 #
-# ⚠️ AUTO-DEPLOY ON PUSH IS DISABLED ON PURPOSE.
+# SETUP (one-time):
+#   1. In EACH Vercel project → Settings → Git → Deploy Hooks → create a hook on
+#      branch `main`. Copy the URL.
+#   2. Add them as GitHub repo secrets
+#      (repo → Settings → Secrets and variables → Actions → New repository secret):
+#        VERCEL_HOOK_CROSSCOIN  VERCEL_HOOK_GRIPZUS   VERCEL_HOOK_MORBIX
+#        VERCEL_HOOK_SOXBAE     VERCEL_HOOK_KNITWINK  VERCEL_HOOK_VELMIQUE
+#        VERCEL_HOOK_VELQUIRA
+#   3. Do the PREREQUISITE above (turn off Vercel auto-deploy) — LAST, once the
+#      hooks + secrets are in place, so production is never left with no deployer.
 #
-# All 7 storefronts are connected to Vercel via Vercel's own Git integration,
-# which already builds + deploys them on every push to `main` (production) and
-# every push to a branch (preview). Having this workflow ALSO run
-# `vercel deploy --prod` created a SECOND deployment per project per push —
-# double-counting against the Vercel Free plan's 100-deployments/day limit and
-# throwing `api-deployments-free-per-day`, which failed every run.
-#
-# So the `push:` trigger is removed. Vercel's Git integration is now the single
-# source of production deploys. Preview builds on feature branches are already
-# cancelled ~2s in by each project's `ignoreCommand` in vercel.json
-# (`if VERCEL_ENV != production → exit 0`), so they burn no build minutes.
-#
-# This workflow is kept as a MANUAL fallback only (Actions tab → Run workflow)
-# for the rare case you need to force a CLI deploy of a specific project.
-#
-# Required GitHub Secrets (only used by the manual fallback):
-#   VERCEL_TOKEN, VERCEL_ORG_ID, CROSSCOIN_VERCEL_PROJECT, GRIPZUS_VERCEL_PROJECT,
-#   KNITWINK_VERCEL_PROJECT, VELMIQUE_VERCEL_PROJECT, VELQUIRA_VERCEL_PROJECT
+# A missing secret just skips that brand (with a warning) — it never fails the run.
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
-      project:
-        description: 'Project to deploy (leave empty for auto-detect)'
+      brand:
+        description: 'Force-deploy one brand key (crosscoin/gripzus/morbix/soxbae/knitwink/velmique/velquira) or "all"'
         required: false
         default: ''
 
 concurrency:
-  group: vercel-deploy-all
+  group: deploy-storefronts
   cancel-in-progress: false
 
 jobs:
-  # Detect which projects changed
-  detect-changes:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      crosscoin: ${{ steps.changes.outputs.crosscoin }}
-      gripzus: ${{ steps.changes.outputs.gripzus }}
-      knitwink: ${{ steps.changes.outputs.knitwink }}
-      velmique: ${{ steps.changes.outputs.velmique }}
-      jewellery: ${{ steps.changes.outputs.jewellery }}
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # need history to diff the whole push range
 
-      - name: Detect changed projects
-        id: changes
+      - name: Fire deploy hooks for changed brands
+        env:
+          VERCEL_HOOK_CROSSCOIN: ${{ secrets.VERCEL_HOOK_CROSSCOIN }}
+          VERCEL_HOOK_GRIPZUS:   ${{ secrets.VERCEL_HOOK_GRIPZUS }}
+          VERCEL_HOOK_MORBIX:    ${{ secrets.VERCEL_HOOK_MORBIX }}
+          VERCEL_HOOK_SOXBAE:    ${{ secrets.VERCEL_HOOK_SOXBAE }}
+          VERCEL_HOOK_KNITWINK:  ${{ secrets.VERCEL_HOOK_KNITWINK }}
+          VERCEL_HOOK_VELMIQUE:  ${{ secrets.VERCEL_HOOK_VELMIQUE }}
+          VERCEL_HOOK_VELQUIRA:  ${{ secrets.VERCEL_HOOK_VELQUIRA }}
+          FORCE: ${{ github.event.inputs.brand }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          # Get changed files in this commit
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.project }}" != "" ]; then
-            # Manual trigger - deploy specified project
-            echo "Manual deployment requested: ${{ github.event.inputs.project }}"
-            case "${{ github.event.inputs.project }}" in
-              crosscoin) echo "crosscoin=true" >> $GITHUB_OUTPUT;;
-              gripzus) echo "gripzus=true" >> $GITHUB_OUTPUT;;
-              knitwink) echo "knitwink=true" >> $GITHUB_OUTPUT;;
-              velmique) echo "velmique=true" >> $GITHUB_OUTPUT;;
-              jewellery) echo "jewellery=true" >> $GITHUB_OUTPUT;;
-            esac
+          set -euo pipefail
+
+          # Files changed across the WHOLE push (before → HEAD), with safe
+          # fallbacks for the first push, a force-push, or a manual run.
+          ZERO="0000000000000000000000000000000000000000"
+          if [ "$EVENT" = "push" ] && [ "${BEFORE:-}" != "$ZERO" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            CHANGED="$(git diff --name-only "$BEFORE" HEAD)"
           else
-            # Auto-detect based on changed files
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD)
-
-            echo "crosscoin=$(echo "$CHANGED_FILES" | grep -q "^Crosscoin/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-            echo "gripzus=$(echo "$CHANGED_FILES" | grep -q "^Gripzus/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-            echo "knitwink=$(echo "$CHANGED_FILES" | grep -q "^Knitwink/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-            echo "velmique=$(echo "$CHANGED_FILES" | grep -q "^Velmique/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-            echo "jewellery=$(echo "$CHANGED_FILES" | grep -q "^Velquira/" && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            CHANGED="$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)"
           fi
+          echo "Changed files:"; echo "$CHANGED" | sed 's/^/  /'
+          echo "----"
 
-  # Deploy Crosscoin
-  deploy-crosscoin:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.crosscoin == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+          changed() { echo "$CHANGED" | grep -q "^$1/"; }
+          forced()  { [ "${FORCE:-}" = "all" ] || [ "${FORCE:-}" = "$1" ]; }
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+          any=0
+          fire() {  # $1 brand-key  $2 Folder  $3 hook-url
+            local key="$1" folder="$2" hook="$3"
+            if forced "$key" || { [ -z "${FORCE:-}" ] && changed "$folder"; }; then
+              if [ -z "$hook" ]; then
+                echo "::warning::$folder changed but secret VERCEL_HOOK_$(echo "$key" | tr a-z A-Z) is not set — skipping"
+                return 0
+              fi
+              echo "→ Deploying $folder"
+              if curl -fsS -X POST "$hook" >/dev/null; then echo "  ✓ hook fired"; else echo "::error::deploy hook for $folder failed"; fi
+              any=1
+            else
+              echo "· $folder unchanged — skip"
+            fi
+          }
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+          fire crosscoin Crosscoin "$VERCEL_HOOK_CROSSCOIN"
+          fire gripzus   Gripzus   "$VERCEL_HOOK_GRIPZUS"
+          fire morbix    Morbix    "$VERCEL_HOOK_MORBIX"
+          fire soxbae    Soxbae    "$VERCEL_HOOK_SOXBAE"
+          fire knitwink  Knitwink  "$VERCEL_HOOK_KNITWINK"
+          fire velmique  Velmique  "$VERCEL_HOOK_VELMIQUE"
+          fire velquira  Velquira  "$VERCEL_HOOK_VELQUIRA"
 
-      - name: Deploy Crosscoin to Vercel
-        # Deploy from the REPO ROOT — the Vercel project's Root Directory is
-        # already set to "Crosscoin", so cd-ing in doubles the path to
-        # Crosscoin/Crosscoin (which doesn't exist) and the deploy fails.
-        run: |
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.CROSSCOIN_VERCEL_PROJECT }}
-
-      - name: Notify Success
-        run: echo "✅ Crosscoin deployed to Vercel successfully!"
-
-  # Deploy Gripzus
-  deploy-gripzus:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gripzus == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy Gripzus to Vercel
-        # Deploy from the repo root — Vercel's Root Directory is already "Gripzus".
-        run: |
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.GRIPZUS_VERCEL_PROJECT }}
-
-      - name: Notify Success
-        run: echo "✅ Gripzus deployed to Vercel successfully!"
-
-  # Deploy Knitwink
-  deploy-knitwink:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.knitwink == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy Knitwink to Vercel
-        # Deploy from the repo root — Vercel's Root Directory is already "Knitwink".
-        run: |
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.KNITWINK_VERCEL_PROJECT }}
-
-      - name: Notify Success
-        run: echo "✅ Knitwink deployed to Vercel successfully!"
-
-  # Deploy Velmique
-  deploy-velmique:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.velmique == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy Velmique to Vercel
-        # Deploy from the repo root — Vercel's Root Directory is already "Velmique".
-        run: |
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VELMIQUE_VERCEL_PROJECT }}
-
-      - name: Notify Success
-        run: echo "✅ Velmique deployed to Vercel successfully!"
-
-  # Deploy jewellery
-  deploy-jewellery:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.jewellery == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Deploy Velquira to Vercel
-        env:
-          # Accept the Deploy Hook URL from either a Secret OR a Variable, under
-          # any of the common names — whichever the operator actually created.
-          DEPLOY_HOOK: ${{ secrets.VELQUIRA_DEPLOY_HOOK || vars.VELQUIRA_DEPLOY_HOOK || secrets.VERCEL_DEPLOY_HOOK || vars.VERCEL_DEPLOY_HOOK || secrets.DEPLOY_HOOK || vars.DEPLOY_HOOK }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VELQUIRA_VERCEL_PROJECT || secrets.JEWELLERY_VERCEL_PROJECT }}
-        run: |
-          set -e
-          if [ -n "$DEPLOY_HOOK" ]; then
-            # Simplest + most reliable: POST the Vercel Deploy Hook. No project
-            # ID needed; Vercel builds the latest main from the project's own
-            # Git settings. Add secret VELQUIRA_DEPLOY_HOOK = the hook URL.
-            echo "Triggering Vercel Deploy Hook…"
-            curl -fsS -X POST "$DEPLOY_HOOK" && echo "✅ Deploy hook triggered."
-          elif [ -n "$VERCEL_PROJECT_ID" ]; then
-            echo "Deploying via Vercel CLI…"
-            npm install --global vercel@latest
-            # Deploy from the REPO ROOT — the Vercel project's Root Directory is
-            # already set to "Velquira", so cd-ing in would double the path to
-            # Velquira/Velquira (which doesn't exist).
-            vercel deploy --prod --token="$VERCEL_TOKEN"
-            echo "✅ Velquira deployed via CLI."
-          else
-            echo "::error::No deploy method configured. Add repo secret VELQUIRA_DEPLOY_HOOK (a Vercel Deploy Hook URL) OR JEWELLERY_VERCEL_PROJECT (the Velquira Vercel project ID)."
-            exit 1
-          fi
+          [ "$any" = "1" ] && echo "Done — deployed the changed storefront(s)." || echo "No storefront folders changed — nothing to deploy."
