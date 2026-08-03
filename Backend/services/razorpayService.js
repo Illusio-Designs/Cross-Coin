@@ -4,6 +4,26 @@ const settingsHelper = require('./settingsHelper');
 const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
 
 /**
+ * Pull a human-readable message out of a Razorpay SDK rejection.
+ * The SDK rejects with the parsed API body — { statusCode, error: { code,
+ * description, reason, field } } — which is NOT an Error, so `err.message` is
+ * `undefined`. That's why order failures showed up as "…: undefined". Dig out
+ * the real description (and the offending field, which is gold for Magic
+ * line_items errors) so the log and the client see WHY it failed.
+ */
+function rzpErrorMessage(error) {
+  if (!error) return 'Unknown error';
+  const inner = error.error || error;
+  const parts = [
+    inner.description || error.message,
+    inner.field ? `(field: ${inner.field})` : null,
+    inner.code && inner.code !== 'BAD_REQUEST_ERROR' ? `[${inner.code}]` : null,
+  ].filter(Boolean);
+  if (parts.length) return parts.join(' ');
+  try { return JSON.stringify(inner); } catch { return String(inner); }
+}
+
+/**
  * Razorpay Service Wrapper
  * Centralizes all Razorpay API interactions and provides a single point of configuration
  * Supports multi-brand setup with different API keys per brand
@@ -112,7 +132,7 @@ class RazorpayService {
 
       return order;
     } catch (error) {
-      throw new Error(`Failed to create Razorpay order: ${error.message}`);
+      throw new Error(`Failed to create Razorpay order: ${rzpErrorMessage(error)}`);
     }
   }
 
@@ -197,7 +217,7 @@ class RazorpayService {
 
       return refund;
     } catch (error) {
-      throw new Error(`Failed to create refund: ${error.message}`);
+      throw new Error(`Failed to create refund: ${rzpErrorMessage(error)}`);
     }
   }
 
@@ -218,7 +238,7 @@ class RazorpayService {
 
       return payment;
     } catch (error) {
-      throw new Error(`Failed to fetch payment: ${error.message}`);
+      throw new Error(`Failed to fetch payment: ${rzpErrorMessage(error)}`);
     }
   }
 
@@ -239,7 +259,7 @@ class RazorpayService {
 
       return order;
     } catch (error) {
-      throw new Error(`Failed to fetch order: ${error.message}`);
+      throw new Error(`Failed to fetch order: ${rzpErrorMessage(error)}`);
     }
   }
 
