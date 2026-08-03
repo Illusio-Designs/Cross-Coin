@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
@@ -95,6 +95,7 @@ export default function CartDrawer() {
   const [addressForm, setAddressForm] = useState(EMPTY_ADDR);
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressSaving, setAddressSaving] = useState(false);
+  const lastAutoSaveSig = useRef('');
 
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
@@ -251,6 +252,33 @@ export default function CartDrawer() {
       setAddressSaving(false);
     }
   };
+
+  /* Auto-save the address once every field is valid — debounced, so the
+     user never has to press a button. Mirrors handleSaveAddress's field
+     resolution (guest name/phone come from guestInfo). */
+  useEffect(() => {
+    if (!showAddressForm || addressSaving) return;
+    const fd = isAuthenticated
+      ? addressForm
+      : { ...addressForm, fullName: guestInfo.fullName.trim() || addressForm.fullName, phoneNumber: guestInfo.phone || addressForm.phoneNumber };
+    const errs = validateAddress({
+      full_name: fd.fullName, address: fd.address, city: fd.city, state: fd.state,
+      postal_code: fd.postalCode, phone_number: isAuthenticated ? fd.phoneNumber : guestInfo.phone,
+    });
+    if (errs.length) return;
+    const sig = JSON.stringify({
+      fullName: fd.fullName, phoneNumber: isAuthenticated ? fd.phoneNumber : guestInfo.phone,
+      address: fd.address, city: fd.city, state: fd.state, postalCode: fd.postalCode,
+      country: fd.country, editingAddressId,
+    });
+    if (sig === lastAutoSaveSig.current) return;
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      handleSaveAddress({ preventDefault: () => {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddressForm, addressSaving, isAuthenticated, addressForm, guestInfo, editingAddressId]);
 
   /* ── order placement ──────────────────────────────────────────── */
   const itemsPayload = () => items
@@ -626,9 +654,7 @@ export default function CartDrawer() {
                           </div>
                         </div>
                         <div className="cd-form-actions">
-                          <button type="submit" className="cd-btn-primary" disabled={addressSaving}>
-                            {addressSaving ? 'Saving…' : editingAddressId ? 'Update Address' : 'Save Address'}
-                          </button>
+                          <p className="cd-autosave-hint" style={{ fontSize: 13, color: '#6b7280', margin: 0, flex: 1 }}>{addressSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}</p>
                           {(selectedAddress || isAuthenticated) && (
                             <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}>Cancel</button>
                           )}
