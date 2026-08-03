@@ -52,17 +52,17 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <article className="group flex flex-col">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-paper shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card">
 
-      {/* ── Image frame ─────────────────────────────────────────── */}
+      {/* ── Image ───────────────────────────────────────────────── */}
       <div className="relative">
         <Link
           href={`/products/${slug}`}
-          className="relative block overflow-hidden rounded-xl border border-line bg-paper-warm"
+          className="relative block aspect-[4/5] overflow-hidden bg-paper-warm"
         >
-          {/* Full image — natural ratio, never cropped */}
+          {/* Uniform ratio so every card in a row is the same size */}
           <img src={primary} alt={name} loading="lazy"
-               className="block w-full h-auto" />
+               className="block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
 
           {/* subtle darkening on hover to lift the image off the page */}
           <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/[0.04] transition-colors duration-500" />
@@ -119,7 +119,7 @@ export default function ProductCard({ product }) {
       </div>
 
       {/* ── Caption ─────────────────────────────────────────────── */}
-      <div className="pt-3.5">
+      <div className="flex flex-1 flex-col p-3.5 pt-3">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow text-ink-muted truncate">{collection}</span>
           {colors.length > 0 && (

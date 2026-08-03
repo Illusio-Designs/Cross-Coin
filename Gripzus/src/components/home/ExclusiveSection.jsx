@@ -29,7 +29,9 @@ function normalize(p) {
 }
 
 export default function ExclusiveSection({ products = [] }) {
-  const list = (Array.isArray(products) ? products : []).slice(0, 6).map(normalize);
+  // Spotlight one product + a short "Other Products" rail. Cap the pool at 4 so
+  // the rail shows at most 3 other pairs (never a long scroll list).
+  const list = (Array.isArray(products) ? products : []).slice(0, 4).map(normalize);
 
   const [active, setActive] = useState(0);
   const [color, setColor]   = useState(0);
