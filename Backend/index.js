@@ -459,6 +459,42 @@ const startServer = async () => {
             logger.error('users.roles column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: WhatsApp catalog columns ─────────────────
+        // products.whatsapp_synced and product_variations.whatsapp_retailer_id
+        // are otherwise added only inside the version-gated setupDatabase()
+        // below — so on a DB whose schema_version already matches, they get
+        // SKIPPED, and the product model / WhatsApp sync then reference columns
+        // that don't exist (the "whatsapp_synced doesn't exist" error). Ensure
+        // them here on every boot, guarded by information_schema (a no-op once
+        // applied). ALTER … ADD COLUMN is metadata-only, so it's safe even when
+        // the server disk is nearly full.
+        try {
+            const [wsCol] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'whatsapp_synced'`
+            );
+            if (!wsCol.length) {
+                logger.info('Migrating: adding products.whatsapp_synced column…');
+                await sequelize.query(
+                    `ALTER TABLE products ADD COLUMN whatsapp_synced BOOLEAN DEFAULT false COMMENT 'Whether this product has been synced to WhatsApp catalog'`
+                );
+                logger.info('✓ products.whatsapp_synced column added');
+            }
+            const [wrCol] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variations' AND COLUMN_NAME = 'whatsapp_retailer_id'`
+            );
+            if (!wrCol.length) {
+                logger.info('Migrating: adding product_variations.whatsapp_retailer_id column…');
+                await sequelize.query(
+                    `ALTER TABLE product_variations ADD COLUMN whatsapp_retailer_id VARCHAR(255) UNIQUE COMMENT 'WhatsApp product_retailer_id in format {productId}_{variationId}'`
+                );
+                logger.info('✓ product_variations.whatsapp_retailer_id column added');
+            }
+        } catch (err) {
+            logger.error('WhatsApp catalog column migration failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

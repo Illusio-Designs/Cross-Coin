@@ -8,7 +8,23 @@
 //
 // Enabled only in production (or when SENTRY_FORCE=true) so local dev and the
 // test suite don't spam the project.
-const Sentry = require('@sentry/node');
+// Load the SDK defensively. If @sentry/node isn't installed (e.g. a deploy
+// without deps, or an install that couldn't finish because the server disk was
+// full), a hard require here would crash the whole app on the very first line
+// of index.js — taking down the API and blocking the DB migrations that run
+// later in boot. Instead we fall back to a no-op shim so the server always
+// boots; error reporting simply stays off until the package is installed.
+let Sentry;
+try {
+  Sentry = require('@sentry/node');
+} catch (err) {
+  const noop = () => {};
+  // Any property access returns a callable no-op (covers Sentry.init,
+  // setupExpressErrorHandler, getClient, captureException, …).
+  Sentry = new Proxy({}, { get: () => noop });
+  // eslint-disable-next-line no-console
+  console.warn('[Sentry] @sentry/node not installed — error reporting disabled. Run `npm install` once disk space is available to enable it.');
+}
 
 const DSN = process.env.SENTRY_DSN
   || 'https://6d7846406261c25dac778ea438dcd09e@o4511839897387008.ingest.us.sentry.io/4511839942082560';
