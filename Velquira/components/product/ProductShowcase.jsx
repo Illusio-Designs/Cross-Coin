@@ -5,6 +5,7 @@ import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
+import { checkServiceability } from '@/lib/api/serviceability';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -18,6 +19,27 @@ export default function ProductShowcase({ product }) {
   const [active, setActive] = useState(0);         // active gallery image
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Delivery / pincode serviceability check.
+  const [pincode, setPincode] = useState('');
+  const [serviceability, setServiceability] = useState(null);
+  const [checkingPin, setCheckingPin] = useState(false);
+  const handlePincodeCheck = async () => {
+    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return; }
+    setCheckingPin(true);
+    setServiceability(null);
+    try { setServiceability(await checkServiceability(pincode)); }
+    catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
+    finally { setCheckingPin(false); }
+  };
+  const eta = (() => {
+    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const day = d.getDate();
+    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
+  })();
 
   // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
   useEffect(() => {
@@ -211,11 +233,49 @@ export default function ProductShowcase({ product }) {
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
         </div>
 
+        {/* Free shipping + delivery ETA */}
+        <div className="pdp-ship">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          <span><strong>Free shipping</strong> over ₹999</span>
+          <span className="pdp-ship-eta">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
+        </div>
+
         {/* Stock reflects the selected variation */}
         <div className="pdp-stock" style={{ marginBottom: 14 }}>
           {inStock
             ? <span className="in-stock"><Icon name="ShieldCheck" size={13} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
             : <span className="muted" style={{ color: 'var(--sale)' }}><Icon name="X" size={13} /> Out of stock</span>}
+        </div>
+
+        {/* Delivery / pincode serviceability */}
+        <div className="pdp-pin">
+          <span className="pdp-pin-label">Delivery Details</span>
+          <div className="pdp-pin-row">
+            <input
+              className="pdp-pin-input"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Enter Pincode"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+              aria-label="Pincode"
+            />
+            <button type="button" className="pdp-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
+              {checkingPin ? '…' : 'CHECK'}
+            </button>
+          </div>
+          {serviceability && (
+            <div className={`pdp-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
+              {serviceability.error ? (
+                <span>{serviceability.error}</span>
+              ) : serviceability.serviceable ? (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <strong>{pincode}</strong>{serviceability.cod_available && <span className="pdp-cod">COD available</span>}</>
+              ) : (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Not deliverable to <strong>{pincode}</strong></>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="buy">
@@ -287,9 +347,10 @@ export default function ProductShowcase({ product }) {
 
         {/* Trust row sits last, after the specifications. */}
         <div className="pdp-trust">
-          <div><Icon name="Truck" size={16} /> Free shipping over ₹999</div>
-          <div><Icon name="RefreshCw" size={16} /> 14-day returns</div>
-          <div><Icon name="ShieldCheck" size={16} /> Authentic</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cash on Delivery</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 14-Day Returns</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
         </div>
         </div>
       </div>
