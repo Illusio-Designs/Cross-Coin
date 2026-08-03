@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -235,6 +235,38 @@ export default function CartDrawer() {
       setSavingAddr(false);
     }
   };
+
+  // Auto-save the delivery address once every required field is valid — no
+  // explicit "Save" click needed. Debounced, and guarded so it only fires when
+  // the signature of the validated fields actually changes.
+  const lastAutoSaveSig = useRef('');
+  useEffect(() => {
+    if (!showForm || savingAddr) return;
+    const name = (isAuthenticated ? form.fullName : guest.fullName) || '';
+    const phone = isAuthenticated ? form.phoneNumber : guest.phone;
+    const pinOk = /^\d{6}$/.test(String(form.postalCode || '').replace(/\D/g, ''));
+    const ready =
+      pinOk &&
+      String(name).trim().length > 0 &&
+      isValidMobile(phone) &&
+      String(form.address || '').trim().length >= 10 &&
+      String(form.city || '').trim().length > 0 &&
+      String(form.state || '').trim().length > 0 &&
+      (isAuthenticated || isValidEmail(guest.email)) &&
+      !(serviceability && serviceability.serviceable === false);
+    if (!ready) return;
+    const sig = JSON.stringify({
+      name: String(name).trim(), phone, address: form.address, city: form.city,
+      state: form.state, postalCode: form.postalCode, email: guest.email,
+    });
+    if (sig === lastAutoSaveSig.current) return;
+    const t = setTimeout(() => {
+      lastAutoSaveSig.current = sig;
+      saveAddress({ preventDefault() {} });
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, form, guest, serviceability, savingAddr, isAuthenticated]);
 
 
   const buildItems = () => items
@@ -518,8 +550,8 @@ export default function CartDrawer() {
                     {isAuthenticated && (
                       <label className="cd-checkbox"><input type="checkbox" name="isDefault" checked={form.isDefault} onChange={onFormChange} /> Set as default</label>
                     )}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="submit" className="btn btn-primary" disabled={savingAddr}>{savingAddr ? 'Saving…' : 'Save address'}</button>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <p className="muted" aria-live="polite">{savingAddr ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}</p>
                       {(selectedAddress || (isAuthenticated && addresses.length > 0)) && <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>}
                     </div>
                   </form>
