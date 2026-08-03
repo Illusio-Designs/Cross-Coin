@@ -28,6 +28,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [galleryPaused, setGalleryPaused] = useState(false);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -216,12 +217,12 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
 
   // Auto-cycle through gallery images every 3 seconds
   useEffect(() => {
-    if (!galleryImages || galleryImages.length <= 1) return;
+    if (!galleryImages || galleryImages.length <= 1 || galleryPaused) return;
     const id = setInterval(() => {
       setSelectedImage(prev => (prev + 1) % galleryImages.length);
     }, 3000);
     return () => clearInterval(id);
-  }, [galleryImages?.length]);
+  }, [galleryImages?.length, galleryPaused]);
 
   // Fetch real reviews once product id is known
   useEffect(() => {
@@ -381,7 +382,12 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
                 </button>
               ))}
             </div>
-            <div className="pdt-main-img-wrap">
+            <div
+              className="pdt-main-img-wrap"
+              onMouseEnter={() => setGalleryPaused(true)}
+              onMouseLeave={() => setGalleryPaused(false)}
+              onTouchStart={() => setGalleryPaused(true)}
+            >
               <button
                 className="pdt-main-img"
                 onClick={() => { setLightboxIndex(selectedImage); setShowLightbox(true); }}
@@ -491,33 +497,74 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
             <span className="pdt-ship-eta">&middot; Delivered by {estimatedDelivery.day}{estimatedDelivery.suffix} {estimatedDelivery.month}</span>
           </div>
 
-          {/* Fomo signals — counts seeded by product id so stable per product */}
-          {(() => {
-            const seed = productData.id || 1;
-            const viewers = 100 + (seed * 37 + seed * seed * 3) % 200;
-            const soldRaw = 800 + (seed * 53 + seed * seed * 7) % 1200;
-            const soldLabel = soldRaw >= 1000 ? (soldRaw / 1000).toFixed(1) + 'k' : soldRaw;
-            const dummyStock = 1 + (seed * 11) % 5;
-            const lowStock = true;
-            return (
-              <div className="pdt-fomo-row">
-                {lowStock && (
-                  <span className="pdt-fomo-pill pdt-fomo-urgent">
-                    <AlertTriangle size={13} strokeWidth={2.5} />
-                    Only <strong>{dummyStock}</strong> left
-                  </span>
+          {/* Honest low-stock — only when the selected variant's REAL stock is low. */}
+          {Number.isFinite(Number(productData.stock)) && Number(productData.stock) > 0 && Number(productData.stock) <= 5 && (
+            <div className="pdt-fomo-row">
+              <span className="pdt-fomo-pill pdt-fomo-urgent">
+                <AlertTriangle size={13} strokeWidth={2.5} />
+                Only <strong>{Number(productData.stock)}</strong> left
+              </span>
+            </div>
+          )}
+
+          <div className="pdt-delivery">
+            <div className="pdt-delivery-title">Delivery Details</div>
+            <div className="pdt-pin-row">
+              <input
+                className="pdt-pin-input"
+                type="text"
+                placeholder="Enter Pincode"
+                maxLength="6"
+                value={pincode}
+                onChange={e => setPincode(e.target.value.replace(/\D/g, ''))}
+                aria-label="Pincode"
+              />
+              <button className="pdt-pin-check" onClick={handlePincodeCheck} disabled={serviceabilityLoading}>
+                {serviceabilityLoading ? '...' : 'CHECK'}
+              </button>
+            </div>
+            {serviceability && (
+              <div className={`pdt-serviceability-result${serviceability.serviceable ? ' ok' : ' fail'}`}>
+                {serviceability.error ? (
+                  <span>{serviceability.error}</span>
+                ) : serviceability.serviceable ? (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="#2e7d32" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                    Delivery available to <strong>{pincode}</strong>
+                    {serviceability.cod_available && <span className="pdt-cod-tag">COD available</span>}
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="#c62828" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Delivery not available to <strong>{pincode}</strong>
+                  </>
                 )}
-                <span className="pdt-fomo-pill pdt-fomo-live">
-                  <Users size={13} strokeWidth={2.5} />
-                  <strong>{viewers}</strong> viewing
-                </span>
-                <span className="pdt-fomo-pill pdt-fomo-fire">
-                  <ShoppingBag size={13} strokeWidth={2.5} />
-                  <strong>{soldLabel}</strong> sold
-                </span>
               </div>
-            );
-          })()}
+            )}
+            <div className="pdt-del-info-row">
+              <div className="pdt-del-info-card">
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  <rect x="1" y="8" width="22" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <path d="M23 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <circle cx="7" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="29" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="13" cy="15" r="5" stroke="#CE1E36" strokeWidth="1.3" fill="white"/>
+                  <path d="M13 12.5v3l1.8 1.1" stroke="#CE1E36" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Estimated Delivery by <strong>{estimatedDelivery.day}<sup>{estimatedDelivery.suffix}</sup> {estimatedDelivery.month}</strong></span>
+              </div>
+              <div className="pdt-del-info-card">
+                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+                  <rect x="5" y="8" width="20" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <path d="M25 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
+                  <circle cx="11" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <circle cx="31" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
+                  <path d="M1 12h6M1 16h4M1 20h5" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                <span>Eligible For <strong>Free Delivery</strong></span>
+              </div>
+            </div>
+          </div>
 
           <hr className="pdt-divider" />
 
@@ -626,64 +673,6 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
           </div>
 
           {/* Delivery */}
-          <div className="pdt-delivery">
-            <div className="pdt-delivery-title">Delivery Details</div>
-            <div className="pdt-pin-row">
-              <input
-                className="pdt-pin-input"
-                type="text"
-                placeholder="Enter Pincode"
-                maxLength="6"
-                value={pincode}
-                onChange={e => setPincode(e.target.value.replace(/\D/g, ''))}
-                aria-label="Pincode"
-              />
-              <button className="pdt-pin-check" onClick={handlePincodeCheck} disabled={serviceabilityLoading}>
-                {serviceabilityLoading ? '...' : 'CHECK'}
-              </button>
-            </div>
-            {serviceability && (
-              <div className={`pdt-serviceability-result${serviceability.serviceable ? ' ok' : ' fail'}`}>
-                {serviceability.error ? (
-                  <span>{serviceability.error}</span>
-                ) : serviceability.serviceable ? (
-                  <>
-                    <svg width="14" height="14" fill="none" stroke="#2e7d32" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                    Delivery available to <strong>{pincode}</strong>
-                    {serviceability.cod_available && <span className="pdt-cod-tag">COD available</span>}
-                  </>
-                ) : (
-                  <>
-                    <svg width="14" height="14" fill="none" stroke="#c62828" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Delivery not available to <strong>{pincode}</strong>
-                  </>
-                )}
-              </div>
-            )}
-            <div className="pdt-del-info-row">
-              <div className="pdt-del-info-card">
-                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
-                  <rect x="1" y="8" width="22" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
-                  <path d="M23 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
-                  <circle cx="7" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
-                  <circle cx="29" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
-                  <circle cx="13" cy="15" r="5" stroke="#CE1E36" strokeWidth="1.3" fill="white"/>
-                  <path d="M13 12.5v3l1.8 1.1" stroke="#CE1E36" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>Estimated Delivery by <strong>{estimatedDelivery.day}<sup>{estimatedDelivery.suffix}</sup> {estimatedDelivery.month}</strong></span>
-              </div>
-              <div className="pdt-del-info-card">
-                <svg width="30" height="26" viewBox="0 0 38 28" fill="none" aria-hidden="true">
-                  <rect x="5" y="8" width="20" height="14" rx="1.5" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
-                  <path d="M25 13h5l4 5v4h-9V13z" stroke="#180D3E" strokeWidth="1.5" fill="none"/>
-                  <circle cx="11" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
-                  <circle cx="31" cy="24" r="3" stroke="#180D3E" strokeWidth="1.5" fill="white"/>
-                  <path d="M1 12h6M1 16h4M1 20h5" stroke="#CE1E36" strokeWidth="1.4" strokeLinecap="round"/>
-                </svg>
-                <span>Eligible For <strong>Free Delivery</strong></span>
-              </div>
-            </div>
-          </div>
 
         </div>{/* end pdt-info */}
       </div>{/* end pdt-wrapper */}

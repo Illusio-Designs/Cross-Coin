@@ -1160,11 +1160,18 @@
     padding: 28px;
   }
 
-  /* Thumbnail strip roughly matches the (smaller) square main image on phones —
-     3 whole thumbnails (3×88 + 2×8) so none is cut at the edge. */
+  /* Mobile-first gallery: full-width main image on top, thumbnails as a
+     horizontal swipe strip below (the vertical side rail cramps phone width). */
+  .pdt-gallery { flex-direction: column-reverse; }
   .pdt-thumbs {
-    max-height: 280px;
+    flex-direction: row;
+    width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
   }
+  .pdt-thumb { width: 58px; height: 58px; }
 
   .pdt-details {
     padding: 0 20px 80px;
