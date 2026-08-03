@@ -51,12 +51,20 @@
   gap: 48px;
 }
 
+/* Grid/flex items default to min-width:auto, which refuses to shrink a 1fr
+   track below its content's min-content size. A nowrap child (the feature-card
+   scroller, delivery cards, long title word) then stretches the whole column
+   wider than the viewport on phones. Forcing min-width:0 lets the tracks and
+   their children actually shrink to the available width. */
+.pdt-wrapper > * { min-width: 0; }
+
 .pdt-gallery-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
   align-self: start;
   position: sticky;
+  min-width: 0;
 }
 
 .pdt-gallery {
@@ -697,6 +705,7 @@
 
 .pdt-pin-input {
   flex: 1;
+  min-width: 0; /* allow the input to shrink so the CHECK button never spills */
   border: 1.5px solid var(--gray-border);
   border-radius: 8px;
   font-size: 14px;
@@ -827,6 +836,7 @@
   scrollbar-width: none;
   width: 100%;
   max-width: 600px;
+  min-width: 0; /* scroll the cards, never let them widen the column */
   cursor: grab;
 }
 
@@ -1226,20 +1236,32 @@
     gap: 8px;
   }
 
+  /* On phones the horizontal-scroll feature strip looked cut off (only the
+     first card visible, the rest clipped past the edge). Wrap the cards into
+     full-width rows instead so all three are always fully visible — no scroll,
+     no clipping. */
+  .pdt-fit-row {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    max-width: 100%;
+    width: 100%;
+    gap: 8px;
+    cursor: default;
+  }
+
   .pdt-fit-item {
-    flex: 0 0 calc(55% - 8px);
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .pdt-fit-text strong {
-    font-size: 12px;
+    font-size: 13px;
+    white-space: normal;
   }
 
   .pdt-fit-text span {
-    font-size: 10px;
-  }
-
-  .pdt-fit-row {
-    max-width: 285px;
+    font-size: 11px;
+    white-space: normal;
   }
 
   .pdt-mfg-row {
