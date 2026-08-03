@@ -598,10 +598,15 @@ class IThinkService {
         },
       };
 
-      // Endpoint per iThink's pincode-check spec (the domestic /api_v3/pincode
-      // path was returning an empty 200, which read as "not serviceable" for
-      // every pincode). country_code is sent in the payload above.
-      const response = await this.axiosInstance.post('/api/pincode_intl/check.json', payload);
+      // iThink domestic serviceability endpoint, pinned to the PRODUCTION host
+      // via an ABSOLUTE URL. Serviceability must always query real data — even
+      // if ITHINK_ENVIRONMENT is (stale) 'staging', pre-alpha returns an empty
+      // 200 that reads as "not serviceable" for every pincode. Passing the full
+      // URL overrides axios's baseURL for this one call only.
+      const response = await this.axiosInstance.post(
+        `${ITHINK_PRODUCTION_URL}/api/pincode/check.json`,
+        payload
+      );
       logger.debug('Serviceability response:', JSON.stringify(response.data, null, 2));
 
       // Normalise — return an array (empty = not serviceable)
