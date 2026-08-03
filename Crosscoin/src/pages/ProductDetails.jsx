@@ -459,6 +459,20 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
           <h1 className="pdt-title">{productData.title}</h1>
           {productData.styleNo && <div className="pdt-style">Style No: {productData.styleNo}</div>}
 
+          {/* Aggregate rating — real data only; hidden when a product has no reviews */}
+          {productData.reviewCount > 0 && (
+            <button
+              type="button"
+              className="pdt-rating-row"
+              onClick={() => document.querySelector('.pdt-reviews')?.scrollIntoView({ behavior: 'smooth' })}
+              aria-label={`${Number(productData.avgRating).toFixed(1)} out of 5 stars, ${productData.reviewCount} reviews`}
+            >
+              <span className="pdt-stars" style={{ '--pct': `${Math.max(0, Math.min(100, (Number(productData.avgRating) / 5) * 100))}%` }} aria-hidden="true" />
+              <span className="pdt-rating-score">{Number(productData.avgRating).toFixed(1)}</span>
+              <span className="pdt-rating-count">{productData.reviewCount} review{productData.reviewCount === 1 ? '' : 's'}</span>
+            </button>
+          )}
+
           <div className="pdt-price-block">
             <span className="pdt-price">&#8377;{productData.price.toFixed(2)}</span>
             {productData.comparePrice > 0 && (
@@ -467,6 +481,15 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
             {discount > 0 && <span className="pdt-discount">{discount}% OFF</span>}
           </div>
           <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
+
+          {/* Free shipping + delivery reassurance */}
+          <div className="pdt-ship-line">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+            </svg>
+            <span><strong>Free shipping</strong> over &#8377;499</span>
+            <span className="pdt-ship-eta">&middot; Delivered by {estimatedDelivery.day}{estimatedDelivery.suffix} {estimatedDelivery.month}</span>
+          </div>
 
           {/* Fomo signals — counts seeded by product id so stable per product */}
           {(() => {
@@ -580,6 +603,26 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
             </div>
             <button className="pdt-btn-atb" onClick={handleAddToBag}>Add to Bag</button>
             <button className="pdt-btn-buy" onClick={handleBuyNow}>Buy Now</button>
+          </div>
+
+          {/* Trust strip — real reassurances at the moment of decision */}
+          <div className="pdt-trust-strip">
+            <div className="pdt-trust-cell">
+              <span className="pdt-trust-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <span className="pdt-trust-lbl">Secure Checkout</span>
+            </div>
+            <div className="pdt-trust-cell">
+              <span className="pdt-trust-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
+              <span className="pdt-trust-lbl">Cash on Delivery</span>
+            </div>
+            <div className="pdt-trust-cell">
+              <span className="pdt-trust-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span>
+              <span className="pdt-trust-lbl">7-Day Returns</span>
+            </div>
+            <div className="pdt-trust-cell">
+              <span className="pdt-trust-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg></span>
+              <span className="pdt-trust-lbl">100% Genuine</span>
+            </div>
           </div>
 
           {/* Delivery */}
