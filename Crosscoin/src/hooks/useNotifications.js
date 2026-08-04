@@ -7,27 +7,38 @@ const MAX_NOTIFICATIONS = 50;
 function playSound(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+
+    // One bell-like note: quick attack, long exponential decay (triangle wave
+    // reads warmer/brighter than a raw sine — closer to a chime/register bell).
+    const bell = (freq, start, dur, peak) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + start);
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(peak, now + start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.03);
+    };
 
     if (type === 'order') {
-      osc.frequency.setValueAtTime(520, ctx.currentTime);
-      osc.frequency.setValueAtTime(780, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.4, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.4);
+      // Shopify-style "ka-ching" — a bright ascending two-note bell with a
+      // shimmer on top, so a new order is unmistakable across the room.
+      bell(1046.50, 0.00, 0.55, 0.45); // C6
+      bell(1567.98, 0.10, 0.65, 0.45); // G6
+      bell(2093.00, 0.10, 0.45, 0.20); // C7 shimmer
     } else {
-      osc.frequency.setValueAtTime(660, ctx.currentTime);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.25);
+      // Softer single chime for WhatsApp / other notifications.
+      bell(880, 0.00, 0.30, 0.30);
+      bell(1318.51, 0.06, 0.32, 0.22);
     }
 
-    osc.onended = () => ctx.close();
+    // Close the context after the sound has finished so it doesn't leak.
+    setTimeout(() => { try { ctx.close(); } catch (_) {} }, 1000);
   } catch (_) {}
 }
 
