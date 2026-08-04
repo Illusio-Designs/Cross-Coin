@@ -14,8 +14,8 @@ export default function CollectionCard({ collection = {}, index = 0, ratio = 'as
   const href = `/products?collection=${encodeURIComponent(slug || (name || '').trim())}`;
 
   return (
-    <Link href={href} className={`group block ${className}`}>
-      <div className={`media-zoom relative ${ratio} overflow-hidden rounded-xl border border-line bg-paper-warm`}>
+    <Link href={href} className={`group block lift ${className}`}>
+      <div className={`media-zoom relative ${ratio} overflow-hidden rounded-2xl border border-line bg-paper-warm shadow-sm group-hover:shadow-card transition-shadow duration-500`}>
         {image
           ? <img src={image} alt={name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
           : <div className="absolute inset-0 bg-paper-deep" />}

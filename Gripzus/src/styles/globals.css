@@ -1,38 +1,55 @@
 /* ===================================================================
-   GRIPZUS — Editorial Gallery design system (SSENSE-inspired)
-   Stark white canvas, near-black type, ONE clean grotesque at small
-   sizes, huge imagery, asymmetric layouts, generous negative space.
-   The product photography carries the colour; the UI stays quiet.
+   GRIPZUS — Monochrome Atelier design system
+   A premium, tactile black-&-white storefront. Where the sibling brands
+   lean on colour, Gripzus earns its "premium" from DEPTH: a soft warm
+   platinum canvas, pure-white surfaces that float above it on layered
+   shadows, generously rounded cards, rich near-black type and a single
+   metallic-grey hairline accent. The product photography carries the
+   colour; the UI stays quiet, confident and expensive.
    =================================================================== */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --ink:        #0A0A0A;   /* near-black */
-  --ink-soft:   #6E6E6E;
-  --ink-muted:  #A6A6A6;
+  /* ── Ink — rich, faintly-warm near-blacks ─────────────────────── */
+  --ink:        #121211;   /* headings / primary */
+  --ink-soft:   #56544E;   /* body / muted */
+  --ink-muted:  #9A968C;   /* captions / labels */
 
-  --paper:      #FFFFFF;   /* pure white gallery wall */
-  --paper-warm: #F6F6F4;   /* barely-there off-white */
-  --paper-deep: #EFEFED;
-  --line:       #E8E8E6;   /* faint hairline */
+  /* ── Surfaces — the layered canvas that reads as "premium" ─────── */
+  --bg:         #F1EFEA;   /* page canvas — soft warm platinum */
+  --paper:      #FFFFFF;   /* elevated surface — cards float on --bg */
+  --paper-warm: #F7F5F1;   /* image wells / tinted sections */
+  --paper-deep: #E8E5DE;   /* skeletons / recessed */
+  --line:       #E4E1D9;   /* warm hairline */
+  --line-strong:#D3CFC5;   /* stronger divider */
 
-  --accent:      #0A0A0A;  /* colour comes from product imagery, not UI */
+  /* ── Accent — stays monochrome; a hint of metal for shine ─────── */
+  --accent:      #121211;
   --accent-deep: #000000;
-  --accent-soft: #F2F2F0;
+  --accent-soft: #F0EEE9;
+  --silver:      #C7C3B9;   /* metallic-grey — hairline gradients only */
 
-  --clay:       #0A0A0A;
+  --clay:       #121211;   /* legacy alias */
   --clay-deep:  #000000;
 
   --font-body:    'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-display: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
-  --radius:      12px;
-  --radius-lg:   12px;
+  /* ── Shape — softer, more generous than the old flat editorial ── */
+  --radius-sm:  10px;
+  --radius:     14px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+
+  /* ── Elevation — soft, layered, monochrome ────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(18,18,17,0.04), 0 3px 10px -6px rgba(18,18,17,0.10);
+  --shadow:     0 2px 6px -3px rgba(18,18,17,0.06), 0 16px 34px -18px rgba(18,18,17,0.16);
+  --shadow-lg:  0 6px 14px -8px rgba(18,18,17,0.08), 0 34px 64px -28px rgba(18,18,17,0.22);
 }
 
 * { box-sizing: border-box; }
@@ -40,12 +57,13 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--paper);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'cv05', 'tnum' 0;
   /* clip (not hidden) so the page can't scroll sideways WITHOUT turning the
      body into a scroll container — which would break `position: sticky`. */
   overflow-x: clip;
@@ -60,19 +78,19 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 
 ::selection { background: var(--ink); color: var(--paper); }
 
-/* ── Type — small, quiet, editorial ───────────────────────────────── */
+/* ── Type — quiet, editorial, but with more premium weight ────────── */
 
-/* Editorial statement — large but thin/tight, used sparingly */
+/* Editorial statement — large, tight, confident */
 .h-display {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.022em;
   line-height: 1.03;
 }
 .h-mark {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
   line-height: 0.98;
 }
 /* legacy accent — plain medium, no italic/serif */
@@ -83,76 +101,95 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .mono-label {
   font-family: var(--font-body);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink);
 }
 .spec { font-family: var(--font-body); font-size: 11px; letter-spacing: 0.06em; color: var(--ink-soft); }
 
-/* Kicker — micro uppercase label (no decoration) */
+/* Kicker — micro uppercase label, optionally with a metallic tick */
 .kicker {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-family: var(--font-body);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink);
 }
+.kicker::before {
+  content: '';
+  width: 22px; height: 1px;
+  background: linear-gradient(90deg, var(--ink), var(--silver));
+  flex: 0 0 auto;
+}
 .kicker-light { color: var(--paper); }
+.kicker-light::before { background: linear-gradient(90deg, var(--paper), rgba(255,255,255,0.25)); }
+.kicker-bare::before { display: none; }
 
 .prose-body { font-family: var(--font-body); color: var(--ink-soft); line-height: 1.7; }
 
-/* Underlined text link — the primary SSENSE-style CTA */
+/* Underlined text link — the primary editorial CTA */
 .link-line {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--ink);
-  border-bottom: 1px solid var(--ink);
-  padding-bottom: 2px;
-  transition: opacity 0.2s ease;
+  padding-bottom: 3px;
+  background-image: linear-gradient(var(--ink), var(--ink));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 1px;
+  transition: background-size 0.35s cubic-bezier(.22,1,.36,1), opacity 0.2s ease;
 }
-.link-line:hover { opacity: 0.55; }
+.link-line:hover { background-size: 0 1px; opacity: 0.7; }
+.link-line svg, .link-line span[aria-hidden] { transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
+.link-line:hover svg, .link-line:hover span[aria-hidden] { transform: translateX(3px); }
 
-/* ── Buttons — minimal, gentle radius ─────────────────────────────── */
+/* ── Buttons — minimal, tactile, with real depth ──────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--ink); color: var(--paper);
-  padding: 14px 24px;
+  padding: 14px 26px;
   font-family: var(--font-body);
-  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
   border: 1px solid var(--ink);
   border-radius: var(--radius);
-  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), box-shadow 0.25s ease, background 0.2s ease, color 0.2s ease;
 }
-.btn:hover { opacity: 0.82; }
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); background: #000; }
+.btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
 
 .btn-outline {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: transparent; color: var(--ink);
-  border: 1px solid var(--ink);
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 14px 24px;
+  padding: 13px 25px;
   font-family: var(--font-body);
-  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
-  transition: background 0.2s ease, color 0.2s ease;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), box-shadow 0.25s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
-.btn-outline:hover { background: var(--ink); color: var(--paper); }
+.btn-outline:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--ink); }
+.btn-outline:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
 
 .btn-light {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--paper); color: var(--ink);
-  padding: 14px 24px;
+  padding: 14px 26px;
   font-family: var(--font-body);
-  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
   border: 1px solid var(--paper);
   border-radius: var(--radius);
-  transition: opacity 0.2s ease;
+  box-shadow: var(--shadow);
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), box-shadow 0.25s ease, opacity 0.2s ease;
 }
-.btn-light:hover { opacity: 0.82; }
+.btn-light:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.btn-light:active { transform: translateY(0); }
 
 .cta { @apply btn; }
 .cta-ghost { @apply btn-outline; }
@@ -165,15 +202,16 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .field {
   width: 100%;
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 13px 14px;
+  padding: 13px 15px;
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--ink);
-  transition: border-color 0.18s ease;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
-.field:focus { outline: none; border-color: var(--ink); }
+.field:focus { outline: none; border-color: var(--ink); box-shadow: var(--shadow-sm), 0 0 0 3px rgba(18,18,17,0.06); }
 .field::placeholder { color: var(--ink-muted); }
 
 /* ── Layout — wide, edge-forward gallery ──────────────────────────── */
@@ -189,7 +227,7 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 @media (min-width: 1024px) { .wrap { padding-left: 40px; padding-right: 40px; } }
 
 .section-y { padding-top: 56px; padding-bottom: 56px; }
-@media (min-width: 768px) { .section-y { padding-top: 88px; padding-bottom: 88px; } }
+@media (min-width: 768px) { .section-y { padding-top: 92px; padding-bottom: 92px; } }
 
 /* A page hero already closes with a hairline + margin, so the first content
    block right after it must not stack another full section gap on top — that
@@ -199,6 +237,8 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 
 .hairline { height: 1px; background: var(--line); }
 .rule-ink { height: 1px; background: var(--ink); }
+/* Metallic hairline — the one "shine" flourish, used sparingly */
+.rule-shine { height: 1px; background: linear-gradient(90deg, transparent, var(--silver), transparent); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -206,15 +246,43 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 /* Media hover — quiet zoom for gallery imagery */
 .media-zoom { overflow: hidden; }
 .media-zoom img { transition: transform 0.9s cubic-bezier(0.22,1,0.36,1); }
-.media-zoom:hover img { transform: scale(1.04); }
+.media-zoom:hover img { transform: scale(1.05); }
 
-.card-soft { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+/* ── Surfaces — the elevated white cards that float on the canvas ── */
+.card-soft {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.surface {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.lift {
+  transition: transform 0.35s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease;
+}
+.lift:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+
+/* Pill chip — small tactile monochrome tag */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 11px; border-radius: 999px;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+.chip-ink { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 /* ── Policy / rich-text content ───────────────────────────────────── */
 .policy-content { font-family: var(--font-body); color: var(--ink-soft); font-size: 14px; line-height: 1.8; }
 .policy-content h1, .policy-content h2, .policy-content h3, .policy-content h4 {
-  font-family: var(--font-display); font-weight: 600; color: var(--ink);
-  line-height: 1.2; margin: 1.8em 0 0.55em; letter-spacing: -0.01em;
+  font-family: var(--font-display); font-weight: 700; color: var(--ink);
+  line-height: 1.2; margin: 1.8em 0 0.55em; letter-spacing: -0.02em;
 }
 .policy-content h1 { font-size: 1.7rem; }
 .policy-content h2 { font-size: 1.35rem; }
@@ -237,9 +305,9 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .rise-in { animation: riseIn 0.6s cubic-bezier(0.22,1,0.36,1) both; }
 
 @media (min-width: 768px) {
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--line); }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
 }
 

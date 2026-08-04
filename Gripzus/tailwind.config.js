@@ -7,28 +7,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Gripzus — Editorial Gallery (stark white + near-black)
+        // Gripzus — Monochrome Atelier (warm platinum canvas + white surfaces)
         ink: {
-          DEFAULT: '#0A0A0A',
-          soft:    '#6E6E6E',
-          muted:   '#A6A6A6',
+          DEFAULT: '#121211',
+          soft:    '#56544E',
+          muted:   '#9A968C',
         },
+        // page canvas — white cards float above this
+        canvas:  '#F1EFEA',
         paper: {
           DEFAULT: '#FFFFFF',
-          warm:    '#F6F6F4',
-          deep:    '#EFEFED',
+          warm:    '#F7F5F1',
+          deep:    '#E8E5DE',
         },
         line: {
-          DEFAULT: '#E8E8E6',
-          dark:    '#1E1E1E',
+          DEFAULT: '#E4E1D9',
+          strong:  '#D3CFC5',
+          dark:    '#1E1E1C',
         },
+        silver: '#C7C3B9',
         accent: {
-          DEFAULT: '#0A0A0A',
+          DEFAULT: '#121211',
           deep:    '#000000',
-          soft:    '#F2F2F0',
+          soft:    '#F0EEE9',
         },
         clay: {
-          DEFAULT: '#0A0A0A',
+          DEFAULT: '#121211',
           deep:    '#000000',
         },
       },
@@ -41,15 +45,21 @@ module.exports = {
         widest: '0.16em',
       },
       borderRadius: {
-        DEFAULT: '12px',
-        lg: '12px',
+        DEFAULT: '14px',
+        sm: '10px',
+        md: '14px',
+        lg: '20px',
+        xl: '24px',
+        '2xl': '28px',
       },
       maxWidth: {
         site: '1600px',
       },
       boxShadow: {
-        card: '0 20px 60px -30px rgba(0,0,0,0.22)',
-        soft: '0 4px 20px -14px rgba(0,0,0,0.14)',
+        // layered, monochrome elevation
+        sm:   '0 1px 2px rgba(18,18,17,0.04), 0 3px 10px -6px rgba(18,18,17,0.10)',
+        soft: '0 2px 6px -3px rgba(18,18,17,0.06), 0 16px 34px -18px rgba(18,18,17,0.16)',
+        card: '0 6px 14px -8px rgba(18,18,17,0.08), 0 34px 64px -28px rgba(18,18,17,0.22)',
       },
       keyframes: {
         riseIn: {

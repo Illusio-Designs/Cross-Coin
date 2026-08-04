@@ -56,13 +56,13 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-paper shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card">
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-sm transition-all duration-[400ms] ease-[cubic-bezier(.22,1,.36,1)] hover:-translate-y-2 hover:shadow-card hover:border-line-strong">
 
       {/* ── Image ───────────────────────────────────────────────── */}
-      <div className="relative">
+      <div className="relative p-1.5">
         <Link
           href={href}
-          className="relative block aspect-[4/5] overflow-hidden bg-paper-warm"
+          className="relative block aspect-[4/5] overflow-hidden rounded-[16px] bg-paper-warm"
         >
           {/* Uniform ratio so every card in a row is the same size */}
           <img src={primary} alt={name} loading="lazy"

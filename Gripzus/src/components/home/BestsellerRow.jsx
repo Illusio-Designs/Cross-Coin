@@ -25,10 +25,10 @@ export default function BestsellerRow({
         {/* quiet header */}
         <div className="flex items-end justify-between mb-10 md:mb-14">
           <div>
-            <p className="eyebrow text-ink-muted mb-3">{eyebrow}</p>
-            <h2 className="h-display text-2xl md:text-3xl">{title}</h2>
+            <span className="kicker text-ink-muted">{eyebrow}</span>
+            <h2 className="h-display text-3xl md:text-[2.6rem] mt-3">{title}</h2>
           </div>
-          <Link href={ctaHref} className="link-line">See all</Link>
+          <Link href={ctaHref} className="link-line">See all <span aria-hidden>→</span></Link>
         </div>
 
         {/* Single row — item count follows the column count at each width

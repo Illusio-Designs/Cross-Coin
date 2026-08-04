@@ -19,10 +19,10 @@ export default function CategoryCards({ categories = [] }) {
         {/* quiet header */}
         <div className="flex items-end justify-between mb-10 md:mb-14">
           <div>
-            <p className="eyebrow text-ink-muted mb-3">Shop by chapter</p>
-            <h2 className="h-display text-2xl md:text-3xl">Collections</h2>
+            <span className="kicker text-ink-muted mb-4">Shop by chapter</span>
+            <h2 className="h-display text-3xl md:text-[2.6rem] mt-3">Collections</h2>
           </div>
-          <Link href="/collections" className="link-line">All collections</Link>
+          <Link href="/collections" className="link-line">All collections <span aria-hidden>→</span></Link>
         </div>
 
         {/* Single row — 2 on mobile, 4 from md; extras hidden, not wrapped. */}
