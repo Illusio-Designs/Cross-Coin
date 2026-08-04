@@ -21,6 +21,10 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
   first_response_at: { type: DataTypes.DATE, allowNull: true },
   // User ID link (if customer is a registered user)
   user_id: { type: DataTypes.INTEGER, allowNull: true },
+  // COD flow: set to the order number when we've asked the customer to send a
+  // NEW delivery address (after they tapped "Wrong Address"). Their next text
+  // message is then captured as the corrected address for that order.
+  awaiting_address_for: { type: DataTypes.STRING(50), allowNull: true },
 }, { tableName: 'whatsapp_conversations', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
 
 const WhatsappMessage = sequelize.define('WhatsappMessage', {

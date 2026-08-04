@@ -519,6 +519,22 @@ const startServer = async () => {
             logger.error('whatsapp_messages.type ENUM migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: whatsapp_conversations.awaiting_address_for ──
+        // Tracks the order awaiting a corrected COD address (Wrong Address flow).
+        try {
+            const [aac] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_conversations' AND COLUMN_NAME = 'awaiting_address_for'`
+            );
+            if (!aac.length) {
+                logger.info('Migrating: adding whatsapp_conversations.awaiting_address_for column…');
+                await sequelize.query(`ALTER TABLE whatsapp_conversations ADD COLUMN awaiting_address_for VARCHAR(50) NULL`);
+                logger.info('✓ whatsapp_conversations.awaiting_address_for column added');
+            }
+        } catch (err) {
+            logger.error('whatsapp_conversations.awaiting_address_for migration failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

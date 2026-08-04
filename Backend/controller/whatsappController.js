@@ -984,10 +984,48 @@ async function processCodReply(phone, kind, value, brandId) {
     notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
     logger.info(`[WhatsApp] COD address confirmed → order ${pendingOrder.order_number}`);
   } else {
-    await whatsappSvc.sendTextMessage(phone, `No problem! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention order *#${pendingOrder.order_number}*.`, brandId);
+    // Wrong address → ask for the corrected address and remember which order the
+    // customer's next message should update.
+    const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+    await WhatsappConversation.update({ awaiting_address_for: pendingOrder.order_number }, { where: { customer_phone: phone } });
+    const addr = await ShippingAddress.findByPk(pendingOrder.shipping_address_id).catch(() => null);
+    const firstName = (addr?.full_name || '').split(' ')[0] || 'there';
+    await whatsappSvc.sendAddressRequest(phone, { name: firstName, orderNumber: pendingOrder.order_number }, brandId);
     notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
-    logger.warn(`[WhatsApp] COD address rejected → order ${pendingOrder.order_number}`);
+    logger.warn(`[WhatsApp] COD address rejected → requested new address for ${pendingOrder.order_number}`);
   }
+}
+
+// ─── Capture a customer's corrected delivery address (Wrong Address flow) ─────
+// Fired when the customer's text reply arrives while their conversation is
+// flagged awaiting_address_for a specific order. Updates the shipping address
+// (+ extracts the pincode) and re-sends the COD confirmation so they can confirm.
+async function captureNewAddress(phone, addressText, orderNumber, brandId) {
+  const { Order } = require('../model/orderModel.js');
+  const { ShippingAddress } = require('../model/shippingAddressModel.js');
+  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+  const whatsappSvc = require('../services/whatsappService.js');
+
+  // Clear the flag first so we never double-capture the same reply.
+  await WhatsappConversation.update({ awaiting_address_for: null }, { where: { customer_phone: phone } });
+
+  const order = await Order.findOne({ where: { order_number: orderNumber, status: 'awaiting_confirmation', payment_type: 'cod' } });
+  if (!order) return;
+  const addr = await ShippingAddress.findByPk(order.shipping_address_id);
+  if (!addr) return;
+
+  const clean = String(addressText || '').trim();
+  const pin = (clean.match(/\b(\d{6})\b/) || [])[1] || addr.pincode;
+  await addr.update({ address: clean, pincode: pin });
+
+  const firstName = (addr.full_name || '').split(' ')[0] || 'there';
+  await whatsappSvc.sendCodConfirmation(phone, {
+    name: firstName,
+    orderNumber: order.order_number,
+    amount: parseFloat(order.final_amount).toFixed(2),
+    fullAddress: [addr.full_name, clean].filter(Boolean).join(', '),
+  }, brandId);
+  logger.info(`[WhatsApp] Captured corrected COD address for ${orderNumber} (pincode ${pin})`);
 }
 
 const _origReceiveWebhook = exports.receiveWebhook;
@@ -1115,16 +1153,23 @@ exports.receiveWebhook = async (req, res) => {
           notificationService.emitNewWhatsApp(phone, lastMsgPreview);
           logger.info(`WhatsApp inbound [${phone}] (${msgType}): ${lastMsgPreview}`);
 
-          // COD address confirmation: a free-text YES/NO or a "Confirm Address"
-          // button tap advances the pending COD order to `confirmed`.
-          if (msgType === 'text' && text) {
+          // COD flow:
+          //  • if we're awaiting a corrected address from this customer, their
+          //    next text IS the new address → capture it and re-confirm;
+          //  • otherwise a text YES/NO or "Confirm Address" button advances the
+          //    pending COD order to `confirmed`.
+          if (msgType === 'text' && text && conv.awaiting_address_for) {
+            const _orderNo = conv.awaiting_address_for;
+            setImmediate(() => captureNewAddress(phone, text, _orderNo, brandId).catch(e => logger.error('[WhatsApp] capture address error: ' + e.message)));
+          } else if (msgType === 'text' && text) {
             setImmediate(() => processCodReply(phone, 'text', text, brandId).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
           } else if (msgType === 'button' && buttonPayload) {
             setImmediate(() => processCodReply(phone, 'button', buttonPayload, brandId).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
           }
 
-          // Auto-reply bot — only for text messages
-          if (msg.type === 'text') {
+          // Auto-reply bot — only for plain text messages that aren't a captured
+          // address (so the address text doesn't trip keyword auto-replies).
+          if (msg.type === 'text' && !conv.awaiting_address_for) {
             setImmediate(() => handleAutoReply(phone, text, brandId).catch(() => {}));
           }
         }

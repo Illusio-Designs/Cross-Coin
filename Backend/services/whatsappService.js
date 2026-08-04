@@ -294,6 +294,18 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      name: 'address_request', category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: '📍 Share Your Correct Address' },
+        {
+          type: 'BODY',
+          text: `No problem, {{1}}! 📍\n\nTo update your *{{2}}* order *#{{3}}*, please reply with your *full delivery address*, landmark and 6-digit pincode in a single message.\n\n_Example: Flat 4B, MG Road, near City Mall, Pune, Maharashtra 411001_`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
       name: 'refund_processed', category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: '💳 Refund Initiated' },
@@ -545,6 +557,14 @@ async function sendOrderConfirmation(phone, data, brandId = 1) {
 
 async function sendOrderPacked(phone, data, brandId = 1) {
   return sendTemplate(phone, 'order_packed', [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+  ], brandId);
+}
+
+async function sendAddressRequest(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'address_request', [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -910,6 +930,7 @@ module.exports = {
   // Order notifications
   sendOrderConfirmation,
   sendOrderPacked,
+  sendAddressRequest,
   sendOrderShipped,
   sendOutForDelivery,
   sendOrderDelivered,
