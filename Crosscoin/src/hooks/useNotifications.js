@@ -136,38 +136,49 @@ export function useNotifications() {
     };
 
     // One long-poll cycle: the server HOLDS the request until an event or ~25s,
-    // then we reconnect immediately. No fixed interval → a fraction of the
-    // requests of 8s polling, and a new order/message arrives near-instantly.
+    // then we reconnect. RESOURCE-SAVER: only the VISIBLE tab long-polls — a
+    // hidden/background tab releases its held connection entirely and relies on
+    // Web Push for alerts, so N background tabs cost 0 held Passenger workers.
+    let running = false;
     const loop = async () => {
-      if (!alive) return;
+      if (!alive || document.hidden) { running = false; return; } // paused in background
       const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) { backoffTimer = setTimeout(loop, 5000); return; } // wait for login
+      if (!token) { running = false; backoffTimer = setTimeout(loop, 5000); return; } // wait for login
 
+      running = true;
       controller = new AbortController();
       try {
         const res = await fetch(
           `${API_BASE}/api/notifications/poll?since=${encodeURIComponent(sinceRef.current)}`,
           { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
         );
-        if (res.status === 401) return; // stop on auth failure (page reload restarts)
+        if (res.status === 401) { running = false; return; } // stop on auth failure (page reload restarts)
         if (res.ok) {
           const data = await res.json();
           if (data.serverTime) sinceRef.current = data.serverTime;
           process(data);
         }
-        if (alive) loop(); // reconnect immediately — the server does the waiting
+        return loop(); // reconnect (loop() itself pauses if now hidden)
       } catch (e) {
-        if (!alive) return;
-        if (e.name === 'AbortError') { loop(); return; } // visibility refresh — reconnect now
+        if (!alive) { running = false; return; }
+        if (e.name === 'AbortError') { return loop(); } // hidden→pauses, visible→reconnects
+        running = false;
         backoffTimer = setTimeout(loop, 5000); // network error — back off
       }
     };
 
     const start = setTimeout(loop, 2000);
 
-    // Phase 0: when the tab becomes visible again, abort the current wait so we
-    // reconnect and catch up instantly (a hidden tab keeps one cheap held request).
-    const onVisible = () => { if (!document.hidden && controller) { try { controller.abort(); } catch (_) {} } };
+    // Hidden → abort the held request (frees the worker); Visible → catch up now.
+    // The `since` timestamp means the first poll on resume returns everything
+    // missed while the tab was in the background, so nothing is lost.
+    const onVisible = () => {
+      if (document.hidden) {
+        if (controller) { try { controller.abort(); } catch (_) {} }
+      } else if (!running) {
+        loop();
+      }
+    };
     document.addEventListener('visibilitychange', onVisible);
 
     // Unlock audio on the first interaction so the new-order sound can play.
