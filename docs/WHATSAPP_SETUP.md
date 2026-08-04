@@ -35,13 +35,15 @@ WHATSAPP_PHONE_NUMBER_ID=<phone number id>
 WHATSAPP_BUSINESS_ACCOUNT_ID=<WABA id>
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=<same string you set in the Meta webhook>
 WHATSAPP_WEBHOOK_SECRET=<App Secret from Meta>
-WEBHOOK_REQUIRE_SIGNATURE=true        # turn ON only AFTER the secret above is set & verified
 WHATSAPP_SHARED_BRAND_ID=1            # CrossCoin holds the shared account
 ```
 
 - [ ] Set all values above.
-- [ ] Set `WHATSAPP_WEBHOOK_SECRET` **first**, confirm inbound messages still arrive, **then** set `WEBHOOK_REQUIRE_SIGNATURE=true`.
-      (Until the secret is set + enforcement is on, the webhook accepts unsigned requests — i.e. spoofable.)
+- [ ] Setting **`WHATSAPP_WEBHOOK_SECRET` alone secures WhatsApp** — the server verifies
+      Meta's signature on every request once the secret is present (spoofed requests are rejected).
+- [ ] **Do NOT set `WEBHOOK_REQUIRE_SIGNATURE=true`** if you also use the **iThink shipping
+      webhook** (Section 5) — iThink does not sign its callbacks, so global enforcement would
+      reject them. WhatsApp is already protected by the secret above.
 - [ ] Restart the backend so the startup migrations run (they auto-add the new
       `whatsapp_messages.type` values and `whatsapp_conversations.awaiting_address_for` column).
 

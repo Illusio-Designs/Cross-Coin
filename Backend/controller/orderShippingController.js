@@ -260,18 +260,30 @@ module.exports.handleFShipWebhook = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const webhookData = req.body;
-    logger.debug("🔔 FShip Webhook received:", JSON.stringify(webhookData, null, 2));
+    const raw = req.body || {};
+    // Log the RAW payload so the exact iThink shape is visible in production the
+    // first time a real webhook lands (helps confirm/adjust the field mapping).
+    logger.info('🔔 Shipping webhook received: ' + JSON.stringify(raw).slice(0, 800));
 
-    const {
-      waybill,
-      status,
-      courier_name,
-      order_id,
-      remark,
-      delivery_date,
-      rto_reason
-    } = webhookData;
+    // Both iThink and FShip POST here, and iThink may nest a single shipment
+    // under `data` (object or array). Normalise across every field name we've
+    // seen so the handler works regardless of provider/version.
+    const d = Array.isArray(raw.data) ? (raw.data[0] || {})
+      : (raw.data && typeof raw.data === 'object' ? raw.data : raw);
+    const pick = (...keys) => {
+      for (const k of keys) {
+        if (raw[k] != null && raw[k] !== '') return raw[k];
+        if (d[k] != null && d[k] !== '') return d[k];
+      }
+      return undefined;
+    };
+    const waybill       = pick('waybill', 'awb', 'awb_number', 'awbno', 'tracking_number');
+    const status        = pick('status', 'current_status', 'current_status_code', 'shipment_status', 'scan_status');
+    const courier_name  = pick('courier_name', 'logistic', 'logistic_name', 'courier', 'carrier');
+    const order_id      = pick('order_id', 'reference_no', 'refnum', 'order_number', 'reference', 'client_order_id');
+    const remark        = pick('remark', 'remarks', 'message', 'instructions', 'status_remark');
+    const delivery_date = pick('delivery_date', 'delivered_date', 'deliveredDate');
+    const rto_reason    = pick('rto_reason', 'return_reason', 'ndr_reason');
 
     if (!waybill && !order_id) {
       await transaction.rollback();
