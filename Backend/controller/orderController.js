@@ -776,6 +776,7 @@
               // COD: send address confirmation request (customer must reply YES)
               const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
               await whatsappService.sendCodConfirmation(addr.phone, {
+                name: (addr.full_name || '').split(' ')[0] || 'there',
                 orderNumber: createdOrder.order_number,
                 amount: parseFloat(createdOrder.final_amount).toFixed(2),
                 fullAddress,
@@ -789,10 +790,9 @@
             } else {
               // Prepaid: send standard confirmation
               await whatsappService.sendOrderConfirmation(addr.phone, {
+                name: (addr.full_name || '').split(' ')[0] || 'there',
                 orderNumber: createdOrder.order_number,
-                itemCount: validatedItems.length,
                 total: parseFloat(createdOrder.final_amount).toFixed(2),
-                estimatedDelivery: '3-5 working days'
               }, createdOrder.brand_id || 1);
             }
           }
@@ -1301,6 +1301,7 @@
             if (payment_type === 'cod') {
               const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
               await whatsappService.sendCodConfirmation(addr.phone, {
+                name: (addr.full_name || '').split(' ')[0] || 'there',
                 orderNumber: createdOrder.order_number,
                 amount: parseFloat(createdOrder.final_amount).toFixed(2),
                 fullAddress,
@@ -1308,10 +1309,9 @@
               await Order.update({ cod_address_confirmed: false }, { where: { id: order.id } });
             } else {
               await whatsappService.sendOrderConfirmation(addr.phone, {
+                name: (addr.full_name || '').split(' ')[0] || 'there',
                 orderNumber: createdOrder.order_number,
-                itemCount: validatedItems.length,
                 total: parseFloat(createdOrder.final_amount).toFixed(2),
-                estimatedDelivery: '3-5 working days',
               }, brandId);
             }
           }

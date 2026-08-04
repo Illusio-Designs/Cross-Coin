@@ -483,27 +483,32 @@ module.exports.handleFShipWebhook = async (req, res) => {
         const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
         const phone = addr?.phone || order.GuestUser?.phone;
         if (!phone) return;
+        const name = (addr?.full_name || order.GuestUser?.firstName || '').split(' ')[0] || 'there';
 
         if (orderStatus === 'shipped' || orderStatus === 'in transit') {
           await whatsappService.sendOrderShipped(phone, {
+            name,
             orderNumber: order.order_number,
             awbNumber: waybill || order.fship_waybill,
             trackingUrl: order.tracking_url || `https://crosscoin.in/OrderTracking?order=${order.order_number}`
           }, order.brand_id || 1);
         } else if (orderStatus === 'out for delivery') {
           await whatsappService.sendOutForDelivery(phone, {
+            name,
             orderNumber: order.order_number,
-            courierName: courier_name || order.courier_name || 'Our courier partner'
+            courierName: courier_name || order.courier_name || 'our courier partner'
           }, order.brand_id || 1);
         } else if (orderStatus === 'delivered') {
-          await whatsappService.sendOrderDelivered(phone, { orderNumber: order.order_number }, order.brand_id || 1);
+          await whatsappService.sendOrderDelivered(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
         } else if (orderStatus === 'cancelled' || orderStatus === 'order cancelled') {
           await whatsappService.sendOrderCancelled(phone, {
+            name,
             orderNumber: order.order_number,
             refundInfo: order.payment_status === 'refund_pending' ? 'Refund will be processed in 5-7 business days' : 'No refund applicable'
           }, order.brand_id || 1);
         } else if (orderStatus === 'rto' || orderStatus === 'rto delivered') {
           await whatsappService.sendOrderCancelled(phone, {
+            name,
             orderNumber: order.order_number,
             refundInfo: 'Your order was returned. Refund will be processed in 5-7 business days if payment was made online.'
           }, order.brand_id || 1);
@@ -891,6 +896,18 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
 
         if (shouldCommit) await localTransaction.commit();
+
+        // "Packed & ready" WhatsApp — the order is now booked with a courier.
+        setImmediate(async () => {
+          try {
+            const whatsappService = require('../services/whatsappService.js');
+            const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
+            const phone = addr?.phone || order.GuestUser?.phone;
+            if (!phone) return;
+            const name = (addr?.full_name || order.GuestUser?.firstName || '').split(' ')[0] || 'there';
+            await whatsappService.sendOrderPacked(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
+          } catch (e) { logger.warn(`[WhatsApp] order_packed notify failed for ${order.order_number}: ${e.message}`); }
+        });
 
         return {
           success: true,
@@ -1531,26 +1548,31 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
             const addr = await ShippingAddress.findOne({ where: { id: _notifyPhone } });
             const phone = addr?.phone;
             if (!phone) return;
+            const name = (addr?.full_name || '').split(' ')[0] || 'there';
             const trackingUrl = _notifyOrder.tracking_url
               || `https://crosscoin.in/OrderTracking?order=${_notifyOrder.order_number}`;
 
             if (_notifyStatus === 'shipped' || _notifyStatus === 'in transit') {
               await whatsappSvc.sendOrderShipped(phone, {
+                name,
                 orderNumber: _notifyOrder.order_number,
                 awbNumber: _notifyOrder.fship_waybill || _notifyOrder.tracking_number,
                 trackingUrl,
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'out for delivery') {
               await whatsappSvc.sendOutForDelivery(phone, {
+                name,
                 orderNumber: _notifyOrder.order_number,
-                courierName: _notifyOrder.courier_name || 'Our courier partner',
+                courierName: _notifyOrder.courier_name || 'our courier partner',
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'delivered') {
               await whatsappSvc.sendOrderDelivered(phone, {
+                name,
                 orderNumber: _notifyOrder.order_number,
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'cancelled' || _notifyStatus === 'order cancelled') {
               await whatsappSvc.sendOrderCancelled(phone, {
+                name,
                 orderNumber: _notifyOrder.order_number,
                 refundInfo: _notifyOrder.payment_status === 'refund_pending'
                   ? 'Refund will be processed in 5-7 business days'
@@ -1558,6 +1580,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'rto' || _notifyStatus === 'rto delivered') {
               await whatsappSvc.sendOrderCancelled(phone, {
+                name,
                 orderNumber: _notifyOrder.order_number,
                 refundInfo: 'Your order was returned. Refund will be processed in 5-7 business days if payment was made online.',
               }, _notifyOrder.brand_id || 1);

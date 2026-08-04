@@ -26,10 +26,9 @@ orderEmitter.on('order.confirmed', async (order) => {
     const addr = await ShippingAddress.findByPk(order.shipping_address_id);
     if (addr?.phone) {
       await whatsappService.sendOrderConfirmation(addr.phone, {
+        name: (addr.full_name || '').split(' ')[0] || 'there',
         orderNumber: order.order_number,
-        itemCount: order._itemCount || 1,
         total: parseFloat(order.final_amount).toFixed(2),
-        estimatedDelivery: '3-5 working days',
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA confirm failed:', e.message));
     }
 

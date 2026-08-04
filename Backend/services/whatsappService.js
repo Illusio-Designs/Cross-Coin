@@ -208,8 +208,20 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: '✅ Order Confirmed' },
         {
           type: 'BODY',
-          text: `Thank you for shopping with *{{1}}*!\n\nYour order has been confirmed and is being prepared for dispatch.\n\n🧾 *Order ID:* #{{2}}\n📦 *Items:* {{3}}\n💰 *Order Total:* ₹{{4}}\n🚚 *Estimated Delivery:* {{5}}\n\nYou will receive a shipping notification with live tracking as soon as your order is dispatched. We appreciate your trust in us!`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', '2 items', '699', '3–5 working days']] },
+          text: `Thank you, {{1}}! 🎉\n\nYour *{{2}}* order *#{{3}}* (₹{{4}}) is confirmed and we're preparing it for dispatch now.\n\nWe'll share your tracking details as soon as it ships. We appreciate your trust in us!`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', '699']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      name: 'order_packed', category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: '📦 Order Packed & Ready' },
+        {
+          type: 'BODY',
+          text: `Good news, {{1}}! 📦\n\nYour *{{2}}* order *#{{3}}* has been packed and is ready for shipping.\n\nThank you for your patience — your tracking details will be shared shortly.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -217,11 +229,11 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_shipped', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '📦 Your Order Is On Its Way!' },
+        { type: 'HEADER', format: 'TEXT', text: '🚚 Your Order Is On Its Way!' },
         {
           type: 'BODY',
-          text: `Great news! Your *{{1}}* order has been dispatched and is heading your way.\n\n🧾 *Order ID:* #{{2}}\n🔖 *Tracking No (AWB):* {{3}}\n📍 *Track your shipment:* {{4}}\n\nExpected delivery within 2–5 business days. We'll keep you posted at every milestone. Thank you for your patience!`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] },
+          text: `Great news, {{1}}! 🚚\n\nYour *{{2}}* order *#{{3}}* has been dispatched and is heading your way.\n\n🔖 *Tracking (AWB):* {{4}}\n📍 *Track live:* {{5}}\n\nThanks for staying connected — we'll notify you the moment it's delivered.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -232,8 +244,8 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: '🚛 Out for Delivery Today!' },
         {
           type: 'BODY',
-          text: `Your *{{1}}* order is out for delivery and will arrive today!\n\n🧾 *Order ID:* #{{2}}\n🚚 *Courier Partner:* {{3}}\n\nPlease ensure someone is available at the delivery address to receive the package. If you miss the delivery, the courier will attempt again the next working day.`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', 'BlueDart Express']] },
+          text: `Out for delivery today, {{1}}! 🚛\n\nYour *{{2}}* order *#{{3}}* is arriving today via {{4}}.\n\nPlease keep your phone handy and make sure someone is available to receive the package.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'BlueDart Express']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -241,11 +253,11 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_delivered', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered Successfully!' },
+        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered!' },
         {
           type: 'BODY',
-          text: `We're delighted to inform you that your *{{1}}* order has been delivered!\n\n🧾 *Order ID:* #{{2}}\n\nWe hope you love your purchase. If you have any concerns or if the package arrived damaged, please reply to this message within 48 hours and our team will assist you promptly.\n\nThank you for shopping with us. We look forward to serving you again! 😊`,
-          example: { body_text: [[storeName, 'CC-20240101-0001']] },
+          text: `Delivered! ✅\n\nYour *{{2}}* order *#{{3}}* has arrived — we hope you love it, {{1}}! 😊\n\nThank you for shopping with *{{2}}*. If anything's not right or the package arrived damaged, just reply here within 48 hours and we'll help right away.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -256,8 +268,8 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: '❌ Order Cancelled' },
         {
           type: 'BODY',
-          text: `We regret to inform you that your *{{1}}* order has been cancelled.\n\n🧾 *Order ID:* #{{2}}\n💳 *Refund Status:* {{3}}\n\nIf this was unexpected or if you have any questions regarding your refund, please reply to this message or reach out to our support team. We apologise for any inconvenience caused and hope to serve you better next time.`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', 'Refund will be credited within 5–7 working days']] },
+          text: `Hi {{1}}, your *{{2}}* order *#{{3}}* has been cancelled.\n\n💳 *Refund:* {{4}}\n\nIf this was unexpected or you have any questions, just reply here and our team will help right away.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'Refund will be credited within 5–7 working days']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -265,11 +277,11 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'cod_order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🧾 Action Required — COD Order' },
+        { type: 'HEADER', format: 'TEXT', text: '🛒 Confirm Your COD Order' },
         {
           type: 'BODY',
-          text: `Thank you for placing a Cash on Delivery order with *{{1}}*!\n\nBefore we process your order, we need to verify your delivery address.\n\n🧾 *Order ID:* #{{2}}\n💰 *Amount Payable:* ₹{{3}} (Cash on Delivery)\n📍 *Delivery Address:* {{4}}\n\nPlease confirm your address using the buttons below. This helps us ensure a smooth and hassle-free delivery.`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', '699', 'Rushikesh, 123 Main St, Surat, Gujarat 395006']] },
+          text: `Hi {{1}}! 🛒\n\nYour *{{2}}* order *#{{3}}* for ₹{{4}} (Cash on Delivery) has been placed successfully.\n\n📍 *Deliver to:* {{5}}\n\nPlease reply *YES* to confirm, or tap *Confirm Address* below. Reply *NO* if you'd like to cancel.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', '699', 'Rushikesh, 123 Main St, Surat, Gujarat 395006']] },
         },
         { type: 'FOOTER', text: footer },
         {
@@ -287,8 +299,8 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: '💳 Refund Initiated' },
         {
           type: 'BODY',
-          text: `Your refund for the *{{1}}* order has been successfully initiated.\n\n🧾 *Order ID:* #{{2}}\n💰 *Refund Amount:* ₹{{3}}\n🏦 *Refund Mode:* {{4}}\n⏳ *Expected Credit:* 5–7 working days\n\nPlease note that the credit timeline may vary slightly depending on your bank. If you do not receive your refund within 7 working days, please reply to this message and we will investigate immediately.`,
-          example: { body_text: [[storeName, 'CC-20240101-0001', '699', 'Original payment method']] },
+          text: `Hi {{1}}, your refund for the *{{2}}* order *#{{3}}* has been initiated.\n\n💰 *Amount:* ₹{{4}}\n🏦 *Mode:* {{5}}\n⏳ *Expected credit:* 5–7 working days\n\nThe exact timing can vary by bank. If you don't see it within 7 working days, reply here and we'll look into it right away.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', '699', 'Original payment method']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -300,8 +312,8 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: '⭐ Share Your Experience!' },
         {
           type: 'BODY',
-          text: `Hi {{1}}!\n\nWe hope you are enjoying your *{{2}}* from *{{3}}*. Your feedback means the world to us and helps fellow shoppers make informed decisions.\n\nSharing your experience takes less than a minute — and we genuinely appreciate every review!\n\n👉 Review your purchase: {{4}}`,
-          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks', storeName, `https://${storeUrl}/review`]] },
+          text: `Thanks for your order, {{1}}! 🌟\n\nHow did we do? Please take a moment to rate your experience with *{{2}}* or leave a quick review — it means the world to us and helps other shoppers.\n\n👉 Share your feedback: {{3}}`,
+          example: { body_text: [['Rushikesh', storeName, `https://${storeUrl}/review`]] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -520,19 +532,29 @@ async function testConnection(phone, brandId = 1) {
 
 // ─── Order notification helpers ───────────────────────────────────────────────
 
+// All lifecycle templates lead with {{1}}=customer name, {{2}}=brand. `name`
+// defaults to a friendly "there" so callers that don't have it still work.
 async function sendOrderConfirmation(phone, data, brandId = 1) {
   return sendTemplate(phone, 'order_confirmation', [
+    data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-    data.itemCount || '1 item',
-    data.total,
-    data.estimatedDelivery || '3-5 working days',
+    String(data.total ?? ''),
+  ], brandId);
+}
+
+async function sendOrderPacked(phone, data, brandId = 1) {
+  return sendTemplate(phone, 'order_packed', [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
   ], brandId);
 }
 
 async function sendOrderShipped(phone, data, brandId = 1) {
   const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
   return sendTemplate(phone, 'order_shipped', [
+    data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
     data.awbNumber || 'N/A',
@@ -542,18 +564,24 @@ async function sendOrderShipped(phone, data, brandId = 1) {
 
 async function sendOutForDelivery(phone, data, brandId = 1) {
   return sendTemplate(phone, 'order_out_for_delivery', [
+    data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-    data.courierName || 'Our courier partner',
+    data.courierName || 'our courier partner',
   ], brandId);
 }
 
 async function sendOrderDelivered(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_delivered', [await _brandName(brandId), data.orderNumber], brandId);
+  return sendTemplate(phone, 'order_delivered', [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+  ], brandId);
 }
 
 async function sendOrderCancelled(phone, data, brandId = 1) {
   return sendTemplate(phone, 'order_cancelled', [
+    data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
     data.refundInfo || 'Refund will be processed in 5-7 business days',
@@ -586,6 +614,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
           {
             type: 'body',
             parameters: [
+              { type: 'text', text: String(data.name || 'there') },
               { type: 'text', text: await _brandName(brandId) },
               { type: 'text', text: orderNumber },
               { type: 'text', text: String(data.amount) },
@@ -614,9 +643,10 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
 
 async function sendRefundProcessed(phone, data, brandId = 1) {
   return sendTemplate(phone, 'refund_processed', [
+    data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-    data.amount,
+    String(data.amount ?? ''),
     data.paymentMethod || 'Original Payment Method',
   ], brandId);
 }
@@ -635,10 +665,9 @@ async function sendAbandonedCart(phone, data, brandId = 1) {
 async function sendReviewRequest(phone, data, brandId = 1) {
   const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
   return sendTemplate(phone, 'review_request', [
-    data.customerName || 'there',
-    data.productName || 'your recent purchase',
+    data.name || data.customerName || 'there',
     await _brandName(brandId),
-    `https://${storeUrl}/product/${data.productSlug || ''}`,
+    data.reviewUrl || `https://${storeUrl}/review`,
   ], brandId);
 }
 
@@ -880,6 +909,7 @@ module.exports = {
   testConnection,
   // Order notifications
   sendOrderConfirmation,
+  sendOrderPacked,
   sendOrderShipped,
   sendOutForDelivery,
   sendOrderDelivered,

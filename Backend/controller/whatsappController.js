@@ -976,9 +976,11 @@ async function processCodReply(phone, kind, value, brandId) {
       await t.commit();
     } catch (txErr) { await t.rollback(); throw txErr; }
 
+    // Emitting order.confirmed sends the 'order_confirmation' (thank-you +
+    // processing) template — no separate text here, so the customer gets ONE
+    // clean confirmation message per the merged-stage design.
     const orderEmitter = require('../services/orderEvents.js');
     setImmediate(() => { try { orderEmitter.emit('order.confirmed', pendingOrder); } catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed: ' + e.message); } });
-    await whatsappSvc.sendTextMessage(phone, `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`, brandId);
     notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
     logger.info(`[WhatsApp] COD address confirmed → order ${pendingOrder.order_number}`);
   } else {
