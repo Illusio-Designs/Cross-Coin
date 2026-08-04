@@ -79,9 +79,13 @@ async function setBrandSetting(
         { returning: true }
     );
     
-    // Clear cache
+    // Clear cache — BOTH this service's cache AND the settingsHelper cache that
+    // the booking/shipping path reads from. They're separate Maps; clearing only
+    // this one left the shipping worker using the old value (e.g. a stale pickup
+    // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
+    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
     
     return setting;
 }
@@ -94,9 +98,13 @@ async function deleteBrandSetting(brandId, key) {
         where: { brand_id: brandId, key }
     });
     
-    // Clear cache
+    // Clear cache — BOTH this service's cache AND the settingsHelper cache that
+    // the booking/shipping path reads from. They're separate Maps; clearing only
+    // this one left the shipping worker using the old value (e.g. a stale pickup
+    // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
+    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
     
     return deleted > 0;
 }
@@ -172,9 +180,13 @@ async function updateSetting(brandId, key, data) {
         updated_by: data.updated_by || null
     });
     
-    // Clear cache
+    // Clear cache — BOTH this service's cache AND the settingsHelper cache that
+    // the booking/shipping path reads from. They're separate Maps; clearing only
+    // this one left the shipping worker using the old value (e.g. a stale pickup
+    // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
+    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
     
     return setting;
 }
