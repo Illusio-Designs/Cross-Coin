@@ -21,10 +21,6 @@ export default function CollectionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const [featured, ...rest] = collections;
-  const hrefFor = (c) =>
-    `/products?collection=${encodeURIComponent(c?.slug || (c?.name || '').trim())}`;
-
   return (
     <SeoWrapper pageName="categories">
       <PageHero
@@ -36,71 +32,34 @@ export default function CollectionsPage() {
 
       <section className="section-y">
         <div className="wrap">
+          <div className="flex items-baseline justify-between mb-6 md:mb-8">
+            <p className="eyebrow text-ink-muted">All collections</p>
+            {!loading && collections.length > 0 && (
+              <span className="spec">{collections.length} in total</span>
+            )}
+          </div>
+
           {loading ? (
-            <div className="space-y-5">
-              <div className="aspect-[16/10] md:aspect-[21/9] rounded-2xl bg-paper-deep animate-pulse" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="aspect-[4/3] rounded-2xl bg-paper-deep animate-pulse" />
-                ))}
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-[4/5] rounded-xl bg-paper-deep animate-pulse" />
+              ))}
             </div>
           ) : collections.length === 0 ? (
-            <div className="text-center py-24 rounded-2xl border border-line">
-              <p className="h-display text-3xl md:text-4xl text-ink mb-3">No collections yet</p>
-              <p className="prose-body mb-7">The first chapters are being knit. In the meantime —</p>
+            <div className="text-center py-20 rounded-xl border border-line">
+              <p className="h-display text-3xl text-ink mb-3">No collections yet</p>
               <Link href="/products" className="btn-outline inline-flex">Browse all pairs</Link>
             </div>
           ) : (
-            <div className="space-y-12 md:space-y-16">
-              {/* Featured — full-width lead */}
-              {featured && (
-                <Link href={hrefFor(featured)} className="group block">
-                  <div className="media-zoom relative aspect-[16/11] sm:aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl border border-line bg-paper-warm">
-                    {featured.image
-                      ? <img src={featured.image} alt={featured.name} className="absolute inset-0 w-full h-full object-cover" />
-                      : <div className="absolute inset-0 bg-paper-deep" />}
-                    <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/15 to-transparent opacity-95 group-hover:opacity-100 transition-opacity duration-500" />
-                    <span className="absolute top-5 left-6 text-paper/70 text-[11px] tracking-[0.22em] tabular-nums z-10">
-                      FEATURED · 01
-                    </span>
-                    <div className="absolute inset-x-0 bottom-0 p-6 md:p-10 z-10">
-                      <h2 className="h-display text-paper leading-[1.02] text-3xl sm:text-4xl md:text-6xl max-w-3xl">
-                        {featured.name}
-                      </h2>
-                      <div className="mt-4 flex items-center gap-4">
-                        <span className="inline-flex items-center gap-2 text-paper text-[11px] font-medium tracking-[0.14em] uppercase">
-                          Explore the edit
-                          <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-                        </span>
-                        {typeof featured.count === 'number' && featured.count > 0 && (
-                          <span className="text-paper/60 text-[11px] tabular-nums">{featured.count} pairs</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* The rest — big two-up gallery tiles */}
-              {rest.length > 0 && (
-                <div>
-                  <div className="flex items-baseline justify-between mb-6 md:mb-8">
-                    <p className="eyebrow text-ink-muted">All collections</p>
-                    <span className="spec">{collections.length} in total</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-7">
-                    {rest.map((c, i) => (
-                      <CollectionCard
-                        key={c.id ?? c.slug ?? i}
-                        collection={c}
-                        index={i + 1}
-                        ratio="aspect-[4/3] sm:aspect-[4/3.2]"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+              {collections.map((c, i) => (
+                <CollectionCard
+                  key={c.id ?? c.slug ?? i}
+                  collection={c}
+                  index={i}
+                  ratio="aspect-[4/5]"
+                />
+              ))}
             </div>
           )}
         </div>

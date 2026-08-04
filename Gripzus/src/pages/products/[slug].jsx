@@ -199,9 +199,9 @@ export default function ProductDetail() {
           </p>
         </div>
 
-        {/* ── Top split — sticky editorial image left, airy details right ── */}
-        <section className="wrap py-10 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-20">
+        {/* ── Top split — sticky editorial image left, details right ── */}
+        <section className="wrap py-5 md:py-8">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-12">
 
             {/* Gallery — sticky while the info column scrolls */}
             <div className="md:col-span-7 md:sticky md:top-24 md:self-start">
@@ -435,7 +435,7 @@ export default function ProductDetail() {
         {product.description && (
           <>
             <div className="wrap"><div className="hairline" /></div>
-            <section className="wrap section-y grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-20">
+            <section className="wrap py-10 md:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-14">
               <p className="eyebrow text-ink-muted">The story</p>
               <div className="space-y-6 max-w-2xl">
                 <p className="h-display text-ink text-2xl md:text-3xl leading-snug">
@@ -449,7 +449,7 @@ export default function ProductDetail() {
 
         {/* ── Editorial band 2 — Details & specs ───────────────────────── */}
         <div className="wrap"><div className="hairline" /></div>
-        <section className="wrap section-y grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-20">
+        <section className="wrap py-10 md:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-14">
           <p className="eyebrow text-ink-muted">Details &amp; care</p>
           <div className="max-w-3xl">
             {[
@@ -478,9 +478,9 @@ export default function ProductDetail() {
         {related.length > 0 && (
           <>
             <div className="wrap"><div className="hairline" /></div>
-            <section className="section-y">
+            <section className="py-10 md:py-14">
               <div className="wrap">
-                <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
+                <div className="flex items-end justify-between flex-wrap gap-6 mb-8">
                   <div>
                     <p className="eyebrow text-ink-muted mb-4">More from the collection</p>
                     <h2 className="h-display text-3xl md:text-5xl">Pairs <span className="h-italic">like this.</span></h2>
