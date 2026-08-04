@@ -199,9 +199,9 @@ export default function ProductDetail() {
           </p>
         </div>
 
-        {/* Gallery + Info */}
-        <section className="wrap py-8 md:py-12">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-14">
+        {/* ── Top split — sticky editorial image left, airy details right ── */}
+        <section className="wrap py-10 md:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-20">
 
             {/* Gallery — sticky while the info column scrolls */}
             <div className="md:col-span-7 md:sticky md:top-24 md:self-start">
@@ -260,13 +260,13 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Info */}
-            <div className="md:col-span-5">
-              <span className="eyebrow mb-3 block">{product.collection}</span>
+            {/* Info — airy, generous spacing */}
+            <div className="md:col-span-5 md:py-2">
+              <span className="eyebrow text-ink-muted mb-4 block">{product.collection}</span>
 
-              <h1 className="h-display text-2xl md:text-3xl mb-5">{product.name}</h1>
+              <h1 className="h-display text-3xl md:text-4xl leading-tight mb-6">{product.name}</h1>
 
-              <div className="flex items-baseline gap-3 mb-5">
+              <div className="flex items-baseline gap-3 mb-6">
                 <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
                 {compare && compare > price && (
                   <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
@@ -414,7 +414,7 @@ export default function ProductDetail() {
               </div>
 
               {/* Trust strip */}
-              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6 mb-9">
+              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6">
                 {[
                   ['Secure Checkout', <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>],
                   ['Cash on Delivery', <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>],
@@ -427,54 +427,72 @@ export default function ProductDetail() {
                   </div>
                 ))}
               </div>
-
-              {/* Description */}
-              {product.description && (
-                <div className="mb-8">
-                  <p className="eyebrow mb-3">About this pair</p>
-                  <p className="prose-body text-sm md:text-base">{product.description}</p>
-                </div>
-              )}
-
-              {/* Spec */}
-              <div className="border-t border-line pt-7">
-                <p className="eyebrow mb-4">Details</p>
-                <ul className="divide-y divide-line text-sm">
-                  {product.sku && (
-                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">SKU</span><span className="text-ink sm:text-right">{product.sku}</span></li>
-                  )}
-                  <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Collection</span><span className="text-ink sm:text-right">{product.collection}</span></li>
-                  {product.sizes?.length > 0 && (
-                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Sizes</span><span className="text-ink sm:text-right">{product.sizes.join(', ')}</span></li>
-                  )}
-                  {product.colors?.length > 0 && (
-                    <li className="flex flex-col gap-1 py-2.5 sm:flex-row sm:justify-between sm:gap-3"><span className="text-ink-muted">Colours</span><span className="text-ink sm:text-right">{product.colors.map((c) => c.name).join(', ')}</span></li>
-                  )}
-                </ul>
-              </div>
             </div>
           </div>
         </section>
 
-        {/* Testimonials + write-a-review */}
+        {/* ── Editorial band 1 — Product story ─────────────────────────── */}
+        {product.description && (
+          <>
+            <div className="wrap"><div className="hairline" /></div>
+            <section className="wrap section-y grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-20">
+              <p className="eyebrow text-ink-muted">The story</p>
+              <div className="space-y-6 max-w-2xl">
+                <p className="h-display text-ink text-2xl md:text-3xl leading-snug">
+                  {product.name}<span className="h-italic">.</span>
+                </p>
+                <p className="prose-body text-base md:text-lg">{product.description}</p>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ── Editorial band 2 — Details & specs ───────────────────────── */}
+        <div className="wrap"><div className="hairline" /></div>
+        <section className="wrap section-y grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-20">
+          <p className="eyebrow text-ink-muted">Details &amp; care</p>
+          <div className="max-w-3xl">
+            {[
+              product.sku && ['SKU', product.sku],
+              ['Collection', product.collection],
+              product.sizes?.length > 0 && ['Sizes', product.sizes.join(', ')],
+              product.colors?.length > 0 && ['Colours', product.colors.map((c) => c.name).join(', ')],
+            ].filter(Boolean).map(([label, value], i) => (
+              <div
+                key={label}
+                className={`grid grid-cols-1 md:grid-cols-[minmax(0,10rem)_1fr] gap-1 md:gap-12 py-5 md:py-6 ${i > 0 ? 'border-t border-line' : ''}`}
+              >
+                <p className="eyebrow text-ink-muted">{label}</p>
+                <p className="prose-body text-sm md:text-base text-ink">{value}</p>
+              </div>
+            ))}
+            <p className="spec block pt-6 md:pt-8">Hand-finished and inspected pair-by-pair. Free shipping over ₹499 · 7-day returns.</p>
+          </div>
+        </section>
+
+        {/* ── Editorial band 3 — Reviews ───────────────────────────────── */}
+        <div className="wrap"><div className="hairline" /></div>
         <ProductTestimonials productId={product.id} productName={product.name} />
 
-        {/* Related */}
+        {/* ── Editorial band 4 — You may also like ─────────────────────── */}
         {related.length > 0 && (
-          <section className="bg-paper-warm border-t border-line section-y">
-            <div className="wrap">
-              <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
-                <div>
-                  <p className="eyebrow mb-4">More from the collection</p>
-                  <h2 className="h-display text-3xl md:text-5xl">Pairs <span className="h-italic">like this.</span></h2>
+          <>
+            <div className="wrap"><div className="hairline" /></div>
+            <section className="section-y">
+              <div className="wrap">
+                <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
+                  <div>
+                    <p className="eyebrow text-ink-muted mb-4">More from the collection</p>
+                    <h2 className="h-display text-3xl md:text-5xl">Pairs <span className="h-italic">like this.</span></h2>
+                  </div>
+                  <Link href="/products" className="link-line shrink-0">See all</Link>
                 </div>
-                <Link href="/products" className="btn-outline">See all</Link>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                  {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+                </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
-                {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
-              </div>
-            </div>
-          </section>
+            </section>
+          </>
         )}
 
         {/* Sticky add-to-bag bar — slides in once the action block scrolls away */}
