@@ -678,7 +678,14 @@ const Orders = () => {
                                 </button>
                             </Tooltip>
                         )}
-                        {canCancel && divider}
+                        {(canConfirm || canCancel) && divider}
+                        {canConfirm && (
+                            <Tooltip text="Confirm order and proceed to shipping" position="top">
+                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
+                                    ✓
+                                </button>
+                            </Tooltip>
+                        )}
                         {canCancel && (
                             <Tooltip text="Cancel this order permanently" position="top">
                                 <button className="sl-btn-delete" onClick={() => cancelOrder(row.id, row.order_number)}>
