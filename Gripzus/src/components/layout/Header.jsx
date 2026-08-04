@@ -94,8 +94,8 @@ export default function Header() {
                   href={l.href}
                   ref={(el) => (linkRefs.current[i] = el)}
                   onMouseEnter={(e) => moveHi(e.currentTarget)}
-                  className={`relative z-10 px-3.5 py-2 text-[11px] tracking-[0.12em] uppercase rounded-full transition-colors ${
-                    isActive(l.href) ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                  className={`relative z-10 px-3.5 py-2 text-[11px] font-medium tracking-[0.12em] uppercase rounded-full transition-colors ${
+                    isActive(l.href) ? 'text-ink' : 'text-[#3d3d3d] hover:text-ink'
                   }`}
                 >
                   {l.label}
