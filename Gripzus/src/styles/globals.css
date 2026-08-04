@@ -191,6 +191,12 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .section-y { padding-top: 56px; padding-bottom: 56px; }
 @media (min-width: 768px) { .section-y { padding-top: 88px; padding-bottom: 88px; } }
 
+/* A page hero already closes with a hairline + margin, so the first content
+   block right after it must not stack another full section gap on top — that
+   compounding is what left every interior page looking half-empty up top. */
+.page-hero + .section-y { padding-top: 36px; }
+@media (min-width: 768px) { .page-hero + .section-y { padding-top: 52px; } }
+
 .hairline { height: 1px; background: var(--line); }
 .rule-ink { height: 1px; background: var(--ink); }
 

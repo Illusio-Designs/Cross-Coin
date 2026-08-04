@@ -5,17 +5,17 @@
    (Morbix / Soxbae) use. Closed by a hairline that leads into the content. */
 export default function PageHero({ eyebrow, title, accent, intro, children }) {
   return (
-    <section className="wrap pt-16 md:pt-24 pb-0">
-      {eyebrow && <p className="eyebrow text-ink-muted mb-5">{eyebrow}</p>}
-      <h1 className="h-display leading-[1.01] text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl max-w-4xl">
+    <section className="page-hero wrap pt-9 md:pt-14 pb-0">
+      {eyebrow && <p className="eyebrow text-ink-muted mb-3.5">{eyebrow}</p>}
+      <h1 className="h-display leading-[1.03] text-[2.15rem] sm:text-4xl md:text-5xl lg:text-6xl max-w-4xl">
         {title}
         {accent && <> <span className="h-italic">{accent}</span></>}
       </h1>
       {intro && (
-        <p className="prose-body text-base md:text-lg mt-6 max-w-xl">{intro}</p>
+        <p className="prose-body text-[15px] md:text-lg mt-4 md:mt-5 max-w-xl">{intro}</p>
       )}
       {children}
-      <div className="hairline mt-10 md:mt-14" />
+      <div className="hairline mt-7 md:mt-9" />
     </section>
   );
 }
