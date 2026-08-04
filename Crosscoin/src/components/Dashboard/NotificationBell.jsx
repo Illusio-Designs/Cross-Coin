@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../../hooks/useNotifications';
+import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
 
 function timeAgo(date) {
   const s = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -28,6 +29,27 @@ export default function NotificationBell() {
   const { notifications, unreadCount, markAllRead, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+
+  // Web Push: "on" once granted + subscribed. Re-subscribes silently on load so
+  // an already-opted-in browser stays registered after a redeploy.
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if (pushSupported() && pushPermission() === 'granted') {
+      enablePush().then(r => setPushOn(!!r.ok)).catch(() => {});
+    }
+  }, []);
+  const handleEnablePush = async () => {
+    setPushBusy(true);
+    try {
+      const r = await enablePush();
+      if (r.ok) setPushOn(true);
+      else if (r.reason === 'denied') alert('Notifications are blocked. Enable them for this site in your browser settings.');
+      else if (r.reason === 'disabled') alert('Push is not configured on the server yet (VAPID keys missing).');
+      else if (r.reason === 'unsupported') alert('This browser does not support push notifications.');
+      else alert('Could not enable notifications. Please try again.');
+    } finally { setPushBusy(false); }
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -85,12 +107,29 @@ export default function NotificationBell() {
             position: 'sticky', top: 0, background: 'var(--card-bg, #fff)',
           }}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Notifications</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {pushSupported() && (
+                pushOn ? (
+                  <span style={{ fontSize: 11, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg>
+                    Alerts on
+                  </span>
+                ) : (
+                  <button onClick={handleEnablePush} disabled={pushBusy} style={{
+                    background: 'none', border: 'none', cursor: 'pointer', fontSize: 12,
+                    color: '#0b7a5e', fontWeight: 600, padding: 0,
+                  }}>
+                    {pushBusy ? 'Enabling…' : 'Enable alerts'}
+                  </button>
+                )
+              )}
             {notifications.length > 0 && (
               <button onClick={clearAll} style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: 12, color: '#6b7280',
               }}>Clear all</button>
             )}
+            </div>
           </div>
 
           {/* List */}

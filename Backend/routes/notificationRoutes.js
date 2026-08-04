@@ -73,4 +73,22 @@ router.get('/poll', authenticate, isStaff, async (req, res) => {
   }
 });
 
+// ── Web Push: browser notifications that fire even with the dashboard closed ──
+const pushService = require('../services/pushService.js');
+
+// Public VAPID key so the browser can subscribe.
+router.get('/push/vapid-public-key', authenticate, isStaff, (req, res) => {
+  res.json({ success: true, enabled: pushService.isEnabled(), publicKey: pushService.getPublicKey() });
+});
+
+// Save a browser subscription for the signed-in staff user.
+router.post('/push/subscribe', authenticate, isStaff, async (req, res) => {
+  try {
+    await pushService.saveSubscription(req.body?.subscription || req.body, req.user?.id || null);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

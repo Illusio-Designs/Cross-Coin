@@ -8,13 +8,37 @@ orderEmitter.setMaxListeners(20);
 
 // ── Listeners ────────────────────────────────────────────────────────────────
 
-// order.created — basic log + real-time SSE
+// order.created — basic log + real-time SSE + ops push (Telegram / Web Push)
 orderEmitter.on('order.created', (order) => {
   try {
     const notificationService = require('./notificationService.js');
     notificationService.emitNewOrder(order);
     logger.info(`[Event] order.created: ${order.order_number}`);
   } catch (e) { logger.error('[Event] order.created error:', e.message); }
+
+  // Reliable off-dashboard alerts (fire-and-forget, never blocks order flow).
+  setImmediate(async () => {
+    try {
+      const settingsHelper = require('./settingsHelper');
+      const brand = (await settingsHelper.getSetting(order.brand_id || 1, 'STORE_NAME')) || 'Cross Coin';
+      const amount = order.final_amount != null ? `₹${order.final_amount}` : '';
+      const pay = String(order.payment_type || '').toUpperCase() || 'N/A';
+      const items = order._itemCount ? ` · ${order._itemCount} item(s)` : '';
+      const title = `🛒 New order — ${brand}`;
+      const line = `#${order.order_number}\n${amount} · ${pay}${items}`;
+
+      const { sendTelegram } = require('./telegramService.js');
+      await sendTelegram(`<b>${title}</b>\n${line}`);
+
+      const pushService = require('./pushService.js');
+      await pushService.sendToAll({
+        title,
+        body: `${order.order_number} · ${amount} · ${pay}`,
+        url: '/dashboard/orders',
+        tag: `order-${order.order_number}`,
+      });
+    } catch (e) { logger.warn('[Event] order.created alert failed: ' + e.message); }
+  });
 });
 
 // order.confirmed — WhatsApp confirmation + trigger FShip sync

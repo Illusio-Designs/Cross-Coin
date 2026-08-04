@@ -535,6 +535,24 @@ const startServer = async () => {
             logger.error('whatsapp_conversations.awaiting_address_for migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: push_subscriptions table (Web Push) ─────────
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    endpoint TEXT NOT NULL,
+                    p256dh VARCHAR(255) NOT NULL,
+                    auth VARCHAR(255) NOT NULL,
+                    user_id INT NULL,
+                    endpoint_hash VARCHAR(64) NOT NULL UNIQUE,
+                    createdAt DATETIME NOT NULL,
+                    updatedAt DATETIME NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            );
+        } catch (err) {
+            logger.error('push_subscriptions table migration failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

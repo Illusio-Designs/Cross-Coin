@@ -2210,6 +2210,16 @@ export const whatsappService = {
     return response.data;
   },
 
+  // ── Web Push (browser notifications) ──
+  getPushVapidKey: async () => {
+    const response = await adminApi.get('/api/notifications/push/vapid-public-key');
+    return response.data;
+  },
+  savePushSubscription: async (subscription) => {
+    const response = await adminApi.post('/api/notifications/push/subscribe', { subscription });
+    return response.data;
+  },
+
   // Attach & send a file (image / video / audio / document) to the customer.
   sendMedia: async (conversationId, file, brandId = 1, caption = '') => {
     const form = new FormData();
