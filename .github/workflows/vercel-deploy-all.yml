@@ -1,0 +1,108 @@
+name: Deploy changed storefronts to Vercel
+
+# Fires a Vercel Deploy Hook ONLY for the brand folder(s) that changed in a push
+# to main. A backend-only push (Backend/**, .github/**, docs/**, scripts/**)
+# deploys NOTHING — so it no longer creates 7 "Canceled" deployments that eat
+# the Vercel Free plan's 100-deployments/day limit.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ⚠️  PREREQUISITE — do this or you get DOUBLE deployments:
+#     Turn OFF Vercel's own Git auto-deploy for ALL 7 projects, so this workflow
+#     is the single source of deploys. Two ways:
+#       • Dashboard: each project → Settings → Git → disable Production AND
+#         Preview automatic deployments, OR
+#       • Config: add  "git": { "deploymentEnabled": { "main": false } }  to each
+#         brand's vercel.json (stops production auto-deploys; disable Preview in
+#         the dashboard to stop feature-branch preview builds too).
+#     Deploy Hooks keep working even with Git auto-deploy disabled.
+#
+# SETUP (one-time):
+#   1. In EACH Vercel project → Settings → Git → Deploy Hooks → create a hook on
+#      branch `main`. Copy the URL.
+#   2. Add them as GitHub repo secrets
+#      (repo → Settings → Secrets and variables → Actions → New repository secret):
+#        VERCEL_HOOK_CROSSCOIN  VERCEL_HOOK_GRIPZUS   VERCEL_HOOK_MORBIX
+#        VERCEL_HOOK_SOXBAE     VERCEL_HOOK_KNITWINK  VERCEL_HOOK_VELMIQUE
+#        VERCEL_HOOK_VELQUIRA
+#   3. Do the PREREQUISITE above (turn off Vercel auto-deploy) — LAST, once the
+#      hooks + secrets are in place, so production is never left with no deployer.
+#
+# A missing secret just skips that brand (with a warning) — it never fails the run.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: 'Force-deploy one brand key (crosscoin/gripzus/morbix/soxbae/knitwink/velmique/velquira) or "all"'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-storefronts
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history to diff the whole push range
+
+      - name: Fire deploy hooks for changed brands
+        env:
+          VERCEL_HOOK_CROSSCOIN: ${{ secrets.VERCEL_HOOK_CROSSCOIN }}
+          VERCEL_HOOK_GRIPZUS:   ${{ secrets.VERCEL_HOOK_GRIPZUS }}
+          VERCEL_HOOK_MORBIX:    ${{ secrets.VERCEL_HOOK_MORBIX }}
+          VERCEL_HOOK_SOXBAE:    ${{ secrets.VERCEL_HOOK_SOXBAE }}
+          VERCEL_HOOK_KNITWINK:  ${{ secrets.VERCEL_HOOK_KNITWINK }}
+          VERCEL_HOOK_VELMIQUE:  ${{ secrets.VERCEL_HOOK_VELMIQUE }}
+          VERCEL_HOOK_VELQUIRA:  ${{ secrets.VERCEL_HOOK_VELQUIRA }}
+          FORCE: ${{ github.event.inputs.brand }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # Files changed across the WHOLE push (before → HEAD), with safe
+          # fallbacks for the first push, a force-push, or a manual run.
+          ZERO="0000000000000000000000000000000000000000"
+          if [ "$EVENT" = "push" ] && [ "${BEFORE:-}" != "$ZERO" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            CHANGED="$(git diff --name-only "$BEFORE" HEAD)"
+          else
+            CHANGED="$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)"
+          fi
+          echo "Changed files:"; echo "$CHANGED" | sed 's/^/  /'
+          echo "----"
+
+          changed() { echo "$CHANGED" | grep -q "^$1/"; }
+          forced()  { [ "${FORCE:-}" = "all" ] || [ "${FORCE:-}" = "$1" ]; }
+
+          any=0
+          fire() {  # $1 brand-key  $2 Folder  $3 hook-url
+            local key="$1" folder="$2" hook="$3"
+            if forced "$key" || { [ -z "${FORCE:-}" ] && changed "$folder"; }; then
+              if [ -z "$hook" ]; then
+                echo "::warning::$folder changed but secret VERCEL_HOOK_$(echo "$key" | tr a-z A-Z) is not set — skipping"
+                return 0
+              fi
+              echo "→ Deploying $folder"
+              if curl -fsS -X POST "$hook" >/dev/null; then echo "  ✓ hook fired"; else echo "::error::deploy hook for $folder failed"; fi
+              any=1
+            else
+              echo "· $folder unchanged — skip"
+            fi
+          }
+
+          fire crosscoin Crosscoin "$VERCEL_HOOK_CROSSCOIN"
+          fire gripzus   Gripzus   "$VERCEL_HOOK_GRIPZUS"
+          fire morbix    Morbix    "$VERCEL_HOOK_MORBIX"
+          fire soxbae    Soxbae    "$VERCEL_HOOK_SOXBAE"
+          fire knitwink  Knitwink  "$VERCEL_HOOK_KNITWINK"
+          fire velmique  Velmique  "$VERCEL_HOOK_VELMIQUE"
+          fire velquira  Velquira  "$VERCEL_HOOK_VELQUIRA"
+
+          [ "$any" = "1" ] && echo "Done — deployed the changed storefront(s)." || echo "No storefront folders changed — nothing to deploy."

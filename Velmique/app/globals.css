@@ -1,0 +1,538 @@
+/* Fonts are loaded via next/font in app/layout.jsx — they expose the CSS
+   variables --font-playfair / --font-cormorant / --font-jost / --font-anton
+   on <html> at build time, so the page paints with the real typeface on
+   first render (no FOUT to a system font). */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Accessibility primitives
+   ------------------------------------------------------------------ */
+
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 12px 18px;
+  background: #1A1612;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+}
+.skip-to-main:focus { left: 0; outline: 3px solid #C9A84C; outline-offset: 2px; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Touch-target floor — anything interactive must be at least 44×44
+   on coarse-pointer devices unless explicitly opted out. */
+@media (hover: none) and (pointer: coarse) {
+  a:not(.no-touch-min),
+  button:not(.no-touch-min),
+  [role="button"]:not(.no-touch-min),
+  input[type="checkbox"]:not(.no-touch-min),
+  input[type="radio"]:not(.no-touch-min) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+:root {
+  /* Cream + Gold palette — Velmique editorial */
+  --bg: #FBF7EC;              /* main bg — warm cream */
+  --surface: #F5EFE0;         /* secondary cream */
+  --surface-2: #EAE0C7;       /* panel cream */
+  --paper: #FFFFFF;           /* pure white panels */
+  --ink: #1A1612;             /* deep espresso brown */
+  --ink-soft: #4A3F33;        /* secondary text */
+  --ink-muted: #8A7E6C;       /* tertiary / captions */
+  --gold: #C9A84C;            /* signature golden */
+  --gold-deep: #8B6914;       /* deep gold */
+  --gold-light: #E5CD8A;      /* pale gold */
+  --champagne: #BFAB5E;       /* hero panel champagne */
+  --olive: #A89548;           /* olive-gold pill */
+  --border: #E0D4B8;          /* subtle dividers */
+  --dark: #14110E;            /* dark contrast (footer) */
+  --dark-soft: #1F1B16;
+
+  /* Legacy aliases for any older components */
+  --bone: var(--bg);
+  --sand: var(--surface);
+  --cream: var(--bg);
+  --cream-light: var(--paper);
+  --cream-dark: var(--surface);
+  --terracotta: var(--gold);
+  --terracotta-strong: var(--gold-deep);
+  --gold-dark: var(--gold-deep);
+  --accent: var(--gold);
+  --dark-card: var(--dark-soft);
+  --dark-border: var(--border);
+  --text-muted: var(--ink-muted);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-jost), 'Jost', system-ui, sans-serif;
+  overflow-x: hidden;
+  max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.splash-locked { overflow: hidden; }
+
+/* Editorial display class — Anton + tight tracking */
+.font-display {
+  font-family: var(--font-anton), 'Anton', 'Playfair Display', Impact, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Vertical text helpers */
+.vertical-rl {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.vertical-lr {
+  writing-mode: vertical-rl;
+}
+
+/* Gold gradient text */
+.gold-text {
+  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 40%, #E5CD8A 60%, #8B6914 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #8B6914 0%, #C9A84C 25%, #E5CD8A 50%, #C9A84C 75%, #8B6914 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Hide browser scrollbar — top ScrollProgress bar serves as the only scroll indicator */
+html { scrollbar-width: none; -ms-overflow-style: none; }
+::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* Marquee */
+.marquee-container { overflow: hidden; white-space: nowrap; width: 100%; }
+.marquee-content {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+.animate-marquee {
+  animation: marquee 35s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Divider */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* Pill button — Ethixia-style olive/gold pill */
+.pill-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--olive);
+  color: var(--paper);
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+.pill-cta:hover {
+  background: var(--ink);
+  color: var(--gold-light);
+  transform: translateY(-1px);
+}
+.pill-cta-light {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+.pill-cta-light:hover {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.pill-cta-dark {
+  background: var(--ink);
+  color: var(--gold-light);
+}
+.pill-cta-dark:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* Buttons (legacy) */
+.btn-gold {
+  background: var(--gold);
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  transition: all 0.25s ease;
+}
+.btn-gold:hover {
+  background: var(--gold-deep);
+  color: var(--paper);
+}
+
+.btn-outline-gold {
+  border: 1px solid var(--gold);
+  color: var(--gold-deep);
+  background: transparent;
+  letter-spacing: 0.1em;
+  transition: all 0.25s ease;
+}
+.btn-outline-gold:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* Inputs */
+.input-gold {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  transition: all 0.3s;
+}
+.input-gold:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.15);
+}
+.input-gold::placeholder { color: var(--ink-muted); }
+
+/* Star rating */
+.star-filled { color: var(--gold); }
+.star-empty { color: var(--border); }
+
+/* Section reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Product card hover */
+.product-card:hover .product-overlay { opacity: 1; }
+
+/* Editorial outline text */
+.text-outline {
+  -webkit-text-stroke: 1px var(--ink);
+  color: transparent;
+}
+.text-outline-gold {
+  -webkit-text-stroke: 1px var(--gold);
+  color: transparent;
+}
+
+/* Blog body — prose styles for HTML rendered via dangerouslySetInnerHTML */
+.prose-velmique h1,
+.prose-velmique h2,
+.prose-velmique h3,
+.prose-velmique h4 {
+  font-family: var(--font-anton), 'Anton', sans-serif;
+  color: var(--ink);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+.prose-velmique h1 { font-size: clamp(1.9rem, 3.5vw, 2.6rem); }
+.prose-velmique h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+.prose-velmique h3 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); }
+.prose-velmique h4 { font-size: 1.15rem; letter-spacing: 0.02em; }
+
+.prose-velmique h2::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 2px;
+  background: var(--gold);
+  margin-top: 0.65rem;
+}
+
+.prose-velmique p {
+  margin-bottom: 1.25rem;
+}
+
+.prose-velmique strong,
+.prose-velmique b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.prose-velmique em,
+.prose-velmique i {
+  font-style: italic;
+  color: var(--ink);
+}
+
+.prose-velmique a {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.prose-velmique a:hover { color: var(--ink); }
+
+.prose-velmique ul,
+.prose-velmique ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+.prose-velmique ul { list-style: disc; }
+.prose-velmique ol { list-style: decimal; }
+.prose-velmique li { margin-bottom: 0.4rem; }
+.prose-velmique li::marker { color: var(--gold-deep); }
+
+.prose-velmique blockquote {
+  border-left: 3px solid var(--gold);
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  margin: 1.75rem 0;
+  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.35rem;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.prose-velmique img {
+  border-radius: 1rem;
+  margin: 1.75rem 0;
+  width: 100%;
+  height: auto;
+}
+
+.prose-velmique hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2.5rem 0;
+}
+
+.prose-velmique code {
+  background: var(--surface-2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.95em;
+  color: var(--ink);
+}
+
+/* ───────────────────────────────────────────────────────────
+   Velmique toast skin — overrides react-toastify defaults so
+   the toasts wear the cream + ink + gold palette instead of the
+   library's default green/red/blue blocks.
+   ─────────────────────────────────────────────────────────── */
+.Toastify__toast-container {
+  width: auto;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 0;
+}
+
+/* Mobile: stretch the toast container edge-to-edge with a small inset
+   so the message reads as a banner, not a tiny corner pill. */
+@media (max-width: 640px) {
+  .Toastify__toast-container {
+    width: calc(100vw - 16px);
+    max-width: none;
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    padding: 0;
+  }
+  .Toastify__toast-container--top-right,
+  .Toastify__toast-container--top-left,
+  .Toastify__toast-container--top-center {
+    top: 8px;
+  }
+  .Toastify__toast {
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+}
+.Toastify__toast {
+  font-family: var(--font-jost), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px -12px rgba(26, 22, 18, 0.18);
+  padding: 14px 16px;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+.Toastify__toast-body {
+  padding: 0;
+  margin: 0;
+  align-items: center;
+}
+.Toastify__toast-body > div:last-child {
+  font-family: var(--font-jost), system-ui, sans-serif;
+  color: var(--ink);
+}
+.Toastify__close-button {
+  color: var(--ink-muted);
+  opacity: 0.6;
+  align-self: center;
+  padding-left: 8px;
+}
+.Toastify__close-button:hover { color: var(--ink); opacity: 1; }
+
+/* Type-specific accents — coloured left bar instead of full bg flood */
+.Toastify__toast--success {
+  border-left: 3px solid var(--gold);
+}
+.Toastify__toast--success .Toastify__toast-icon svg {
+  fill: var(--gold-deep);
+}
+.Toastify__toast--info {
+  border-left: 3px solid var(--ink);
+}
+.Toastify__toast--info .Toastify__toast-icon svg {
+  fill: var(--ink-soft);
+}
+.Toastify__toast--warning {
+  border-left: 3px solid #C9821C;
+}
+.Toastify__toast--warning .Toastify__toast-icon svg {
+  fill: #C9821C;
+}
+.Toastify__toast--error {
+  border-left: 3px solid #B0413E;
+}
+.Toastify__toast--error .Toastify__toast-icon svg {
+  fill: #B0413E;
+}
+
+/* Slim progress strip (when shown) tinted gold */
+.Toastify__progress-bar {
+  background: linear-gradient(90deg, var(--gold), var(--gold-deep));
+  height: 2px;
+}
+
+/* ── WhatsApp floating chat ─────────────────────────────────────────────── */
+.wachat-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25D366;
+  border: none;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
+  z-index: 1060;
+  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+}
+.wachat-fab:hover {
+  transform: scale(1.08);
+  background: #128C7E;
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55);
+}
+.wachat-fab svg { width: 28px; height: 28px; }
+
+.wachat-greet {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  background: #fff;
+  border-radius: 12px 12px 0 12px;
+  padding: 10px 14px 10px 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  font-size: 13.5px;
+  color: #111827;
+  z-index: 1059;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  white-space: nowrap;
+  animation: wachatPop 0.3s cubic-bezier(.34, 1.4, .64, 1);
+}
+.wachat-greet:hover { background: #f9fafb; }
+.wachat-greet-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+.wachat-greet-close:hover { color: #374151; }
+
+@keyframes wachatPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .wachat-fab { bottom: 20px; right: 16px; width: 52px; height: 52px; }
+  .wachat-fab svg { width: 26px; height: 26px; }
+  .wachat-greet { bottom: 84px; right: 16px; font-size: 12.5px; max-width: 220px; padding: 9px 12px 9px 10px; }
+}
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */
+
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}

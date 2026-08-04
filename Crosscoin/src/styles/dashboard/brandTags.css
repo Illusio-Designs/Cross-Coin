@@ -1,0 +1,48 @@
+/* ============================================================
+   Brand Tags — uses sl-* design system tokens
+   ============================================================ */
+
+.brand-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.brand-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #180D3E;
+    background: #f0eeff;
+    border: 1px solid #e0d8ff;
+    white-space: nowrap;
+    cursor: default;
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.4;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.brand-tag:hover {
+    background: #e8e0ff;
+    border-color: #c8b8ff;
+}
+
+.brand-tag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+@media (max-width: 768px) {
+    .brand-tag {
+        font-size: 11px;
+        padding: 2px 7px;
+    }
+}

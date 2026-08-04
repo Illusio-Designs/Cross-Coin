@@ -1,0 +1,448 @@
+.dashboard-title { 
+  color: #180d3e;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-content {
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.dashboard-content .products-container {
+  padding: 1.5rem;
+}
+
+.dashboard-content .products-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-content .products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-content .product-card {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-content .product-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.dashboard-content .product-info {
+  padding: 0.5rem 0;
+}
+
+.dashboard-content .product-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-content .product-price {
+  color: #ce1e36;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.dashboard-content .product-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Variation Images Upload Styling - Matching InputField.css */
+.variation-images-upload {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.variation-images-upload label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #180D3E;
+}
+
+.variation-images-upload input[type="file"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #180D3E;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  width: -webkit-fill-available;
+  cursor: pointer;
+}
+
+.variation-images-upload input[type="file"]:focus {
+  outline: none;
+  border-color: #CE1E36;
+  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+}
+
+.variation-images-upload input[type="file"]:hover {
+  border-color: #CE1E36;
+}
+
+.variation-images-preview {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.variation-images-preview > div {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+}
+
+.variation-images-preview img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+/* Empty state styling */
+.variation-images-preview:empty::after {
+  content: "No images uploaded yet";
+  color: #6B7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  width: 100%;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+/* File input button styling to match theme */
+.variation-images-upload input[type="file"]::-webkit-file-upload-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.variation-images-upload input[type="file"]::-webkit-file-upload-button:hover {
+  background: #b91c31;
+}
+
+.variation-images-upload input[type="file"]::file-selector-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.variation-images-upload input[type="file"]::file-selector-button:hover {
+  background: #b91c31;
+}
+/* Product Images Upload Styling - Matching InputField.css */
+.product-images-section {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.product-images-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #180D3E;
+}
+
+.product-images-section input[type="file"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #180D3E;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  width: -webkit-fill-available;
+  cursor: pointer;
+}
+
+.product-images-section input[type="file"]:focus {
+  outline: none;
+  border-color: #CE1E36;
+  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+}
+
+.product-images-section input[type="file"]:hover {
+  border-color: #CE1E36;
+}
+
+.images-preview {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  min-height: 100px;
+  align-items: flex-start;
+}
+
+.images-preview > div {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.images-preview img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.images-preview button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.images-preview button:hover {
+  background: #dc2626;
+}
+
+/* Empty state styling */
+.images-preview:empty::after {
+  content: "No images uploaded yet. Click 'Choose Files' to add product images.";
+  color: #6B7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  width: 100%;
+  text-align: center;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* File input button styling to match theme */
+.product-images-section input[type="file"]::-webkit-file-upload-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.product-images-section input[type="file"]::-webkit-file-upload-button:hover {
+  background: #b91c31;
+}
+
+.product-images-section input[type="file"]::file-selector-button {
+  background: #CE1E36;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.product-images-section input[type="file"]::file-selector-button:hover {
+  background: #b91c31;
+}
+
+/* Weight and Dimensions Section Styling */
+.weight-dimensions-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.weight-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dimensions-section h6 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #180D3E;
+}
+
+.dimensions-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.dimensions-inputs > div:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .weight-dimensions-section {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .dimensions-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .dimensions-inputs > div:last-child {
+    grid-column: 1;
+  }
+}
+
+
+/* Action button tooltips */
+.action-btn[data-tooltip] {
+  position: relative;
+}
+
+.action-btn[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: #1f2937;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: max-content;
+}
+
+/* Add arrow to tooltip */
+.action-btn[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Action buttons container */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  z-index: 1;
+  overflow: visible !important;
+}
+
+/* Increase z-index when hovering over action buttons */
+.action-buttons:hover {
+  z-index: 9998;
+  overflow: visible !important;
+}
+
+/* Ensure action buttons are consistent size */
+.action-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: visible !important;
+}
+
+.action-btn.edit {
+  background: #3b82f6;
+  color: white;
+}
+
+.action-btn.edit:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.action-btn.delete {
+  background: #ef4444;
+  color: white;
+}
+
+.action-btn.delete:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

@@ -1,0 +1,51 @@
+Cross-Coin API Load Testing
+
+🚀 Starting load test...
+⏱️  Duration: 30s
+👥 Max concurrent users: 50
+📍 API URL: http://localhost:3000
+
+📈 Ramping up: 1/50 users📈 Ramping up: 2/50 users📈 Ramping up: 3/50 users📈 Ramping up: 4/50 users📈 Ramping up: 5/50 users📈 Ramping up: 6/50 users📈 Ramping up: 7/50 users📈 Ramping up: 8/50 users📈 Ramping up: 9/50 users📈 Ramping up: 10/50 users📈 Ramping up: 11/50 users📈 Ramping up: 12/50 users📈 Ramping up: 13/50 users📈 Ramping up: 14/50 users📈 Ramping up: 15/50 users📈 Ramping up: 16/50 users📈 Ramping up: 17/50 users📈 Ramping up: 18/50 users📈 Ramping up: 19/50 users📈 Ramping up: 20/50 users📈 Ramping up: 21/50 users📈 Ramping up: 22/50 users📈 Ramping up: 23/50 users📈 Ramping up: 24/50 users📈 Ramping up: 25/50 users📈 Ramping up: 26/50 users📈 Ramping up: 27/50 users📈 Ramping up: 28/50 users📈 Ramping up: 29/50 users📈 Ramping up: 30/50 users📈 Ramping up: 31/50 users📈 Ramping up: 32/50 users📈 Ramping up: 33/50 users📈 Ramping up: 34/50 users📈 Ramping up: 35/50 users📈 Ramping up: 36/50 users📈 Ramping up: 37/50 users📈 Ramping up: 38/50 users📈 Ramping up: 39/50 users📈 Ramping up: 40/50 users📈 Ramping up: 41/50 users📈 Ramping up: 42/50 users📈 Ramping up: 43/50 users📈 Ramping up: 44/50 users📈 Ramping up: 45/50 users📈 Ramping up: 46/50 users📈 Ramping up: 47/50 users📈 Ramping up: 48/50 users📈 Ramping up: 49/50 users📈 Ramping up: 50/50 users
+
+╔════════════════════════════════════════════════════════════════╗
+║                  LOAD TEST SUMMARY REPORT                       ║
+╚════════════════════════════════════════════════════════════════╝
+
+📊 EXECUTION SUMMARY
+────────────────────────────────────────────────────────────
+   Total Duration:       30.94 seconds
+   Max Concurrent Users: 50
+   Total Requests:       1345
+   Requests/Second:      43.47
+
+✅ SUCCESS/FAILURE STATS
+────────────────────────────────────────────────────────────
+   Successful:  0 (0.00%)
+   Failed:      1345 (100.00%)
+
+⏱️  RESPONSE TIME STATISTICS (milliseconds)
+────────────────────────────────────────────────────────────
+   Min:         317 ms
+   Max:         3487 ms
+   Average:     1547.86 ms
+   Median:      1142 ms
+   p95:         3306 ms
+   p99:         3487 ms
+
+🎯 PERFORMANCE ASSESSMENT
+────────────────────────────────────────────────────────────
+   ⚠️  p95 Response Time < 500ms      3306 ms
+   ⚠️  p99 Response Time < 1000ms     3487 ms
+   ⚠️  Error Rate < 0.1%              100.00%
+   ✅ Requests/Second > 10           43.47/sec
+
+🔍 RECOMMENDATIONS
+────────────────────────────────────────────────────────────
+   • Response times are slow. Consider:
+     - Enabling caching headers
+     - Implementing pagination
+     - Optimizing database queries
+     - Adding CDN for static assets
+   • Error rate is high. Check server logs for issues
+
+════════════════════════════════════════════════════════════

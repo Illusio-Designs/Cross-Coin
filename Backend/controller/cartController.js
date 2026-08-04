@@ -1,0 +1,344 @@
+const { Cart, CartItem, Product, ProductImage, ProductVariation } = require('../model/associations.js');
+const { sequelize } = require('../config/db.js');
+const imagekitService = require('../services/imagekitService.js');
+const { logger } = require('../config/logging.js');
+
+// Get user's cart
+module.exports.getCart = async (req, res) => {
+    try {
+        const cart = await Cart.findOne({
+            where: { user_id: req.user.id },
+            include: [{
+                model: CartItem,
+                as: 'CartItems',
+                include: [
+                    { 
+                        model: Product,
+                        include: [
+                            { model: ProductImage, as: 'ProductImages' },
+                            { model: ProductVariation, as: 'ProductVariations' }
+                        ]
+                    },
+                    { 
+                        model: ProductVariation,
+                        include: [
+                            { model: ProductImage, as: 'VariationImages' }
+                        ]
+                    }
+                ]
+            }]
+        });
+
+        if (!cart) {
+            return res.json({ cart: [], summary: { subtotal: 0, shipping: 0, discount: 0, total: 0 } });
+        }
+
+        // Calculate subtotal
+        let subtotal = 0;
+        cart.CartItems.forEach(item => {
+            subtotal += (item.price || 0) * (item.quantity || 1);
+        });
+
+        // Calculate shipping fee (simple example, you may want to use your real logic)
+        let shipping = 0;
+        if (subtotal > 0) {
+            shipping = 0; // Free shipping logic, or set your fee
+        }
+
+        // Coupon discount is calculated at checkout, not in cart preview
+        // Remove placeholder to prevent incorrect discount display
+        let discount = 0;
+
+        // Final total
+        const total = Math.max(0, subtotal - discount + shipping);
+
+        const formattedCart = cart.CartItems.map(item => {
+            const product = item.Product;
+            let variation = item.ProductVariation;
+            
+            // If cart item lacks a specific variation, use the first one from the product as a default.
+            if (!variation && product && product.ProductVariations && product.ProductVariations.length > 0) {
+                variation = product.ProductVariations[0];
+            }
+
+            // Determine attributes, image, and price
+            const attributes = variation && variation.attributes ? JSON.parse(variation.attributes) : {};
+            
+            let image = '/placeholder.png'; // Fallback image
+            let images = []; // Array to store all images for this variation
+            
+            // First, try to get variation-specific images
+            if (variation && variation.VariationImages && variation.VariationImages.length > 0) {
+                image = imagekitService.getOptimizedUrl(variation.VariationImages[0].image_url, 'medium');
+                images = variation.VariationImages.map(img => ({
+                    image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                    alt_text: img.alt_text
+                }));
+            } else if (product && product.ProductImages && product.ProductImages.length > 0) {
+                // If no variation-specific images, try to find product images that match the variation's color
+                const color = attributes.color;
+                if (color && Array.isArray(color) && color.length > 0) {
+                    const colorLower = color[0].toLowerCase();
+                    const matchingImages = product.ProductImages.filter(img => 
+                        (img.alt_text && img.alt_text.toLowerCase().includes(colorLower)) ||
+                        (img.image_url && img.image_url.toLowerCase().includes(colorLower))
+                    );
+                    
+                    if (matchingImages.length > 0) {
+                        image = imagekitService.getOptimizedUrl(matchingImages[0].image_url, 'medium');
+                        images = matchingImages.map(img => ({
+                            image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                            alt_text: img.alt_text
+                        }));
+                    } else {
+                        // Fallback to first product image
+                        image = imagekitService.getOptimizedUrl(product.ProductImages[0].image_url, 'medium');
+                        images = product.ProductImages.map(img => ({
+                            image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                            alt_text: img.alt_text
+                        }));
+                    }
+                } else {
+                    // No color info, use first product image
+                    image = imagekitService.getOptimizedUrl(product.ProductImages[0].image_url, 'medium');
+                    images = product.ProductImages.map(img => ({
+                        image_url: imagekitService.getOptimizedUrl(img.image_url, 'medium'),
+                        alt_text: img.alt_text
+                    }));
+                }
+            }
+
+            const price = variation ? variation.price : (product ? product.price : 0);
+
+            return {
+                id: item.id,
+                productId: product ? product.id : null,
+                variationId: variation ? variation.id : null,
+                name: product ? product.name : 'Product not found',
+                image: image,
+                images: images,
+                price: price,
+                quantity: item.quantity,
+                size: item.selected_size || null,
+                color: attributes.color || null,
+                stock: variation ? variation.stock : (product ? product.stock_quantity : 0),
+                weight: product ? product.weight : null,
+                weightUnit: product ? product.weightUnit : null,
+                dimensions: product ? product.dimensions : null,
+                dimensionUnit: product ? product.dimensionUnit : null
+            };
+        });
+
+        res.json({
+            cart: formattedCart,
+            summary: {
+                subtotal,
+                shipping,
+                discount,
+                total
+            }
+        });
+    } catch (error) {
+        logger.error('Error fetching cart:', error);
+        res.status(500).json({ message: 'Failed to fetch cart', error: error.message });
+    }
+};
+
+// Add item to cart
+module.exports.addToCart = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { productId, variationId, quantity, size } = req.body;
+
+    // Task 11.4: Validate quantity is a positive integer
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return res.status(400).json({ message: 'Quantity must be a positive integer' });
+    }
+
+    // Task 11.1: Wrap entire logic in a Sequelize transaction
+    const transaction = await sequelize.transaction();
+    try {
+      let cart = await Cart.findOne({ where: { user_id: userId }, transaction });
+      if (!cart) {
+        cart = await Cart.create({ user_id: userId }, { transaction });
+      }
+
+      // Task 11.2: Validate product exists and is active
+      const product = await Product.findByPk(productId, { transaction });
+      if (!product || product.status !== 'active') {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Product not found or inactive' });
+      }
+
+      // Check if item already exists (by product and variation)
+      let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
+      logger.info('[Cart] addToCart where:', where);
+      let item = await CartItem.findOne({ where, transaction });
+      logger.info('[Cart] addToCart found item:', item);
+
+      // Task 11.1: Use SELECT ... FOR UPDATE to lock the variation row during stock check
+      let stockAvailable = 0;
+      let variation = null;
+      if (variationId) {
+        variation = await ProductVariation.findByPk(variationId, { transaction, lock: transaction.LOCK.UPDATE });
+        stockAvailable = variation ? variation.stock : 0;
+      } else {
+        variation = await ProductVariation.findOne({ where: { productId }, transaction, lock: transaction.LOCK.UPDATE });
+        stockAvailable = variation ? variation.stock : 0;
+      }
+      const requestedQuantity = item ? item.quantity + quantity : quantity;
+      if (typeof stockAvailable !== 'number' || stockAvailable < requestedQuantity) {
+        await transaction.rollback();
+        return res.status(400).json({ message: 'Product is out of stock or insufficient quantity' });
+      }
+      if (item) {
+        item.quantity += quantity;
+        await item.save({ transaction });
+        logger.info('[Cart] Updated existing CartItem:', item.id, 'quantity:', item.quantity);
+      } else {
+        // Get price from the already-fetched variation
+        let price = variation ? variation.price : 0;
+        item = await CartItem.create({
+          cartId: cart.id,
+          productId: productId,
+          variationId: variationId || null,
+          quantity,
+          price,
+          selected_size: size || null
+        }, { transaction });
+        logger.info('[Cart] Created new CartItem:', {
+          id: item.id,
+          productId: productId,
+          variationId: variationId || null,
+          quantity: quantity,
+          price: price,
+          size: size || null
+        });
+      }
+
+      await transaction.commit();
+      res.json({ success: true, item });
+    } catch (innerError) {
+      await transaction.rollback();
+      throw innerError;
+    }
+  } catch (error) {
+    logger.error('[Cart] Error in addToCart:', error);
+    res.status(500).json({ message: 'Failed to add to cart', error: error.message });
+  }
+};
+
+// Update cart item
+module.exports.updateCartItem = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { quantity, variationId } = req.body;
+        const userId = req.user.id;
+
+        if (quantity < 1) {
+            return res.status(400).json({ success: false, message: 'Quantity must be at least 1.' });
+        }
+
+        const cart = await Cart.findOne({ where: { user_id: userId } });
+        if (!cart) {
+            return res.status(404).json({ success: false, message: 'Cart not found.' });
+        }
+
+        const whereClause = {
+            cartId: cart.id,
+            productId: productId
+        };
+        if (variationId) {
+            whereClause.variationId = variationId;
+        }
+        
+        let cartItem = await CartItem.findOne({ where: whereClause });
+
+        if (!cartItem) {
+            // If not found, try finding without variationId, in case the item is basic
+            const fallbackCartItem = await CartItem.findOne({ where: { cartId: cart.id, productId: productId, variationId: null } });
+            if (!fallbackCartItem) {
+                return res.status(404).json({ success: false, message: 'Cart item not found.' });
+            }
+            cartItem = fallbackCartItem;
+        }
+
+        // Re-check stock availability before updating quantity
+        let stockAvailable = 0;
+        if (cartItem.variationId) {
+            const variation = await ProductVariation.findByPk(cartItem.variationId);
+            stockAvailable = variation ? variation.stock : 0;
+            // Refresh price if it changed since item was added
+            if (variation && parseFloat(variation.price) !== parseFloat(cartItem.price)) {
+                cartItem.price = variation.price;
+            }
+        } else {
+            const variation = await ProductVariation.findOne({ where: { productId } });
+            stockAvailable = variation ? variation.stock : 0;
+            if (variation && parseFloat(variation.price) !== parseFloat(cartItem.price)) {
+                cartItem.price = variation.price;
+            }
+        }
+        if (quantity > stockAvailable) {
+            return res.status(400).json({ success: false, message: `Only ${stockAvailable} items available in stock.` });
+        }
+
+        cartItem.quantity = quantity;
+        await cartItem.save();
+
+        res.json({ success: true, message: 'Cart item updated.', item: cartItem });
+    } catch (error) {
+        logger.error('Error updating cart item:', error);
+        res.status(500).json({ success: false, message: 'Failed to update cart item.', error: error.message });
+    }
+};
+
+// Remove item from cart
+module.exports.removeFromCart = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { productId, variationId } = req.params;
+    let cart = await Cart.findOne({ where: { user_id: userId } });
+    if (!cart) return res.status(404).json({ message: 'Cart not found' });
+    
+    logger.info('Remove from cart params:', { productId, variationId });
+    
+    const whereClause = { cartId: cart.id, productId: productId };
+    
+    // Handle variationId parameter
+    if (variationId && variationId !== 'null' && variationId !== '0' && variationId !== 0) {
+      whereClause.variationId = parseInt(variationId);
+    } else {
+      whereClause.variationId = null;
+    }
+    
+    logger.info('Remove from cart whereClause:', whereClause);
+    
+    // Find the exact item — no fallback to avoid deleting wrong variation
+    const cartItem = await CartItem.findOne({ where: whereClause });
+    if (!cartItem) {
+      return res.status(404).json({ message: 'Cart item not found' });
+    }
+    
+    await cartItem.destroy();
+    logger.info('Deleted cart item:', cartItem.id);
+    
+    res.json({ success: true, deleted: 1 });
+  } catch (error) {
+    logger.error('Error removing from cart:', error);
+    res.status(500).json({ message: 'Failed to remove cart item', error: error.message });
+  }
+};
+
+// Clear cart
+module.exports.clearCart = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let cart = await Cart.findOne({ where: { user_id: userId } });
+    if (!cart) return res.status(404).json({ message: 'Cart not found' });
+    await CartItem.destroy({ where: { cartId: cart.id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to clear cart', error: error.message });
+  }
+}; 

@@ -1,0 +1,68 @@
+import Link from 'next/link';
+import Icon from '@/components/Icon';
+import BrandLogo from '@/components/BrandLogo';
+
+const COLS = [
+  { title: 'Shop', links: [
+    { label: 'All jewellery', href: '/products' },
+    { label: 'Collections', href: '/collections' },
+    { label: 'Wishlist', href: '/wishlist' },
+    { label: 'Track order', href: '/track-order' },
+  ] },
+  { title: 'For buyers', links: [
+    { label: 'Shipping & delivery', href: '/policies/shipping-policy' },
+    { label: 'Cancellation & refund', href: '/policies/cancellation-and-refund' },
+    { label: 'Privacy policy', href: '/policies/privacy-policy' },
+    { label: 'Terms of service', href: '/policies/terms-and-conditions' },
+  ] },
+  { title: 'Company', links: [
+    { label: 'About', href: '/about' },
+    { label: 'Journal', href: '/journal' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'My account', href: '/account' },
+  ] },
+];
+
+export default function Footer() {
+  return (
+    <footer className="footer vq-footer">
+      <div className="container">
+        {/* Centred brand crest — a maison sign-off, not a left-aligned column */}
+        <div className="vq-foot-crest">
+          <BrandLogo height={48} />
+          <p className="vq-foot-tag">Fine handmade jewellery in hallmarked gold and certified stones — designed in our Morbi studio to be treasured for a lifetime.</p>
+          <div className="socials">
+            <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
+            <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
+            <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
+          </div>
+          <span className="vq-foot-flourish" aria-hidden />
+        </div>
+
+        {/* Link columns + contacts, centred beneath the crest */}
+        <div className="vq-foot-links">
+          {COLS.map((col) => (
+            <div key={col.title}>
+              <h4>{col.title}</h4>
+              <ul>{col.links.map((l) => <li key={l.label}><Link href={l.href}>{l.label}</Link></li>)}</ul>
+            </div>
+          ))}
+
+          <div>
+            <h4>Contacts</h4>
+            <ul className="footer-contacts">
+              <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
+              <li><a href="mailto:support@velquira.in"><Icon name="Mail" size={15} /><span>support@velquira.in</span></a></li>
+              <li><span className="footer-addr"><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India</span></span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} Velquira. All rights reserved.</span>
+          <span className="footer-credit">Made with <span aria-label="love">❤</span> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
+        </div>
+      </div>
+    </footer>
+  );
+}

@@ -1,0 +1,212 @@
+/* ── Dashboard Tables & Shared Table Containers ─────────────── */
+
+/* Table containers — horizontal scroll */
+.seo-table-container,
+.table-container,
+.orders-table,
+.products-table,
+.reviews-table,
+.policies-table,
+.consumers-table {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Scrollbar styling */
+.seo-table-container::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.orders-table::-webkit-scrollbar,
+.products-table::-webkit-scrollbar,
+.reviews-table::-webkit-scrollbar,
+.policies-table::-webkit-scrollbar,
+.consumers-table::-webkit-scrollbar { height: 6px; }
+
+.seo-table-container::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.orders-table::-webkit-scrollbar-track,
+.products-table::-webkit-scrollbar-track,
+.reviews-table::-webkit-scrollbar-track,
+.policies-table::-webkit-scrollbar-track,
+.consumers-table::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.seo-table-container::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.orders-table::-webkit-scrollbar-thumb,
+.products-table::-webkit-scrollbar-thumb,
+.reviews-table::-webkit-scrollbar-thumb,
+.policies-table::-webkit-scrollbar-thumb,
+.consumers-table::-webkit-scrollbar-thumb {
+  background: #180D3E;
+  border-radius: 4px;
+}
+
+.seo-table-container::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.orders-table::-webkit-scrollbar-thumb:hover,
+.products-table::-webkit-scrollbar-thumb:hover,
+.reviews-table::-webkit-scrollbar-thumb:hover,
+.policies-table::-webkit-scrollbar-thumb:hover,
+.consumers-table::-webkit-scrollbar-thumb:hover {
+  background: #CE1E36;
+}
+
+/* Common table base */
+.common-table {
+  width: 100%;
+  min-width: 900px;
+  table-layout: auto;
+  border-collapse: collapse;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.common-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 10;
+  padding: 10px 12px;
+  white-space: nowrap;
+  font-weight: 600;
+  text-align: left;
+  font-size: 13px;
+}
+
+.common-table td {
+  padding: 10px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+  font-size: 13px;
+}
+
+/* S/N column */
+.common-table th:first-child,
+.common-table td:first-child {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+/* Actions column */
+.common-table th:last-child,
+.common-table td:last-child {
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+.common-table th:nth-child(2), .common-table td:nth-child(2) { min-width: 120px; max-width: 180px; }
+.common-table th:nth-child(3), .common-table td:nth-child(3) { min-width: 120px; max-width: 180px; }
+.common-table th:nth-child(4), .common-table td:nth-child(4) { min-width: 100px; max-width: 150px; }
+.common-table th:nth-child(5), .common-table td:nth-child(5) { min-width: 100px; max-width: 150px; }
+.common-table th:nth-child(6), .common-table td:nth-child(6) { min-width: 80px;  max-width: 120px; }
+
+/* Reviews — comment column */
+.reviews-table .common-table td:nth-child(5) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+/* Policies — title flexible, content truncated */
+.policies-table .common-table th:nth-child(2),
+.policies-table .common-table td:nth-child(2) {
+  min-width: 180px;
+  max-width: none;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.policies-table .common-table th:nth-child(3),
+.policies-table .common-table td:nth-child(3) {
+  min-width: 300px;
+  max-width: 500px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Page header layout (used by SEO, orders, products, etc.) */
+.seo-header-container {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.seo-title,
+.dashboard-title {
+  text-align: left;
+  margin-bottom: 0;
+}
+
+.adding-button { margin-left: auto; }
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.seo-pagination-container {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+/* Responsive — page headers stack on mobile */
+@media (max-width: 768px) {
+  .seo-header-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .adding-button { margin-left: 0; width: 100%; }
+
+  .action-buttons { width: 100%; flex-wrap: wrap; }
+
+  .common-table { min-width: 600px; font-size: 12px; }
+  .common-table thead th { padding: 8px 10px; font-size: 11px; }
+  .common-table td { padding: 8px 10px; }
+}
+
+@media (max-width: 480px) {
+  .common-table { min-width: 500px; font-size: 11px; }
+  .common-table thead th { padding: 6px 8px; font-size: 10px; }
+  .common-table td { padding: 6px 8px; }
+}
+
+/* ── Row Highlighting and Status Borders ── */
+
+@keyframes rowHighlight {
+  0% { background-color: rgba(33, 150, 243, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.tbl-row {
+  transition: background-color 0.3s ease, border-left-color 0.2s ease;
+}
+
+.tbl-row[style*="background-color: rgba"] {
+  animation: rowHighlight 2.5s ease-out forwards;
+}
+
+/* Row status indicators — left border colors */
+.tbl-row[style*="border-left"] {
+  border-left: 2px solid #e5e7eb;
+}

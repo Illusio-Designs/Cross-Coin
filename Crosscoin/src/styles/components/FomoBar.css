@@ -1,0 +1,57 @@
+.fomo-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #fffbf0;
+  border: 1px solid #ffe4a0;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.fomo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #444;
+}
+
+.fomo-item.fomo-stock {
+  color: #c0392b;
+}
+
+.fomo-item.fomo-stock .fomo-text strong {
+  color: #c0392b;
+}
+
+.fomo-text strong {
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.fomo-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Live green dot */
+.fomo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  animation: fomo-ping 2s infinite;
+}
+
+.fomo-dot.pulse {
+  animation: fomo-ping 0.6s ease-out, fomo-ping 2s 0.6s infinite;
+}
+
+@keyframes fomo-ping {
+  0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}

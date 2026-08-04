@@ -1,0 +1,247 @@
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+
+const Order = sequelize.define('Order', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Allow null for guest users
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    guest_user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Allow null for registered users
+        references: {
+            model: 'guest_users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    order_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: 'idx_order_number'
+    },
+    total_amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    discount_amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0.00
+    },
+    shipping_fee: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00
+    },
+    final_amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    payment_type: {
+        type: DataTypes.ENUM('cod', 'credit_card', 'debit_card', 'upi', 'wallet', 'razorpay'),
+        allowNull: false
+    },
+    coupon_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'coupons',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
+    },
+    payment_status: {
+        type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded', 'cancelled', 'refund_pending'),
+        defaultValue: 'pending'
+    },
+    status: {
+        type: DataTypes.ENUM(
+            'pending',
+            'awaiting_confirmation',
+            'confirmed',
+            'processing', 
+            'booked', 
+            'pickup initiated', 
+            'manifested', 
+            'in transit', 
+            'shipped', 
+            'out for delivery', 
+            'delivered', 
+            'undelivered',
+            'rto',
+            'rto delivered',
+            'return_initiated',
+            'returned_rto',
+            'cancelled', 
+            'order cancelled', 
+            'exception'
+        ),
+        defaultValue: 'awaiting_confirmation'
+    },
+    notes: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    // FShip integration fields
+    fship_order_id: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_waybill: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_route_code: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    fship_courier_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    fship_label_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    fship_label_downloaded: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    fship_label_downloaded_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    fship_label_downloaded_by: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
+    },
+    fship_tracking_number: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    tracking_number: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    courier_name: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    tracking_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    shipping_address_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'shipping_addresses',
+            key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+    },
+    utm_tracking_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'utm_tracking',
+            key: 'id'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+    },
+    brand_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        references: {
+            model: 'brands',
+            key: 'id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    },
+    fship_last_synced_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Last time this order was synced with FShip'
+    },
+    fship_sync_status: {
+        type: DataTypes.ENUM('pending', 'syncing', 'synced', 'failed'),
+        defaultValue: 'pending',
+        comment: 'FShip sync state machine status'
+    },
+    fship_sync_attempts: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        comment: 'Number of FShip sync attempts made'
+    },
+    fship_sync_error: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Validation or sync error details shown on order page'
+    },
+    rto_risk_score: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'RTO risk score: landmark missing +10, repeat RTO customer +20'
+    },
+    idempotency_key: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        unique: true,
+        comment: 'Prevents duplicate order creation from retries'
+    },
+    cod_address_confirmed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: null,
+        comment: 'COD address confirmation via WhatsApp: null=not sent, false=sent/pending, true=confirmed by customer'
+    },
+    cod_address_confirmed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Timestamp when customer confirmed address via WhatsApp'
+    }
+}, {
+    tableName: 'orders',
+    timestamps: true, // This will add createdAt and updatedAt fields
+    charset: 'utf8mb4',
+    collate: 'utf8mb4_general_ci',
+    underscored: true,
+    indexes: [
+        { name: 'idx_user_id',            fields: ['user_id'] },
+        { name: 'idx_status',             fields: ['status'] },
+        { name: 'idx_payment_status',     fields: ['payment_status'] },
+        { name: 'idx_fship_sync_status',  fields: ['fship_sync_status'] },
+        { name: 'idx_orders_brand_id',    fields: ['brand_id'] },
+        { name: 'idx_orders_fship_waybill', fields: ['fship_waybill'] },
+        { name: 'idx_orders_created_at',  fields: ['created_at'] },
+        // Composites for the hot dashboard/list path: filter by brand_id/status
+        // AND sort/range by created_at (see setupDatabase migration 012).
+        { name: 'idx_orders_brand_created',  fields: ['brand_id', 'created_at'] },
+        { name: 'idx_orders_status_created', fields: ['status', 'created_at'] }
+    ]
+});
+
+module.exports = { Order };

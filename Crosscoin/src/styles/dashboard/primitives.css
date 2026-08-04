@@ -1,0 +1,293 @@
+/**
+ * Styles for every dashboard primitive in src/components/dashboard/*.
+ * Tokens come from tokens.css (imported alongside this file in _app.jsx).
+ * Class prefix: ds- (Design System). Don't mix these classes with the
+ * legacy dc- / pdt- / cd- families.
+ */
+
+/* ── PageHeader ──────────────────────────────────────────────────────── */
+.ds-pageheader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  margin-bottom: var(--ds-space-6);
+}
+.ds-pageheader__text { min-width: 0; flex: 1; }
+.ds-pageheader__title {
+  margin: 0;
+  font-size: var(--ds-text-2xl);
+  font-weight: var(--ds-weight-bold);
+  color: var(--ds-color-brand);
+  letter-spacing: -0.01em;
+}
+.ds-pageheader__subtitle {
+  margin: var(--ds-space-1) 0 0;
+  font-size: var(--ds-text-md);
+  color: var(--ds-color-text-muted);
+}
+.ds-pageheader__actions {
+  display: flex;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .ds-pageheader { flex-direction: column; align-items: stretch; }
+  .ds-pageheader__title { font-size: var(--ds-text-xl); }
+}
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+  padding: var(--ds-space-5);
+}
+.ds-card--flush { padding: 0; }
+.ds-card--padless-x { padding-left: 0; padding-right: 0; }
+.ds-card + .ds-card { margin-top: var(--ds-space-4); }
+.ds-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-4);
+}
+.ds-card__title {
+  margin: 0;
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-color-brand);
+}
+.ds-card__subtitle {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-muted);
+}
+
+/* ── StatTile ───────────────────────────────────────────────────────── */
+.ds-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-space-3);
+}
+.ds-stat {
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-left: 3px solid var(--ds-color-brand);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  box-shadow: var(--ds-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  transition: transform var(--ds-trans-fast), box-shadow var(--ds-trans-fast);
+}
+.ds-stat:hover { transform: translateY(-2px); box-shadow: var(--ds-shadow-md); }
+.ds-stat--good   { border-left-color: var(--ds-color-success); }
+.ds-stat--warn   { border-left-color: var(--ds-color-warn); }
+.ds-stat--danger { border-left-color: var(--ds-color-danger); }
+.ds-stat--info   { border-left-color: var(--ds-color-info); }
+.ds-stat__label {
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semi);
+  color: var(--ds-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ds-stat__value {
+  font-size: var(--ds-text-2xl);
+  font-weight: var(--ds-weight-bold);
+  color: var(--ds-color-brand);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ds-stat__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semi);
+}
+.ds-stat__trend--up   { color: var(--ds-color-success); }
+.ds-stat__trend--down { color: var(--ds-color-danger); }
+.ds-stat__sub {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-color-text-muted);
+}
+
+/* ── FilterBar (sticky on desktop, collapses on mobile) ─────────────── */
+.ds-filterbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  display: flex;
+  gap: var(--ds-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--ds-space-4);
+}
+.ds-filterbar__search {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 8px 12px;
+  background: var(--ds-color-surface-soft);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+}
+.ds-filterbar__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: var(--ds-text-md);
+  outline: none;
+  color: var(--ds-color-text);
+}
+.ds-filterbar__search svg { width: 16px; height: 16px; color: var(--ds-color-text-faint); }
+.ds-filterbar__group { display: flex; gap: var(--ds-space-2); align-items: center; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .ds-filterbar { padding: var(--ds-space-2); }
+  .ds-filterbar__search { min-width: 100%; }
+}
+
+/* ── ResponsiveTable ────────────────────────────────────────────────── */
+.ds-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-md);
+  background: var(--ds-color-surface);
+}
+.ds-table thead th {
+  text-align: left;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-bold);
+  color: var(--ds-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--ds-color-surface-soft);
+  border-bottom: 1px solid var(--ds-color-border);
+  position: sticky; top: 0; z-index: 1;
+}
+.ds-table tbody td {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-color-border-soft);
+  color: var(--ds-color-text);
+  vertical-align: middle;
+}
+.ds-table tbody tr:hover td { background: var(--ds-color-surface-soft); }
+.ds-table tbody tr:last-child td { border-bottom: 0; }
+
+/* Mobile: stack each row as a card. We toggle a class on the wrapper
+   from the React component (it knows the viewport via hook), but a
+   pure-CSS fallback under 768px is here so SSR HTML degrades cleanly. */
+@media (max-width: 768px) {
+  .ds-table--auto thead { display: none; }
+  .ds-table--auto tbody, .ds-table--auto tr { display: block; }
+  .ds-table--auto tr {
+    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-md);
+    margin-bottom: var(--ds-space-3);
+    background: var(--ds-color-surface);
+    box-shadow: var(--ds-shadow-sm);
+    padding: var(--ds-space-2);
+  }
+  .ds-table--auto tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border-bottom: 1px solid var(--ds-color-border-soft);
+  }
+  .ds-table--auto tbody tr td:last-child { border-bottom: 0; }
+  .ds-table--auto tbody td::before {
+    content: attr(data-label);
+    font-size: var(--ds-text-xs);
+    font-weight: var(--ds-weight-semi);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ds-color-text-muted);
+    flex-shrink: 0;
+  }
+}
+
+/* ── EmptyState ─────────────────────────────────────────────────────── */
+.ds-empty {
+  text-align: center;
+  padding: var(--ds-space-12) var(--ds-space-4);
+  color: var(--ds-color-text-muted);
+}
+.ds-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px; height: 56px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-brand-soft);
+  color: var(--ds-color-brand);
+  margin: 0 auto var(--ds-space-4);
+}
+.ds-empty__icon svg { width: 28px; height: 28px; }
+.ds-empty__title {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-bold);
+  color: var(--ds-color-text);
+  margin: 0 0 var(--ds-space-2);
+}
+.ds-empty__message {
+  font-size: var(--ds-text-md);
+  margin: 0 auto var(--ds-space-4);
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+/* ── Buttons (minimal — most pages reuse legacy buttons; these
+   are for primitives that render their own actions) ─────────────────── */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 8px 14px;
+  border-radius: var(--ds-radius-sm);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-semi);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--ds-trans-fast), border-color var(--ds-trans-fast), transform var(--ds-trans-fast);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  border-color: var(--ds-color-border);
+  white-space: nowrap;
+}
+.ds-btn:hover  { background: var(--ds-color-surface-soft); }
+.ds-btn:active { transform: translateY(1px); }
+.ds-btn--primary {
+  background: var(--ds-color-brand);
+  color: #fff;
+  border-color: var(--ds-color-brand);
+}
+.ds-btn--primary:hover { background: var(--ds-color-brand-strong); }
+.ds-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ds-color-text-muted);
+}
+.ds-btn--ghost:hover  { background: var(--ds-color-brand-soft); color: var(--ds-color-brand); }
+.ds-btn--danger {
+  background: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
+  border-color: var(--ds-color-danger-bd);
+}
+.ds-btn--sm { padding: 4px 10px; font-size: var(--ds-text-sm); }
+.ds-btn[disabled] { opacity: 0.55; cursor: not-allowed; }

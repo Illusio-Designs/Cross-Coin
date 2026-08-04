@@ -1,0 +1,157 @@
+.phone-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: popup-fade-in 0.25s ease;
+}
+
+@keyframes popup-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.phone-popup-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 36px 28px 28px;
+  max-width: 380px;
+  width: 100%;
+  position: relative;
+  text-align: center;
+  animation: popup-slide-up 0.3s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  border-top: 4px solid #CE1E36;
+}
+
+@keyframes popup-slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.phone-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.phone-popup-close:hover { color: #333; }
+
+.phone-popup-emoji {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.phone-popup-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #180D3E;
+  margin: 0 0 8px;
+}
+
+.phone-popup-subtitle {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.phone-popup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phone-popup-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.phone-popup-input-wrap:focus-within {
+  border-color: #180D3E;
+}
+
+.phone-popup-prefix {
+  padding: 0 10px;
+  font-size: 14px;
+  color: #555;
+  background: #f5f5f5;
+  border-right: 1.5px solid #ddd;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.phone-popup-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 12px;
+  font-size: 15px;
+  height: 44px;
+  background: transparent;
+  letter-spacing: 0.5px;
+}
+
+.phone-popup-error {
+  font-size: 12px;
+  color: #e53e3e;
+  margin: 0;
+  text-align: left;
+}
+
+.phone-popup-btn {
+  background: #CE1E36;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.phone-popup-btn:hover:not(:disabled) { background: #a8172b; }
+.phone-popup-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.phone-popup-note {
+  font-size: 11px;
+  color: #aaa;
+  margin: 10px 0 0;
+}
+
+.phone-popup-coupon {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #180D3E;
+  background: #f5f0ff;
+  border: 2px dashed #CE1E36;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin: 16px 0;
+  user-select: all;
+}
+
+@media (max-width: 420px) {
+  .phone-popup-box { padding: 28px 18px 22px; }
+  .phone-popup-title { font-size: 19px; }
+}

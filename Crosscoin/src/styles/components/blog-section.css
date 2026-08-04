@@ -1,0 +1,324 @@
+/* ── SECTION WRAPPER ── */
+.blog-section-wrapper {
+  padding: 60px;
+  background: #fff;
+}
+
+.blog-section-header {
+  margin-bottom: 48px;
+  text-align: center;
+}
+
+.section-header-h2 {
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: #1a1a1a;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+}
+
+.section-header-h2 strong {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #CE1E36;
+}
+
+/* ── GRID ── */
+.blog-grid-home {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  margin-bottom: 48px;
+}
+
+/* ── CARD ── */
+.blog-card-home {
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-card-home:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ── IMAGE ── */
+.bc-img-wrap {
+  position: relative;
+  /* Match the 16:9 card thumbnail delivered from ImageKit (w-800,h-450) so the
+     image fills the box with no vertical cropping at any column width. A fixed
+     height caused a slight top/bottom cut on wider cards. */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.bc-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.blog-card-home:hover .bc-img-wrap img {
+  transform: scale(1.04);
+}
+
+.bc-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bc-badge-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #CE1E36;
+  flex-shrink: 0;
+}
+
+/* ── BODY ── */
+.bc-body {
+  padding: 18px 18px 20px;
+  background: #fefefe;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.bc-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bc-desc {
+  font-size: 12.5px;
+  color: #666;
+  line-height: 1.5;
+  font-weight: 400;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── META ── */
+.bc-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.bc-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #180D3E;
+}
+
+.bc-meta-item svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.bc-meta-diff {
+  background: rgba(206, 30, 54, 0.08);
+  color: #CE1E36;
+}
+
+/* ── TAGS ── */
+.bc-tags {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.bc-tag {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #180D3E;
+  background: #F3F4F6;
+  border-radius: 3px;
+  padding: 4px 10px;
+  border: 1px solid #E5E7EB;
+  transition: background 0.2s, color 0.2s;
+  cursor: default;
+}
+
+.bc-tag:hover {
+  background: #CE1E36;
+  color: #fff;
+  border-color: #CE1E36;
+}
+
+/* ── BUTTON ── */
+.bc-btn {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  background: #180D3E;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.25s, transform 0.15s;
+  margin-top: auto;
+}
+
+.bc-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.bc-btn:hover {
+  background: #CE1E36;
+  transform: translateY(-1px);
+}
+
+.bc-btn:hover::after {
+  transform: translateX(100%);
+}
+
+.bc-btn:active { transform: translateY(0); }
+
+.bc-btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.bc-btn-icon {
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bc-btn-icon svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* ── VIEW ALL ── */
+.blog-view-all-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-all-btn-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: #CE1E36;
+  color: #fff;
+  border-radius: 6px;
+  padding: 16px 56px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.view-all-btn-home:hover {
+  background: #a8172a;
+  transform: translateY(-1px);
+}
+
+.view-all-btn-home svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.3s ease;
+}
+
+.view-all-btn-home:hover svg {
+  transform: translateX(4px);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1200px) {
+  .blog-grid-home {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 900px) {
+  .blog-section-wrapper { padding: 40px; }
+  .section-header-h2 { font-size: 24px; }
+  .blog-grid-home {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .blog-section-wrapper { padding: 28px; }
+  .section-header-h2 { font-size: 20px; }
+  .blog-grid-home {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
