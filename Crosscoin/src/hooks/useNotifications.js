@@ -4,13 +4,25 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const POLL_INTERVAL = 8000; // 8 seconds
 const MAX_NOTIFICATIONS = 50;
 
-function playSound(type) {
+// The real Shopify "ka-ching" sale sound (served from /public/sounds). Preloaded
+// once and reused so it fires instantly on a new order.
+let orderAudio = null;
+function getOrderAudio() {
+  if (typeof Audio === 'undefined') return null;
+  if (!orderAudio) {
+    orderAudio = new Audio('/sounds/new-order.mp3');
+    orderAudio.preload = 'auto';
+    orderAudio.volume = 0.85;
+  }
+  return orderAudio;
+}
+
+// Synth fallback — used only if the mp3 can't play (blocked/unloaded), so a new
+// order is never silent.
+function playSynth(type) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
-
-    // One bell-like note: quick attack, long exponential decay (triangle wave
-    // reads warmer/brighter than a raw sine — closer to a chime/register bell).
     const bell = (freq, start, dur, peak) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -24,22 +36,33 @@ function playSound(type) {
       osc.start(now + start);
       osc.stop(now + start + dur + 0.03);
     };
-
     if (type === 'order') {
-      // Shopify-style "ka-ching" — a bright ascending two-note bell with a
-      // shimmer on top, so a new order is unmistakable across the room.
-      bell(1046.50, 0.00, 0.55, 0.45); // C6
-      bell(1567.98, 0.10, 0.65, 0.45); // G6
-      bell(2093.00, 0.10, 0.45, 0.20); // C7 shimmer
+      bell(1046.50, 0.00, 0.55, 0.45);
+      bell(1567.98, 0.10, 0.65, 0.45);
+      bell(2093.00, 0.10, 0.45, 0.20);
     } else {
-      // Softer single chime for WhatsApp / other notifications.
       bell(880, 0.00, 0.30, 0.30);
       bell(1318.51, 0.06, 0.32, 0.22);
     }
-
-    // Close the context after the sound has finished so it doesn't leak.
     setTimeout(() => { try { ctx.close(); } catch (_) {} }, 1000);
   } catch (_) {}
+}
+
+function playSound(type) {
+  if (type === 'order') {
+    const a = getOrderAudio();
+    if (a) {
+      try {
+        a.currentTime = 0;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => playSynth('order'));
+        return;
+      } catch (_) { /* fall through to synth */ }
+    }
+    playSynth('order');
+    return;
+  }
+  playSynth(type);
 }
 
 export function useNotifications() {
