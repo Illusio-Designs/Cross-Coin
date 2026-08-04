@@ -265,4 +265,71 @@ router.all('/cron/run', async (req, res) => {
     }
 });
 
+// ── Shipping config audit (all brands, credential-free) ─────────────────────
+// Lists every brand's resolved iThink pickup/return/warehouse config so you can
+// verify each brand has its OWN pickup address ID (and isn't silently sharing
+// Crosscoin's). Access tokens/secrets are shown as presence only, never values.
+// Flags brands that share the same pickup ID or the same access token.
+//   curl "https://api.crosscoin.in/api/shipping-config-audit" -H "X-Brand-Name: crosscoin"
+router.get('/shipping-config-audit', async (req, res) => {
+    try {
+        const Brand = require('../model/brandModel.js');
+        const settingsHelper = require('../services/settingsHelper');
+        const brands = await Brand.findAll({ attributes: ['id', 'name'], order: [['id', 'ASC']] });
+
+        const rows = [];
+        for (const b of brands) {
+            const get = (k, d = null) => settingsHelper.getSetting(b.id, k, d);
+            const [provider, env, pickup, ret, whPin, token, secret] = await Promise.all([
+                get('SHIPPING_PROVIDER', 'fship'),
+                get('ITHINK_ENVIRONMENT', 'production'),
+                get('ITHINK_PICKUP_ADDRESS_ID'),
+                get('ITHINK_RETURN_ADDRESS_ID'),
+                get('ITHINK_WAREHOUSE_PINCODE'),
+                get('ITHINK_ACCESS_TOKEN'),
+                get('ITHINK_SECRET_KEY'),
+            ]);
+            rows.push({
+                brand_id: b.id,
+                brand: b.name,
+                provider,
+                ithink_environment: env,
+                pickup_address_id: pickup || null,
+                return_address_id: ret || null,
+                warehouse_pincode: whPin || null,
+                access_token: token ? `set(${String(token).slice(-4)})` : 'MISSING',
+                secret_key: secret ? 'set' : 'MISSING',
+                // token fingerprint (last 4) only, to spot brands sharing one account
+                _tokenTail: token ? String(token).slice(-6) : null,
+            });
+        }
+
+        // Flag collisions: brands sharing the same pickup ID or the same token.
+        const byPickup = {}, byToken = {};
+        rows.forEach((r) => {
+            if (r.pickup_address_id) (byPickup[r.pickup_address_id] ||= []).push(r.brand);
+            if (r._tokenTail) (byToken[r._tokenTail] ||= []).push(r.brand);
+        });
+        rows.forEach((r) => {
+            r.shares_pickup_id_with = r.pickup_address_id && byPickup[r.pickup_address_id].length > 1
+                ? byPickup[r.pickup_address_id].filter((n) => n !== r.brand) : [];
+            r.shares_ithink_account_with = r._tokenTail && byToken[r._tokenTail].length > 1
+                ? byToken[r._tokenTail].filter((n) => n !== r.brand) : [];
+            delete r._tokenTail;
+        });
+
+        const warnings = [];
+        Object.entries(byPickup).forEach(([id, names]) => {
+            if (names.length > 1) warnings.push(`Pickup ID ${id} is shared by: ${names.join(', ')}`);
+        });
+        Object.entries(byToken).forEach(([, names]) => {
+            if (names.length > 1) warnings.push(`Same iThink account (token) used by: ${names.join(', ')}`);
+        });
+
+        return res.json({ success: true, brands: rows, warnings });
+    } catch (e) {
+        return res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 module.exports = router;
