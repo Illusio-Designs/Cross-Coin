@@ -495,6 +495,30 @@ const startServer = async () => {
             logger.error('WhatsApp catalog column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: whatsapp_messages.type ENUM (+reaction,+button) ─
+        // Inbound reactions and quick-reply button taps use these types; without
+        // them MySQL rejects the insert ("Data truncated for column 'type'") and
+        // the message (incl. COD button confirmations) is silently dropped. Add
+        // the values if missing — guarded so it's a no-op once applied.
+        try {
+            const [tc] = await sequelize.query(
+                `SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME = 'type'`
+            );
+            const colType = tc?.[0]?.COLUMN_TYPE || '';
+            if (colType && (!colType.includes("'reaction'") || !colType.includes("'button'"))) {
+                logger.info('Migrating: adding reaction/button to whatsapp_messages.type ENUM…');
+                await sequelize.query(
+                    `ALTER TABLE whatsapp_messages MODIFY COLUMN type
+                     ENUM('text','template','image','document','audio','video','sticker','location','contacts','reaction','button')
+                     NOT NULL DEFAULT 'text'`
+                );
+                logger.info('✓ whatsapp_messages.type ENUM updated');
+            }
+        } catch (err) {
+            logger.error('whatsapp_messages.type ENUM migration failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

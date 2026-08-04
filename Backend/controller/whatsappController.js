@@ -537,6 +537,9 @@ exports.sendReply = async (req, res) => {
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
     const result = await whatsappService.sendTextMessage(conv.customer_phone, message.trim(), brandId, quotedWaMessageId || null);
+    if (result?.rate_limited) {
+      return res.status(429).json({ success: false, message: 'Hourly message limit reached for this customer (10/hour). Please try again later.' });
+    }
 
     // Find the DB id of the quoted message
     let quotedMsgDbId = null;
@@ -556,7 +559,11 @@ exports.sendReply = async (req, res) => {
       sent_at:           new Date(),
     });
 
-    await conv.update({ last_message: message.trim(), last_message_at: new Date() });
+    // Stamp the SLA first-response time on the first agent reply (not on
+    // automated notification deliveries) so "avg first response" is accurate.
+    const convUpdate = { last_message: message.trim(), last_message_at: new Date() };
+    if (!conv.first_response_at) convUpdate.first_response_at = new Date();
+    await conv.update(convUpdate);
 
     res.json({ success: true, message: saved });
   } catch (err) {
@@ -914,6 +921,73 @@ async function handleAutoReply(phone, text, brandId) {
 }
 
 // Patch receiveWebhook to call auto-reply
+// ─── COD address confirmation from a customer's WhatsApp reply ────────────────
+// Handles a free-text YES/NO and a quick-reply button tap (payload
+// "confirm_cod_<orderNumber>" / "reject_cod_<orderNumber>"): confirms the
+// address, advances the order to `confirmed`, and fires order.confirmed so the
+// shipping sync can proceed. Called from the LIVE webhook handler below.
+async function processCodReply(phone, kind, value, brandId) {
+  const { Order } = require('../model/orderModel.js');
+  const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+  const { ShippingAddress } = require('../model/shippingAddressModel.js');
+  const { sequelize: sq } = require('../config/db.js');
+  const { Op: OpCod } = require('sequelize');
+  const whatsappSvc = require('../services/whatsappService.js');
+  const notificationService = require('../services/notificationService.js');
+
+  let pendingOrder = null;
+  let intent = null; // 'confirm' | 'reject'
+
+  if (kind === 'button') {
+    const payload = String(value || '');
+    if (payload.startsWith('confirm_cod_')) intent = 'confirm';
+    else if (payload.startsWith('reject_cod_')) intent = 'reject';
+    if (!intent) return;
+    const orderNumber = payload.replace(/^(confirm|reject)_cod_/, '');
+    pendingOrder = await Order.findOne({
+      where: { order_number: orderNumber, status: 'awaiting_confirmation', payment_type: 'cod', cod_address_confirmed: false },
+    });
+  } else {
+    const normalised = String(value || '').trim().toLowerCase();
+    const confirmKeywords  = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
+    const rejectionKeywords = ['no', 'nahi', 'nope', 'wrong', 'incorrect', 'galat', 'change', 'update', 'different'];
+    if (confirmKeywords.includes(normalised)) intent = 'confirm';
+    else if (rejectionKeywords.some(k => normalised.includes(k))) intent = 'reject';
+    if (!intent) return;
+    const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+    pendingOrder = await Order.findOne({
+      where: { status: 'awaiting_confirmation', payment_type: 'cod', cod_address_confirmed: false },
+      include: [{ model: ShippingAddress, as: 'ShippingAddress', where: { phone: { [OpCod.like]: `%${phoneDigits}` } }, required: true }],
+      order: [['created_at', 'DESC']],
+    });
+  }
+
+  if (!pendingOrder) return;
+
+  if (intent === 'confirm') {
+    const t = await sq.transaction();
+    try {
+      await pendingOrder.update({ cod_address_confirmed: true, cod_address_confirmed_at: new Date(), status: 'confirmed' }, { transaction: t });
+      await OrderStatusHistory.create({
+        order_id: pendingOrder.id, status: 'confirmed',
+        notes: `Auto-confirmed: customer ${kind === 'button' ? 'tapped Confirm Address' : 'replied YES'} via WhatsApp`,
+        updated_by: null,
+      }, { transaction: t });
+      await t.commit();
+    } catch (txErr) { await t.rollback(); throw txErr; }
+
+    const orderEmitter = require('../services/orderEvents.js');
+    setImmediate(() => { try { orderEmitter.emit('order.confirmed', pendingOrder); } catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed: ' + e.message); } });
+    await whatsappSvc.sendTextMessage(phone, `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`, brandId);
+    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
+    logger.info(`[WhatsApp] COD address confirmed → order ${pendingOrder.order_number}`);
+  } else {
+    await whatsappSvc.sendTextMessage(phone, `No problem! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention order *#${pendingOrder.order_number}*.`, brandId);
+    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
+    logger.warn(`[WhatsApp] COD address rejected → order ${pendingOrder.order_number}`);
+  }
+}
+
 const _origReceiveWebhook = exports.receiveWebhook;
 exports.receiveWebhook = async (req, res) => {
   res.status(200).json({ status: 'ok' });
@@ -939,6 +1013,7 @@ exports.receiveWebhook = async (req, res) => {
           let mediaUrl = null;
           let mediaMime = null;
           let mediaCaption = null;
+          let buttonPayload = null;
 
           switch (msg.type) {
             case 'text':
@@ -990,15 +1065,29 @@ exports.receiveWebhook = async (req, res) => {
               msgType = 'reaction';
               text    = msg.reaction?.emoji || '👍';
               break;
+            case 'button':
+              // Quick-reply button tap (e.g. COD "Confirm Address").
+              msgType       = 'button';
+              buttonPayload = msg.button?.payload || msg.button?.text || '';
+              text          = msg.button?.text || 'Button tap';
+              break;
+            case 'interactive':
+              // Interactive reply (button_reply / list_reply) also carries a payload.
+              msgType       = 'button';
+              buttonPayload = msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || '';
+              text          = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || 'Selection';
+              break;
             default:
               msgType = 'text';
               text    = `[${msg.type}]`;
           }
 
-          // Build metadata JSON stored in body for media messages
-          const bodyContent = msgType !== 'text'
+          // Only true media types store a JSON metadata blob in `body`; reactions
+          // store the emoji, buttons store their payload, everything else the text.
+          const MEDIA_TYPES = ['image', 'video', 'audio', 'document'];
+          const bodyContent = MEDIA_TYPES.includes(msgType)
             ? JSON.stringify({ url: mediaUrl, mime: mediaMime, caption: mediaCaption, text })
-            : text;
+            : (msgType === 'button' ? (buttonPayload || text) : text);
 
           const lastMsgPreview = msgType !== 'text' ? text : text;
 
@@ -1024,22 +1113,24 @@ exports.receiveWebhook = async (req, res) => {
           notificationService.emitNewWhatsApp(phone, lastMsgPreview);
           logger.info(`WhatsApp inbound [${phone}] (${msgType}): ${lastMsgPreview}`);
 
+          // COD address confirmation: a free-text YES/NO or a "Confirm Address"
+          // button tap advances the pending COD order to `confirmed`.
+          if (msgType === 'text' && text) {
+            setImmediate(() => processCodReply(phone, 'text', text, brandId).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
+          } else if (msgType === 'button' && buttonPayload) {
+            setImmediate(() => processCodReply(phone, 'button', buttonPayload, brandId).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
+          }
+
           // Auto-reply bot — only for text messages
           if (msg.type === 'text') {
             setImmediate(() => handleAutoReply(phone, text, brandId).catch(() => {}));
           }
         }
         for (const status of (value.statuses || [])) {
+          // Meta status updates: sent → delivered → read. (first_response_at is
+          // stamped when an AGENT sends a reply — see sendReply — not on the
+          // delivery of automated notifications, so SLA stays meaningful.)
           await WhatsappMessage.update({ status: status.status }, { where: { wa_message_id: status.id } });
-          if (status.status === 'delivered') {
-            const msg = await WhatsappMessage.findOne({ where: { wa_message_id: status.id } });
-            if (msg) {
-              const conv = await WhatsappConversation.findByPk(msg.conversation_id);
-              if (conv && !conv.first_response_at) {
-                await conv.update({ first_response_at: new Date() });
-              }
-            }
-          }
         }
       }
     }
