@@ -288,43 +288,9 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* Delivery / pincode serviceability */}
-              <div className="mb-8 rounded-lg border border-line bg-paper-warm/40 p-4">
-                <p className="eyebrow mb-3">Delivery Details</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="Enter Pincode"
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                    aria-label="Pincode"
-                    className="min-w-0 flex-1 rounded-sm border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink"
-                  />
-                  <button
-                    type="button"
-                    onClick={handlePincodeCheck}
-                    disabled={checkingPin}
-                    className="btn shrink-0 !py-2.5 !px-6 whitespace-nowrap disabled:opacity-60"
-                  >
-                    {checkingPin ? '…' : 'Check'}
-                  </button>
-                </div>
-                {serviceability && (
-                  <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-sm font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
-                    {serviceability.error ? (
-                      <span>{serviceability.error}</span>
-                    ) : (
-                      <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Colour */}
               {product.colors?.length > 0 && (
-                <div className="mb-7">
+                <div className="mb-6">
                   <p className="eyebrow mb-3">Colour — <span className="text-ink">{colorLabel}</span></p>
                   <div className="flex flex-wrap gap-2">
                     {product.colors.map((c) =>
@@ -367,7 +333,7 @@ export default function ProductDetail() {
 
               {/* Size */}
               {product.sizes?.length > 0 && (
-                <div className="mb-8">
+                <div className="mb-6">
                   <p className="eyebrow mb-3">Size — <span className="text-ink">{size}</span></p>
                   <div className="flex flex-wrap gap-2">
                     {product.sizes.map((s) => (
@@ -408,11 +374,45 @@ export default function ProductDetail() {
                     </svg>
                   </button>
                 </div>
-                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 mb-6 whitespace-nowrap">Buy Now</button>
+                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 whitespace-nowrap">Buy Now</button>
+              </div>
+
+              {/* Delivery / pincode serviceability — below the buy actions */}
+              <div className="mt-6 rounded-lg border border-line bg-paper-warm/40 p-4">
+                <p className="eyebrow mb-3">Delivery Details</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="Enter Pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                    aria-label="Pincode"
+                    className="min-w-0 flex-1 rounded-sm border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePincodeCheck}
+                    disabled={checkingPin}
+                    className="btn shrink-0 !py-2.5 !px-6 whitespace-nowrap disabled:opacity-60"
+                  >
+                    {checkingPin ? '…' : 'Check'}
+                  </button>
+                </div>
+                {serviceability && (
+                  <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-sm font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
+                    {serviceability.error ? (
+                      <span>{serviceability.error}</span>
+                    ) : (
+                      <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Trust strip */}
-              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6">
+              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6 mt-6">
                 {[
                   ['Secure Checkout', <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>],
                   ['Cash on Delivery', <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>],
