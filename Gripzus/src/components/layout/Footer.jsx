@@ -131,11 +131,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Signature oversized wordmark */}
-        <div className="border-t border-paper/10 pt-8 pb-2 overflow-hidden">
-          <div className="h-mark text-paper/[0.09] leading-[0.8] text-[22vw] md:text-[17vw] select-none pointer-events-none">GRIPZUS</div>
-        </div>
-
         {/* Bottom bar */}
         <div className="border-t border-paper/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-paper/45">
           <p className="tracking-wide">© {year} Gripzus. All rights reserved.</p>
