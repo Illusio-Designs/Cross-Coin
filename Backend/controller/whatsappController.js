@@ -88,8 +88,10 @@ async function detectBrandFromText(text) {
 // need help.") stay on the default — correct.
 exports.reattributeBrands = async () => {
   const DEFAULT_BRAND = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
-  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
-  const { WhatsappMessage } = require('../model/whatsappMessageModel.js');
+  // Both models live in whatsappConversationModel.js — there is no separate
+  // whatsappMessageModel.js file (the wrong path made this backfill crash on
+  // every boot with "Cannot find module", so no old chat was ever re-tagged).
+  const { WhatsappConversation, WhatsappMessage } = require('../model/whatsappConversationModel.js');
   const convs = await WhatsappConversation.findAll({
     where: { brand_id: DEFAULT_BRAND },
     attributes: ['id', 'brand_id'],
