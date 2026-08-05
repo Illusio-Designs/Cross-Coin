@@ -560,6 +560,9 @@ export function WhatsAppManager() {
   // Library
   const [templateList, setTemplateList] = useState([]);
   const [listLoading, setListLoading] = useState(false);
+  // Persistent seed result (so Meta's rejection reasons stay on screen instead
+  // of vanishing with a 1.5s toast).
+  const [seedResult, setSeedResult] = useState(null);
   // Template manager (SaaS-style: seed / update one or a selected batch)
   const [defaultTpls, setDefaultTpls] = useState([]);
   const [selectedTpls, setSelectedTpls] = useState(() => new Set());
@@ -663,16 +666,28 @@ export function WhatsAppManager() {
 
   const seedTemplates = async () => {
     setSeedLoading(true);
+    setSeedResult(null);
     try {
       const data = await whatsappService.seedTemplates(brandId || 1);
       if (data.success) {
-        const { created, skipped, failed } = data.summary || { created:0, skipped:0, failed:0 };
-        showSuccess('templateCreated', `Created: ${created} · Skipped: ${skipped} · Failed: ${failed}`);
+        const { created = 0, skipped = 0, failed = 0 } = data.summary || {};
+        // Keep Meta's actual per-template rejection reasons visible on the page.
+        const errors = (data.results || [])
+          .filter(r => r.status === 'error')
+          .map(r => ({ name: r.name, error: r.error || 'Unknown error' }));
+        setSeedResult({ created, skipped, failed, errors });
+        if (failed > 0) showError('loadingFailed', `${failed} template(s) failed — see details below`);
+        else showSuccess('templateCreated', `Created: ${created} · Skipped: ${skipped}`);
         fetchTemplates();
       } else {
+        setSeedResult({ created:0, skipped:0, failed:0, errors:[{ name:'Request failed', error: data.message || 'Failed to seed templates' }] });
         showError('loadingFailed', data.message || 'Failed to seed templates');
       }
-    } catch (e) { showError('loadingFailed', e.message || 'Failed to seed templates'); }
+    } catch (e) {
+      const msg = e?.response?.data?.message || e.message || 'Failed to seed templates';
+      setSeedResult({ created:0, skipped:0, failed:0, errors:[{ name:'Request failed', error: msg }] });
+      showError('loadingFailed', msg);
+    }
     setSeedLoading(false);
   };
 
@@ -1406,6 +1421,34 @@ export function WhatsAppManager() {
                   </button>
                 </div>
               </div>
+
+              {/* Seed result — stays on screen so Meta's rejection reasons are readable */}
+              {seedResult && (
+                <div style={{
+                  margin:'0 0 16px', padding:'12px 14px', borderRadius:10,
+                  border:`1px solid ${seedResult.failed > 0 ? '#fecaca' : '#bbf7d0'}`,
+                  background: seedResult.failed > 0 ? '#fef2f2' : '#f0fdf4',
+                }}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:12}}>
+                    <div style={{fontSize:13, fontWeight:600, color:'#111827'}}>
+                      Seed result — Created {seedResult.created} · Already existed {seedResult.skipped} · Failed {seedResult.failed}
+                    </div>
+                    <button onClick={() => setSeedResult(null)} style={{border:'none', background:'transparent', cursor:'pointer', color:'#6b7280', fontSize:18, lineHeight:1}}>×</button>
+                  </div>
+                  {seedResult.errors.length > 0 && (
+                    <div style={{marginTop:8}}>
+                      <div style={{fontSize:12, fontWeight:600, color:'#b91c1c', marginBottom:4}}>Why these failed (from Meta):</div>
+                      <ul style={{margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4}}>
+                        {seedResult.errors.map((e, i) => (
+                          <li key={i} style={{fontSize:12.5, color:'#374151'}}>
+                            <strong style={{color:'#111827'}}>{e.name}</strong> — {e.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Stats */}
               <div className="was-stats-grid">
