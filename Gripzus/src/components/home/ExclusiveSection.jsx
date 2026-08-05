@@ -251,14 +251,14 @@ export default function ExclusiveSection({ products = [] }) {
 
         /* Thumbnail rail — height matches the main image, extras scroll. */
         .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-        .excl3-thumb { width: 60px; height: 60px; flex: 0 0 auto; border-radius: 10px; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
+        .excl3-thumb { width: 60px; height: 60px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
         .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
         /* Auto-height main image (natural ratio), capped so it never dominates. */
         .excl3-frame {
-          position: relative; z-index: 1; overflow: hidden; border-radius: 16px;
+          position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
           flex: 1; min-width: 0; max-width: 460px; align-self: flex-start;
@@ -268,7 +268,7 @@ export default function ExclusiveSection({ products = [] }) {
         .is-shown .excl3-frame { opacity: 1; transform: none; }
         .excl3-img { width: 100%; height: auto; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
-        .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 999px; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
+        .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 0; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
         .excl3-info > * { opacity: 0; transform: translateY(14px); animation: excl3-up .6s cubic-bezier(.22,1,.36,1) forwards; }
         .excl3-info .i0 { animation-delay: .05s; } .excl3-info .i1 { animation-delay: .12s; }
@@ -280,34 +280,34 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-name { color: #fff; font-size: clamp(1.5rem, 3vw, 2.4rem); margin: 12px 0 0; line-height: 1.05; }
         .excl3-price { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 0; }
         .excl3-price .now { font-size: 20px; } .excl3-price .was { color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 15px; }
-        .excl3-price .off { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; padding: 3px 8px; }
+        .excl3-price .off { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.3); border-radius: 0; padding: 3px 8px; }
 
         .excl3-colors { margin: 26px 0 0; }
         .excl3-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-        .excl3-dot { width: 26px; height: 26px; border-radius: 999px; cursor: pointer; transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; box-shadow: 0 0 0 1px rgba(255,255,255,0.2); }
+        .excl3-dot { width: 26px; height: 26px; border-radius: 0; cursor: pointer; transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; box-shadow: 0 0 0 1px rgba(255,255,255,0.2); }
         .excl3-dot:hover { transform: scale(1.12); }
         .excl3-dot.on { transform: scale(1.15); box-shadow: 0 0 0 2px #0A0A0A, 0 0 0 4px #fff; }
-        .excl3-pack { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); cursor: pointer; transition: border-color .2s ease, transform .2s ease; }
+        .excl3-pack { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; border-radius: 0; border: 1px solid rgba(255,255,255,0.25); cursor: pointer; transition: border-color .2s ease, transform .2s ease; }
         .excl3-pack:hover { transform: translateY(-1px); } .excl3-pack.on { border-color: #fff; }
-        .excl3-pack span { width: 16px; height: 16px; border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); }
+        .excl3-pack span { width: 16px; height: 16px; border-radius: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); }
 
         .excl3-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.7; margin: 24px 0 0; max-width: 34rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
         .excl3-actions { display: flex; align-items: center; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
-        .excl3-qty { display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 11px 16px; }
+        .excl3-qty { display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 0; padding: 11px 16px; }
         .excl3-qty button { color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1; } .excl3-qty button:hover { color: #fff; } .excl3-qty span { min-width: 18px; text-align: center; font-size: 14px; }
-        .excl3-add { flex: 1; min-width: 160px; background: #fff; color: #0A0A0A; border-radius: 12px; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
+        .excl3-add { flex: 1; min-width: 160px; background: #fff; color: #0A0A0A; border-radius: 0; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
         .excl3-add:hover { transform: translateY(-2px); } .excl3-add:active { transform: none; }
-        .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
+        .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 0; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
         .excl3-view:hover { background: #fff; color: #0A0A0A; }
 
         /* Other products — one flex row each (image · title · price) */
         .excl3-others { margin: 32px 0 0; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.12); }
         .excl3-others-title { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 12px; }
         .excl3-olist { display: flex; flex-direction: column; gap: 8px; }
-        .excl3-orow { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 8px; border-radius: 12px; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
+        .excl3-orow { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 8px; border-radius: 0; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
         .excl3-orow:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
-        .excl3-orow-img { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+        .excl3-orow-img { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 0; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
         .excl3-orow-img img { width: 100%; height: 100%; object-fit: cover; }
         .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .excl3-orow-price { flex: 0 0 auto; font-size: 14px; color: rgba(255,255,255,0.8); }

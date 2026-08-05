@@ -83,7 +83,7 @@ export default function ToastViewport() {
           color: #111111;
           border: 1px solid #e2e2e2;
           border-left: 3px solid #111111;
-          border-radius: 0.75rem;
+          border-radius: 0;
           box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.22);
           font-family: 'Inter', system-ui, sans-serif;
           animation: gz-toast-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
@@ -101,7 +101,7 @@ export default function ToastViewport() {
           justify-content: center;
           width: 1.25rem;
           height: 1.25rem;
-          border-radius: 9999px;
+          border-radius: 0;
           background: #111111;
           color: #ffffff;
         }
