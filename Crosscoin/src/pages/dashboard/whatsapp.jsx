@@ -80,6 +80,22 @@ function formatTime(date) {
 }
 function catLabel(c) { return { MARKETING:'Marketing', UTILITY:'Utility', marketing:'Marketing', utility:'Utility', otp:'OTP/Auth' }[c] || c; }
 
+// Meta returns rejected_reason as an enum (e.g. INVALID_FORMAT, ABUSIVE_CONTENT).
+// Turn it into a human sentence with a hint on how to fix it.
+function normalizeRejectReason(reason) {
+  if (!reason || reason === 'NONE') return '';
+  const MAP = {
+    ABUSIVE_CONTENT: 'Content flagged as abusive/spammy. Remove promotional or aggressive wording.',
+    INVALID_FORMAT: 'Formatting invalid — check variables ({{1}}), no trailing spaces, and matched braces.',
+    SCAM: 'Flagged as potential scam. Avoid urgency/payment-bait language.',
+    PROMOTIONAL: 'Too promotional for its category. Move to MARKETING or soften the copy.',
+    TAG_CONTENT_MISMATCH: 'Copy does not match the chosen category (Utility vs Marketing).',
+    INCORRECT_CATEGORY: 'Wrong category — Meta expects a different one for this content.',
+    NONE: '',
+  };
+  return MAP[reason] || reason.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase());
+}
+
 // ─── Phone Preview ────────────────────────────────────────────────────────────
 function PhonePreview({ tpl }) {
   if (!tpl) return (
@@ -1179,6 +1195,7 @@ export function WhatsAppManager() {
         name: d.name, category: d.category, language: d.language,
         body: d.body, footer: d.footer, buttons: d.buttons || [],
         live, status: live ? (live.status || 'pending').toLowerCase() : 'not_created',
+        rejectedReason: live ? normalizeRejectReason(live.rejected_reason) : '',
         isDefault: true,
       };
     });
@@ -1190,7 +1207,9 @@ export function WhatsAppManager() {
         body: t.components?.find(c => c.type === 'BODY')?.text || '',
         footer: t.components?.find(c => c.type === 'FOOTER')?.text || '',
         buttons: (t.components?.find(c => c.type === 'BUTTONS')?.buttons || []).map(b => b.text),
-        live: t, status: (t.status || 'pending').toLowerCase(), isDefault: false,
+        live: t, status: (t.status || 'pending').toLowerCase(),
+        rejectedReason: normalizeRejectReason(t.rejected_reason),
+        isDefault: false,
       });
     });
     return rows;
@@ -1825,6 +1844,16 @@ export function WhatsAppManager() {
                         </div>
                         <div className="was-tpl-name">{t.name}{t.isDefault ? '' : ' ·  custom'}</div>
                         <div className="was-tpl-body" onClick={() => setViewTpl(t)} title="Click to view full content" style={{cursor:'pointer'}}>{t.body || '—'}</div>
+                        {t.status === 'rejected' && (
+                          <div style={{
+                            display:'flex', gap:6, alignItems:'flex-start', margin:'2px 0 6px',
+                            background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8,
+                            padding:'7px 9px', fontSize:12, color:'#b91c1c', lineHeight:1.4
+                          }}>
+                            <span style={{ flexShrink:0, marginTop:1 }}>⚠️</span>
+                            <span><strong>Meta rejected:</strong> {t.rejectedReason || 'No reason given. Edit the copy and Re-submit.'}</span>
+                          </div>
+                        )}
                         <div className="was-tpl-foot">
                           <span className="was-tpl-meta-item">{IC.info}{t.language || 'en'}</span>
                           <span className="was-tpl-meta-item">{IC.tag}{vars} var{vars!==1?'s':''}</span>
@@ -2263,6 +2292,17 @@ export function WhatsAppManager() {
                   <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.language || 'en'}</span>
                   <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
                 </div>
+
+                {viewTpl.status === 'rejected' && (
+                  <div style={{
+                    display:'flex', gap:8, alignItems:'flex-start', marginBottom:16,
+                    background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10,
+                    padding:'10px 12px', fontSize:13, color:'#b91c1c', lineHeight:1.5
+                  }}>
+                    <span style={{ flexShrink:0, marginTop:1 }}>⚠️</span>
+                    <span><strong>Meta rejected this template.</strong><br />{viewTpl.rejectedReason || 'No reason was given. Edit the copy and Re-submit.'}</span>
+                  </div>
+                )}
 
                 {/* WhatsApp-style preview */}
                 <div style={{

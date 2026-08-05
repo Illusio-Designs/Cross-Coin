@@ -157,12 +157,31 @@ async function sendMediaMessage(to, { mediaId, kind, caption, filename }, brandI
 
 // ─── Template management ──────────────────────────────────────────────────────
 
-async function listTemplates(brandId = 1) {
+// Meta's message_templates endpoint is slow (1–3s) and the template set barely
+// changes, yet the dashboard re-fetches it on every visit to the Templates page.
+// Cache the response per brand for a short TTL so page loads are instant; any
+// mutation (create / delete / update) clears the cache so the UI still sees
+// fresh status right after a Seed / Re-submit.
+const _templateCache = new Map(); // brandId -> { data, expires }
+const TEMPLATE_CACHE_TTL_MS = 60 * 1000;
+
+function invalidateTemplateCache(brandId) {
+  if (brandId == null) _templateCache.clear();
+  else _templateCache.delete(Number(brandId));
+}
+
+async function listTemplates(brandId = 1, { force = false } = {}) {
+  const key = Number(brandId);
+  const now = Date.now();
+  const hit = _templateCache.get(key);
+  if (!force && hit && hit.expires > now) return hit.data;
+
   const { token, businessAccountId } = await getCredentials(brandId);
   const res = await axios.get(
-    `${GRAPH_API_URL}/${businessAccountId}/message_templates?limit=100&fields=name,status,category,language,components`,
+    `${GRAPH_API_URL}/${businessAccountId}/message_templates?limit=100&fields=name,status,category,language,components,rejected_reason,quality_score`,
     { headers: authHeader(token) }
   );
+  _templateCache.set(key, { data: res.data, expires: now + TEMPLATE_CACHE_TTL_MS });
   return res.data; // { data: [...], paging: {...} }
 }
 
@@ -179,6 +198,7 @@ async function createTemplate(tplData, brandId = 1) {
     payload,
     { headers: authHeader(token) }
   );
+  invalidateTemplateCache(brandId);
   return res.data;
 }
 
@@ -188,6 +208,7 @@ async function deleteTemplate(name, brandId = 1) {
     `${GRAPH_API_URL}/${businessAccountId}/message_templates?name=${encodeURIComponent(name)}`,
     { headers: authHeader(token) }
   );
+  invalidateTemplateCache(brandId);
   return res.data;
 }
 

@@ -641,7 +641,8 @@ exports.resolveConversation = async (req, res) => {
 exports.listTemplates = async (req, res) => {
   try {
     const brandId = parseInt(req.query.brandId) || 1;
-    const data = await whatsappService.listTemplates(brandId);
+    const force = ['1', 'true', 'yes'].includes(String(req.query.force).toLowerCase());
+    const data = await whatsappService.listTemplates(brandId, { force });
     res.json({ success: true, templates: data.data || [], paging: data.paging || null });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
