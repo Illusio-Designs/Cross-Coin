@@ -20,7 +20,7 @@ const cron = require('node-cron');
 function initializeCronJobs() {
   console.log('🕐 Initializing cron jobs (Bull-backed)...');
 
-  const { enqueue } = require('../services/integrationQueue.js');
+  const { enqueue, registerProcessor } = require('../services/integrationQueue.js');
   const skipQueue = process.env.CRON_SKIP_QUEUE === 'true';
 
   async function trigger(jobName, payload = {}) {
@@ -37,6 +37,21 @@ function initializeCronJobs() {
     } catch (e) {
       console.error(`❌ [CRON] enqueue ${jobName} failed:`, e.message);
     }
+  }
+
+  // Move a heavy cron handler off the cron tick and onto the job queue: it runs
+  // one-at-a-time (concurrency 1) and can be offloaded to a dedicated worker on
+  // AWS with zero code change. attempts:1 — NO retry — because these handlers
+  // send customer WhatsApp messages, and a retry could re-send. (They also
+  // already swallow their own errors, so they never fail Bull anyway.) Returns
+  // a cron callback that just enqueues the job. The handler body is unchanged.
+  function queued(jobName, handler) {
+    registerProcessor(jobName, 1, async () => { await handler(); });
+    return () => {
+      enqueue(jobName, {}, { attempts: 1 })
+        .then(() => console.log(`✅ [CRON] enqueued ${jobName}`))
+        .catch((e) => console.error(`❌ [CRON] enqueue ${jobName} failed:`, e.message));
+    };
   }
 
   // Shipping order sync (provider-agnostic) — twice a day at 6:05 AM & 6:05 PM
@@ -81,7 +96,7 @@ function initializeCronJobs() {
 
   // ── Abandoned Cart Recovery — every hour at :15 ──────────────────────────
   // Finds carts with items that haven't converted to an order in 1 hour
-  cron.schedule('15 * * * *', async () => {
+  cron.schedule('15 * * * *', queued('cron:abandoned-cart', async () => {
     console.log('\n⏰ [CRON] Abandoned cart check started at:', new Date().toISOString());
     try {
       // Load via associations to ensure all relationships are registered
@@ -132,11 +147,11 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Abandoned cart error:', error.message);
     }
-  });
+  }));
 
   // ── Review Request — daily at 10 AM ──────────────────────────────────────
   // Finds orders delivered 3 days ago with no review yet
-  cron.schedule('0 10 * * *', async () => {
+  cron.schedule('0 10 * * *', queued('cron:review-request', async () => {
     console.log('\n⏰ [CRON] Review request started at:', new Date().toISOString());
     try {
       const { Order } = require('../model/orderModel.js');
@@ -191,11 +206,11 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Review request error:', error.message);
     }
-  });
+  }));
 
   // ── Win-back Campaign — daily at 11 AM ───────────────────────────────────
   // Targets users with no order in 30 days
-  cron.schedule('0 11 * * *', async () => {
+  cron.schedule('0 11 * * *', queued('cron:winback', async () => {
     console.log('\n⏰ [CRON] Win-back campaign started at:', new Date().toISOString());
     try {
       const { Order } = require('../model/orderModel.js');
@@ -244,11 +259,11 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Win-back error:', error.message);
     }
-  });
+  }));
 
   // ── Post-purchase Upsell — daily at 3 PM ─────────────────────────────────
   // Targets orders delivered exactly 1 day ago
-  cron.schedule('0 15 * * *', async () => {
+  cron.schedule('0 15 * * *', queued('cron:upsell', async () => {
     console.log('\n⏰ [CRON] Post-purchase upsell started at:', new Date().toISOString());
     try {
       const { Order } = require('../model/orderModel.js');
@@ -303,12 +318,12 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Post-purchase upsell error:', error.message);
     }
-  });
+  }));
 
   // ── Stale Prepaid Order Cleanup — every 30 minutes at :10 and :40 ────────
   // Cancels prepaid orders where payment_status is still 'pending' or 'failed'
   // after 30 minutes (customer abandoned or payment failed)
-  cron.schedule('10,40 * * * *', async () => {
+  cron.schedule('10,40 * * * *', queued('cron:stale-cleanup', async () => {
     console.log('\n⏰ [CRON] Stale prepaid cleanup started at:', new Date().toISOString());
     try {
       const { Order, OrderItem, ProductVariation } = require('../model/associations.js');
@@ -393,7 +408,7 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Stale prepaid cleanup error:', error.message);
     }
-  });
+  }));
 
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
