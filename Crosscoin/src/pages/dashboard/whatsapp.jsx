@@ -618,6 +618,9 @@ export function WhatsAppManager() {
   // without restarting the loop on every conversation switch.
   const activeConvRef = useRef(null);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
+  // Per-conversation message cache — reopening a chat shows instantly while we
+  // refresh in the background, so the spinner only appears on a true first load.
+  const messagesCacheRef = useRef(new Map());
 
   // Merge messages by id (keeps optimistic + server copies from duplicating,
   // avoids the wholesale-replace flicker), sorted chronologically.
@@ -828,21 +831,36 @@ export function WhatsAppManager() {
   };
 
   const fetchMessages = async (conv) => {
-    setActiveConv(conv); setMsgLoading(true);
+    setActiveConv(conv);
+    // Show cached messages instantly if we've opened this chat before; only
+    // show the spinner on a genuine first load.
+    const cached = messagesCacheRef.current.get(conv.id);
+    if (cached) {
+      setMessages(cached);
+      isNearBottomRef.current = true;
+      setMsgLoading(false);
+    } else {
+      setMessages([]);
+      setMsgLoading(true);
+    }
     try {
       const data = await whatsappService.getMessages(conv.id);
       if (data.success) {
-        setMessages(data.messages || []);
+        const msgs = data.messages || [];
+        messagesCacheRef.current.set(conv.id, msgs);
+        setMessages(msgs);
         setHasMoreMsgs(!!data.hasMore);
         isNearBottomRef.current = true; // jump to newest on open
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c));
-      } else {
+      } else if (!cached) {
         setMessages([]); setHasMoreMsgs(false);
         showError('loadingFailed', 'Failed to load messages');
       }
     } catch (err) {
-      setMessages([]); setHasMoreMsgs(false);
-      showError('loadingFailed', 'Failed to load messages');
+      if (!cached) {
+        setMessages([]); setHasMoreMsgs(false);
+        showError('loadingFailed', 'Failed to load messages');
+      }
     }
     setMsgLoading(false);
   };
