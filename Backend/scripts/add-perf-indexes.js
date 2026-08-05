@@ -1,14 +1,16 @@
 /**
- * One-off production index migration.
+ * Performance index migration — runs automatically at boot.
  *
  * Production never runs sync({ alter:true }), so indexes added to a model file
- * do NOT reach the live DB automatically. Run this once after deploy:
+ * do NOT reach the live DB automatically. `ensureIndexes()` is called from
+ * index.js on every startup: it is idempotent (checks information_schema and
+ * skips indexes that already exist), so it's safe and cheap to run each boot —
+ * any newly-added index in the map below is created on the next deploy with no
+ * manual step.
+ *
+ * Still runnable manually if you want to apply indexes without a restart:
  *
  *   cd Backend && node scripts/add-perf-indexes.js
- *
- * It adds the indexes that eliminate the product-listing filesort (2–12s slow
- * queries seen in the cPanel log) and is idempotent — re-running skips indexes
- * that already exist.
  */
 
 const { sequelize } = require('../config/db.js');
@@ -45,26 +47,58 @@ async function indexExists(table, name) {
   return rows.length > 0;
 }
 
-(async () => {
-  try {
-    await sequelize.authenticate();
-    for (const [table, defs] of Object.entries(INDEXES)) {
+async function tableExists(table) {
+  const [rows] = await sequelize.query(
+    'SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1',
+    { replacements: [table] }
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Create any missing performance indexes. Idempotent — safe to call on every
+ * boot. Never throws: a failure to add an index must not take the server down,
+ * so errors are logged and swallowed.
+ */
+async function ensureIndexes() {
+  let created = 0;
+  for (const [table, defs] of Object.entries(INDEXES)) {
+    try {
+      if (!(await tableExists(table))) continue; // table not created yet — skip
       for (const def of defs) {
-        if (await indexExists(table, def.name)) {
-          logger.info(`[perf-index] ${def.name} already exists — skipping`);
-          continue;
+        try {
+          if (await indexExists(table, def.name)) continue;
+          const cols = def.columns.map((c) => `\`${c}\``).join(', ');
+          await sequelize.query(`CREATE INDEX \`${def.name}\` ON \`${table}\` (${cols})`);
+          created++;
+          logger.info(`[perf-index] created ${def.name} on ${table} (${def.columns.join(', ')})`);
+        } catch (err) {
+          logger.error(`[perf-index] failed to create ${def.name} on ${table}: ${err.message}`);
         }
-        const cols = def.columns.map((c) => `\`${c}\``).join(', ');
-        await sequelize.query(`CREATE INDEX \`${def.name}\` ON \`${table}\` (${cols})`);
-        logger.info(`[perf-index] created ${def.name} on ${table} (${def.columns.join(', ')})`);
       }
+    } catch (err) {
+      logger.error(`[perf-index] check failed for ${table}: ${err.message}`);
     }
-    logger.info('[perf-index] done');
-    await sequelize.close();
-    process.exit(0);
-  } catch (err) {
-    logger.error(`[perf-index] failed: ${err.message}`);
-    try { await sequelize.close(); } catch {}
-    process.exit(1);
   }
-})();
+  if (created > 0) logger.info(`[perf-index] added ${created} index(es)`);
+  return created;
+}
+
+module.exports = { ensureIndexes, INDEXES };
+
+// Allow running standalone: `node scripts/add-perf-indexes.js`
+if (require.main === module) {
+  (async () => {
+    try {
+      await sequelize.authenticate();
+      await ensureIndexes();
+      logger.info('[perf-index] done');
+      await sequelize.close();
+      process.exit(0);
+    } catch (err) {
+      logger.error(`[perf-index] failed: ${err.message}`);
+      try { await sequelize.close(); } catch {}
+      process.exit(1);
+    }
+  })();
+}

@@ -641,6 +641,16 @@ const startServer = async () => {
             logger.info('✓ Database schema up-to-date, skipping setup');
         }
 
+        // Ensure performance indexes exist (idempotent). Production never runs
+        // sync({alter}), so indexes defined on models don't reach the live DB —
+        // this creates any that are missing on each boot (skips existing ones).
+        try {
+            const { ensureIndexes } = require('./scripts/add-perf-indexes.js');
+            await ensureIndexes();
+        } catch (err) {
+            logger.error('[perf-index] boot hook failed: ' + err.message);
+        }
+
         // Initialize SEO data — only runs once, skipped on subsequent boots
         // Piggybacks on the schema_version table to avoid a DB query every start
         try {
