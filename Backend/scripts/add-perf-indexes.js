@@ -37,6 +37,25 @@ const INDEXES = {
     { name: 'idx_wa_msg_conv_id', columns: ['conversation_id', 'id'] },
     { name: 'idx_wa_msg_wa_msg_id', columns: ['wa_message_id'] },
   ],
+  // Storefront product listing (getAllProducts) joins these child/junction
+  // tables on every page. The models DECLARE these indexes, but they were added
+  // after the tables already existed in prod — and prod never runs sync({alter}),
+  // so the live DB can be missing them, forcing full scans on each join (the
+  // 2s "SELECT Product … JOIN Category" slow-queries in the log). The leading-
+  // column check below skips any that already exist under another name.
+  product_brands: [
+    { name: 'idx_pb_brand_product', columns: ['brand_id', 'product_id'] },
+  ],
+  product_images: [
+    { name: 'idx_pi_product', columns: ['product_id'] },
+    { name: 'idx_pi_variation', columns: ['product_variation_id'] },
+  ],
+  product_seo: [
+    { name: 'idx_pseo_product', columns: ['product_id'] },
+  ],
+  product_variations: [
+    { name: 'idx_pv_product', columns: ['productId'] },
+  ],
 };
 
 async function indexExists(table, name) {
@@ -55,6 +74,19 @@ async function tableExists(table) {
   return rows.length > 0;
 }
 
+// True if some existing index already LEADS with this column (seq_in_index = 1).
+// A different-named index (e.g. Sequelize's auto-named model index) that starts
+// with the same column already serves the same lookups, so we skip creating a
+// duplicate. Guards against redundant indexes when the model-declared index is
+// already present under another name.
+async function columnAlreadyLeadIndexed(table, column) {
+  const [rows] = await sequelize.query(
+    'SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND seq_in_index = 1 LIMIT 1',
+    { replacements: [table, column] }
+  );
+  return rows.length > 0;
+}
+
 /**
  * Create any missing performance indexes. Idempotent — safe to call on every
  * boot. Never throws: a failure to add an index must not take the server down,
@@ -68,6 +100,9 @@ async function ensureIndexes() {
       for (const def of defs) {
         try {
           if (await indexExists(table, def.name)) continue;
+          // Skip if an index already leads with the same first column — an
+          // equivalent index (often the model's auto-named one) already exists.
+          if (await columnAlreadyLeadIndexed(table, def.columns[0])) continue;
           const cols = def.columns.map((c) => `\`${c}\``).join(', ');
           await sequelize.query(`CREATE INDEX \`${def.name}\` ON \`${table}\` (${cols})`);
           created++;

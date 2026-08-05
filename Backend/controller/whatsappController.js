@@ -1708,6 +1708,41 @@ exports.sendCatalogue = async (req, res) => {
 // ─── Media proxy — fetches media from Meta and streams to browser ─────────────
 // GET /api/whatsapp/media/:mediaId?brandId=1
 // The browser cannot call Meta directly (needs auth token), so we proxy it.
+//
+// WhatsApp media is IMMUTABLE — a given media id always returns the same bytes —
+// so we cache the downloaded bytes on disk keyed by the stable media id. Opening
+// an OLD chat used to re-hit Meta twice per item (resolve URL + download) on
+// every view; after the first fetch it now streams straight from local disk.
+const _mediaPath = require('path');
+const _mediaFs = require('fs');
+const _mediaCrypto = require('crypto');
+const WA_MEDIA_CACHE_DIR = _mediaPath.join(
+  __dirname, '..', process.env.UPLOAD_PATH || 'uploads', 'wa-media'
+);
+try { _mediaFs.mkdirSync(WA_MEDIA_CACHE_DIR, { recursive: true }); } catch (_) {}
+
+// The stable Meta media id is the cache key. Full CDN URLs expire but carry the
+// id in the `mid` param; bare ids are used directly; anything else is hashed.
+function waMediaCacheKey(decoded) {
+  try {
+    if (decoded.startsWith('http')) {
+      const mid = new URL(decoded).searchParams.get('mid');
+      if (mid) return mid;
+      return _mediaCrypto.createHash('sha1').update(decoded).digest('hex');
+    }
+  } catch (_) { /* fall through */ }
+  return decoded;
+}
+function waMediaCachePaths(key) {
+  const hash = _mediaCrypto.createHash('sha1').update(String(key)).digest('hex');
+  const base = _mediaPath.join(WA_MEDIA_CACHE_DIR, hash);
+  // Unique temp per request so two simultaneous first-views of the same media
+  // never interleave writes into one temp file; whichever finishes renames to
+  // the same final path (identical bytes, so last-writer-wins is safe).
+  const tmp = `${base}.${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}.tmp`;
+  return { bin: base, ct: base + '.ct', tmp };
+}
+
 exports.proxyMedia = async (req, res) => {
   try {
     const { mediaId } = req.params;
@@ -1715,6 +1750,25 @@ exports.proxyMedia = async (req, res) => {
 
     // Decode in case it was URL-encoded (full Facebook URLs)
     const decoded = decodeURIComponent(mediaId);
+
+    // ── Cache hit: serve the bytes straight from disk, no Meta round-trip ──
+    const cacheKey = waMediaCacheKey(decoded);
+    const paths = waMediaCachePaths(cacheKey);
+    try {
+      const stat = _mediaFs.statSync(paths.bin);
+      if (stat.size > 0) {
+        let ct = 'application/octet-stream';
+        try { ct = _mediaFs.readFileSync(paths.ct, 'utf8') || ct; } catch (_) {}
+        res.setHeader('Content-Type', ct);
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('X-Media-Cache', 'HIT');
+        _mediaFs.createReadStream(paths.bin).pipe(res);
+        return;
+      }
+    } catch (_) { /* miss — fall through to fetch */ }
 
     let downloadUrl, mimeType;
 
@@ -1754,15 +1808,47 @@ exports.proxyMedia = async (req, res) => {
 
     // Stream the bytes back to the browser
     const { stream, contentType, contentLength } = await whatsappService.downloadMedia(downloadUrl, brandId);
+    const finalType = contentType || mimeType || 'application/octet-stream';
 
-    res.setHeader('Content-Type', contentType || mimeType || 'application/octet-stream');
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Content-Type', finalType);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (contentLength) res.setHeader('Content-Length', contentLength);
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('X-Media-Cache', 'MISS');
+
+    // Tee the download to disk while streaming to the browser: the write costs
+    // nothing extra on the response, and the next view of this item is a cache
+    // hit. Only promote the temp file to the cache if the download completed in
+    // full (a client abort or upstream error must not leave a truncated file).
+    let cacheOk = true;
+    let downloadComplete = false;
+    const cacheStream = _mediaFs.createWriteStream(paths.tmp);
+    cacheStream.on('error', () => {
+      cacheOk = false;
+      try { _mediaFs.unlink(paths.tmp, () => {}); } catch (_) {}
+    });
+    cacheStream.on('finish', () => {
+      if (!cacheOk || !downloadComplete) {
+        try { _mediaFs.unlink(paths.tmp, () => {}); } catch (_) {}
+        return;
+      }
+      try {
+        _mediaFs.renameSync(paths.tmp, paths.bin);
+        _mediaFs.writeFile(paths.ct, finalType, () => {});
+      } catch (_) { try { _mediaFs.unlink(paths.tmp, () => {}); } catch (__) {} }
+    });
+
+    stream.on('end', () => { downloadComplete = true; });
+    stream.on('error', () => {
+      cacheOk = false;
+      try { cacheStream.destroy(); } catch (_) {}
+      if (!res.headersSent) res.status(500);
+      res.end();
+    });
 
     stream.pipe(res);
-    stream.on('error', () => res.status(500).end());
+    if (cacheOk) stream.pipe(cacheStream);
   } catch (err) {
     logger.error('Media proxy error: ' + err.message);
     res.status(500).json({ success: false, message: errMsg(err) });
