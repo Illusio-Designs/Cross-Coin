@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-const WA_NUMBER = '917434834000';
+const WA_NUMBER = '919712891700';
 const WA_MESSAGE = 'Hi! I need help with Gripzus.';
 
 export default function WhatsAppChat() {
