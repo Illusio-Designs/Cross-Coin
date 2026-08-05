@@ -206,13 +206,20 @@ export function CartProvider({ children }) {
     if (!it) return;
 
     if (isAuthed()) {
+      // Try the exact variation first; if that 404s (legacy items were stored
+      // with a null variationId but the API reports a resolved default id), retry
+      // matching by product only so the row is actually deleted server-side.
+      let ok = false;
+      try { await apiRemoveFromCart(it.id, it.variationId ?? null); ok = true; } catch { /* retry below */ }
+      if (!ok && it.variationId != null) { try { await apiRemoveFromCart(it.id, null); ok = true; } catch { /* ignore */ } }
       try {
-        await apiRemoveFromCart(it.id, it.variationId ?? null);
         const data = await apiGetCart();
         setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
-        toastRemovedFromCart(it.name);
-        return;
-      } catch { /* fall through to local remove */ }
+      } catch {
+        setItems((prev) => prev.filter((p) => lineKey(p) !== key));
+      }
+      toastRemovedFromCart(it.name);
+      return;
     }
 
     setItems((prev) => prev.filter((p) => lineKey(p) !== key));

@@ -80,19 +80,19 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Right — square icon actions with hairline dividers */}
-          <div className="flex items-center justify-end">
+          {/* Right — evenly-sized icon actions (identical hover boxes) */}
+          <div className="flex items-center justify-end gap-0.5 md:gap-1">
             <IconBtn as={Link} href="/search" ariaLabel="Search">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="11" cy="11" r="7.5" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" /></svg>
             </IconBtn>
             <IconBtn as={Link} href={accountHref} ariaLabel={isAuthenticated ? 'Account' : 'Sign in'}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="8" r="3.6" /><path d="M5 20c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4" strokeLinecap="round" /></svg>
             </IconBtn>
             <IconBtn as={Link} href="/wishlist" ariaLabel="Wishlist" badge={wishCount}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 21s-7-4.35-9-9c-1.5-3.5 1-7 4.5-7 1.74 0 3 .81 4.5 2.5C13.5 5.81 14.76 5 16.5 5 20 5 22.5 8.5 21 12c-2 4.65-9 9-9 9z" /></svg>
             </IconBtn>
-            <IconBtn ariaLabel="Bag" onClick={openCart} badge={count} divide>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 7h12l-1.5 11a2 2 0 01-2 1.8h-5a2 2 0 01-2-1.8L6 7z" /><path d="M9 7V5a3 3 0 016 0v2" strokeLinecap="round" /></svg>
+            <IconBtn ariaLabel="Bag" onClick={openCart} badge={count}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 8h16l-1 12a2 2 0 01-2 1.8H7a2 2 0 01-2-1.8L4 8z" /><path d="M8.5 8V6.5a3.5 3.5 0 017 0V8" strokeLinecap="round" /></svg>
             </IconBtn>
           </div>
         </div>
@@ -140,12 +140,12 @@ export default function Header() {
   );
 }
 
-function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, divide, ...rest }) {
+function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, ...rest }) {
   return (
-    <Comp aria-label={ariaLabel} className={`relative w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-ink hover:bg-black/[0.05] transition-colors ${divide ? 'ml-2 border-l border-line pl-3 md:pl-4' : ''}`} {...rest}>
+    <Comp aria-label={ariaLabel} className="relative w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-ink hover:bg-black/[0.05] transition-colors" {...rest}>
       {children}
       {Number(badge) > 0 && (
-        <span key={badge} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 bg-ink text-paper text-[10px] font-semibold leading-none flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
+        <span key={badge} className="absolute top-1.5 right-1 min-w-[15px] h-[15px] px-1 bg-ink text-paper text-[9.5px] font-semibold leading-none flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
           {badge}
         </span>
       )}
