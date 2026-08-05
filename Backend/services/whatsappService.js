@@ -429,8 +429,23 @@ async function updateTemplate(name, brandId = 1) {
   // Step 2 — wait for Meta propagation before recreating
   await new Promise(r => setTimeout(r, 3000));
 
-  // Step 3 — recreate with latest content from buildTemplates
-  const result = await createTemplate(tpl, brandId);
+  // Step 3 — recreate with latest content. Meta sometimes hasn't freed the old
+  // name yet ("template already exists") — retry a few times before giving up.
+  let result, lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try { result = await createTemplate(tpl, brandId); break; }
+    catch (err) {
+      lastErr = err;
+      const msg = metaError(err).toLowerCase();
+      if (msg.includes('already exists') || msg.includes('duplicate')) {
+        logger.info(`[WhatsApp] "${name}" name not freed yet — retry ${attempt}/3 in 5s`);
+        await new Promise(r => setTimeout(r, 5000));
+        continue;
+      }
+      throw err; // a real validation error — surface it immediately
+    }
+  }
+  if (!result) throw new Error(`Failed to recreate template "${name}": ${metaError(lastErr)}`);
   logger.info(`[WhatsApp] Recreated template "${name}" for brand ${brandId} — id: ${result.id}`);
   return { name, status: 'updated', id: result.id };
 }

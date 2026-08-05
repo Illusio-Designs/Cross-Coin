@@ -498,6 +498,7 @@ export function WhatsAppManager() {
   const [defaultTpls, setDefaultTpls] = useState([]);
   const [selectedTpls, setSelectedTpls] = useState(() => new Set());
   const [tplBusy, setTplBusy] = useState(() => new Set()); // template names mid-action
+  const [viewTpl, setViewTpl] = useState(null); // template open in the full-view modal
   // Inbox
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
@@ -629,11 +630,19 @@ export function WhatsAppManager() {
       const data = await whatsappService.seedTemplates(brandId || 1, arr);
       if (data.success) {
         const { created = 0, skipped = 0, failed = 0 } = data.summary || {};
-        showSuccess('templateCreated', `Submitted ${arr.length} · Created ${created} · Already existed ${skipped} · Failed ${failed}`);
+        const errs = (data.results || []).filter(r => r.status === 'error');
+        if (failed > 0 && errs.length) {
+          // Show Meta's actual rejection so it's clear WHY nothing was created.
+          showError('loadingFailed', `Meta rejected ${failed}: ${errs.map(e => `${e.name} — ${e.error}`).join(' | ')}`);
+        } else if (skipped > 0 && created === 0) {
+          showError('loadingFailed', `Already exist on Meta (${skipped}) — nothing new created. Use "Re-submit" to push changed copy.`);
+        } else {
+          showSuccess('templateCreated', `Created ${created} · Already existed ${skipped} · Failed ${failed}`);
+        }
         setSelectedTpls(new Set());
         fetchTemplates();
       } else showError('loadingFailed', data.message || 'Failed to seed');
-    } catch (e) { showError('loadingFailed', e.message || 'Failed to seed'); }
+    } catch (e) { showError('loadingFailed', e?.response?.data?.message || e.message || 'Failed to seed'); }
     markBusy(arr, false);
   };
 
@@ -647,11 +656,16 @@ export function WhatsAppManager() {
       const data = await whatsappService.syncAllTemplates(brandId || 1, arr);
       if (data.success) {
         const { updated = 0, failed = 0 } = data.summary || {};
-        showSuccess('saved', `Re-submitted ${updated} · Failed ${failed}`);
+        const errs = (data.results || []).filter(r => r.status === 'error');
+        if (failed > 0 && errs.length) {
+          showError('updateFailed', `Meta rejected ${failed}: ${errs.map(e => `${e.name} — ${e.error}`).join(' | ')}`);
+        } else {
+          showSuccess('saved', `Re-submitted ${updated} for approval · Failed ${failed}`);
+        }
         setSelectedTpls(new Set());
         fetchTemplates();
       } else showError('updateFailed', data.message || 'Failed to update');
-    } catch (e) { showError('updateFailed', e.message || 'Failed to update'); }
+    } catch (e) { showError('updateFailed', e?.response?.data?.message || e.message || 'Failed to update'); }
     markBusy(arr, false);
   };
 
@@ -1740,6 +1754,10 @@ export function WhatsAppManager() {
                   <button className="was-btn-secondary" onClick={() => { fetchTemplates(); fetchDefaultTemplates(); }} disabled={listLoading}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading...':'Refresh'}
                   </button>
+                  <button className="was-btn-secondary" title="Delete + recreate every default template with the latest copy — use this to replace old versions (e.g. that still show CrossCoin)"
+                    onClick={() => updateNames(defaultTpls.map(d => d.name))}>
+                    Re-submit all
+                  </button>
                   <button className="was-btn-primary" onClick={() => { setForm(EMPTY_FORM); setFormResponse(null); setCreateModal(true); }}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Template
                   </button>
@@ -1806,12 +1824,15 @@ export function WhatsAppManager() {
                           </span>
                         </div>
                         <div className="was-tpl-name">{t.name}{t.isDefault ? '' : ' ·  custom'}</div>
-                        <div className="was-tpl-body">{t.body || '—'}</div>
+                        <div className="was-tpl-body" onClick={() => setViewTpl(t)} title="Click to view full content" style={{cursor:'pointer'}}>{t.body || '—'}</div>
                         <div className="was-tpl-foot">
                           <span className="was-tpl-meta-item">{IC.info}{t.language || 'en'}</span>
                           <span className="was-tpl-meta-item">{IC.tag}{vars} var{vars!==1?'s':''}</span>
                         </div>
                         <div className="was-tpl-actions">
+                          <button className="was-btn-secondary" style={{justifyContent:'center'}} onClick={() => setViewTpl(t)} title="View full content">
+                            View
+                          </button>
                           {busy ? (
                             <button className="was-btn-secondary" style={{flex:1,justifyContent:'center'}} disabled>Working…</button>
                           ) : !created ? (
@@ -2223,6 +2244,105 @@ export function WhatsAppManager() {
             {sendingProduct ? 'Sending...' : selectedProducts.length > 1 ? `Send ${selectedProducts.length} products` : 'Send product'}
           </button>
         </div>
+      </Modal>
+
+      {/* ── Template full-view Modal ── */}
+      <Modal isOpen={!!viewTpl} onClose={() => setViewTpl(null)} title={viewTpl ? viewTpl.name : 'Template'}>
+        {viewTpl && (() => {
+          const cat = (viewTpl.category || '').toLowerCase();
+          const st = viewTpl.status || 'not_created';
+          const stLabel = st === 'not_created' ? 'Not created' : st.charAt(0).toUpperCase() + st.slice(1);
+          const vars = (viewTpl.body || '').match(/\{\{\d+\}\}/g) || [];
+          const uniqVars = [...new Set(vars)].sort();
+          return (
+            <>
+              <div className="modal-body">
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
+                  <span className={`was-cat-badge was-cat--${cat}`}>{catLabel(viewTpl.category)}</span>
+                  <span className={`was-status-badge was-status--${st}`}><span className="was-status-dot" />{stLabel}</span>
+                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.language || 'en'}</span>
+                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
+                </div>
+
+                {/* WhatsApp-style preview */}
+                <div style={{
+                  background:'#e5ddd5', borderRadius:12, padding:16, marginBottom:16,
+                  backgroundImage:'radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px)', backgroundSize:'14px 14px'
+                }}>
+                  <div style={{
+                    background:'#fff', borderRadius:'0 10px 10px 10px', padding:'10px 12px',
+                    maxWidth:340, boxShadow:'0 1px 1px rgba(0,0,0,0.12)', fontSize:13.5, lineHeight:1.5, color:'#111b21'
+                  }}>
+                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{viewTpl.body || '—'}</div>
+                    {viewTpl.footer && (
+                      <div style={{ marginTop:8, fontSize:11.5, color:'#8696a0' }}>{viewTpl.footer}</div>
+                    )}
+                    {!!(viewTpl.buttons && viewTpl.buttons.length) && (
+                      <div style={{ marginTop:8, borderTop:'1px solid #e9edef', paddingTop:6, display:'flex', flexDirection:'column', gap:4 }}>
+                        {viewTpl.buttons.map((b, i) => (
+                          <div key={i} style={{
+                            textAlign:'center', color:'#00a5f4', fontSize:13, fontWeight:500, padding:'6px 0'
+                          }}>
+                            {typeof b === 'string' ? b : (b.text || b)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Raw fields */}
+                <div style={{ display:'flex', flexDirection:'column', gap:10, fontSize:13 }}>
+                  <div>
+                    <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Body</div>
+                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word', background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'#111827' }}>{viewTpl.body || '—'}</div>
+                  </div>
+                  {viewTpl.footer && (
+                    <div>
+                      <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Footer</div>
+                      <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'#111827' }}>{viewTpl.footer}</div>
+                    </div>
+                  )}
+                  {!!(viewTpl.buttons && viewTpl.buttons.length) && (
+                    <div>
+                      <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Buttons</div>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {viewTpl.buttons.map((b, i) => (
+                          <span key={i} style={{ background:'#eef2ff', color:'#4338ca', borderRadius:6, padding:'4px 10px', fontSize:12, fontWeight:500 }}>
+                            {typeof b === 'string' ? b : (b.text || b)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Variables ({uniqVars.length})</div>
+                    {uniqVars.length ? (
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {uniqVars.map(v => (
+                          <span key={v} style={{ background:'#f3f4f6', color:'#374151', borderRadius:6, padding:'4px 10px', fontSize:12, fontFamily:'monospace' }}>{v}</span>
+                        ))}
+                      </div>
+                    ) : <div style={{ color:'#9ca3af', fontSize:12 }}>None</div>}
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                {viewTpl.isDefault && viewTpl.status !== 'not_created' && (
+                  <button className="was-btn-secondary" onClick={() => { updateNames(viewTpl.name); setViewTpl(null); }} title="Delete + recreate for approval">
+                    Re-submit
+                  </button>
+                )}
+                {viewTpl.isDefault && viewTpl.status === 'not_created' && (
+                  <button className="was-btn-primary" onClick={() => { seedNames(viewTpl.name); setViewTpl(null); }}>
+                    Seed
+                  </button>
+                )}
+                <button className="was-btn-secondary" onClick={() => setViewTpl(null)}>Close</button>
+              </div>
+            </>
+          );
+        })()}
       </Modal>
 
     </div>
