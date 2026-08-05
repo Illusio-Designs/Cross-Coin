@@ -9,7 +9,6 @@ export default function PageHero({ eyebrow, title, accent, intro, children }) {
       <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-line text-[10px] tracking-[0.2em] uppercase text-ink-muted">
         <span className="text-ink">Gripzus</span>
         {eyebrow && <span>{eyebrow}</span>}
-        <span className="hidden sm:block">SS26 / Vol.01</span>
       </div>
 
       <div className="wrap pt-10 md:pt-16 pb-9 md:pb-14">

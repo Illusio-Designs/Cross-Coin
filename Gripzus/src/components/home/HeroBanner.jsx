@@ -30,8 +30,7 @@ export default function HeroBanner({ slides = [] }) {
       {/* Top meta rule — coordinates-style labels */}
       <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-line text-[10px] tracking-[0.2em] uppercase text-ink-muted">
         <span className="text-ink">Gripzus — Grip Socks</span>
-        <span className="hidden sm:block">Engineered in Morbi, IN</span>
-        <span>SS26 / Vol.01</span>
+        <span>Engineered in Morbi, IN</span>
       </div>
 
       <div className="wrap grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pt-9 pb-11 md:pt-14 md:pb-16 items-end">
@@ -71,29 +70,29 @@ export default function HeroBanner({ slides = [] }) {
           </div>
         </div>
 
-        {/* Right — framed image tile with an index badge + caption bar */}
+        {/* Right — clean image (no frame/partition), slider controls on TOP */}
         <div className="lg:col-span-5 order-1 lg:order-2">
-          <div className="relative aspect-[4/5] border border-line overflow-hidden bg-paper-warm">
+          <div className="relative aspect-[4/5] overflow-hidden bg-paper-warm">
             {has ? slides.map((sl, i) => (
               <img key={sl.id ?? i} src={sl.image} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1100ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
             )) : <div className="absolute inset-0 bg-paper-deep animate-pulse" />}
 
-            <div className="absolute top-0 left-0 bg-ink text-paper text-[10px] tracking-[0.2em] uppercase px-3 py-1.5 tabular-nums">
-              {idx} / {String(total).padStart(2, '0')}
-            </div>
-          </div>
+            {/* Scrim so the top controls stay legible on any image */}
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/45 to-transparent pointer-events-none" />
 
-          {/* Caption bar — one hairline box continuous with the tile */}
-          <div className="flex items-center justify-between gap-3 border border-t-0 border-line px-4 py-3">
-            <span className="text-[12px] text-ink truncate">{has ? (s.title || 'Gripzus') : 'Loading…'}</span>
-            {slides.length > 1 && (
-              <div className="flex items-center gap-3 shrink-0">
-                <button onClick={() => go(current - 1)} aria-label="Previous" className="text-ink-muted hover:text-ink transition-colors text-lg leading-none">‹</button>
-                <span className="text-[10px] tabular-nums text-ink-muted">{String(current + 1).padStart(2, '0')}—{String(slides.length).padStart(2, '0')}</span>
-                <button onClick={() => go(current + 1)} aria-label="Next" className="text-ink-muted hover:text-ink transition-colors text-lg leading-none">›</button>
-              </div>
-            )}
+            {/* Slider content on TOP: index + title left, prev/next right */}
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 px-4 py-3.5">
+              <span className="text-paper text-[11px] tracking-[0.16em] uppercase tabular-nums truncate">
+                {idx} / {String(total).padStart(2, '0')}{has && s.title ? ` · ${s.title}` : ''}
+              </span>
+              {slides.length > 1 && (
+                <div className="flex items-center gap-3 shrink-0">
+                  <button onClick={() => go(current - 1)} aria-label="Previous" className="text-paper/80 hover:text-paper transition-colors text-xl leading-none">‹</button>
+                  <button onClick={() => go(current + 1)} aria-label="Next" className="text-paper/80 hover:text-paper transition-colors text-xl leading-none">›</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -56,8 +56,7 @@ export default function Footer() {
       {/* Architectural top meta rule */}
       <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-paper/15 text-[10px] tracking-[0.2em] uppercase text-paper/45">
         <span className="text-paper/70">Gripzus — Grip Socks</span>
-        <span className="hidden sm:block">Morbi, Gujarat · IN</span>
-        <span>SS26 / Vol.01</span>
+        <span>Morbi, Gujarat · IN</span>
       </div>
       <div className="wrap pt-14 md:pt-20 pb-8">
 
