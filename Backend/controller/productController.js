@@ -1619,6 +1619,11 @@ module.exports.getProductsByCategory = async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["createdAt", "DESC"]],
+      // Without distinct, the one-to-many joins (variations/images) multiply
+      // rows, so `count` (and totalPages) came out inflated AND the query was
+      // heavier. distinct fixes the count and trims the work — same products
+      // returned, so nothing on the page changes visually.
+      distinct: true,
     });
 
     if (!products.count) {

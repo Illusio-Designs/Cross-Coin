@@ -21,6 +21,17 @@ const INDEXES = {
   products: [
     { name: 'idx_products_created_at', columns: ['createdAt'] },
     { name: 'idx_products_status', columns: ['status'] },
+    // Best-sellers filters WHERE total_sold>0 and ORDER BY total_sold DESC —
+    // without this it filesorts the whole table every call.
+    { name: 'idx_products_total_sold', columns: ['total_sold'] },
+    // Category page (getProductsByCategory) filters WHERE categoryId=?.
+    { name: 'idx_products_category', columns: ['categoryId'] },
+  ],
+  // Review listings filter by product (and often status); the reviews table had
+  // no indexes at all. One composite covers WHERE productId=? and
+  // WHERE productId=? AND status=? (productId is the leading column).
+  reviews: [
+    { name: 'idx_reviews_product_status', columns: ['productId', 'status'] },
   ],
   // WhatsApp inbox: the conversation list sorts by last_message_at DESC (loaded
   // on open AND on every long-poll reconnect), messages load by conversation_id,
