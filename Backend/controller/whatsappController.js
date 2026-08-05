@@ -114,12 +114,14 @@ async function detectBrandFromText(text) {
   return null;
 }
 
-// One-time (and re-runnable) backfill: re-attribute existing conversations that
-// are still tagged with the shared default brand to the brand actually NAMED in
-// their first inbound message. Older chats were all created before text-based
-// detection existed, so they show the wrong (CrossCoin) badge. Returns the count
-// updated. Chats whose first message names no brand (e.g. CrossCoin's own "Hi! I
-// need help.") stay on the default — correct.
+// Re-attribute conversations still tagged with the shared default brand to the
+// brand they actually belong to. Two signals, in priority order:
+//   1) ANY inbound text that names a brand (scan every message, not just the
+//      first — the brand word is often not in the opening "Hi" message).
+//   2) Else the brand of the customer's most recent order (matched by phone).
+// Chats with neither signal (generic message, no orders) correctly stay on the
+// default — a shared number has no other way to know their brand. Idempotent and
+// re-runnable; returns the count changed.
 exports.reattributeBrands = async () => {
   const DEFAULT_BRAND = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
   // Both models live in whatsappConversationModel.js — there is no separate
@@ -128,18 +130,32 @@ exports.reattributeBrands = async () => {
   const { WhatsappConversation, WhatsappMessage } = require('../model/whatsappConversationModel.js');
   const convs = await WhatsappConversation.findAll({
     where: { brand_id: DEFAULT_BRAND },
-    attributes: ['id', 'brand_id'],
+    attributes: ['id', 'brand_id', 'customer_phone'],
   });
   let updated = 0;
   for (const conv of convs) {
     try {
-      const msg = await WhatsappMessage.findOne({
+      let brandId = null;
+
+      // 1) Scan ALL inbound text messages for a brand name.
+      const msgs = await WhatsappMessage.findAll({
         where: { conversation_id: conv.id, direction: 'inbound', type: 'text' },
         order: [['id', 'ASC']],
         attributes: ['body'],
       });
-      if (!msg?.body) continue;
-      const brandId = await detectBrandFromText(msg.body);
+      for (const m of msgs) {
+        const b = await detectBrandFromText(m.body);
+        if (b) { brandId = b; break; }
+      }
+
+      // 2) Else fall back to the brand of their most recent order (by phone).
+      //    resolveBrandByPhone returns DEFAULT_BRAND when no order matches, so
+      //    only apply a real, non-default match.
+      if (!brandId) {
+        const b = await resolveBrandByPhone(conv.customer_phone);
+        if (b && b !== DEFAULT_BRAND) brandId = b;
+      }
+
       if (brandId && brandId !== conv.brand_id) {
         await conv.update({ brand_id: brandId });
         updated++;
