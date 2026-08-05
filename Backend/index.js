@@ -519,6 +519,28 @@ const startServer = async () => {
             logger.error('whatsapp_messages.type ENUM migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: whatsapp_conversations.status ENUM (+resolved) ─
+        // The "Resolve" button sets status='resolved'; if the column was created
+        // before that value existed, MySQL silently rejects/truncates the update
+        // and the conversation never resolves. Ensure the ENUM has both values.
+        try {
+            const [sc] = await sequelize.query(
+                `SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_conversations' AND COLUMN_NAME = 'status'`
+            );
+            const colType = sc?.[0]?.COLUMN_TYPE || '';
+            if (colType && (!colType.includes("'open'") || !colType.includes("'resolved'"))) {
+                logger.info('Migrating: ensuring whatsapp_conversations.status ENUM has open/resolved…');
+                await sequelize.query(
+                    `ALTER TABLE whatsapp_conversations MODIFY COLUMN status
+                     ENUM('open','resolved') NOT NULL DEFAULT 'open'`
+                );
+                logger.info('✓ whatsapp_conversations.status ENUM updated');
+            }
+        } catch (err) {
+            logger.error('whatsapp_conversations.status ENUM migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: whatsapp_conversations.awaiting_address_for ──
         // Tracks the order awaiting a corrected COD address (Wrong Address flow).
         try {

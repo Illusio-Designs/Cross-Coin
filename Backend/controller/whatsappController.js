@@ -711,9 +711,10 @@ exports.sendMediaReply = async (req, res) => {
 exports.resolveConversation = async (req, res) => {
   try {
     const { id } = req.params;
-    const [updated] = await WhatsappConversation.update({ status: 'resolved' }, { where: { id } });
-    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    res.json({ success: true });
+    const conv = await WhatsappConversation.findByPk(id);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    await conv.update({ status: 'resolved' });
+    res.json({ success: true, status: conv.status });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
