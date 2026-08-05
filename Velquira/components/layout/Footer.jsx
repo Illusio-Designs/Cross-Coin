@@ -34,7 +34,7 @@ export default function Footer() {
           <div className="socials">
             <a href="https://www.instagram.com/crosscoin99/?igsh=d2FiY29iemhtb2Nl" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="Instagram" size={18} /></a>
             <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="Facebook" size={18} /></a>
-            <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
+            <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
           </div>
           <span className="vq-foot-flourish" aria-hidden />
         </div>

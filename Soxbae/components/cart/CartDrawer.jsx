@@ -597,7 +597,7 @@ export default function CartDrawer() {
                 </button>
               )}
 
-              <a className="cd-whatsapp" href="https://wa.me/919712891700?text=Hi%2C%20I%20need%20help%20with%20my%20Soxbae%20order" target="_blank" rel="noopener noreferrer">
+              <a className="cd-whatsapp" href="https://wa.me/917434834000?text=Hi%2C%20I%20need%20help%20with%20my%20Soxbae%20order" target="_blank" rel="noopener noreferrer">
                 <Icon name="Phone" size={14} /> Need help? Chat on WhatsApp
               </a>
 

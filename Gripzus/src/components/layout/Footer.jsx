@@ -27,7 +27,7 @@ function PinIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill
 const SOCIALS = [
   { label: 'Instagram', href: 'https://instagram.com/gripzus', Icon: IgIcon },
   { label: 'Facebook',  href: 'https://facebook.com/gripzus',  Icon: FbIcon },
-  { label: 'WhatsApp',  href: 'https://wa.me/919712891700',    Icon: WaIcon },
+  { label: 'WhatsApp',  href: 'https://wa.me/917434834000',    Icon: WaIcon },
 ];
 
 function Column({ title, links }) {

@@ -125,7 +125,7 @@ export function ContactPageClient() {
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
                   <Facebook size={16} />
                 </a>
-                <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
+                <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-brand-black transition-all hover:bg-brand-black hover:text-white hover:border-brand-black">
                   <WhatsAppIcon size={16} />
                 </a>

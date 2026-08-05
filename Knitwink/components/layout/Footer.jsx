@@ -54,7 +54,7 @@ export function Footer() {
               {[
                 { icon: Instagram,    href: 'https://www.instagram.com/knitwink/', label: 'Instagram' },
                 { icon: Facebook,     href: 'https://www.facebook.com/profile.php?id=61592007865725',  label: 'Facebook' },
-                { icon: WhatsAppIcon, href: 'https://wa.me/919712891700',     label: 'WhatsApp' },
+                { icon: WhatsAppIcon, href: 'https://wa.me/917434834000',     label: 'WhatsApp' },
               ].map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}

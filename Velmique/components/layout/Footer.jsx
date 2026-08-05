@@ -14,7 +14,7 @@ function WhatsAppIcon({ size = 14 }) {
 const SOCIAL_LINKS = [
   { Icon: Instagram,    href: 'https://www.instagram.com/velmique_perfume/', label: 'Instagram' },
   { Icon: Facebook,     href: 'https://www.facebook.com/profile.php?id=61589512171604',  label: 'Facebook'  },
-  { Icon: WhatsAppIcon, href: 'https://wa.me/919712891700',       label: 'WhatsApp'  },
+  { Icon: WhatsAppIcon, href: 'https://wa.me/917434834000',       label: 'WhatsApp'  },
 ];
 
 export default function Footer() {

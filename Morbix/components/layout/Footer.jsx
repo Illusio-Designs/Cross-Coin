@@ -34,7 +34,7 @@ export default function Footer() {
             <div className="socials">
               <a href="https://www.instagram.com/morb.ix_socks/" target="_blank" rel="noopener noreferrer" aria-label="Morbix on Instagram"><Icon name="Instagram" size={18} /></a>
               <a href="https://www.facebook.com/profile.php?id=61584727552983" target="_blank" rel="noopener noreferrer" aria-label="Morbix on Facebook"><Icon name="Facebook" size={18} /></a>
-              <a href="https://wa.me/919712891700" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
+              <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="WhatsApp" size={18} /></a>
             </div>
           </div>
 
