@@ -109,7 +109,13 @@ export default function ProductsPage() {
       }
       const cat = categories.find((c) => c.slug === activeCat || c.name === activeCat);
       if (!cat) return getPublicProducts({ limit: 200 }); // unknown slug → show all
-      return getProductsByCategory(cat.name);             // always the real name
+      // Use the rich catalog endpoint filtered by category ID — same data as
+      // "All", so colour variants are present and expand into their own cards.
+      // (The category-embedded products lack variation/colour data and collapse
+      // to a single card, which is why a collection showed only one product.)
+      return cat.id != null
+        ? getPublicProducts({ category: cat.id, limit: 200 })
+        : getProductsByCategory(cat.name);
     };
     run()
       .then((list) => { if (alive) setProducts(Array.isArray(list) ? list : []); })
