@@ -326,7 +326,7 @@ export default function ProductDetail() {
               {product.colors?.length > 0 && (
                 <div className="mb-7">
                   <p className="eyebrow mb-3">Colour — <span className="text-ink">{colorLabel}</span></p>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap gap-2">
                     {product.colors.map((c) =>
                       c.packColors ? (
                         // Multi-colour pack — all colours shown together in one box
@@ -335,7 +335,7 @@ export default function ProductDetail() {
                           onClick={() => setColor(c.name)}
                           title={c.name}
                           aria-label={`Pack of ${c.packColors.length}`}
-                          className={`flex h-12 items-center gap-1.5 rounded-sm border px-3 transition-all ${
+                          className={`flex h-8 items-center gap-1 border px-2 transition-all ${
                             color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
                           }`}
                         >
@@ -343,7 +343,7 @@ export default function ProductDetail() {
                             <span
                               key={pc.name}
                               title={pc.name}
-                              className="h-6 w-6 rounded-full border border-line"
+                              className="h-4 w-4 border border-line"
                               style={{ backgroundColor: pc.hex }}
                             />
                           ))}
@@ -354,7 +354,7 @@ export default function ProductDetail() {
                           onClick={() => setColor(c.name)}
                           title={c.name}
                           aria-label={c.name}
-                          className={`w-10 h-10 rounded-full border transition-all ${
+                          className={`w-7 h-7 border transition-all ${
                             color === c.name ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
                           }`}
                           style={{ backgroundColor: c.hex }}
