@@ -638,7 +638,14 @@ class IThinkService {
       };
 
       const response = await this.axiosInstance.post('/api/order/cancel.json', payload);
-      logger.debug('Cancel response:', JSON.stringify(response.data, null, 2));
+      // iThink returns HTTP 200 even when the cancel is rejected, so inspect the
+      // body. Log the raw response so the exact shape is visible in production.
+      logger.info(`iThink cancel response for AWB ${awbStr}: ` + JSON.stringify(response.data).slice(0, 400));
+      const body = response.data || {};
+      const status = String(body.status ?? '').toLowerCase();
+      if (status && !/success|200/.test(status)) {
+        throw new Error(body.message || body.status_message || body.remark || `iThink cancel rejected (status: ${body.status})`);
+      }
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Cancel Order');

@@ -224,26 +224,32 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
     // orders go to iThink, FShip to FShip. The outcome is recorded on the
     // shipment so staff can see whether the courier-side cancel actually landed
     // (and cancel it manually in the courier panel if it didn't).
-    if (order.fship_waybill) {
-      const waybill = order.fship_waybill;
-      setImmediate(async () => {
-        const { OrderShipment } = require('../model/orderShipmentModel.js');
-        try {
-          const { resolveProviderForOrder } = require('../controller/orderShippingController.js');
-          const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-          await provider.cancelOrder(waybill, reason || 'Order cancelled');
-          logger.info(`✅ ${providerName} cancel confirmed for ${order.order_number} (AWB ${waybill})`);
-          try {
-            await OrderShipment.update({ sync_status: 'cancelled', sync_error: null }, { where: { order_id: order.id } });
-          } catch (_) { /* shipment row optional */ }
-        } catch (e) {
-          logger.error(`⚠️ Courier cancel FAILED for ${order.order_number} (AWB ${waybill}) — cancel it manually in the courier panel: ${e.message}`);
-          try {
-            await OrderShipment.update({ sync_error: `Courier cancel failed: ${e.message}` }, { where: { order_id: order.id } });
-          } catch (_) { /* shipment row optional */ }
+    setImmediate(async () => {
+      const { OrderShipment } = require('../model/orderShipmentModel.js');
+      // The AWB may live on the order row OR only in order_shipments — check both,
+      // otherwise the courier-side cancel silently gets skipped and the order
+      // stays active in iThink even though it's cancelled in our DB.
+      let waybill = order.fship_waybill || null;
+      try {
+        if (!waybill) {
+          const shp = await OrderShipment.findOne({ where: { order_id: order.id }, attributes: ['waybill', 'tracking_number'] });
+          waybill = shp?.waybill || shp?.tracking_number || null;
         }
-      });
-    }
+        if (!waybill) return; // never synced/booked — nothing to cancel at the courier
+        const { resolveProviderForOrder } = require('../controller/orderShippingController.js');
+        const { service: provider, name: providerName } = await resolveProviderForOrder(order);
+        await provider.cancelOrder(waybill, reason || 'Order cancelled');
+        logger.info(`✅ ${providerName} cancel confirmed for ${order.order_number} (AWB ${waybill})`);
+        try {
+          await OrderShipment.update({ sync_status: 'cancelled', sync_error: null }, { where: { order_id: order.id } });
+        } catch (_) { /* shipment row optional */ }
+      } catch (e) {
+        logger.error(`⚠️ Courier cancel FAILED for ${order.order_number} (AWB ${waybill || 'n/a'}) — cancel it manually in the courier panel: ${e.message}`);
+        try {
+          await OrderShipment.update({ sync_error: `Courier cancel failed: ${e.message}` }, { where: { order_id: order.id } });
+        } catch (_) { /* shipment row optional */ }
+      }
+    });
 
     // Auto-refund prepaid orders
     if (order.payment_status === 'refund_pending') {
