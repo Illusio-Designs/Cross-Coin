@@ -23,6 +23,7 @@ router.post('/webhook', verifyWebhookSignature('whatsapp'), ctrl.receiveWebhook)
 router.post('/customer/contact', ctrl.customerContact);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
+router.post('/reattribute-brands', isAuthenticated, isAdmin, ctrl.reattributeBrandsHandler);
 router.get('/stats', isAuthenticated, isWhatsappManager, ctrl.getStats);
 router.get('/stats/sla', isAuthenticated, isWhatsappManager, ctrl.getSLAStats);
 

@@ -80,6 +80,49 @@ async function detectBrandFromText(text) {
   return null;
 }
 
+// One-time (and re-runnable) backfill: re-attribute existing conversations that
+// are still tagged with the shared default brand to the brand actually NAMED in
+// their first inbound message. Older chats were all created before text-based
+// detection existed, so they show the wrong (CrossCoin) badge. Returns the count
+// updated. Chats whose first message names no brand (e.g. CrossCoin's own "Hi! I
+// need help.") stay on the default — correct.
+exports.reattributeBrands = async () => {
+  const DEFAULT_BRAND = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
+  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+  const { WhatsappMessage } = require('../model/whatsappMessageModel.js');
+  const convs = await WhatsappConversation.findAll({
+    where: { brand_id: DEFAULT_BRAND },
+    attributes: ['id', 'brand_id'],
+  });
+  let updated = 0;
+  for (const conv of convs) {
+    try {
+      const msg = await WhatsappMessage.findOne({
+        where: { conversation_id: conv.id, direction: 'inbound', type: 'text' },
+        order: [['id', 'ASC']],
+        attributes: ['body'],
+      });
+      if (!msg?.body) continue;
+      const brandId = await detectBrandFromText(msg.body);
+      if (brandId && brandId !== conv.brand_id) {
+        await conv.update({ brand_id: brandId });
+        updated++;
+      }
+    } catch (_) { /* skip a bad row, keep going */ }
+  }
+  return updated;
+};
+
+// POST /api/whatsapp/reattribute-brands — admin trigger for the backfill above.
+exports.reattributeBrandsHandler = async (req, res) => {
+  try {
+    const updated = await exports.reattributeBrands();
+    res.json({ success: true, updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
 // ─── Webhook: verify (GET) ────────────────────────────────────────────────────
 exports.verifyWebhook = (req, res) => {
   const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'crosscoin_wa_verify';

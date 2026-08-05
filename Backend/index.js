@@ -580,6 +580,26 @@ const startServer = async () => {
         await ensureIndex('whatsapp_conversations', 'idx_wac_brand_last', 'brand_id, last_message_at');
         await ensureIndex('whatsapp_conversations', 'idx_wac_last', 'last_message_at');
 
+        // ── One-time backfill: re-attribute existing WhatsApp conversations ──
+        // Older chats were all tagged with the shared brand (CrossCoin); tag
+        // each with the brand named in its first message. Guarded by a flag row
+        // so it runs exactly once (kept separate from schema_version, whose
+        // single-row check must not see extra rows).
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
+            );
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v1' LIMIT 1`);
+            if (!done.length) {
+                const { reattributeBrands } = require('./controller/whatsappController.js');
+                const n = await reattributeBrands();
+                logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v1')`);
+            }
+        } catch (err) {
+            logger.error('WhatsApp brand backfill failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;
