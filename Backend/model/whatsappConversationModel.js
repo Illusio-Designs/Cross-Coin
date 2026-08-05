@@ -25,7 +25,24 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
   // NEW delivery address (after they tapped "Wrong Address"). Their next text
   // message is then captured as the corrected address for that order.
   awaiting_address_for: { type: DataTypes.STRING(50), allowNull: true },
-}, { tableName: 'whatsapp_conversations', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
+}, {
+  tableName: 'whatsapp_conversations',
+  timestamps: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_unicode_ci',
+  // Inbox list queries filter by brand_id/status and always sort by
+  // last_message_at DESC (getConversations + the live long-poll stream, which
+  // re-runs on every reconnect). The webhook routes inbound messages by phone.
+  // Without these the DB does a full scan + filesort every time — the main
+  // cause of slow inbox loading. NOTE: production runs migrations, not
+  // sync({alter}), so these are also mirrored in scripts/add-perf-indexes.js.
+  indexes: [
+    { name: 'idx_wa_conv_brand_status_lastmsg', fields: ['brand_id', 'status', 'last_message_at'] },
+    { name: 'idx_wa_conv_status_lastmsg',       fields: ['status', 'last_message_at'] },
+    { name: 'idx_wa_conv_lastmsg',              fields: ['last_message_at'] },
+    { name: 'idx_wa_conv_phone_brand',          fields: ['customer_phone', 'brand_id'] },
+  ],
+});
 
 const WhatsappMessage = sequelize.define('WhatsappMessage', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -37,7 +54,20 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   quoted_message_id: { type: DataTypes.INTEGER, allowNull: true, comment: 'ID of the message being replied to' },
   status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received'), defaultValue: 'sent' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
-}, { tableName: 'whatsapp_messages', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
+}, {
+  tableName: 'whatsapp_messages',
+  timestamps: true,
+  charset: 'utf8mb4',
+  collate: 'utf8mb4_unicode_ci',
+  // Opening a chat loads messages by conversation_id ordered by id (getMessages,
+  // incl. "load older" with id < before). Status webhooks (delivered/read) and
+  // reply-quote lookups hit wa_message_id on every receipt. Both were full table
+  // scans over the whole message history before these indexes.
+  indexes: [
+    { name: 'idx_wa_msg_conv_id',   fields: ['conversation_id', 'id'] },
+    { name: 'idx_wa_msg_wa_msg_id', fields: ['wa_message_id'] },
+  ],
+});
 
 // Associations
 WhatsappConversation.hasMany(WhatsappMessage, { foreignKey: 'conversation_id', as: 'Messages', onDelete: 'CASCADE' });

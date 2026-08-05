@@ -20,6 +20,21 @@ const INDEXES = {
     { name: 'idx_products_created_at', columns: ['createdAt'] },
     { name: 'idx_products_status', columns: ['status'] },
   ],
+  // WhatsApp inbox: the conversation list sorts by last_message_at DESC (loaded
+  // on open AND on every long-poll reconnect), messages load by conversation_id,
+  // and webhooks look up by phone / wa_message_id. All were full scans + filesort
+  // before — the cause of the slow WhatsApp loading. Mirrors the `indexes` in
+  // model/whatsappConversationModel.js.
+  whatsapp_conversations: [
+    { name: 'idx_wa_conv_brand_status_lastmsg', columns: ['brand_id', 'status', 'last_message_at'] },
+    { name: 'idx_wa_conv_status_lastmsg', columns: ['status', 'last_message_at'] },
+    { name: 'idx_wa_conv_lastmsg', columns: ['last_message_at'] },
+    { name: 'idx_wa_conv_phone_brand', columns: ['customer_phone', 'brand_id'] },
+  ],
+  whatsapp_messages: [
+    { name: 'idx_wa_msg_conv_id', columns: ['conversation_id', 'id'] },
+    { name: 'idx_wa_msg_wa_msg_id', columns: ['wa_message_id'] },
+  ],
 };
 
 async function indexExists(table, name) {
