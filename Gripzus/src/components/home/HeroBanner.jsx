@@ -20,7 +20,37 @@ export default function HeroBanner({ slides = [] }) {
     return () => clearInterval(t);
   }, [slides.length]);
 
-  const s = has ? slides[Math.min(current, slides.length - 1)] : {};
+  // Until the slider API responds, show a shimmer skeleton — never placeholder copy.
+  if (!has) {
+    return (
+      <section className="relative w-full overflow-hidden bg-paper-warm">
+        <div className="relative h-[82vh] min-h-[540px] max-h-[840px] w-full">
+          <div className="absolute inset-0 flex items-end">
+            <div className="wrap w-full pb-14 md:pb-20">
+              <div className="max-w-2xl">
+                <div className="gz-sk h-3 w-40 mb-6" />
+                <div className="gz-sk h-14 md:h-[4.5rem] w-4/5 mb-4" />
+                <div className="gz-sk h-14 md:h-[4.5rem] w-3/5 mb-7" />
+                <div className="gz-sk h-4 w-64 mb-8" />
+                <div className="gz-sk h-12 w-48" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <style jsx>{`
+          .gz-sk {
+            background: linear-gradient(100deg, var(--paper-warm) 20%, var(--paper-deep) 40%, var(--paper-warm) 60%);
+            background-size: 200% 100%;
+            animation: gzShimmer 1.4s ease-in-out infinite;
+          }
+          @keyframes gzShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+          @media (prefers-reduced-motion: reduce) { .gz-sk { animation: none; } }
+        `}</style>
+      </section>
+    );
+  }
+
+  const s = slides[Math.min(current, slides.length - 1)];
   const idx = String((current % total) + 1).padStart(2, '0');
   const words = (s.title || 'Hold your ground.').split(' ');
 
