@@ -52,7 +52,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-ink text-paper mt-8">
+    <footer className="bg-ink text-paper">
       {/* Architectural top meta rule */}
       <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-paper/15 text-[10px] tracking-[0.2em] uppercase text-paper/45">
         <span className="text-paper/70">Gripzus — Grip Socks</span>
