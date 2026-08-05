@@ -1841,6 +1841,70 @@ const WA_MEDIA_CACHE_DIR = _mediaPath.join(
 );
 try { _mediaFs.mkdirSync(WA_MEDIA_CACHE_DIR, { recursive: true }); } catch (_) {}
 
+// ── Media cache size/age cap ──────────────────────────────────────────────────
+// The cache is a convenience, not storage — bound it so it can never fill the
+// disk. Prune runs lazily (throttled to ~1/hour), triggered by cache activity,
+// so there's no always-on timer. Tunable via env.
+const WA_MEDIA_MAX_BYTES = Number(process.env.WA_MEDIA_MAX_BYTES) || 500 * 1024 * 1024; // 500 MB
+const WA_MEDIA_MAX_AGE_MS = Number(process.env.WA_MEDIA_MAX_AGE_DAYS || 30) * 24 * 60 * 60 * 1000;
+const WA_MEDIA_PRUNE_EVERY_MS = 60 * 60 * 1000; // at most once an hour
+let _mediaLastPrune = 0;
+let _mediaPruning = false;
+
+async function pruneMediaCache() {
+  if (_mediaPruning) return;
+  _mediaPruning = true;
+  try {
+    const fsp = _mediaFs.promises;
+    const names = await fsp.readdir(WA_MEDIA_CACHE_DIR);
+    const now = Date.now();
+    const entries = [];
+    let total = 0;
+    for (const name of names) {
+      const full = _mediaPath.join(WA_MEDIA_CACHE_DIR, name);
+      let st; try { st = await fsp.stat(full); } catch { continue; }
+      if (!st.isFile()) continue;
+      // Sweep orphaned temp files (a crash mid-download) after 10 minutes.
+      if (name.endsWith('.tmp')) {
+        if (now - st.mtimeMs > 10 * 60 * 1000) { try { await fsp.unlink(full); } catch {} }
+        continue;
+      }
+      // Cache entries are the bytes files (no extension); .ct sidecars ride along.
+      if (name.endsWith('.ct')) continue;
+      total += st.size;
+      entries.push({ full, size: st.size, mtime: st.mtimeMs });
+    }
+    // 1) Age out anything older than the max age (removes bytes + its .ct).
+    for (const e of entries) {
+      if (now - e.mtime > WA_MEDIA_MAX_AGE_MS) {
+        try { await fsp.unlink(e.full); total -= e.size; e.deleted = true; } catch {}
+        try { await fsp.unlink(e.full + '.ct'); } catch {}
+      }
+    }
+    // 2) If still over the size cap, delete oldest-first until under it.
+    if (total > WA_MEDIA_MAX_BYTES) {
+      const live = entries.filter(e => !e.deleted).sort((a, b) => a.mtime - b.mtime);
+      for (const e of live) {
+        if (total <= WA_MEDIA_MAX_BYTES) break;
+        try { await fsp.unlink(e.full); total -= e.size; } catch {}
+        try { await fsp.unlink(e.full + '.ct'); } catch {}
+      }
+    }
+  } catch (err) {
+    logger.warn('[MediaCache] prune failed: ' + err.message);
+  } finally {
+    _mediaPruning = false;
+  }
+}
+
+// Kick a prune at most once an hour, off the request path (never awaited).
+function maybePruneMediaCache() {
+  const now = Date.now();
+  if (now - _mediaLastPrune < WA_MEDIA_PRUNE_EVERY_MS) return;
+  _mediaLastPrune = now;
+  setImmediate(() => { pruneMediaCache().catch(() => {}); });
+}
+
 // The stable Meta media id is the cache key. Full CDN URLs expire but carry the
 // id in the `mid` param; bare ids are used directly; anything else is hashed.
 function waMediaCacheKey(decoded) {
@@ -1864,6 +1928,7 @@ function waMediaCachePaths(key) {
 }
 
 exports.proxyMedia = async (req, res) => {
+  maybePruneMediaCache(); // bound the cache size; runs off-thread, at most 1/hour
   try {
     const { mediaId } = req.params;
     const brandId = parseInt(req.query.brandId) || 1;
