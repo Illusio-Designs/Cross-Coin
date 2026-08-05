@@ -160,7 +160,12 @@ function getProxyUrl(mediaId, brandId = 1) {
   return `${API_BASE}/api/whatsapp/media/${encoded}?brandId=${brandId}&token=${encodeURIComponent(token)}`;
 }
 
-// WhatsApp-style audio player ï¿½ fetches as blob so auth token works, plays inline
+// WhatsApp-style audio player — fetches as blob so the auth token works, plays
+// inline. WhatsApp voice notes are audio/ogg;codecs=opus, which has two quirks:
+//   1) Chrome/Firefox report duration = Infinity until you seek to the end
+//      (the "seek-to-end" trick below forces a real duration + working seekbar).
+//   2) Safari/iOS can't decode opus at all — we detect that and fall back to a
+//      download link so the note is never a silent dead end.
 function AudioPlayer({ src }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -168,14 +173,17 @@ function AudioPlayer({ src }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [blobUrl, setBlobUrl] = useState(null);
-  const [loadState, setLoadState] = useState('loading');
+  const [loadState, setLoadState] = useState('loading'); // loading | ready | error | unsupported
+  const [blobType, setBlobType] = useState('');
 
   const blobUrlRef = useRef(null);
+  const durationFixedRef = useRef(false);
 
   useEffect(() => {
     if (!src) return;
     setLoadState('loading');
     setBlobUrl(null);
+    durationFixedRef.current = false;
     let cancelled = false;
     fetch(src)
       .then(r => { if (!r.ok) throw new Error('Failed'); return r.blob(); })
@@ -183,8 +191,15 @@ function AudioPlayer({ src }) {
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
         blobUrlRef.current = url;
+        setBlobType(blob.type || '');
         setBlobUrl(url);
-        setLoadState('ready');
+        // Can this browser actually decode the audio? (Safari/iOS can't do opus.)
+        let playable = true;
+        if (blob.type && typeof document !== 'undefined') {
+          const probe = document.createElement('audio');
+          playable = probe.canPlayType(blob.type) !== '';
+        }
+        setLoadState(playable ? 'ready' : 'unsupported');
       })
       .catch(() => { if (!cancelled) setLoadState('error'); });
     return () => {
@@ -201,20 +216,42 @@ function AudioPlayer({ src }) {
   const toggle = () => {
     const a = audioRef.current;
     if (!a || loadState !== 'ready') return;
-    playing ? a.pause() : a.play().catch(() => {});
+    playing ? a.pause() : a.play().catch(() => setLoadState('unsupported'));
   };
 
-  const fmt = s => (!s || isNaN(s)) ? '0:00' : `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+  const fmt = s => (!s || isNaN(s) || !isFinite(s)) ? '0:00' : `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+
+  // Opus-in-ogg often reports duration=Infinity in Chromium. Seeking to a huge
+  // time forces the browser to scan the file and compute the true duration,
+  // then we snap back to 0. Runs once per clip.
+  const resolveDuration = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (isFinite(a.duration) && a.duration > 0) { setDuration(a.duration); return; }
+    if (durationFixedRef.current) return;
+    durationFixedRef.current = true;
+    const onSeeked = () => {
+      a.removeEventListener('timeupdate', onSeeked);
+      a.currentTime = 0;
+      if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration);
+    };
+    a.addEventListener('timeupdate', onSeeked);
+    try { a.currentTime = 1e101; } catch { /* ignore */ }
+  };
 
   const seek = e => {
+    const a = audioRef.current;
+    if (!a || !isFinite(duration) || duration <= 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    if (audioRef.current) audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
+    a.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
   };
 
   const bars = useMemo(() => {
     const seed = (src||'').split('').reduce((a,c) => a + c.charCodeAt(0), 0);
     return Array.from({length:30}, (_,i) => Math.max(8, Math.min(20 + ((seed*(i+1)*7919)%60), 28)));
   }, [src]);
+
+  const dlExt = /ogg|opus/i.test(blobType) ? 'ogg' : /mpeg|mp3/i.test(blobType) ? 'mp3' : /mp4|aac|m4a/i.test(blobType) ? 'm4a' : 'audio';
 
   if (loadState === 'error') return (
     <div style={{fontSize:12, color:'#9ca3af', fontStyle:'italic', display:'flex', alignItems:'center', gap:6}}>
@@ -223,15 +260,28 @@ function AudioPlayer({ src }) {
     </div>
   );
 
+  // Browser can't decode this codec (Safari/iOS + opus) — offer a download so
+  // the note can be opened in an app that supports it.
+  if (loadState === 'unsupported' && blobUrl) return (
+    <a href={blobUrl} download={`voice-note.${dlExt}`}
+       style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#0b7a5e', textDecoration:'none',
+               background:'#e8f5f0', border:'1px solid #b8e0d4', borderRadius:8, padding:'8px 12px'}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Download voice note
+    </a>
+  );
+
   return (
     <div style={{display:'flex', alignItems:'center', gap:8, minWidth:220, maxWidth:280}}>
       {blobUrl && (
-        <audio ref={audioRef} src={blobUrl}
+        <audio ref={audioRef} src={blobUrl} preload="metadata"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0); }}
-          onTimeUpdate={() => { const a = audioRef.current; if (a?.duration) { setCurrentTime(a.currentTime); setProgress(a.currentTime/a.duration); } }}
-          onLoadedMetadata={() => { if (audioRef.current) setDuration(audioRef.current.duration); }}
+          onError={() => setLoadState('unsupported')}
+          onTimeUpdate={() => { const a = audioRef.current; if (a && isFinite(a.duration) && a.duration > 0) { setCurrentTime(a.currentTime); setProgress(a.currentTime/a.duration); } }}
+          onLoadedMetadata={resolveDuration}
+          onDurationChange={resolveDuration}
           style={{display:'none'}}
         />
       )}
