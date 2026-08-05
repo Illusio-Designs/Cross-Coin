@@ -103,16 +103,20 @@ export default function ProductDetail() {
     return () => { alive = false; };
   }, [product]);
 
+  // Reset to the first image whenever the selected colour changes.
+  useEffect(() => { setActiveImg(0); }, [color]);
+
   /* Auto-advance the gallery one image at a time every 3s.
      Pauses while the shopper hovers the main image. */
   useEffect(() => {
-    const count = product?.images?.length || 0;
+    const count = (product?.colors?.find((c) => c.name === color)?.images?.filter(Boolean).length)
+      || product?.images?.length || 0;
     if (count < 2 || paused) return;
     const id = setTimeout(() => {
       setActiveImg((i) => (i + 1) % count);
     }, 3000);
     return () => clearTimeout(id);
-  }, [product, paused, activeImg]);
+  }, [product, paused, activeImg, color]);
 
   // Watch the action block — when it leaves the viewport, reveal the bar.
   useEffect(() => {
@@ -161,8 +165,13 @@ export default function ProductDetail() {
   const price    = product.price;
   const compare  = product.compareAtPrice;
   const wished   = has(product.id);
-  const images   = product.images?.length ? product.images : ['/assets/Gripzus.JPG.jpeg'];
   const activeColor = product.colors?.find((c) => c.name === color);
+  // Show the SELECTED colour's images; fall back to the product's gallery.
+  const colorImages = (activeColor?.images || []).filter(Boolean);
+  const images   = colorImages.length
+    ? colorImages
+    : (product.images?.length ? product.images : ['/assets/Gripzus.JPG.jpeg']);
+  const curImg   = Math.min(activeImg, images.length - 1);
   const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
 
   const handleAdd = () => {
@@ -204,46 +213,46 @@ export default function ProductDetail() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-12">
 
             {/* Gallery — sticky while the info column scrolls */}
-            <div className="md:col-span-7 md:sticky md:top-24 md:self-start">
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <div className="md:col-span-6 md:sticky md:top-24 md:self-start">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:gap-3">
 
-                {/* Thumbnail rail — natural height so the whole image shows */}
+                {/* Thumbnail rail — small squares */}
                 {images.length > 1 && (
-                  <div className="flex items-start gap-3 overflow-x-auto p-1.5 sm:max-h-[42rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto">
+                  <div className="flex items-start gap-2 overflow-x-auto p-1 sm:max-h-[28rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto">
                     {images.slice(0, 8).map((img, i) => (
                       <button
                         key={i}
                         onClick={() => setActiveImg(i)}
                         aria-label={`View image ${i + 1}`}
-                        className={`w-[4.75rem] shrink-0 overflow-hidden rounded-md bg-paper-warm transition-all duration-300 ${
-                          activeImg === i
+                        className={`w-12 h-12 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
+                          curImg === i
                             ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
                             : 'opacity-45 hover:opacity-100'
                         }`}
                       >
-                        <img src={img} alt="" className="block h-auto w-full" />
+                        <img src={img} alt="" className="block h-full w-full object-cover" />
                       </button>
                     ))}
                   </div>
                 )}
 
-                {/* Main image — natural height, auto-advances every 3s, pauses on hover */}
+                {/* Main image — capped height, auto-advances every 3s, pauses on hover */}
                 <div
-                  className="gz-pdp-main relative flex-1 overflow-hidden rounded-lg bg-paper-warm"
+                  className="gz-pdp-main relative flex-1 overflow-hidden bg-paper-warm"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
                 >
                   <img
-                    key={activeImg}
-                    src={images[activeImg]}
+                    key={curImg}
+                    src={images[curImg]}
                     alt={product.name}
-                    className="gz-pdp-img block h-auto w-full"
+                    className="gz-pdp-img mx-auto block w-full max-h-[26rem] object-contain"
                   />
 
                   {/* Image counter */}
                   {images.length > 1 && (
                     <span className="absolute bottom-4 right-4 rounded-full bg-black/80 px-3 py-1 text-[10px] tracking-[0.16em] text-paper backdrop-blur-sm">
-                      {String(activeImg + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
+                      {String(curImg + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
                     </span>
                   )}
 
@@ -261,7 +270,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Info — airy, generous spacing */}
-            <div className="md:col-span-5 md:py-2">
+            <div className="md:col-span-6 md:py-2">
               <span className="eyebrow text-ink-muted mb-4 block">{product.collection}</span>
 
               <h1 className="h-display text-3xl md:text-4xl leading-tight mb-6">{product.name}</h1>
@@ -271,13 +280,6 @@ export default function ProductDetail() {
                 {compare && compare > price && (
                   <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
                 )}
-              </div>
-
-              {/* Free shipping + delivery ETA */}
-              <div className="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft mb-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                <span className="text-ink"><span className="font-semibold">Free shipping</span> over ₹499</span>
-                <span>· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
               </div>
 
               {/* Honest low-stock — only when total stock is genuinely low */}
@@ -429,42 +431,34 @@ export default function ProductDetail() {
           </div>
         </section>
 
-        {/* ── Editorial band 1 — Product story ─────────────────────────── */}
-        {product.description && (
-          <>
-            <div className="wrap"><div className="hairline" /></div>
-            <section className="wrap py-10 md:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-14">
-              <p className="eyebrow text-ink-muted">The story</p>
-              <div className="space-y-6 max-w-2xl">
-                <p className="h-display text-ink text-2xl md:text-3xl leading-snug">
-                  {product.name}<span className="h-italic">.</span>
-                </p>
-                <p className="prose-body text-base md:text-lg">{product.description}</p>
-              </div>
-            </section>
-          </>
-        )}
-
-        {/* ── Editorial band 2 — Details & specs ───────────────────────── */}
+        {/* ── Story + Details & care — one tight two-column row ────────── */}
         <div className="wrap"><div className="hairline" /></div>
-        <section className="wrap py-10 md:py-14 grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_1fr] gap-6 lg:gap-14">
-          <p className="eyebrow text-ink-muted">Details &amp; care</p>
-          <div className="max-w-3xl">
-            {[
-              product.sku && ['SKU', product.sku],
-              ['Collection', product.collection],
-              product.sizes?.length > 0 && ['Sizes', product.sizes.join(', ')],
-              product.colors?.length > 0 && ['Colours', product.colors.map((c) => c.name).join(', ')],
-            ].filter(Boolean).map(([label, value], i) => (
-              <div
-                key={label}
-                className={`grid grid-cols-1 md:grid-cols-[minmax(0,10rem)_1fr] gap-1 md:gap-12 py-5 md:py-6 ${i > 0 ? 'border-t border-line' : ''}`}
-              >
-                <p className="eyebrow text-ink-muted">{label}</p>
-                <p className="prose-body text-sm md:text-base text-ink">{value}</p>
-              </div>
-            ))}
-            <p className="spec block pt-6 md:pt-8">Hand-finished and inspected pair-by-pair. Free shipping over ₹499 · 7-day returns.</p>
+        <section className={`wrap py-10 md:py-14 grid grid-cols-1 gap-10 lg:gap-16 ${product.description ? 'lg:grid-cols-2' : ''}`}>
+          {/* Story */}
+          {product.description && (
+            <div>
+              <p className="eyebrow text-ink-muted mb-4">The story</p>
+              <p className="prose-body text-base md:text-lg">{product.description}</p>
+            </div>
+          )}
+
+          {/* Details & care — compact definition rows */}
+          <div>
+            <p className="eyebrow text-ink-muted mb-4">Details &amp; care</p>
+            <div className="border-t border-line">
+              {[
+                product.sku && ['SKU', product.sku],
+                ['Collection', product.collection],
+                product.sizes?.length > 0 && ['Sizes', product.sizes.join(', ')],
+                product.colors?.length > 0 && ['Colours', product.colors.map((c) => c.name).join(', ')],
+              ].filter(Boolean).map(([label, value]) => (
+                <div key={label} className="flex items-baseline justify-between gap-6 py-3 border-b border-line">
+                  <span className="eyebrow text-ink-muted shrink-0">{label}</span>
+                  <span className="prose-body text-sm text-ink text-right">{value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="spec block pt-4">Hand-finished and inspected pair-by-pair · 7-day returns.</p>
           </div>
         </section>
 
