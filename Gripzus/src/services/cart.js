@@ -25,11 +25,11 @@ export async function getCart() {
   return data.cart || data.items || data || [];
 }
 
-export async function addToCart({ productId, variationId, quantity = 1, size = null }) {
+export async function addToCart({ productId, variationId, quantity = 1, size = null, color = null }) {
   const res = await fetch(`${API_URL}/api/cart/items`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ productId, variationId, quantity, size }),
+    body: JSON.stringify({ productId, variationId, quantity, size, color }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to add to cart');

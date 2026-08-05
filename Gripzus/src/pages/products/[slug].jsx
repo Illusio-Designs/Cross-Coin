@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
 import ProductTestimonials from '../../components/products/ProductTestimonials';
 import SeoWrapper from '../../components/SeoWrapper';
-import { getProductBySlug, getProductsByCategory, getPublicProducts } from '../../services/products';
+import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
@@ -179,6 +179,7 @@ export default function ProductDetail() {
       id: product.id, name: product.name, slug: product.slug,
       image: images[0], price, collection: product.collection,
       size, color, qty,
+      variationId: resolveVariationId(product, color, size),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -189,6 +190,7 @@ export default function ProductDetail() {
       id: product.id, name: product.name, slug: product.slug,
       image: images[0], price, collection: product.collection,
       size, color, qty,
+      variationId: resolveVariationId(product, color, size),
     }, { openDrawer: false });
     openCart();
   };

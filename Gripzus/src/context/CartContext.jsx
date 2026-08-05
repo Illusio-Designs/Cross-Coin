@@ -89,6 +89,7 @@ export function CartProvider({ children }) {
                 variationId: g.variationId || null,
                 quantity: g.qty || 1,
                 size: g.size || null,
+                color: g.color || null,
               });
             } catch { /* non-fatal */ }
           }
@@ -162,6 +163,7 @@ export function CartProvider({ children }) {
           variationId: item.variationId || null,
           quantity: item.qty || 1,
           size: item.size || null,
+          color: item.color || null,
         });
         const data = await apiGetCart();
         const rows = Array.isArray(data) ? data.map(normalizeApiItem) : [];

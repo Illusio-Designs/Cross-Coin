@@ -145,7 +145,7 @@ function IconBtn({ as: Comp = 'button', children, ariaLabel, badge, divide, ...r
     <Comp aria-label={ariaLabel} className={`relative w-10 h-10 md:w-11 md:h-11 flex items-center justify-center text-ink hover:bg-black/[0.05] transition-colors ${divide ? 'ml-2 border-l border-line pl-3 md:pl-4' : ''}`} {...rest}>
       {children}
       {Number(badge) > 0 && (
-        <span key={badge} className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-ink text-paper text-[9px] font-medium flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
+        <span key={badge} className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 bg-ink text-paper text-[10px] font-semibold leading-none flex items-center justify-center animate-[gzpop_.3s_cubic-bezier(.34,1.56,.64,1)]">
           {badge}
         </span>
       )}

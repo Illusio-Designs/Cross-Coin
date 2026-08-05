@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { resolveVariationId } from '../../services/products';
 
 /* Gripzus ProductCard — "GROUND INDEX" architectural gallery card.
    A 1px-framed image (no shadow, square corners), square black index/discount
@@ -40,13 +41,16 @@ export default function ProductCard({ product }) {
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const defaultColor = product.color || colors[0]?.name || '';
+    // Prefer THIS card's colour (exploded variant) over the base product's
+    // default, so a Beige card adds Beige — not the product's first colour.
+    const defaultColor = product.colorParam || colors[0]?.name || product.color || '';
     const defaultSize  = product.size || (product.sizes || [])[0] || '';
     addItem({
       id: product.id, name, slug, image: primary,
       price: Number(product.price ?? price),
       salePrice: product.salePrice != null ? Number(product.salePrice) : undefined,
       collection, size: defaultSize, color: defaultColor, qty: 1,
+      variationId: resolveVariationId(product, defaultColor, defaultSize),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);

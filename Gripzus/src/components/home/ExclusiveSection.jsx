@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
+import { resolveVariationId } from '../../services/products';
 
 /* "Hand-Picked" — featured-product spotlight (same idea as the sibling brands,
    Morbix / Soxbae). The main image auto-advances through the selected colour's
@@ -25,6 +26,7 @@ function normalize(p) {
     colors: Array.isArray(p.colors) ? p.colors.filter((c) => c?.name) : [],
     sizes: Array.isArray(p.sizes) ? p.sizes : [],
     description: p.description || '',
+    variations: Array.isArray(p.variations) ? p.variations : [],
   };
 }
 
@@ -132,6 +134,7 @@ export default function ExclusiveSection({ products = [] }) {
       id: product.id, name: product.name, slug: product.slug, image: gallery[0] || FALLBACK_IMG,
       price: product.price, collection: product.category, qty,
       size: product.sizes[0] || '', color: activeCol?.name || '',
+      variationId: resolveVariationId(product, activeCol?.name, product.sizes[0]),
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);

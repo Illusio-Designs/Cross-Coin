@@ -146,6 +146,25 @@ export function mapProduct(p) {
   };
 }
 
+/* Resolve the exact variation id for a selected colour (+ size) from a mapped
+   product's raw `variations`. Passing this to the cart is what makes the cart
+   store the CHOSEN colour — the other brands already send a variationId; Gripzus
+   was sending none, so the backend defaulted every add to the first variation. */
+export function resolveVariationId(product, colorName, sizeName) {
+  const vars = product?.variations || [];
+  if (!vars.length) return null;
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const wc = norm(colorName), ws = norm(sizeName);
+  const attrsOf = (v) => { try { return typeof v.attributes === 'string' ? JSON.parse(v.attributes) : (v.attributes || {}); } catch { return {}; } };
+  const colorsOf = (a) => (Array.isArray(a.color) ? a.color : (a.color ? [a.color] : []));
+  const sizesOf  = (a) => (Array.isArray(a.size)  ? a.size  : (a.size  ? [a.size]  : []));
+  const match = vars.find((v) => {
+    const a = attrsOf(v);
+    return (!wc || colorsOf(a).some((c) => norm(c) === wc)) && (!ws || !sizesOf(a).length || sizesOf(a).some((s) => norm(s) === ws));
+  }) || vars.find((v) => colorsOf(attrsOf(v)).some((c) => norm(c) === wc));
+  return match?.id ?? null;
+}
+
 /* Show EVERY colour as its own product card — explode a product that has more
    than one colour into one card per colour, each with that colour's own photos,
    a single colour swatch, and a ?color= link to preselect it on the PDP. The
@@ -224,7 +243,9 @@ export async function searchProducts(query) {
   try {
     const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`);
     const products = data?.data?.products || data?.products || data?.data || [];
-    return explodeColorVariants((Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean));
+    // Search shows DISTINCT products (one card each) — not every colour variant,
+    // so "alignment" returns one pair, not 14 identical-looking colour cards.
+    return (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
   } catch {
     return [];
   }
