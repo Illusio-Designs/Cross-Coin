@@ -7,31 +7,33 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Gripzus — Atelier Off-White. A warm bone canvas (not stark white),
-        // rich near-black ink, and a deep pine-green accent used sparingly.
-        // Premium, quiet, knitwear-editorial.
+        // Gripzus — Monochrome Atelier. A soft off-white canvas and true
+        // near-black ink, nothing else: black IS the accent. Contrast,
+        // hairlines and typography carry the design. Distinct from the
+        // sibling brands, which lean on brand-tinted colour.
         ink: {
-          DEFAULT: '#1A1712',   // warm near-black — primary text
-          soft:    '#6C665B',   // muted body
-          muted:   '#A39C8E',   // captions / eyebrows
+          DEFAULT: '#121212',   // near-black — primary text & accent
+          soft:    '#575552',   // muted body
+          muted:   '#9A968F',   // captions / eyebrows
         },
         paper: {
-          DEFAULT: '#F5F2EA',   // warm bone off-white canvas
-          warm:    '#ECE8DC',   // card / raised
-          deep:    '#E2DCCC',   // deepest panel
+          DEFAULT: '#F4F2EC',   // soft off-white canvas (never stark white)
+          warm:    '#ECE9E1',   // card / raised
+          deep:    '#E3DFD5',   // deepest panel / skeletons
         },
         line: {
-          DEFAULT: '#E0D9C9',   // warm hairline
-          dark:    '#CBBFA9',
+          DEFAULT: '#E2DDD2',   // quiet hairline
+          dark:    '#D5CFC3',   // stronger hairline
         },
+        // Black is the accent — monochrome by design.
         accent: {
-          DEFAULT: '#28402E',   // deep pine green
-          deep:    '#1B2E20',
-          soft:    '#E7EBE1',   // pale green tint fill
+          DEFAULT: '#141414',
+          deep:    '#000000',
+          soft:    '#ECE9E1',   // neutral tint fill (was pale green)
         },
         clay: {
-          DEFAULT: '#28402E',
-          deep:    '#1B2E20',
+          DEFAULT: '#141414',
+          deep:    '#000000',
         },
       },
       fontFamily: {
@@ -44,8 +46,10 @@ module.exports = {
         widest: '0.16em',
       },
       borderRadius: {
-        DEFAULT: '12px',
-        lg: '12px',
+        // Crisp near-square frames (sharper than the sibling brands).
+        // rounded-full pills stay the Gripzus signature.
+        DEFAULT: '4px',
+        lg: '6px',
       },
       maxWidth: {
         site: '1600px',
