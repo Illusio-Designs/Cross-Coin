@@ -706,7 +706,7 @@ export default function CartDrawer() {
         {!orderSuccess && !paymentFailed && items.length > 0 && (
           <div className="cd-footer">
             {!pincodeServiceable && (
-              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 0, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
                 We don’t deliver to this PIN code yet — please try a different delivery address.
               </div>
             )}

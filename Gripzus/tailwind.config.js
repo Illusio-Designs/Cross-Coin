@@ -46,10 +46,10 @@ module.exports = {
         widest: '0.16em',
       },
       borderRadius: {
-        // Crisp near-square frames (sharper than the sibling brands).
-        // rounded-full pills stay the Gripzus signature.
-        DEFAULT: '4px',
-        lg: '6px',
+        // ONE shape across the whole site: square. Every rounded-* utility
+        // (including rounded-full) resolves to 0 so nothing mixes pills/circles
+        // with the architectural square frames. This is the GROUND INDEX thesis.
+        none: '0', sm: '0', DEFAULT: '0', md: '0', lg: '0', xl: '0', '2xl': '0', '3xl': '0', full: '0',
       },
       maxWidth: {
         site: '1600px',
