@@ -208,8 +208,10 @@ export default function ExclusiveSection({ products = [] }) {
                 <span>{qty}</span>
                 <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
               </div>
-              <button type="button" className="excl3-add" onClick={onAdd}>{added ? 'Added ✓' : 'Add to Bag'}</button>
-              <Link href={`/products/${product.slug}`} className="excl3-view">View</Link>
+              <div className="excl3-cta">
+                <button type="button" className="excl3-add" onClick={onAdd}>{added ? 'Added ✓' : 'Add to Bag'}</button>
+                <Link href={`/products/${product.slug}`} className="excl3-view">View</Link>
+              </div>
             </div>
 
             {/* Other products — one flex row each: image · title · price,
@@ -293,8 +295,9 @@ export default function ExclusiveSection({ products = [] }) {
 
         .excl3-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.7; margin: 24px 0 0; max-width: 34rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        .excl3-actions { display: flex; align-items: center; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
-        .excl3-qty { display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 0; padding: 11px 16px; }
+        .excl3-actions { display: flex; align-items: stretch; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
+        .excl3-cta { flex: 1 1 260px; display: flex; gap: 12px; }
+        .excl3-qty { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 0; padding: 11px 16px; }
         .excl3-qty button { color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1; } .excl3-qty button:hover { color: #fff; } .excl3-qty span { min-width: 18px; text-align: center; font-size: 14px; }
         .excl3-add { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #0A0A0A; border-radius: 0; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
         .excl3-add:hover { transform: translateY(-2px); } .excl3-add:active { transform: none; }
