@@ -1,111 +1,107 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-/* Gripzus hero — full-bleed, starts BEHIND the fixed header. Distinct from
-   the sibling brands: a slow Ken-Burns image, a word-by-word headline reveal
-   low-left, and a floating glass control pill (prev / index / next / shop)
-   docked bottom-right — echoing the header + footer pill language.
+/* Gripzus hero — "The Statement". An asymmetric editorial spread laid on the
+   off-white page (NOT a full-bleed image slider): an index kicker + oversized
+   Space Grotesk headline + CTA + hairline stat row on the left, a 1px-framed
+   image tile that crossfades on the right, the whole band ruled top + bottom.
+   Monochrome, architectural — a third archetype, distinct from the siblings.
    slide: { id, eyebrow, title, description, image, buttonText, buttonLink } */
 
 export default function HeroBanner({ slides = [] }) {
   const [current, setCurrent] = useState(0);
-  const go = (n) => setCurrent((c) => (n + slides.length) % slides.length);
+  const has = slides.length > 0;
+  const total = slides.length || 1;
+  const go = (n) => setCurrent((c) => (n + total) % total);
 
   useEffect(() => {
     if (slides.length < 2) return;
-    const t = setInterval(() => setCurrent((c) => (c + 1) % slides.length), 6500);
+    const t = setInterval(() => setCurrent((c) => (c + 1) % slides.length), 6000);
     return () => clearInterval(t);
   }, [slides.length]);
 
-  if (!slides.length) {
-    return <section className="-mt-[76px] md:-mt-[84px] h-[94vh] min-h-[600px] bg-paper-deep animate-pulse" />;
-  }
-
-  const s = slides[Math.min(current, slides.length - 1)];
-  const words = (s.title || 'Hold your ground.').split(' ');
+  const s = has ? slides[Math.min(current, slides.length - 1)] : {};
+  const title = s.title || 'Hold your ground.';
+  const words = title.split(' ');
+  const idx = String((current % total) + 1).padStart(2, '0');
 
   return (
-    <section className="relative -mt-[76px] md:-mt-[84px] bg-ink overflow-hidden">
-      <div className="relative h-[94vh] min-h-[620px]">
-        {/* Crossfading images with a slow zoom */}
-        {slides.map((sl, i) => (
-          <img
-            key={sl.id ?? i}
-            src={sl.image}
-            alt={sl.title || 'Gripzus'}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              i === current ? 'opacity-100 gz-kenburns' : 'opacity-0'
-            }`}
-            loading={i === 0 ? 'eager' : 'lazy'}
-          />
-        ))}
+    <section className="border-b border-line">
+      {/* Top meta rule — coordinates-style labels */}
+      <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-line text-[10px] tracking-[0.2em] uppercase text-ink-muted">
+        <span className="text-ink">Gripzus — Grip Socks</span>
+        <span className="hidden sm:block">Engineered in Morbi, IN</span>
+        <span>SS26 / Vol.01</span>
+      </div>
 
-        {/* Scrims — top so the header reads, bottom for the type */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+      <div className="wrap grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pt-9 pb-11 md:pt-14 md:pb-16 items-end">
+        {/* Left — the statement */}
+        <div className="lg:col-span-7 order-2 lg:order-1">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="text-[11px] tracking-[0.2em] uppercase text-ink tabular-nums">N°{idx}</span>
+            <span className="h-px w-10 bg-ink" />
+            <span className="eyebrow text-ink-muted">{s.eyebrow || 'New season'}</span>
+          </div>
 
-        {/* Headline — low-left, aligned to the site gutter (.wrap) so the
-            text line matches every other section's left edge. */}
-        <div className="absolute inset-0 flex items-end">
-          <div className="wrap w-full pb-28 md:pb-32">
-            <div key={current} className="max-w-3xl">
-              <span className="inline-block text-paper/70 text-[11px] tracking-[0.26em] uppercase gz-fade" style={{ animationDelay: '.05s' }}>
-                {s.eyebrow || 'Gripzus — SS26'}
+          <h1 key={current} className="h-mark text-ink text-[13.5vw] leading-[0.9] sm:text-[9vw] lg:text-[6.4rem]">
+            {words.map((w, i) => (
+              <span key={i} className="inline-block overflow-hidden align-bottom mr-[0.2em]">
+                <span className="inline-block gz-word" style={{ animationDelay: `${0.05 + i * 0.07}s` }}>{w}</span>
               </span>
-              <h1 className="h-display text-paper mt-4 text-[12vw] leading-[1.0] sm:text-[8vw] md:text-6xl lg:text-[5.4rem]">
-                {words.map((w, i) => (
-                  <span key={i} className="inline-block overflow-hidden align-bottom mr-[0.25em]">
-                    <span className="inline-block gz-word" style={{ animationDelay: `${0.12 + i * 0.08}s` }}>{w}</span>
-                  </span>
-                ))}
-              </h1>
-              {s.description && (
-                <p className="text-paper/75 text-[13px] md:text-[15px] mt-5 max-w-md leading-7 gz-fade" style={{ animationDelay: `${0.16 + words.length * 0.08}s` }}>
-                  {s.description}
-                </p>
-              )}
-              {/* Left-side CTA */}
-              <div className="mt-7 gz-fade" style={{ animationDelay: `${0.22 + words.length * 0.08}s` }}>
-                <Link href={s.buttonLink || '/products'} className="inline-flex items-center gap-2 rounded-full bg-paper text-ink px-7 py-3.5 text-[11px] tracking-[0.12em] uppercase hover:opacity-85 transition-opacity">
-                  {s.buttonText || 'Order now'} <span>→</span>
-                </Link>
+            ))}
+          </h1>
+
+          {s.description && <p className="prose-body max-w-md mt-7 text-[14px]">{s.description}</p>}
+
+          <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <Link href={s.buttonLink || '/products'} className="btn">
+              {s.buttonText || 'Shop the range'} <span aria-hidden="true">→</span>
+            </Link>
+            <Link href="/collections" className="link-line">View collections</Link>
+          </div>
+
+          {/* Stat row — hairline separated, index/spec voice */}
+          <div className="mt-11 grid grid-cols-3 border-t border-line max-w-xl">
+            {[['200N', 'Grip force'], ['Hand-linked', 'Seamless toe'], ['500', 'Pairs / run']].map(([a, b], i) => (
+              <div key={i} className={`py-5 ${i > 0 ? 'border-l border-line pl-5' : 'pr-5'}`}>
+                <div className="h-display text-lg md:text-2xl text-ink leading-none">{a}</div>
+                <div className="eyebrow text-ink-muted mt-2">{b}</div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Floating glass nav pill — bottom-right */}
-        {slides.length > 1 && (
-          <div className="absolute inset-x-0 bottom-6 md:bottom-8 z-20">
-           <div className="wrap flex justify-between items-center gap-4">
-            <span className="hidden sm:block text-paper/70 text-[10px] tracking-[0.16em] tabular-nums">
-              {String(current + 1).padStart(2, '0')} — {String(slides.length).padStart(2, '0')}
-            </span>
-            <div className="flex items-center gap-1.5 rounded-full border border-paper/20 bg-black/35 backdrop-blur-md p-1.5 ml-auto">
-              <button onClick={() => go(current - 1)} aria-label="Previous" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">‹</button>
-              <div className="hidden sm:flex items-center gap-1 px-1">
-                {slides.map((_, i) => (
-                  <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? 'w-6 bg-paper' : 'w-1.5 bg-paper/40 hover:bg-paper/70'}`} />
-                ))}
-              </div>
-              <button onClick={() => go(current + 1)} aria-label="Next" className="w-9 h-9 rounded-full flex items-center justify-center text-paper/80 hover:bg-paper/10 transition-colors">›</button>
+        {/* Right — framed image tile with an index badge + caption bar */}
+        <div className="lg:col-span-5 order-1 lg:order-2">
+          <div className="relative aspect-[4/5] border border-line overflow-hidden bg-paper-warm">
+            {has ? slides.map((sl, i) => (
+              <img key={sl.id ?? i} src={sl.image} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1100ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
+            )) : <div className="absolute inset-0 bg-paper-deep animate-pulse" />}
+
+            <div className="absolute top-0 left-0 bg-ink text-paper text-[10px] tracking-[0.2em] uppercase px-3 py-1.5 tabular-nums">
+              {idx} / {String(total).padStart(2, '0')}
             </div>
-           </div>
           </div>
-        )}
+
+          {/* Caption bar — one hairline box continuous with the tile */}
+          <div className="flex items-center justify-between gap-3 border border-t-0 border-line px-4 py-3">
+            <span className="text-[12px] text-ink truncate">{has ? (s.title || 'Gripzus') : 'Loading…'}</span>
+            {slides.length > 1 && (
+              <div className="flex items-center gap-3 shrink-0">
+                <button onClick={() => go(current - 1)} aria-label="Previous" className="text-ink-muted hover:text-ink transition-colors text-lg leading-none">‹</button>
+                <span className="text-[10px] tabular-nums text-ink-muted">{String(current + 1).padStart(2, '0')}—{String(slides.length).padStart(2, '0')}</span>
+                <button onClick={() => go(current + 1)} aria-label="Next" className="text-ink-muted hover:text-ink transition-colors text-lg leading-none">›</button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
-        .gz-kenburns { animation: gz-kb 7s ease-out both; }
-        @keyframes gz-kb { from { transform: scale(1.08); } to { transform: scale(1); } }
-        .gz-word { transform: translateY(110%); animation: gz-word .7s cubic-bezier(.22,1,.36,1) forwards; }
-        @keyframes gz-word { to { transform: translateY(0); } }
-        .gz-fade { opacity: 0; transform: translateY(10px); animation: gz-fade .7s cubic-bezier(.22,1,.36,1) forwards; }
-        @keyframes gz-fade { to { opacity: 1; transform: none; } }
-        @media (prefers-reduced-motion: reduce) {
-          .gz-kenburns, .gz-word, .gz-fade { animation: none !important; opacity: 1 !important; transform: none !important; }
-        }
+        .gz-word { transform: translateY(110%); animation: gzw .7s cubic-bezier(.22,1,.36,1) forwards; }
+        @keyframes gzw { to { transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { .gz-word { animation: none; transform: none; } }
       `}</style>
     </section>
   );
