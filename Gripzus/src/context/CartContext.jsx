@@ -164,7 +164,18 @@ export function CartProvider({ children }) {
           size: item.size || null,
         });
         const data = await apiGetCart();
-        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+        const rows = Array.isArray(data) ? data.map(normalizeApiItem) : [];
+        // Keep the SELECTED variation's first image (the colour the shopper
+        // clicked) on the line we just added — the backend can return a generic
+        // or mismatched image for the row.
+        if (item.image) {
+          const sameLine = (r) =>
+            String(r.id) === String(item.id) &&
+            String(r.size || '') === String(item.size || '') &&
+            String(r.color || '') === String(item.color || '');
+          rows.forEach((r) => { if (sameLine(r)) r.image = item.image; });
+        }
+        setItems(rows);
         toastAddedToCart(item.name);
         if (openDrawer) setOpen(true);
         return;
