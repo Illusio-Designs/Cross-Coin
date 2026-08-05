@@ -86,7 +86,7 @@ async function getBrandTokens() {
   const now = Date.now();
   if (_brandTokenCache && now - _brandTokenCacheAt < 5 * 60 * 1000) return _brandTokenCache;
   try {
-    const { Brand } = require('../model/brandModel.js');
+    const Brand = require('../model/brandModel.js');
     const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name', 'domain'] });
     _brandTokenCache = brands.map((b) => {
       const domainWord = String(b.domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
@@ -1639,7 +1639,7 @@ exports.sendProductLink = async (req, res) => {
     const { Product } = require('../model/productModel.js');
     const { ProductVariation } = require('../model/productVariationModel.js');
     const { ProductImage } = require('../model/productImageModel.js');
-    const { Brand } = require('../model/brandModel.js');
+    const Brand = require('../model/brandModel.js');
     const settingsHelper = require('../services/settingsHelper.js');
 
     // Build the product link from the brand's OWN live domain. Prefer the Brand's

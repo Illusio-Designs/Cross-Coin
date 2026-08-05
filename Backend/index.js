@@ -611,12 +611,12 @@ const startServer = async () => {
             await sequelize.query(
                 `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
             );
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v2' LIMIT 1`);
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v3' LIMIT 1`);
             if (!done.length) {
                 const { reattributeBrands } = require('./controller/whatsappController.js');
                 const n = await reattributeBrands();
                 logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v2')`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v3')`);
             }
         } catch (err) {
             logger.error('WhatsApp brand backfill failed: ' + err.message);
