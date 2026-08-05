@@ -2233,8 +2233,8 @@ export const whatsappService = {
     return response.data;
   },
 
-  resolveConversation: async (conversationId) => {
-    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/resolve`);
+  resolveConversation: async (conversationId, status = 'resolved') => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/resolve`, { status });
     return response.data;
   },
 

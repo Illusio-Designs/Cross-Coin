@@ -885,20 +885,35 @@ export function WhatsAppManager() {
   const sendReply = async (e) => {
     e.preventDefault();
     if (!reply.trim() || !activeConv) return;
+    const fullMessage = reply.trim();
+    const quotedWaId = replyTo?.wa_message_id || null;
+    const quoted = replyTo || null;
+    const convId = activeConv.id;
+    const tempId = `tmp-${Date.now()}`;
+
+    // Optimistic UX: show the bubble and clear the composer immediately so the
+    // send feels instant, instead of the button spinning until Meta responds.
+    // We reconcile with the server copy (or mark it failed) when the call ends.
+    const optimistic = {
+      id: tempId, _optimistic: true, conversation_id: convId,
+      direction: 'outbound', type: 'text', body: fullMessage,
+      status: 'sending', sent_at: new Date().toISOString(), _quotedMsg: quoted,
+    };
+    setMessages(prev => [...prev, optimistic]);
+    setReply(''); setReplyTo(null); setShowEmoji(false); isNearBottomRef.current = true;
     setSending(true);
     try {
-      const fullMessage = reply.trim();
-      const quotedWaId = replyTo?.wa_message_id || null;
-      const data = await whatsappService.sendReply(activeConv.id, fullMessage, activeConv?.brand_id || brandId || 1, quotedWaId);
+      const data = await whatsappService.sendReply(convId, fullMessage, activeConv?.brand_id || brandId || 1, quotedWaId);
       if (data.success) {
-        const savedMsg = { ...data.message, _quotedMsg: replyTo || null };
-        setMessages(prev => [...prev, savedMsg]);
-        setReply(''); setReplyTo(null); setShowEmoji(false); isNearBottomRef.current = true;
+        const savedMsg = { ...data.message, _quotedMsg: quoted };
+        setMessages(prev => prev.map(m => m.id === tempId ? savedMsg : m));
       } else {
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
         showError('sendFailed', data.message || 'Failed to send message');
       }
     } catch (err) {
-      showError('sendFailed', err.message || 'Failed to send message');
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      showError('sendFailed', err?.response?.data?.message || err.message || 'Failed to send message');
     }
     setSending(false);
   };
@@ -933,14 +948,33 @@ export function WhatsAppManager() {
     setUploadingMedia(false);
   };
 
+  // NOTE: no window.confirm() here — Chrome suppresses repeat dialogs ("prevent
+  // this page from creating more dialogs"), which silently made the button do
+  // nothing. Resolve is reversible (Re-open below), so a direct action is safe.
   const resolveConv = async (id) => {
-    if (!window.confirm('Mark this conversation as resolved? It will be removed from your inbox.')) return;
     try {
-      await whatsappService.resolveConversation(id);
+      const data = await whatsappService.resolveConversation(id, 'resolved');
+      if (data && data.success === false) throw new Error(data.message || 'Failed to resolve');
       showSuccess('resolved', 'Conversation marked as resolved');
       setConversations(prev => prev.filter(c => c.id !== id));
       if (activeConv?.id === id) { setActiveConv(null); setMessages([]); }
-    } catch (err) { showError('updateFailed', err.message); }
+    } catch (err) {
+      showError('updateFailed', err?.response?.data?.message || err.message || 'Failed to resolve');
+    }
+  };
+
+  // Move a resolved conversation back to Open.
+  const reopenConv = async (id) => {
+    try {
+      const data = await whatsappService.resolveConversation(id, 'open');
+      if (data && data.success === false) throw new Error(data.message || 'Failed to re-open');
+      showSuccess('saved', 'Conversation re-opened');
+      setActiveConv(prev => prev && prev.id === id ? { ...prev, status: 'open' } : prev);
+      setConversations(prev => prev.map(c => c.id === id ? { ...c, status: 'open' } : c)
+                                     .filter(c => statusFilter === 'all' || c.status === statusFilter));
+    } catch (err) {
+      showError('updateFailed', err?.response?.data?.message || err.message || 'Failed to re-open');
+    }
   };
 
   // Manually set the brand shown on a conversation's badge (shared number can't
@@ -1534,9 +1568,13 @@ export function WhatsAppManager() {
                       <div className="was-chat-name">{activeConv.customer_name||activeConv.customer_phone}</div>
                       <div className="was-chat-phone">+{activeConv.customer_phone}</div>
                     </div>
-                    {activeConv.status === 'open' && (
+                    {activeConv.status === 'open' ? (
                       <button className="was-resolve-btn" onClick={() => resolveConv(activeConv.id)}>
                         {IC.check} Resolve
+                      </button>
+                    ) : (
+                      <button className="was-resolve-btn" onClick={() => reopenConv(activeConv.id)}>
+                        {IC.refresh} Re-open
                       </button>
                     )}
                   </div>
@@ -1622,7 +1660,11 @@ export function WhatsAppManager() {
                                 {formatTime(msg.sent_at||msg.createdAt)}
                                 {msg.direction==='outbound' && (
                                   <span style={{marginLeft:3}}>
-                                    {msg.status === 'read' ? (
+                                    {msg.status === 'sending' ? (
+                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                    ) : msg.status === 'failed' ? (
+                                      <span title="Failed to send" style={{color:'#dc2626', fontWeight:700, fontSize:12}}>!</span>
+                                    ) : msg.status === 'read' ? (
                                       <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
                                         <path d="M1 5.5L4.5 9L10 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                         <path d="M6 5.5L9.5 9L15 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1819,10 +1861,15 @@ export function WhatsAppManager() {
                             onClick={() => openProductModal()}>
                             Send Products
                           </button>
-                          {activeConv.status === 'open' && (
+                          {activeConv.status === 'open' ? (
                             <button className="was-btn-primary" style={{fontSize:12,padding:'6px 10px',justifyContent:'center'}}
                               onClick={() => resolveConv(activeConv.id)}>
                               Mark Resolved
+                            </button>
+                          ) : (
+                            <button className="was-btn-secondary" style={{fontSize:12,padding:'6px 10px',justifyContent:'center'}}
+                              onClick={() => reopenConv(activeConv.id)}>
+                              Re-open Conversation
                             </button>
                           )}
                         </div>

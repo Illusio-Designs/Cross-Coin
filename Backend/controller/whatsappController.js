@@ -786,11 +786,15 @@ exports.sendMediaReply = async (req, res) => {
 exports.resolveConversation = async (req, res) => {
   try {
     const { id } = req.params;
+    // Doubles as re-open: pass { status: 'open' } to move a resolved chat back.
+    const target = req.body?.status === 'open' ? 'open' : 'resolved';
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    await conv.update({ status: 'resolved' });
+    await conv.update({ status: target });
+    logger.info(`[WhatsApp] conversation ${id} → ${target}`);
     res.json({ success: true, status: conv.status });
   } catch (err) {
+    logger.error(`[WhatsApp] resolve/reopen failed for ${req.params.id}: ${err.message}`);
     res.status(500).json({ success: false, message: err.message });
   }
 };
