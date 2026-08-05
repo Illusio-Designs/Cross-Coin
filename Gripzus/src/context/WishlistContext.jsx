@@ -42,14 +42,16 @@ export function WishlistProvider({ children }) {
 
     apiGetWishlist()
       .then((remote) => {
+        // Backend tracks PRODUCT ids. Keep the richer local rows (which may be
+        // per-colour variants, keyed by uid) whose product is still wishlisted,
+        // then append any product wishlisted elsewhere that we don't have locally.
         const remoteIds = new Set(remote.map((r) => String(r.id)));
-        const localById = new Map(local.map((i) => [String(i.id), i]));
-        // Prefer the richer local copy; fall back to the backend row.
-        const merged = remote.map((r) => {
-          const l = localById.get(String(r.id));
-          return l ? { ...l, id: String(r.id) } : r;
-        });
-        setItems(merged.filter((i) => remoteIds.has(String(i.id))));
+        const keptLocal = local.filter((i) => remoteIds.has(String(i.pid ?? i.id)));
+        const localPids = new Set(keptLocal.map((i) => String(i.pid ?? i.id)));
+        const extras = remote
+          .filter((r) => !localPids.has(String(r.id)))
+          .map((r) => ({ ...r, id: String(r.id), pid: String(r.id), key: String(r.id) }));
+        setItems([...keptLocal, ...extras]);
       })
       .catch(() => { /* offline / unreachable — keep the localStorage copy */ });
   }, []);
@@ -60,36 +62,44 @@ export function WishlistProvider({ children }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
   }, [items, hydrated]);
 
+  // Match on the variant key (uid) OR the product id, so each colour card is
+  // independent yet page-level calls that pass a product id still resolve.
   const has = useCallback(
-    (id) => items.some((i) => String(i.id) === String(id)),
+    (x) => {
+      const s = String(x);
+      return items.some((i) => String(i.key ?? i.id) === s || String(i.id) === s || String(i.pid ?? i.id) === s);
+    },
     [items]
   );
 
   const addItem = useCallback(async (product) => {
     if (!product?.id) return;
-    const id = String(product.id);
-    if (items.some((i) => String(i.id) === id)) return;
-    setItems((prev) => [...prev, { ...product, id }]); // optimistic
+    const pid = String(product.id);               // real product id — sent to backend
+    const key = String(product.uid || product.id); // per-variant key — unique per colour card
+    if (items.some((i) => String(i.key ?? i.id) === key)) return;
+    setItems((prev) => [...prev, { ...product, id: pid, pid, key }]); // optimistic
     setSyncing(true);
     try {
-      await apiAddToWishlist(id);
+      await apiAddToWishlist(pid);
       toastAddedToWishlist(product.name);
     } catch {
-      setItems((prev) => prev.filter((i) => String(i.id) !== id)); // rollback
+      setItems((prev) => prev.filter((i) => String(i.key ?? i.id) !== key)); // rollback
       showError('Could not save to wishlist. Please try again.', 'wishlist-err');
     } finally {
       setSyncing(false);
     }
   }, [items]);
 
-  const remove = useCallback(async (productId) => {
-    const id = String(productId);
-    const removed = items.find((i) => String(i.id) === id);
+  const remove = useCallback(async (x) => {
+    const s = String(x);
+    const removed = items.find((i) => String(i.key ?? i.id) === s || String(i.id) === s || String(i.pid ?? i.id) === s);
     if (!removed) return;
-    setItems((prev) => prev.filter((i) => String(i.id) !== id)); // optimistic
+    const rKey = String(removed.key ?? removed.id);
+    const pid  = String(removed.pid ?? removed.id);
+    setItems((prev) => prev.filter((i) => String(i.key ?? i.id) !== rKey)); // optimistic
     setSyncing(true);
     try {
-      await apiRemoveFromWishlist(id);
+      await apiRemoveFromWishlist(pid);
       toastRemovedFromWishlist(removed.name);
     } catch {
       setItems((prev) => [...prev, removed]); // rollback
@@ -101,8 +111,9 @@ export function WishlistProvider({ children }) {
 
   const toggle = useCallback((product) => {
     if (!product?.id) return;
-    if (items.some((i) => String(i.id) === String(product.id))) {
-      remove(product.id);
+    const key = String(product.uid || product.id);
+    if (items.some((i) => String(i.key ?? i.id) === key)) {
+      remove(key);
     } else {
       addItem(product);
     }

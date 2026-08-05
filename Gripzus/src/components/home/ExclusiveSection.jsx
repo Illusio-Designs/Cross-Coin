@@ -296,9 +296,9 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-actions { display: flex; align-items: center; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
         .excl3-qty { display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 0; padding: 11px 16px; }
         .excl3-qty button { color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1; } .excl3-qty button:hover { color: #fff; } .excl3-qty span { min-width: 18px; text-align: center; font-size: 14px; }
-        .excl3-add { flex: 1; min-width: 160px; background: #fff; color: #0A0A0A; border-radius: 0; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
+        .excl3-add { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #0A0A0A; border-radius: 0; padding: 14px 22px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: transform .2s ease, opacity .2s ease; }
         .excl3-add:hover { transform: translateY(-2px); } .excl3-add:active { transform: none; }
-        .excl3-view { display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); border-radius: 0; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
+        .excl3-view { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #fff; color: #fff; border-radius: 0; padding: 14px 20px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; transition: background .2s ease, color .2s ease; }
         .excl3-view:hover { background: #fff; color: #0A0A0A; }
 
         /* Other products — one flex row each (image · title · price) */

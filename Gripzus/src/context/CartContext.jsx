@@ -33,12 +33,18 @@ const lineKey = (it) => `${it.id}::${it.size || ''}::${it.color || ''}`;
 function normalizeApiItem(row) {
   const p = row.Product || row.product || {};
   const productId = String(row.productId ?? row.product_id ?? p.id ?? row.id ?? '');
+  // Prefer the product's FIRST image (matches the listing card) over the
+  // backend's colour-matched `row.image`.
+  const firstOf = (arr) => {
+    const x = arr?.[0];
+    if (!x) return '';
+    return typeof x === 'string' ? x : (x.image_url || x.url || x.large || '');
+  };
   const image =
+    firstOf(row.images) ||
+    firstOf(p.images) ||
+    firstOf(p.ProductImages) ||
     row.image ||
-    row.images?.[0]?.image_url ||
-    row.images?.[0]?.url ||
-    p.ProductImages?.[0]?.image_url ||
-    p.ProductImages?.[0]?.large ||
     '';
   return {
     id:          productId,

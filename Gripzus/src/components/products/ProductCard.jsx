@@ -29,7 +29,7 @@ export default function ProductCard({ product }) {
   const collection = product.collection || product.collectionName || 'Gripzus';
   const inStock   = product.inStock !== false;
   const badge     = product.badge;
-  const wished    = has(product.id);
+  const wished    = has(product.uid || product.id); // per-colour variant, not the shared product id
   const off = compare && compare > price ? Math.round((1 - price / compare) * 100) : 0;
 
   const colors    = product.colors || [];
