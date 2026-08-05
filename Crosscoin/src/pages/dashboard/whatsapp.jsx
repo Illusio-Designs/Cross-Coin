@@ -1279,8 +1279,8 @@ export function WhatsAppManager() {
   const seedCannedResponses = async () => {
     try {
       const data = await whatsappService.seedCannedResponses(brandId);
-      const { created, skipped } = data.summary || { created:0, skipped:0 };
-      showSuccess('saved', `Created: ${created} · Skipped: ${skipped}`);
+      const { created = 0, updated = 0 } = data.summary || {};
+      showSuccess('saved', `Added: ${created} · Refreshed: ${updated}`);
       fetchCannedResponses();
     } catch (err) { showError('loadingFailed', err.message || 'Failed to seed canned responses'); }
   };

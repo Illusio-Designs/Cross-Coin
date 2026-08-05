@@ -541,6 +541,31 @@ const startServer = async () => {
             logger.error('whatsapp_conversations.status ENUM migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: whatsapp_canned_responses → utf8mb4 ──────────
+        // Canned bodies contain emojis (📦 📍 💳 …). If the table was created
+        // without utf8mb4, MySQL can't store 4-byte chars and every emoji became
+        // "?". Convert the table so future writes keep emojis. (Existing "?" rows
+        // are already lost — re-seed defaults to restore them.)
+        try {
+            const [cc] = await sequelize.query(
+                `SELECT CCSA.character_set_name AS cs
+                 FROM information_schema.TABLES T
+                 JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA
+                   ON CCSA.collation_name = T.table_collation
+                 WHERE T.table_schema = DATABASE() AND T.table_name = 'whatsapp_canned_responses'`
+            );
+            const cs = cc?.[0]?.cs || '';
+            if (cs && cs !== 'utf8mb4') {
+                logger.info('Migrating whatsapp_canned_responses → utf8mb4 (emoji support)…');
+                await sequelize.query(
+                    `ALTER TABLE whatsapp_canned_responses CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+                );
+                logger.info('✓ whatsapp_canned_responses converted to utf8mb4');
+            }
+        } catch (err) {
+            logger.error('whatsapp_canned_responses charset migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: whatsapp_conversations.awaiting_address_for ──
         // Tracks the order awaiting a corrected COD address (Wrong Address flow).
         try {

@@ -81,7 +81,9 @@ const WhatsappCannedResponse = sequelize.define('WhatsappCannedResponse', {
   title: { type: DataTypes.STRING(100), allowNull: false },
   body: { type: DataTypes.TEXT, allowNull: false },
   created_by: { type: DataTypes.INTEGER, allowNull: true },
-}, { tableName: 'whatsapp_canned_responses', timestamps: true });
+  // utf8mb4 is REQUIRED — canned bodies contain emojis (📦 📍 💳 …). Without it
+  // the column can't store 4-byte chars and every emoji becomes "?".
+}, { tableName: 'whatsapp_canned_responses', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
 
 // ─── Broadcast Campaigns ──────────────────────────────────────────────────────
 const WhatsappBroadcast = sequelize.define('WhatsappBroadcast', {

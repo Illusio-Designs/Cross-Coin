@@ -1515,15 +1515,22 @@ exports.seedCannedResponses = async (req, res) => {
       { shortcut: '/thanks',     title: 'Thank You',             body: `🙏 Thank you for shopping with *Cross Coin*! We hope you love your purchase.\n\nDon't forget to leave us a review — it means the world to us! ⭐\n\nSee you again soon! 😊` },
     ];
 
-    let created = 0; let skipped = 0;
+    // Upsert (not skip): overwrite the title/body of an existing default so that
+    // re-seeding after the utf8mb4 fix RESTORES the emojis that got corrupted to
+    // "?". Only the default shortcuts are touched — any custom replies the user
+    // added under different shortcuts are left alone.
+    let created = 0; let updated = 0;
     for (const cr of defaults) {
       const existing = await WhatsappCannedResponse.findOne({ where: { brand_id: brandId, shortcut: cr.shortcut } });
       if (!existing) {
         await WhatsappCannedResponse.create({ brand_id: brandId, ...cr });
         created++;
-      } else { skipped++; }
+      } else {
+        await existing.update({ title: cr.title, body: cr.body });
+        updated++;
+      }
     }
-    res.json({ success: true, summary: { created, skipped } });
+    res.json({ success: true, summary: { created, updated } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
