@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
 
 /* "Hand-Picked" — featured-product spotlight (same idea as the sibling brands,
@@ -51,8 +51,11 @@ export default function ExclusiveSection({ products = [] }) {
   const [added, setAdded]   = useState(false);
   const [shown, setShown]   = useState(false);
   const [paused, setPaused] = useState(false);
+  const [railH, setRailH]   = useState(0);
   const { addItem } = useCart();
+  const router = useRouter();
   const sectionRef = useRef(null);
+  const mainRef    = useRef(null);
   const thumbsRef  = useRef(null);
 
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
@@ -80,6 +83,17 @@ export default function ExclusiveSection({ products = [] }) {
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }, { threshold: 0.2 });
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Match the thumbnail rail height to the main image (so extra thumbs scroll).
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setRailH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // Auto-advance the main image through the gallery every 3s (pause on hover).
@@ -137,22 +151,24 @@ export default function ExclusiveSection({ products = [] }) {
         </div>
 
         <div className="excl3-grid">
-          {/* Stage — large auto-advancing main image with a thumbnail strip below */}
+          {/* Stage — thumbnail rail on the LEFT + auto-advancing main image */}
           <div className="excl3-stage">
-            <div className="excl3-frame">
-              <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
-              {product.badge && <span className="excl3-badge">{product.badge}</span>}
-            </div>
-            {imgCount > 1 && (
-              <div className="excl3-thumbs no-scrollbar" ref={thumbsRef}>
-                {gallery.map((img, i) => (
-                  <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)}
-                    className={`excl3-thumb ${i === safeIdx ? 'on' : ''}`} aria-label={`View image ${i + 1}`}>
-                    <img src={img} alt="" loading="lazy" />
-                  </button>
-                ))}
+            <div className="excl3-stage-row">
+              {imgCount > 1 && (
+                <div className="excl3-thumbs no-scrollbar" ref={thumbsRef} style={railH ? { maxHeight: railH } : undefined}>
+                  {gallery.map((img, i) => (
+                    <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)}
+                      className={`excl3-thumb ${i === safeIdx ? 'on' : ''}`} aria-label={`View image ${i + 1}`}>
+                      <img src={img} alt="" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="excl3-frame" ref={mainRef}>
+                <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
+                {product.badge && <span className="excl3-badge">{product.badge}</span>}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Info */}
@@ -195,7 +211,7 @@ export default function ExclusiveSection({ products = [] }) {
                 <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
               </div>
               <button type="button" className="excl3-add" onClick={onAdd}>{added ? 'Added ✓' : 'Add to Bag'}</button>
-              <Link href={`/products/${product.slug}`} className="excl3-view">View</Link>
+              <button type="button" className="excl3-view" onClick={() => router.push(`/products/${product.slug}`)}>View</button>
             </div>
 
             {/* Other products — one flex row each: image · title · price,
@@ -230,28 +246,29 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-title { color: #fff; font-size: clamp(1.8rem, 4vw, 3.2rem); margin: 10px 0 0; }
 
         .excl3-grid { display: grid; grid-template-columns: 1fr; gap: 44px; align-items: start; }
-        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: 1fr 1fr; gap: 72px; } }
+        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: 1.1fr 1fr; gap: 64px; } }
 
         .excl3-stage { position: relative; }
+        .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
 
-        /* Large, uniform main image (top-aligned with the info column). */
+        /* Thumbnail rail — on the LEFT of the main image; height matches it, extras scroll. */
+        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+        .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
+        .excl3-thumb:hover { opacity: .85; }
+        .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
+        .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Main image — natural height, capped so it never dominates. */
         .excl3-frame {
           position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
-          width: 100%; aspect-ratio: 4 / 5;
+          flex: 1; min-width: 0; max-width: 460px; align-self: flex-start;
           opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
         .is-shown .excl3-frame { opacity: 1; transform: none; }
-        .excl3-img { width: 100%; height: 100%; object-fit: cover; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
-
-        /* Thumbnail strip below the image */
-        .excl3-thumbs { display: flex; flex-direction: row; gap: 10px; margin-top: 14px; overflow-x: auto; overscroll-behavior: contain; padding-bottom: 2px; }
-        .excl3-thumb { width: 68px; height: 68px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
-        .excl3-thumb:hover { opacity: .85; }
-        .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
-        .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .excl3-img { width: 100%; height: auto; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
         .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 0; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
