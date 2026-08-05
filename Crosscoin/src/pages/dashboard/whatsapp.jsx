@@ -943,6 +943,19 @@ export function WhatsAppManager() {
     } catch (err) { showError('updateFailed', err.message); }
   };
 
+  // Manually set the brand shown on a conversation's badge (shared number can't
+  // always auto-detect it). Updates the open chat and the list in place.
+  const changeConvBrand = async (id, newBrandId) => {
+    const brandId = parseInt(newBrandId);
+    if (!brandId) return;
+    try {
+      await whatsappService.setConversationBrand(id, brandId);
+      setActiveConv(prev => prev && prev.id === id ? { ...prev, brand_id: brandId } : prev);
+      setConversations(prev => prev.map(c => c.id === id ? { ...c, brand_id: brandId } : c));
+      showSuccess('saved', 'Brand updated');
+    } catch (err) { showError('updateFailed', err.message || 'Failed to update brand'); }
+  };
+
   const saveConvNote = async () => {
     if (!activeConv || !convNote.trim()) return;
     setSavingNote(true);
@@ -1758,9 +1771,22 @@ export function WhatsAppManager() {
                       {/* Contact info */}
                       <div className="was-rp-section">
                         <div className="was-rp-section-title">Contact</div>
-                        {brandLabel(activeConv.brand_id) && (
-                          <div className="was-rp-row"><span className="was-rp-label">Brand</span><span className="was-rp-value"><span className="was-brand-chip">{brandLabel(activeConv.brand_id)}</span></span></div>
-                        )}
+                        <div className="was-rp-row">
+                          <span className="was-rp-label">Brand</span>
+                          <span className="was-rp-value">
+                            <select
+                              value={activeConv.brand_id || ''}
+                              onChange={e => changeConvBrand(activeConv.id, e.target.value)}
+                              style={{ border:'1px solid #d1d5db', borderRadius:6, padding:'3px 8px', fontSize:13, background:'#fff', cursor:'pointer', maxWidth:150 }}
+                              title="Set the brand for this conversation"
+                            >
+                              {!activeConv.brand_id && <option value="">Select brand…</option>}
+                              {brands.map(b => (
+                                <option key={b.id} value={b.id}>{b.display_name || b.name}</option>
+                              ))}
+                            </select>
+                          </span>
+                        </div>
                         <div className="was-rp-row"><span className="was-rp-label">Name</span><span className="was-rp-value">{activeConv.customer_name||'—'}</span></div>
                         <div className="was-rp-row"><span className="was-rp-label">Phone</span><span className="was-rp-value" style={{color:'#0b7a5e'}}>+{activeConv.customer_phone}</span></div>
                         <div className="was-rp-row"><span className="was-rp-label">Status</span>

@@ -2248,6 +2248,11 @@ export const whatsappService = {
     return response.data;
   },
 
+  setConversationBrand: async (conversationId, brandId) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/brand`, { brandId });
+    return response.data;
+  },
+
   setOptOut: async (conversationId, opted_out) => {
     const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/optout`, { opted_out });
     return response.data;

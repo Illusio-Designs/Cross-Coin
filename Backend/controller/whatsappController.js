@@ -1384,6 +1384,22 @@ exports.tagConversation = async (req, res) => {
   }
 };
 
+// ─── Set conversation brand ───────────────────────────────────────────────────
+// Manual override for the inbox brand badge: a shared number can't always detect
+// the brand from the message or an order, so let staff set it explicitly.
+exports.setConversationBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brandId = parseInt(req.body.brandId);
+    if (!brandId) return res.status(400).json({ success: false, message: 'brandId is required' });
+    const [updated] = await WhatsappConversation.update({ brand_id: brandId }, { where: { id } });
+    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, brand_id: brandId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── Opt-out management ───────────────────────────────────────────────────────
 exports.setOptOut = async (req, res) => {
   try {
