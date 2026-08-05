@@ -711,7 +711,7 @@ export default function CartDrawer() {
               </div>
             )}
             <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing || !pincodeServiceable}>
-              {isProcessing ? 'Processing…' : `Place Order — ₹${finalTotal.toFixed(0)}`}
+              {isProcessing ? 'Processing…' : `${isPrepaid ? 'Pay Now' : 'Place Order'} — ₹${finalTotal.toFixed(0)}`}
             </button>
             <div className="cd-trust-bar">
               <span className="cd-trust-item">Secure checkout</span>
