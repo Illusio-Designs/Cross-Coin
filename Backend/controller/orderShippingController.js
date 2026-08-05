@@ -159,19 +159,28 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     }
   }
 
-  // Preferred courier priority. Instead of always booking the cheapest (which
-  // meant Amazon won almost every time), book by a configured priority list:
-  // try the 1st preferred courier that serves this route, then the 2nd, etc.,
-  // and only if NONE of the preferred couriers are available fall back to the
-  // cheapest of whatever is left. Configurable per brand via COURIER_PRIORITY
-  // (comma-separated, matched case-insensitively as a substring of the courier
-  // name), default "xpressbees, delhivery, amazon".
-  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'xpressbees, delhivery, amazon');
+  // Spread orders ACROSS the enabled couriers instead of dumping every order on
+  // one. COURIER_PRIORITY lists the couriers to rotate across (comma-separated,
+  // matched case-insensitively as a substring of the courier name), default
+  // "delhivery, amazon, xpressbees, dtdc" (the four enabled in iThink).
+  // We ROTATE which courier leads each order (round-robin by order id) so
+  // consecutive orders use different couriers, keep only ones serviceable for
+  // this route, and use the cheapest rate as the tiebreak. If the chosen courier
+  // fails to book, the loop below falls through to the next serviceable one.
+  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees, dtdc');
   const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const rankOf = (name) => {
+  const listRankOf = (name) => {
     const n = String(name || '').toLowerCase();
     const idx = priorityList.findIndex((tok) => n.includes(tok));
-    return idx === -1 ? priorityList.length : idx; // unlisted couriers sort after all preferred ones
+    return idx === -1 ? priorityList.length : idx; // unlisted couriers sort after listed ones
+  };
+  // Rotate the lead courier per order so orders distribute evenly across the
+  // listed couriers (order #1 leads with the 1st, #2 the 2nd, …, wrapping).
+  const rotation = priorityList.length ? (Math.abs(Number(order.id) || 0) % priorityList.length) : 0;
+  const rankOf = (name) => {
+    const base = listRankOf(name);
+    if (base >= priorityList.length) return priorityList.length; // unlisted → always last
+    return (base - rotation + priorityList.length) % priorityList.length;
   };
 
   // 3. Keep only couriers that can carry THIS order's payment mode. A COD order
@@ -217,12 +226,12 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     return { success: false, courier: null, permanent: true, notServiceable: true, error: msg };
   }
 
-  // 5. Preferred priority first (Xpressbees, then Amazon, …), surface/"delivery"
-  //    service before air, then cheapest as the tiebreak. Any courier not on the
-  //    preference list sorts after all preferred ones (cheapest of the rest).
-  //    Book the first that succeeds.
-  options.sort((a, b) => (a.priorityRank - b.priorityRank) || (a.economy - b.economy) || (a.rate - b.rate));
-  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — priority [${priorityList.join(' > ') || 'none'}], trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
+  // 5. Rotated lead courier first (spreads orders across couriers), then the
+  //    cheapest rate, then surface/"delivery" over air. Any courier not on the
+  //    list sorts last. Book the first that succeeds — this is the serviceability
+  //    fallback: if the lead courier can't book, the next serviceable one is tried.
+  options.sort((a, b) => (a.priorityRank - b.priorityRank) || (a.rate - b.rate) || (a.economy - b.economy));
+  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — rotating [${priorityList.join(', ') || 'none'}] (offset ${rotation}), trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
   let lastError = null;
   for (const opt of options) {
     try {
