@@ -150,7 +150,8 @@ const ProductsPage = () => {
         filterValue,
         null,            // signal
         false,           // forceRefresh
-        selectedBrandSlug  // brandSlug — '' means all brands
+        selectedBrandSlug, // brandSlug — '' means all brands
+        true             // listMode — lean columns for the table (full data loads on Edit)
       );
       if (response && response.products) {
         setProducts(response.products);

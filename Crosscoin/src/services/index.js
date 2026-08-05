@@ -1184,10 +1184,10 @@ export const productService = {
     }
   },
 
-  getAllProducts: async (page = 1, limit = 10, search = "", signal = null, forceRefresh = false, brandSlug = '') => {
-    // Bake brandSlug into the cache key so flipping brand filters never
-    // returns stale "all-brand" data (and vice versa).
-    const cacheParams = { page, limit, search: search || '', brand: brandSlug || '' };
+  getAllProducts: async (page = 1, limit = 10, search = "", signal = null, forceRefresh = false, brandSlug = '', listMode = false) => {
+    // Bake brandSlug + listMode into the cache key so a lean "table" response
+    // and a full response never overwrite each other.
+    const cacheParams = { page, limit, search: search || '', brand: brandSlug || '', view: listMode ? 'list' : 'full' };
 
     // Check cache first (unless force refresh)
     if (!forceRefresh) {
@@ -1201,6 +1201,7 @@ export const productService = {
         if (!search) {
           delete params.search;
         }
+        if (listMode) params.view = 'list'; // lean columns for the admin table
         const config = { params };
         if (signal) config.signal = signal;
         // Per-request brand header — adminApi has none by default so the
