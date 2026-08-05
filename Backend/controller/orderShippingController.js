@@ -159,28 +159,21 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     }
   }
 
-  // Spread orders ACROSS the enabled couriers instead of dumping every order on
-  // one. COURIER_PRIORITY lists the couriers to rotate across (comma-separated,
-  // matched case-insensitively as a substring of the courier name), default
-  // "delhivery, amazon, xpressbees, dtdc" (the four enabled in iThink).
-  // We ROTATE which courier leads each order (round-robin by order id) so
-  // consecutive orders use different couriers, keep only ones serviceable for
-  // this route, and use the cheapest rate as the tiebreak. If the chosen courier
-  // fails to book, the loop below falls through to the next serviceable one.
+  // SHUFFLE orders across the enabled couriers instead of dumping every order on
+  // one. COURIER_PRIORITY is the set of couriers to distribute across (comma-
+  // separated, matched case-insensitively as a substring of the courier name),
+  // default "delhivery, amazon, xpressbees, dtdc" (the four enabled in iThink).
+  // For each order we RANDOMLY shuffle the enabled serviceable couriers, keep
+  // only ones serviceable for this route, and use the cheapest rate as the
+  // tiebreak. If the chosen courier can't book, the loop below falls through to
+  // the next serviceable one. Couriers NOT in the list are used only as a last
+  // resort (cheapest of them).
   const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees, dtdc');
   const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const listRankOf = (name) => {
+  // 0 = an enabled/listed courier (gets shuffled), 1 = not in the list (last resort).
+  const listedRank = (name) => {
     const n = String(name || '').toLowerCase();
-    const idx = priorityList.findIndex((tok) => n.includes(tok));
-    return idx === -1 ? priorityList.length : idx; // unlisted couriers sort after listed ones
-  };
-  // Rotate the lead courier per order so orders distribute evenly across the
-  // listed couriers (order #1 leads with the 1st, #2 the 2nd, …, wrapping).
-  const rotation = priorityList.length ? (Math.abs(Number(order.id) || 0) % priorityList.length) : 0;
-  const rankOf = (name) => {
-    const base = listRankOf(name);
-    if (base >= priorityList.length) return priorityList.length; // unlisted → always last
-    return (base - rotation + priorityList.length) % priorityList.length;
+    return priorityList.some((tok) => n.includes(tok)) ? 0 : 1;
   };
 
   // 3. Keep only couriers that can carry THIS order's payment mode. A COD order
@@ -204,7 +197,8 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
         rate,
         name: c.code,
         economy,
-        priorityRank: rankOf(c.code),
+        listed: listedRank(c.code),   // 0 = enabled courier, 1 = last resort
+        shuffle: Math.random(),       // fresh random order every time → distributes
       };
     })
     .filter(Boolean);
@@ -226,18 +220,18 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     return { success: false, courier: null, permanent: true, notServiceable: true, error: msg };
   }
 
-  // 5. Rotated lead courier first (spreads orders across couriers), then the
-  //    cheapest rate, then surface/"delivery" over air. Any courier not on the
-  //    list sorts last. Book the first that succeeds — this is the serviceability
+  // 5. Enabled couriers first, then a RANDOM shuffle (so orders spread across
+  //    them), then cheapest rate, then surface/"delivery" over air. Couriers not
+  //    in the list sort last. Book the first that succeeds — the serviceability
   //    fallback: if the lead courier can't book, the next serviceable one is tried.
-  options.sort((a, b) => (a.priorityRank - b.priorityRank) || (a.rate - b.rate) || (a.economy - b.economy));
-  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — rotating [${priorityList.join(', ') || 'none'}] (offset ${rotation}), trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
+  options.sort((a, b) => (a.listed - b.listed) || (a.shuffle - b.shuffle) || (a.rate - b.rate) || (a.economy - b.economy));
+  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — shuffled among [${priorityList.join(', ') || 'none'}], trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
   let lastError = null;
   for (const opt of options) {
     try {
       const r = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', opt.logistics, opt.s_type);
       if (r.success) {
-        logger.info(`✅ Auto-assigned courier ${opt.name}/${opt.s_type} (${opt.logistics}) @ ₹${opt.rate} [priority rank ${opt.priorityRank}] for ${order.order_number}`);
+        logger.info(`✅ Auto-assigned courier ${opt.name}/${opt.s_type} (${opt.logistics}) @ ₹${opt.rate} [${opt.listed === 0 ? 'enabled' : 'last-resort'}] for ${order.order_number}`);
         return { success: true, courier: opt.logistics, result: r };
       }
       lastError = r.error || lastError;
