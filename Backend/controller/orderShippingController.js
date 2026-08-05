@@ -165,8 +165,8 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
   // and only if NONE of the preferred couriers are available fall back to the
   // cheapest of whatever is left. Configurable per brand via COURIER_PRIORITY
   // (comma-separated, matched case-insensitively as a substring of the courier
-  // name), default "xpressbees, amazon".
-  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'xpressbees, amazon');
+  // name), default "xpressbees, delhivery, amazon".
+  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'xpressbees, delhivery, amazon');
   const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   const rankOf = (name) => {
     const n = String(name || '').toLowerCase();

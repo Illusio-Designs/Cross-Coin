@@ -218,17 +218,29 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
 
     await auditLog(order.id, 'cancel', cancelledBy, isAdmin ? 'admin' : 'user', { reason }, t);
 
-    // Cancel at the shipping provider that issued the AWB (after commit).
-    // Use the per-order resolver so iThink orders go to iThink, FShip to FShip.
+    // Cancel at the shipping provider that issued the AWB (after commit), so a
+    // synced/booked order is cancelled on BOTH sides — our DB (above) and the
+    // courier (iThink order/cancel.json). Uses the per-order resolver so iThink
+    // orders go to iThink, FShip to FShip. The outcome is recorded on the
+    // shipment so staff can see whether the courier-side cancel actually landed
+    // (and cancel it manually in the courier panel if it didn't).
     if (order.fship_waybill) {
+      const waybill = order.fship_waybill;
       setImmediate(async () => {
+        const { OrderShipment } = require('../model/orderShipmentModel.js');
         try {
           const { resolveProviderForOrder } = require('../controller/orderShippingController.js');
           const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-          await provider.cancelOrder(order.fship_waybill, reason || 'Order cancelled');
-          logger.debug(`${providerName} cancel sent for ${order.order_number} (AWB ${order.fship_waybill})`);
+          await provider.cancelOrder(waybill, reason || 'Order cancelled');
+          logger.info(`✅ ${providerName} cancel confirmed for ${order.order_number} (AWB ${waybill})`);
+          try {
+            await OrderShipment.update({ sync_status: 'cancelled', sync_error: null }, { where: { order_id: order.id } });
+          } catch (_) { /* shipment row optional */ }
         } catch (e) {
-          logger.warn(`Provider cancel failed for ${order.order_number}: ${e.message}`);
+          logger.error(`⚠️ Courier cancel FAILED for ${order.order_number} (AWB ${waybill}) — cancel it manually in the courier panel: ${e.message}`);
+          try {
+            await OrderShipment.update({ sync_error: `Courier cancel failed: ${e.message}` }, { where: { order_id: order.id } });
+          } catch (_) { /* shipment row optional */ }
         }
       });
     }
