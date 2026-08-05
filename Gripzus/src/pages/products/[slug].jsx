@@ -236,9 +236,9 @@ export default function ProductDetail() {
                   </div>
                 )}
 
-                {/* Main image — capped height, auto-advances every 3s, pauses on hover */}
+                {/* Main image — fills the frame (no background/letterbox), tall */}
                 <div
-                  className="gz-pdp-main relative flex-1 overflow-hidden bg-paper-warm"
+                  className="gz-pdp-main relative flex-1 overflow-hidden"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
                 >
@@ -246,15 +246,8 @@ export default function ProductDetail() {
                     key={curImg}
                     src={images[curImg]}
                     alt={product.name}
-                    className="gz-pdp-img mx-auto block w-full max-h-[26rem] object-contain"
+                    className="gz-pdp-img block w-full aspect-[4/5] object-cover"
                   />
-
-                  {/* Image counter */}
-                  {images.length > 1 && (
-                    <span className="absolute bottom-4 right-4 rounded-full bg-black/80 px-3 py-1 text-[10px] tracking-[0.16em] text-paper backdrop-blur-sm">
-                      {String(curImg + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
-                    </span>
-                  )}
 
                   <style jsx>{`
                     .gz-pdp-img {
