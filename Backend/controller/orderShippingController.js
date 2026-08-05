@@ -159,6 +159,21 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     }
   }
 
+  // Preferred courier priority. Instead of always booking the cheapest (which
+  // meant Amazon won almost every time), book by a configured priority list:
+  // try the 1st preferred courier that serves this route, then the 2nd, etc.,
+  // and only if NONE of the preferred couriers are available fall back to the
+  // cheapest of whatever is left. Configurable per brand via COURIER_PRIORITY
+  // (comma-separated, matched case-insensitively as a substring of the courier
+  // name), default "xpressbees, amazon".
+  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'xpressbees, amazon');
+  const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const rankOf = (name) => {
+    const n = String(name || '').toLowerCase();
+    const idx = priorityList.findIndex((tok) => n.includes(tok));
+    return idx === -1 ? priorityList.length : idx; // unlisted couriers sort after all preferred ones
+  };
+
   // 3. Keep only couriers that can carry THIS order's payment mode. A COD order
   //    MUST use a COD-capable courier (cod === 'Y'); a prepaid order a
   //    prepaid-capable one. When the flag is absent we keep the courier and let
@@ -171,8 +186,8 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
       if (!modeOk) return null;
       const rate = parseFloat(c.raw?.rate ?? c.raw?.freight_charges ?? c.raw?.total_charges ?? c.raw?.total_amount ?? 0) || 0;
       const st = String(c.s_type || 'surface');
-      // Prefer economy/surface over premium/air on a rate tie.
-      const economy = /econom|surface|ground|standard/i.test(st) ? 0 : 1;
+      // Prefer economy/surface ("delivery") over premium/air on a tie.
+      const economy = /econom|surface|ground|standard|deliver/i.test(st) ? 0 : 1;
       return {
         // order/add.json expects the courier NAME (e.g. "delhivery") + s_type.
         logistics: String(c.code).toLowerCase(),
@@ -180,6 +195,7 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
         rate,
         name: c.code,
         economy,
+        priorityRank: rankOf(c.code),
       };
     })
     .filter(Boolean);
@@ -201,16 +217,18 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     return { success: false, courier: null, permanent: true, notServiceable: true, error: msg };
   }
 
-  // 5. Cheapest first (economy service breaks a rate tie). Book the first that
-  //    succeeds.
-  options.sort((a, b) => (a.rate - b.rate) || (a.economy - b.economy));
-  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — trying cheapest first: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
+  // 5. Preferred priority first (Xpressbees, then Amazon, …), surface/"delivery"
+  //    service before air, then cheapest as the tiebreak. Any courier not on the
+  //    preference list sorts after all preferred ones (cheapest of the rest).
+  //    Book the first that succeeds.
+  options.sort((a, b) => (a.priorityRank - b.priorityRank) || (a.economy - b.economy) || (a.rate - b.rate));
+  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — priority [${priorityList.join(' > ') || 'none'}], trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
   let lastError = null;
   for (const opt of options) {
     try {
       const r = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', opt.logistics, opt.s_type);
       if (r.success) {
-        logger.info(`✅ Auto-assigned cheapest courier ${opt.name}/${opt.s_type} (${opt.logistics}) @ ₹${opt.rate} for ${order.order_number}`);
+        logger.info(`✅ Auto-assigned courier ${opt.name}/${opt.s_type} (${opt.logistics}) @ ₹${opt.rate} [priority rank ${opt.priorityRank}] for ${order.order_number}`);
         return { success: true, courier: opt.logistics, result: r };
       }
       lastError = r.error || lastError;
