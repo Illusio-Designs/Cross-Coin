@@ -41,6 +41,40 @@ async function resolveBrandByPhone(phone) {
   return DEFAULT_BRAND;
 }
 
+// WhatsApp only includes a customer's profile name in the webhook when they've
+// set one and their privacy allows it — so many threads have no name and the
+// inbox falls back to showing the raw phone number. When we have no name, look
+// one up from the customer's most recent order (shipping name), then their guest
+// record. Matched by the last-10 phone digits, same as the brand resolver.
+async function resolveCustomerNameByPhone(phone) {
+  try {
+    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) return null;
+    const { Order } = require('../model/orderModel.js');
+    const { ShippingAddress } = require('../model/shippingAddressModel.js');
+    const { GuestUser } = require('../model/guestUserModel.js');
+    const recent = { attributes: ['id'], order: [['createdAt', 'DESC']] };
+
+    const viaAddr = await Order.findOne({
+      ...recent,
+      include: [{ model: ShippingAddress, as: 'ShippingAddress', attributes: ['full_name'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
+    });
+    const addrName = viaAddr?.ShippingAddress?.full_name?.trim();
+    if (addrName) return addrName;
+
+    const viaGuest = await Order.findOne({
+      ...recent,
+      include: [{ model: GuestUser, as: 'GuestUser', attributes: ['firstName', 'lastName'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
+    });
+    const g = viaGuest?.GuestUser;
+    const gName = g ? [g.firstName, g.lastName].filter(Boolean).join(' ').trim() : '';
+    if (gName) return gName;
+  } catch (e) {
+    logger.warn('[WhatsApp] name resolve by phone failed: ' + e.message);
+  }
+  return null;
+}
+
 // Detect the brand from the message TEXT. Every storefront's WhatsApp widget
 // opens with "Hi! I need help with <Brand> [order]." — a stronger signal than
 // the phone lookup for a first-time customer (who has no order yet), and the
@@ -115,6 +149,25 @@ exports.reattributeBrands = async () => {
   return updated;
 };
 
+// One-time (and re-runnable) backfill: fill in a real name for existing chats
+// that have none (they show a bare phone number in the inbox), by looking the
+// customer up in their order/guest records. Only touches nameless rows.
+exports.backfillCustomerNames = async () => {
+  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+  const convs = await WhatsappConversation.findAll({
+    where: { [Op.or]: [{ customer_name: null }, { customer_name: '' }] },
+    attributes: ['id', 'customer_phone'],
+  });
+  let updated = 0;
+  for (const conv of convs) {
+    try {
+      const name = await resolveCustomerNameByPhone(conv.customer_phone);
+      if (name) { await conv.update({ customer_name: name }); updated++; }
+    } catch (_) { /* skip a bad row, keep going */ }
+  }
+  return updated;
+};
+
 // POST /api/whatsapp/reattribute-brands — admin trigger for the backfill above.
 exports.reattributeBrandsHandler = async (req, res) => {
   try {
@@ -155,7 +208,10 @@ exports.receiveWebhook = async (req, res) => {
           const phone       = msg.from;
           // Shared number → attribute this message to the customer's brand.
           const brandId     = await resolveBrandByPhone(phone);
-          const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          // Prefer the live WhatsApp profile name; fall back to the customer's
+          // order/guest name so the inbox shows a real name, not a bare number.
+          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
@@ -225,7 +281,8 @@ exports.receiveWebhook = async (req, res) => {
               last_message:    displayText,
               last_message_at: sentAt,
               unread_count:    conv.unread_count + 1,
-              customer_name:   contactName || conv.customer_name,
+              // Fresh WhatsApp name wins; else keep existing; else the resolved name.
+              customer_name:   waName || conv.customer_name || contactName,
               status:          'open',
             });
           }
@@ -825,13 +882,16 @@ exports.customerContact = async (req, res) => {
 
     const normalizedPhone = whatsappService.formatE164(phone.trim()).replace('+', '');
 
+    // Fall back to the customer's order/guest name when the widget didn't pass one.
+    const widgetName = name?.trim() || await resolveCustomerNameByPhone(normalizedPhone);
+
     // Save conversation in DB so it appears in dashboard inbox (one thread per
     // customer — shared number).
     const [conv, created] = await WhatsappConversation.findOrCreate({
       where: { customer_phone: normalizedPhone },
       defaults: {
         brand_id:        brandId,
-        customer_name:   name?.trim() || null,
+        customer_name:   widgetName,
         wa_contact_id:   normalizedPhone,
         last_message:    message.trim(),
         last_message_at: new Date(),
@@ -845,7 +905,7 @@ exports.customerContact = async (req, res) => {
         last_message:    message.trim(),
         last_message_at: new Date(),
         unread_count:    conv.unread_count + 1,
-        customer_name:   name?.trim() || conv.customer_name,
+        customer_name:   conv.customer_name || widgetName,
         status:          'open',
       });
     }
@@ -1129,7 +1189,10 @@ exports.receiveWebhook = async (req, res) => {
           // Shared number → attribute this message to the customer's brand
           // (by their most recent order); tags the one-per-customer thread.
           const brandId     = await resolveBrandByPhone(phone);
-          const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          // Prefer the live WhatsApp profile name; fall back to the customer's
+          // order/guest name so the inbox shows a real name, not a bare number.
+          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
@@ -1227,7 +1290,7 @@ exports.receiveWebhook = async (req, res) => {
             defaults: { brand_id: namedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
-            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' };
+            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: waName || conv.customer_name || contactName, status: 'open' };
             if (namedBrand) upd.brand_id = namedBrand; // only re-attribute when a brand is explicitly named
             await conv.update(upd);
           }

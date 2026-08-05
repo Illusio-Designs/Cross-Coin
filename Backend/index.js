@@ -622,6 +622,21 @@ const startServer = async () => {
             logger.error('WhatsApp brand backfill failed: ' + err.message);
         }
 
+        // ── One-time backfill: fill missing customer names ──────────────────
+        // Older chats with no WhatsApp profile name show a bare phone number;
+        // look each up in their order/guest records. Guarded by its own flag.
+        try {
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-name-backfill-v1' LIMIT 1`);
+            if (!done.length) {
+                const { backfillCustomerNames } = require('./controller/whatsappController.js');
+                const n = await backfillCustomerNames();
+                logger.info(`✓ WhatsApp name backfill: named ${n} conversation(s)`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-name-backfill-v1')`);
+            }
+        } catch (err) {
+            logger.error('WhatsApp name backfill failed: ' + err.message);
+        }
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;
