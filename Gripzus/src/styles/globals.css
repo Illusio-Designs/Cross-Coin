@@ -252,11 +252,9 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 
 /* Marquee ticker — hairline-ruled band of making-notes in the display face. */
 .gz-marquee {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
   overflow: hidden;
-  padding: 16px 0;
-  background: var(--paper);
+  padding: 13px 0;
+  background: var(--ink);
 }
 .gz-marquee-track {
   display: inline-flex;
@@ -268,15 +266,15 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .gz-marquee:hover .gz-marquee-track { animation-play-state: paused; }
 .gz-marquee-item {
   font-family: var(--font-display);
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--paper);
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   padding: 0 6px;
 }
-.gz-marquee-star { color: var(--accent); margin: 0 26px 0 30px; font-size: 12px; }
+.gz-marquee-star { color: var(--paper); opacity: 0.45; margin: 0 26px 0 30px; font-size: 10px; }
 @keyframes gz-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) {
   .gz-marquee-track { animation: none; }

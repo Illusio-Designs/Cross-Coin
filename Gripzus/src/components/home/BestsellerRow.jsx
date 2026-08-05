@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import ProductCard from '../products/ProductCard';
+import SectionHead from '../common/SectionHead';
 
 /* Bestseller product grid — editorial gallery. Prop-driven: pass `products`
    from the API. `title` + `cta` configurable so it doubles as "New Arrivals"
@@ -16,20 +16,14 @@ export default function BestsellerRow({
   title = 'Bestsellers',
   accent = 'this season.',
   ctaHref = '/products',
+  index = 3,
 }) {
   const skeleton = !products.length;
 
   return (
     <section className="section-y">
       <div className="wrap">
-        {/* quiet header */}
-        <div className="flex items-end justify-between mb-10 md:mb-14">
-          <div>
-            <p className="eyebrow text-ink-muted mb-3">{eyebrow}</p>
-            <h2 className="h-display text-2xl md:text-3xl">{title}</h2>
-          </div>
-          <Link href={ctaHref} className="link-line">See all</Link>
-        </div>
+        <SectionHead index={index} eyebrow={eyebrow} title={title} linkHref={ctaHref} linkLabel="See all" />
 
         {/* Single row — item count follows the column count at each width
             (2 on mobile, 4 on md, 5 on xl); extras are hidden, not wrapped. */}
