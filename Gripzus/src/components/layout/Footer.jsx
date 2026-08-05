@@ -52,7 +52,13 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-ink text-paper rounded-t-[32px] md:rounded-t-[44px] mt-8">
+    <footer className="bg-ink text-paper mt-8">
+      {/* Architectural top meta rule */}
+      <div className="wrap flex items-center justify-between gap-4 py-3 border-b border-paper/15 text-[10px] tracking-[0.2em] uppercase text-paper/45">
+        <span className="text-paper/70">Gripzus — Grip Socks</span>
+        <span className="hidden sm:block">Morbi, Gujarat · IN</span>
+        <span>SS26 / Vol.01</span>
+      </div>
       <div className="wrap pt-14 md:pt-20 pb-8">
 
         {/* Top — brand + newsletter */}
@@ -124,6 +130,11 @@ export default function Footer() {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Signature oversized wordmark */}
+        <div className="border-t border-paper/10 pt-8 pb-2 overflow-hidden">
+          <div className="h-mark text-paper/[0.09] leading-[0.8] text-[22vw] md:text-[17vw] select-none pointer-events-none">GRIPZUS</div>
         </div>
 
         {/* Bottom bar */}
