@@ -553,6 +553,33 @@ const startServer = async () => {
             logger.error('push_subscriptions table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: WhatsApp inbox indexes (load speed) ─────────
+        // The inbox was slow because these hot columns were unindexed: opening a
+        // conversation scans whatsapp_messages by conversation_id, the inbound
+        // webhook looks up conversations by customer_phone, and the list orders
+        // by last_message_at. Add covering indexes (guarded by STATISTICS so it's
+        // a no-op once applied). CREATE INDEX has no IF NOT EXISTS in MySQL.
+        const ensureIndex = async (table, indexName, columns) => {
+            try {
+                const [rows] = await sequelize.query(
+                    `SELECT 1 FROM information_schema.STATISTICS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
+                    { replacements: [table, indexName] }
+                );
+                if (!rows.length) {
+                    logger.info(`Migrating: adding index ${indexName} on ${table}(${columns})…`);
+                    await sequelize.query(`ALTER TABLE ${table} ADD INDEX ${indexName} (${columns})`);
+                    logger.info(`✓ index ${indexName} added`);
+                }
+            } catch (err) {
+                logger.error(`index ${indexName} migration failed: ` + err.message);
+            }
+        };
+        await ensureIndex('whatsapp_messages', 'idx_wam_conv_id', 'conversation_id, id');
+        await ensureIndex('whatsapp_conversations', 'idx_wac_phone', 'customer_phone');
+        await ensureIndex('whatsapp_conversations', 'idx_wac_brand_last', 'brand_id, last_message_at');
+        await ensureIndex('whatsapp_conversations', 'idx_wac_last', 'last_message_at');
+
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
         let needsSetup = false;

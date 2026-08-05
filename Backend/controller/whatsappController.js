@@ -41,6 +41,45 @@ async function resolveBrandByPhone(phone) {
   return DEFAULT_BRAND;
 }
 
+// Detect the brand from the message TEXT. Every storefront's WhatsApp widget
+// opens with "Hi! I need help with <Brand> [order]." — a stronger signal than
+// the phone lookup for a first-time customer (who has no order yet), and the
+// reason a Morbix chat used to show the CrossCoin badge. Matches brand name /
+// display name / domain (alphanumerics only) as a substring of the text.
+let _brandTokenCache = null;
+let _brandTokenCacheAt = 0;
+async function getBrandTokens() {
+  const now = Date.now();
+  if (_brandTokenCache && now - _brandTokenCacheAt < 5 * 60 * 1000) return _brandTokenCache;
+  try {
+    const { Brand } = require('../model/brandModel.js');
+    const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name', 'domain'] });
+    _brandTokenCache = brands.map((b) => {
+      const domainWord = String(b.domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
+      const tokens = [b.name, b.display_name, domainWord]
+        .filter(Boolean)
+        .map((s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, ''))
+        .filter((t) => t.length >= 4);
+      return { id: b.id, tokens: [...new Set(tokens)] };
+    });
+    _brandTokenCacheAt = now;
+  } catch (e) {
+    logger.warn('[WhatsApp] brand token load failed: ' + e.message);
+    _brandTokenCache = _brandTokenCache || [];
+  }
+  return _brandTokenCache;
+}
+async function detectBrandFromText(text) {
+  if (!text) return null;
+  const hay = String(text).toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!hay) return null;
+  const brands = await getBrandTokens();
+  for (const b of brands) {
+    if (b.tokens.some((tok) => hay.includes(tok))) return b.id;
+  }
+  return null;
+}
+
 // ─── Webhook: verify (GET) ────────────────────────────────────────────────────
 exports.verifyWebhook = (req, res) => {
   const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'crosscoin_wa_verify';
@@ -1132,12 +1171,19 @@ exports.receiveWebhook = async (req, res) => {
 
           const lastMsgPreview = msgType !== 'text' ? text : text;
 
+          // Prefer the brand the customer NAMED in this text ("...my Morbix
+          // order") over the phone-based guess — that's what makes the inbox
+          // badge show the right brand. Only override on an explicit mention so
+          // a later "yes" doesn't flip an already-attributed conversation back.
+          const namedBrand = msgType === 'text' ? await detectBrandFromText(text) : null;
           const [conv, created] = await WhatsappConversation.findOrCreate({
             where: { customer_phone: phone },
-            defaults: { brand_id: brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
+            defaults: { brand_id: namedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
-            await conv.update({ brand_id: brandId, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' });
+            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' };
+            if (namedBrand) upd.brand_id = namedBrand; // only re-attribute when a brand is explicitly named
+            await conv.update(upd);
           }
 
           await WhatsappMessage.create({
