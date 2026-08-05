@@ -596,6 +596,13 @@ exports.getConversations = async (req, res) => {
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
 exports.getMessages = async (req, res) => {
+  // Timing so we can SEE where the time goes: X-DB-Ms is the actual DB work,
+  // X-Handler-Ms the whole handler. Read them in the browser Network tab. If
+  // X-Handler-Ms is small but the request feels slow, the time is in the
+  // network / auth / Passenger cold-start, not this query.
+  const t0 = Date.now();
+  let dbMs = 0;
+  res.setHeader('Access-Control-Expose-Headers', 'X-DB-Ms, X-Handler-Ms');
   try {
     const { id } = req.params;
     const conv = await WhatsappConversation.findByPk(id);
@@ -609,6 +616,7 @@ exports.getMessages = async (req, res) => {
     const where = { conversation_id: id };
     if (before) where.id = { [Op.lt]: before };
 
+    const tDb = Date.now();
     let rows = await WhatsappMessage.findAll({
       where,
       order: [['id', 'DESC']],
@@ -625,6 +633,7 @@ exports.getMessages = async (req, res) => {
       const quotedMsgs = await WhatsappMessage.findAll({ where: { id: quotedIds } });
       quotedMsgs.forEach(q => { quotedMap[q.id] = q; });
     }
+    dbMs = Date.now() - tDb;
     const messagesWithQuotes = rows.map(m => {
       const plain = m.toJSON();
       if (m.quoted_message_id && quotedMap[m.quoted_message_id]) {
@@ -633,10 +642,15 @@ exports.getMessages = async (req, res) => {
       return plain;
     });
 
-    if (!before) await conv.update({ unread_count: 0 }); // mark read only on newest load
+    // Only write when there's actually something to clear (avoids a needless
+    // UPDATE on every open of an already-read chat).
+    if (!before && conv.unread_count > 0) await conv.update({ unread_count: 0 });
 
+    res.setHeader('X-DB-Ms', String(dbMs));
+    res.setHeader('X-Handler-Ms', String(Date.now() - t0));
     res.json({ success: true, conversation: conv, messages: messagesWithQuotes, hasMore });
   } catch (err) {
+    res.setHeader('X-Handler-Ms', String(Date.now() - t0));
     res.status(500).json({ success: false, message: err.message });
   }
 };
