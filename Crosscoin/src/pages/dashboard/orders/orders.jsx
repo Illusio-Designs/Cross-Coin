@@ -625,7 +625,13 @@ const Orders = () => {
                 // hide the Sync button (the Refresh-tracking button takes over).
                 const isSynced = !!(row.Shipment?.waybill || row.fship_waybill);
                 const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
-                const canCancel = row.payment_type?.toLowerCase() === 'cod' && (row.status === 'pending' || row.status === 'awaiting_confirmation');
+                // Admin can cancel any non-dispatched order (COD or prepaid),
+                // including confirmed / processing / synced-&-booked ones — the
+                // backend restores stock, refunds prepaid, and cancels the
+                // courier booking (iThink) so both sides stay in sync. Matches
+                // the server's admin-cancellable statuses; dispatched/final
+                // orders (shipped, delivered, cancelled…) never show it.
+                const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
                 const divider = <span aria-hidden="true" style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 3px', flexShrink: 0 }} />;
                 return (
                     <div className="sl-actions">
