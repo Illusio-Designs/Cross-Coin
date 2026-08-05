@@ -236,7 +236,7 @@ export default function ProductDetail() {
                   </div>
                 )}
 
-                {/* Main image — fills the frame (no background/letterbox), tall */}
+                {/* Main image — full image (never cropped), capped height, no bg */}
                 <div
                   className="gz-pdp-main relative flex-1 overflow-hidden"
                   onMouseEnter={() => setPaused(true)}
@@ -246,7 +246,7 @@ export default function ProductDetail() {
                     key={curImg}
                     src={images[curImg]}
                     alt={product.name}
-                    className="gz-pdp-img block w-full aspect-[4/5] object-cover"
+                    className="gz-pdp-img mx-auto block w-full max-h-[26rem] object-contain"
                   />
 
                   <style jsx>{`
