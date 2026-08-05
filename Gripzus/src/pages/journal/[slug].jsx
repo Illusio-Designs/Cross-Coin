@@ -42,9 +42,9 @@ export default function JournalPost({ post, related }) {
         {/* Cover — full image, full viewport width, natural height (never cut) */}
         <img src={post.image} alt={post.title} className="block w-full h-auto" />
 
-        {/* Body — readable measure, centered inside the full-width wrap */}
+        {/* Body — same full-width container as the other pages/sections */}
         <div className="wrap py-12 md:py-16">
-          <div className="max-w-3xl mx-auto">
+          <div>
             <p className="h-display text-xl md:text-2xl text-ink leading-snug mb-8">{post.excerpt}</p>
             {post.body.map((block, i) => {
               // Body items are typed blocks ({ type, text }) from the API,
