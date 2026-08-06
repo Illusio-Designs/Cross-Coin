@@ -3633,5 +3633,13 @@
 .oa-form textarea:focus { outline: none; border-color: #0a0a0a; background: var(--ds-color-surface); }
 .oa-row { display: flex; gap: 10px; }
 .oa-row > label { flex: 1 1 0; min-width: 0; }
+/* While editing, the shipping card spans the full panel width so the
+   two-column form has room (it lives inside the half-width odm-row-2 grid
+   otherwise, which squeezed the inputs and clipped them). */
+.odm-card--editing { grid-column: 1 / -1; }
+/* Extra-narrow fallback: stack the paired fields so nothing is ever cut. */
+@media (max-width: 520px) {
+  .oa-row { flex-direction: column; gap: 10px; }
+}
 .oa-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
 .oa-hint { font-size: 11px; color: var(--ds-color-text-muted); margin: 2px 0 0; line-height: 1.4; }
