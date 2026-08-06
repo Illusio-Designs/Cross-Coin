@@ -54,6 +54,8 @@ export default function ProductDetail() {
   const actionsRef = useRef(null);
   const [showBar, setShowBar] = useState(false);
   const thumbsRef = useRef(null);
+  const mainImgRef = useRef(null);
+  const [galH, setGalH] = useState(0); // main-image height → thumbnail rail height
 
   // Fetch the product by slug.
   useEffect(() => {
@@ -119,8 +121,20 @@ export default function ProductDetail() {
     return () => clearTimeout(id);
   }, [product, paused, activeImg, color]);
 
-  // Keep the active thumbnail in view by scrolling ONLY the rail (horizontal on
-  // mobile, vertical on desktop) as the gallery auto-advances — never the page.
+  // Match the thumbnail rail height to the main image so the 3 thumbnails fill
+  // exactly its height (extras scroll). Re-measures on resize / product change.
+  useEffect(() => {
+    const el = mainImgRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setGalH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [product]);
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail (never the
+  // page) as the gallery auto-advances.
   useEffect(() => {
     const rail = thumbsRef.current;
     if (!rail) return;
@@ -189,6 +203,8 @@ export default function ProductDetail() {
     ? colorImages
     : (product.images?.length ? product.images : ['/assets/Gripzus.JPG.jpeg']);
   const curImg   = Math.min(activeImg, images.length - 1);
+  // 3 thumbnails fill the main-image height (gap-2 = 8px, two gaps = 16px).
+  const thumbH   = galH ? Math.max(44, Math.round((galH - 16) / 3)) : 96;
   const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
 
   const handleAdd = () => {
@@ -240,7 +256,8 @@ export default function ProductDetail() {
                 {images.length > 1 && (
                   <div
                     ref={thumbsRef}
-                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] max-h-[172px] overflow-y-auto shrink-0"
+                    style={galH ? { maxHeight: galH } : undefined}
+                    className="flex flex-col items-stretch gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0 w-14 sm:w-[72px]"
                   >
                     {images.slice(0, 8).map((img, i) => (
                       <button
@@ -248,7 +265,8 @@ export default function ProductDetail() {
                         onClick={() => setActiveImg(i)}
                         data-active={curImg === i ? 'true' : undefined}
                         aria-label={`View image ${i + 1}`}
-                        className={`w-12 h-12 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
+                        style={{ height: thumbH }}
+                        className={`w-full shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
                           curImg === i
                             ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
                             : 'opacity-45 hover:opacity-100'
@@ -263,6 +281,7 @@ export default function ProductDetail() {
                 {/* Main image — a fixed SQUARE frame so every product renders at
                     the same size; the photo is contained (never cropped). */}
                 <div
+                  ref={mainImgRef}
                   className="gz-pdp-main relative flex-1 max-w-[360px] aspect-square grid place-items-center overflow-hidden"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
