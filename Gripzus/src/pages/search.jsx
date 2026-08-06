@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../components/products/ProductCard';
 import SeoWrapper from '../components/SeoWrapper';
-import { searchProducts, getPublicProducts } from '../services/products';
+import { searchProducts } from '../services/products';
 
-/* Search — live API search (GET /api/products/search), same flow as the
-   Knitwink search page: a debounced field in the hero that syncs to
-   ?q=, results below, and a one-per-collection browse grid when empty. */
+/* Search — live API search (GET /api/products/search): a debounced field in
+   the hero that syncs to ?q= and shows the matching pairs below. Nothing is
+   shown until the shopper actually types a query. */
 
 export default function SearchPage() {
   const router = useRouter();
@@ -16,7 +16,6 @@ export default function SearchPage() {
   const [value, setValue]   = useState('');   // what's typed
   const [query, setQuery]   = useState('');   // the committed (debounced) term
   const [results, setResults] = useState([]);
-  const [browse, setBrowse]   = useState([]); // one product per collection
   const [loading, setLoading] = useState(false);
 
   const debounceRef = useRef(null);
@@ -53,20 +52,6 @@ export default function SearchPage() {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [query]);
-
-  // Browse grid for the empty state — one pair from each collection.
-  useEffect(() => {
-    getPublicProducts({ limit: 100 })
-      .then((list) => {
-        const seen = new Map();
-        for (const p of list) {
-          const c = p.collection || 'Gripzus';
-          if (!seen.has(c)) seen.set(c, p);
-        }
-        setBrowse([...seen.values()]);
-      })
-      .catch(() => setBrowse([]));
-  }, []);
 
   const hasQuery = query.trim().length > 0;
 
@@ -146,14 +131,11 @@ export default function SearchPage() {
               )
             )}
 
-            {/* NO QUERY — one pair per collection */}
-            {!hasQuery && browse.length > 0 && (
-              <>
-                <p className="eyebrow text-center mb-10">A pair from every collection</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
-                  {browse.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
-                </div>
-              </>
+            {/* NO QUERY — a quiet prompt, no products until the shopper types. */}
+            {!hasQuery && (
+              <p className="prose-body text-sm text-ink-muted text-center py-16">
+                Start typing to search the archive.
+              </p>
             )}
           </div>
         </section>

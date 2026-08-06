@@ -165,7 +165,7 @@ async function searchProducts(query, options = {}) {
       SELECT product_id, product_variation_id, image_url, is_primary
       FROM product_images
       WHERE product_id IN (:productIds)
-      ORDER BY is_primary DESC
+      ORDER BY display_order ASC, id ASC
     `, { replacements: { productIds } });
 
     imageMap = images.reduce((acc, img) => {
