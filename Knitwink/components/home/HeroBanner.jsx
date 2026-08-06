@@ -83,20 +83,13 @@ export function HeroBanner({ slides = [] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeInOut' }}
           >
-            {/* Blurred fill so the letterbox area around the (uncropped)
-                banner is a soft extension of the image, not a hard black bar. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={slide.image}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full scale-110 object-cover object-center blur-2xl"
-            />
+            {/* Full-bleed banner — fills the whole hero (cropped as needed) so
+                there's no letterbox/blurred side fill. */}
             <ShimmerImg
               src={slide.image}
               alt={slide.title || 'Banner'}
               shimmerClassName="bg-gray-800"
-              className="absolute inset-0 h-full w-full object-contain object-center"
+              className="absolute inset-0 h-full w-full object-cover object-center"
             />
           </motion.div>
         </AnimatePresence>
