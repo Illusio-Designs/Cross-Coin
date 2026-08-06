@@ -12907,7 +12907,15 @@
 
 /* ── Small phones ── */
 @media (max-width: 480px) {
-  .was-stats-grid { grid-template-columns: 1fr; }
+  /* Keep the KPIs as a compact 2×2 grid — a single column made each card
+     full-width and huge, so 4 stats took the whole screen to scroll past. */
+  .was-stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .was-stat-card { padding: 12px; }
+  .was-stat-top { margin-bottom: 6px; }
+  .was-stat-label { font-size: 10px; letter-spacing: .3px; }
+  .was-stat-num { font-size: 20px; }
+  .was-stat-icon { width: 26px; height: 26px; }
+  .was-stat-icon svg { width: 13px; height: 13px; }
   .was-page-head { flex-wrap: wrap; gap: 8px; }
   .was-thread-list { min-width: 0; }
   .was-nav-label { display: none; }        /* icon-only rail on tiny screens */
