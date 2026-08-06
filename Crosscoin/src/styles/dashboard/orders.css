@@ -790,14 +790,13 @@
   font-weight: 600;
 }
 
-/* Modal Footer */
+/* Modal Footer — pinning + padding handled by ui-modal.css (aside panel).
+   Keep only the layout basics; do NOT add margin-top/padding-top here or it
+   pushes the pinned footer. */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--ds-color-border);
 }
 
 /* Loading and Empty States */

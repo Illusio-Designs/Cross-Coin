@@ -3008,14 +3008,13 @@
   font-weight: 600;
 }
 
-/* Modal Footer */
+/* Modal Footer — pinning + padding handled by ui-modal.css (aside panel).
+   Keep only the layout basics; do NOT add margin-top/padding-top here or it
+   pushes the pinned footer. */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--ds-color-border);
 }
 
 /* Loading and Empty States */
@@ -8063,35 +8062,18 @@
    brandSettings, shippingFees, policies, reviews, slider
    ============================================================ */
 
-/* Modal box sizing */
-.modal-box {
-  width: 100%;
-  max-width: 560px;
-}
-
-.modal-box.modal-lg {
-  max-width: 720px;
-}
-
-/* Modal body scroll */
+/* Modal body — fills the full-height aside panel and scrolls internally so
+   the pinned footer never moves. Width + footer are governed by ui-modal.css
+   (the aside-panel styles); do NOT re-cap max-height/width here or the footer
+   floats mid-panel. */
 .modal-body {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 24px;
-  border-top: 1px solid var(--ds-color-border);
-  background: var(--ds-color-surface-soft);
-  border-radius: 0 0 8px 8px;
 }
 
 /* ---- dm-field: single form field row ---- */
@@ -8465,7 +8447,6 @@
 
   .modal-body {
     padding: 16px;
-    max-height: 70vh;
   }
 
   .modal-footer {

@@ -514,7 +514,7 @@ const Orders = () => {
                 // cell shows only the name (no number, no email).
                 const name = String(rawName).replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim() || 'N/A';
                 return (
-                    <div className="customer-info">
+                    <div className="customer-info" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
                         <div className="customer-name" style={{ whiteSpace: 'nowrap' }}>{name}</div>
                         {row.rto_risk_level && (
                             <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
