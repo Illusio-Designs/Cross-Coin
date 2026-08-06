@@ -238,64 +238,65 @@
 .sl-status-badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 20px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
   white-space: nowrap;
+  border: 1px solid transparent;
+}
+/* Demo-style dotted pill */
+.sl-status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
-.sl-status-active {
-  background: #e8f5e9;
-  color: #1a7a4a;
+.sl-status-active,
+.sl-status-approved,
+.sl-status-paid {
+  background: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
 }
 
 .sl-status-inactive {
-  background: #ffeef0;
-  color: var(--ds-color-text);
+  background: var(--ds-color-surface-soft);
+  color: var(--ds-color-text-muted);
+  border-color: var(--ds-color-border);
 }
 
 .sl-status-pending {
-  background: #fff8e1;
-  color: #b45309;
+  background: var(--ds-color-warn-bg);
+  color: var(--ds-color-warn);
 }
 
-.sl-status-approved {
-  background: #e8f5e9;
-  color: #1a7a4a;
-}
-
-.sl-status-rejected {
-  background: #ffeef0;
-  color: var(--ds-color-text);
+.sl-status-rejected,
+.sl-status-failed {
+  background: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
 }
 
 .sl-status-refunded {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.sl-status-paid {
-  background: #e8f5e9;
-  color: #1a7a4a;
-}
-
-.sl-status-failed {
-  background: #ffeef0;
-  color: #dc2626;
+  background: var(--ds-color-info-bg);
+  color: var(--ds-color-info);
 }
 
 /* ---- Category Badge ---- */
 .sl-cat-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2px 9px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  background: var(--ds-color-bg);
-  color: var(--ds-color-text);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--ds-color-surface-soft);
+  color: var(--ds-color-text-muted);
+  border: 1px solid var(--ds-color-border);
   white-space: nowrap;
 }
 

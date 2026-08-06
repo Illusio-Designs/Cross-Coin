@@ -252,16 +252,27 @@
 
 /* Status Badges */
 .status-badge {
-  padding: 0.34rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   text-align: center;
-  min-width: 80px;
   white-space: nowrap;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+/* Demo-style dotted pill: a small dot in the current text colour. */
+.status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .status-badge.status-synced {
@@ -3419,3 +3430,80 @@
     padding: 14px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Obzus SaaS status pills — consolidated tone mapping.
+   Appended last so it overrides the legacy gradient variants above with
+   equal specificity. Every order/payment status resolves to one of five
+   token-driven tones (good / info / warn / bad / muted), matching the
+   approved dashboard prototype. Light + dark both work via the tokens.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* good — completed / delivered / paid */
+.status-badge.status-delivered,
+.status-badge.status-rto-delivered,
+.status-badge.status-paid,
+.status-badge.status-prepaid,
+.status-badge.status-synced,
+.status-badge.status-refunded {
+  color: var(--ds-color-success);
+  background: var(--ds-color-success-bg);
+  border-color: transparent;
+}
+
+/* info — in-motion / processing / shipped */
+.status-badge.status-processing,
+.status-badge.status-shipped,
+.status-badge.status-booked,
+.status-badge.status-pickup-initiated,
+.status-badge.status-manifested,
+.status-badge.status-in-transit,
+.status-badge.status-out-for-delivery,
+.status-badge.status-confirmed {
+  color: var(--ds-color-info);
+  background: var(--ds-color-info-bg);
+  border-color: transparent;
+}
+
+/* warn — awaiting action */
+.status-badge.status-pending,
+.status-badge.status-awaiting-confirmation,
+.status-badge.status-cod,
+.status-badge.status-refund-pending,
+.status-badge.status-undelivered,
+.status-badge.status-exception {
+  color: var(--ds-color-warn);
+  background: var(--ds-color-warn-bg);
+  border-color: transparent;
+}
+
+/* bad — cancelled / failed */
+.status-badge.status-cancelled,
+.status-badge.status-order-cancelled,
+.status-badge.status-unsynced,
+.status-badge.status-failed {
+  color: var(--ds-color-danger);
+  background: var(--ds-color-danger-bg);
+  border-color: transparent;
+}
+
+/* muted — returns / unknown */
+.status-badge.status-rto,
+.status-badge.status-return-initiated,
+.status-badge.status-returned-rto,
+.status-badge.status-unknown {
+  color: var(--ds-color-text-muted);
+  background: var(--ds-color-surface-soft);
+  border-color: var(--ds-color-border);
+}
+
+/* Payment-type chip → same dotted-pill language */
+.pay-chip {
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.pay-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pay-chip.pay-prepaid { color: var(--ds-color-info);  background: var(--ds-color-info-bg); }
+.pay-chip.pay-cod     { color: var(--ds-color-warn);  background: var(--ds-color-warn-bg); }
