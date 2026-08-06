@@ -157,7 +157,7 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6', background: isDirty ? '#fffbeb' : '#fff' }}>
                       <td style={{ ...td, verticalAlign: 'top', minWidth: 180 }}>
-                        <div style={{ fontWeight: 600, color: '#180D3E' }}>{p.name}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{p.name}</div>
                         <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}>{p.slug}</div>
                         {isDirty && <div style={{ marginTop: 4, fontSize: 11, color: '#d97706', fontWeight: 600 }}>● unsaved</div>}
                       </td>

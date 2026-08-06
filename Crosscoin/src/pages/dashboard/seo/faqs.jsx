@@ -198,7 +198,7 @@ export default function FaqsManager({ brandId = 1 } = {}) {
           </div>
         ) : groups.map(g => (
           <div key={`${g.type}:${g.ref}`} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#180D3E', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {g.type === 'global'   && 'Global site FAQs'}
               {g.type === 'product'  && `Product #${g.ref}`}
               {g.type === 'category' && `Category #${g.ref}`}
@@ -221,7 +221,7 @@ export default function FaqsManager({ brandId = 1 } = {}) {
                       <button title="Down" disabled={idx === arr.length-1} onClick={() => move(f,  1)} style={btnSmall}>↓</button>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, color: '#180D3E', marginBottom: 4 }}>{f.question}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--ds-color-text)', marginBottom: 4 }}>{f.question}</div>
                       <div style={{ fontSize: 13, color: '#6b7280' }} {...richHtml(f.answer)} />
                       {!f.is_active && (
                         <div style={{ marginTop: 4, fontSize: 11, color: '#9ca3af' }}>Inactive — not shown on site</div>

@@ -196,7 +196,7 @@ const UTMAnalytics = () => {
           onApply={fetchUTMData}
         />
         {error && (
-          <div role="alert" style={{ padding: 12, background: '#fee2e2', color: '#dc2626', borderRadius: 8, marginTop: 12 }}>
+          <div role="alert" style={{ padding: 12, background: 'var(--ds-color-danger-bg)', color: 'var(--ds-color-danger)', borderRadius: 8, marginTop: 12 }}>
             <p style={{ margin: 0 }}>{error}</p>
           </div>
         )}
@@ -210,7 +210,7 @@ const UTMAnalytics = () => {
       </StatGrid>
 
       <Panel>
-        <h2 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: '#180D3E' }}>Campaign Performance</h2>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: 'var(--ds-color-text)' }}>Campaign Performance</h2>
         {utmData.length === 0 ? (
           <EmptyState
             title="No UTM data"

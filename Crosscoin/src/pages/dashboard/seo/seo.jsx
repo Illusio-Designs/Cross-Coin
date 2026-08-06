@@ -388,7 +388,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
               )}
             </div>
             <div style={{ marginTop: 24 }}>
-              <h4 style={{ marginBottom: 12, color: '#180D3E', fontSize: 14 }}>Live Search Preview</h4>
+              <h4 style={{ marginBottom: 12, color: 'var(--ds-color-text)', fontSize: 14 }}>Live Search Preview</h4>
               <SerpPreview
                 title={formData.meta_title}
                 description={formData.meta_description}

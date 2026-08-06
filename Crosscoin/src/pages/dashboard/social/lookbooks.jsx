@@ -5,10 +5,12 @@ import { Button, Modal, Table, Input, Select } from "../../../components/ui";
 import { PageHeader, Panel, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
+import { HugeiconsIcon } from '@hugeicons/react';
+import { PencilEdit02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  edit:  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/></svg>,
-  trash: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+  edit:  <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />,
 };
 
 const STEPS = ["Lookbook Details", "Upload Image", "Add Hotspot"];
@@ -170,14 +172,14 @@ export default function AdminLookbooks() {
             <div key={i} onClick={() => step > i && setStep(i)} style={{
               flex: 1, textAlign: 'center', padding: '10px 0', fontSize: 13,
               fontWeight: step === i ? 700 : 500,
-              color: step === i ? '#CE1E36' : step > i ? '#10b981' : '#aaa',
-              borderBottom: step === i ? '2px solid #CE1E36' : '2px solid transparent',
+              color: step === i ? 'var(--ds-color-text)' : step > i ? 'var(--ds-color-text-muted)' : '#aaa',
+              borderBottom: step === i ? '2px solid var(--ds-color-text)' : '2px solid transparent',
               cursor: step > i ? 'pointer' : 'default', transition: 'all 0.2s',
             }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 22, height: 22, borderRadius: '50%', marginRight: 6, fontSize: 11, fontWeight: 700,
-                background: step === i ? '#CE1E36' : step > i ? '#10b981' : '#e0e0e0',
+                background: step === i ? 'var(--ds-color-text)' : step > i ? 'var(--ds-color-text-muted)' : '#e0e0e0',
                 color: step >= i ? '#fff' : '#888',
               }}>{step > i ? '✓' : i + 1}</span>
               {s}
@@ -227,7 +229,7 @@ export default function AdminLookbooks() {
                               setForm(p => ({ ...p, existingImages: p.existingImages.filter(i => i.id !== img.id) }));
                             } catch (e) { showError("saveFailed", e?.message); }
                           }}
-                          style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: '#CE1E36', border: '2px solid #fff', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}
+                          style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--ds-color-text)', border: '2px solid #fff', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}
                         >✕</button>
                       </div>
                     ))}
@@ -278,13 +280,13 @@ export default function AdminLookbooks() {
                   <label className="dm-label">
                     Click on the image to place hotspot
                     {form.position_x && form.position_y && (
-                      <span style={{ marginLeft: 10, background: '#CE1E36', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+                      <span style={{ marginLeft: 10, background: 'var(--ds-color-text)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
                         {form.position_x}%, {form.position_y}%
                       </span>
                     )}
                   </label>
                   <div
-                    style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? '#CE1E36' : '#e0e0e0'}`, userSelect: 'none', background: '#f5f5f5' }}
+                    style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : '#e0e0e0'}`, userSelect: 'none', background: '#f5f5f5' }}
                     onClick={e => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
@@ -296,9 +298,9 @@ export default function AdminLookbooks() {
                     {form.position_x && form.position_y && (
                       <div style={{ position: 'absolute', left: `${form.position_x}%`, top: `${form.position_y}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
                         {/* Outer ring */}
-                        <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: '2px solid #CE1E36', opacity: 0.4, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+                        <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: '2px solid var(--ds-color-text)', opacity: 0.4, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
                         {/* Dot */}
-                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#CE1E36', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', position: 'relative' }} />
+                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--ds-color-text)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', position: 'relative' }} />
                       </div>
                     )}
                     {!form.position_x && (

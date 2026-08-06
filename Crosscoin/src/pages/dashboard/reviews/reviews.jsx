@@ -4,17 +4,20 @@ import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "..
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { reviewService, brandService } from "../../../services";
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon, CheckmarkCircle02Icon, Delete02Icon, Message01Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  moderate: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
+  moderate: <HugeiconsIcon icon={CheckmarkCircle02Icon} size={15} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />,
+  // filled star kept inline for the rating (Hugeicons free set has no solid star)
   star: <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  reviews: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  reviews: <HugeiconsIcon icon={Message01Icon} size={48} strokeWidth={1.5} />,
 };
 
 const StarRating = ({ rating }) => (
-  <div style={{ display: 'flex', gap: '2px', color: '#f59e0b' }}>
+  <div style={{ display: 'flex', gap: '2px', color: 'var(--ds-color-text)' }}>
     {[1,2,3,4,5].map(i => (
       <span key={i} style={{ width: '14px', height: '14px', opacity: i <= rating ? 1 : 0.25 }}>{IC.star}</span>
     ))}
@@ -175,7 +178,7 @@ export default function Reviews() {
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Customer", accessor: "customerName", cell: ({ customerName }) => <span className="cat-name-cell">{customerName}</span> },
     { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
-    { header: "Brand", accessor: "brandName", cell: ({ brandName }) => brandName ? <span className="sl-status-badge sl-status-approved">{brandName}</span> : <span style={{ color: '#a3a3a3' }}>—</span> },
+    { header: "Brand", accessor: "brandName", cell: ({ brandName }) => brandName ? <span className="sl-cat-badge">{brandName}</span> : <span className="sl-na">—</span> },
     { header: "Rating", accessor: "rating", cell: ({ rating }) => <StarRating rating={rating} /> },
     { header: "Review", accessor: "review", cell: ({ review }) => <span className="cat-desc-cell">{review}</span> },
     { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },

@@ -276,7 +276,7 @@ export default function StaffUsers() {
             {/* User info — edit mode */}
             {editUser && (
               <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#180D3E18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#180D3E', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ds-color-surface-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ds-color-text)', flexShrink: 0 }}>
                   {IC.users}
                 </div>
                 <div>

@@ -17,7 +17,7 @@ const BrandTags = ({ brands = [] }) => {
                 >
                     <span
                         className="brand-tag-dot"
-                        style={{ backgroundColor: brand.primary_color || '#180D3E' }}
+                        style={{ backgroundColor: brand.primary_color || 'var(--ds-color-text)' }}
                     />
                     {brand.display_name || brand.name}
                 </span>

@@ -1560,7 +1560,7 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
             borderRadius: 6,
             cursor: editingProductId ? 'pointer' : 'not-allowed',
             fontSize: 13,
-            color: '#180D3E',
+            color: 'var(--ds-color-text)',
             opacity: editingProductId ? 1 : 0.5,
           }}
         >
@@ -1657,7 +1657,7 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
       />
 
       <div style={{ marginTop: 24 }}>
-        <h4 style={{ marginBottom: 12, color: '#180D3E' }}>Live Search Preview</h4>
+        <h4 style={{ marginBottom: 12, color: 'var(--ds-color-text)' }}>Live Search Preview</h4>
         <SerpPreview
           title={formData.seo.metaTitle || `${formData.name || 'Product'} | CrossCoin`}
           description={formData.seo.metaDescription || formData.description?.slice(0, 160) || ''}
