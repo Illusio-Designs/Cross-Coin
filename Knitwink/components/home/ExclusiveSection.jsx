@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Zap, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
@@ -12,7 +12,51 @@ export function ExclusiveSection({ products = [] }) {
   const [added, setAdded] = useState(false)
   const [activeThumb, setActiveThumb] = useState(0)
   const [activeColor, setActiveColor] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [railH, setRailH] = useState(0)          // main-image height → rail height
+  const mainRef = useRef(null)
+  const thumbsRef = useRef(null)
   const { addItem } = useCart()
+
+  // Resolve the current gallery (selected colour's images) — used by the effects
+  // below, which must run before any early return.
+  const curImages = (() => {
+    const p = products[active]
+    if (!p) return []
+    const cn = p.colors?.[activeColor]?.name
+    return (cn && p.colorImages?.[cn]?.length) ? p.colorImages[cn] : (p.images || [])
+  })()
+
+  // Match the thumbnail rail height to the main image so both are the same height.
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const update = () => setRailH(el.offsetHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [active, activeColor])
+
+  // Auto-advance the main image through the gallery every 3s (pause on hover).
+  useEffect(() => {
+    if (curImages.length <= 1 || paused) return
+    const t = setInterval(() => setActiveThumb((i) => (i + 1) % curImages.length), 3000)
+    return () => clearInterval(t)
+  }, [curImages.length, active, activeColor, paused])
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail (never the page).
+  useEffect(() => {
+    const rail = thumbsRef.current
+    if (!rail) return
+    const el = rail.querySelector('[data-active="true"]')
+    if (!el) return
+    const rr = rail.getBoundingClientRect()
+    const er = el.getBoundingClientRect()
+    if (rail.scrollHeight > rail.clientHeight + 1) {
+      rail.scrollBy({ top: (er.top - rr.top) - (rail.clientHeight - el.clientHeight) / 2, behavior: 'smooth' })
+    }
+  }, [activeThumb, active, activeColor])
 
   if (!products.length) {
     return (
@@ -121,13 +165,22 @@ export function ExclusiveSection({ products = [] }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto_1fr]">
 
         {/* LEFT — thumbnails + main image */}
-        <div className="flex gap-3">
+        <div
+          className="flex gap-3"
+          onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true) }}
+          onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false) }}
+        >
           {colorImages.length > 1 && (
-            <div className="flex max-h-[280px] flex-col gap-2 overflow-y-auto sm:max-h-[360px] md:max-h-[420px]">
+            <div
+              ref={thumbsRef}
+              style={railH ? { maxHeight: railH } : undefined}
+              className="flex flex-col gap-2 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
               {colorImages.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveThumb(i)}
+                  data-active={i === activeThumb ? 'true' : undefined}
                   className={`h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-14 sm:w-14 md:h-16 md:w-16 ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                 >
                   <img src={img.url} alt="" className="h-full w-full object-cover" />
@@ -135,7 +188,7 @@ export function ExclusiveSection({ products = [] }) {
               ))}
             </div>
           )}
-          <div className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50">
+          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50">
             <img src={displayImage} alt={product.name} className="h-full w-full min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
             {product.badge && (
               <span className="absolute left-3 top-3 rounded-full bg-brand-black px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
