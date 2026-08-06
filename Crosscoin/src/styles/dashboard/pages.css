@@ -10,11 +10,14 @@
 /* ---- Page Wrapper ---- */
 .dashboard-page {
   padding: 0;
-  margin: 0;
   /* Grey canvas so the white Panel / StatGrid / table cards pop (SaaS look),
      instead of white cards on a white page. The surrounding .dashboard-content
      already supplies the 24px gutter. */
   background: var(--ds-color-bg);
+  /* Cap + centre so content doesn't stretch edge-to-edge on wide monitors
+     (cards/table columns were spreading out with huge gaps). */
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 /* ---- Page Header ---- */

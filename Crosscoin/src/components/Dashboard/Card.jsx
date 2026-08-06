@@ -5,25 +5,32 @@ import { useDashboardStats } from '../../hooks/queries/useDashboard';
 import { useAuth } from '../../context/AuthContext';
 import { DateRangePicker } from '../ui';
 import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from './primitives';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  MoneyBag02Icon, ShoppingCart01Icon, Clock01Icon, Tick02Icon, RefreshIcon,
+  Package01Icon, StarIcon, CreditCardIcon, UndoIcon, Alert02Icon,
+  Analytics01Icon, ChartUpIcon, UserMultiple02Icon, DeliveryTruck01Icon,
+  ArrowDown01Icon, ArrowUp01Icon,
+} from '@hugeicons/core-free-icons';
 
 /* ── Icons ── */
 const IC = {
-  rupee: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12M6 8h12M6 13l8 8M6 13h3a4 4 0 0 0 0-8H6"/></svg>,
-  cart:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
-  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-  check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  recent:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
-  box:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
-  star:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  card:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-  undo:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>,
-  warn:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>,
-  trend: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  truck: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
-  chevDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
-  chevUp: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+  rupee: <HugeiconsIcon icon={MoneyBag02Icon} size={16} strokeWidth={2} />,
+  cart:  <HugeiconsIcon icon={ShoppingCart01Icon} size={16} strokeWidth={2} />,
+  clock: <HugeiconsIcon icon={Clock01Icon} size={16} strokeWidth={2} />,
+  check: <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={2} />,
+  recent:<HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />,
+  box:   <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} />,
+  star:  <HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />,
+  card:  <HugeiconsIcon icon={CreditCardIcon} size={16} strokeWidth={2} />,
+  undo:  <HugeiconsIcon icon={UndoIcon} size={16} strokeWidth={2} />,
+  warn:  <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />,
+  chart: <HugeiconsIcon icon={Analytics01Icon} size={16} strokeWidth={2} />,
+  trend: <HugeiconsIcon icon={ChartUpIcon} size={16} strokeWidth={2} />,
+  users: <HugeiconsIcon icon={UserMultiple02Icon} size={16} strokeWidth={2} />,
+  truck: <HugeiconsIcon icon={DeliveryTruck01Icon} size={16} strokeWidth={2} />,
+  chevDown: <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={2} />,
+  chevUp: <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={2} />,
 };
 
 const THEMES = {

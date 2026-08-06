@@ -8,24 +8,30 @@ import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
 import { inlineHtml } from '../../utils/sanitizeHtml';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  WhatsappIcon, SentIcon, Add01Icon, Copy01Icon, Tick02Icon, RefreshIcon,
+  Call02Icon, Message01Icon, File01Icon, ViewIcon, Tag01Icon,
+  InformationCircleIcon, DashboardSquare01Icon, Analytics01Icon, FilterIcon,
+} from '@hugeicons/core-free-icons';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IC = {
-  wa:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>,
-  send:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-  add:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  copy:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
-  check:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  refresh: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
-  phone:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>,
-  msg:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
-  tpl:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
-  eye:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  tag:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  info:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-  dash:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-  bar:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-  filter:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  wa:      <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} />,
+  send:    <HugeiconsIcon icon={SentIcon} size={16} strokeWidth={2} />,
+  add:     <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
+  copy:    <HugeiconsIcon icon={Copy01Icon} size={16} strokeWidth={2} />,
+  check:   <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={2} />,
+  refresh: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />,
+  phone:   <HugeiconsIcon icon={Call02Icon} size={16} strokeWidth={2} />,
+  msg:     <HugeiconsIcon icon={Message01Icon} size={16} strokeWidth={2} />,
+  tpl:     <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />,
+  eye:     <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />,
+  tag:     <HugeiconsIcon icon={Tag01Icon} size={16} strokeWidth={2} />,
+  info:    <HugeiconsIcon icon={InformationCircleIcon} size={16} strokeWidth={2} />,
+  dash:    <HugeiconsIcon icon={DashboardSquare01Icon} size={16} strokeWidth={2} />,
+  bar:     <HugeiconsIcon icon={Analytics01Icon} size={16} strokeWidth={2} />,
+  filter:  <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />,
 };
 
 // ─── Template data ────────────────────────────────────────────────────────────
