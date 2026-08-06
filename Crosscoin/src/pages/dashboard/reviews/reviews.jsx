@@ -24,6 +24,11 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
+const revInitials = (s = '') => {
+  const w = String(s).trim().split(/\s+/).filter(Boolean);
+  return ((w.length >= 2 ? w[0][0] + w[1][0] : (w[0] || '').slice(0, 2)).toUpperCase()) || '·';
+};
+
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -176,7 +181,12 @@ export default function Reviews() {
 
   const columns = [
     { header: "Sr. No", accessor: "serial_number" },
-    { header: "Customer", accessor: "customerName", cell: ({ customerName }) => <span className="cat-name-cell">{customerName}</span> },
+    { header: "Customer", accessor: "customerName", cell: ({ customerName }) => (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--ds-color-text)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{revInitials(customerName)}</span>
+        <span style={{ color: 'var(--ds-color-text)', fontWeight: 600, whiteSpace: 'nowrap' }}>{customerName}</span>
+      </span>
+    ) },
     { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
     { header: "Brand", accessor: "brandName", cell: ({ brandName }) => brandName ? <span className="sl-cat-badge">{brandName}</span> : <span className="sl-na">—</span> },
     { header: "Rating", accessor: "rating", cell: ({ rating }) => <StarRating rating={rating} /> },
@@ -203,10 +213,10 @@ export default function Reviews() {
         />
 
         <StatGrid>
-          <StatTile label="Total" value={totalReviews} tone="info" />
-          <StatTile label="Approved" value={statusCounts.approved} tone="good" />
-          <StatTile label="Pending" value={statusCounts.pending} tone="warn" />
-          <StatTile label="Avg. rating" value={`${avgRating} / 5`} tone="default" />
+          <StatTile label="Total" value={totalReviews} />
+          <StatTile label="Approved" value={statusCounts.approved} />
+          <StatTile label="Pending" value={statusCounts.pending} />
+          <StatTile label="Avg. rating" value={`${avgRating} / 5`} />
         </StatGrid>
 
         <Panel>

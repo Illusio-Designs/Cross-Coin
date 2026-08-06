@@ -149,9 +149,9 @@ export default function Coupons() {
         />
 
         <StatGrid>
-          <StatTile label="Total coupons" value={coupons.length} tone="info" />
-          <StatTile label="Active" value={activeCount} tone="good" />
-          <StatTile label="Expired" value={expiredCount} tone="danger" sub="past end date" />
+          <StatTile label="Total coupons" value={coupons.length} />
+          <StatTile label="Active" value={activeCount} />
+          <StatTile label="Expired" value={expiredCount} sub="past end date" />
         </StatGrid>
 
         <Panel>

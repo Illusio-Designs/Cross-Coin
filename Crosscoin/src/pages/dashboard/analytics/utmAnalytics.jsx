@@ -166,6 +166,40 @@ const UTMAnalytics = () => {
     serial_number: startIndex + idx + 1
   }));
 
+  // ── Monochrome breakdown aggregates (Revenue by Source / Orders by Medium) ──
+  const aggBy = (field, val) => {
+    const m = {};
+    utmData.forEach(r => { const k = r[field] || '—'; m[k] = (m[k] || 0) + (Number(r[val]) || 0); });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  };
+  const revBySource = aggBy('utm_source', 'revenue');
+  const ordByMedium = aggBy('utm_medium', 'orders');
+  const revTotal = revBySource.reduce((s, [, v]) => s + v, 0) || 1;
+  const ordTotal = ordByMedium.reduce((s, [, v]) => s + v, 0) || 1;
+  const maxConv = Math.max(1, ...utmData.map(r => parseFloat(r.conversionRate) || 0));
+  const shortMoney = (n) => n >= 1e5 ? `₹${(n / 1e5).toFixed(2)}L` : n >= 1e3 ? `₹${(n / 1e3).toFixed(1)}K` : `₹${Math.round(n)}`;
+  const utmChip = { fontFamily: 'var(--ds-font-mono)', fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: 6, background: 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)' };
+  const panelH = { margin: '0 0 14px', fontSize: 14, fontWeight: 650, color: 'var(--ds-color-text)', letterSpacing: '-0.01em' };
+  // grayscale via opacity so it flips correctly in dark mode
+  const BarList = ({ rows, total, fmt }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+      {rows.map(([k, v], i) => {
+        const pct = (v / total) * 100;
+        return (
+          <div key={k}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 6, fontSize: 13 }}>
+              <span style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>{k}</span>
+              <span style={{ color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(v)} · {pct.toFixed(1)}%</span>
+            </div>
+            <div style={{ height: 8, background: 'var(--ds-color-border-soft)', borderRadius: 5, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, borderRadius: 5, background: 'var(--ds-color-text)', opacity: Math.max(0.28, 1 - i * 0.16) }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="dashboard-page">
@@ -203,11 +237,24 @@ const UTMAnalytics = () => {
       </Panel>
 
       <StatGrid>
-        <StatTile label="Total Visits" value={stats.totalVisits} tone="info" />
-        <StatTile label="Total Orders" value={stats.totalOrders} tone="good" />
-        <StatTile label="Conversion Rate" value={`${stats.conversionRate}%`} tone="default" />
-        <StatTile label="Total Revenue" value={`₹${stats.totalRevenue}`} tone="default" />
+        <StatTile label="Total Visits" value={stats.totalVisits} />
+        <StatTile label="Total Orders" value={stats.totalOrders} />
+        <StatTile label="Conversion Rate" value={`${stats.conversionRate}%`} />
+        <StatTile label="Total Revenue" value={`₹${stats.totalRevenue}`} />
       </StatGrid>
+
+      {utmData.length > 0 && (
+        <div className="dc-two-col" style={{ marginBottom: 12 }}>
+          <Panel>
+            <h2 style={panelH}>Revenue by Source</h2>
+            <BarList rows={revBySource} total={revTotal} fmt={shortMoney} />
+          </Panel>
+          <Panel>
+            <h2 style={panelH}>Orders by Medium</h2>
+            <BarList rows={ordByMedium} total={ordTotal} fmt={(v) => String(v)} />
+          </Panel>
+        </div>
+      )}
 
       <Panel>
         <h2 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: 'var(--ds-color-text)' }}>Campaign Performance</h2>
@@ -235,20 +282,17 @@ const UTMAnalytics = () => {
                 {currentItemsWithSN.map((row) => (
                   <tr key={row.serial_number}>
                     <td>{row.serial_number}</td>
-                    <td>
-                      <span className="utm-badge source">{row.utm_source}</span>
-                    </td>
-                    <td>
-                      <span className="utm-badge medium">{row.utm_medium}</span>
-                    </td>
-                    <td>
-                      <span className="utm-badge campaign">{row.utm_campaign}</span>
-                    </td>
+                    <td><span style={{ ...utmChip, color: 'var(--ds-color-text)' }}>{row.utm_source}</span></td>
+                    <td><span style={utmChip}>{row.utm_medium}</span></td>
+                    <td style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>{row.utm_campaign}</td>
                     <td>{row.visits}</td>
                     <td>{row.orders}</td>
                     <td>
-                      <span className={`conversion-badge ${parseFloat(row.conversionRate) > 5 ? 'high' : parseFloat(row.conversionRate) > 2 ? 'medium' : 'low'}`}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ds-color-text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                         {row.conversionRate}%
+                        <span style={{ width: 44, height: 6, background: 'var(--ds-color-border-soft)', borderRadius: 4, overflow: 'hidden' }}>
+                          <span style={{ display: 'block', height: '100%', width: `${Math.min(100, (parseFloat(row.conversionRate) / maxConv) * 100)}%`, background: 'var(--ds-color-text)', borderRadius: 4 }} />
+                        </span>
                       </span>
                     </td>
                     <td className="revenue">₹{row.revenue.toFixed(2)}</td>
