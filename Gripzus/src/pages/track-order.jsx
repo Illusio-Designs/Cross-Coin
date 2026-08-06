@@ -12,12 +12,19 @@ const STEPS = [
   { key: 'delivered',        label: 'Delivered',            short: 'Delivered' },
 ];
 
-/* Backend order status → stepper index. */
+/* Backend order status → stepper index. Mapped so the stage reflects the
+   REAL progress (an order that's only being prepared doesn't jump ahead to
+   "Out for Delivery"):
+     0 Placed      pending / placed / created / new
+     1 Confirmed   confirmed / accepted / processing
+     2 Dispatched  packed / dispatched / ready_to_ship / shipped / in_transit
+     3 On the way  out_for_delivery
+     4 Delivered   delivered / completed                                    */
 const STATUS_TO_STEP = {
   pending: 0, placed: 0, created: 0, new: 0,
-  confirmed: 1, accepted: 1,
-  processing: 2, packed: 2, dispatched: 2, ready_to_ship: 2,
-  shipped: 3, out_for_delivery: 3, in_transit: 3,
+  confirmed: 1, accepted: 1, processing: 1,
+  packed: 2, dispatched: 2, ready_to_ship: 2, shipped: 2, in_transit: 2,
+  out_for_delivery: 3, ofd: 3,
   delivered: 4, completed: 4,
 };
 
@@ -72,8 +79,22 @@ function mapOrder(raw, fallbackId) {
     ? itemsArr.reduce((s, it) => s + (Number(it.quantity) || 1), 0)
     : Number(o.item_count || 0);
   const placed = o.created_at || o.createdAt || o.placed_at;
-  const addrLine = [addr.city || addr.City, addr.state || addr.State].filter(Boolean).join(', ');
-  const pin = addr.postal_code || addr.pincode || addr.postalCode || '';
+
+  // Full delivery details — the backend returns the recipient name, street
+  // address and phone alongside city/state/pincode; show all of it, not just
+  // the city line.
+  const cust = src.customer?.info || {};
+  const shipTo = {
+    name:     addr.full_name || addr.name || cust.name
+                || [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '',
+    street:   addr.address || addr.address_line1 || addr.line1 || addr.street || '',
+    landmark: addr.landmark || '',
+    city:     addr.city || addr.City || '',
+    state:    addr.state || addr.State || '',
+    pin:      addr.postal_code || addr.pincode || addr.postalCode || '',
+    phone:    addr.phone || addr.mobile || cust.phone || '',
+  };
+  const hasAddress = Boolean(shipTo.name || shipTo.street || shipTo.city || shipTo.pin);
   const lineItems = (Array.isArray(itemsArr) ? itemsArr : []).map((it) => ({
     name: it.name || it.product?.name || it.Product?.name || it.product_name || 'Item',
     image: resolveImg(it.image || it.product?.image || it.Product?.image
@@ -97,7 +118,8 @@ function mapOrder(raw, fallbackId) {
     paymentLabel: String(o.payment_type || '').toLowerCase() === 'cod' ? 'Cash on Delivery' : (String(o.payment_type || o.paymentType || '').toUpperCase() || '—'),
     awb: o.tracking_number || src.tracking?.tracking_number || '',
     trackUrl: o.tracking_url || src.tracking?.tracking_url || '',
-    address: [addrLine, pin].filter(Boolean).join(' · '),
+    shipTo,
+    hasAddress,
     timeline: buildTimeline(src, status),
   };
 }
@@ -288,11 +310,24 @@ export default function TrackOrderPage() {
               )}
 
               {/* Address */}
-              {data.address && (
+              {data.hasAddress && (
                 <section className="bg-paper-deep rounded-xl border border-line p-6 md:p-7">
                   <p className="eyebrow mb-1">Deliver to</p>
                   <h3 className="font-display text-ink text-2xl uppercase mb-3">Address</h3>
-                  <p className="text-ink-soft text-sm">{data.address}</p>
+                  <address className="not-italic text-sm leading-relaxed">
+                    {data.shipTo.name && <p className="text-ink font-semibold">{data.shipTo.name}</p>}
+                    {data.shipTo.street && <p className="text-ink-soft">{data.shipTo.street}</p>}
+                    {data.shipTo.landmark && <p className="text-ink-soft">{data.shipTo.landmark}</p>}
+                    {(data.shipTo.city || data.shipTo.state || data.shipTo.pin) && (
+                      <p className="text-ink-soft">
+                        {[data.shipTo.city, data.shipTo.state].filter(Boolean).join(', ')}
+                        {data.shipTo.pin ? ` – ${data.shipTo.pin}` : ''}
+                      </p>
+                    )}
+                    {data.shipTo.phone && (
+                      <p className="text-ink-muted mt-1.5 tracking-wider">Phone {data.shipTo.phone}</p>
+                    )}
+                  </address>
                 </section>
               )}
 
