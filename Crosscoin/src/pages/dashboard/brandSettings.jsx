@@ -3,6 +3,8 @@ export { default } from './index';
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandSettingsService, brandService } from '../../services';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon, FloppyDiskIcon, Cancel01Icon, SquareLock02Icon, SquareUnlock02Icon, Settings01Icon } from '@hugeicons/core-free-icons';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
@@ -10,14 +12,14 @@ import { ConfirmModal } from '../../components/common/AlertModal';
 import { PageHeader, EmptyState } from '../../components/Dashboard/primitives';
 
 const IC = {
-  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
-  save: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
-  cancel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  lock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-  unlock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>,
-  settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41"/></svg>,
+  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
+  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
+  save: <HugeiconsIcon icon={FloppyDiskIcon} size={16} strokeWidth={2} />,
+  cancel: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />,
+  lock: <HugeiconsIcon icon={SquareLock02Icon} size={16} strokeWidth={2} />,
+  unlock: <HugeiconsIcon icon={SquareUnlock02Icon} size={16} strokeWidth={2} />,
+  settings: <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />,
 };
 
 const CATEGORIES = { all: 'All', general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
