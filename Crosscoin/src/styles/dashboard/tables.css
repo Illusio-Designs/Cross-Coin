@@ -29,7 +29,7 @@
 .reviews-table::-webkit-scrollbar-track,
 .policies-table::-webkit-scrollbar-track,
 .consumers-table::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--ds-color-surface-soft);
   border-radius: 4px;
 }
 

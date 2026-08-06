@@ -72,7 +72,7 @@
 
 .brand-checkbox-item:hover {
     border-color: #4CAF50;
-    background: #f9f9f9;
+    background: var(--ds-color-surface-soft);
 }
 
 .brand-checkbox-item.selected {
@@ -149,7 +149,7 @@
     justify-content: center;
     gap: 8px;
     padding: 24px;
-    background: #f9f9f9;
+    background: var(--ds-color-surface-soft);
     border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     color: var(--ds-color-text-muted);

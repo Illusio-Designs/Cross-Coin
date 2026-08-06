@@ -42,8 +42,8 @@
   background: var(--ds-color-surface);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-md);
-  padding: var(--ds-space-5);
+  box-shadow: var(--ds-shadow-sm);
+  padding: var(--ds-space-6);
 }
 .ds-card--flush { padding: 0; }
 .ds-card--padless-x { padding-left: 0; padding-right: 0; }
@@ -53,56 +53,73 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--ds-space-3);
-  margin-bottom: var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
 }
 .ds-card__title {
   margin: 0;
-  font-size: var(--ds-text-md);
+  font-size: var(--ds-text-xs);
   font-weight: var(--ds-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ds-color-brand);
+  letter-spacing: 0.08em;
+  color: var(--ds-color-text-muted);
 }
 .ds-card__subtitle {
   font-size: var(--ds-text-sm);
-  color: var(--ds-color-text-muted);
+  color: var(--ds-color-text-faint);
+  margin-top: 2px;
 }
 
 /* ── StatTile ───────────────────────────────────────────────────────── */
 .ds-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
   gap: var(--ds-space-3);
 }
 .ds-stat {
+  position: relative;
   background: var(--ds-color-surface);
   border: 1px solid var(--ds-color-border);
-  border-left: 3px solid var(--ds-color-brand);
   border-radius: var(--ds-radius-lg);
-  padding: var(--ds-space-4) var(--ds-space-5);
+  padding: var(--ds-space-5);
   box-shadow: var(--ds-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-2);
-  transition: transform var(--ds-trans-fast), box-shadow var(--ds-trans-fast);
+  transition: transform var(--ds-trans-fast), box-shadow var(--ds-trans-fast), border-color var(--ds-trans-fast);
+  overflow: hidden;
 }
-.ds-stat:hover { transform: translateY(-2px); box-shadow: var(--ds-shadow-md); }
-.ds-stat--good   { border-left-color: var(--ds-color-success); }
-.ds-stat--warn   { border-left-color: var(--ds-color-warn); }
-.ds-stat--danger { border-left-color: var(--ds-color-danger); }
-.ds-stat--info   { border-left-color: var(--ds-color-info); }
+/* Tone accent: a slim bar pinned to the top edge, revealed by tone class.
+   Cleaner than a full left border — reads as a premium status cue. */
+.ds-stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background var(--ds-trans-fast);
+}
+.ds-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ds-shadow-md);
+  border-color: var(--ds-color-text-faint);
+}
+.ds-stat--good::before   { background: var(--ds-color-success); }
+.ds-stat--warn::before   { background: var(--ds-color-warn); }
+.ds-stat--danger::before { background: var(--ds-color-danger); }
+.ds-stat--info::before   { background: var(--ds-color-info); }
 .ds-stat__label {
   font-size: var(--ds-text-xs);
   font-weight: var(--ds-weight-semi);
   color: var(--ds-color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 .ds-stat__value {
-  font-size: var(--ds-text-2xl);
+  font-size: 27px;
   font-weight: var(--ds-weight-bold);
-  color: var(--ds-color-brand);
-  line-height: 1.1;
+  color: var(--ds-color-text);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .ds-stat__trend {

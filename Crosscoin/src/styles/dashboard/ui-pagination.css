@@ -27,7 +27,7 @@
   font-size: 13px;
 }
 .pgn-btn:hover:not(.pgn-btn-disabled):not(.pgn-btn-active) {
-  background: #f5f5f7;
+  background: var(--ds-color-surface-soft);
   border-color: var(--ds-color-border);
 }
 .pgn-btn:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
@@ -39,7 +39,7 @@
 .pgn-btn-active { background: #0a0a0a; border-color: #0a0a0a; color: #fff; }
 .pgn-btn-active:hover { background: #050505; border-color: #050505; }
 
-.pgn-btn-disabled { background: #f5f5f7; border-color: var(--ds-color-border); color: var(--ds-color-text-faint); cursor: not-allowed; }
+.pgn-btn-disabled { background: var(--ds-color-surface-soft); border-color: var(--ds-color-border); color: var(--ds-color-text-faint); cursor: not-allowed; }
 
 .pgn-ellipsis {
   display: flex;

@@ -36,12 +36,13 @@
 .tbl-header-cell {
   background: var(--ds-color-surface-soft, var(--ds-color-surface-soft));
   color: var(--ds-color-text-muted, var(--ds-color-text-muted));
-  font-weight: 700;
-  font-size: 11px;
+  font-family: var(--ds-font-mono, ui-monospace, Menlo, Consolas, monospace);
+  font-weight: 600;
+  font-size: 10px;
   text-align: left;
   border-bottom: 1px solid var(--ds-color-border, var(--ds-color-border));
   white-space: nowrap;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .tbl-sm .tbl-header-cell { padding: 8px 10px; }
@@ -87,7 +88,7 @@
   padding-left: 10px !important;
   padding-right: 10px !important;
 }
-.tbl-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: #0a0a0a; }
+.tbl-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: var(--ds-color-text); }
 
 .tbl-loading {
   display: flex;

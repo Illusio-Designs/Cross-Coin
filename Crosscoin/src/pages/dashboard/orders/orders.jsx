@@ -504,7 +504,6 @@ const Orders = () => {
                     checked={selectedOrders.has(row.id)} onChange={() => toggleOrderSelection(row.id)} />
             ) : null
         },
-        { header: "Sr. No", accessor: "serial_number", width: "60px" },
         { header: "Order ID", accessor: "order_number", width: "130px" },
         {
             header: "Customer",
@@ -537,84 +536,56 @@ const Orders = () => {
             }
         },
         { header: "Date", cell: (row) => formatDate(row.createdAt), width: "130px" },
-        { header: "Payment Type", cell: (row) => {
+        { header: "Payment", cell: (row) => {
             const label = formatPaymentType(row.payment_type);
-            return <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>;
-        }, width: "110px" },
-        { header: "Payment Status", cell: (row) => <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>, width: "120px" },
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                    <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>
+                    <span className={`status-badge status-${getPaymentStatusClass(row)}`} style={{ fontSize: '10px' }}>{getPaymentStatusDisplay(row)}</span>
+                </div>
+            );
+        }, width: "130px" },
         { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
         { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "160px" },
         {
-            header: "Shipment Status",
+            // Consolidated shipment column — status + AWB/courier + label, so the
+            // table reads clean like the prototype. All shipment ACTIONS (sync,
+            // refresh, edit AWB, generate/download label) still live in the
+            // Actions column, so nothing is lost by merging these display cells.
+            header: "Shipment",
             cell: (row) => {
                 const s = row.Shipment || {};
-                const hasWaybill = s.waybill || row.fship_waybill;
+                const waybill = s.waybill || row.fship_waybill;
+                const courier = s.courier_name || row.courier_name;
                 const orderStatus = (row.status || '').toLowerCase();
                 // Cancelled orders never ship — don't show a "Pending Sync" chip.
-                if ((orderStatus === 'cancelled' || orderStatus === 'order cancelled') && !hasWaybill) {
-                    return <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>;
+                if ((orderStatus === 'cancelled' || orderStatus === 'order cancelled') && !waybill) {
+                    return <span style={{ color: 'var(--ds-color-text-faint)', fontSize: '12px' }}>—</span>;
                 }
-                // Prefer an explicit sync_status from either the Shipment row or
-                // the order's fship_sync_status (the worker writes 'failed' there
-                // when a sync gives up) so a failed sync shows as Failed, not Pending.
-                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || hasWaybill ? 'synced' : 'pending');
+                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || waybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
-                return <ShipmentStatusBadge status={status} syncError={syncError} />;
-            },
-            width: "150px"
-        },
-        {
-            header: "AWB",
-            cell: (row) => {
-                const waybill = row.Shipment?.waybill || row.fship_waybill;
-                const courier = row.Shipment?.courier_name || row.courier_name;
-                if (waybill) {
-                    return (
-                        <div style={{ fontSize: '12px' }}>
-                            <div style={{ fontWeight: '500', color: '#2196f3' }}>{waybill}</div>
-                            {courier && <div style={{ color: '#999', fontSize: '11px' }}>({courier})</div>}
-                        </div>
-                    );
-                }
-                return <span style={{ color: '#999', fontSize: '12px' }}>—</span>;
-            },
-            width: "140px"
-        },
-        {
-            header: "Label Status",
-            cell: (row) => {
-                const hasLabel = row.Shipment?.label_url || row.fship_label_url;
-                const labelDownloadedAt = row.Shipment?.label_downloaded_at || row.fship_label_downloaded_at;
+                const hasLabel = s.label_url || row.fship_label_url;
+                const labelDownloadedAt = s.label_downloaded_at || row.fship_label_downloaded_at;
                 return (
-                    <Tooltip text={hasLabel ? (labelDownloadedAt ? "Label downloaded" : "Click to download label") : "No label available"} position="top">
-                        <div onClick={() => hasLabel && !labelDownloadedAt && handleLabelDownload(row.id, hasLabel)}
-                            style={{ cursor: (hasLabel && !labelDownloadedAt) ? 'pointer' : 'default' }}>
-                            <LabelStatusBadge hasLabel={hasLabel} downloadedAt={labelDownloadedAt} />
-                        </div>
-                    </Tooltip>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                        <ShipmentStatusBadge status={status} syncError={syncError} />
+                        {waybill && (
+                            <span style={{ fontSize: '11px', color: 'var(--ds-color-text-muted)' }}>
+                                {waybill}{courier ? ` · ${courier}` : ''}
+                            </span>
+                        )}
+                        {hasLabel && (
+                            <Tooltip text={labelDownloadedAt ? "Label downloaded" : "Click to download label"} position="top">
+                                <span onClick={() => !labelDownloadedAt && handleLabelDownload(row.id, hasLabel)}
+                                    style={{ cursor: labelDownloadedAt ? 'default' : 'pointer' }}>
+                                    <LabelStatusBadge hasLabel={hasLabel} downloadedAt={labelDownloadedAt} />
+                                </span>
+                            </Tooltip>
+                        )}
+                    </div>
                 );
             },
-            width: "150px"
-        },
-        {
-            header: "Last Updated",
-            cell: (row) => {
-                const lastUpdate = row.updatedAt || row.Shipment?.updatedAt;
-                if (!lastUpdate) return <span style={{ color: '#999', fontSize: '12px' }}>—</span>;
-                const date = new Date(lastUpdate);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffMins = Math.floor(diffMs / 60000);
-                const diffHours = Math.floor(diffMs / 3600000);
-                const diffDays = Math.floor(diffMs / 86400000);
-                let timeAgo = '';
-                if (diffMins < 1) timeAgo = 'Just now';
-                else if (diffMins < 60) timeAgo = `${diffMins}m ago`;
-                else if (diffHours < 24) timeAgo = `${diffHours}h ago`;
-                else timeAgo = `${diffDays}d ago`;
-                return <span style={{ fontSize: '12px', color: '#666' }} title={date.toLocaleString()}>{timeAgo}</span>;
-            },
-            width: "100px"
+            width: "180px"
         },
         {
             header: "Actions",
@@ -1011,14 +982,15 @@ const Orders = () => {
                                 <Table
                                     columns={columns}
                                     data={currentItemsWithSN}
-                                    striped={true}
+                                    striped={false}
                                     hoverable={true}
                                     getRowStyle={(row) => {
-                                        const borderColor = getRowBorderColor(row.status);
+                                        // Clean rows like the prototype — no per-row colour stripe
+                                        // (status is already shown by the pill). Keep only the
+                                        // transient "just updated" highlight.
                                         const isHighlighted = highlightedRows.has(row.id);
                                         return {
-                                            borderLeft: `2px solid ${borderColor}`,
-                                            backgroundColor: isHighlighted ? 'rgba(33, 150, 243, 0.08)' : 'transparent',
+                                            backgroundColor: isHighlighted ? 'var(--ds-color-info-bg)' : 'transparent',
                                             transition: 'background-color 0.3s ease'
                                         };
                                     }}

@@ -154,7 +154,7 @@
 .modal-footer .btn-secondary {
   background: transparent;
   color: var(--ds-color-text);
-  border: 1.5px solid #d4d4d8;
+  border: 1.5px solid var(--ds-color-border);
 }
 .modal-footer .btn-secondary:hover:not(:disabled) { background: var(--ds-color-bg); border-color: #0a0a0a; }
 .modal-footer .btn-primary { background: #0a0a0a; color: #fff; border: none; }
