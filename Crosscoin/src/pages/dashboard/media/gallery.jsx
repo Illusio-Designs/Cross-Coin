@@ -82,10 +82,17 @@ const MediaGallery = () => {
 
   const getImageUrl = (imagePath) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    // Images are served from ImageKit (CDN), not the API's /uploads path — mirror
+    // the URL logic the Products page uses so thumbnails actually resolve.
+    const ik = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
     if (!imagePath || typeof imagePath !== 'string') return null;
     if (imagePath.startsWith('http')) return imagePath;
+    // Legacy local uploads still live on the API server
     if (imagePath.startsWith('/uploads/')) return `${baseUrl}${imagePath}`;
-    return `${baseUrl}/uploads/products/${imagePath.replace(/^\/+/, '')}`;
+    // ImageKit-hosted assets (product / category / slider folders)
+    if (/^\/(products|categories|sliders)/.test(imagePath)) return `${ik}${imagePath}`;
+    // Bare filename → default to the products folder on ImageKit
+    return `${ik}/products/${imagePath.replace(/^\/+/, '')}`;
   };
 
   const getImageName = (imagePath) => imagePath.split('/').pop();

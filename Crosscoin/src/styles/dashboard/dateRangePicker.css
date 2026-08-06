@@ -337,10 +337,18 @@
     justify-content: center;
   }
 
-  .drp-dropdown {
-    left: 0;
-    right: 0;
+  /* On phones the calendar becomes a bottom sheet pinned to the viewport so it
+     never gets clipped by a narrow trigger container or the screen edge. */
+  .drp-dropdown,
+  .drp-dropdown--right {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 12px;
     width: auto;
+    max-height: 82vh;
+    overflow-y: auto;
   }
 
   .drp-dropdown-body {
