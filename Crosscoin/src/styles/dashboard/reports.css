@@ -85,6 +85,19 @@
 @media (max-width: 860px) { .rep-grid2, .rep-grid2--wide { grid-template-columns: 1fr; } }
 .rep-grid2 > * { min-width: 0; }
 
+/* Masonry for the analytics cards: equal-width columns that the browser
+   height-balances, so a short card (Revenue by Status) never leaves a big
+   blank beside a tall one (Top Products). Cards stay whole via break-inside. */
+.rep-masonry { column-count: 2; column-gap: 16px; }
+.rep-masonry > .rep-panel {
+  width: 100%;
+  margin: 0 0 16px;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+}
+@media (max-width: 860px) { .rep-masonry { column-count: 1; } }
+
 /* ── Export chip (per-panel) ── */
 .rep-chip {
   display: inline-flex; align-items: center; gap: 6px;

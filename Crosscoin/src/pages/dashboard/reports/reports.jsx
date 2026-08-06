@@ -263,8 +263,9 @@ export default function Reports() {
             <RevenueTrend data={stats.revenueTrend} />
           </div>
 
-          {/* ── Sales by brand: table + monochrome share ── */}
-          <div className="rep-grid2 rep-grid2--wide">
+          {/* ── Analytics cards — masonry so short + tall cards flow and fill
+               without leaving big blank gaps beside a taller neighbour ── */}
+          <div className="rep-masonry">
             <div className="rep-panel rep-panel--flush">
               <div className="rep-ph">
                 <h3>Sales by Brand</h3>
@@ -313,10 +314,7 @@ export default function Reports() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* ── Top products + order status breakdown (both tall) ── */}
-          <div className="rep-grid2 rep-grid2--wide">
             <div className="rep-panel rep-panel--flush">
               <div className="rep-ph">
                 <h3>Top Products</h3>
@@ -361,10 +359,7 @@ export default function Reports() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* ── Revenue by status + payment ── */}
-          <div className="rep-grid2">
             <div className="rep-panel">
               <div className="rep-ph"><h3>Revenue by Status</h3><span className="hint">where the money sits</span></div>
               <div className="rep-seg">
