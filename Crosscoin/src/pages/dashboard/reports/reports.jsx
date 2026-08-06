@@ -209,6 +209,17 @@ export default function Reports() {
             <button type="button" className="order-sync-main-btn" onClick={exportSummary} disabled={!stats}>
               <DlIcon /> Export summary
             </button>
+            <button
+              type="button"
+              className="order-sync-main-btn"
+              onClick={exportDeliveredOrders}
+              disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}
+              title={(!dateFilter.start_date || !dateFilter.end_date)
+                ? 'Pick a start and end date to export delivered orders'
+                : 'Export a detailed CSV of delivered orders for the selected range'}
+            >
+              <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered'}
+            </button>
           </div>
         }
       />
@@ -381,19 +392,6 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* ── Delivered-orders server export ── */}
-          <div className="rep-panel">
-            <div className="rep-ph"><h3>Delivered Orders Export</h3></div>
-            <div className="rep-exp">
-              <p>
-                Download a detailed CSV of all delivered orders for the selected date range (used for reconciliation &amp; accounting).
-                {!hasDateFilter && ' Pick a start and end date above first.'}
-              </p>
-              <button type="button" className="order-sync-main-btn" onClick={exportDeliveredOrders} disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}>
-                <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered orders'}
-              </button>
-            </div>
-          </div>
         </>
       )}
     </div>
