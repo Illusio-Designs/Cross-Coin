@@ -3604,7 +3604,9 @@
   transition: color 0.15s, border-color 0.15s;
 }
 .oa-edit-btn:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
-.oa-form { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+/* Match the padded look of .odm-fields so the edit form has the same inset
+   spacing on all sides as the rest of the cards (was flush to the edges). */
+.oa-form { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .oa-form label {
   display: flex;
   flex-direction: column;
