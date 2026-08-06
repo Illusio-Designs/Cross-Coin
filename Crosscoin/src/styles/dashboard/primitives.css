@@ -319,14 +319,14 @@
 }
 /* On phones the fixed-width panel anchored to the right edge overflowed the
    viewport — drop it to a near-full-width sheet pinned under the header. */
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .notif-panel {
     position: fixed;
-    top: 62px;
+    top: 60px;
     right: 10px;
     left: 10px;
     width: auto;
-    max-height: 74vh;
+    max-height: 76vh;
   }
 }
 .notif-item { transition: background 0.12s; }
