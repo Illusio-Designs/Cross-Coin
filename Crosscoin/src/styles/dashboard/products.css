@@ -446,3 +446,43 @@
   cursor: not-allowed;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Obzus monochrome products list + form  (scoped .obz-prod*)
+   ══════════════════════════════════════════════════════════════ */
+.obz-prod-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 2px 2px 18px; }
+.obz-prod-title { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 4px; color: var(--ds-color-text); }
+.obz-prod-sub { margin: 0; color: var(--ds-color-text-muted); font-size: 13px; }
+.obz-prod-headR { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.obz-search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 1.5px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-surface); min-width: 220px; }
+.obz-search svg { width: 15px; height: 15px; color: var(--ds-color-text-muted); flex-shrink: 0; }
+.obz-search input { border: none; background: none; outline: none; font-size: 13px; color: var(--ds-color-text); width: 100%; font-family: inherit; }
+.obz-add-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border: 1.5px solid #0a0a0a; border-radius: 8px; background: #0a0a0a; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .2s, border-color .2s; }
+.obz-add-btn svg { width: 16px; height: 16px; }
+.obz-add-btn:hover { background: #262626; border-color: #262626; }
+
+/* Table cell contents */
+.obz-prod-cell { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.obz-thumb { width: 34px; height: 34px; border-radius: 9px; background: var(--ds-color-text); color: var(--ds-color-surface); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.obz-prod-meta { min-width: 0; }
+.obz-prod-name { color: var(--ds-color-text); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
+.obz-prod-cell .prod-badge { display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: var(--ds-color-surface-soft); color: var(--ds-color-text-muted); border: 1px solid var(--ds-color-border); }
+.obz-cat { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; background: var(--ds-color-surface-soft); color: var(--ds-color-text-muted); border: 1px solid var(--ds-color-border); white-space: nowrap; }
+.obz-rating { color: var(--ds-color-text); font-weight: 600; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 5px; }
+.obz-rating svg { width: 13px; height: 13px; fill: var(--ds-color-text); }
+.obz-na { color: var(--ds-color-text-faint); }
+.obz-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.obz-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.obz-pill.on { color: var(--ds-color-success); background: var(--ds-color-success-bg); }
+.obz-pill.off { color: var(--ds-color-text-muted); background: var(--ds-color-surface-soft); }
+.obz-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.obz-ico { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-surface); color: var(--ds-color-text-muted); cursor: pointer; transition: color .15s, border-color .15s; }
+.obz-ico:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
+.obz-ico.del:hover { color: var(--ds-color-danger); border-color: var(--ds-color-danger); }
+.obz-ico svg { width: 15px; height: 15px; }
+.obz-sn { font-family: var(--ds-font-mono); color: var(--ds-color-text-faint); font-size: 12px; }
+
+/* Compact edit-product form: 3-up select row (Category / Status / Badge) */
+.obz-form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: start; }
+.obz-form-row3 > .dm-field, .obz-form-row3 > .input-container { margin-bottom: 0; }
+@media (max-width: 640px) { .obz-form-row3 { grid-template-columns: 1fr; } }
+

@@ -40,7 +40,7 @@ input[type="file"].input-field { border: none; background: transparent; padding:
 /* Native file inputs NOT using input-field class — no extra styling */
 .prd-upload-row input[type="file"] { border: none !important; background: transparent !important; box-shadow: none !important; outline: none; }
 .input-field::placeholder { color: #b0b0c0; }
-.input-field:hover:not(:disabled) { border-color: #c0b8e8; background: var(--ds-color-surface); }
+.input-field:hover:not(:disabled) { border-color: var(--ds-color-text-faint); background: var(--ds-color-surface); }
 .input-field:focus {
   border-color: #0a0a0a;
   background: var(--ds-color-surface);

@@ -244,45 +244,59 @@ const ProductsPage = () => {
     );
   };
 
+  // Monogram initials for the product thumbnail — first two words' initials,
+  // else the first two letters (deterministic, no external image needed).
+  const initials = (s = '') => {
+    const w = String(s).trim().split(/\s+/).filter(Boolean);
+    const t = w.length >= 2 ? (w[0][0] + w[1][0]) : (w[0] || '').slice(0, 2);
+    return t.toUpperCase() || '·';
+  };
+
   // Update columns definition to include badge and avg_rating
   const columns = [
     {
-      header: "S/N",
-      accessor: "serial_number"
+      header: "#",
+      width: 48,
+      sortable: false,
+      accessor: row => <span className="obz-sn">{row.serial_number}</span>
     },
     {
       header: "Product",
       accessor: row => (
-        <div className="prod-name-cell">
-          <span className="prod-name">{row.name}</span>
-          <BadgeDisplay badge={row.badge} />
+        <div className="obz-prod-cell">
+          <div className="obz-thumb">{initials(row.brands?.[0]?.display_name || row.brands?.[0]?.name || row.name)}</div>
+          <div className="obz-prod-meta">
+            <span className="obz-prod-name">{row.name}</span>
+            <BadgeDisplay badge={row.badge} />
+          </div>
         </div>
       )
     },
     {
       header: "Category",
       accessor: row => (
-        <span className="sl-cat-badge">
+        <span className="obz-cat">
           {row.category?.name || 'Uncategorized'}
         </span>
       )
     },
     {
       header: "Brands",
+      sortable: false,
       accessor: row => <BrandTags brands={row.brands || []} />
     },
     {
       header: "Avg. Rating",
       accessor: row => (
-        <span className="prod-rating">
-          {row.avg_rating ? `${Number(row.avg_rating).toFixed(1)} / 5` : <span className="sl-na">N/A</span>}
-        </span>
+        row.avg_rating
+          ? <span className="obz-rating"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>{Number(row.avg_rating).toFixed(1)}</span>
+          : <span className="obz-na">N/A</span>
       )
     },
     {
       header: "Status",
       accessor: row => (
-        <span className={`sl-status-badge ${row.status === 'active' ? 'sl-status-active' : 'sl-status-inactive'}`}>
+        <span className={`obz-pill ${row.status === 'active' ? 'on' : 'off'}`}>
           {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
         </span>
       )
@@ -290,15 +304,17 @@ const ProductsPage = () => {
     {
       header: "Actions",
       accessor: "actions",
-      cell: ({ id, name }) => (
-        <div className="sl-actions">
-          <button className="sl-btn-edit" onClick={() => handleEdit(id)}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      align: "right",
+      sortable: false,
+      cell: ({ id }) => (
+        <div className="obz-acts">
+          <button className="obz-ico" title="Edit" onClick={() => handleEdit(id)}>
+            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
           </button>
-          <button className="sl-btn-delete" onClick={() => handleDelete(id)}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <button className="obz-ico del" title="Delete" onClick={() => handleDelete(id)}>
+            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
@@ -990,6 +1006,7 @@ const ProductsPage = () => {
                 placeholder="Write product description..."
               />
             </div>
+            <div className="obz-form-row3">
             <div className="dm-field">
               <label className="dm-label">Category</label>
               <select
@@ -1035,7 +1052,8 @@ const ProductsPage = () => {
                 { value: 'low_stock', label: 'Low Stock' }
               ]}
             />
-            
+            </div>
+
             {/* Brand Assignment */}
             <BrandAssignment
               selectedBrands={formData.brandIds || []}
@@ -1312,25 +1330,18 @@ const ProductsPage = () => {
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-          </div>
-          <div>
-            <h1 className="sl-page-title">Products Management</h1>
-            <p className="sl-page-sub">Manage your product catalog</p>
-          </div>
+      <div className="obz-prod-head">
+        <div className="obz-prod-headL">
+          <h1 className="obz-prod-title">Products</h1>
+          <p className="obz-prod-sub">{totalProducts} products · manage your catalog</p>
         </div>
-        <div className="sl-header-right">
-          <div className="sl-search-wrap">
-            <span className="sl-search-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </span>
-            <input type="text" className="sl-search-input" placeholder="Search products..."
+        <div className="obz-prod-headR">
+          <div className="obz-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Search products…"
               onChange={handleSearchChange} defaultValue={filterValue} />
           </div>
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 170 }}>
             <Select
               options={[
                 { value: '', label: 'All Brands' },
@@ -1341,10 +1352,8 @@ const ProductsPage = () => {
               placeholder="All Brands"
             />
           </div>
-          <button className="sl-add-btn" onClick={handleAddNew}>
-            <span className="sl-add-btn-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </span>
+          <button className="obz-add-btn" onClick={handleAddNew}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Product
           </button>
         </div>
