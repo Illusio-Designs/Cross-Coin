@@ -15,7 +15,7 @@
 .attributes-table td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--ds-color-border);
 }
 
 .attributes-table th {

@@ -870,7 +870,7 @@
 
 .was-ph-btext {
   font-size: 9px;
-  color: #111;
+  color: var(--ds-color-text);
   line-height: 1.5;
 }
 
@@ -917,11 +917,11 @@
 
 .was-ph-input span {
   flex: 1;
-  background: #fff;
+  background: var(--ds-color-surface);
   border-radius: 12px;
   padding: 3px 7px;
   font-size: 8px;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
 }
 
 .was-pp-empty {
@@ -977,7 +977,7 @@
 
 .was-thread-search:focus {
   border-color: #0b7a5e;
-  background: #fff;
+  background: var(--ds-color-surface);
 }
 
 .was-thread-tabs {
@@ -1297,7 +1297,7 @@
 
 .was-reply-input:focus {
   border-color: #0b7a5e;
-  background: #fff;
+  background: var(--ds-color-surface);
 }
 
 .was-send-btn {
@@ -1958,7 +1958,7 @@
   resize: none; outline: none; background: var(--wa-surface-2); line-height: 1.6;
   transition: border-color var(--wa-transition);
 }
-.was-rp-notes:focus { border-color: #0b7a5e; background: #fff; }
+.was-rp-notes:focus { border-color: #0b7a5e; background: var(--ds-color-surface); }
 
 /* Update inbox wrap to accommodate right panel */
 .was-inbox-wrap { display: flex; flex: 1; overflow: hidden; height: 100%; }
@@ -1989,8 +1989,8 @@
 /* "Load older messages" control at the top of the chat history. */
 .was-load-older { text-align: center; padding: 8px 0 4px; }
 .was-load-older button {
-  border: 1px solid var(--ds-color-border, #e5e7eb);
-  background: #fff; color: #4338ca; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--ds-color-border, var(--ds-color-border));
+  background: var(--ds-color-surface); color: #4338ca; font-size: 12px; font-weight: 600;
   padding: 5px 14px; border-radius: 999px; cursor: pointer;
 }
 .was-load-older button:disabled { opacity: 0.6; cursor: default; }

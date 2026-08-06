@@ -97,6 +97,57 @@
   --ds-sidebar-w-collapsed: 72px;
 }
 
+/* ── Dark theme ─────────────────────────────────────────────────────
+   Opt-in via <html data-theme="dark">. Only the neutral surface / text /
+   border tokens are remapped; brand chrome that is intentionally near-black
+   (sidebar active pill, modal header, monogram) is handled with the few
+   targeted overrides below so it stays legible on a dark canvas.
+   Because every dashboard surface now reads these tokens, flipping them
+   re-themes the whole admin without touching light mode. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ds-color-brand:        #fafafa;   /* links / accents go light on dark */
+  --ds-color-brand-soft:   #26262c;
+  --ds-color-brand-strong: #ffffff;
+  --ds-color-accent:       #fafafa;
+
+  --ds-color-bg:           #0d0d0f;   /* dashboard canvas */
+  --ds-color-surface:      #17171b;   /* cards / panels */
+  --ds-color-surface-soft: #1e1e24;   /* table header / muted */
+  --ds-color-border:       #2b2b33;
+  --ds-color-border-soft:  #232329;
+  --ds-color-text:         #f4f4f5;
+  --ds-color-text-muted:   #a1a1aa;
+  --ds-color-text-faint:   #71717a;
+
+  /* Status backgrounds need to darken so light text/badges stay readable. */
+  --ds-color-success-bg:   #0f2a1c;
+  --ds-color-warn-bg:      #2a2110;
+  --ds-color-danger-bg:    #2a1414;
+  --ds-color-info-bg:      #101d33;
+
+  --ds-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.4);
+  --ds-shadow-md:  0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
+  --ds-shadow-lg:  0 4px 12px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
+  --ds-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Chrome pieces that keep a literal near-black in light mode need to invert
+   in dark mode to stay legible on the dark canvas. */
+:root[data-theme="dark"] .sb-link--active,
+:root[data-theme="dark"] .sb-link--active:hover {
+  background: #fafafa;
+  color: #0a0a0a;
+}
+:root[data-theme="dark"] .sb-link--active .sb-icon { color: #0a0a0a; }
+:root[data-theme="dark"] .sb-logo-mark { background: #fafafa; color: #0a0a0a; }
+:root[data-theme="dark"] .sb-toggle:hover,
+:root[data-theme="dark"] .sb-help:hover,
+:root[data-theme="dark"] .sb-toggle--close { background: #fafafa; color: #0a0a0a; }
+/* Modal header + primary buttons keep the dark bar — that reads fine on dark,
+   but the aside body/footer follow the tokens automatically. */
+
 /* ── Breakpoint reference (use in component CSS via @media) ─────────
    --bp-sm:  640px;   small phones in landscape
    --bp-md:  768px;   tablets / phablets — table → cards switch point

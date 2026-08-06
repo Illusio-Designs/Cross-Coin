@@ -18,7 +18,7 @@
 }
 
 .payment-card {
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -48,7 +48,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
+  background: var(--ds-color-bg);
   border-radius: 6px;
 }
 
@@ -58,13 +58,13 @@
 }
 
 .payment-description {
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   font-size: 0.875rem;
 }
 
 /* Payment Form */
 .payment-form {
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -92,13 +92,13 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--ds-color-text-muted);
 }
 
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ds-color-border);
   border-radius: 4px;
   transition: border-color 0.2s ease;
 }
@@ -118,12 +118,12 @@
   right: 1rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 /* Payment Summary */
 .payment-summary {
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -140,7 +140,7 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 1rem;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 .summary-total {
@@ -148,7 +148,7 @@
   justify-content: space-between;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--ds-color-border);
   font-weight: 600;
   color: #1f2937;
   font-size: 1.1rem;
@@ -179,7 +179,7 @@
 .history-table {
   width: 100%;
   border-collapse: collapse;
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -189,16 +189,16 @@
 .history-table td {
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--ds-color-border);
 }
 
 .history-table th {
-  background-color: #f8f9fa;
+  background-color: var(--ds-color-surface-soft);
   font-weight: 600;
 }
 
 .history-table tr:hover {
-  background-color: #f8f9fa;
+  background-color: var(--ds-color-surface-soft);
 }
 
 .payment-status {
@@ -335,13 +335,13 @@
 .modal-content .form-group label {
   display: block;
   font-weight: 600;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   margin-bottom: 0.25rem;
   font-size: 0.875rem;
 }
 
 .modal-content .form-group p {
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   margin: 0;
 }
 
@@ -355,7 +355,7 @@
   gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--ds-color-border);
 }
 
 /* Loading and error states */
@@ -363,7 +363,7 @@
 .error-container {
   text-align: center;
   padding: 3rem;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 .error-container {
@@ -469,12 +469,12 @@
 .seo-controls select {
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ds-color-border);
   background-color: white;
   cursor: pointer;
   min-width: 150px;
   font-size: 14px;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   transition: all 0.2s ease;
 }
 
@@ -490,7 +490,7 @@
 
 .seo-controls label {
   font-weight: 600;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   min-width: 80px;
   font-size: 14px;
 }
@@ -498,17 +498,17 @@
 .seo-controls button {
   padding: 8px 16px;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  border: 1px solid var(--ds-color-border);
+  background-color: var(--ds-color-surface-soft);
   cursor: pointer;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   font-weight: 500;
   transition: all 0.2s ease;
 }
 
 .seo-controls button:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
+  background-color: var(--ds-color-bg);
+  border-color: var(--ds-color-border);
 }
 

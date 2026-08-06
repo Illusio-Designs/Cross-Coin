@@ -25,8 +25,8 @@
 }
 
 .dc-greeting { display: flex; flex-direction: column; gap: 2px; }
-.dc-greeting-text { font-size: 20px; font-weight: 700; color: #0a0a0a; }
-.dc-greeting-sub { font-size: 13px; color: #9ca3af; }
+.dc-greeting-text { font-size: 20px; font-weight: 700; color: var(--ds-color-text); }
+.dc-greeting-sub { font-size: 13px; color: var(--ds-color-text-faint); }
 
 /* ===================================
    2. ALERT BAR
@@ -57,8 +57,8 @@
 }
 
 .dc-kpi-tile {
-  background: #fff;
-  border: 1px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
   border-left: 3px solid #0a0a0a;
   border-radius: 8px;
   padding: 12px 14px;
@@ -74,12 +74,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
 }
 .dc-kpi-value {
   font-size: 16px;
   font-weight: 800;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   word-break: break-word;
 }
 
@@ -126,7 +126,7 @@
 .dc-pipe-bar-track {
   width: 100%;
   height: 8px;
-  background: #f0f0f5;
+  background: var(--ds-color-bg);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -151,7 +151,7 @@
 
 .dc-pipe-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   font-weight: 500;
 }
 
@@ -160,9 +160,9 @@
   gap: 16px;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f5;
+  border-top: 1px solid var(--ds-color-border);
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   font-weight: 500;
   flex-wrap: wrap;
 }
@@ -171,10 +171,10 @@
    SECTION WRAPPER
    =================================== */
 .dashboard-section {
-  background: #fff;
+  background: var(--ds-color-surface);
   border-radius: 8px;
   padding: 20px 24px;
-  border: 1px solid #ebebf0;
+  border: 1px solid var(--ds-color-border);
   width: 100%;
 }
 
@@ -184,18 +184,18 @@
   gap: 10px;
   font-size: 15px;
   font-weight: 700;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   margin-bottom: 18px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #f0f0f5;
+  border-bottom: 1px solid var(--ds-color-border);
 }
 
 .dc-section-icon {
   width: 32px; height: 32px;
-  background: #f4f4f5;
+  background: var(--ds-color-bg);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   flex-shrink: 0;
 }
 .dc-section-icon svg { width: 16px; height: 16px; }
@@ -215,9 +215,9 @@
   text-align: left;
 }
 .dc-collapse-trigger .dc-section-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; flex: 1; }
-.dc-collapse-chevron { width: 20px; height: 20px; color: #9ca3af; flex-shrink: 0; }
+.dc-collapse-chevron { width: 20px; height: 20px; color: var(--ds-color-text-faint); flex-shrink: 0; }
 .dc-collapse-chevron svg { width: 20px; height: 20px; }
-.dc-collapse-body { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f0f5; }
+.dc-collapse-body { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ds-color-border); }
 
 /* ===================================
    ORDER STAT CARDS GRID
@@ -235,8 +235,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: #fafafa;
-  border: 1px solid #ebebf0;
+  background: var(--ds-color-surface-soft);
+  border: 1px solid var(--ds-color-border);
   border-radius: 8px;
   padding: 14px 16px;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -260,7 +260,7 @@
 .dc-stat-label {
   font-size: 10px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin-bottom: 3px;
@@ -269,7 +269,7 @@
 .dc-stat-value {
   font-size: 24px;
   font-weight: 800;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   line-height: 1;
   margin-bottom: 3px;
   word-break: break-word;
@@ -277,7 +277,7 @@
 
 .dc-stat-desc {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   line-height: 1.4;
 }
 
@@ -296,8 +296,8 @@
    RTO MINI CARD (fits in 2x2 grid)
    =================================== */
 .dc-rto-mini-card {
-  background: #fff;
-  border: 1px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
   border-radius: 8px;
   padding: 20px 24px;
   display: flex;
@@ -309,15 +309,15 @@
   align-items: center;
   gap: 10px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f5;
+  border-bottom: 1px solid var(--ds-color-border);
 }
 .dc-rto-mini-icon { width: 28px; height: 28px; color: #dc2626; background: #fee2e2; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
 .dc-rto-mini-icon svg { width: 14px; height: 14px; }
-.dc-rto-mini-title { font-size: 15px; font-weight: 700; color: #0a0a0a; }
+.dc-rto-mini-title { font-size: 15px; font-weight: 700; color: var(--ds-color-text); }
 .dc-rto-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .dc-rto-mini-item { display: flex; flex-direction: column; gap: 2px; }
 .dc-rto-mini-val { font-size: 20px; font-weight: 800; color: #dc2626; }
-.dc-rto-mini-lbl { font-size: 11px; color: #9ca3af; font-weight: 500; }
+.dc-rto-mini-lbl { font-size: 11px; color: var(--ds-color-text-faint); font-weight: 500; }
 
 /* ===================================
    ALERT CARDS
@@ -336,7 +336,7 @@
   padding: 14px;
   border-radius: 8px;
   border: 1px solid;
-  background: #fff;
+  background: var(--ds-color-surface);
 }
 
 .alert-danger  { border-color: #fca5a5; background: #fff5f5; }
@@ -348,9 +348,9 @@
 .alert-warning .alert-icon { color: #d97706; }
 
 .alert-content { flex: 1; min-width: 0; }
-.alert-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-.alert-value { font-size: 20px; font-weight: 700; color: #0a0a0a; margin-bottom: 3px; }
-.alert-description { font-size: 12px; color: #9ca3af; }
+.alert-title { font-size: 11px; font-weight: 600; color: var(--ds-color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.alert-value { font-size: 20px; font-weight: 700; color: var(--ds-color-text); margin-bottom: 3px; }
+.alert-description { font-size: 12px; color: var(--ds-color-text-faint); }
 
 /* ===================================
    TABLES
@@ -359,7 +359,7 @@
   overflow-x: auto;
   margin-top: 12px;
   border-radius: 8px;
-  border: 1px solid #ebebf0;
+  border: 1px solid var(--ds-color-border);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -370,19 +370,19 @@
   font-size: 13px;
 }
 
-.dashboard-table thead { background: #f9fafb; border-bottom: 1px solid #ebebf0; }
-.dashboard-table th { padding: 10px 14px; text-align: left; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }
-.dashboard-table tbody tr { border-bottom: 1px solid #f0f0f5; }
+.dashboard-table thead { background: var(--ds-color-surface-soft); border-bottom: 1px solid var(--ds-color-border); }
+.dashboard-table th { padding: 10px 14px; text-align: left; font-weight: 600; color: var(--ds-color-text-muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; white-space: nowrap; }
+.dashboard-table tbody tr { border-bottom: 1px solid var(--ds-color-border); }
 .dashboard-table tbody tr:last-child { border-bottom: none; }
-.dashboard-table tbody tr:hover { background: #fafafa; }
-.dashboard-table td { padding: 10px 14px; color: #1a1a1a; }
+.dashboard-table tbody tr:hover { background: var(--ds-color-surface-soft); }
+.dashboard-table td { padding: 10px 14px; color: var(--ds-color-text); }
 
-.table-rank { font-weight: 700; color: #0a0a0a; font-size: 14px; }
-.table-product-name { font-weight: 600; color: #0a0a0a; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-rank { font-weight: 700; color: var(--ds-color-text); font-size: 14px; }
+.table-product-name { font-weight: 600; color: var(--ds-color-text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-revenue { font-weight: 700; color: #059669; }
 .table-amount { font-weight: 600; }
 .table-order-number { font-family: 'Courier New', monospace; font-weight: 600; color: #7c3aed; font-size: 12px; }
-.table-date { color: #6b7280; font-size: 12px; white-space: nowrap; }
+.table-date { color: var(--ds-color-text-muted); font-size: 12px; white-space: nowrap; }
 
 /* ===================================
    BADGES
@@ -395,7 +395,7 @@
 .status-processing, .status-confirmed              { background: #fef3c7; color: #d97706; }
 .status-shipped, .status-out-for-delivery, .status-in-transit { background: #dbeafe; color: #2563eb; }
 .status-delivered, .status-completed               { background: #d1fae5; color: #059669; }
-.status-cancelled                                  { background: #f3f4f6; color: #6b7280; }
+.status-cancelled                                  { background: var(--ds-color-bg); color: var(--ds-color-text-muted); }
 .status-rto                                        { background: #fee2e2; color: #dc2626; }
 .status-danger                                     { background: #fee2e2; color: #dc2626; }
 .status-warning                                    { background: #fef3c7; color: #d97706; }
@@ -416,7 +416,7 @@
 
 .utm-badge {
   display: inline-block; padding: 3px 8px; border-radius: 4px;
-  font-size: 11px; font-weight: 600; background: #f3f4f6; color: #1a1a1a;
+  font-size: 11px; font-weight: 600; background: var(--ds-color-bg); color: var(--ds-color-text);
 }
 .utm-badge.source   { background: #dbeafe; color: #1e40af; }
 .utm-badge.medium   { background: #fef3c7; color: #92400e; }
@@ -435,8 +435,8 @@
    =================================== */
 .dashboard-subsection { margin-top: 16px; }
 .dashboard-subsection-title {
-  font-size: 13px; font-weight: 600; color: #0a0a0a;
-  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f5;
+  font-size: 13px; font-weight: 600; color: var(--ds-color-text);
+  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--ds-color-border);
 }
 
 /* ===================================

@@ -7,7 +7,7 @@
   margin: 0 0 14px;
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--ds-color-text);
 }
 
 .sc-mt-16 {
@@ -25,7 +25,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--ds-color-text);
 }
 
 .sc-card-grid {
@@ -35,9 +35,9 @@
 }
 
 .sc-item-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ds-color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--ds-color-surface);
   padding: 12px;
 }
 
@@ -51,19 +51,19 @@
 .sc-item-sub {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 .sc-item-meta {
   margin-top: 10px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 .sc-item-id {
   margin-bottom: 8px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
 }
 
 .sc-post-image {
@@ -76,5 +76,5 @@
 .sc-item-caption {
   margin-top: 8px;
   font-size: 13px;
-  color: #111827;
+  color: var(--ds-color-text);
 }

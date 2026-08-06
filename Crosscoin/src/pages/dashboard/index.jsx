@@ -116,6 +116,26 @@ function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [theme, setTheme] = useState('light');
+
+  // Theme is scoped to the dashboard only — we set data-theme on <html> while
+  // the dashboard is mounted and remove it on unmount so the storefront (which
+  // doesn't read the dark tokens) is never affected.
+  useEffect(() => {
+    const saved = (typeof window !== 'undefined' && localStorage.getItem('obzus-theme')) || 'light';
+    setTheme(saved);
+    document.documentElement.setAttribute('data-theme', saved);
+    return () => { document.documentElement.removeAttribute('data-theme'); };
+  }, []);
+
+  const handleToggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('obzus-theme', next); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const mobile = window.innerWidth <= 900;
@@ -247,6 +267,8 @@ function Dashboard() {
             currentView={currentView}
             isMobile={isMobile}
             onMobileMenuToggle={handleMobileMenuToggle}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
           />
         </header>
         <footer role="contentinfo" aria-label="Dashboard footer">

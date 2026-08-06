@@ -17,7 +17,7 @@
     margin: 0;
     font-size: 28px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
 }
 
 .header-actions {
@@ -29,11 +29,11 @@
 .brand-selector {
     min-width: 200px;
     padding: 10px 16px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ds-color-text-muted);
     background: white;
     cursor: pointer;
     transition: all 0.2s;
@@ -60,7 +60,7 @@
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
-    color: #666;
+    color: var(--ds-color-text-muted);
 }
 
 .loading-container .spin {
@@ -86,7 +86,7 @@
     margin: 0 0 20px 0;
     font-size: 20px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
 }
 
 .form-grid {
@@ -108,7 +108,7 @@
 .form-group label {
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ds-color-text-muted);
     margin-bottom: 8px;
 }
 
@@ -116,7 +116,7 @@
 .form-group select,
 .form-group textarea {
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
@@ -145,17 +145,17 @@
     background: white;
     border-radius: 6px;
     box-shadow: none;
-    border: 1px solid #ebebf0;
+    border: 1px solid var(--ds-color-border);
 }
 
 .category-btn {
     padding: 8px 16px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     background: white;
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
-    color: #666;
+    color: var(--ds-color-text-muted);
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
@@ -165,7 +165,7 @@
 
 .category-btn:hover {
     border-color: #0a0a0a;
-    color: #0a0a0a;
+    color: var(--ds-color-text);
 }
 
 .category-btn.active {
@@ -215,7 +215,7 @@
     margin: 0 0 6px 0;
     font-size: 16px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
     word-break: break-word;
 }
 
@@ -250,17 +250,17 @@
 
 .value-display {
     padding: 12px;
-    background: #f8f9fa;
+    background: var(--ds-color-surface-soft);
     border-radius: 6px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
-    color: #333;
+    color: var(--ds-color-text-muted);
     word-break: break-all;
     min-height: 44px;
 }
 
 .encrypted-value {
-    color: #999;
+    color: var(--ds-color-text-faint);
     letter-spacing: 2px;
 }
 
@@ -291,17 +291,17 @@
     border-left: 3px solid #2196f3;
     border-radius: 4px;
     font-size: 13px;
-    color: #555;
+    color: var(--ds-color-text-muted);
     margin-bottom: 12px;
 }
 
 .setting-footer {
     padding-top: 12px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--ds-color-border);
 }
 
 .setting-footer small {
-    color: #999;
+    color: var(--ds-color-text-faint);
     font-size: 12px;
 }
 
@@ -310,7 +310,7 @@
     padding: 8px;
     border: none;
     background: transparent;
-    color: #666;
+    color: var(--ds-color-text-muted);
     cursor: pointer;
     border-radius: 6px;
     transition: background-color 0.2s, color 0.2s;
@@ -320,12 +320,12 @@
 }
 
 .btn-icon:hover {
-    background: #f5f5f5;
-    color: #333;
+    background: var(--ds-color-surface-soft);
+    color: var(--ds-color-text-muted);
 }
 
 .btn-icon.btn-save {
-    color: #0a0a0a;
+    color: var(--ds-color-text);
 }
 
 .btn-icon.btn-save:hover {
@@ -358,7 +358,7 @@
     grid-column: 1 / -1;
     text-align: center;
     padding: 60px 20px;
-    color: #999;
+    color: var(--ds-color-text-faint);
 }
 
 .empty-state p {
@@ -409,7 +409,7 @@
 .form-select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
@@ -426,7 +426,7 @@
 .form-textarea {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;

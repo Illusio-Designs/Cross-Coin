@@ -15,7 +15,7 @@
     margin: 0;
     font-size: 28px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
 }
 
 .loading-container {
@@ -24,7 +24,7 @@
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
-    color: #666;
+    color: var(--ds-color-text-muted);
 }
 
 .loading-container .spin {
@@ -57,7 +57,7 @@
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
 }
 
 .form-grid {
@@ -79,7 +79,7 @@
 .form-group label {
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--ds-color-text-muted);
     margin-bottom: 8px;
 }
 
@@ -87,7 +87,7 @@
 .form-group select,
 .form-group textarea {
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
@@ -146,11 +146,11 @@
     border-radius: 6px;
     margin-bottom: 24px;
     box-shadow: none;
-    border: 1px solid #ebebf0;
+    border: 1px solid var(--ds-color-border);
 }
 
 .search-bar svg {
-    color: #999;
+    color: var(--ds-color-text-faint);
     font-size: 18px;
 }
 
@@ -159,11 +159,11 @@
     border: none;
     outline: none;
     font-size: 14px;
-    color: #333;
+    color: var(--ds-color-text-muted);
 }
 
 .search-bar input::placeholder {
-    color: #999;
+    color: var(--ds-color-text-faint);
 }
 
 /* Brands Grid */
@@ -191,7 +191,7 @@
     align-items: flex-start;
     margin-bottom: 16px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--ds-color-border);
 }
 
 .brand-info {
@@ -204,19 +204,19 @@
     width: 40px;
     height: 40px;
     border-radius: 6px;
-    border: 2px solid #eee;
+    border: 2px solid var(--ds-color-border);
 }
 
 .brand-info h4 {
     margin: 0 0 4px 0;
     font-size: 18px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ds-color-text);
 }
 
 .brand-slug {
     font-size: 13px;
-    color: #999;
+    color: var(--ds-color-text-faint);
     font-family: 'Courier New', monospace;
 }
 
@@ -232,21 +232,21 @@
 .brand-detail {
     margin-bottom: 8px;
     font-size: 14px;
-    color: #555;
+    color: var(--ds-color-text-muted);
 }
 
 .brand-detail strong {
-    color: #333;
+    color: var(--ds-color-text-muted);
     margin-right: 6px;
 }
 
 .brand-description {
     margin-top: 12px;
     padding: 12px;
-    background: #f8f9fa;
+    background: var(--ds-color-surface-soft);
     border-radius: 6px;
     font-size: 14px;
-    color: #666;
+    color: var(--ds-color-text-muted);
     line-height: 1.5;
 }
 
@@ -255,7 +255,7 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 12px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--ds-color-border);
 }
 
 .status-badge {
@@ -268,16 +268,16 @@
 
 .status-badge.active {
     background: #f0eef5;
-    color: #0a0a0a;
+    color: var(--ds-color-text);
 }
 
 .status-badge.inactive {
     background: #fce8ec;
-    color: #0a0a0a;
+    color: var(--ds-color-text);
 }
 
 .brand-card-footer small {
-    color: #999;
+    color: var(--ds-color-text-faint);
     font-size: 12px;
 }
 
@@ -286,7 +286,7 @@
     padding: 8px;
     border: none;
     background: transparent;
-    color: #666;
+    color: var(--ds-color-text-muted);
     cursor: pointer;
     border-radius: 6px;
     transition: background-color 0.2s, color 0.2s;
@@ -297,12 +297,12 @@
 }
 
 .btn-icon:hover {
-    background: #f5f5f5;
-    color: #333;
+    background: var(--ds-color-surface-soft);
+    color: var(--ds-color-text-muted);
 }
 
 .btn-icon.active {
-    color: #0a0a0a;
+    color: var(--ds-color-text);
 }
 
 .btn-icon.active:hover {
@@ -310,11 +310,11 @@
 }
 
 .btn-icon.inactive {
-    color: #999;
+    color: var(--ds-color-text-faint);
 }
 
 .btn-icon.inactive:hover {
-    background: #f5f5f5;
+    background: var(--ds-color-surface-soft);
 }
 
 .btn-icon.btn-danger {
@@ -330,7 +330,7 @@
     grid-column: 1 / -1;
     text-align: center;
     padding: 60px 20px;
-    color: #999;
+    color: var(--ds-color-text-faint);
 }
 
 .empty-state p {
@@ -369,7 +369,7 @@
 .form-select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--ds-color-border);
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
