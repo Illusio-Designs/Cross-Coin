@@ -812,7 +812,7 @@
 }
 
 .seo-empty-state {
-  background: #f8fafc;
+  background: var(--ds-color-surface-soft);
   color: #64748b;
   border-radius: 6px;
   padding: 2.5rem 1rem;
@@ -1433,7 +1433,7 @@
 }
 
 .sort-select:hover {
-  border-color: #9ca3af;
+  border-color: var(--ds-color-text-faint);
 }
 
 /* Enhanced Table Styling */
@@ -1898,7 +1898,7 @@
     gap: 16px;
     margin-right: 16px;
     padding: 8px 12px;
-    background-color: #f8fafc;
+    background-color: var(--ds-color-surface-soft);
     border-radius: 6px;
     border: 1px solid var(--ds-color-border);
 }

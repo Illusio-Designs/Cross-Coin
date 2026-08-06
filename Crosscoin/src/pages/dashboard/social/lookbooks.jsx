@@ -302,7 +302,7 @@ export default function AdminLookbooks() {
                   )}
                 </label>
                 <div
-                  style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : '#e0e0e0'}`, userSelect: 'none', background: '#f5f5f5' }}
+                  style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : 'var(--ds-color-border)'}`, userSelect: 'none', background: '#f5f5f5' }}
                   onClick={e => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
