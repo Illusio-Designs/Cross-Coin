@@ -7,6 +7,7 @@ import {
   File01Icon, Building01Icon, Settings01Icon, Analytics01Icon, UserMultiple02Icon,
   UserCheck01Icon, Logout01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon,
   Cancel01Icon, WhatsappIcon, News01Icon, Share08Icon, ChartLineData01Icon,
+  CustomerSupportIcon,
 } from '@hugeicons/core-free-icons';
 
 const nav = (icon) => <HugeiconsIcon icon={icon} size={18} strokeWidth={1.8} />;
@@ -32,6 +33,7 @@ const IC = {
   chevRight: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
   close:     <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />,
   wa:        nav(WhatsappIcon),
+  support:   nav(CustomerSupportIcon),
   blog:      nav(News01Icon),
   social:    nav(Share08Icon),
   reports:   nav(ChartLineData01Icon),
@@ -272,7 +274,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
             className="sb-help"
             onClick={() => window.open('https://wa.me/917600046416?text=' + encodeURIComponent('Hi, I need help with CrossCoin Admin Panel.'), '_blank')}
           >
-            {IC.wa}
+            {IC.support}
             {expanded && <span>Need help?</span>}
           </button>
         </div>
