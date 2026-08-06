@@ -1668,7 +1668,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
-.modal-body .dimensions-section h6 { margin: 0 0 10px; }
 .modal-body .dimensions-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;

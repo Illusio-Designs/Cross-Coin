@@ -305,7 +305,6 @@
 .weight-dimensions-section {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
   margin: 1.5rem 0;
   padding: 1.5rem;
   border: 1px solid var(--ds-color-border);

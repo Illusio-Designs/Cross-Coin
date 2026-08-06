@@ -2074,7 +2074,6 @@
 .weight-dimensions-section {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
   margin: 1.5rem 0;
   padding: 1.5rem;
   border: 1px solid var(--ds-color-border);
@@ -8944,7 +8943,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
-.modal-body .dimensions-section h6 { margin: 0 0 10px; }
 .modal-body .dimensions-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
