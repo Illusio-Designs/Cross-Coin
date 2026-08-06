@@ -33,6 +33,7 @@ const FILES = [
   'payments.css',
   'products.css',
   'orders.css',
+  'reports.css',
   'media.css',
   'utmAnalytics.css',
   'attributes.css',

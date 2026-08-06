@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import Loader from '../../../components/common/Loader';
-import DonutChart from '../../../components/common/DonutChart';
 import { useDashboardStats } from '../../../hooks/queries/useDashboard';
 import { orderService } from '../../../services';
 import { DateRangePicker } from '../../../components/ui';
-import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
+import { PageHeader } from '../../../components/Dashboard/primitives';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 
 /* ──────────────────────────────────────────────────────────────
    Reports — a date-ranged, exportable view of store performance.
-   Reuses the dashboard stats API (revenue, brand-wise sales, top
-   products, payment + status breakdowns) and adds one-click CSV
-   export per table plus a delivered-orders server export.
+   Monochrome Obzus treatment: grayscale share bars + segmented
+   revenue bar (no rainbow donuts), KPI compare arrows, and a
+   revenue-trend area chart. Reuses the dashboard stats API and
+   adds one-click CSV export per table + a delivered-orders export.
    ────────────────────────────────────────────────────────────── */
 
 const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n) => (Number(n) || 0).toLocaleString('en-IN');
+/* Compact ₹ for legends: 12,10,400 → ₹12.1L */
+const moneyShort = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
+  if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)}L`;
+  if (v >= 1e3) return `₹${(v / 1e3).toFixed(1)}K`;
+  return `₹${Math.round(v)}`;
+};
+
+/* Grayscale ramp (flips for dark via the CSS vars on .obz-rep) */
+const RAMP = ['var(--rr1)', 'var(--rr2)', 'var(--rr3)', 'var(--rr4)', 'var(--rr5)'];
 
 /* Build a CSV string from rows + column defs, then trigger a download. */
 function exportCsv(filename, columns, rows) {
@@ -34,24 +45,48 @@ function exportCsv(filename, columns, rows) {
   URL.revokeObjectURL(url);
 }
 
-const DL_ICON = (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const DlIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 
-function ExportButton({ onClick, children = 'Export CSV', disabled }) {
+/* KPI delta arrow (▲/▼ %) — green up, red down (matches dashboard home) */
+function Delta({ pct }) {
+  if (pct === null || pct === undefined) return null;
+  const up = pct >= 0;
+  return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
+}
+
+/* Revenue area chart — daily revenue, smooth monochrome line + soft fill */
+function RevenueTrend({ data }) {
+  if (!Array.isArray(data) || data.length < 2 || data.every((v) => !v)) {
+    return <div className="rep-ph"><span className="hint">Not enough revenue history yet for a trend.</span></div>;
+  }
+  const W = 720, H = 180, PAD = 8;
+  const max = Math.max(1, ...data);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - PAD - ((v || 0) / max) * (H - PAD * 2);
+    return [x, y];
+  });
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  const area = `${d} L${W} ${H} L0 ${H} Z`;
+  const last = pts[pts.length - 1];
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="sl-add-btn"
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.5 : 1 }}
-    >
-      <span className="sl-add-btn-icon" style={{ display: 'inline-flex' }}>{DL_ICON}</span>
-      {children}
-    </button>
+    <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="180" preserveAspectRatio="none" role="img" aria-label="Daily revenue trend">
+      <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+      <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+      <path d={area} fill="var(--ds-color-surface-soft)" />
+      <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--ds-color-text)" />
+    </svg>
   );
 }
 
@@ -80,6 +115,13 @@ export default function Reports() {
   const breakdown = revenue.breakdown || {};
   const payment = stats?.paymentDistribution || {};
   const sd = orders.statusDistribution || {};
+  const deltas = stats?.deltas || {};
+
+  /* Revenue-by-status segments (earned / active / lost) */
+  const earned = Number(revenue.earned) || 0;
+  const active = Number(revenue.active) || 0;
+  const lost = Number(revenue.lost) || 0;
+  const segTotal = earned + active + lost || 1;
 
   /* ── Exports ── */
   const exportBrandSales = () =>
@@ -137,22 +179,24 @@ export default function Reports() {
     }
   };
 
+  const totalOrders = Number(orders.total) || 0;
+  const pct = (v) => (totalOrders > 0 ? Math.round((v / totalOrders) * 1000) / 10 : 0);
   const statusRows = [
-    { label: 'Delivered', value: (sd['delivered'] || 0) + (sd['completed'] || 0) },
-    { label: 'Shipped / In transit', value: (sd['shipped'] || 0) + (sd['in transit'] || 0) + (sd['out for delivery'] || 0) },
-    { label: 'Confirmed / Processing', value: (sd['confirmed'] || 0) + (sd['processing'] || 0) },
-    { label: 'Pending', value: (sd['pending'] || 0) + (sd['awaiting_confirmation'] || 0) },
-    { label: 'RTO / Returned', value: (sd['rto'] || 0) + (sd['rto delivered'] || 0) + (sd['return_initiated'] || 0) + (sd['returned_rto'] || 0) },
-    { label: 'Cancelled', value: (sd['cancelled'] || 0) + (sd['order cancelled'] || 0) },
+    { label: 'Delivered', value: (sd['delivered'] || 0) + (sd['completed'] || 0), c: RAMP[0] },
+    { label: 'Shipped / In transit', value: (sd['shipped'] || 0) + (sd['in transit'] || 0) + (sd['out for delivery'] || 0), c: RAMP[1] },
+    { label: 'Confirmed / Processing', value: (sd['confirmed'] || 0) + (sd['processing'] || 0), c: RAMP[2] },
+    { label: 'Pending', value: (sd['pending'] || 0) + (sd['awaiting_confirmation'] || 0), c: RAMP[3] },
+    { label: 'RTO / Returned', value: (sd['rto'] || 0) + (sd['rto delivered'] || 0) + (sd['return_initiated'] || 0) + (sd['returned_rto'] || 0), c: RAMP[3] },
+    { label: 'Cancelled', value: (sd['cancelled'] || 0) + (sd['order cancelled'] || 0), c: RAMP[4] },
   ].filter((r) => r.value > 0);
 
   return (
-    <div className="dashboard-sections">
+    <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Reports"
         subtitle={hasDateFilter ? `Period: ${periodLabel}` : 'All-time performance — pick a date range to narrow it'}
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="obz-rep-head">
             <DateRangePicker
               label=""
               startDate={dateFilter.start_date || ''}
@@ -162,139 +206,194 @@ export default function Reports() {
               onClear={clearDates}
               inline
             />
-            <ExportButton onClick={exportSummary} disabled={!stats}>Export summary</ExportButton>
+            <button type="button" className="order-sync-main-btn" onClick={exportSummary} disabled={!stats}>
+              <DlIcon /> Export summary
+            </button>
           </div>
         }
       />
 
       {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Loader /></div>
+        <div className="rep-state"><Loader /></div>
       ) : error ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#dc2626' }}>Failed to load report data.</div>
+        <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Failed to load report data.</div>
       ) : !stats ? null : (
         <>
-          {/* ── Summary KPIs ── */}
-          <StatGrid style={{ marginBottom: 'var(--ds-space-4)' }}>
-            <StatTile label="Total Revenue" value={money(revenue.total)} />
-            <StatTile label="Earned" value={money(revenue.earned)} tone="good" sub="Delivered" />
-            <StatTile label="Active" value={money(revenue.active)} tone="info" sub="In pipeline" />
-            <StatTile label="Lost" value={money(revenue.lost)} tone="danger" sub="Cancelled + RTO" />
-            <StatTile label="Avg Order" value={money(revenue.average)} tone="info" />
-            <StatTile label="Orders" value={num(orders.total)} />
-            <StatTile label="Delivered" value={num(orders.completed)} tone="good" />
-            <StatTile label="Cancelled" value={num(orders.cancelled)} tone="danger" />
-          </StatGrid>
+          {/* ── KPI strip with compare arrows ── */}
+          <div className="rep-kpis">
+            <div className="rep-kpi">
+              <div className="rep-kl">Total Revenue</div>
+              <div className="rep-kv num">{money(revenue.total)}</div>
+              <div className="rep-kf"><Delta pct={deltas.revenue?.pct} /> vs prev 30d</div>
+            </div>
+            <div className="rep-kpi">
+              <div className="rep-kl">Earned</div>
+              <div className="rep-kv num">{money(revenue.earned)}</div>
+              <div className="rep-kf">Delivered revenue</div>
+            </div>
+            <div className="rep-kpi">
+              <div className="rep-kl">Orders</div>
+              <div className="rep-kv num">{num(orders.total)}</div>
+              <div className="rep-kf"><Delta pct={deltas.orders?.pct} /> · {num(orders.completed)} delivered</div>
+            </div>
+            <div className="rep-kpi">
+              <div className="rep-kl">Avg Order</div>
+              <div className="rep-kv num">{money(revenue.average)}</div>
+              <div className="rep-kf"><Delta pct={deltas.aov?.pct} /> vs prev 30d</div>
+            </div>
+          </div>
 
-          {/* ── Sales by Brand ── */}
-          <div className="dc-two-col" style={{ marginBottom: 'var(--ds-space-4)' }}>
-            <Panel
-              title="Sales by Brand"
-              actions={<ExportButton onClick={exportBrandSales} disabled={!brandSales.length} />}
-              flush
-            >
-              <ResponsiveTable
-                data={brandSales}
-                rowKey="brandId"
-                emptyMessage="No brand sales in this period"
-                columns={[
-                  { key: 'brand', label: 'Brand', cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)' },
-                    render: (b) => (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 3, background: b.color, flexShrink: 0 }} />
-                        {b.name}
+          {/* ── Revenue trend ── */}
+          <div className="rep-panel">
+            <div className="rep-ph">
+              <h3>Revenue Trend</h3>
+              <span className="hint">Daily revenue · last 30 days</span>
+            </div>
+            <RevenueTrend data={stats.revenueTrend} />
+          </div>
+
+          {/* ── Sales by brand: table + monochrome share ── */}
+          <div className="rep-grid2 rep-grid2--wide">
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph">
+                <h3>Sales by Brand</h3>
+                <button type="button" className="rep-chip" onClick={exportBrandSales} disabled={!brandSales.length}>
+                  <DlIcon /> Export CSV
+                </button>
+              </div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead>
+                    <tr><th>Brand</th><th className="r">Orders</th><th className="r">Revenue</th><th className="r">Earned</th><th className="r">Share</th></tr>
+                  </thead>
+                  <tbody>
+                    {brandSales.length === 0 ? (
+                      <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>No brand sales in this period</td></tr>
+                    ) : brandSales.map((b, i) => (
+                      <tr key={b.brandId ?? b.name}>
+                        <td className="strong"><span className="rep-dot" style={{ background: RAMP[i % RAMP.length] }} />{b.name}</td>
+                        <td className="r num">{num(b.orders)}</td>
+                        <td className="r strong num">{money(b.revenue)}</td>
+                        <td className="r num">{money(b.earned)}</td>
+                        <td className="r num">{b.share || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Revenue Share</h3><span className="hint">of {moneyShort(revenue.total)} total</span></div>
+              <div className="rep-bars">
+                {brandSales.length === 0 ? (
+                  <span className="hint">No data</span>
+                ) : brandSales.map((b, i) => (
+                  <div className="rep-bar-row" key={b.brandId ?? b.name}>
+                    <div className="rep-bar-top">
+                      <span className="rep-bar-name">
+                        <span className="rep-dot" style={{ background: RAMP[i % RAMP.length] }} />
+                        <span className="lbl">{b.name}</span>
                       </span>
-                    ) },
-                  { key: 'orders', label: 'Orders', render: (b) => num(b.orders) },
-                  { key: 'revenue', label: 'Revenue', cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)' }, render: (b) => money(b.revenue) },
-                  { key: 'earned', label: 'Earned', render: (b) => money(b.earned) },
-                  { key: 'share', label: 'Share', render: (b) => `${b.share || 0}%` },
-                ]}
-              />
-            </Panel>
-
-            {brandSales.length > 0 && (
-              <Panel>
-                <DonutChart
-                  data={brandSales.map((b) => ({ label: b.name, value: b.revenue, color: b.color }))}
-                  title="Revenue by Brand"
-                  subtitle="Share of total revenue"
-                  totalValue={money(revenue.total)}
-                  totalLabel="Total Revenue"
-                  size={160} strokeWidth={22} showLegend
-                />
-              </Panel>
-            )}
-          </div>
-
-          {/* ── Top Products + Revenue by status ── */}
-          <div className="dc-two-col" style={{ marginBottom: 'var(--ds-space-4)' }}>
-            <Panel
-              title="Top Products"
-              actions={<ExportButton onClick={exportTopProducts} disabled={!topProducts.length} />}
-              flush
-            >
-              <ResponsiveTable
-                data={topProducts.slice(0, 10)}
-                rowKey="id"
-                emptyMessage="No products sold in this period"
-                columns={[
-                  { key: 'rank', label: '#', headerStyle: { width: 44 }, render: (_p, i) => i + 1 },
-                  { key: 'name', label: 'Product', cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', whiteSpace: 'normal', overflowWrap: 'break-word', minWidth: 160 }, render: (p) => p.name },
-                  { key: 'sold', label: 'Units', render: (p) => num(p.totalSold) },
-                  { key: 'revenue', label: 'Revenue', cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)' }, render: (p) => money(p.totalRevenue) },
-                ]}
-              />
-            </Panel>
-
-            {revenue.donutChart?.length > 0 && (
-              <Panel>
-                <DonutChart
-                  data={revenue.donutChart}
-                  title="Revenue by Order Status"
-                  subtitle="Where the money sits"
-                  totalValue={money(revenue.total)}
-                  totalLabel="Total Revenue"
-                  size={160} strokeWidth={22} showLegend
-                />
-              </Panel>
-            )}
-          </div>
-
-          {/* ── Order status + Payment breakdown ── */}
-          <div className="dc-two-col" style={{ marginBottom: 'var(--ds-space-4)' }}>
-            <Panel title="Order Status Breakdown">
-              <StatGrid>
-                {statusRows.map((r) => (
-                  <StatTile key={r.label} label={r.label} value={num(r.value)}
-                    sub={orders.total > 0 ? `${Math.round((r.value / orders.total) * 100)}%` : '0%'} />
+                      <span className="rep-bar-val num">{b.share || 0}%</span>
+                    </div>
+                    <div className="rep-track"><div className="rep-fill" style={{ width: `${b.share || 0}%`, background: RAMP[i % RAMP.length] }} /></div>
+                  </div>
                 ))}
-              </StatGrid>
-            </Panel>
+              </div>
+            </div>
+          </div>
 
-            <Panel title="Payment & Fulfilment">
-              <StatGrid>
-                <StatTile label="COD Orders" value={num(payment.cod?.count)} tone="warn" />
-                <StatTile label="COD Revenue" value={money(payment.cod?.revenue)} tone="warn" />
-                <StatTile label="Prepaid Orders" value={num(payment.prepaid?.count)} tone="good" />
-                <StatTile label="Prepaid Revenue" value={money(payment.prepaid?.revenue)} tone="good" />
-                <StatTile label="RTO Rate" value={`${stats.rtoStats?.rtoRate || 0}%`} tone="danger" />
-                <StatTile label="RTO Value" value={money(breakdown.rto)} tone="danger" />
-              </StatGrid>
-            </Panel>
+          {/* ── Top products + revenue by status ── */}
+          <div className="rep-grid2 rep-grid2--wide">
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph">
+                <h3>Top Products</h3>
+                <button type="button" className="rep-chip" onClick={exportTopProducts} disabled={!topProducts.length}>
+                  <DlIcon /> Export CSV
+                </button>
+              </div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead>
+                    <tr><th style={{ width: 36 }}>#</th><th>Product</th><th className="r">Units</th><th className="r">Revenue</th></tr>
+                  </thead>
+                  <tbody>
+                    {topProducts.length === 0 ? (
+                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>No products sold in this period</td></tr>
+                    ) : topProducts.slice(0, 10).map((p, i) => (
+                      <tr key={p.id ?? i}>
+                        <td className="rank">{i + 1}</td>
+                        <td className="strong rep-prod">{p.name}</td>
+                        <td className="r num">{num(p.totalSold)}</td>
+                        <td className="r strong num">{money(p.totalRevenue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Revenue by Status</h3><span className="hint">where the money sits</span></div>
+              <div className="rep-seg">
+                <span style={{ width: `${(earned / segTotal) * 100}%`, background: RAMP[0] }} />
+                <span style={{ width: `${(active / segTotal) * 100}%`, background: RAMP[2] }} />
+                <span style={{ width: `${(lost / segTotal) * 100}%`, background: RAMP[4] }} />
+              </div>
+              <div className="rep-legend">
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[0] }} /><div><b className="num">{moneyShort(earned)}</b><small>Earned · delivered</small></div></div>
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[2] }} /><div><b className="num">{moneyShort(active)}</b><small>Active · in pipeline</small></div></div>
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[4] }} /><div><b className="num">{moneyShort(lost)}</b><small>Lost · cancelled + RTO</small></div></div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Order status breakdown + payment ── */}
+          <div className="rep-grid2">
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Order Status Breakdown</h3><span className="hint">{num(orders.total)} orders</span></div>
+              <div className="rep-bars">
+                {statusRows.length === 0 ? (
+                  <span className="hint">No orders in this period</span>
+                ) : statusRows.map((r) => (
+                  <div className="rep-bar-row" key={r.label}>
+                    <div className="rep-bar-top">
+                      <span className="rep-bar-name"><span className="lbl">{r.label}</span></span>
+                      <span className="rep-sb-pct num">{num(r.value)} · {pct(r.value)}%</span>
+                    </div>
+                    <div className="rep-track"><div className="rep-fill" style={{ width: `${Math.max(pct(r.value), 1)}%`, background: r.c }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Payment &amp; Fulfilment</h3></div>
+              <div className="rep-tiles">
+                <div className="rep-tile"><div className="rep-tl">COD Orders</div><div className="rep-tv num">{num(payment.cod?.count)}</div><div className="rep-ts">to be collected</div></div>
+                <div className="rep-tile"><div className="rep-tl">COD Revenue</div><div className="rep-tv num">{money(payment.cod?.revenue)}</div><div className="rep-ts">cash on delivery</div></div>
+                <div className="rep-tile"><div className="rep-tl">Prepaid Orders</div><div className="rep-tv num">{num(payment.prepaid?.count)}</div><div className="rep-ts good">already paid</div></div>
+                <div className="rep-tile"><div className="rep-tl">Prepaid Revenue</div><div className="rep-tv num">{money(payment.prepaid?.revenue)}</div><div className="rep-ts good">collected</div></div>
+                <div className="rep-tile"><div className="rep-tl">RTO Rate</div><div className="rep-tv num">{stats.rtoStats?.rtoRate || 0}%</div><div className="rep-ts bad">returns</div></div>
+                <div className="rep-tile"><div className="rep-tl">RTO Value</div><div className="rep-tv num">{money(breakdown.rto)}</div><div className="rep-ts bad">at risk</div></div>
+              </div>
+            </div>
           </div>
 
           {/* ── Delivered-orders server export ── */}
-          <Panel title="Delivered Orders Export">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '4px 2px' }}>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
-                Download a detailed CSV of all delivered orders for the selected date range (used for reconciliation & accounting).
+          <div className="rep-panel">
+            <div className="rep-ph"><h3>Delivered Orders Export</h3></div>
+            <div className="rep-exp">
+              <p>
+                Download a detailed CSV of all delivered orders for the selected date range (used for reconciliation &amp; accounting).
                 {!hasDateFilter && ' Pick a start and end date above first.'}
               </p>
-              <ExportButton onClick={exportDeliveredOrders} disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}>
-                {exportingOrders ? 'Exporting…' : 'Export delivered orders'}
-              </ExportButton>
+              <button type="button" className="rep-chip" onClick={exportDeliveredOrders} disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}>
+                <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered orders'}
+              </button>
             </div>
-          </Panel>
+          </div>
         </>
       )}
     </div>
