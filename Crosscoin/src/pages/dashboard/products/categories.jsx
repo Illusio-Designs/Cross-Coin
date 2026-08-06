@@ -362,9 +362,9 @@ export default function Categories() {
             </div>
 
             {/* ── SEO ── */}
-            <div style={{ marginTop: 8, padding: 12, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+            <div style={{ marginTop: 8, padding: 12, background: 'var(--ds-color-surface-soft)', border: '1px solid var(--ds-color-border)', borderRadius: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)', marginBottom: 8 }}>SEO</div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginBottom: 12 }}>
                 Empty fields fall back to the category name and description on the live page.
               </div>
 

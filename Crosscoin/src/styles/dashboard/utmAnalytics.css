@@ -11,7 +11,7 @@
   align-items: flex-end;
   margin-bottom: 20px;
   padding: 16px;
-  background: white;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
   box-shadow: none;
@@ -96,7 +96,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--ds-color-surface);
   padding: 18px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
@@ -144,7 +144,7 @@
 
 /* Table Container */
 .utm-table-container {
-  background: white;
+  background: var(--ds-color-surface);
   padding: 20px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
@@ -256,7 +256,7 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: white;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
   box-shadow: none;
@@ -265,7 +265,7 @@
 .loader {
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f4f6;
+  border: 3px solid var(--ds-color-surface-soft);
   border-top: 3px solid #0a0a0a;
   border-radius: 50%;
   animation: spin 1s linear infinite;

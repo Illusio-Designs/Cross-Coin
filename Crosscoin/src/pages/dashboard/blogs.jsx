@@ -64,7 +64,7 @@ function SectionsEditor({ value, onChange }) {
   return (
     <div className="dm-sections-editor">
       {value.map((sec, i) => (
-        <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 14, marginBottom: 10 }}>
+        <div key={i} style={{ border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 14, marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ds-color-text-muted)' }}>Section {i + 1}</span>
             <button type="button" onClick={() => removeSection(i)}

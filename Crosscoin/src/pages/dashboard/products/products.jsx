@@ -21,7 +21,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { StarIcon, PencilEdit02Icon, Delete02Icon, ArrowUp01Icon, ArrowDown01Icon, Search01Icon, Add01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 const Editor = dynamic(() => import('../../../components/common/Editor'), {
   ssr: false,
-  loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
+  loading: () => <div style={{ height: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />
 });
 
 const ProductsPage = () => {
@@ -1551,7 +1551,7 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
             : 'Save the product first'}
           style={{
             padding: '6px 12px',
-            background: '#fff',
+            background: 'var(--ds-color-surface)',
             border: '1px solid #d1d5db',
             borderRadius: 6,
             cursor: editingProductId ? 'pointer' : 'not-allowed',
@@ -1565,8 +1565,8 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
       </div>
 
       <div style={{
-        background: '#f9fafb',
-        border: '1px solid #e5e7eb',
+        background: 'var(--ds-color-surface-soft)',
+        border: '1px solid var(--ds-color-border)',
         borderRadius: 8,
         padding: 12,
         marginBottom: 16,

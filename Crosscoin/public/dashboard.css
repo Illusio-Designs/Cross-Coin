@@ -173,7 +173,7 @@
   padding: 10px 14px; border: none; background: transparent;
   font-family: inherit; font-size: 13px; cursor: pointer;
   text-align: left; transition: background 0.12s;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--ds-color-border-soft);
 }
 .mo-search-item:last-child { border-bottom: none; }
 .mo-search-item:hover { background: #f0edf7; }
@@ -612,7 +612,7 @@
 .common-table thead th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: var(--ds-color-surface-soft);
   z-index: 10;
   padding: 10px 12px;
   white-space: nowrap;
@@ -1722,7 +1722,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
-  background-color: white;
+  background-color: var(--ds-color-surface);
   cursor: pointer;
   min-width: 150px;
   font-size: 14px;
@@ -6540,7 +6540,7 @@
   align-items: flex-end;
   margin-bottom: 20px;
   padding: 16px;
-  background: white;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
   box-shadow: none;
@@ -6625,7 +6625,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--ds-color-surface);
   padding: 18px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
@@ -6673,7 +6673,7 @@
 
 /* Table Container */
 .utm-table-container {
-  background: white;
+  background: var(--ds-color-surface);
   padding: 20px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
@@ -6785,7 +6785,7 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: white;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
   box-shadow: none;
@@ -6794,7 +6794,7 @@
 .loader {
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f4f6;
+  border: 3px solid var(--ds-color-surface-soft);
   border-top: 3px solid #0a0a0a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -7064,12 +7064,12 @@
 }
 
 .attributes-table th {
-  background-color: #f8fafc;
+  background-color: var(--ds-color-surface-soft);
   font-weight: 600;
 }
 
 .attributes-table tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--ds-color-surface-soft);
 }
 
 .attribute-actions {
@@ -9097,7 +9097,7 @@
 
 /* Form Card */
 .brand-form-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 24px;
     margin-bottom: 24px;
@@ -9200,7 +9200,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     margin-bottom: 24px;
     box-shadow: none;
@@ -9232,7 +9232,7 @@
 }
 
 .brand-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -9432,7 +9432,7 @@
     font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s;
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
 }
 
@@ -9491,7 +9491,7 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--ds-color-text-muted);
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
     transition: all 0.2s;
     appearance: none;
@@ -9532,7 +9532,7 @@
 
 /* Add Form */
 .add-form-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 24px;
     margin-bottom: 24px;
@@ -9599,7 +9599,7 @@
     gap: 8px;
     margin-bottom: 24px;
     padding: 16px;
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     box-shadow: none;
     border: 1px solid var(--ds-color-border);
@@ -9608,7 +9608,7 @@
 .category-btn {
     padding: 8px 16px;
     border: 1px solid var(--ds-color-border);
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
@@ -9650,7 +9650,7 @@
 }
 
 .setting-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -9871,7 +9871,7 @@
     font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s;
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
 }
 
@@ -10007,7 +10007,7 @@
 }
 
 .brand-action-btn:hover {
-    background: #e0e0e0;
+    background: var(--ds-color-border);
 }
 
 .brand-action-btn:disabled {
@@ -10417,7 +10417,7 @@
   flex-direction: column;
   gap: 1.25rem;
   scrollbar-width: thin;
-  scrollbar-color: #e5e7eb #fff;
+  scrollbar-color: var(--ds-color-border) var(--ds-color-surface);
   overflow-x: hidden;
 }
 .custom-modal-body::-webkit-scrollbar {

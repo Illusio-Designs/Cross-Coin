@@ -39,7 +39,7 @@
 
 /* Form Card */
 .brand-form-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 24px;
     margin-bottom: 24px;
@@ -142,7 +142,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     margin-bottom: 24px;
     box-shadow: none;
@@ -174,7 +174,7 @@
 }
 
 .brand-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -374,7 +374,7 @@
     font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s;
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
 }
 

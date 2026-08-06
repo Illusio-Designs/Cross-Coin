@@ -133,14 +133,14 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
 
       <Panel flush style={{ overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading…</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>Loading…</div>
         ) : items.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>No products match.</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>No products match.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <tr style={{ background: 'var(--ds-color-surface-soft)', borderBottom: '1px solid var(--ds-color-border)' }}>
                   <th style={th}>Product</th>
                   <th style={th}>Meta Title</th>
                   <th style={th}>Meta Description</th>
@@ -155,10 +155,10 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
                   const keywords    = edited.metaKeywords    ?? p.seo.metaKeywords;
                   const isDirty = Object.keys(edited).length > 0;
                   return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6', background: isDirty ? '#fffbeb' : '#fff' }}>
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--ds-color-border-soft)', background: isDirty ? '#fffbeb' : 'var(--ds-color-surface)' }}>
                       <td style={{ ...td, verticalAlign: 'top', minWidth: 180 }}>
                         <div style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{p.name}</div>
-                        <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}>{p.slug}</div>
+                        <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontFamily: 'ui-monospace, monospace' }}>{p.slug}</div>
                         {isDirty && <div style={{ marginTop: 4, fontSize: 11, color: '#d97706', fontWeight: 600 }}>● unsaved</div>}
                       </td>
                       <td style={{ ...td, verticalAlign: 'top', minWidth: 220 }}>
@@ -217,13 +217,13 @@ const cellInput = {
   border: '1px solid #d1d5db',
   borderRadius: 5,
   fontSize: 13,
-  background: '#fff',
+  background: 'var(--ds-color-surface)',
   outline: 'none',
 };
 const pageBtn = {
   padding: '6px 12px',
   border: '1px solid #d1d5db',
-  background: '#fff',
+  background: 'var(--ds-color-surface)',
   borderRadius: 6,
   cursor: 'pointer',
   fontSize: 13,

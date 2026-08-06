@@ -119,8 +119,8 @@
 }
 
 .drp-clear-btn:hover {
-  background: #e5e7eb;
-  border-color: #9ca3af;
+  background: var(--ds-color-border);
+  border-color: var(--ds-color-text-faint);
 }
 
 /* ── Dropdown ── */

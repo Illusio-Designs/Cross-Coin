@@ -67,7 +67,7 @@
 .common-table thead th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: var(--ds-color-surface-soft);
   z-index: 10;
   padding: 10px 12px;
   white-space: nowrap;

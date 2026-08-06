@@ -43,7 +43,7 @@
 }
 
 .brand-action-btn:hover {
-    background: #e0e0e0;
+    background: var(--ds-color-border);
 }
 
 .brand-action-btn:disabled {

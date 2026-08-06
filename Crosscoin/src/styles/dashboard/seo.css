@@ -193,7 +193,7 @@
   flex-direction: column;
   gap: 1.25rem;
   scrollbar-width: thin;
-  scrollbar-color: #e5e7eb #fff;
+  scrollbar-color: var(--ds-color-border) var(--ds-color-surface);
   overflow-x: hidden;
 }
 .custom-modal-body::-webkit-scrollbar {

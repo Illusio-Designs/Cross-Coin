@@ -76,7 +76,7 @@ export default function NotificationBell() {
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           padding: '6px', borderRadius: 8, display: 'flex', alignItems: 'center',
-          color: 'var(--text-secondary, #6b7280)', position: 'relative',
+          color: 'var(--ds-color-text-muted)', position: 'relative',
         }}
       >
         <HugeiconsIcon icon={Notification01Icon} size={20} strokeWidth={2} />
@@ -98,8 +98,8 @@ export default function NotificationBell() {
           {/* Header */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', borderBottom: '1px solid var(--border, #e5e7eb)',
-            position: 'sticky', top: 0, background: 'var(--card-bg, #fff)',
+            padding: '12px 16px', borderBottom: '1px solid var(--ds-color-border)',
+            position: 'sticky', top: 0, background: 'var(--ds-color-surface)',
           }}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Notifications</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -121,7 +121,7 @@ export default function NotificationBell() {
             {notifications.length > 0 && (
               <button onClick={clearAll} style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 12, color: '#6b7280',
+                fontSize: 12, color: 'var(--ds-color-text-muted)',
               }}>Clear all</button>
             )}
             </div>
@@ -129,7 +129,7 @@ export default function NotificationBell() {
 
           {/* List */}
           {notifications.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--ds-color-text-faint)', fontSize: 13 }}>
               No notifications yet
             </div>
           ) : (
@@ -144,17 +144,17 @@ export default function NotificationBell() {
                 }}>
                 <div style={{ flexShrink: 0, marginTop: 2 }}>{ICONS[n.type]}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text, #111827)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ds-color-text)' }}>
                     {n.type === 'order'
                       ? `New order #${n.data.orderNumber}`
                       : `New WhatsApp message`}
                   </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {n.type === 'order'
                       ? `₹${Number(n.data.amount).toFixed(2)} · ${n.data.paymentType?.toUpperCase()}`
                       : n.data.message}
                   </div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3 }}>{timeAgo(n.time)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', marginTop: 3 }}>{timeAgo(n.time)}</div>
                 </div>
               </div>
             ))

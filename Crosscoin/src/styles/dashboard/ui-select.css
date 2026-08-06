@@ -160,11 +160,11 @@
   overflow-y: auto;
   padding: 4px 0;
   scrollbar-width: thin;
-  scrollbar-color: #e0e0e0 transparent;
+  scrollbar-color: var(--ds-color-border) transparent;
 }
 .sel-options-list::-webkit-scrollbar { width: 4px; }
 .sel-options-list::-webkit-scrollbar-track { background: transparent; }
-.sel-options-list::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+.sel-options-list::-webkit-scrollbar-thumb { background: var(--ds-color-border); border-radius: 4px; }
 
 .sel-option {
   display: flex;

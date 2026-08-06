@@ -36,7 +36,7 @@
   padding: 10px 14px; border: none; background: transparent;
   font-family: inherit; font-size: 13px; cursor: pointer;
   text-align: left; transition: background 0.12s;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--ds-color-border-soft);
 }
 .mo-search-item:last-child { border-bottom: none; }
 .mo-search-item:hover { background: #f0edf7; }

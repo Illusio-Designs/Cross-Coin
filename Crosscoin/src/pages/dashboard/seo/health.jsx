@@ -149,19 +149,19 @@ function KpiGrid({ children }) {
 function Stat({ label, count, total, tone = 'auto' }) {
   const pct = total ? Math.round((count / total) * 100) : 0;
   const color = tone === 'neutral'
-    ? '#6b7280'
+    ? 'var(--ds-color-text-muted)'
     : (count === 0 ? '#0a0a0a' : pct > 25 ? '#3f3f46' : '#6b6b73');
   return (
     <div style={{
       padding: 12,
-      border: `1px solid ${count === 0 && tone !== 'neutral' ? '#bbf7d0' : '#e5e7eb'}`,
+      border: `1px solid ${count === 0 && tone !== 'neutral' ? '#bbf7d0' : 'var(--ds-color-border)'}`,
       borderRadius: 8,
-      background: count === 0 && tone !== 'neutral' ? '#f0fdf4' : '#fff',
+      background: count === 0 && tone !== 'neutral' ? '#f0fdf4' : 'var(--ds-color-surface)',
     }}>
-      <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span style={{ fontSize: 22, fontWeight: 700, color }}>{count}</span>
-        <span style={{ fontSize: 12, color: '#9ca3af' }}>/ {total} ({pct}%)</span>
+        <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>/ {total} ({pct}%)</span>
       </div>
     </div>
   );

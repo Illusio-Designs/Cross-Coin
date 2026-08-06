@@ -19,12 +19,12 @@
 }
 
 .attributes-table th {
-  background-color: #f8fafc;
+  background-color: var(--ds-color-surface-soft);
   font-weight: 600;
 }
 
 .attributes-table tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--ds-color-surface-soft);
 }
 
 .attribute-actions {

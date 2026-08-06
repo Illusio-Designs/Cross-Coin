@@ -2390,7 +2390,7 @@ export function WhatsAppManager() {
       {/* ── Send Products Modal (single card OR multi-product catalogue) ── */}
       <Modal isOpen={productModal} onClose={() => setProductModal(false)} title="Send Products" closeOnOverlayClick={false}>
         <div className="modal-body">
-          <p style={{ fontSize:13, color:'#6b7280', marginBottom:12 }}>
+          <p style={{ fontSize:13, color:'var(--ds-color-text-muted)', marginBottom:12 }}>
             Choose a brand, pick one or more products, and we'll send each as a photo card with a link to buy. No catalogue setup needed.
           </p>
           {brands.length > 0 && (
@@ -2413,7 +2413,7 @@ export function WhatsAppManager() {
             {productLoading
               ? <div style={{ textAlign:'center', padding:20 }}><Loader /></div>
               : productList.length === 0
-                ? <div style={{ textAlign:'center', color:'#9ca3af', fontSize:13, padding:20 }}>No products found</div>
+                ? <div style={{ textAlign:'center', color:'var(--ds-color-text-faint)', fontSize:13, padding:20 }}>No products found</div>
                 : productList.map(p => {
                   const selected = !!selectedProducts.find(x => x.id === p.id);
                   const price = p.ProductVariations?.[0]?.price || p.price || '—';
@@ -2423,8 +2423,8 @@ export function WhatsAppManager() {
                       onClick={() => toggleProduct(p)}
                       style={{
                         display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
-                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#0b7a5e' : '#e5e7eb'}`,
-                        background: selected ? '#e8f5f0' : '#fff', transition:'all 0.15s'
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#0b7a5e' : 'var(--ds-color-border)'}`,
+                        background: selected ? '#e8f5f0' : 'var(--ds-color-surface)', transition:'all 0.15s'
                       }}
                     >
                       <div style={{
@@ -2436,7 +2436,7 @@ export function WhatsAppManager() {
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:'var(--ds-color-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
-                        <div style={{ fontSize:11, color:'#6b7280' }}>₹{price}  · ID: {p.id}</div>
+                        <div style={{ fontSize:11, color:'var(--ds-color-text-muted)' }}>₹{price}  · ID: {p.id}</div>
                       </div>
                     </div>
                   );
@@ -2475,8 +2475,8 @@ export function WhatsAppManager() {
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
                   <span className={`was-cat-badge was-cat--${cat}`}>{catLabel(viewTpl.category)}</span>
                   <span className={`was-status-badge was-status--${st}`}><span className="was-status-dot" />{stLabel}</span>
-                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)' }}>{viewTpl.language || 'en'}</span>
-                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
+                  <span className="was-cat-badge" style={{ background:'var(--ds-color-surface-soft)', color:'var(--ds-color-text-muted)' }}>{viewTpl.language || 'en'}</span>
+                  <span className="was-cat-badge" style={{ background:'var(--ds-color-surface-soft)', color:'var(--ds-color-text-muted)' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
                 </div>
 
                 {viewTpl.status === 'rejected' && (
@@ -2521,12 +2521,12 @@ export function WhatsAppManager() {
                 <div style={{ display:'flex', flexDirection:'column', gap:10, fontSize:13 }}>
                   <div>
                     <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Body</div>
-                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word', background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.body || '—'}</div>
+                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word', background:'var(--ds-color-surface-soft)', border:'1px solid var(--ds-color-border)', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.body || '—'}</div>
                   </div>
                   {viewTpl.footer && (
                     <div>
                       <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Footer</div>
-                      <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.footer}</div>
+                      <div style={{ background:'var(--ds-color-surface-soft)', border:'1px solid var(--ds-color-border)', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.footer}</div>
                     </div>
                   )}
                   {!!(viewTpl.buttons && viewTpl.buttons.length) && (
@@ -2546,10 +2546,10 @@ export function WhatsAppManager() {
                     {uniqVars.length ? (
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {uniqVars.map(v => (
-                          <span key={v} style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)', borderRadius:6, padding:'4px 10px', fontSize:12, fontFamily:'monospace' }}>{v}</span>
+                          <span key={v} style={{ background:'var(--ds-color-surface-soft)', color:'var(--ds-color-text-muted)', borderRadius:6, padding:'4px 10px', fontSize:12, fontFamily:'monospace' }}>{v}</span>
                         ))}
                       </div>
-                    ) : <div style={{ color:'#9ca3af', fontSize:12 }}>None</div>}
+                    ) : <div style={{ color:'var(--ds-color-text-faint)', fontSize:12 }}>None</div>}
                   </div>
                 </div>
               </div>

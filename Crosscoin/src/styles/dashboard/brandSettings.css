@@ -34,7 +34,7 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--ds-color-text-muted);
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
     transition: all 0.2s;
     appearance: none;
@@ -75,7 +75,7 @@
 
 /* Add Form */
 .add-form-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 24px;
     margin-bottom: 24px;
@@ -142,7 +142,7 @@
     gap: 8px;
     margin-bottom: 24px;
     padding: 16px;
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     box-shadow: none;
     border: 1px solid var(--ds-color-border);
@@ -151,7 +151,7 @@
 .category-btn {
     padding: 8px 16px;
     border: 1px solid var(--ds-color-border);
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
@@ -193,7 +193,7 @@
 }
 
 .setting-card {
-    background: white;
+    background: var(--ds-color-surface);
     border-radius: 6px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -414,7 +414,7 @@
     font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s;
-    background: white;
+    background: var(--ds-color-surface);
     cursor: pointer;
 }
 

@@ -187,7 +187,7 @@ function Field({ field, value, onChange, dirty }) {
     <div style={{ marginBottom: 14 }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--ds-color-text-muted)', marginBottom: 4 }}>
         <span>{field.label}</span>
-        <span style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'ui-monospace, monospace' }}>{field.key}</span>
+        <span style={{ fontSize: 10, color: 'var(--ds-color-text-faint)', fontFamily: 'ui-monospace, monospace' }}>{field.key}</span>
         {dirty && <span style={{ fontSize: 10, color: '#d97706' }}>● unsaved</span>}
       </label>
       <input
@@ -201,11 +201,11 @@ function Field({ field, value, onChange, dirty }) {
           border: '1px solid #d1d5db',
           borderRadius: 6,
           fontSize: 14,
-          background: '#fff',
+          background: 'var(--ds-color-surface)',
         }}
       />
       {field.hint && (
-        <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>{field.hint}</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{field.hint}</div>
       )}
     </div>
   );

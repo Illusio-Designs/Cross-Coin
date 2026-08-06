@@ -9,7 +9,7 @@ import { richHtml } from '../../../utils/sanitizeHtml';
 // in the admin shell's initial bundle.
 const Editor = dynamic(() => import('../../../components/common/Editor'), {
   ssr: false,
-  loading: () => <div style={{ height: 180, border: '1px solid #e5e7eb', borderRadius: 6 }} />,
+  loading: () => <div style={{ height: 180, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />,
 });
 
 const ATTACH_TYPES = [
@@ -204,17 +204,17 @@ export default function FaqsManager({ brandId = 1 } = {}) {
               {g.type === 'category' && `Category #${g.ref}`}
               {g.type === 'page'     && `Page: ${g.ref}`}
             </div>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--ds-color-border)', borderRadius: 8, overflow: 'hidden' }}>
               {g.rows
                 .sort((a, b) => a.display_order - b.display_order)
                 .map((f, idx, arr) => (
                   <div key={f.id} style={{
-                    borderTop: idx === 0 ? 'none' : '1px solid #f3f4f6',
+                    borderTop: idx === 0 ? 'none' : '1px solid var(--ds-color-border-soft)',
                     padding: 12,
                     display: 'flex',
                     gap: 12,
                     alignItems: 'flex-start',
-                    background: f.is_active ? '#fff' : '#fafafa',
+                    background: f.is_active ? 'var(--ds-color-surface)' : 'var(--ds-color-surface-soft)',
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <button title="Up"   disabled={idx === 0}            onClick={() => move(f, -1)} style={btnSmall}>↑</button>
@@ -222,9 +222,9 @@ export default function FaqsManager({ brandId = 1 } = {}) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: 'var(--ds-color-text)', marginBottom: 4 }}>{f.question}</div>
-                      <div style={{ fontSize: 13, color: '#6b7280' }} {...richHtml(f.answer)} />
+                      <div style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }} {...richHtml(f.answer)} />
                       {!f.is_active && (
-                        <div style={{ marginTop: 4, fontSize: 11, color: '#9ca3af' }}>Inactive — not shown on site</div>
+                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--ds-color-text-faint)' }}>Inactive — not shown on site</div>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -308,7 +308,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
 
       <div style={{ marginTop: 10 }}>
         <Field label="Answer">
-          <div style={{ background: '#fff' }}>
+          <div style={{ background: 'var(--ds-color-surface)' }}>
             <Editor
               theme="snow"
               value={form.answer}
@@ -356,13 +356,13 @@ const inputStyle = {
   borderRadius: 6,
   fontSize: 14,
   outline: 'none',
-  background: '#fff',
+  background: 'var(--ds-color-surface)',
 };
 
 const btnSmall = {
   padding: '2px 6px',
   border: '1px solid #d1d5db',
-  background: '#fff',
+  background: 'var(--ds-color-surface)',
   borderRadius: 4,
   cursor: 'pointer',
   fontSize: 11,
@@ -372,7 +372,7 @@ const btnSmall = {
 const btnSecondary = {
   padding: '6px 10px',
   border: '1px solid #d1d5db',
-  background: '#fff',
+  background: 'var(--ds-color-surface)',
   borderRadius: 6,
   cursor: 'pointer',
   fontSize: 12,

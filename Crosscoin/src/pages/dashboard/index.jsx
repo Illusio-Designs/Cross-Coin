@@ -50,7 +50,7 @@ function NoAccess() {
         justifyContent: 'center',
         height: '60vh',
         gap: 12,
-        color: '#6b7280'
+        color: 'var(--ds-color-text-muted)'
       }}
     >
       <HugeiconsIcon icon={UnavailableIcon} size={48} strokeWidth={1.5} aria-hidden="true" />
@@ -79,7 +79,7 @@ function LoadingAccess() {
         justifyContent: 'center',
         height: '60vh',
         gap: 14,
-        color: '#6b7280'
+        color: 'var(--ds-color-text-muted)'
       }}
     >
       <span
@@ -87,7 +87,7 @@ function LoadingAccess() {
         style={{
           width: 34,
           height: 34,
-          border: '3px solid #e5e7eb',
+          border: '3px solid var(--ds-color-border)',
           borderTopColor: 'var(--ds-color-text)',
           borderRadius: '50%',
           animation: 'dashSpin 0.7s linear infinite'

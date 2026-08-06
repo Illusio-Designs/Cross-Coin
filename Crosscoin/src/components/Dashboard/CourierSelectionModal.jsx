@@ -101,7 +101,7 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
 
         {/* Route */}
         {route && (
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginBottom: 10 }}>
             Route: <strong>{route.from}</strong> → <strong>{route.to}</strong>
           </div>
         )}
@@ -114,7 +114,7 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
         )}
 
         {loading ? (
-          <div style={{ padding: '32px 0', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+          <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--ds-color-text-muted)', fontSize: 14 }}>
             Loading couriers from the shipping provider…
           </div>
         ) : error ? (
@@ -123,7 +123,7 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
             <Button variant="secondary" onClick={load}>Retry</Button>
           </div>
         ) : couriers.length === 0 ? (
-          <div style={{ padding: '24px 0', textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+          <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ds-color-text-muted)', fontSize: 14 }}>
             No couriers are serviceable for this destination / payment mode.
             <div style={{ fontSize: 12, marginTop: 6 }}>Check the pincode, COD availability, or the shipping weight/dimensions.</div>
           </div>
@@ -132,11 +132,11 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
             {couriers.map((c) => (
               <div key={c.key} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px',
+                border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: '10px 12px',
               }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ds-color-text)', textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'var(--ds-color-text-muted)', marginTop: 2 }}>
                     <span style={{ textTransform: 'capitalize' }}>{c.sType}</span>
                     {c.days && <span>· ETA {c.days} day{String(c.days) === '1' ? '' : 's'}</span>}
                     {c.rating != null && <span>· ★ {c.rating}</span>}

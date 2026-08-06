@@ -470,7 +470,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--ds-color-border);
-  background-color: white;
+  background-color: var(--ds-color-surface);
   cursor: pointer;
   min-width: 150px;
   font-size: 14px;
