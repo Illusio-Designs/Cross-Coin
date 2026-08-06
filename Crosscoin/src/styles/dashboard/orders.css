@@ -3507,3 +3507,10 @@
 .pay-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .pay-chip.pay-prepaid { color: var(--ds-color-info);  background: var(--ds-color-info-bg); }
 .pay-chip.pay-cod     { color: var(--ds-color-warn);  background: var(--ds-color-warn-bg); }
+
+/* ── Orders KPI strip — one clean row like the prototype ──────────────── */
+.orders-kpi-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.orders-kpi-grid .ds-stat { padding: 12px 14px; }
+.orders-kpi-grid .ds-stat__value { font-size: 20px; }
+@media (max-width: 1200px) { .orders-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px)  { .orders-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -504,7 +504,7 @@ const Orders = () => {
                     checked={selectedOrders.has(row.id)} onChange={() => toggleOrderSelection(row.id)} />
             ) : null
         },
-        { header: "Order ID", accessor: "order_number", width: "130px" },
+        { header: "Order ID", cell: (row) => <span style={{ fontFamily: 'var(--ds-font-mono)', fontWeight: 600, color: 'var(--ds-color-text)', whiteSpace: 'nowrap' }}>{row.order_number}</span>, width: "140px" },
         {
             header: "Customer",
             cell: (row) => {
@@ -514,7 +514,7 @@ const Orders = () => {
                 const name = String(rawName).replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim() || 'N/A';
                 return (
                     <div className="customer-info">
-                        <div className="customer-name">{name}</div>
+                        <div className="customer-name" style={{ whiteSpace: 'nowrap' }}>{name}</div>
                         {row.rto_risk_level && (
                             <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
                                 <span className="rto-dot" />
@@ -539,12 +539,12 @@ const Orders = () => {
         { header: "Payment", cell: (row) => {
             const label = formatPaymentType(row.payment_type);
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
                     <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>
-                    <span className={`status-badge status-${getPaymentStatusClass(row)}`} style={{ fontSize: '10px' }}>{getPaymentStatusDisplay(row)}</span>
+                    <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>
                 </div>
             );
-        }, width: "130px" },
+        }, width: "180px" },
         { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
         { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "160px" },
         {
@@ -564,28 +564,18 @@ const Orders = () => {
                 }
                 const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || waybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
-                const hasLabel = s.label_url || row.fship_label_url;
-                const labelDownloadedAt = s.label_downloaded_at || row.fship_label_downloaded_at;
                 return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
                         <ShipmentStatusBadge status={status} syncError={syncError} />
                         {waybill && (
                             <span style={{ fontSize: '11px', color: 'var(--ds-color-text-muted)' }}>
                                 {waybill}{courier ? ` · ${courier}` : ''}
                             </span>
                         )}
-                        {hasLabel && (
-                            <Tooltip text={labelDownloadedAt ? "Label downloaded" : "Click to download label"} position="top">
-                                <span onClick={() => !labelDownloadedAt && handleLabelDownload(row.id, hasLabel)}
-                                    style={{ cursor: labelDownloadedAt ? 'default' : 'pointer' }}>
-                                    <LabelStatusBadge hasLabel={hasLabel} downloadedAt={labelDownloadedAt} />
-                                </span>
-                            </Tooltip>
-                        )}
                     </div>
                 );
             },
-            width: "180px"
+            width: "190px"
         },
         {
             header: "Actions",
@@ -765,16 +755,16 @@ const Orders = () => {
                         }
                     />
 
-                    {/* ── KPI Strip — design-system StatTiles ── */}
-                    <StatGrid style={{ marginBottom: 'var(--ds-space-4)' }}>
+                    {/* ── KPI Strip — one clean row (prototype style) ── */}
+                    <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}>
                         <StatTile label="Total"     value={allOrdersStats.total} />
-                        <StatTile label="Revenue"   value={parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })} prefix="₹" tone="good" />
-                        <StatTile label="Prepaid"   value={allOrdersStats.prepaid}          tone="good" />
-                        <StatTile label="COD"       value={allOrdersStats.cod}              tone="warn" />
-                        <StatTile label="Delivered" value={allOrdersStats.deliveredOrders}  tone="good" />
-                        <StatTile label="Cancelled" value={allOrdersStats.cancelledOrders}  tone="danger" />
-                        <StatTile label="Paid"      value={allOrdersStats.paymentStatusPaid} tone="good" />
-                        <StatTile label="Avg Order" value={parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)} prefix="₹" tone="info" />
+                        <StatTile label="Revenue"   value={parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })} prefix="₹" />
+                        <StatTile label="Prepaid"   value={allOrdersStats.prepaid} />
+                        <StatTile label="COD"       value={allOrdersStats.cod} />
+                        <StatTile label="Delivered" value={allOrdersStats.deliveredOrders} />
+                        <StatTile label="Cancelled" value={allOrdersStats.cancelledOrders} />
+                        <StatTile label="Paid"      value={allOrdersStats.paymentStatusPaid} />
+                        <StatTile label="Avg Order" value={parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)} prefix="₹" />
                     </StatGrid>
 
                     {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
@@ -925,36 +915,6 @@ const Orders = () => {
                             </button>
                         )}
                     </FilterBar>
-
-                    {/* ── Export (compact) ── */}
-                    <div className="orders-export-section">
-                        <div className="orders-export-left">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span>Export Delivered</span>
-                        </div>
-                        <DateRangePicker
-                            label=""
-                            showIcon={false}
-                            inline
-                            startDate={exportStartDate}
-                            endDate={exportEndDate}
-                            onStartChange={setExportStartDate}
-                            onEndChange={setExportEndDate}
-                        />
-                        <button onClick={handleExportDeliveredOrders}
-                            disabled={isExporting || !exportStartDate || !exportEndDate}
-                            className={`sl-add-btn${isExporting || !exportStartDate || !exportEndDate ? ' sl-add-btn--disabled' : ''}`}>
-                            <span className="sl-add-btn-icon">
-                                {isExporting
-                                    ? <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="animate-spin"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    : <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                }
-                            </span>
-                            {isExporting ? 'Exporting...' : 'Export'}
-                        </button>
-                    </div>
 
                 </div>{/* end orders-header-container */}
 

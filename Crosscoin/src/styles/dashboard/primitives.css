@@ -80,46 +80,27 @@
   background: var(--ds-color-surface);
   border: 1px solid var(--ds-color-border);
   border-radius: var(--ds-radius-lg);
-  padding: var(--ds-space-5);
-  box-shadow: var(--ds-shadow-sm);
+  padding: 15px 16px;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-2);
-  transition: transform var(--ds-trans-fast), box-shadow var(--ds-trans-fast), border-color var(--ds-trans-fast);
-  overflow: hidden;
+  gap: 6px;
+  transition: border-color var(--ds-trans-fast);
+  min-width: 0;
 }
-/* Tone accent: a slim bar pinned to the top edge, revealed by tone class.
-   Cleaner than a full left border — reads as a premium status cue. */
-.ds-stat::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: transparent;
-  transition: background var(--ds-trans-fast);
-}
-.ds-stat:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--ds-shadow-md);
-  border-color: var(--ds-color-text-faint);
-}
-.ds-stat--good::before   { background: var(--ds-color-success); }
-.ds-stat--warn::before   { background: var(--ds-color-warn); }
-.ds-stat--danger::before { background: var(--ds-color-danger); }
-.ds-stat--info::before   { background: var(--ds-color-info); }
+/* Clean, flat KPI tiles like the prototype — no coloured accent bars.
+   Tone classes are kept as no-ops so existing usages don't break. */
+.ds-stat:hover { border-color: var(--ds-color-text-faint); }
 .ds-stat__label {
-  font-size: var(--ds-text-xs);
-  font-weight: var(--ds-weight-semi);
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ds-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 .ds-stat__value {
-  font-size: 27px;
-  font-weight: var(--ds-weight-bold);
+  font-size: 25px;
+  font-weight: 700;
   color: var(--ds-color-text);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  line-height: 1;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 .ds-stat__trend {
