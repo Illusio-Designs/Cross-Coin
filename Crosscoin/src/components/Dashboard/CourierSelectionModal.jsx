@@ -143,7 +143,7 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  {money(c.rate) && <span style={{ fontWeight: 700, fontSize: 14, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>{money(c.rate)}</span>}
+                  {money(c.rate) && <span style={{ fontWeight: 700, fontSize: 14, color: '#0a0a0a', fontVariantNumeric: 'tabular-nums' }}>{money(c.rate)}</span>}
                   <Button variant="primary" onClick={() => assign(c)} disabled={!!assigning} style={{ fontSize: 12, padding: '6px 12px' }}>
                     {assigning === c.key ? 'Assigning…' : 'Assign'}
                   </Button>

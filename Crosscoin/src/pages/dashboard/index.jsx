@@ -106,23 +106,46 @@ function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [themeMode, setThemeMode] = useState('auto'); // 'auto' | 'light' | 'dark'
+  const [theme, setTheme] = useState('light');        // effective theme (drives the icon)
+
+  // In 'auto' mode the theme follows the clock in IST (UTC+5:30): dark at
+  // night (18:00–06:00), light during the day. Manual light/dark overrides it.
+  const istTheme = () => {
+    const now = new Date();
+    const istHour = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 3600000)).getHours();
+    return (istHour >= 18 || istHour < 6) ? 'dark' : 'light';
+  };
+  const applyMode = (mode) => {
+    const eff = mode === 'auto' ? istTheme() : mode;
+    setTheme(eff);
+    document.documentElement.setAttribute('data-theme', eff);
+  };
 
   // Theme is scoped to the dashboard only — we set data-theme on <html> while
   // the dashboard is mounted and remove it on unmount so the storefront (which
   // doesn't read the dark tokens) is never affected.
   useEffect(() => {
-    const saved = (typeof window !== 'undefined' && localStorage.getItem('obzus-theme')) || 'light';
-    setTheme(saved);
-    document.documentElement.setAttribute('data-theme', saved);
+    const saved = (typeof window !== 'undefined' && localStorage.getItem('obzus-theme')) || 'auto';
+    setThemeMode(saved);
+    applyMode(saved);
     return () => { document.documentElement.removeAttribute('data-theme'); };
   }, []);
 
+  // While auto, re-evaluate every minute so the theme flips at the IST
+  // day/night boundary without a page reload.
+  useEffect(() => {
+    if (themeMode !== 'auto') return;
+    applyMode('auto');
+    const id = setInterval(() => applyMode('auto'), 60 * 1000);
+    return () => clearInterval(id);
+  }, [themeMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleToggleTheme = () => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
+    setThemeMode(prev => {
+      const next = prev === 'auto' ? 'light' : prev === 'light' ? 'dark' : 'auto';
       try { localStorage.setItem('obzus-theme', next); } catch {}
+      applyMode(next);
       return next;
     });
   };
@@ -257,6 +280,7 @@ function Dashboard() {
             isMobile={isMobile}
             onMobileMenuToggle={handleMobileMenuToggle}
             theme={theme}
+            themeMode={themeMode}
             onToggleTheme={handleToggleTheme}
           />
         </header>

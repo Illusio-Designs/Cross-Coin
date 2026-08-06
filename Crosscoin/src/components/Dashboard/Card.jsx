@@ -34,13 +34,13 @@ const IC = {
 };
 
 const THEMES = {
-  primary: { bg: '#ede9fe', color: '#7c3aed', border: '#c4b5fd' },
-  success: { bg: '#d1fae5', color: '#059669', border: '#6ee7b7' },
-  warning: { bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
-  danger:  { bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
-  info:    { bg: '#dbeafe', color: '#2563eb', border: '#93c5fd' },
-  orange:  { bg: '#fff7ed', color: '#ea580c', border: '#fdba74' },
-  default: { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' },
+  primary: { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
+  success: { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
+  warning: { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
+  danger:  { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
+  info:    { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
+  orange:  { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
+  default: { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
 };
 
 const fmt = (n) => (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -207,7 +207,7 @@ function CardGrid() {
       </div>
     </div>
   );
-  if (error) return <div className="dashboard-sections"><div style={{ textAlign:'center', padding:'40px', color:'#dc2626' }}>{error}</div></div>;
+  if (error) return <div className="dashboard-sections"><div style={{ textAlign:'center', padding:'40px', color:'var(--ds-color-text)' }}>{error}</div></div>;
   if (!stats) return null;
 
   /* ── Derived counts ── */

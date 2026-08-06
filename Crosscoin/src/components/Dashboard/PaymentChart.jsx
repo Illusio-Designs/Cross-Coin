@@ -39,7 +39,7 @@ const PaymentChart = ({ allOrdersStats }) => {
         });
     }
 
-    const paymentColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    const paymentColors = ['#0a0a0a', '#3f3f46', '#6b6b73', '#9a9aa2', '#c4c4cc'];
 
     return (
         <DonutChart

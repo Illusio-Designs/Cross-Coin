@@ -5,10 +5,10 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Menu01Icon, Maximize01Icon, Minimize01Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons';
 
 const ROLE_COLORS = {
-  admin:            '#ef4444',
-  product_manager:  '#8b5cf6',
-  order_manager:    '#f59e0b',
-  whatsapp_manager: '#10b981',
+  admin:            '#0a0a0a',
+  product_manager:  '#3f3f46',
+  order_manager:    '#6b6b73',
+  whatsapp_manager: '#9a9aa2',
 };
 
 const ROLE_LABELS = {
@@ -26,9 +26,9 @@ const IC = {
   moon:     <HugeiconsIcon icon={Moon02Icon} size={17} strokeWidth={2} />,
 };
 
-function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobile, onMobileMenuToggle, theme, onToggleTheme }) {
+function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobile, onMobileMenuToggle, theme, themeMode, onToggleTheme }) {
   const { role } = useAuth();
-  const color = ROLE_COLORS[role] || '#6b7280';
+  const color = ROLE_COLORS[role] || '#6b6b73';
   const label = ROLE_LABELS[role] || role;
 
   return (
@@ -50,7 +50,9 @@ function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobi
         )}
         <NotificationBell />
         {onToggleTheme && (
-          <button className="dh-action" onClick={onToggleTheme} title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'} aria-label="Toggle theme">
+          <button className="dh-action" onClick={onToggleTheme}
+            title={themeMode === 'auto' ? `Theme: Auto — follows IST time (now ${theme}). Click for Light.` : themeMode === 'light' ? 'Theme: Light. Click for Dark.' : 'Theme: Dark. Click for Auto.'}
+            aria-label="Toggle theme">
             {theme === 'dark' ? IC.sun : IC.moon}
           </button>
         )}

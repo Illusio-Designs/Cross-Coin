@@ -13,8 +13,8 @@ function timeAgo(date) {
 }
 
 const ICONS = {
-  order: <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} color="#10b981" />,
-  whatsapp: <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} color="#25d366" />,
+  order: <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} color="#6b6b73" />,
+  whatsapp: <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} color="#6b6b73" />,
 };
 
 export default function NotificationBell() {
@@ -83,7 +83,7 @@ export default function NotificationBell() {
         {unreadCount > 0 && (
           <span style={{
             position: 'absolute', top: 2, right: 2,
-            background: '#ef4444', color: '#fff',
+            background: '#0a0a0a', color: '#fff',
             borderRadius: '50%', fontSize: 10, fontWeight: 700,
             minWidth: 16, height: 16, display: 'flex', alignItems: 'center',
             justifyContent: 'center', padding: '0 3px', lineHeight: 1,
@@ -105,14 +105,14 @@ export default function NotificationBell() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {pushSupported() && (
                 pushOn ? (
-                  <span style={{ fontSize: 11, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: '#0a0a0a', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} />
                     Alerts on
                   </span>
                 ) : (
                   <button onClick={handleEnablePush} disabled={pushBusy} style={{
                     background: 'none', border: 'none', cursor: 'pointer', fontSize: 12,
-                    color: '#0b7a5e', fontWeight: 600, padding: 0,
+                    color: '#0a0a0a', fontWeight: 600, padding: 0,
                   }}>
                     {pushBusy ? 'Enabling…' : 'Enable alerts'}
                   </button>
