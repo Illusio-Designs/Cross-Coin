@@ -210,6 +210,14 @@ html, body {
   transition: width 0.1s linear;
 }
 
+/* Dashboard only ([data-theme] is set on <html> by the admin shell, never the
+   storefront): the scroll-progress bar goes monochrome with a soft shadow so
+   it matches the black-and-white admin chrome. Storefront keeps its brand red. */
+:root[data-theme] .custom-scrollbar-progress-fill {
+  background: var(--ds-color-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
 .shimmer-placeholder {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
