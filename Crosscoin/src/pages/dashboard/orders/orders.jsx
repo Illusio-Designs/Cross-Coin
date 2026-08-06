@@ -1212,47 +1212,39 @@ const Orders = () => {
 
                         {/* Manifest Section */}
                         {(selectedOrder.Shipment?.waybill || selectedOrder.fship_waybill) && (
-                            <div className="odm-card" style={{ backgroundColor: '#fafafa', borderLeft: '4px solid #FF9800' }}>
-                                <div className="odm-card-title" style={{ color: '#FF9800' }}>
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <div className="odm-card">
+                                <div className="odm-card-title">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                         <polyline points="14 2 14 8 20 8"/>
                                     </svg>
-                                    Manifest & Download
+                                    Shipping Label
                                 </div>
-                                <div style={{ padding: '12px 0' }}>
-                                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#666' }}>
-                                        Download shipping manifest or label for this order.
+                                <div style={{ paddingTop: '8px' }}>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--ds-color-text-muted)' }}>
+                                        Download the shipping label for this order.
                                     </p>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <Button
-                                            variant="primary"
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary btn-md"
                                             onClick={() => generateLabelForOrder(selectedOrder.id)}
                                             disabled={generatingLabel.has(selectedOrder.id)}
-                                            style={{ flex: 1, fontSize: '12px' }}
+                                            style={{ flex: 1 }}
                                         >
-                                            {generatingLabel.has(selectedOrder.id) ? 'Downloading...' : '📥 Download Label'}
-                                        </Button>
+                                            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            {generatingLabel.has(selectedOrder.id) ? 'Preparing…' : 'Download Label'}
+                                        </button>
                                         {selectedOrder.fship_label_url && (
                                             <a
                                                 href={selectedOrder.fship_label_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    backgroundColor: '#2196F3',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    textDecoration: 'none',
-                                                    fontSize: '12px',
-                                                    fontWeight: '500',
-                                                    flex: 1,
-                                                    textAlign: 'center'
-                                                }}
+                                                className="btn btn-outline btn-md"
+                                                style={{ flex: 1, justifyContent: 'center' }}
                                             >
-                                                🏷️ Download Label
+                                                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                                Open Label
                                             </a>
                                         )}
                                     </div>

@@ -5823,10 +5823,13 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--ds-color-text-muted);
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;            /* let flex children shrink instead of overflowing */
 }
 .oa-form input,
 .oa-form textarea {
+  width: 100%;
+  box-sizing: border-box;  /* keep inputs inside the narrow aside panel */
   border: 1px solid var(--ds-color-border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -5840,6 +5843,7 @@
 .oa-form input:focus,
 .oa-form textarea:focus { outline: none; border-color: #0a0a0a; background: var(--ds-color-surface); }
 .oa-row { display: flex; gap: 10px; }
+.oa-row > label { flex: 1 1 0; min-width: 0; }
 .oa-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
 .oa-hint { font-size: 11px; color: var(--ds-color-text-muted); margin: 2px 0 0; line-height: 1.4; }
 
