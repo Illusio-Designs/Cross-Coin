@@ -293,8 +293,8 @@ export default function ProductDetail() {
                 <div
                   ref={mainImgRef}
                   className="gz-pdp-main relative flex-1 overflow-hidden aspect-square max-w-[340px] mx-auto grid place-items-center sm:aspect-auto sm:max-w-none sm:mx-0 sm:block"
-                  onMouseEnter={() => setPaused(true)}
-                  onMouseLeave={() => setPaused(false)}
+                  onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
+                  onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
                 >
                   <img
                     key={curImg}

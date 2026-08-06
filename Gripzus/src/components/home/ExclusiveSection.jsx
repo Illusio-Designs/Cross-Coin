@@ -145,8 +145,8 @@ export default function ExclusiveSection({ products = [] }) {
     <section
       ref={sectionRef}
       className={`excl3 ${shown ? 'is-shown' : ''}`}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
     >
       <div className="wrap">
         <div className="excl3-head">
