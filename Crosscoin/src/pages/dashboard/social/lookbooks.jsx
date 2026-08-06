@@ -239,7 +239,7 @@ export default function AdminLookbooks() {
                 <label className="dm-label">Existing Images ({form.existingImages.length})</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px 0' }}>
                   {form.existingImages.map(img => (
-                    <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '2px solid #e0e0e0' }}>
+                    <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '2px solid var(--ds-color-border)' }}>
                       <img src={img.image_url || img.url} alt={img.alt_text || `Image #${img.id}`}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                       <button
@@ -329,7 +329,7 @@ export default function AdminLookbooks() {
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#aaa', fontSize: 13, border: '2px dashed #e0e0e0', borderRadius: 8 }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#aaa', fontSize: 13, border: '2px dashed var(--ds-color-border)', borderRadius: 8 }}>
                 Select an image above to place the hotspot
               </div>
             )}

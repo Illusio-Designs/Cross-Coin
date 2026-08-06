@@ -364,7 +364,7 @@
 .sl-empty-icon {
   width: 48px;
   height: 48px;
-  color: #ddd;
+  color: var(--ds-color-text-faint);
 }
 
 .sl-empty-icon svg {
@@ -589,7 +589,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--ds-color-border-soft);
 }
 
 .brand-card-identity {
@@ -662,7 +662,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--ds-color-border-soft);
   background: var(--ds-color-surface-soft);
 }
 
@@ -818,7 +818,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--ds-color-border-soft);
   gap: 8px;
 }
 
@@ -880,13 +880,13 @@
   padding: 8px 14px;
   font-size: 12px;
   color: var(--ds-color-text-faint);
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--ds-color-border-soft);
   font-style: italic;
 }
 
 .bset-setting-footer {
   padding: 8px 14px;
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--ds-color-border-soft);
   background: var(--ds-color-surface-soft);
 }
 

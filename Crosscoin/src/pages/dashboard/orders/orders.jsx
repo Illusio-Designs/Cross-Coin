@@ -515,7 +515,7 @@ const Orders = () => {
             'pending sync': '#6b6b73',
             'failed sync': '#3f3f46'
         };
-        return borderColorMap[status?.toLowerCase()] || '#e5e7eb';
+        return borderColorMap[status?.toLowerCase()] || 'var(--ds-color-border)';
     };
 
     const formatDate = (dateString) => {
@@ -651,7 +651,7 @@ const Orders = () => {
                 // the server's admin-cancellable statuses; dispatched/final
                 // orders (shipped, delivered, cancelled…) never show it.
                 const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
-                const divider = <span aria-hidden="true" style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 3px', flexShrink: 0 }} />;
+                const divider = <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--ds-color-border)', margin: '0 3px', flexShrink: 0 }} />;
                 return (
                     <div className="sl-actions">
                         <Tooltip text="View order details and customer information" position="top">
@@ -1150,7 +1150,7 @@ const Orders = () => {
                             </div>
                             <div className="odm-items">
                                 {(selectedOrder.OrderItems || []).length === 0 && (
-                                    <div style={{ padding: 16, color: '#6b7280', fontSize: 13, textAlign: 'center' }}>
+                                    <div style={{ padding: 16, color: 'var(--ds-color-text-muted)', fontSize: 13, textAlign: 'center' }}>
                                         No items recorded for this order.
                                     </div>
                                 )}
