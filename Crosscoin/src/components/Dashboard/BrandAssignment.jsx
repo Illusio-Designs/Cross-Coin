@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowUp01Icon, ArrowDown01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 
 const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) => {
     const [brands, setBrands] = useState([]);
@@ -56,9 +58,7 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
                         </span>
                     ))}
                 </div>
-                <svg className="ba-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points={open ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}/>
-                </svg>
+                <HugeiconsIcon className="ba-chevron" icon={open ? ArrowUp01Icon : ArrowDown01Icon} size={16} strokeWidth={2} />
             </div>
 
             {open && (
@@ -71,7 +71,7 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
                             <div key={b.id} className={`ba-option${checked ? ' ba-option--checked' : ''}`}
                                 onClick={() => toggle(b.id)}>
                                 <div className={`ba-checkbox${checked ? ' ba-checkbox--checked' : ''}`}>
-                                    {checked && <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                                    {checked && <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={3} color="#fff" />}
                                 </div>
                                 <span className="ba-dot" style={{background: b.primary_color || '#CE1E36'}}/>
                                 <div className="ba-option-info">

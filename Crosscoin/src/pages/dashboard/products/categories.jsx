@@ -12,7 +12,7 @@ import { validateForm, isFormValid } from "../../../utils/formValidation";
 import SerpPreview from "../../../components/common/SerpPreview";
 import SeoLengthMeter from "../../../components/common/SeoLengthMeter";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon, Tag01Icon } from '@hugeicons/core-free-icons';
+import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon, Tag01Icon, GridViewIcon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
@@ -286,7 +286,7 @@ export default function Categories() {
         <div className="sl-stat-cards">
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <HugeiconsIcon icon={GridViewIcon} size={20} strokeWidth={2} />
             </div>
             <div className="sl-stat-body">
               <span className="sl-stat-label">Total Categories</span>
@@ -295,7 +295,7 @@ export default function Categories() {
           </div>
           <div className="sl-stat-card">
             <div className="sl-stat-icon sl-stat-icon--green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={20} strokeWidth={2} />
             </div>
             <div className="sl-stat-body">
               <span className="sl-stat-label">Active</span>

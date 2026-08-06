@@ -5,6 +5,8 @@ import { orderService } from '../../../services';
 import { DateRangePicker } from '../../../components/ui';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { showSuccess, showError } from '../../../utils/toastNotification';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Download04Icon } from '@hugeicons/core-free-icons';
 
 /* ──────────────────────────────────────────────────────────────
    Reports — a date-ranged, exportable view of store performance.
@@ -46,9 +48,7 @@ function exportCsv(filename, columns, rows) {
 }
 
 const DlIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
+  <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
 );
 
 /* KPI delta arrow (▲/▼ %) — green up, red down (matches dashboard home) */

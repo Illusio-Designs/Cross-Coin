@@ -17,7 +17,9 @@ import SerpPreview from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import dynamic from 'next/dynamic';
-const Editor = dynamic(() => import('../../../components/common/Editor'), { 
+import { HugeiconsIcon } from '@hugeicons/react';
+import { StarIcon, PencilEdit02Icon, Delete02Icon, ArrowUp01Icon, ArrowDown01Icon, Search01Icon, Add01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+const Editor = dynamic(() => import('../../../components/common/Editor'), {
   ssr: false,
   loading: () => <div style={{ height: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />
 });
@@ -292,7 +294,7 @@ const ProductsPage = () => {
       header: "Avg. Rating",
       accessor: row => (
         row.avg_rating
-          ? <span className="obz-rating"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>{Number(row.avg_rating).toFixed(1)}</span>
+          ? <span className="obz-rating"><HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />{Number(row.avg_rating).toFixed(1)}</span>
           : <span className="obz-na">N/A</span>
       )
     },
@@ -312,14 +314,10 @@ const ProductsPage = () => {
       cell: ({ id }) => (
         <div className="obz-acts">
           <button className="obz-ico" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
-            </svg>
+            <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />
           </button>
           <button className="obz-ico del" title="Delete" onClick={() => handleDelete(id)}>
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
           </button>
         </div>
       )
@@ -1215,9 +1213,7 @@ const ProductsPage = () => {
                           </button>
                         )}
                         <span className="variation-accordion-chevron">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points={isOpen ? "18 15 12 9 6 15" : "6 9 12 15 18 9"} />
-                          </svg>
+                          <HugeiconsIcon icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon} size={14} strokeWidth={2} />
                         </span>
                       </div>
                     </div>
@@ -1344,7 +1340,7 @@ const ProductsPage = () => {
         </div>
         <div className="obz-prod-headR">
           <div className="obz-search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
             <input type="text" placeholder="Search products…"
               onChange={handleSearchChange} defaultValue={filterValue} />
           </div>
@@ -1360,7 +1356,7 @@ const ProductsPage = () => {
             />
           </div>
           <button className="obz-add-btn" onClick={handleAddNew}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />
             Add Product
           </button>
         </div>
@@ -1436,7 +1432,7 @@ const ProductsPage = () => {
                 <div key={step} className={`prod-step ${isActive ? 'prod-step--active' : ''} ${isDone ? 'prod-step--done' : ''}`}>
                   <div className="prod-step-circle">
                     {isDone ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
                     ) : step}
                   </div>
                   <span className="prod-step-label">{label}</span>

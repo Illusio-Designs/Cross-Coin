@@ -18,6 +18,13 @@ import ShippingChart from '../../../components/Dashboard/ShippingChart';
 import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
 import { PageHeader, Panel, StatGrid, StatTile, FilterBar } from '../../../components/Dashboard/primitives';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+    ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
+    Cancel01Icon, Delete02Icon, Search01Icon, FilterIcon, Download04Icon,
+    Package01Icon, UserIcon, PencilEdit02Icon, Calendar01Icon,
+    DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon
+} from '@hugeicons/core-free-icons';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -647,9 +654,7 @@ const Orders = () => {
                         <Tooltip text="View order details and customer information" position="top">
                             <button className="sl-btn-edit"
                                 onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
+                                <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
                         {!isSynced && divider}
@@ -661,9 +666,9 @@ const Orders = () => {
                             {isSyncing ? (
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             ) : isFinal ? (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                                <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={2} />
                             ) : (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                             )}
                         </button>
                         </Tooltip>
@@ -671,13 +676,13 @@ const Orders = () => {
                         {isSynced && (
                             <Tooltip text="Refresh tracking information from courier" position="top">
                                 <button className="order-action-btn order-update-btn" onClick={() => updateSingleOrder(row.id)}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                    <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                                 </button>
                             </Tooltip>
                         )}
                         <Tooltip text="Edit shipping address (fix wrong pincode, phone, etc.)" position="top">
                             <button className="order-action-btn order-address-btn" onClick={() => openAddressEditor(row)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
                         {(row.Shipment?.waybill || row.fship_waybill) && (
@@ -688,7 +693,7 @@ const Orders = () => {
                                     {generatingLabel.has(row.id) ? (
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                     ) : (
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                        <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />
                                     )}
                                 </button>
                             </Tooltip>
@@ -704,13 +709,13 @@ const Orders = () => {
                         {canCancel && (
                             <Tooltip text="Cancel this order permanently" position="top">
                                 <button className="sl-btn-delete" onClick={() => cancelOrder(row.id, row.order_number)}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
                                 </button>
                             </Tooltip>
                         )}
                         <Tooltip text="Delete this order permanently (removes all its data)" position="top">
                             <button className="sl-btn-delete order-delete-btn" onClick={() => deleteOrder(row.id, row.order_number)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
                     </div>
@@ -763,7 +768,7 @@ const Orders = () => {
                             <>
                                 <div className="sl-search-wrap">
                                     <span className="sl-search-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                        <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
                                     </span>
                                     <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB…"
                                         value={filterValue} onChange={handleSearchChange} />
@@ -771,7 +776,7 @@ const Orders = () => {
                                 <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
                                     title="Update the tracking status of already-shipped, active orders"
                                     onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                                    <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} className={refreshingStatus ? 'animate-spin' : ''} />
                                     {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
                                 </button>
                                 <DateRangePicker
@@ -824,15 +829,13 @@ const Orders = () => {
                                 <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
                                     onClick={handleBulkDownload} disabled={isDownloadingBulk}>
                                     <span className="sl-add-btn-icon">
-                                        <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
+                                        <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
                                     </span>
                                     {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
                                 </button>
                             )}
                             <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setFilterOpen(true)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                                <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />
                                 Filter
                             </button>
                         </div>
@@ -890,7 +893,7 @@ const Orders = () => {
                     ) : orders.length === 0 ? (
                         <div className="sl-empty" role="status" aria-label="No orders">
                             <div className="sl-empty-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>
+                                <HugeiconsIcon icon={Package01Icon} size={40} strokeWidth={1.5} />
                             </div>
                             <p>No orders found.</p>
                         </div>
@@ -949,7 +952,7 @@ const Orders = () => {
                             {/* Customer Information */}
                             <div className="odm-card">
                                 <div className="odm-card-title">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <HugeiconsIcon icon={UserIcon} size={14} strokeWidth={2} />
                                     Customer Information
                                 </div>
                                 <div className="odm-fields">
@@ -976,12 +979,12 @@ const Orders = () => {
                                 <div className={`odm-card${editingAddress ? ' odm-card--editing' : ''}`}>
                                     <div className="odm-card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            <HugeiconsIcon icon={Location01Icon} size={14} strokeWidth={2} />
                                             Shipping Address
                                         </span>
                                         {!editingAddress && (
                                             <button type="button" className="oa-edit-btn" onClick={startEditAddress} title="Edit address (fix wrong pincode, phone, etc.)">
-                                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                <HugeiconsIcon icon={PencilEdit02Icon} size={13} strokeWidth={2} />
                                                 Edit
                                             </button>
                                         )}
@@ -1040,7 +1043,7 @@ const Orders = () => {
                         {/* ── Row 2: Order Info ── */}
                         <div className="odm-card">
                             <div className="odm-card-title">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                <HugeiconsIcon icon={Calendar01Icon} size={14} strokeWidth={2} />
                                 Order Information
                             </div>
                             <div className="odm-info-grid">
@@ -1094,7 +1097,7 @@ const Orders = () => {
                                         {showBlock && (
                                             <div className="odm-fship">
                                                 <div className="odm-fship-title">
-                                                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                                    <HugeiconsIcon icon={DeliveryTruck01Icon} size={13} strokeWidth={2} />
                                                     {providerLabel ? `${providerLabel} Tracking` : 'Shipping Tracking'}
                                                 </div>
                                                 <div className="odm-info-grid">
@@ -1108,7 +1111,7 @@ const Orders = () => {
                                                         <div className="odm-field">
                                                             <span className="odm-label">Shipping Label</span>
                                                             <a href={labelUrl} target="_blank" rel="noopener noreferrer" className="odm-label-link">
-                                                                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                <HugeiconsIcon icon={Download04Icon} size={12} strokeWidth={2} />
                                                                 Download PDF
                                                             </a>
                                                         </div>
@@ -1120,7 +1123,7 @@ const Orders = () => {
                                         {syncErr && typeof syncErr === 'string' && (
                                             <div className="odm-sync-error">
                                                 <div className="odm-sync-error-title">
-                                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z"/></svg>
+                                                    <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
                                                     {providerLabel ? `${providerLabel} Sync Issues` : 'Sync Issues'}
                                                 </div>
                                                 <ul className="odm-sync-error-list">
@@ -1138,7 +1141,7 @@ const Orders = () => {
                         {/* ── Products Ordered — card rows, no scroll ── */}
                         <div className="odm-card">
                             <div className="odm-card-title">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                                <HugeiconsIcon icon={Package01Icon} size={14} strokeWidth={2} />
                                 Products Ordered
                                 <span className="odm-count">{selectedOrder.OrderItems?.length}</span>
                             </div>
@@ -1215,10 +1218,7 @@ const Orders = () => {
                         {(selectedOrder.Shipment?.waybill || selectedOrder.fship_waybill) && (
                             <div className="odm-card">
                                 <div className="odm-card-title">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                                        <polyline points="14 2 14 8 20 8"/>
-                                    </svg>
+                                    <HugeiconsIcon icon={File01Icon} size={14} strokeWidth={2} />
                                     Shipping Label
                                 </div>
                                 <div style={{ padding: '14px' }}>
@@ -1233,7 +1233,7 @@ const Orders = () => {
                                             disabled={generatingLabel.has(selectedOrder.id)}
                                             style={{ flex: 1 }}
                                         >
-                                            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            <HugeiconsIcon icon={Download04Icon} size={15} strokeWidth={2} />
                                             {generatingLabel.has(selectedOrder.id) ? 'Preparing…' : 'Download Label'}
                                         </button>
                                         {selectedOrder.fship_label_url && (
@@ -1244,7 +1244,7 @@ const Orders = () => {
                                                 className="btn btn-outline btn-md"
                                                 style={{ flex: 1, justifyContent: 'center' }}
                                             >
-                                                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                                <HugeiconsIcon icon={LinkSquare02Icon} size={15} strokeWidth={2} />
                                                 Open Label
                                             </a>
                                         )}

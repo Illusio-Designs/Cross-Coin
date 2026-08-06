@@ -32,6 +32,8 @@ import AdminLookbooks from "./social/lookbooks";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
+import { HugeiconsIcon } from '@hugeicons/react';
+import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
 const SB_EXPANDED = 260;
 const SB_COLLAPSED = 72;
@@ -52,18 +54,7 @@ function NoAccess() {
         color: '#6b7280'
       }}
     >
-      <svg
-        width="48"
-        height="48"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-      </svg>
+      <HugeiconsIcon icon={UnavailableIcon} size={48} strokeWidth={1.5} aria-hidden="true" />
       <h2 style={{ fontSize: 18, fontWeight: 600, color: '#374151', margin: 0 }}>
         Access Denied
       </h2>

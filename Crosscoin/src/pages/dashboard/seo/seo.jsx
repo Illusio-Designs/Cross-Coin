@@ -7,6 +7,8 @@ import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import SerpPreview from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { PencilEdit02Icon, Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
 
 export default function SEO({ brandSlug = 'crosscoin' } = {}) {
   const router = useRouter();
@@ -139,9 +141,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
       cell: ({ page_name }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(page_name)}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
-            </svg>
+            <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />
           </button>
         </div>
       )
@@ -277,7 +277,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
         <div className="sl-page-header">
           <div className="sl-header-left">
             <div className="sl-header-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <HugeiconsIcon icon={Search01Icon} size={20} strokeWidth={2} />
             </div>
             <div>
               <h1 className="sl-page-title">SEO Management</h1>
@@ -287,14 +287,14 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
           <div className="sl-header-right">
             <div className="sl-search-wrap">
               <span className="sl-search-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
               </span>
               <input type="text" className="sl-search-input" placeholder="Search SEO entries..."
                 onChange={handleSearchChange} defaultValue={filterValue} />
             </div>
             <button className="sl-add-btn" onClick={handleAddNew}>
               <span className="sl-add-btn-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />
               </span>
               Add SEO Entry
             </button>

@@ -6,7 +6,7 @@ import { PageHeader, Panel, EmptyState } from "../../../components/Dashboard/pri
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { PencilEdit02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, Delete02Icon, Image02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   edit:  <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />,
@@ -241,7 +241,7 @@ export default function AdminLookbooks() {
                 <label className="dm-label">Upload New Image {!form.editId && <span className="dm-required">*</span>}</label>
                 <div className="dm-file-upload">
                   <div className="dm-file-upload-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <HugeiconsIcon icon={Image02Icon} size={24} strokeWidth={2} />
                   </div>
                   <div className="dm-file-upload-text">
                     <span className="dm-file-upload-title">{form.image instanceof File ? form.image.name : 'Choose image'}</span>

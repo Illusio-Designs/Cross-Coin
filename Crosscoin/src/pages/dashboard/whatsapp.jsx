@@ -13,6 +13,10 @@ import {
   WhatsappIcon, SentIcon, Add01Icon, Copy01Icon, Tick02Icon, RefreshIcon,
   Call02Icon, Message01Icon, File01Icon, ViewIcon, Tag01Icon,
   InformationCircleIcon, DashboardSquare01Icon, Analytics01Icon, FilterIcon,
+  CheckmarkCircle02Icon, DeliveryTruck01Icon, DeliveryTruck02Icon, PackageDeliveredIcon,
+  ShoppingCartRemove01Icon, CreditCardIcon, StarIcon, ArrowReloadHorizontalIcon, Coins01Icon,
+  Mic01Icon, Download01Icon, ArrowLeft01Icon, ArrowTurnBackwardIcon, Clock01Icon,
+  ShoppingBag01Icon, FlashIcon, SmileIcon, Attachment01Icon,
 } from '@hugeicons/core-free-icons';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -36,15 +40,15 @@ const IC = {
 
 // ─── Template data ────────────────────────────────────────────────────────────
 const TPL_ICONS = {
-  order_confirm:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  order_shipped:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
-  out_for_delivery: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12H3l9-9 9 9h-2"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6h6v6"/></svg>,
-  order_delivered:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>,
-  cart_abandon:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>,
-  cod_confirm:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-  review_request:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  return_initiated: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>,
-  refund_update:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+  order_confirm:    <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} />,
+  order_shipped:    <HugeiconsIcon icon={DeliveryTruck01Icon} size={16} strokeWidth={2} />,
+  out_for_delivery: <HugeiconsIcon icon={DeliveryTruck02Icon} size={16} strokeWidth={2} />,
+  order_delivered:  <HugeiconsIcon icon={PackageDeliveredIcon} size={16} strokeWidth={2} />,
+  cart_abandon:     <HugeiconsIcon icon={ShoppingCartRemove01Icon} size={16} strokeWidth={2} />,
+  cod_confirm:      <HugeiconsIcon icon={CreditCardIcon} size={16} strokeWidth={2} />,
+  review_request:   <HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />,
+  return_initiated: <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={16} strokeWidth={2} />,
+  refund_update:    <HugeiconsIcon icon={Coins01Icon} size={16} strokeWidth={2} />,
 };
 
 const TEMPLATES = {
@@ -261,7 +265,7 @@ function AudioPlayer({ src }) {
 
   if (loadState === 'error') return (
     <div style={{fontSize:12, color:'#9ca3af', fontStyle:'italic', display:'flex', alignItems:'center', gap:6}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+      <HugeiconsIcon icon={Mic01Icon} size={14} strokeWidth={2} />
       Voice message unavailable
     </div>
   );
@@ -272,7 +276,7 @@ function AudioPlayer({ src }) {
     <a href={blobUrl} download={`voice-note.${dlExt}`}
        style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#0b7a5e', textDecoration:'none',
                background:'#e8f5f0', border:'1px solid #b8e0d4', borderRadius:8, padding:'8px 12px'}}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={2} />
       Download voice note
     </a>
   );
@@ -455,9 +459,7 @@ function MsgContent({ msg, brandId = 1 }) {
       ? <AudioPlayer src={proxyUrl} />
       : (
         <div style={{ display:'flex', alignItems:'center', gap:8, color:'#6b7280', fontSize:13 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          </svg>
+          <HugeiconsIcon icon={Mic01Icon} size={16} strokeWidth={2} />
           <span style={{ fontStyle:'italic' }}>🎤 Voice message</span>
         </div>
       );
@@ -506,16 +508,12 @@ function MsgContent({ msg, brandId = 1 }) {
           background: isPdf ? '#fef2f2' : '#eff6ff',
           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
         }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isPdf ? '#0b7a5e' : '#3b82f6'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-          </svg>
+          <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} color={isPdf ? '#0b7a5e' : '#3b82f6'} />
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13, fontWeight:600, color:'#111827', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
           <div style={{ fontSize:11, color:'#6b7280', display:'flex', alignItems:'center', gap:4 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
+            <HugeiconsIcon icon={Download01Icon} size={11} strokeWidth={2.5} />
             Download {isPdf ? 'PDF' : 'file'}
           </div>
         </div>
@@ -1608,7 +1606,7 @@ export function WhatsAppManager() {
                 <>
                   <div className="was-chat-hd">
                     <button className="was-chat-back" onClick={() => { setActiveConv(null); setMessages([]); }} aria-label="Back to conversations" type="button">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                      <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2.4} />
                     </button>
                     <div className="was-chat-av" style={{background:avatarColor(activeConv.customer_name||activeConv.customer_phone)}}>
                       {initials(activeConv.customer_name||activeConv.customer_phone)}
@@ -1678,9 +1676,7 @@ export function WhatsAppManager() {
                                 width:22, height:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
                                 color:'#6b7280', padding:0,
                               }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
-                                </svg>
+                                <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={12} strokeWidth={2.5} />
                               </button>
                               <div className="was-msg-bubble">
                                 {msg._quotedMsg && (
@@ -1710,7 +1706,7 @@ export function WhatsAppManager() {
                                 {msg.direction==='outbound' && (
                                   <span style={{marginLeft:3}}>
                                     {msg.status === 'sending' ? (
-                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                      <HugeiconsIcon icon={Clock01Icon} size={11} strokeWidth={2} color="#9ca3af" />
                                     ) : msg.status === 'failed' ? (
                                       <span title="Failed to send" style={{color:'#dc2626', fontWeight:700, fontSize:12}}>!</span>
                                     ) : msg.status === 'read' ? (
@@ -1744,11 +1740,11 @@ export function WhatsAppManager() {
                       {/* Quick-send tools row */}
                       <div className="was-composer-tools">
                         <button type="button" className="was-tool-chip" onClick={() => openProductModal()} title="Send one or more products">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>
+                          <HugeiconsIcon icon={ShoppingBag01Icon} size={16} strokeWidth={2} />
                           Products
                         </button>
                         <button type="button" className="was-tool-chip" onClick={() => setReply(r => (r || '') + '/')} title="Type /shortcut to insert a saved reply">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+                          <HugeiconsIcon icon={FlashIcon} size={16} strokeWidth={2} />
                           Canned
                         </button>
                         <div style={{flex:1}} />
@@ -1808,14 +1804,14 @@ export function WhatsAppManager() {
                         />
                         <button type="button" className={`was-attach-btn${showEmoji?' active':''}`} title="Emoji"
                           onClick={() => setShowEmoji(s => !s)}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+                          <HugeiconsIcon icon={SmileIcon} size={16} strokeWidth={2} />
                         </button>
                         <button type="button" className="was-attach-btn" title="Attach a photo, video or document"
                           onClick={() => fileInputRef.current?.click()} disabled={uploadingMedia}>
                           {uploadingMedia ? (
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="was-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                           ) : (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <HugeiconsIcon icon={Attachment01Icon} size={16} strokeWidth={2} />
                           )}
                         </button>
                         <textarea className="was-reply-input" placeholder="Type a message…" value={reply}
@@ -2436,7 +2432,7 @@ export function WhatsAppManager() {
                         background: selected ? '#0b7a5e' : 'transparent', flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center'
                       }}>
-                        {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                        {selected && <HugeiconsIcon icon={Tick02Icon} size={10} strokeWidth={3} color="#fff" />}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
