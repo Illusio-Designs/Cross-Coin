@@ -1119,6 +1119,7 @@
   color: var(--ds-color-text);
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  margin-bottom: 6px; /* label→field gap (previously provided by .dm-field gap) */
 }
 
 .dm-label .dm-required {

@@ -477,6 +477,10 @@
 
 /* Compact edit-product form: 3-up select row (Category / Status / Badge) */
 .obz-form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: start; }
+/* Zero the top margin inside the row so the dm-field (Category) and the Input
+   components (Status/Badge, which carry margin-top) start at the same line. */
+.obz-form-row3 > .dm-field,
+.obz-form-row3 > .input-container { margin-top: 0; }
 /* Normalise the Input component's label to match .dm-label so CATEGORY / STATUS
    / BADGE read as one consistent uppercase set. */
 .obz-form-row3 .input-label,
