@@ -35,19 +35,30 @@ export default function AdminLookbooks() {
   const load = async () => {
     setLoading(true);
     try {
-      const [lbRes, prodRes] = await Promise.all([
-        lookbookService.getAdminLookbooks(),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in"}/api/products?page=1&limit=500`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-        }).then(r => r.json()).then(d => Array.isArray(d?.products) ? d.products : []),
-      ]);
+      const lbRes = await lookbookService.getAdminLookbooks();
       setLookbooks(Array.isArray(lbRes?.data) ? lbRes.data : []);
-      setProducts(prodRes);
     } catch (e) { showError("loadingFailed", e?.message); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  // Products are only needed for the hotspot dropdown inside the modal, and
+  // the /products?limit=500 call is heavy. Fetch it separately so it never
+  // blocks the lookbook table from rendering (previously both were awaited in
+  // a Promise.all, so a slow product fetch left the page stuck on "loading").
+  const loadProducts = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in"}/api/products?page=1&limit=500`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+      });
+      const d = await res.json();
+      const list = Array.isArray(d?.products) ? d.products
+        : Array.isArray(d?.data?.products) ? d.data.products
+        : Array.isArray(d?.data) ? d.data : [];
+      setProducts(list);
+    } catch { /* products are optional for viewing lookbooks */ }
+  };
+
+  useEffect(() => { load(); loadProducts(); }, []);
 
   const openAdd  = () => { setForm(EMPTY); setStep(0); setIsOpen(true); };
   const openEdit = (r) => { setForm({ ...EMPTY, editId: r.id, lookbookId: String(r.id), title: r.title, description: r.description || '', status: r.status, display_order: r.display_order, existingImages: r.Images || [] }); setStep(0); setIsOpen(true); };
