@@ -73,7 +73,7 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[54vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
+      <div className="relative flex min-h-[66vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -89,7 +89,7 @@ export function HeroBanner({ slides = [] }) {
               src={slide.image}
               alt={slide.title || 'Banner'}
               shimmerClassName="bg-gray-800"
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-cover object-top sm:object-center"
             />
           </motion.div>
         </AnimatePresence>
