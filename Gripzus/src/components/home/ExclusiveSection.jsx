@@ -87,8 +87,9 @@ export default function ExclusiveSection({ products = [] }) {
     return () => io.disconnect();
   }, []);
 
-  // Match the thumbnail rail height to the main image so the 3 thumbnails fill
-  // exactly its height (extras scroll).
+  // Match the thumbnail rail height to the main image (extras scroll). Depends
+  // on the product so it re-measures once the (async-loaded) image frame is
+  // actually mounted — otherwise frameH stays 0 and the rail shows every thumb.
   useEffect(() => {
     const el = frameRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
@@ -97,7 +98,7 @@ export default function ExclusiveSection({ products = [] }) {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [product?.id, activeIndex]);
 
   // Auto-advance the main image through the gallery every 3s (pause on hover).
   useEffect(() => {
