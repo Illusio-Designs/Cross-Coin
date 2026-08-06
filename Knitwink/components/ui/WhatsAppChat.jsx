@@ -36,7 +36,8 @@ export default function WhatsAppChat() {
         .gzwa-greet-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; line-height: 1; padding: 0; flex-shrink: 0; }
         .gzwa-greet-close:hover { color: #374151; }
         @keyframes gzwaPop { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: none; } }
-        @media (max-width: 640px) { .gzwa-fab { bottom: 20px; right: 16px; } .gzwa-greet { bottom: 84px; right: 16px; } }
+        /* Minimal on mobile — just the icon, no greeting bubble. */
+        @media (max-width: 640px) { .gzwa-fab { bottom: 20px; right: 16px; width: 50px; height: 50px; } .gzwa-greet { display: none; } }
       `}</style>
     </>
   );

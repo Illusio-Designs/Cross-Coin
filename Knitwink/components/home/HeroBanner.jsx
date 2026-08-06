@@ -73,7 +73,7 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[68vh] items-end justify-start bg-gray-900 sm:min-h-[74vh] md:min-h-[88vh]">
+      <div className="relative flex min-h-[54vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -107,10 +107,10 @@ export function HeroBanner({ slides = [] }) {
               className="inline-block rounded-2xl bg-brand-black/25 p-4 backdrop-blur-md sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
             >
               {slide.title && (
-                <p className="mb-3 text-xs font-medium uppercase tracking-widest text-white/70">{slide.title}</p>
+                <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-white/70 sm:mb-3 sm:text-xs">{slide.title}</p>
               )}
               {slide.description && (
-                <h1 className="whitespace-pre-line font-display text-2xl font-normal leading-[1.12] tracking-tight text-white drop-shadow-sm sm:text-3xl md:text-4xl lg:text-5xl">
+                <h1 className="whitespace-pre-line font-display text-lg font-normal leading-[1.15] tracking-tight text-white drop-shadow-sm sm:text-2xl md:text-4xl lg:text-5xl">
                   {slide.description}
                 </h1>
               )}
