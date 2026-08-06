@@ -203,8 +203,6 @@ export default function ProductDetail() {
     ? colorImages
     : (product.images?.length ? product.images : ['/assets/Gripzus.JPG.jpeg']);
   const curImg   = Math.min(activeImg, images.length - 1);
-  // 3 thumbnails fill the main-image height (gap-2 = 8px, two gaps = 16px).
-  const thumbH   = galH ? Math.max(44, Math.round((galH - 16) / 3)) : 96;
   const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
 
   const handleAdd = () => {
@@ -257,7 +255,7 @@ export default function ProductDetail() {
                   <div
                     ref={thumbsRef}
                     style={galH ? { maxHeight: galH } : undefined}
-                    className="flex flex-col items-stretch gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0 w-14 sm:w-[72px]"
+                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0"
                   >
                     {images.slice(0, 8).map((img, i) => (
                       <button
@@ -265,8 +263,7 @@ export default function ProductDetail() {
                         onClick={() => setActiveImg(i)}
                         data-active={curImg === i ? 'true' : undefined}
                         aria-label={`View image ${i + 1}`}
-                        style={{ height: thumbH }}
-                        className={`w-full shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
+                        className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
                           curImg === i
                             ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
                             : 'opacity-45 hover:opacity-100'

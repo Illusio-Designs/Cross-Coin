@@ -114,7 +114,12 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 }
 .kicker-light { color: var(--paper); }
 
-.prose-body { font-family: var(--font-body); color: var(--ink-soft); line-height: 1.7; }
+.prose-body { font-family: var(--font-body); color: var(--ink-soft); line-height: 1.7; text-align: justify; text-justify: inter-word; hyphens: auto; }
+/* Keep intentionally-centered copy centered (heroes, empty states) — a
+   higher-specificity guard so justify applies only to left-aligned body text. */
+.text-center .prose-body, .prose-body.text-center, .text-center.prose-body { text-align: center; text-justify: auto; hyphens: manual; }
+/* Live rich-text (blog / policies) rendered as raw HTML — justify its paragraphs too. */
+.policy-content p, .gz-richtext p { text-align: justify; text-justify: inter-word; hyphens: auto; }
 
 /* Underlined text link — the primary SSENSE-style CTA */
 .link-line {

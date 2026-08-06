@@ -128,8 +128,6 @@ export default function ExclusiveSection({ products = [] }) {
   const off = product.oldPrice && product.oldPrice > product.price
     ? Math.round((1 - product.price / product.oldPrice) * 100) : 0;
   const others = list.filter((_, i) => i !== activeIndex);
-  // 3 thumbnails fill the main-image height (gap 10px, two gaps = 20px).
-  const thumbHt = frameH ? Math.max(40, Math.round((frameH - 20) / 3)) : 64;
 
   const onAdd = () => {
     addItem({
@@ -163,7 +161,7 @@ export default function ExclusiveSection({ products = [] }) {
               {imgCount > 1 && (
                 <div className="excl3-thumbs no-scrollbar" ref={thumbsRef} style={frameH ? { maxHeight: frameH } : undefined}>
                   {gallery.map((img, i) => (
-                    <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)} style={{ height: thumbHt }}
+                    <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)}
                       className={`excl3-thumb ${i === safeIdx ? 'on' : ''}`} aria-label={`View image ${i + 1}`}>
                       <img src={img} alt="" loading="lazy" />
                     </button>
@@ -252,7 +250,9 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-title { color: #fff; font-size: clamp(1.8rem, 4vw, 3.2rem); margin: 10px 0 0; }
 
         .excl3-grid { display: grid; grid-template-columns: 1fr; gap: 44px; align-items: start; }
-        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: 1.1fr 1fr; gap: 64px; } }
+        /* Image column takes only its (now smaller) width; the info column gets
+           the rest so the copy has room and never gets cut. */
+        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: auto minmax(0, 1fr); gap: 56px; } }
 
         .excl3-stage { position: relative; }
         .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -261,7 +261,7 @@ export default function ExclusiveSection({ products = [] }) {
            thumbnails (64px × 3 + 2 gaps = 212px), the rest scroll and the rail
            auto-follows the active image. */
         .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
-        .excl3-thumb { width: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
+        .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
         .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -272,7 +272,7 @@ export default function ExclusiveSection({ products = [] }) {
           position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
-          flex: 1; min-width: 0; max-width: 300px; align-self: flex-start;
+          flex: 1; min-width: 0; max-width: 280px; align-self: flex-start;
           aspect-ratio: 1 / 1; display: grid; place-items: center;
           opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
@@ -321,7 +321,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-orow:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
         .excl3-orow-img { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 0; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
         .excl3-orow-img img { width: 100%; height: 100%; object-fit: cover; }
-        .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; color: #fff; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .excl3-orow-price { flex: 0 0 auto; font-size: 14px; color: rgba(255,255,255,0.8); }
         .excl3-orow-price em { font-style: normal; color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 12px; margin-left: 6px; }
 
