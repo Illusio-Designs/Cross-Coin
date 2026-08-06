@@ -172,25 +172,32 @@ const DateRangePicker = ({
     setOpen(!open);
   };
 
+  // Value-driven selection: we decide "start vs end" from the ACTUAL dates,
+  // not from the `selecting` flag. The flag could desync from the parent
+  // state (e.g. after an outside-click closed a half-picked range, or when
+  // reopening a completed range), which made the picker occasionally treat
+  // an end-date click as a new start — or close before the end registered.
   const handleSelect = useCallback((dayStr) => {
-    if (selecting === 'start') {
+    const rangeComplete = startDate && endDate;
+    if (!startDate || rangeComplete) {
+      // Begin a fresh range: set start, clear any old end. Never close here.
       onStartChange(dayStr);
-      // If end date is before new start, clear it
-      if (endDate && dayStr > endDate) onEndChange('');
+      if (endDate) onEndChange('');
       setSelecting('end');
     } else {
-      // If selected date is before start, swap
-      if (startDate && dayStr < startDate) {
+      // startDate is set, end is empty → this click completes the range.
+      if (dayStr < startDate) {
+        // Clicked before the start: treat the earlier date as the new start.
         onEndChange(startDate);
         onStartChange(dayStr);
       } else {
         onEndChange(dayStr);
       }
-      // If there's no onApply, auto-close after selecting end
+      // With no explicit Apply button, auto-close once the range is complete.
       if (!onApply) setOpen(false);
       setSelecting('start');
     }
-  }, [selecting, startDate, endDate, onStartChange, onEndChange, onApply]);
+  }, [startDate, endDate, onStartChange, onEndChange, onApply]);
 
   const handlePreset = (key) => {
     const range = getPresetRange(key);
@@ -276,7 +283,7 @@ const DateRangePicker = ({
             {/* Calendar */}
             <div className="drp-cal-wrap">
               <div className="drp-selecting-hint">
-                {selecting === 'start' ? 'Select start date' : 'Select end date'}
+                {(!startDate || (startDate && endDate)) ? 'Select start date' : 'Select end date'}
               </div>
               <CalendarGrid
                 year={calYear}

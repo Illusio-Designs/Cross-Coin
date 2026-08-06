@@ -4706,7 +4706,7 @@
   height: 34px;
   padding: 0 14px;
   border-radius: 8px;
-  border: 1.5px solid #0a0a0a;
+  border: 1.5px solid var(--ds-color-border);
   background: var(--ds-color-surface);
   color: var(--ds-color-text);
   font-size: 12.5px;
@@ -4722,6 +4722,7 @@
 }
 .order-sync-main-btn:hover:not(:disabled) {
   background: #0a0a0a;
+  border-color: #0a0a0a;
   color: #fff;
 }
 .order-sync-main-btn:disabled {
@@ -4729,8 +4730,8 @@
   cursor: not-allowed;
 }
 .order-sync-main-btn.syncing {
-  background: #6c757d;
-  border-color: #6c757d;
+  background: var(--ds-color-text-muted);
+  border-color: var(--ds-color-text-muted);
   color: #fff;
 }
 
@@ -5748,12 +5749,14 @@
   border-color: #0a0a0a;
 }
 .order-sync-main-btn--primary:hover:not(:disabled) { background: #262626; border-color: #262626; color: #fff; }
+/* Ghost = identical to the base outline button so every header control
+   (Refresh Tracking, Filter, date trigger) reads as one consistent set. */
 .order-sync-main-btn--ghost {
   border-color: var(--ds-color-border);
-  color: var(--ds-color-text-muted);
+  color: var(--ds-color-text);
   background: var(--ds-color-surface);
 }
-.order-sync-main-btn--ghost:hover:not(:disabled) { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); background: var(--ds-color-surface); }
+.order-sync-main-btn--ghost:hover:not(:disabled) { color: #fff; border-color: #0a0a0a; background: #0a0a0a; }
 
 /* ── Status tabs — segmented control like the prototype ──────────────── */
 .ord-tabs {
