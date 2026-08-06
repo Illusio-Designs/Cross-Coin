@@ -107,7 +107,7 @@ export function Blogs() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [postModal, setPostModal] = useState(false);
   const [catModal, setCatModal] = useState(false);
@@ -299,9 +299,9 @@ export function Blogs() {
   });
   const filteredCats = categories.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
   const activeList = tab === 'Posts' ? filteredPosts : filteredCats;
-  const totalPages = Math.ceil(activeList.length / ITEMS_PER_PAGE);
-  const start = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageItems = activeList.slice(start, start + ITEMS_PER_PAGE).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
+  const totalPages = Math.ceil(activeList.length / itemsPerPage);
+  const start = (currentPage - 1) * itemsPerPage;
+  const pageItems = activeList.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
   // ── Table columns ──────────────────────────────────────────────────────────
   const postColumns = [
@@ -371,7 +371,13 @@ export function Blogs() {
             search={search}
             onSearchChange={setSearch}
             placeholder={`Search ${tab.toLowerCase()}…`}
-          />
+          >
+            <Select
+              value={String(itemsPerPage)}
+              onChange={v => { setItemsPerPage(Number(v || 10)); setCurrentPage(1); }}
+              options={[{ value: '10', label: 'Show: 10' }, { value: '25', label: 'Show: 25' }, { value: '50', label: 'Show: 50' }, { value: '100', label: 'Show: 100' }]}
+            />
+          </FilterBar>
           {loading ? (
             <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
           ) : pageItems.length === 0 ? (
@@ -383,7 +389,7 @@ export function Blogs() {
           ) : (
             <>
               <Table columns={tab === 'Posts' ? postColumns : catColumns} data={pageItems} striped hoverable />
-              {activeList.length > ITEMS_PER_PAGE && (
+              {activeList.length > itemsPerPage && (
                 <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>

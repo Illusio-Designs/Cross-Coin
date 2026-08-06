@@ -83,13 +83,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-          width: 320, maxHeight: 420, overflowY: 'auto',
-          background: 'var(--card-bg, #fff)', border: '1px solid var(--border, #e5e7eb)',
-          borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          zIndex: 9999,
-        }}>
+        <div className="notif-panel">
           {/* Header */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',

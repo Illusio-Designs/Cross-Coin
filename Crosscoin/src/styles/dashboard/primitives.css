@@ -302,3 +302,30 @@
 }
 .ds-btn--sm { padding: 4px 10px; font-size: var(--ds-text-sm); }
 .ds-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Notification dropdown (bell) ─────────────────────────────────────── */
+.notif-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--ds-color-surface, #fff);
+  border: 1px solid var(--ds-color-border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+}
+/* On phones the fixed-width panel anchored to the right edge overflowed the
+   viewport — drop it to a near-full-width sheet pinned under the header. */
+@media (max-width: 560px) {
+  .notif-panel {
+    position: fixed;
+    top: 62px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 74vh;
+  }
+}

@@ -6,7 +6,7 @@ import { PageHeader, Panel, EmptyState } from "../../../components/Dashboard/pri
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { PencilEdit02Icon, Delete02Icon, Image02Icon } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, Delete02Icon, Image02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   edit:  <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />,
@@ -66,8 +66,7 @@ export default function AdminLookbooks() {
   const f = (key) => (e) => setForm(p => ({ ...p, [key]: e.target.type === 'file' ? e.target.files?.[0] || null : e.target.value }));
 
   // Step 0 — create or update lookbook details
-  const handleStep0 = async (e) => {
-    e.preventDefault();
+  const handleStep0 = async () => {
     try {
       if (form.editId) {
         await lookbookService.updateLookbook(form.editId, {
@@ -92,8 +91,7 @@ export default function AdminLookbooks() {
   };
 
   // Step 1 — upload image
-  const handleStep1 = async (e) => {
-    e.preventDefault();
+  const handleStep1 = async () => {
     if (!form.lookbookId) return showError("fieldRequired");
     // In edit mode, allow proceeding without a new image
     if (!form.image) { setStep(2); return; }
@@ -110,8 +108,7 @@ export default function AdminLookbooks() {
   };
 
   // Step 2 — add hotspot
-  const handleStep2 = async (e) => {
-    e.preventDefault();
+  const handleStep2 = async () => {
     if (!form.position_x || !form.position_y) return showError("fieldRequired", "Please click on the image to place the hotspot.");
     try {
       await lookbookService.addHotspot(form.imageId, {
@@ -175,169 +172,172 @@ export default function AdminLookbooks() {
         )}
       </Panel>
 
-      <Modal isOpen={isOpen} onClose={closeModal} title={isEditing ? "Edit Lookbook" : "Add Lookbook"}>
-
-        {/* Step indicator */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #eee', marginBottom: 20 }}>
-          {STEPS.map((s, i) => (
-            <div key={i} onClick={() => step > i && setStep(i)} style={{
-              flex: 1, textAlign: 'center', padding: '10px 0', fontSize: 13,
-              fontWeight: step === i ? 700 : 500,
-              color: step === i ? 'var(--ds-color-text)' : step > i ? 'var(--ds-color-text-muted)' : '#aaa',
-              borderBottom: step === i ? '2px solid var(--ds-color-text)' : '2px solid transparent',
-              cursor: step > i ? 'pointer' : 'default', transition: 'all 0.2s',
-            }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 22, height: 22, borderRadius: '50%', marginRight: 6, fontSize: 11, fontWeight: 700,
-                background: step === i ? 'var(--ds-color-text)' : step > i ? 'var(--ds-color-text-muted)' : '#e0e0e0',
-                color: step >= i ? '#fff' : '#888',
-              }}>{step > i ? '✓' : i + 1}</span>
-              {s}
-            </div>
-          ))}
+      <Modal
+        isOpen={isOpen}
+        onClose={closeModal}
+        title={isEditing ? "Edit Lookbook" : "Add Lookbook"}
+        closeOnOverlayClick={false}
+        footer={
+          step === 0 ? (
+            <>
+              <Button variant="secondary" size="medium" type="button" onClick={closeModal}>Cancel</Button>
+              <Button variant="primary" size="medium" type="button" onClick={handleStep0}>{isEditing ? "Save & Next" : "Create & Next"}</Button>
+            </>
+          ) : step === 1 ? (
+            <>
+              <Button variant="secondary" size="medium" type="button" onClick={() => setStep(0)}>Back</Button>
+              {isEditing && <Button variant="secondary" size="medium" type="button" onClick={() => setStep(2)}>Skip</Button>}
+              <Button variant="primary" size="medium" type="button" onClick={handleStep1}>Upload & Next</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" size="medium" type="button" onClick={() => setStep(1)}>Back</Button>
+              <Button variant="primary" size="medium" type="button" onClick={handleStep2}>Add Hotspot & Finish</Button>
+            </>
+          )
+        }
+      >
+        {/* Step indicator — matches the product modal */}
+        <div className="prod-steps">
+          {STEPS.map((label, i) => {
+            const isActive = step === i;
+            const isDone = step > i;
+            return (
+              <div
+                key={i}
+                className={`prod-step ${isActive ? 'prod-step--active' : ''} ${isDone ? 'prod-step--done' : ''}`}
+                onClick={() => step > i && setStep(i)}
+                style={step > i ? { cursor: 'pointer' } : undefined}
+              >
+                <div className="prod-step-circle">{isDone ? <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} /> : i + 1}</div>
+                <span className="prod-step-label">{label}</span>
+                {i < STEPS.length - 1 && <div className={`prod-step-line ${isDone ? 'prod-step-line--done' : ''}`} />}
+              </div>
+            );
+          })}
         </div>
 
         {/* Step 0 — Lookbook details (create or edit) */}
         {step === 0 && (
-          <form onSubmit={handleStep0}>
-            <div className="modal-body">
-              <Input label="Title" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))} required placeholder="Lookbook title..." />
-              <Input label="Description" value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} multiline rows={3} placeholder="Short description..." />
-              <Select label="Status" value={form.status} onChange={v => setForm(p => ({...p, status: v}))} options={[{ value: 'draft', label: 'Draft' }, { value: 'active', label: 'Active' }]} />
-              <Input label="Display Order" type="number" value={form.display_order} onChange={e => setForm(p => ({...p, display_order: Number(e.target.value || 0)}))} />
-            </div>
-            <div className="modal-footer">
-              <Button variant="secondary" onClick={closeModal}>Cancel</Button>
-              <Button variant="primary" type="submit">{isEditing ? "Save & Next" : "Create & Next"}</Button>
-            </div>
-          </form>
+          <>
+            <Input label="Title" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))} required placeholder="Lookbook title..." />
+            <Input label="Description" value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} multiline rows={3} placeholder="Short description..." />
+            <Select label="Status" value={form.status} onChange={v => setForm(p => ({...p, status: v}))} options={[{ value: 'draft', label: 'Draft' }, { value: 'active', label: 'Active' }]} />
+            <Input label="Display Order" type="number" value={form.display_order} onChange={e => setForm(p => ({...p, display_order: Number(e.target.value || 0)}))} />
+          </>
         )}
 
         {/* Step 1 — Upload Image */}
         {step === 1 && (
-          <form onSubmit={handleStep1}>
-            <div className="modal-body">
-              <Select label="Lookbook" value={form.lookbookId} onChange={v => setForm(p => ({...p, lookbookId: v}))} required
-                options={[{ value: '', label: 'Select lookbook' }, ...lookbooks.map(lb => ({ value: String(lb.id), label: lb.title }))]} searchable />
+          <>
+            <Select label="Lookbook" value={form.lookbookId} onChange={v => setForm(p => ({...p, lookbookId: v}))} required
+              options={[{ value: '', label: 'Select lookbook' }, ...lookbooks.map(lb => ({ value: String(lb.id), label: lb.title }))]} searchable />
 
-              {/* Show existing images in edit mode */}
-              {form.existingImages?.length > 0 && (
-                <div className="dm-field">
-                  <label className="dm-label">Existing Images ({form.existingImages.length})</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px 0' }}>
-                    {form.existingImages.map(img => (
-                      <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '2px solid #e0e0e0' }}>
-                        <img src={img.image_url || img.url} alt={img.alt_text || `Image #${img.id}`}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        <button
-                          type="button"
-                          title="Delete image"
-                          onClick={async () => {
-                            try {
-                              await lookbookService.deleteLookbookImage(img.id);
-                              showSuccess("deleteSuccess");
-                              setForm(p => ({ ...p, existingImages: p.existingImages.filter(i => i.id !== img.id) }));
-                            } catch (e) { showError("saveFailed", e?.message); }
-                          }}
-                          style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--ds-color-text)', border: '2px solid #fff', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}
-                        >✕</button>
-                      </div>
-                    ))}
-                  </div>
+            {/* Show existing images in edit mode */}
+            {form.existingImages?.length > 0 && (
+              <div className="dm-field">
+                <label className="dm-label">Existing Images ({form.existingImages.length})</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '8px 0' }}>
+                  {form.existingImages.map(img => (
+                    <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '2px solid #e0e0e0' }}>
+                      <img src={img.image_url || img.url} alt={img.alt_text || `Image #${img.id}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <button
+                        type="button"
+                        title="Delete image"
+                        onClick={async () => {
+                          try {
+                            await lookbookService.deleteLookbookImage(img.id);
+                            showSuccess("deleteSuccess");
+                            setForm(p => ({ ...p, existingImages: p.existingImages.filter(i => i.id !== img.id) }));
+                          } catch (e) { showError("saveFailed", e?.message); }
+                        }}
+                        style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--ds-color-text)', border: '2px solid #fff', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="dm-field">
+              <label className="dm-label">Upload New Image {!form.editId && <span className="dm-required">*</span>}</label>
+              <div className="dm-file-upload">
+                <div className="dm-file-upload-icon">
+                  <HugeiconsIcon icon={Image02Icon} size={24} strokeWidth={2} />
+                </div>
+                <div className="dm-file-upload-text">
+                  <span className="dm-file-upload-title">{form.image instanceof File ? form.image.name : 'Choose image'}</span>
+                  <span className="dm-file-upload-sub">PNG, JPG, WEBP</span>
+                </div>
+                <input type="file" accept="image/*" onChange={f('image')} required={!form.editId} />
+              </div>
+              {form.image instanceof File && (
+                <div className="dm-img-preview">
+                  <img src={URL.createObjectURL(form.image)} alt="Preview" />
                 </div>
               )}
-
-              <div className="dm-field">
-                <label className="dm-label">Upload New Image {!form.editId && <span className="dm-required">*</span>}</label>
-                <div className="dm-file-upload">
-                  <div className="dm-file-upload-icon">
-                    <HugeiconsIcon icon={Image02Icon} size={24} strokeWidth={2} />
-                  </div>
-                  <div className="dm-file-upload-text">
-                    <span className="dm-file-upload-title">{form.image instanceof File ? form.image.name : 'Choose image'}</span>
-                    <span className="dm-file-upload-sub">PNG, JPG, WEBP</span>
-                  </div>
-                  <input type="file" accept="image/*" onChange={f('image')} required={!form.editId} />
-                </div>
-                {form.image instanceof File && (
-                  <div className="dm-img-preview">
-                    <img src={URL.createObjectURL(form.image)} alt="Preview" />
-                  </div>
-                )}
-              </div>
-              <Input label="Alt Text" value={form.alt_text} onChange={e => setForm(p => ({...p, alt_text: e.target.value}))} placeholder="Image alt text..." />
-              <Input label="Display Order" type="number" value={form.imgOrder} onChange={e => setForm(p => ({...p, imgOrder: e.target.value}))} />
             </div>
-            <div className="modal-footer">
-              <Button variant="secondary" onClick={() => setStep(0)}>Back</Button>
-              {isEditing && <Button variant="secondary" onClick={() => setStep(2)}>Skip</Button>}
-              <Button variant="primary" type="submit">Upload & Next</Button>
-            </div>
-          </form>
+            <Input label="Alt Text" value={form.alt_text} onChange={e => setForm(p => ({...p, alt_text: e.target.value}))} placeholder="Image alt text..." />
+            <Input label="Display Order" type="number" value={form.imgOrder} onChange={e => setForm(p => ({...p, imgOrder: e.target.value}))} />
+          </>
         )}
 
         {/* Step 2 — Add Hotspot (click-to-place only) */}
         {step === 2 && (
-          <form onSubmit={handleStep2}>
-            <div className="modal-body">
-              <Select label="Select Image" value={form.imageId} onChange={v => {
-                const img = allImages.find(i => String(i.id) === v);
-                setForm(p => ({ ...p, imageId: v, _previewUrl: img?.image_url || null, position_x: '', position_y: '' }));
-              }} required options={[{ value: '', label: 'Select image' }, ...allImages.map(img => ({ value: String(img.id), label: `${img.lbTitle} — Image #${img.id}` }))]} searchable />
+          <>
+            <Select label="Select Image" value={form.imageId} onChange={v => {
+              const img = allImages.find(i => String(i.id) === v);
+              setForm(p => ({ ...p, imageId: v, _previewUrl: img?.image_url || null, position_x: '', position_y: '' }));
+            }} required options={[{ value: '', label: 'Select image' }, ...allImages.map(img => ({ value: String(img.id), label: `${img.lbTitle} — Image #${img.id}` }))]} searchable />
 
-              {form._previewUrl ? (
-                <div className="dm-field">
-                  <label className="dm-label">
-                    Click on the image to place hotspot
-                    {form.position_x && form.position_y && (
-                      <span style={{ marginLeft: 10, background: 'var(--ds-color-text)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
-                        {form.position_x}%, {form.position_y}%
-                      </span>
-                    )}
-                  </label>
-                  <div
-                    style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : '#e0e0e0'}`, userSelect: 'none', background: '#f5f5f5' }}
-                    onClick={e => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
-                      const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
-                      setForm(p => ({ ...p, position_x: x, position_y: y }));
-                    }}
-                  >
-                    <img src={form._previewUrl} alt="hotspot picker" style={{ width: '100%', display: 'block', maxHeight: 300, objectFit: 'contain' }} />
-                    {form.position_x && form.position_y && (
-                      <div style={{ position: 'absolute', left: `${form.position_x}%`, top: `${form.position_y}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
-                        {/* Outer ring */}
-                        <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: '2px solid var(--ds-color-text)', opacity: 0.4, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
-                        {/* Dot */}
-                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--ds-color-text)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', position: 'relative' }} />
+            {form._previewUrl ? (
+              <div className="dm-field">
+                <label className="dm-label">
+                  Click on the image to place hotspot
+                  {form.position_x && form.position_y && (
+                    <span style={{ marginLeft: 10, background: 'var(--ds-color-text)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+                      {form.position_x}%, {form.position_y}%
+                    </span>
+                  )}
+                </label>
+                <div
+                  style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : '#e0e0e0'}`, userSelect: 'none', background: '#f5f5f5' }}
+                  onClick={e => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+                    const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+                    setForm(p => ({ ...p, position_x: x, position_y: y }));
+                  }}
+                >
+                  <img src={form._previewUrl} alt="hotspot picker" style={{ width: '100%', display: 'block', maxHeight: 300, objectFit: 'contain' }} />
+                  {form.position_x && form.position_y && (
+                    <div style={{ position: 'absolute', left: `${form.position_x}%`, top: `${form.position_y}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+                      {/* Outer ring */}
+                      <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: '2px solid var(--ds-color-text)', opacity: 0.4, top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+                      {/* Dot */}
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--ds-color-text)', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.5)', position: 'relative' }} />
+                    </div>
+                  )}
+                  {!form.position_x && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+                        Click anywhere to place hotspot
                       </div>
-                    )}
-                    {!form.position_x && (
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                        <div style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-                          Click anywhere to place hotspot
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#aaa', fontSize: 13, border: '2px dashed #e0e0e0', borderRadius: 8 }}>
-                  Select an image above to place the hotspot
-                </div>
-              )}
+              </div>
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#aaa', fontSize: 13, border: '2px dashed #e0e0e0', borderRadius: 8 }}>
+                Select an image above to place the hotspot
+              </div>
+            )}
 
-              <Select label="Product" value={form.product_id} onChange={v => setForm(p => ({...p, product_id: v}))} required
-                options={[{ value: '', label: 'Select product' }, ...products.map(p => ({ value: String(p.id), label: p.name }))]} searchable />
-              <Input label="Label (optional)" value={form.label} onChange={e => setForm(p => ({...p, label: e.target.value}))} placeholder="e.g. Shop this look" />
-            </div>
-            <div className="modal-footer">
-              <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
-              <Button variant="primary" type="submit">Add Hotspot & Finish</Button>
-            </div>
-          </form>
+            <Select label="Product" value={form.product_id} onChange={v => setForm(p => ({...p, product_id: v}))} required
+              options={[{ value: '', label: 'Select product' }, ...products.map(p => ({ value: String(p.id), label: p.name }))]} searchable />
+            <Input label="Label (optional)" value={form.label} onChange={e => setForm(p => ({...p, label: e.target.value}))} placeholder="e.g. Shop this look" />
+          </>
         )}
       </Modal>
     </div>
