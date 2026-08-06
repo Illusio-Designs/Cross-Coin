@@ -250,9 +250,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-title { color: #fff; font-size: clamp(1.8rem, 4vw, 3.2rem); margin: 10px 0 0; }
 
         .excl3-grid { display: grid; grid-template-columns: 1fr; gap: 44px; align-items: start; }
-        /* Image column takes only its (now smaller) width; the info column gets
-           the rest so the copy has room and never gets cut. */
-        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: auto minmax(0, 1fr); gap: 56px; } }
+        @media (min-width: 1024px) { .excl3-grid { grid-template-columns: 1.1fr 1fr; gap: 64px; } }
 
         .excl3-stage { position: relative; }
         .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
@@ -261,25 +259,24 @@ export default function ExclusiveSection({ products = [] }) {
            the main image (inline max-height = frame height) so it shows as MANY
            thumbnails as fit that height, and the rest scroll (auto-following the
            active image). Small squares + tight gap so more fit per space. */
-        .excl3-thumbs { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
-        .excl3-thumb { width: 60px; height: 60px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
+        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
+        .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
         .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Main image — a fixed SQUARE frame so every product renders at the same
-           size; the photo is contained (never cropped) and centred. */
+        /* Main image — DESKTOP: the original larger natural image (max 460px).
+           MOBILE: a compact fixed square (see the mobile media block). */
         .excl3-frame {
           position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
-          flex: 1; min-width: 0; max-width: 280px; align-self: flex-start;
-          aspect-ratio: 1 / 1; display: grid; place-items: center;
+          flex: 1; min-width: 0; max-width: 460px; align-self: flex-start;
           opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
         .is-shown .excl3-frame { opacity: 1; transform: none; }
-        .excl3-img { width: 100%; height: 100%; object-fit: contain; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
+        .excl3-img { width: 100%; height: auto; object-fit: contain; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
         .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 0; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
@@ -340,7 +337,9 @@ export default function ExclusiveSection({ products = [] }) {
              touch momentum here — no fixed cap, so it fills the image height. */
           .excl3-thumbs { -webkit-overflow-scrolling: touch; padding-right: 3px; }
           .excl3-thumb { width: 54px; height: 54px; }
-          .excl3-frame { max-width: 100%; }
+          /* MOBILE ONLY — compact fixed square (desktop keeps the larger image). */
+          .excl3-frame { max-width: 280px; aspect-ratio: 1 / 1; display: grid; place-items: center; }
+          .excl3-img { height: 100%; }
 
           .excl3-name { margin-top: 8px; }
           .excl3-price { margin-top: 14px; }

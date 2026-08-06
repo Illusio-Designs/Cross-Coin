@@ -55,7 +55,19 @@ export default function ProductDetail() {
   const [showBar, setShowBar] = useState(false);
   const thumbsRef = useRef(null);
   const mainImgRef = useRef(null);
-  const [galH, setGalH] = useState(0); // main-image height → thumbnail rail height
+  const [galH, setGalH] = useState(0); // main-image height → thumbnail rail height (mobile only)
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track the mobile breakpoint so the compact-gallery sizing applies on phones
+  // only; desktop keeps the original larger layout.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 639px)');
+    const on = () => setIsMobile(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
 
   // Fetch the product by slug.
   useEffect(() => {
@@ -254,8 +266,8 @@ export default function ProductDetail() {
                 {images.length > 1 && (
                   <div
                     ref={thumbsRef}
-                    style={galH ? { maxHeight: galH } : undefined}
-                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0"
+                    style={isMobile && galH ? { maxHeight: galH } : undefined}
+                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0 sm:max-h-[26rem]"
                   >
                     {images.slice(0, 8).map((img, i) => (
                       <button
@@ -263,7 +275,7 @@ export default function ProductDetail() {
                         onClick={() => setActiveImg(i)}
                         data-active={curImg === i ? 'true' : undefined}
                         aria-label={`View image ${i + 1}`}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
+                        className={`w-14 h-14 sm:w-12 sm:h-12 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
                           curImg === i
                             ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
                             : 'opacity-45 hover:opacity-100'
@@ -275,11 +287,12 @@ export default function ProductDetail() {
                   </div>
                 )}
 
-                {/* Main image — a fixed SQUARE frame so every product renders at
-                    the same size; the photo is contained (never cropped). */}
+                {/* Main image — MOBILE: a compact fixed square (same size every
+                    product). DESKTOP: the original larger image (natural, capped
+                    height, never cropped). */}
                 <div
                   ref={mainImgRef}
-                  className="gz-pdp-main relative flex-1 max-w-[360px] aspect-square grid place-items-center overflow-hidden"
+                  className="gz-pdp-main relative flex-1 overflow-hidden aspect-square max-w-[340px] mx-auto grid place-items-center sm:aspect-auto sm:max-w-none sm:mx-0 sm:block"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
                 >
@@ -287,7 +300,7 @@ export default function ProductDetail() {
                     key={curImg}
                     src={images[curImg]}
                     alt={product.name}
-                    className="gz-pdp-img block h-full w-full object-contain"
+                    className="gz-pdp-img block h-full w-full object-contain sm:h-auto sm:max-h-[26rem] sm:mx-auto"
                   />
 
                   <style jsx>{`
