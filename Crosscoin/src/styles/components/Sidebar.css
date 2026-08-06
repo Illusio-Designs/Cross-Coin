@@ -1,8 +1,8 @@
 /* ── Sidebar (sb-*) ─────────────────────────────────────────── */
 .sb {
   width: 260px;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -10,8 +10,8 @@
   left: 0;
   top: 0;
   z-index: 1000;
-  border-right: 1px solid #e8e8e8;
-  box-shadow: 2px 0 12px rgba(24, 13, 62, 0.06);
+  border-right: 1px solid var(--ds-color-border);
+  box-shadow: 2px 0 12px rgba(10, 10, 10, 0.06);
   transition: width 0.3s cubic-bezier(.4,0,.2,1);
   overflow: hidden;
 }
@@ -42,7 +42,7 @@
   padding: 0 14px;
   height: 72px;
   min-height: 72px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ds-color-border-soft);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -66,16 +66,24 @@
   flex-shrink: 0;
 }
 
-/* Logo image — controlled via CSS so it's consistent */
-.sb-logo img {
+/* Obzus monogram — monochrome black square with a white "O" */
+.sb-logo-mark {
   width: 34px;
   height: 34px;
-  object-fit: contain;
   flex-shrink: 0;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 9px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
 }
 
-.sb--collapsed .sb-logo img {
+.sb--collapsed .sb-logo-mark {
   width: 36px;
   height: 36px;
 }
@@ -87,18 +95,18 @@
 }
 
 .sb-logo-name {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #180D3E;
-  letter-spacing: 0.4px;
+  color: var(--ds-color-text);
+  letter-spacing: -0.3px;
   white-space: nowrap;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .sb-logo-sub {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  color: #CE1E36;
+  color: var(--ds-color-text-faint);
   letter-spacing: 1.8px;
   text-transform: uppercase;
   margin-top: 2px;
@@ -106,10 +114,10 @@
 }
 
 .sb-toggle {
-  background: #f0f0f5;
+  background: var(--ds-color-bg);
   border: none;
   cursor: pointer;
-  color: #180D3E;
+  color: var(--ds-color-text);
   width: 28px;
   height: 28px;
   border-radius: 7px;
@@ -121,17 +129,17 @@
 }
 
 .sb-toggle:hover {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
 }
 
 .sb-toggle--close {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: #fff;
 }
 
 .sb-toggle--close:hover {
-  background: #a8172b;
+  background: #262626;
 }
 
 /* ── Nav ────────────────────────────────────────────────────── */
@@ -166,7 +174,7 @@
   background: none;
   border-radius: 8px;
   cursor: pointer;
-  color: #4a4a6a;
+  color: var(--ds-color-text-muted);
   font-size: 0.875rem;
   font-weight: 500;
   font-family: 'DM Sans', sans-serif;
@@ -180,17 +188,17 @@
 }
 
 .sb-link:hover {
-  background: #f4f3ff;
-  color: #180D3E;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
 }
 
 .sb-link--active {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #ffffff;
 }
 
 .sb-link--active:hover {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #ffffff;
 }
 
@@ -229,7 +237,7 @@
 .sb-sub {
   margin: 2px 0 4px 30px;
   padding-left: 10px;
-  border-left: 2px solid #e8e8f0;
+  border-left: 2px solid var(--ds-color-border);
 }
 
 .sb-sub-link {
@@ -240,7 +248,7 @@
   background: none;
   border-radius: 6px;
   cursor: pointer;
-  color: #5a5a7a;
+  color: var(--ds-color-text-muted);
   font-size: 0.84rem;
   font-weight: 500;
   font-family: 'DM Sans', sans-serif;
@@ -250,12 +258,12 @@
 }
 
 .sb-sub-link:hover {
-  background: #f4f3ff;
-  color: #180D3E;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
 }
 
 .sb-sub-link--active {
-  color: #CE1E36;
+  color: var(--ds-color-text);
   font-weight: 600;
 }
 
@@ -264,7 +272,7 @@
   position: fixed;
   left: 72px;
   transform: translateY(-50%);
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
   border-radius: 6px;
   padding: 6px 12px;
@@ -273,20 +281,20 @@
   white-space: nowrap;
   z-index: 9999;
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(24,13,62,0.18);
+  box-shadow: 0 4px 12px rgba(10, 10, 10,0.18);
 }
 
 .sb-tooltip-menu {
   position: fixed;
   left: 72px;
   transform: translateY(-50%);
-  background: #fff;
-  border: 1px solid #e8e8f0;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
   border-radius: 8px;
   padding: 6px;
   min-width: 170px;
   z-index: 9999;
-  box-shadow: 0 8px 24px rgba(24,13,62,0.12);
+  box-shadow: 0 8px 24px rgba(10, 10, 10,0.12);
   /* Extend left edge to cover the gap between sidebar and popup */
   padding-left: 6px;
 }
@@ -294,11 +302,11 @@
 .sb-tooltip-title {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #180D3E;
+  color: var(--ds-color-text);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   padding: 4px 8px 6px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ds-color-border-soft);
   margin-bottom: 4px;
 }
 
@@ -310,7 +318,7 @@
   background: none;
   border-radius: 6px;
   cursor: pointer;
-  color: #4a4a6a;
+  color: var(--ds-color-text-muted);
   font-size: 0.84rem;
   font-weight: 500;
   font-family: 'DM Sans', sans-serif;
@@ -320,19 +328,19 @@
 }
 
 .sb-tooltip-link:hover {
-  background: #f4f3ff;
-  color: #180D3E;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
 }
 
 .sb-tooltip-link--active {
-  color: #CE1E36;
+  color: var(--ds-color-text);
   font-weight: 600;
 }
 
 /* ── Footer ─────────────────────────────────────────────────── */
 .sb-footer {
   padding: 12px 10px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ds-color-border-soft);
   flex-shrink: 0;
 }
 
@@ -343,10 +351,10 @@
   width: 100%;
   padding: 9px 10px;
   border: none;
-  background: #fff5f6;
+  background: var(--ds-color-bg);
   border-radius: 8px;
   cursor: pointer;
-  color: #CE1E36;
+  color: var(--ds-color-text);
   font-size: 0.84rem;
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
@@ -356,7 +364,7 @@
 }
 
 .sb-help:hover {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: #fff;
 }
 

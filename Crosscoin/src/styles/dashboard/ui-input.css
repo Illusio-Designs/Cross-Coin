@@ -13,7 +13,7 @@
   margin-bottom: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ds-color-text);
   font-family: 'DM Sans', sans-serif;
 }
 .input-required { color: #dc2626; margin-left: 2px; }
@@ -26,11 +26,11 @@
 
 .input-field {
   width: 100%;
-  border: 1.5px solid #e8e8f0;
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 8px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
-  color: #1a1a1a;
+  color: var(--ds-color-text);
   background: #fafafe;
   transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
   outline: none;
@@ -40,10 +40,10 @@ input[type="file"].input-field { border: none; background: transparent; padding:
 /* Native file inputs NOT using input-field class — no extra styling */
 .prd-upload-row input[type="file"] { border: none !important; background: transparent !important; box-shadow: none !important; outline: none; }
 .input-field::placeholder { color: #b0b0c0; }
-.input-field:hover:not(:disabled) { border-color: #c0b8e8; background: #fff; }
+.input-field:hover:not(:disabled) { border-color: #c0b8e8; background: var(--ds-color-surface); }
 .input-field:focus {
   border-color: #0a0a0a;
-  background: #fff;
+  background: var(--ds-color-surface);
   box-shadow: 0 0 0 3px rgba(10, 10, 10,0.07);
 }
 
@@ -53,7 +53,7 @@ input[type="file"].input-field { border: none; background: transparent; padding:
 
 .input-filled { background: #f5f5f7; border-color: transparent; }
 .input-filled:hover:not(:disabled) { background: #ebebf0; }
-.input-filled:focus { background: #fff; border-color: #0a0a0a; }
+.input-filled:focus { background: var(--ds-color-surface); border-color: #0a0a0a; }
 .input-outline { background: transparent; border-width: 2px; }
 
 .input-error { border-color: #dc2626; }
@@ -67,7 +67,7 @@ input[type="file"].input-field { border: none; background: transparent; padding:
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@ select.input-field:disabled { cursor: not-allowed; }
   position: relative;
   display: flex;
   align-items: center;
-  border: 1.5px solid #e8e8f0;
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 8px;
   overflow: hidden;
   background: #fafafe;
@@ -114,7 +114,7 @@ select.input-field:disabled { cursor: not-allowed; }
 .input-file-placeholder {
   flex: 1;
   padding: 9px 12px;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,12 +124,12 @@ select.input-field:disabled { cursor: not-allowed; }
   padding: 9px 14px;
   background: #f5f5f7;
   border: none;
-  border-left: 1px solid #ebebf0;
+  border-left: 1px solid var(--ds-color-border);
   cursor: pointer;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ds-color-text);
   transition: background 0.15s;
 }
 .input-file-button:hover:not(:disabled) { background: #ebebf0; }
@@ -141,10 +141,10 @@ select.input-field:disabled { cursor: not-allowed; }
   height: 60px;
   object-fit: cover;
   border-radius: 6px;
-  border: 1px solid #ebebf0;
+  border: 1px solid var(--ds-color-border);
 }
 
-.input-helper-text { margin-top: 4px; font-size: 12px; color: #6b7280; line-height: 1.4; }
+.input-helper-text { margin-top: 4px; font-size: 12px; color: var(--ds-color-text-muted); line-height: 1.4; }
 .input-error-text { margin-top: 4px; font-size: 12px; color: #dc2626; line-height: 1.4; }
 
 .input-field:focus-visible { outline: none; }

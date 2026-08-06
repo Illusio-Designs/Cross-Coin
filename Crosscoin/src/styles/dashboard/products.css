@@ -1,5 +1,5 @@
 .dashboard-title { 
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
@@ -28,7 +28,7 @@
 }
 
 .dashboard-content .product-card {
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   padding: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -53,7 +53,7 @@
 }
 
 .dashboard-content .product-price {
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   font-weight: 600;
   font-size: 1.2rem;
 }
@@ -75,7 +75,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
 }
 
 .variation-images-upload input[type="file"] {
@@ -84,7 +84,7 @@
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
-  background-color: #ffffff;
+  background-color: var(--ds-color-surface);
   width: -webkit-fill-available;
   cursor: pointer;
 }
@@ -110,7 +110,7 @@
   position: relative;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--ds-color-border);
 }
 
 .variation-images-preview img {
@@ -124,7 +124,7 @@
 /* Empty state styling */
 .variation-images-preview:empty::after {
   content: "No images uploaded yet";
-  color: #6B7280;
+  color: var(--ds-color-text-muted);
   font-size: 0.875rem;
   font-style: italic;
   width: 100%;
@@ -177,7 +177,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
 }
 
 .product-images-section input[type="file"] {
@@ -186,7 +186,7 @@
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
-  background-color: #ffffff;
+  background-color: var(--ds-color-surface);
   width: -webkit-fill-available;
   cursor: pointer;
 }
@@ -207,7 +207,7 @@
   flex-wrap: wrap;
   margin-top: 0.75rem;
   padding: 0.75rem;
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--ds-color-border);
   border-radius: 6px;
   min-height: 100px;
   align-items: flex-start;
@@ -217,7 +217,7 @@
   position: relative;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--ds-color-border);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -255,7 +255,7 @@
 /* Empty state styling */
 .images-preview:empty::after {
   content: "No images uploaded yet. Click 'Choose Files' to add product images.";
-  color: #6B7280;
+  color: var(--ds-color-text-muted);
   font-size: 0.875rem;
   font-style: italic;
   width: 100%;
@@ -308,9 +308,9 @@
   gap: 2rem;
   margin: 1.5rem 0;
   padding: 1.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ds-color-border);
   border-radius: 6px;
-  background-color: #f9fafb;
+  background-color: var(--ds-color-surface-soft);
 }
 
 .weight-section {
@@ -323,7 +323,7 @@
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
 }
 
 .dimensions-inputs {

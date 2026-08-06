@@ -208,5 +208,5 @@
 
 /* Row status indicators — left border colors */
 .tbl-row[style*="border-left"] {
-  border-left: 2px solid #e5e7eb;
+  border-left: 2px solid var(--ds-color-border);
 }

@@ -17,8 +17,8 @@
     border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
-    color: #0a0a0a;
-    background: #f4f4f5;
+    color: var(--ds-color-text);
+    background: var(--ds-color-bg);
     border: 1px solid #e0d8ff;
     white-space: nowrap;
     cursor: default;

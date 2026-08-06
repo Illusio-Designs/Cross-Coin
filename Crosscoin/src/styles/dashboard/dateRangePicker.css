@@ -4,8 +4,8 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: #fff;
-  border: 1.5px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 12px;
   flex-wrap: wrap;
   position: relative;
@@ -24,12 +24,12 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   white-space: nowrap;
 }
 
 .drp-label svg {
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   flex-shrink: 0;
 }
 
@@ -48,7 +48,7 @@
   height: 38px;
   padding: 0 14px;
   background: #fafafb;
-  border: 1.5px solid #ebebf0;
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 10px;
   font-size: 13px;
   font-family: inherit;
@@ -59,19 +59,19 @@
 }
 
 .drp-trigger svg {
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   flex-shrink: 0;
 }
 
 .drp-trigger:hover {
   border-color: #0a0a0a;
-  background: #fff;
+  background: var(--ds-color-surface);
 }
 
 .drp-trigger--active {
   border-color: #0a0a0a;
   box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
-  background: #fff;
+  background: var(--ds-color-surface);
 }
 
 .drp-trigger-text {
@@ -107,9 +107,9 @@
   gap: 4px;
   height: 38px;
   padding: 0 12px;
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text-muted);
+  border: 1px solid var(--ds-color-border);
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
@@ -129,8 +129,8 @@
   top: calc(100% + 6px);
   left: 0;
   z-index: 1000;
-  background: #fff;
-  border: 1.5px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -159,7 +159,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 12px;
-  border-right: 1px solid #f0f0f5;
+  border-right: 1px solid var(--ds-color-border);
   min-width: 140px;
   background: #fafafb;
 }
@@ -169,7 +169,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   padding: 4px 8px 8px;
 }
 
@@ -180,7 +180,7 @@
   padding: 8px 10px;
   font-size: 13px;
   font-family: inherit;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -202,7 +202,7 @@
 .drp-selecting-hint {
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--ds-color-text-muted);
   text-align: center;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -228,16 +228,16 @@
   width: 32px;
   height: 32px;
   background: transparent;
-  border: 1.5px solid #ebebf0;
+  border: 1.5px solid var(--ds-color-border);
   border-radius: 8px;
   cursor: pointer;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   transition: background 0.15s, border-color 0.15s;
 }
 
 .drp-cal-nav:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  background: var(--ds-color-bg);
+  border-color: var(--ds-color-border);
 }
 
 .drp-cal-title {
@@ -255,7 +255,7 @@
 .drp-cal-day-name {
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--ds-color-text-faint);
   text-align: center;
   padding: 4px 0;
 }
@@ -274,7 +274,7 @@
   height: 34px;
   font-size: 13px;
   font-family: inherit;
-  color: #374151;
+  color: var(--ds-color-text-muted);
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -287,12 +287,12 @@
 }
 
 .drp-cal-cell:not(.drp-cal-empty):hover {
-  background: #f3f4f6;
+  background: var(--ds-color-bg);
 }
 
 .drp-cal-today {
   font-weight: 700;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   background: #f0edf7;
 }
 
@@ -310,7 +310,7 @@
 
 .drp-cal-in-range {
   background: #ede9f7;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   border-radius: 4px;
 }
 
@@ -351,7 +351,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     border-right: none;
-    border-bottom: 1px solid #f0f0f5;
+    border-bottom: 1px solid var(--ds-color-border);
     min-width: unset;
     padding: 10px;
     gap: 4px;
@@ -366,7 +366,7 @@
     width: auto;
     padding: 6px 12px;
     font-size: 12px;
-    border: 1px solid #ebebf0;
+    border: 1px solid var(--ds-color-border);
     border-radius: 20px;
   }
 

@@ -14,7 +14,7 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #f4f5f7;
+  background: var(--ds-color-bg);
   font-family: 'DM Sans', sans-serif;
   position: relative;
   overflow-x: hidden;
@@ -31,8 +31,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  border-bottom: 1px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border-bottom: 1px solid var(--ds-color-border);
   box-shadow: 0 1px 4px rgba(10, 10, 10,0.04);
   padding: 0 24px;
   box-sizing: border-box;
@@ -50,7 +50,7 @@
 .dh-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,7 +85,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #0a0a0a;
+  color: var(--ds-color-text);
   width: 34px;
   height: 34px;
   border-radius: 6px;
@@ -95,7 +95,7 @@
   transition: background 0.18s;
 }
 
-.dh-action:hover { background: #f0f0f8; }
+.dh-action:hover { background: var(--ds-color-bg); }
 
 .dh-role-badge {
   display: inline-flex;
@@ -122,10 +122,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  border-top: 1px solid #ebebf0;
+  background: var(--ds-color-surface);
+  border-top: 1px solid var(--ds-color-border);
   font-size: 0.78rem;
-  color: #aaa;
+  color: var(--ds-color-text-faint);
   font-family: 'DM Sans', sans-serif;
   box-sizing: border-box;
   transition: left 0.3s cubic-bezier(.4,0,.2,1);
@@ -150,7 +150,7 @@
   box-sizing: border-box;
   min-height: calc(100vh - var(--dh-h) - var(--df-h));
   overflow-x: hidden;
-  background: #f4f5f7;
+  background: var(--ds-color-bg);
 }
 
 /* ── Backward-compat aliases (old class names used by sub-pages) */
@@ -170,13 +170,13 @@
   margin-bottom: var(--df-h);
   padding: 24px;
   box-sizing: border-box;
-  background: #f4f5f7;
+  background: var(--ds-color-bg);
   overflow-x: hidden;
 }
 
 /* main CardGrid — same white card treatment as dashboard-page */
 .dashboard-sections {
-  background: #ffffff;
+  background: var(--ds-color-surface);
   border-radius: 6px;
   padding: 15px;
   width: 100%;
