@@ -2086,17 +2086,12 @@
   // Get order statistics
   module.exports.getOrderStats = async (req, res) => {
     try {
-      // Date filter support
+      // Date filter support (IST day boundaries; gate on hasRange — Op.* are
+      // Symbols so Object.keys() is always 0 and must not be used to detect it).
       const { start_date, end_date } = req.query;
-      const dateWhere = {};
-      if (start_date) dateWhere[Op.gte] = new Date(start_date);
-      if (end_date) {
-        const endDate = new Date(end_date);
-        endDate.setHours(23, 59, 59, 999);
-        dateWhere[Op.lte] = endDate;
-      }
-      const hasDateFilter = Object.keys(dateWhere).length > 0;
-      const orderWhere = hasDateFilter ? { createdAt: dateWhere } : {};
+      const { buildCreatedAtRange } = require('../utils/dateRange.js');
+      const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
+      const orderWhere = hasRange ? { createdAt: range } : {};
 
       const totalOrders = await Order.count({ where: orderWhere });
 

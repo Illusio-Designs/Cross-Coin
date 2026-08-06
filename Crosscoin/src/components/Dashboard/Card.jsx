@@ -172,7 +172,7 @@ function CardGrid() {
   if (stats.lowStock?.outOfStockCount > 0) alerts.push(`${stats.lowStock.outOfStockCount} out of stock`);
   if (stats.lowStock?.lowStockCount > 0) alerts.push(`${stats.lowStock.lowStockCount} low stock`);
   if (stats.rtoStats?.rtoRate > 0) alerts.push(`RTO rate: ${stats.rtoStats.rtoRate}%`);
-  if (orders.pending > 0) alerts.push(`${orders.pending} orders pending`);
+  if (pendingCount > 0) alerts.push(`${pendingCount} orders pending`);
 
   return (
     <div className="dashboard-sections">
@@ -234,7 +234,7 @@ function CardGrid() {
       <div className="dc-two-col">
         <Panel title="Order Pipeline">
           <div className="dc-pipeline">
-            <PipelineStep label="Pending" count={orders.pending || 0} total={pipelineTotal} color="#f59e0b" />
+            <PipelineStep label="Pending" count={pendingCount} total={pipelineTotal} color="#f59e0b" />
             <PipelineStep label="Confirmed" count={confirmedCount} total={pipelineTotal} color="#3b82f6" />
             <PipelineStep label="Shipped" count={shippedCount} total={pipelineTotal} color="#0891b2" />
             <PipelineStep label="Delivered" count={orders.completed || 0} total={pipelineTotal} color="#10b981" />
