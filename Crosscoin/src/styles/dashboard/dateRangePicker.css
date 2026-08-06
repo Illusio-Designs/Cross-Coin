@@ -80,13 +80,13 @@
 
 /* ── Action Buttons ── */
 .drp-apply-btn {
-  height: 38px;
-  padding: 0 18px;
+  height: 34px;
+  padding: 0 16px;
   background: #0a0a0a;
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
@@ -105,14 +105,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 38px;
+  height: 34px;
   padding: 0 12px;
   background: var(--ds-color-bg);
   color: var(--ds-color-text-muted);
-  border: 1px solid var(--ds-color-border);
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
   white-space: nowrap;
