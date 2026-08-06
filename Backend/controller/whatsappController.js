@@ -622,8 +622,6 @@ exports.getMessages = async (req, res) => {
   res.setHeader('Access-Control-Expose-Headers', 'X-DB-Ms, X-Handler-Ms');
   try {
     const { id } = req.params;
-    const conv = await WhatsappConversation.findByPk(id);
-    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
     // Paginated: newest LIMIT by default; ?before=<messageId> loads the previous
     // page (for "load older"). hasMore tells the client whether to keep the
@@ -633,12 +631,17 @@ exports.getMessages = async (req, res) => {
     const where = { conversation_id: id };
     if (before) where.id = { [Op.lt]: before };
 
+    // The conversation lookup and the messages query are independent — on a
+    // remote DB each await is a network round-trip, so run them in parallel
+    // instead of back-to-back (halves the latency for this endpoint).
     const tDb = Date.now();
-    let rows = await WhatsappMessage.findAll({
-      where,
-      order: [['id', 'DESC']],
-      limit: LIMIT + 1,
-    });
+    const [conv, rowsRaw] = await Promise.all([
+      WhatsappConversation.findByPk(id),
+      WhatsappMessage.findAll({ where, order: [['id', 'DESC']], limit: LIMIT + 1 }),
+    ]);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    let rows = rowsRaw;
     const hasMore = rows.length > LIMIT;
     if (hasMore) rows = rows.slice(0, LIMIT);
     rows.reverse(); // chronological (oldest → newest)
@@ -659,9 +662,13 @@ exports.getMessages = async (req, res) => {
       return plain;
     });
 
-    // Only write when there's actually something to clear (avoids a needless
-    // UPDATE on every open of an already-read chat).
-    if (!before && conv.unread_count > 0) await conv.update({ unread_count: 0 });
+    // Clearing the unread badge is a side effect the client doesn't wait on —
+    // fire it off without blocking the response (saves a round-trip on open).
+    // Only write when there's actually something to clear.
+    if (!before && conv.unread_count > 0) {
+      conv.unread_count = 0; // reflect in the response payload immediately
+      conv.update({ unread_count: 0 }).catch(() => {});
+    }
 
     res.setHeader('X-DB-Ms', String(dbMs));
     res.setHeader('X-Handler-Ms', String(Date.now() - t0));
