@@ -73,7 +73,7 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[46vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
+      <div className="relative flex min-h-[68vh] items-end justify-start bg-gray-900 sm:min-h-[74vh] md:min-h-[88vh]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -83,13 +83,13 @@ export function HeroBanner({ slides = [] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeInOut' }}
           >
-            {/* MOBILE: contain so the whole banner (incl. its text) is visible,
-                never cropped. DESKTOP: full-bleed cover. */}
+            {/* Full-bleed banner — fills the whole (taller) hero at full height
+                and width. */}
             <ShimmerImg
               src={slide.image}
               alt={slide.title || 'Banner'}
               shimmerClassName="bg-gray-800"
-              className="absolute inset-0 h-full w-full object-contain object-center sm:object-cover"
+              className="absolute inset-0 h-full w-full object-cover object-center"
             />
           </motion.div>
         </AnimatePresence>
