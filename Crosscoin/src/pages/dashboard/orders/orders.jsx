@@ -72,6 +72,10 @@ const Orders = () => {
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [liveUpdates, setLiveUpdates] = useState(true);
     const [filterOpen, setFilterOpen] = useState(false);
+    // Shipping-address editor (fix wrong pincode/phone that blocks courier booking)
+    const [editingAddress, setEditingAddress] = useState(false);
+    const [savingAddress, setSavingAddress] = useState(false);
+    const [addressForm, setAddressForm] = useState({});
     // Manual courier picker — opened directly or auto-opened when an
     // auto-sync comes back failed (no serviceable courier).
 
@@ -353,6 +357,49 @@ const Orders = () => {
         } catch (error) { showError('updateFailed', error.message || 'Failed to update AWB number'); }
     };
 
+    // ── Shipping-address edit (fix pincode/phone/etc. that blocks shipping) ──
+    const buildAddressForm = (order) => {
+        const a = order?.ShippingAddress || {};
+        return {
+            full_name: a.full_name || '', phone: a.phone || '', address: a.address || '',
+            landmark: a.landmark || '', city: a.city || '', state: a.state || '',
+            pincode: a.pincode || '', country: a.country || 'India',
+        };
+    };
+    const startEditAddress = () => {
+        setAddressForm(buildAddressForm(selectedOrder));
+        setEditingAddress(true);
+    };
+    // Open the order panel straight into the address editor (row action).
+    const openAddressEditor = (row) => {
+        if (!row.ShippingAddress) { showError('updateFailed', 'This order has no shipping address to edit'); return; }
+        setSelectedOrder(row);
+        setAddressForm(buildAddressForm(row));
+        setEditingAddress(true);
+        setIsViewModalOpen(true);
+    };
+
+    const saveAddress = async () => {
+        if (!/^\d{6}$/.test(String(addressForm.pincode || '').trim())) {
+            showError('fieldRequired', 'Pincode must be 6 digits'); return;
+        }
+        setSavingAddress(true);
+        try {
+            const res = await orderService.updateOrderAddress(selectedOrder.id, addressForm);
+            const updated = res?.address || { ...selectedOrder.ShippingAddress, ...addressForm };
+            // Reflect the change in the open detail panel immediately.
+            setSelectedOrder(prev => prev ? { ...prev, ShippingAddress: { ...prev.ShippingAddress, ...updated } } : prev);
+            setEditingAddress(false);
+            showSuccess('addressUpdated', res?.message || 'Shipping address updated. Re-sync to re-check serviceability.');
+            highlightRow(selectedOrder.id);
+            fetchOrders(currentPage);
+        } catch (error) {
+            showError('updateFailed', error.message || 'Failed to update address');
+        } finally {
+            setSavingAddress(false);
+        }
+    };
+
     const handleExportDeliveredOrders = async () => {
         if (!exportStartDate || !exportEndDate) { showError('selectDates'); return; }
         if (new Date(exportStartDate) > new Date(exportEndDate)) { showError('dateError'); return; }
@@ -628,9 +675,9 @@ const Orders = () => {
                                 </button>
                             </Tooltip>
                         )}
-                        <Tooltip text="Update or correct the Air Waybill number" position="top">
-                            <button className="order-action-btn order-awb-btn" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        <Tooltip text="Edit shipping address (fix wrong pincode, phone, etc.)" position="top">
+                            <button className="order-action-btn order-address-btn" onClick={() => openAddressEditor(row)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                             </button>
                         </Tooltip>
                         {(row.Shipment?.waybill || row.fship_waybill) && (
@@ -886,7 +933,7 @@ const Orders = () => {
             {/* Order Details Modal */}
             <Modal
               isOpen={isViewModalOpen}
-              onClose={() => setIsViewModalOpen(false)}
+              onClose={() => { setIsViewModalOpen(false); setEditingAddress(false); }}
               title={`Order Details: #${selectedOrder?.order_number}`}
               size="lg"
               role="dialog"
@@ -926,32 +973,65 @@ const Orders = () => {
                             {/* Shipping Address */}
                             {selectedOrder.ShippingAddress && (
                                 <div className="odm-card">
-                                    <div className="odm-card-title">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                        Shipping Address
+                                    <div className="odm-card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            Shipping Address
+                                        </span>
+                                        {!editingAddress && (
+                                            <button type="button" className="oa-edit-btn" onClick={startEditAddress} title="Edit address (fix wrong pincode, phone, etc.)">
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                Edit
+                                            </button>
+                                        )}
                                     </div>
-                                    <div className="odm-fields">
-                                        <div className="odm-field">
-                                            <span className="odm-label">Name</span>
-                                            <span className="odm-value odm-bold">{selectedOrder.ShippingAddress.full_name}</span>
+
+                                    {!editingAddress ? (
+                                        <div className="odm-fields">
+                                            <div className="odm-field">
+                                                <span className="odm-label">Name</span>
+                                                <span className="odm-value odm-bold">{selectedOrder.ShippingAddress.full_name}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Address</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.address}{selectedOrder.ShippingAddress.landmark ? `, ${selectedOrder.ShippingAddress.landmark}` : ''}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">City / State</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} — {selectedOrder.ShippingAddress.pincode}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Country</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.country || 'India'}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Phone</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.phone}</span>
+                                            </div>
                                         </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Address</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.address}</span>
+                                    ) : (
+                                        <div className="oa-form">
+                                            <div className="oa-row">
+                                                <label>Name<input value={addressForm.full_name} onChange={e => setAddressForm(f => ({ ...f, full_name: e.target.value }))} /></label>
+                                                <label>Phone<input value={addressForm.phone} onChange={e => setAddressForm(f => ({ ...f, phone: e.target.value }))} /></label>
+                                            </div>
+                                            <label>Address<textarea rows={2} value={addressForm.address} onChange={e => setAddressForm(f => ({ ...f, address: e.target.value }))} /></label>
+                                            <label>Landmark<input value={addressForm.landmark} onChange={e => setAddressForm(f => ({ ...f, landmark: e.target.value }))} /></label>
+                                            <div className="oa-row">
+                                                <label>City<input value={addressForm.city} onChange={e => setAddressForm(f => ({ ...f, city: e.target.value }))} /></label>
+                                                <label>State<input value={addressForm.state} onChange={e => setAddressForm(f => ({ ...f, state: e.target.value }))} /></label>
+                                            </div>
+                                            <div className="oa-row">
+                                                <label>Pincode<input inputMode="numeric" maxLength={6} value={addressForm.pincode} onChange={e => setAddressForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))} /></label>
+                                                <label>Country<input value={addressForm.country} onChange={e => setAddressForm(f => ({ ...f, country: e.target.value }))} /></label>
+                                            </div>
+                                            <div className="oa-actions">
+                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingAddress(false)} disabled={savingAddress}>Cancel</button>
+                                                <button type="button" className="btn btn-primary btn-sm" onClick={saveAddress} disabled={savingAddress}>{savingAddress ? 'Saving…' : 'Save address'}</button>
+                                            </div>
+                                            <p className="oa-hint">After saving, click <b>Sync</b> on the order row to re-check courier serviceability for the new pincode.</p>
                                         </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">City / State</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} — {selectedOrder.ShippingAddress.pincode}</span>
-                                        </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Country</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.country || 'India'}</span>
-                                        </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Phone</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.phone}</span>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1132,47 +1212,39 @@ const Orders = () => {
 
                         {/* Manifest Section */}
                         {(selectedOrder.Shipment?.waybill || selectedOrder.fship_waybill) && (
-                            <div className="odm-card" style={{ backgroundColor: '#fafafa', borderLeft: '4px solid #FF9800' }}>
-                                <div className="odm-card-title" style={{ color: '#FF9800' }}>
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <div className="odm-card">
+                                <div className="odm-card-title">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                         <polyline points="14 2 14 8 20 8"/>
                                     </svg>
-                                    Manifest & Download
+                                    Shipping Label
                                 </div>
-                                <div style={{ padding: '12px 0' }}>
-                                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#666' }}>
-                                        Download shipping manifest or label for this order.
+                                <div style={{ paddingTop: '8px' }}>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--ds-color-text-muted)' }}>
+                                        Download the shipping label for this order.
                                     </p>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <Button
-                                            variant="primary"
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary btn-md"
                                             onClick={() => generateLabelForOrder(selectedOrder.id)}
                                             disabled={generatingLabel.has(selectedOrder.id)}
-                                            style={{ flex: 1, fontSize: '12px' }}
+                                            style={{ flex: 1 }}
                                         >
-                                            {generatingLabel.has(selectedOrder.id) ? 'Downloading...' : '📥 Download Label'}
-                                        </Button>
+                                            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            {generatingLabel.has(selectedOrder.id) ? 'Preparing…' : 'Download Label'}
+                                        </button>
                                         {selectedOrder.fship_label_url && (
                                             <a
                                                 href={selectedOrder.fship_label_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    backgroundColor: '#2196F3',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    textDecoration: 'none',
-                                                    fontSize: '12px',
-                                                    fontWeight: '500',
-                                                    flex: 1,
-                                                    textAlign: 'center'
-                                                }}
+                                                className="btn btn-outline btn-md"
+                                                style={{ flex: 1, justifyContent: 'center' }}
                                             >
-                                                🏷️ Download Label
+                                                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                                Open Label
                                             </a>
                                         )}
                                     </div>

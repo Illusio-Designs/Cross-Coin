@@ -15,8 +15,16 @@ const { Op } = require('sequelize');
  * ALWAYS 0 and must NOT be used to detect a filter — gate on `hasRange` instead.
  */
 
-// India has no DST, so a fixed offset is correct. Overridable via env.
-const TZ_OFFSET = process.env.APP_TZ_OFFSET || '+05:30';
+// India has no DST, so the business day is ALWAYS +05:30. This is hardcoded on
+// purpose: a stray/empty APP_TZ_OFFSET in the environment was making the day
+// boundary fall back to UTC, which dropped every order placed between 00:00 and
+// 05:30 IST (they land on the previous UTC day) from date-filtered results —
+// e.g. a day with 13 orders showed only 7. Only honour APP_TZ_OFFSET if it is a
+// well-formed, non-UTC offset; otherwise force IST.
+const _envTz = String(process.env.APP_TZ_OFFSET || '').trim();
+const TZ_OFFSET = (/^[+-]\d{2}:\d{2}$/.test(_envTz) && _envTz !== '+00:00' && _envTz !== '-00:00')
+  ? _envTz
+  : '+05:30';
 
 // Start of the given calendar day IN THE BUSINESS TZ, as a UTC Date.
 // e.g. IST '2026-08-06' → 2026-08-05T18:30:00.000Z

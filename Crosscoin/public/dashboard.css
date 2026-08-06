@@ -5451,6 +5451,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px 20px;
 }
+/* Let grid/flex children shrink instead of pushing a track past the aside
+   panel's edge (which the panel then clips). Fixes right-side cut-off. */
+.odm-row-2 > *,
+.odm-info-grid > *,
+.odm-field { min-width: 0; }
+.odm-info-grid .odm-value,
+.odm-summary-row .odm-value { overflow-wrap: anywhere; word-break: break-word; }
 
 /* FShip block */
 .odm-fship {
@@ -5798,6 +5805,54 @@
   margin-top: 12px;
 }
 .ord-filter-drawer > .ord-filter-label:first-child { margin-top: 0; }
+
+/* ── Order shipping-address inline editor ────────────────────────────── */
+.oa-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-muted);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.oa-edit-btn:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
+.oa-form { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.oa-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-text-muted);
+  flex: 1 1 0;
+  min-width: 0;            /* let flex children shrink instead of overflowing */
+}
+.oa-form input,
+.oa-form textarea {
+  width: 100%;
+  box-sizing: border-box;  /* keep inputs inside the narrow aside panel */
+  border: 1px solid var(--ds-color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ds-color-text);
+  background: var(--ds-color-bg);
+  font-family: inherit;
+  resize: vertical;
+}
+.oa-form input:focus,
+.oa-form textarea:focus { outline: none; border-color: #0a0a0a; background: var(--ds-color-surface); }
+.oa-row { display: flex; gap: 10px; }
+.oa-row > label { flex: 1 1 0; min-width: 0; }
+.oa-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.oa-hint { font-size: 11px; color: var(--ds-color-text-muted); margin: 2px 0 0; line-height: 1.4; }
 
 
 /* ===== dashboard/media.css ===== */
