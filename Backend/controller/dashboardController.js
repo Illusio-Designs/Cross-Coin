@@ -12,13 +12,14 @@ const getDashboardStats = async (req, res) => {
     const brandId = req.brandId || null;
     const { start_date, end_date } = req.query;
 
-    // Parse date filters
+    // Parse date filters — anchored to IST day boundaries (see utils/dateRange).
+    // Using new Date()+setHours() computed the day in the server's UTC timezone,
+    // so early-morning IST orders (e.g. placed 12:05 AM) landed on the previous
+    // UTC day and were dropped from "today".
+    const { dayStartTZ, dayEndTZ } = require('../utils/dateRange.js');
     const dateFilter = {};
-    if (start_date) dateFilter.startDate = new Date(start_date);
-    if (end_date) {
-      dateFilter.endDate = new Date(end_date);
-      dateFilter.endDate.setHours(23, 59, 59, 999); // include full end day
-    }
+    if (start_date) dateFilter.startDate = dayStartTZ(start_date);
+    if (end_date) dateFilter.endDate = dayEndTZ(end_date); // full IST end day
 
     const hasDateFilter = !!(start_date || end_date);
 
