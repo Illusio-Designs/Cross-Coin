@@ -26,15 +26,17 @@ const RANGES = {
 };
 
 function statusFor(value, ranges) {
+  // Monochrome: severity is conveyed by the greyscale weight of the fill plus
+  // the label text, not by hue (matches the black-and-white dashboard theme).
   const n = value.length;
-  if (n === 0) return { color: '#9ca3af', label: 'empty', tone: 'neutral' };
+  if (n === 0) return { color: 'var(--ds-color-text-faint)', label: 'empty', tone: 'neutral' };
   if (n >= ranges.optimal[0] && n <= ranges.optimal[1]) {
-    return { color: '#16a34a', label: 'optimal', tone: 'good' };
+    return { color: 'var(--ds-color-text)', label: 'optimal', tone: 'good' };
   }
   if (n >= ranges.warn[0] && n <= ranges.warn[1]) {
-    return { color: '#d97706', label: n < ranges.optimal[0] ? 'too short' : 'a bit long', tone: 'warn' };
+    return { color: 'var(--ds-color-text-muted)', label: n < ranges.optimal[0] ? 'too short' : 'a bit long', tone: 'warn' };
   }
-  return { color: '#dc2626', label: n < ranges.warn[0] ? 'much too short' : 'too long', tone: 'bad' };
+  return { color: 'var(--ds-color-text-faint)', label: n < ranges.warn[0] ? 'much too short' : 'too long', tone: 'bad' };
 }
 
 export default function SeoLengthMeter({ value = '', type = 'title' }) {
@@ -47,7 +49,7 @@ export default function SeoLengthMeter({ value = '', type = 'title' }) {
       <div style={{
         flex: 1,
         height: 4,
-        background: '#f3f4f6',
+        background: 'var(--ds-color-border)',
         borderRadius: 4,
         overflow: 'hidden',
       }}>
@@ -58,7 +60,7 @@ export default function SeoLengthMeter({ value = '', type = 'title' }) {
           transition: 'width 0.2s ease, background 0.2s ease',
         }} />
       </div>
-      <div style={{ fontSize: 11, color: status.color, fontWeight: 600, minWidth: 110, textAlign: 'right' }}>
+      <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontWeight: 600, minWidth: 110, textAlign: 'right' }}>
         {value.length} chars · {status.label}
       </div>
     </div>
