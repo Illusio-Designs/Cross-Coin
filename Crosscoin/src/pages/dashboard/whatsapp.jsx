@@ -131,7 +131,7 @@ function PhonePreview({ tpl }) {
           <div className="was-ph-bubble">
             <div className="was-ph-btext" {...inlineHtml(html)} />
             {tpl.footer && <div className="was-ph-bfooter">{tpl.footer}</div>}
-            <div className="was-ph-bmeta"><span>Just now</span><span style={{color:'#53bdeb'}}>✓✓</span></div>
+            <div className="was-ph-bmeta"><span>Just now</span><span style={{color:'#8a95a3'}}>✓✓</span></div>
           </div>
           {tpl.btn1?.text && <div className="was-ph-btn">{tpl.btn1.text}</div>}
         </div>
@@ -275,7 +275,7 @@ function AudioPlayer({ src }) {
   if (loadState === 'unsupported' && blobUrl) return (
     <a href={blobUrl} download={`voice-note.${dlExt}`}
        style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'var(--ds-color-text-muted)', textDecoration:'none',
-               background:'#e8f5f0', border:'1px solid #b8e0d4', borderRadius:8, padding:'8px 12px'}}>
+               background:'#f0f1f3', border:'1px solid #d7d9dd', borderRadius:8, padding:'8px 12px'}}>
       <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={2} />
       Download voice note
     </a>
@@ -298,7 +298,7 @@ function AudioPlayer({ src }) {
       <button onClick={toggle} disabled={loadState !== 'ready'} style={{
         width:36, height:36, borderRadius:'50%', border:'none',
         cursor: loadState === 'ready' ? 'pointer' : 'wait',
-        background:'#0b7a5e', display:'flex', alignItems:'center', justifyContent:'center',
+        background:'#0d1117', display:'flex', alignItems:'center', justifyContent:'center',
         flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)', opacity: loadState === 'loading' ? 0.6 : 1,
       }}>
         {loadState === 'loading'
@@ -311,7 +311,7 @@ function AudioPlayer({ src }) {
       <div style={{flex:1, display:'flex', flexDirection:'column', gap:4}}>
         <div onClick={seek} style={{display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer'}}>
           {bars.map((h,i) => (
-            <div key={i} style={{width:3, height:h, borderRadius:2, flexShrink:0, background: i/bars.length <= progress ? '#0b7a5e' : '#d1d5db', transition:'background 0.1s'}}/>
+            <div key={i} style={{width:3, height:h, borderRadius:2, flexShrink:0, background: i/bars.length <= progress ? '#0d1117' : '#d1d5db', transition:'background 0.1s'}}/>
           ))}
         </div>
         <div style={{fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between'}}>
@@ -1697,7 +1697,7 @@ export function WhatsAppManager() {
                                 {msg._quotedMsg && (
                                   <div style={{
                                     background: msg.direction === 'outbound' ? 'rgba(11,122,94,0.1)' : 'rgba(0,0,0,0.06)',
-                                    borderLeft: '3px solid #0b7a5e',
+                                    borderLeft: '3px solid #0d1117',
                                     borderRadius: '4px 4px 0 0',
                                     padding: '5px 8px',
                                     marginBottom: 6,
@@ -1726,8 +1726,8 @@ export function WhatsAppManager() {
                                       <span title="Failed to send" style={{color:'#0a0a0a', fontWeight:700, fontSize:12}}>!</span>
                                     ) : msg.status === 'read' ? (
                                       <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
-                                        <path d="M1 5.5L4.5 9L10 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M6 5.5L9.5 9L15 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M1 5.5L4.5 9L10 3" stroke="#8a95a3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M6 5.5L9.5 9L15 3" stroke="#8a95a3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                       </svg>
                                     ) : msg.status === 'delivered' ? (
                                       <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
@@ -1795,7 +1795,7 @@ export function WhatsAppManager() {
                         {replyTo && (
                           <div style={{
                             position:'absolute', bottom:'100%', left:0, right:0,
-                            background:'#f0f4ff', borderTop:'3px solid #0b7a5e',
+                            background:'#f0f1f3', borderTop:'3px solid #0d1117',
                             padding:'8px 12px', display:'flex', alignItems:'center', justifyContent:'space-between',
                             fontSize:12,
                           }}>
@@ -2438,13 +2438,13 @@ export function WhatsAppManager() {
                       onClick={() => toggleProduct(p)}
                       style={{
                         display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
-                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#0b7a5e' : 'var(--ds-color-border)'}`,
-                        background: selected ? '#e8f5f0' : 'var(--ds-color-surface)', transition:'all 0.15s'
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#0d1117' : 'var(--ds-color-border)'}`,
+                        background: selected ? '#f0f1f3' : 'var(--ds-color-surface)', transition:'all 0.15s'
                       }}
                     >
                       <div style={{
-                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#0b7a5e' : '#d1d5db'}`,
-                        background: selected ? '#0b7a5e' : 'transparent', flexShrink:0,
+                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#0d1117' : '#d1d5db'}`,
+                        background: selected ? '#0d1117' : 'transparent', flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center'
                       }}>
                         {selected && <HugeiconsIcon icon={Tick02Icon} size={10} strokeWidth={3} color="#fff" />}
