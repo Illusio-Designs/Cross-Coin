@@ -26,12 +26,14 @@ describe('buildCreatedAtRange', () => {
     const end = range[Op.lte];
     expect(start).toBeInstanceOf(Date);
     expect(end).toBeInstanceOf(Date);
-    expect(start.getHours()).toBe(0);
-    expect(start.getMinutes()).toBe(0);
-    // End is normalised to 23:59:59.999 so the whole end day is included.
-    expect(end.getHours()).toBe(23);
-    expect(end.getMinutes()).toBe(59);
-    expect(end.getSeconds()).toBe(59);
+    // Boundaries are anchored to the INDIA business day (+05:30) and returned
+    // as UTC instants, so assert the absolute UTC value — NOT local getHours(),
+    // which depends on the runner's timezone (CI runs in UTC, so IST-midnight
+    // reads back as hour 18, not 0). IST 2026-07-21 00:00 = 2026-07-20 18:30 UTC.
+    expect(start.toISOString()).toBe('2026-07-20T18:30:00.000Z');
+    // End is normalised to 23:59:59.999 IST so the whole end day is included:
+    // IST 2026-07-31 23:59:59.999 = 2026-07-31 18:29:59.999 UTC.
+    expect(end.toISOString()).toBe('2026-07-31T18:29:59.999Z');
   });
 
   test('start only → only Op.gte', () => {
