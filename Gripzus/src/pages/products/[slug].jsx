@@ -240,7 +240,7 @@ export default function ProductDetail() {
                 {images.length > 1 && (
                   <div
                     ref={thumbsRef}
-                    className="flex items-start gap-2 overflow-x-auto p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-h-[28rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto"
+                    className="flex items-start gap-2 overflow-x-auto p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] max-w-[172px] mx-auto sm:mx-0 sm:max-w-none sm:max-h-[172px] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto"
                   >
                     {images.slice(0, 8).map((img, i) => (
                       <button
@@ -260,9 +260,10 @@ export default function ProductDetail() {
                   </div>
                 )}
 
-                {/* Main image — full image (never cropped), capped height, no bg */}
+                {/* Main image — a fixed SQUARE frame so every product renders at
+                    the same size; the photo is contained (never cropped). */}
                 <div
-                  className="gz-pdp-main relative flex-1 overflow-hidden"
+                  className="gz-pdp-main relative flex-1 aspect-square grid place-items-center overflow-hidden"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
                 >
@@ -270,7 +271,7 @@ export default function ProductDetail() {
                     key={curImg}
                     src={images[curImg]}
                     alt={product.name}
-                    className="gz-pdp-img mx-auto block w-full max-h-[26rem] object-contain"
+                    className="gz-pdp-img block h-full w-full object-contain"
                   />
 
                   <style jsx>{`

@@ -53,11 +53,9 @@ export default function ExclusiveSection({ products = [] }) {
   const [added, setAdded]   = useState(false);
   const [shown, setShown]   = useState(false);
   const [paused, setPaused] = useState(false);
-  const [railH, setRailH]   = useState(0);
   const { addItem } = useCart();
   const router = useRouter();
   const sectionRef = useRef(null);
-  const mainRef    = useRef(null);
   const thumbsRef  = useRef(null);
 
   const activeIndex = list.length ? Math.min(active, list.length - 1) : 0;
@@ -85,17 +83,6 @@ export default function ExclusiveSection({ products = [] }) {
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }, { threshold: 0.2 });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
-
-  // Match the thumbnail rail height to the main image (so extra thumbs scroll).
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const update = () => setRailH(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   // Auto-advance the main image through the gallery every 3s (pause on hover).
@@ -158,7 +145,7 @@ export default function ExclusiveSection({ products = [] }) {
           <div className="excl3-stage">
             <div className="excl3-stage-row">
               {imgCount > 1 && (
-                <div className="excl3-thumbs no-scrollbar" ref={thumbsRef} style={railH ? { maxHeight: railH } : undefined}>
+                <div className="excl3-thumbs no-scrollbar" ref={thumbsRef}>
                   {gallery.map((img, i) => (
                     <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)}
                       className={`excl3-thumb ${i === safeIdx ? 'on' : ''}`} aria-label={`View image ${i + 1}`}>
@@ -167,7 +154,7 @@ export default function ExclusiveSection({ products = [] }) {
                   ))}
                 </div>
               )}
-              <div className="excl3-frame" ref={mainRef}>
+              <div className="excl3-frame">
                 <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
                 {product.badge && <span className="excl3-badge">{product.badge}</span>}
               </div>
@@ -254,24 +241,28 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-stage { position: relative; }
         .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
 
-        /* Thumbnail rail — on the LEFT of the main image; height matches it, extras scroll. */
-        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+        /* Thumbnail rail — on the LEFT of the main image; shows exactly 3
+           thumbnails (64px × 3 + 2 gaps = 212px), the rest scroll and the rail
+           auto-follows the active image. */
+        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; max-height: 212px; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
         .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
         .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Main image — natural height, capped so it never dominates. */
+        /* Main image — a fixed SQUARE frame so every product renders at the same
+           size; the photo is contained (never cropped) and centred. */
         .excl3-frame {
           position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
           flex: 1; min-width: 0; max-width: 460px; align-self: flex-start;
+          aspect-ratio: 1 / 1; display: grid; place-items: center;
           opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
         .is-shown .excl3-frame { opacity: 1; transform: none; }
-        .excl3-img { width: 100%; height: auto; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
+        .excl3-img { width: 100%; height: 100%; object-fit: contain; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
         .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 0; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
@@ -328,10 +319,10 @@ export default function ExclusiveSection({ products = [] }) {
           .excl3-grid { gap: 30px; }
 
           .excl3-stage-row { gap: 10px; }
-          .excl3-thumbs { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; padding-right: 3px; }
+          /* 3 thumbnails at 56px + 2 gaps = 188px */
+          .excl3-thumbs { max-height: 188px; -webkit-overflow-scrolling: touch; padding-right: 3px; }
           .excl3-thumb { width: 56px; height: 56px; }
-          .excl3-frame { max-width: 100%; display: grid; place-items: center; }
-          .excl3-img { width: auto; max-width: 100%; height: auto; max-height: 68vh; margin: 0 auto; }
+          .excl3-frame { max-width: 100%; }
 
           .excl3-name { margin-top: 8px; }
           .excl3-price { margin-top: 14px; }
