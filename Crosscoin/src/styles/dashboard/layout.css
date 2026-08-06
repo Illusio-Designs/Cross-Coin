@@ -111,6 +111,191 @@
   letter-spacing: 0.2px;
 }
 
+/* ── Header profile menu ────────────────────────────────────── */
+.dh-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--ds-color-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.dh-profile { position: relative; flex-shrink: 0; }
+
+.dh-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s;
+  max-width: 220px;
+}
+.dh-profile-btn:hover { background: var(--ds-color-bg); border-color: var(--ds-color-border); }
+
+.dh-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-color-text);
+  color: var(--ds-color-surface);
+}
+.dh-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dh-avatar-ini { font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
+.dh-avatar--lg { width: 44px; height: 44px; }
+.dh-avatar--lg .dh-avatar-ini { font-size: 16px; }
+
+.dh-profile-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  min-width: 0;
+}
+.dh-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ds-color-text);
+  font-family: 'DM Sans', sans-serif;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dh-profile-role {
+  font-size: 11px;
+  color: var(--ds-color-text-muted);
+  font-family: 'DM Sans', sans-serif;
+}
+.dh-profile-chev { display: inline-flex; color: var(--ds-color-text-muted); transition: transform 0.18s; }
+.dh-profile-chev.is-open { transform: rotate(180deg); }
+
+.dh-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: 12px;
+  box-shadow: var(--ds-shadow-pop);
+  padding: 8px;
+  z-index: 300;
+  animation: dh-menu-in 0.14s ease;
+}
+@keyframes dh-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dh-menu-head { display: flex; gap: 12px; align-items: center; padding: 8px 8px 10px; }
+.dh-menu-idty { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dh-menu-name {
+  font-size: 14px; font-weight: 700; color: var(--ds-color-text);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dh-menu-email {
+  font-size: 12px; color: var(--ds-color-text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 175px;
+}
+.dh-menu-rolechip {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--ds-color-text-muted);
+  background: var(--ds-color-surface-soft);
+  border: 1px solid var(--ds-color-border);
+  align-self: flex-start;
+}
+
+.dh-menu-sep { height: 1px; background: var(--ds-color-border); margin: 4px 0; }
+
+.dh-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ds-color-text);
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.14s;
+  text-align: left;
+}
+.dh-menu-item:hover { background: var(--ds-color-bg); }
+.dh-menu-item--danger { color: var(--ds-color-danger); }
+.dh-menu-item--danger:hover { background: var(--ds-color-danger-bg); }
+
+/* ── Edit-profile modal form ────────────────────────────────── */
+.dh-editform { display: flex; flex-direction: column; gap: 16px; }
+.dh-field { display: flex; flex-direction: column; gap: 6px; }
+.dh-field-lbl {
+  font-size: 12px; font-weight: 600; color: var(--ds-color-text-muted);
+  font-family: 'DM Sans', sans-serif; letter-spacing: 0.2px;
+}
+.dh-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-color-border);
+  border-radius: 8px;
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  box-sizing: border-box;
+  transition: border-color 0.16s;
+}
+.dh-input:focus { outline: none; border-color: var(--ds-color-text); }
+.dh-field-err {
+  font-size: 12.5px;
+  color: var(--ds-color-danger);
+  background: var(--ds-color-danger-bg);
+  border: 1px solid var(--ds-color-danger-bd);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.dh-mbtn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.14s, opacity 0.14s;
+}
+.dh-mbtn:hover:not(:disabled) { background: var(--ds-color-bg); }
+.dh-mbtn--primary { background: var(--ds-color-text); color: var(--ds-color-surface); border-color: var(--ds-color-text); }
+.dh-mbtn--primary:hover:not(:disabled) { opacity: 0.88; background: var(--ds-color-text); }
+.dh-mbtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .dh-profile-meta { display: none; }
+  .dh-profile-btn { padding: 3px; }
+  .dh-menu { width: 240px; }
+}
+
 /* ── Footer ─────────────────────────────────────────────────── */
 .df {
   position: fixed;

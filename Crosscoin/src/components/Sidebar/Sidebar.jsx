@@ -86,7 +86,7 @@ const ALL_MENU = [
   { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'] },
   { label: 'WhatsApp',     icon: IC.wa,         view: 'whatsapp',    roles: ['admin','whatsapp_manager'] },
   { label: 'Staff Users',  icon: IC.staffUsers, view: 'staff-users', roles: ['admin'] },
-  { label: 'Logout',       icon: IC.logout,     view: 'logout' },
+  // Logout moved to the header profile menu (see DashboardHeader → ProfileMenu).
 ];
 
 // userRoles is the user's effective role set — an item shows if the user holds
