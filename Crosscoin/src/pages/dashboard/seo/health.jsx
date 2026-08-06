@@ -150,7 +150,7 @@ function Stat({ label, count, total, tone = 'auto' }) {
   const pct = total ? Math.round((count / total) * 100) : 0;
   const color = tone === 'neutral'
     ? '#6b7280'
-    : (count === 0 ? '#16a34a' : pct > 25 ? '#dc2626' : '#d97706');
+    : (count === 0 ? '#0a0a0a' : pct > 25 ? '#3f3f46' : '#6b6b73');
   return (
     <div style={{
       padding: 12,

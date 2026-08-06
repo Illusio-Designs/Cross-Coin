@@ -281,7 +281,7 @@ export function BrandManager() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                             <span style={{ position: 'relative', width: 38, height: 38, borderRadius: 9, background: 'var(--ds-color-brand)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
                               {brandMono(brand)}
-                              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: brand.primary_color || 'var(--ds-color-text-faint)' }} title={brand.primary_color || ''} />
+                              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: 'var(--ds-color-text-faint)' }} title={brand.primary_color || ''} />
                             </span>
                             <div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{brand.display_name || brand.name}</div><div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', fontFamily: 'var(--ds-font-mono, monospace)' }}>{brand.slug}</div></div>
                           </div>

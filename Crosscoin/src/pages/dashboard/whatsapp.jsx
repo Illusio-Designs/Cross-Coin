@@ -73,7 +73,7 @@ const SAMPLES = ['CC-20240601-0042','3 items','1,299','BlueDart','BD9812345678',
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#7c3aed','#0284c7','#059669','#b45309','#db2777','#dc2626','#0891b2'];
+const AVATAR_COLORS = ['#0a0a0a','#3f3f46','#52525b','#6b6b73','#8a8a92','#9a9aa2','#b8b8bf'];
 function avatarColor(str) { let h = 0; for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]; }
 function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 function timeAgo(date) {
@@ -508,7 +508,7 @@ function MsgContent({ msg, brandId = 1 }) {
           background: isPdf ? '#fef2f2' : '#eff6ff',
           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
         }}>
-          <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} color={isPdf ? '#0b7a5e' : '#3b82f6'} />
+          <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} color={isPdf ? '#0a0a0a' : '#6b6b73'} />
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13, fontWeight:600, color:'#111827', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
@@ -1457,10 +1457,10 @@ export function WhatsAppManager() {
               {/* Stats */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#0b7a5e', icon: IC.send },
-                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#3b82f6', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#f59e0b', icon: IC.eye },
-                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#8b5cf6', icon: IC.msg },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#0a0a0a', icon: IC.send },
+                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#6b6b73', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#6b6b73', icon: IC.eye },
+                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#6b6b73', icon: IC.msg },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
@@ -1527,9 +1527,9 @@ export function WhatsAppManager() {
               {/* Quick cards */}
               <div className="was-quick-row">
                 {[
-                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending  · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#0b7a5e', icon: IC.tpl },
-                  { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#3b82f6', icon: IC.msg },
-                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent  · ${stats?.deliveredMessages ?? 0} delivered`, color:'#f59e0b', icon: IC.phone },
+                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending  · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#0a0a0a', icon: IC.tpl },
+                  { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#6b6b73', icon: IC.msg },
+                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent  · ${stats?.deliveredMessages ?? 0} delivered`, color:'#6b6b73', icon: IC.phone },
                 ].map(q => (
                   <div key={q.label} className="was-quick-card">
                     <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
@@ -1708,7 +1708,7 @@ export function WhatsAppManager() {
                                     {msg.status === 'sending' ? (
                                       <HugeiconsIcon icon={Clock01Icon} size={11} strokeWidth={2} color="#9ca3af" />
                                     ) : msg.status === 'failed' ? (
-                                      <span title="Failed to send" style={{color:'#dc2626', fontWeight:700, fontSize:12}}>!</span>
+                                      <span title="Failed to send" style={{color:'#0a0a0a', fontWeight:700, fontSize:12}}>!</span>
                                     ) : msg.status === 'read' ? (
                                       <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
                                         <path d="M1 5.5L4.5 9L10 3" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1882,7 +1882,7 @@ export function WhatsAppManager() {
                           </span>
                         </div>
                         <div className="was-rp-row"><span className="was-rp-label">Opt-out</span>
-                          <span className="was-rp-value" style={{fontSize:11,color:activeConv.opted_out?'#dc2626':'#16a34a'}}>
+                          <span className="was-rp-value" style={{fontSize:11,color:activeConv.opted_out?'#0a0a0a':'#0a0a0a'}}>
                             {activeConv.opted_out?'Yes':'No'}
                           </span>
                         </div>
@@ -2156,7 +2156,7 @@ export function WhatsAppManager() {
                       <div className="was-tpl-body">{cr.body}</div>
                       <div className="was-tpl-foot" style={{gap:8}}>
                         <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px'}} onClick={() => { setCannedEditId(cr.id); setCannedForm({ shortcut: cr.shortcut, title: cr.title, body: cr.body }); setCannedModal(true); }}>Edit</button>
-                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'#ef4444'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'#0a0a0a'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
                       </div>
                     </div>
                   ))}
@@ -2187,7 +2187,7 @@ export function WhatsAppManager() {
                       <p>No broadcasts yet. Create a campaign to reach all your customers at once.</p>
                     </div>
                   ) : broadcasts.map(b => {
-                    const statusColor = { draft:'#9ca3af', running:'#f59e0b', done:'#22c55e', failed:'#ef4444' }[b.status] || '#9ca3af';
+                    const statusColor = { draft:'#9a9aa2', running:'#6b6b73', done:'#0a0a0a', failed:'#3f3f46' }[b.status] || '#9a9aa2';
                     return (
                       <div key={b.id} className="was-tpl-card">
                         <div className="was-tpl-card-top">
@@ -2227,10 +2227,10 @@ export function WhatsAppManager() {
               {/* Stats row */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#0b7a5e', icon: IC.send },
-                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#3b82f6', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#f59e0b', icon: IC.eye },
-                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#8b5cf6', icon: IC.phone },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#0a0a0a', icon: IC.send },
+                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#6b6b73', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#6b6b73', icon: IC.eye },
+                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#6b6b73', icon: IC.phone },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">

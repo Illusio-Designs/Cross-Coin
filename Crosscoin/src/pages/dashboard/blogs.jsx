@@ -46,9 +46,9 @@ const EMPTY_CAT = { id: null, name: '', description: '', status: 'active' };
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const map = { published: '#22c55e', draft: '#f59e0b', archived: '#6b7280' };
+  const map = { published: '#0a0a0a', draft: '#9a9aa2', archived: '#6b6b73' };
   return (
-    <span style={{ background: map[status] || '#6b7280', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>
+    <span style={{ background: map[status] || '#6b6b73', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>
       {status}
     </span>
   );
@@ -68,7 +68,7 @@ function SectionsEditor({ value, onChange }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>Section {i + 1}</span>
             <button type="button" onClick={() => removeSection(i)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0a0a0a', display: 'flex' }}>
               {IC.trash}
             </button>
           </div>
@@ -499,7 +499,7 @@ export function Blogs() {
                     />
                   </div>
                   <button type="button" onClick={() => removeFeaturedProduct(i)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginBottom: 2 }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0a0a0a', marginBottom: 2 }}>
                     {IC.trash}
                   </button>
                 </div>

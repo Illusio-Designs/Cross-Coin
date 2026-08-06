@@ -507,13 +507,13 @@ const Orders = () => {
 
     const getRowBorderColor = (status) => {
         const borderColorMap = {
-            confirmed: '#10b981',
-            processing: '#2196f3',
-            booked: '#10b981',
-            'in transit': '#06b6d4',
-            delivered: '#10b981',
-            'pending sync': '#f59e0b',
-            'failed sync': '#ef4444'
+            confirmed: '#0a0a0a',
+            processing: '#6b6b73',
+            booked: '#0a0a0a',
+            'in transit': '#6b6b73',
+            delivered: '#0a0a0a',
+            'pending sync': '#6b6b73',
+            'failed sync': '#3f3f46'
         };
         return borderColorMap[status?.toLowerCase()] || '#e5e7eb';
     };
