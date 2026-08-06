@@ -117,6 +117,7 @@ import "../styles/components/PhonePopupModal.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
+import { DASHBOARD_CSS_VERSION } from "../dashboardCssVersion";
 
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
@@ -145,7 +146,7 @@ function AppContent({ Component, pageProps, progressRef }) {
           unstyled dashboard. Built by scripts/build-dashboard-css.mjs. */}
       {isDashboard && (
         <Head>
-          <link rel="stylesheet" href="/dashboard.css" />
+          <link rel="stylesheet" href={`/dashboard.css?v=${DASHBOARD_CSS_VERSION}`} />
         </Head>
       )}
       {/* Global reading progress bar */}
