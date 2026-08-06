@@ -233,14 +233,14 @@ export default function ProductDetail() {
 
             {/* Gallery — sticky while the info column scrolls */}
             <div className="md:col-span-6 md:sticky md:top-24 md:self-start">
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:gap-3">
+              <div className="flex flex-row items-start gap-3">
 
-                {/* Thumbnail rail — small squares; auto-scrolls to the active
-                    image (horizontal on mobile, vertical on desktop). */}
+                {/* Thumbnail rail — small squares on the LEFT (both mobile and
+                    desktop); shows 3, the rest scroll, auto-follows the active. */}
                 {images.length > 1 && (
                   <div
                     ref={thumbsRef}
-                    className="flex items-start gap-2 overflow-x-auto p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] max-w-[172px] mx-auto sm:mx-0 sm:max-w-none sm:max-h-[172px] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto"
+                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] max-h-[172px] overflow-y-auto shrink-0"
                   >
                     {images.slice(0, 8).map((img, i) => (
                       <button
@@ -263,7 +263,7 @@ export default function ProductDetail() {
                 {/* Main image — a fixed SQUARE frame so every product renders at
                     the same size; the photo is contained (never cropped). */}
                 <div
-                  className="gz-pdp-main relative flex-1 aspect-square grid place-items-center overflow-hidden"
+                  className="gz-pdp-main relative flex-1 max-w-[360px] aspect-square grid place-items-center overflow-hidden"
                   onMouseEnter={() => setPaused(true)}
                   onMouseLeave={() => setPaused(false)}
                 >
