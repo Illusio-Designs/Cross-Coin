@@ -57,22 +57,22 @@ const ShippingChart = ({ orders = [], allOrdersStats }) => {
     // Define colors for different shipping statuses
     const getStatusColor = (status) => {
         const colorMap = {
-            'pending': '#6b6b73',
-            'processing': '#6b6b73',
-            'booked': '#9a9aa2',
-            'pickup initiated': '#9a9aa2',
-            'manifested': '#9a9aa2',
-            'in transit': '#9a9aa2',
-            'shipped': '#9a9aa2',
-            'out for delivery': '#9a9aa2',
-            'delivered': '#0a0a0a',
-            'undelivered': '#3f3f46',
-            'rto': '#3f3f46',
-            'cancelled': '#3f3f46',
-            'order cancelled': '#3f3f46',
-            'exception': '#3f3f46'
+            'pending': '#f59e0b',
+            'processing': '#f59e0b',
+            'booked': '#3b82f6',
+            'pickup initiated': '#3b82f6',
+            'manifested': '#3b82f6',
+            'in transit': '#3b82f6',
+            'shipped': '#3b82f6',
+            'out for delivery': '#06b6d4',
+            'delivered': '#10b981',
+            'undelivered': '#ef4444',
+            'rto': '#f97316',
+            'cancelled': '#ef4444',
+            'order cancelled': '#ef4444',
+            'exception': '#ef4444'
         };
-        return colorMap[status] || '#9a9aa2';
+        return colorMap[status] || '#9ca3af';
     };
 
     const shippingColors = shippingData.map(item => getStatusColor(item.status));

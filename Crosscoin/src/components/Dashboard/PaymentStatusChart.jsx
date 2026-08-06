@@ -11,7 +11,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Paid (${allOrdersStats.paymentStatusPaid})`,
             value: allOrdersStats.paymentStatusPaid,
             count: allOrdersStats.paymentStatusPaid,
-            color: '#0a0a0a'
+            color: '#16a34a'
         });
     }
     
@@ -20,7 +20,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Pending (${allOrdersStats.paymentStatusPending})`,
             value: allOrdersStats.paymentStatusPending,
             count: allOrdersStats.paymentStatusPending,
-            color: '#6b6b73'
+            color: '#f59e0b'
         });
     }
     
@@ -29,7 +29,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Failed (${allOrdersStats.paymentStatusFailed})`,
             value: allOrdersStats.paymentStatusFailed,
             count: allOrdersStats.paymentStatusFailed,
-            color: '#3f3f46'
+            color: '#ef4444'
         });
     }
     
@@ -38,7 +38,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Refunded (${allOrdersStats.paymentStatusRefunded})`,
             value: allOrdersStats.paymentStatusRefunded,
             count: allOrdersStats.paymentStatusRefunded,
-            color: '#9a9aa2'
+            color: '#8b5cf6'
         });
     }
     
@@ -47,7 +47,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Refund Pending (${allOrdersStats.paymentStatusRefundPending})`,
             value: allOrdersStats.paymentStatusRefundPending,
             count: allOrdersStats.paymentStatusRefundPending,
-            color: '#c4c4cc'
+            color: '#a78bfa'
         });
     }
     
@@ -56,7 +56,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: `Cancelled (${allOrdersStats.paymentStatusCancelled})`,
             value: allOrdersStats.paymentStatusCancelled,
             count: allOrdersStats.paymentStatusCancelled,
-            color: '#e0e0e3'
+            color: '#6b7280'
         });
     }
 
@@ -66,7 +66,7 @@ const PaymentStatusChart = ({ allOrdersStats }) => {
             label: 'No Payment Data',
             value: 1,
             count: 0,
-            color: '#e0e0e3'
+            color: '#e5e7eb'
         });
     }
 
