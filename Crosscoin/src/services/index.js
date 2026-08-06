@@ -641,6 +641,16 @@ export const orderService = {
     }
   },
 
+  // Admin: edit an order's shipping address (fix pincode/phone/etc that blocks shipping)
+  updateOrderAddress: async (orderId, data) => {
+    try {
+      const response = await adminApi.put(`/api/orders/${orderId}/address`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Label Download Management
   
   // Mark label as downloaded

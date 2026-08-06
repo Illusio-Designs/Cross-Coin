@@ -72,6 +72,10 @@ const Orders = () => {
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [liveUpdates, setLiveUpdates] = useState(true);
     const [filterOpen, setFilterOpen] = useState(false);
+    // Shipping-address editor (fix wrong pincode/phone that blocks courier booking)
+    const [editingAddress, setEditingAddress] = useState(false);
+    const [savingAddress, setSavingAddress] = useState(false);
+    const [addressForm, setAddressForm] = useState({});
     // Manual courier picker — opened directly or auto-opened when an
     // auto-sync comes back failed (no serviceable courier).
 
@@ -351,6 +355,38 @@ const Orders = () => {
             setIsAwbModalOpen(false); setAwbNumber(''); setCourierName(''); setAwbOrderId(null);
             fetchOrders(currentPage);
         } catch (error) { showError('updateFailed', error.message || 'Failed to update AWB number'); }
+    };
+
+    // ── Shipping-address edit (fix pincode/phone/etc. that blocks shipping) ──
+    const startEditAddress = () => {
+        const a = selectedOrder?.ShippingAddress || {};
+        setAddressForm({
+            full_name: a.full_name || '', phone: a.phone || '', address: a.address || '',
+            landmark: a.landmark || '', city: a.city || '', state: a.state || '',
+            pincode: a.pincode || '', country: a.country || 'India',
+        });
+        setEditingAddress(true);
+    };
+
+    const saveAddress = async () => {
+        if (!/^\d{6}$/.test(String(addressForm.pincode || '').trim())) {
+            showError('fieldRequired', 'Pincode must be 6 digits'); return;
+        }
+        setSavingAddress(true);
+        try {
+            const res = await orderService.updateOrderAddress(selectedOrder.id, addressForm);
+            const updated = res?.address || { ...selectedOrder.ShippingAddress, ...addressForm };
+            // Reflect the change in the open detail panel immediately.
+            setSelectedOrder(prev => prev ? { ...prev, ShippingAddress: { ...prev.ShippingAddress, ...updated } } : prev);
+            setEditingAddress(false);
+            showSuccess('addressUpdated', res?.message || 'Shipping address updated. Re-sync to re-check serviceability.');
+            highlightRow(selectedOrder.id);
+            fetchOrders(currentPage);
+        } catch (error) {
+            showError('updateFailed', error.message || 'Failed to update address');
+        } finally {
+            setSavingAddress(false);
+        }
     };
 
     const handleExportDeliveredOrders = async () => {
@@ -886,7 +922,7 @@ const Orders = () => {
             {/* Order Details Modal */}
             <Modal
               isOpen={isViewModalOpen}
-              onClose={() => setIsViewModalOpen(false)}
+              onClose={() => { setIsViewModalOpen(false); setEditingAddress(false); }}
               title={`Order Details: #${selectedOrder?.order_number}`}
               size="lg"
               role="dialog"
@@ -926,32 +962,65 @@ const Orders = () => {
                             {/* Shipping Address */}
                             {selectedOrder.ShippingAddress && (
                                 <div className="odm-card">
-                                    <div className="odm-card-title">
-                                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                        Shipping Address
+                                    <div className="odm-card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            Shipping Address
+                                        </span>
+                                        {!editingAddress && (
+                                            <button type="button" className="oa-edit-btn" onClick={startEditAddress} title="Edit address (fix wrong pincode, phone, etc.)">
+                                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                Edit
+                                            </button>
+                                        )}
                                     </div>
-                                    <div className="odm-fields">
-                                        <div className="odm-field">
-                                            <span className="odm-label">Name</span>
-                                            <span className="odm-value odm-bold">{selectedOrder.ShippingAddress.full_name}</span>
+
+                                    {!editingAddress ? (
+                                        <div className="odm-fields">
+                                            <div className="odm-field">
+                                                <span className="odm-label">Name</span>
+                                                <span className="odm-value odm-bold">{selectedOrder.ShippingAddress.full_name}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Address</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.address}{selectedOrder.ShippingAddress.landmark ? `, ${selectedOrder.ShippingAddress.landmark}` : ''}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">City / State</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} — {selectedOrder.ShippingAddress.pincode}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Country</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.country || 'India'}</span>
+                                            </div>
+                                            <div className="odm-field">
+                                                <span className="odm-label">Phone</span>
+                                                <span className="odm-value">{selectedOrder.ShippingAddress.phone}</span>
+                                            </div>
                                         </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Address</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.address}</span>
+                                    ) : (
+                                        <div className="oa-form">
+                                            <div className="oa-row">
+                                                <label>Name<input value={addressForm.full_name} onChange={e => setAddressForm(f => ({ ...f, full_name: e.target.value }))} /></label>
+                                                <label>Phone<input value={addressForm.phone} onChange={e => setAddressForm(f => ({ ...f, phone: e.target.value }))} /></label>
+                                            </div>
+                                            <label>Address<textarea rows={2} value={addressForm.address} onChange={e => setAddressForm(f => ({ ...f, address: e.target.value }))} /></label>
+                                            <label>Landmark<input value={addressForm.landmark} onChange={e => setAddressForm(f => ({ ...f, landmark: e.target.value }))} /></label>
+                                            <div className="oa-row">
+                                                <label>City<input value={addressForm.city} onChange={e => setAddressForm(f => ({ ...f, city: e.target.value }))} /></label>
+                                                <label>State<input value={addressForm.state} onChange={e => setAddressForm(f => ({ ...f, state: e.target.value }))} /></label>
+                                            </div>
+                                            <div className="oa-row">
+                                                <label>Pincode<input inputMode="numeric" maxLength={6} value={addressForm.pincode} onChange={e => setAddressForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))} /></label>
+                                                <label>Country<input value={addressForm.country} onChange={e => setAddressForm(f => ({ ...f, country: e.target.value }))} /></label>
+                                            </div>
+                                            <div className="oa-actions">
+                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingAddress(false)} disabled={savingAddress}>Cancel</button>
+                                                <button type="button" className="btn btn-primary btn-sm" onClick={saveAddress} disabled={savingAddress}>{savingAddress ? 'Saving…' : 'Save address'}</button>
+                                            </div>
+                                            <p className="oa-hint">After saving, click <b>Sync</b> on the order row to re-check courier serviceability for the new pincode.</p>
                                         </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">City / State</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.city}, {selectedOrder.ShippingAddress.state} — {selectedOrder.ShippingAddress.pincode}</span>
-                                        </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Country</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.country || 'India'}</span>
-                                        </div>
-                                        <div className="odm-field">
-                                            <span className="odm-label">Phone</span>
-                                            <span className="odm-value">{selectedOrder.ShippingAddress.phone}</span>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </div>

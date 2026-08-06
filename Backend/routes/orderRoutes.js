@@ -5,7 +5,7 @@ const {
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, adminDeleteOrder, confirmOrder,
     getOrderStats, updateAwbNumber, initiateReturn,
-    adminCreateManualOrder,
+    adminCreateManualOrder, updateOrderAddress,
 } = require('../controller/orderController.js');
 // checkAddressQuality has been migrated to the domain-grouped file.
 const { checkAddressQuality } = require('../controller/orders/createController.js');
@@ -96,6 +96,7 @@ router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmO
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);
+router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
 router.put('/:id/status',              isAuthenticated, isOrderManager, updateOrderStatus);
 router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
 

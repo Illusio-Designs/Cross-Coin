@@ -2178,6 +2178,47 @@
     }
   };
 
+  // Admin: edit an order's shipping address — mainly to correct a wrong/invalid
+  // pincode (or phone/city/state) that blocks courier booking. Updates the
+  // ShippingAddress row linked to the order. After saving, the admin re-runs the
+  // per-order Sync, which re-checks pincode serviceability with the courier.
+  module.exports.updateOrderAddress = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const order = await Order.findByPk(id, { include: [{ model: ShippingAddress }] });
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+      if (!order.ShippingAddress) {
+        return res.status(400).json({ success: false, message: 'This order has no shipping address to edit' });
+      }
+
+      const allowed = ['full_name', 'phone', 'address', 'landmark', 'city', 'state', 'pincode', 'country'];
+      const patch = {};
+      for (const k of allowed) {
+        if (req.body[k] !== undefined && req.body[k] !== null) patch[k] = String(req.body[k]).trim();
+      }
+      if (Object.keys(patch).length === 0) {
+        return res.status(400).json({ success: false, message: 'No address fields provided' });
+      }
+      // Basic pincode sanity (India = 6 digits) so we don't re-save an obviously
+      // broken value; the real serviceability check happens on the next Sync.
+      if (patch.pincode !== undefined && !/^\d{6}$/.test(patch.pincode)) {
+        return res.status(400).json({ success: false, message: 'Pincode must be 6 digits' });
+      }
+
+      await order.ShippingAddress.update(patch);
+      logger.info(`Order ${order.order_number || id} shipping address updated by admin (fields: ${Object.keys(patch).join(', ')})`);
+
+      return res.json({
+        success: true,
+        message: 'Shipping address updated. Re-sync the order to re-check courier serviceability.',
+        address: order.ShippingAddress,
+      });
+    } catch (error) {
+      logger.error('Error updating order address:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Failed to update address' });
+    }
+  };
+
   // Admin DELETE order — permanently removes the order and its child rows.
   // Destructive and irreversible; admin/order-manager only. Deletes children
   // explicitly in a transaction so it works whether or not the DB enforces the
