@@ -256,7 +256,7 @@ export default function ExclusiveSection({ products = [] }) {
           position: relative; z-index: 1; overflow: hidden; border-radius: 0;
           border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);
           box-shadow: 0 40px 90px -50px rgba(0,0,0,0.8);
-          flex: 1; min-width: 0; max-width: 460px; align-self: flex-start;
+          flex: 1; min-width: 0; max-width: 360px; align-self: flex-start;
           aspect-ratio: 1 / 1; display: grid; place-items: center;
           opacity: 0; transform: translateY(24px) scale(.98);
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
