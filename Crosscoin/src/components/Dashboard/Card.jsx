@@ -151,9 +151,17 @@ function CardGrid() {
   const products = stats.products || {};
   const reviews = stats.reviews || {};
   const sd = orders.statusDistribution || {};
-  const shippedCount = (sd['shipped'] || 0) + (sd['in transit'] || 0) + (sd['out for delivery'] || 0);
-  const confirmedCount = (sd['confirmed'] || 0) + (sd['processing'] || 0);
-  const rtoCount = (sd['rto'] || 0) + (sd['rto delivered'] || 0) + (sd['return_initiated'] || 0) + (sd['returned_rto'] || 0);
+  const g = (k) => sd[k] || 0;
+  // Mutually-exclusive, EXHAUSTIVE status buckets so the Order Overview tiles
+  // actually sum to Total Orders. Before this, "processing" was double-counted
+  // (in both Pending and Confirmed) and booked/manifested/pickup/undelivered/
+  // exception weren't shown anywhere, so the tiles never added up.
+  const pendingCount   = g('awaiting_confirmation') + g('pending');
+  const confirmedCount = g('confirmed') + g('processing');
+  const shippedCount   = g('booked') + g('pickup initiated') + g('manifested')
+                       + g('in transit') + g('shipped') + g('out for delivery')
+                       + g('undelivered') + g('exception');
+  const rtoCount       = g('rto') + g('rto delivered') + g('return_initiated') + g('returned_rto');
   const codCount = stats.paymentDistribution?.cod?.count || 0;
   const prepaidCount = stats.paymentDistribution?.prepaid?.count || 0;
   const totalOrders = orders.total || 0;
@@ -258,7 +266,7 @@ function CardGrid() {
       <Panel title="Order Overview" style={{ marginBottom: 'var(--ds-space-4)' }}>
         <StatGrid>
           <StatTile label="Total Orders" value={totalOrders} sub={hasDateFilter ? 'Filtered period' : 'All time'} />
-          <StatTile label="Pending"      value={orders.pending || 0}   tone="warn"   sub="Awaiting processing" />
+          <StatTile label="Pending"      value={pendingCount}          tone="warn"   sub="Awaiting processing" />
           <StatTile label="Confirmed"    value={confirmedCount}        tone="info"   sub="Confirmed & processing" />
           <StatTile label="Shipped"      value={shippedCount}          tone="info"   sub="In transit / delivery" />
           <StatTile label="Delivered"    value={orders.completed || 0} tone="good"   sub={`${totalOrders > 0 ? Math.round(((orders.completed || 0)/totalOrders)*100) : 0}% success`} />

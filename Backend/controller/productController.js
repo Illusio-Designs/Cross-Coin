@@ -533,31 +533,53 @@ module.exports.getAllProducts = async (req, res) => {
       ];
     }
 
-    const includeOptions = [
-      { model: Category },
-      {
-        model: ProductVariation,
-        as: "ProductVariations",
-        include: [{ model: ProductImage, as: "VariationImages" }],
-      },
-      { model: ProductImage, as: "ProductImages" },
-      { model: ProductSEO, as: "ProductSEO" },
-      {
-        model: Brand,
-        as: "Brands",
-        through: { attributes: ['status', 'price_override', 'stock_override'] },
-        ...(brandFilter && { where: { id: brandFilter } })
-      }
-    ];
+    // Lean "list mode" for the admin products TABLE: it only shows name, badge,
+    // category, brands, rating and status — so we skip variations, product/
+    // variation images, SEO and the heavy TEXT columns. This avoids the join
+    // row-explosion + DISTINCT that made this query take 1–2s. Full data still
+    // loads on Edit via GET /api/products/:id. Opt-in via ?view=list so other
+    // callers (e.g. WhatsApp product cards) keep getting images/prices.
+    const listMode = ['list', 'lite', '1', 'true'].includes(String(req.query.view || '').toLowerCase());
 
-    const { count, rows } = await Product.findAndCountAll({
+    const brandInclude = {
+      model: Brand,
+      as: "Brands",
+      through: { attributes: ['status', 'price_override', 'stock_override'] },
+      ...(brandFilter && { where: { id: brandFilter } })
+    };
+
+    const includeOptions = listMode
+      ? [
+          { model: Category, attributes: ['id', 'name', 'slug'] },
+          { ...brandInclude, attributes: ['id', 'name', 'slug', 'display_name'] },
+        ]
+      : [
+          { model: Category },
+          {
+            model: ProductVariation,
+            as: "ProductVariations",
+            include: [{ model: ProductImage, as: "VariationImages" }],
+          },
+          { model: ProductImage, as: "ProductImages" },
+          { model: ProductSEO, as: "ProductSEO" },
+          brandInclude,
+        ];
+
+    const queryOptions = {
       where: whereOptions,
       limit: parseInt(limit, 10),
       offset: offset,
       order: [["createdAt", "DESC"]],
       include: includeOptions,
       distinct: true,
-    });
+    };
+    // Only the columns the table renders (+ FK/order columns), not Product.*
+    // (which pulls the big description/dimensions blobs for every row).
+    if (listMode) {
+      queryOptions.attributes = ['id', 'name', 'slug', 'badge', 'status', 'avg_rating', 'review_count', 'categoryId', 'createdAt'];
+    }
+
+    const { count, rows } = await Product.findAndCountAll(queryOptions);
 
     // Format products with brand information
     const formattedProducts = rows.map(product => {
@@ -1597,6 +1619,11 @@ module.exports.getProductsByCategory = async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["createdAt", "DESC"]],
+      // Without distinct, the one-to-many joins (variations/images) multiply
+      // rows, so `count` (and totalPages) came out inflated AND the query was
+      // heavier. distinct fixes the count and trims the work — same products
+      // returned, so nothing on the page changes visually.
+      distinct: true,
     });
 
     if (!products.count) {

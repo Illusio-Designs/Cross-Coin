@@ -541,6 +541,31 @@ const startServer = async () => {
             logger.error('whatsapp_conversations.status ENUM migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: whatsapp_canned_responses → utf8mb4 ──────────
+        // Canned bodies contain emojis (📦 📍 💳 …). If the table was created
+        // without utf8mb4, MySQL can't store 4-byte chars and every emoji became
+        // "?". Convert the table so future writes keep emojis. (Existing "?" rows
+        // are already lost — re-seed defaults to restore them.)
+        try {
+            const [cc] = await sequelize.query(
+                `SELECT CCSA.character_set_name AS cs
+                 FROM information_schema.TABLES T
+                 JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA
+                   ON CCSA.collation_name = T.table_collation
+                 WHERE T.table_schema = DATABASE() AND T.table_name = 'whatsapp_canned_responses'`
+            );
+            const cs = cc?.[0]?.cs || '';
+            if (cs && cs !== 'utf8mb4') {
+                logger.info('Migrating whatsapp_canned_responses → utf8mb4 (emoji support)…');
+                await sequelize.query(
+                    `ALTER TABLE whatsapp_canned_responses CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+                );
+                logger.info('✓ whatsapp_canned_responses converted to utf8mb4');
+            }
+        } catch (err) {
+            logger.error('whatsapp_canned_responses charset migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: whatsapp_conversations.awaiting_address_for ──
         // Tracks the order awaiting a corrected COD address (Wrong Address flow).
         try {
@@ -611,15 +636,30 @@ const startServer = async () => {
             await sequelize.query(
                 `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
             );
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v1' LIMIT 1`);
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v3' LIMIT 1`);
             if (!done.length) {
                 const { reattributeBrands } = require('./controller/whatsappController.js');
                 const n = await reattributeBrands();
                 logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v1')`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v3')`);
             }
         } catch (err) {
             logger.error('WhatsApp brand backfill failed: ' + err.message);
+        }
+
+        // ── One-time backfill: fill missing customer names ──────────────────
+        // Older chats with no WhatsApp profile name show a bare phone number;
+        // look each up in their order/guest records. Guarded by its own flag.
+        try {
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-name-backfill-v1' LIMIT 1`);
+            if (!done.length) {
+                const { backfillCustomerNames } = require('./controller/whatsappController.js');
+                const n = await backfillCustomerNames();
+                logger.info(`✓ WhatsApp name backfill: named ${n} conversation(s)`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-name-backfill-v1')`);
+            }
+        } catch (err) {
+            logger.error('WhatsApp name backfill failed: ' + err.message);
         }
 
         // Create all tables — only runs when schema version changes

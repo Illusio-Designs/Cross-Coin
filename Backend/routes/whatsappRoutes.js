@@ -49,6 +49,7 @@ router.post('/conversations/:id/send-media',    isAuthenticated, isWhatsappManag
 router.put('/conversations/:id/resolve',        isAuthenticated, isWhatsappManager, ctrl.resolveConversation);
 router.put('/conversations/:id/assign',         isAuthenticated, isWhatsappManager, ctrl.assignConversation);
 router.put('/conversations/:id/tags',           isAuthenticated, isWhatsappManager, ctrl.tagConversation);
+router.put('/conversations/:id/brand',          isAuthenticated, isWhatsappManager, ctrl.setConversationBrand);
 router.put('/conversations/:id/optout',         isAuthenticated, isWhatsappManager, ctrl.setOptOut);
 
 // ── Canned Responses ──────────────────────────────────────────────────────────

@@ -41,6 +41,40 @@ async function resolveBrandByPhone(phone) {
   return DEFAULT_BRAND;
 }
 
+// WhatsApp only includes a customer's profile name in the webhook when they've
+// set one and their privacy allows it — so many threads have no name and the
+// inbox falls back to showing the raw phone number. When we have no name, look
+// one up from the customer's most recent order (shipping name), then their guest
+// record. Matched by the last-10 phone digits, same as the brand resolver.
+async function resolveCustomerNameByPhone(phone) {
+  try {
+    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) return null;
+    const { Order } = require('../model/orderModel.js');
+    const { ShippingAddress } = require('../model/shippingAddressModel.js');
+    const { GuestUser } = require('../model/guestUserModel.js');
+    const recent = { attributes: ['id'], order: [['createdAt', 'DESC']] };
+
+    const viaAddr = await Order.findOne({
+      ...recent,
+      include: [{ model: ShippingAddress, as: 'ShippingAddress', attributes: ['full_name'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
+    });
+    const addrName = viaAddr?.ShippingAddress?.full_name?.trim();
+    if (addrName) return addrName;
+
+    const viaGuest = await Order.findOne({
+      ...recent,
+      include: [{ model: GuestUser, as: 'GuestUser', attributes: ['firstName', 'lastName'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
+    });
+    const g = viaGuest?.GuestUser;
+    const gName = g ? [g.firstName, g.lastName].filter(Boolean).join(' ').trim() : '';
+    if (gName) return gName;
+  } catch (e) {
+    logger.warn('[WhatsApp] name resolve by phone failed: ' + e.message);
+  }
+  return null;
+}
+
 // Detect the brand from the message TEXT. Every storefront's WhatsApp widget
 // opens with "Hi! I need help with <Brand> [order]." — a stronger signal than
 // the phone lookup for a first-time customer (who has no order yet), and the
@@ -52,7 +86,7 @@ async function getBrandTokens() {
   const now = Date.now();
   if (_brandTokenCache && now - _brandTokenCacheAt < 5 * 60 * 1000) return _brandTokenCache;
   try {
-    const { Brand } = require('../model/brandModel.js');
+    const Brand = require('../model/brandModel.js');
     const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name', 'domain'] });
     _brandTokenCache = brands.map((b) => {
       const domainWord = String(b.domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
@@ -80,34 +114,71 @@ async function detectBrandFromText(text) {
   return null;
 }
 
-// One-time (and re-runnable) backfill: re-attribute existing conversations that
-// are still tagged with the shared default brand to the brand actually NAMED in
-// their first inbound message. Older chats were all created before text-based
-// detection existed, so they show the wrong (CrossCoin) badge. Returns the count
-// updated. Chats whose first message names no brand (e.g. CrossCoin's own "Hi! I
-// need help.") stay on the default — correct.
+// Re-attribute conversations still tagged with the shared default brand to the
+// brand they actually belong to. Two signals, in priority order:
+//   1) ANY inbound text that names a brand (scan every message, not just the
+//      first — the brand word is often not in the opening "Hi" message).
+//   2) Else the brand of the customer's most recent order (matched by phone).
+// Chats with neither signal (generic message, no orders) correctly stay on the
+// default — a shared number has no other way to know their brand. Idempotent and
+// re-runnable; returns the count changed.
 exports.reattributeBrands = async () => {
   const DEFAULT_BRAND = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
-  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
-  const { WhatsappMessage } = require('../model/whatsappMessageModel.js');
+  // Both models live in whatsappConversationModel.js — there is no separate
+  // whatsappMessageModel.js file (the wrong path made this backfill crash on
+  // every boot with "Cannot find module", so no old chat was ever re-tagged).
+  const { WhatsappConversation, WhatsappMessage } = require('../model/whatsappConversationModel.js');
   const convs = await WhatsappConversation.findAll({
     where: { brand_id: DEFAULT_BRAND },
-    attributes: ['id', 'brand_id'],
+    attributes: ['id', 'brand_id', 'customer_phone'],
   });
   let updated = 0;
   for (const conv of convs) {
     try {
-      const msg = await WhatsappMessage.findOne({
+      let brandId = null;
+
+      // 1) Scan ALL inbound text messages for a brand name.
+      const msgs = await WhatsappMessage.findAll({
         where: { conversation_id: conv.id, direction: 'inbound', type: 'text' },
         order: [['id', 'ASC']],
         attributes: ['body'],
       });
-      if (!msg?.body) continue;
-      const brandId = await detectBrandFromText(msg.body);
+      for (const m of msgs) {
+        const b = await detectBrandFromText(m.body);
+        if (b) { brandId = b; break; }
+      }
+
+      // 2) Else fall back to the brand of their most recent order (by phone).
+      //    resolveBrandByPhone returns DEFAULT_BRAND when no order matches, so
+      //    only apply a real, non-default match.
+      if (!brandId) {
+        const b = await resolveBrandByPhone(conv.customer_phone);
+        if (b && b !== DEFAULT_BRAND) brandId = b;
+      }
+
       if (brandId && brandId !== conv.brand_id) {
         await conv.update({ brand_id: brandId });
         updated++;
       }
+    } catch (_) { /* skip a bad row, keep going */ }
+  }
+  return updated;
+};
+
+// One-time (and re-runnable) backfill: fill in a real name for existing chats
+// that have none (they show a bare phone number in the inbox), by looking the
+// customer up in their order/guest records. Only touches nameless rows.
+exports.backfillCustomerNames = async () => {
+  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+  const convs = await WhatsappConversation.findAll({
+    where: { [Op.or]: [{ customer_name: null }, { customer_name: '' }] },
+    attributes: ['id', 'customer_phone'],
+  });
+  let updated = 0;
+  for (const conv of convs) {
+    try {
+      const name = await resolveCustomerNameByPhone(conv.customer_phone);
+      if (name) { await conv.update({ customer_name: name }); updated++; }
     } catch (_) { /* skip a bad row, keep going */ }
   }
   return updated;
@@ -153,7 +224,10 @@ exports.receiveWebhook = async (req, res) => {
           const phone       = msg.from;
           // Shared number → attribute this message to the customer's brand.
           const brandId     = await resolveBrandByPhone(phone);
-          const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          // Prefer the live WhatsApp profile name; fall back to the customer's
+          // order/guest name so the inbox shows a real name, not a bare number.
+          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
@@ -223,7 +297,8 @@ exports.receiveWebhook = async (req, res) => {
               last_message:    displayText,
               last_message_at: sentAt,
               unread_count:    conv.unread_count + 1,
-              customer_name:   contactName || conv.customer_name,
+              // Fresh WhatsApp name wins; else keep existing; else the resolved name.
+              customer_name:   waName || conv.customer_name || contactName,
               status:          'open',
             });
           }
@@ -521,6 +596,13 @@ exports.getConversations = async (req, res) => {
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
 exports.getMessages = async (req, res) => {
+  // Timing so we can SEE where the time goes: X-DB-Ms is the actual DB work,
+  // X-Handler-Ms the whole handler. Read them in the browser Network tab. If
+  // X-Handler-Ms is small but the request feels slow, the time is in the
+  // network / auth / Passenger cold-start, not this query.
+  const t0 = Date.now();
+  let dbMs = 0;
+  res.setHeader('Access-Control-Expose-Headers', 'X-DB-Ms, X-Handler-Ms');
   try {
     const { id } = req.params;
     const conv = await WhatsappConversation.findByPk(id);
@@ -534,6 +616,7 @@ exports.getMessages = async (req, res) => {
     const where = { conversation_id: id };
     if (before) where.id = { [Op.lt]: before };
 
+    const tDb = Date.now();
     let rows = await WhatsappMessage.findAll({
       where,
       order: [['id', 'DESC']],
@@ -550,6 +633,7 @@ exports.getMessages = async (req, res) => {
       const quotedMsgs = await WhatsappMessage.findAll({ where: { id: quotedIds } });
       quotedMsgs.forEach(q => { quotedMap[q.id] = q; });
     }
+    dbMs = Date.now() - tDb;
     const messagesWithQuotes = rows.map(m => {
       const plain = m.toJSON();
       if (m.quoted_message_id && quotedMap[m.quoted_message_id]) {
@@ -558,10 +642,15 @@ exports.getMessages = async (req, res) => {
       return plain;
     });
 
-    if (!before) await conv.update({ unread_count: 0 }); // mark read only on newest load
+    // Only write when there's actually something to clear (avoids a needless
+    // UPDATE on every open of an already-read chat).
+    if (!before && conv.unread_count > 0) await conv.update({ unread_count: 0 });
 
+    res.setHeader('X-DB-Ms', String(dbMs));
+    res.setHeader('X-Handler-Ms', String(Date.now() - t0));
     res.json({ success: true, conversation: conv, messages: messagesWithQuotes, hasMore });
   } catch (err) {
+    res.setHeader('X-Handler-Ms', String(Date.now() - t0));
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -711,11 +800,15 @@ exports.sendMediaReply = async (req, res) => {
 exports.resolveConversation = async (req, res) => {
   try {
     const { id } = req.params;
+    // Doubles as re-open: pass { status: 'open' } to move a resolved chat back.
+    const target = req.body?.status === 'open' ? 'open' : 'resolved';
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    await conv.update({ status: 'resolved' });
+    await conv.update({ status: target });
+    logger.info(`[WhatsApp] conversation ${id} → ${target}`);
     res.json({ success: true, status: conv.status });
   } catch (err) {
+    logger.error(`[WhatsApp] resolve/reopen failed for ${req.params.id}: ${err.message}`);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -823,13 +916,16 @@ exports.customerContact = async (req, res) => {
 
     const normalizedPhone = whatsappService.formatE164(phone.trim()).replace('+', '');
 
+    // Fall back to the customer's order/guest name when the widget didn't pass one.
+    const widgetName = name?.trim() || await resolveCustomerNameByPhone(normalizedPhone);
+
     // Save conversation in DB so it appears in dashboard inbox (one thread per
     // customer — shared number).
     const [conv, created] = await WhatsappConversation.findOrCreate({
       where: { customer_phone: normalizedPhone },
       defaults: {
         brand_id:        brandId,
-        customer_name:   name?.trim() || null,
+        customer_name:   widgetName,
         wa_contact_id:   normalizedPhone,
         last_message:    message.trim(),
         last_message_at: new Date(),
@@ -843,7 +939,7 @@ exports.customerContact = async (req, res) => {
         last_message:    message.trim(),
         last_message_at: new Date(),
         unread_count:    conv.unread_count + 1,
-        customer_name:   name?.trim() || conv.customer_name,
+        customer_name:   conv.customer_name || widgetName,
         status:          'open',
       });
     }
@@ -1127,7 +1223,10 @@ exports.receiveWebhook = async (req, res) => {
           // Shared number → attribute this message to the customer's brand
           // (by their most recent order); tags the one-per-customer thread.
           const brandId     = await resolveBrandByPhone(phone);
-          const contactName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          // Prefer the live WhatsApp profile name; fall back to the customer's
+          // order/guest name so the inbox shows a real name, not a bare number.
+          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
@@ -1225,7 +1324,7 @@ exports.receiveWebhook = async (req, res) => {
             defaults: { brand_id: namedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
-            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: contactName || conv.customer_name, status: 'open' };
+            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: waName || conv.customer_name || contactName, status: 'open' };
             if (namedBrand) upd.brand_id = namedBrand; // only re-attribute when a brand is explicitly named
             await conv.update(upd);
           }
@@ -1298,6 +1397,22 @@ exports.tagConversation = async (req, res) => {
     const [updated] = await WhatsappConversation.update({ tags: tags || null }, { where: { id } });
     if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── Set conversation brand ───────────────────────────────────────────────────
+// Manual override for the inbox brand badge: a shared number can't always detect
+// the brand from the message or an order, so let staff set it explicitly.
+exports.setConversationBrand = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brandId = parseInt(req.body.brandId);
+    if (!brandId) return res.status(400).json({ success: false, message: 'brandId is required' });
+    const [updated] = await WhatsappConversation.update({ brand_id: brandId }, { where: { id } });
+    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, brand_id: brandId });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1400,15 +1515,22 @@ exports.seedCannedResponses = async (req, res) => {
       { shortcut: '/thanks',     title: 'Thank You',             body: `🙏 Thank you for shopping with *Cross Coin*! We hope you love your purchase.\n\nDon't forget to leave us a review — it means the world to us! ⭐\n\nSee you again soon! 😊` },
     ];
 
-    let created = 0; let skipped = 0;
+    // Upsert (not skip): overwrite the title/body of an existing default so that
+    // re-seeding after the utf8mb4 fix RESTORES the emojis that got corrupted to
+    // "?". Only the default shortcuts are touched — any custom replies the user
+    // added under different shortcuts are left alone.
+    let created = 0; let updated = 0;
     for (const cr of defaults) {
       const existing = await WhatsappCannedResponse.findOne({ where: { brand_id: brandId, shortcut: cr.shortcut } });
       if (!existing) {
         await WhatsappCannedResponse.create({ brand_id: brandId, ...cr });
         created++;
-      } else { skipped++; }
+      } else {
+        await existing.update({ title: cr.title, body: cr.body });
+        updated++;
+      }
     }
-    res.json({ success: true, summary: { created, skipped } });
+    res.json({ success: true, summary: { created, updated } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1538,7 +1660,7 @@ exports.sendProductLink = async (req, res) => {
     const { Product } = require('../model/productModel.js');
     const { ProductVariation } = require('../model/productVariationModel.js');
     const { ProductImage } = require('../model/productImageModel.js');
-    const { Brand } = require('../model/brandModel.js');
+    const Brand = require('../model/brandModel.js');
     const settingsHelper = require('../services/settingsHelper.js');
 
     // Build the product link from the brand's OWN live domain. Prefer the Brand's
@@ -1706,13 +1828,132 @@ exports.sendCatalogue = async (req, res) => {
 // ─── Media proxy — fetches media from Meta and streams to browser ─────────────
 // GET /api/whatsapp/media/:mediaId?brandId=1
 // The browser cannot call Meta directly (needs auth token), so we proxy it.
+//
+// WhatsApp media is IMMUTABLE — a given media id always returns the same bytes —
+// so we cache the downloaded bytes on disk keyed by the stable media id. Opening
+// an OLD chat used to re-hit Meta twice per item (resolve URL + download) on
+// every view; after the first fetch it now streams straight from local disk.
+const _mediaPath = require('path');
+const _mediaFs = require('fs');
+const _mediaCrypto = require('crypto');
+const WA_MEDIA_CACHE_DIR = _mediaPath.join(
+  __dirname, '..', process.env.UPLOAD_PATH || 'uploads', 'wa-media'
+);
+try { _mediaFs.mkdirSync(WA_MEDIA_CACHE_DIR, { recursive: true }); } catch (_) {}
+
+// ── Media cache size/age cap ──────────────────────────────────────────────────
+// The cache is a convenience, not storage — bound it so it can never fill the
+// disk. Prune runs lazily (throttled to ~1/hour), triggered by cache activity,
+// so there's no always-on timer. Tunable via env.
+const WA_MEDIA_MAX_BYTES = Number(process.env.WA_MEDIA_MAX_BYTES) || 500 * 1024 * 1024; // 500 MB
+const WA_MEDIA_MAX_AGE_MS = Number(process.env.WA_MEDIA_MAX_AGE_DAYS || 30) * 24 * 60 * 60 * 1000;
+const WA_MEDIA_PRUNE_EVERY_MS = 60 * 60 * 1000; // at most once an hour
+let _mediaLastPrune = 0;
+let _mediaPruning = false;
+
+async function pruneMediaCache() {
+  if (_mediaPruning) return;
+  _mediaPruning = true;
+  try {
+    const fsp = _mediaFs.promises;
+    const names = await fsp.readdir(WA_MEDIA_CACHE_DIR);
+    const now = Date.now();
+    const entries = [];
+    let total = 0;
+    for (const name of names) {
+      const full = _mediaPath.join(WA_MEDIA_CACHE_DIR, name);
+      let st; try { st = await fsp.stat(full); } catch { continue; }
+      if (!st.isFile()) continue;
+      // Sweep orphaned temp files (a crash mid-download) after 10 minutes.
+      if (name.endsWith('.tmp')) {
+        if (now - st.mtimeMs > 10 * 60 * 1000) { try { await fsp.unlink(full); } catch {} }
+        continue;
+      }
+      // Cache entries are the bytes files (no extension); .ct sidecars ride along.
+      if (name.endsWith('.ct')) continue;
+      total += st.size;
+      entries.push({ full, size: st.size, mtime: st.mtimeMs });
+    }
+    // 1) Age out anything older than the max age (removes bytes + its .ct).
+    for (const e of entries) {
+      if (now - e.mtime > WA_MEDIA_MAX_AGE_MS) {
+        try { await fsp.unlink(e.full); total -= e.size; e.deleted = true; } catch {}
+        try { await fsp.unlink(e.full + '.ct'); } catch {}
+      }
+    }
+    // 2) If still over the size cap, delete oldest-first until under it.
+    if (total > WA_MEDIA_MAX_BYTES) {
+      const live = entries.filter(e => !e.deleted).sort((a, b) => a.mtime - b.mtime);
+      for (const e of live) {
+        if (total <= WA_MEDIA_MAX_BYTES) break;
+        try { await fsp.unlink(e.full); total -= e.size; } catch {}
+        try { await fsp.unlink(e.full + '.ct'); } catch {}
+      }
+    }
+  } catch (err) {
+    logger.warn('[MediaCache] prune failed: ' + err.message);
+  } finally {
+    _mediaPruning = false;
+  }
+}
+
+// Kick a prune at most once an hour, off the request path (never awaited).
+function maybePruneMediaCache() {
+  const now = Date.now();
+  if (now - _mediaLastPrune < WA_MEDIA_PRUNE_EVERY_MS) return;
+  _mediaLastPrune = now;
+  setImmediate(() => { pruneMediaCache().catch(() => {}); });
+}
+
+// The stable Meta media id is the cache key. Full CDN URLs expire but carry the
+// id in the `mid` param; bare ids are used directly; anything else is hashed.
+function waMediaCacheKey(decoded) {
+  try {
+    if (decoded.startsWith('http')) {
+      const mid = new URL(decoded).searchParams.get('mid');
+      if (mid) return mid;
+      return _mediaCrypto.createHash('sha1').update(decoded).digest('hex');
+    }
+  } catch (_) { /* fall through */ }
+  return decoded;
+}
+function waMediaCachePaths(key) {
+  const hash = _mediaCrypto.createHash('sha1').update(String(key)).digest('hex');
+  const base = _mediaPath.join(WA_MEDIA_CACHE_DIR, hash);
+  // Unique temp per request so two simultaneous first-views of the same media
+  // never interleave writes into one temp file; whichever finishes renames to
+  // the same final path (identical bytes, so last-writer-wins is safe).
+  const tmp = `${base}.${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}.tmp`;
+  return { bin: base, ct: base + '.ct', tmp };
+}
+
 exports.proxyMedia = async (req, res) => {
+  maybePruneMediaCache(); // bound the cache size; runs off-thread, at most 1/hour
   try {
     const { mediaId } = req.params;
     const brandId = parseInt(req.query.brandId) || 1;
 
     // Decode in case it was URL-encoded (full Facebook URLs)
     const decoded = decodeURIComponent(mediaId);
+
+    // ── Cache hit: serve the bytes straight from disk, no Meta round-trip ──
+    const cacheKey = waMediaCacheKey(decoded);
+    const paths = waMediaCachePaths(cacheKey);
+    try {
+      const stat = _mediaFs.statSync(paths.bin);
+      if (stat.size > 0) {
+        let ct = 'application/octet-stream';
+        try { ct = _mediaFs.readFileSync(paths.ct, 'utf8') || ct; } catch (_) {}
+        res.setHeader('Content-Type', ct);
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('X-Media-Cache', 'HIT');
+        _mediaFs.createReadStream(paths.bin).pipe(res);
+        return;
+      }
+    } catch (_) { /* miss — fall through to fetch */ }
 
     let downloadUrl, mimeType;
 
@@ -1752,15 +1993,47 @@ exports.proxyMedia = async (req, res) => {
 
     // Stream the bytes back to the browser
     const { stream, contentType, contentLength } = await whatsappService.downloadMedia(downloadUrl, brandId);
+    const finalType = contentType || mimeType || 'application/octet-stream';
 
-    res.setHeader('Content-Type', contentType || mimeType || 'application/octet-stream');
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Content-Type', finalType);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (contentLength) res.setHeader('Content-Length', contentLength);
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('X-Media-Cache', 'MISS');
+
+    // Tee the download to disk while streaming to the browser: the write costs
+    // nothing extra on the response, and the next view of this item is a cache
+    // hit. Only promote the temp file to the cache if the download completed in
+    // full (a client abort or upstream error must not leave a truncated file).
+    let cacheOk = true;
+    let downloadComplete = false;
+    const cacheStream = _mediaFs.createWriteStream(paths.tmp);
+    cacheStream.on('error', () => {
+      cacheOk = false;
+      try { _mediaFs.unlink(paths.tmp, () => {}); } catch (_) {}
+    });
+    cacheStream.on('finish', () => {
+      if (!cacheOk || !downloadComplete) {
+        try { _mediaFs.unlink(paths.tmp, () => {}); } catch (_) {}
+        return;
+      }
+      try {
+        _mediaFs.renameSync(paths.tmp, paths.bin);
+        _mediaFs.writeFile(paths.ct, finalType, () => {});
+      } catch (_) { try { _mediaFs.unlink(paths.tmp, () => {}); } catch (__) {} }
+    });
+
+    stream.on('end', () => { downloadComplete = true; });
+    stream.on('error', () => {
+      cacheOk = false;
+      try { cacheStream.destroy(); } catch (_) {}
+      if (!res.headersSent) res.status(500);
+      res.end();
+    });
 
     stream.pipe(res);
-    stream.on('error', () => res.status(500).end());
+    if (cacheOk) stream.pipe(cacheStream);
   } catch (err) {
     logger.error('Media proxy error: ' + err.message);
     res.status(500).json({ success: false, message: errMsg(err) });
