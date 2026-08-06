@@ -111,11 +111,6 @@ export default function StaffUsers() {
   const start = (currentPage - 1) * itemsPerPage;
   const pageItems = filtered.slice(start, start + itemsPerPage).map((u, i) => ({ ...u, _sn: start + i + 1 }));
 
-  const counts = ROLES.reduce((acc, r) => {
-    acc[r.value] = users.filter(u => getUserRoles(u).includes(r.value)).length;
-    return acc;
-  }, {});
-
   const openCreate = () => {
     setEditUser(null);
     setForm(EMPTY_FORM);
@@ -210,26 +205,6 @@ export default function StaffUsers() {
               Add Staff
             </Button>
           </div>
-        </div>
-
-        {/* ── Stat Cards ── */}
-        <div className="sl-stat-cards">
-          {ROLES.map(r => (
-            <div
-              key={r.value}
-              className={`sl-stat-card${filterRole === r.value ? ' sl-stat-card--active' : ''}`}
-              style={{ cursor: 'pointer', borderColor: filterRole === r.value ? 'var(--ds-color-text)' : undefined }}
-              onClick={() => setFilterRole(filterRole === r.value ? 'all' : r.value)}
-            >
-              <div className="sl-stat-icon" style={{ background: 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text)' }}>
-                {IC.users}
-              </div>
-              <div className="sl-stat-body">
-                <span className="sl-stat-label">{r.label}</span>
-                <span className="sl-stat-value" style={{ color: 'var(--ds-color-text)' }}>{counts[r.value] || 0}</span>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* ── Table ── */}
