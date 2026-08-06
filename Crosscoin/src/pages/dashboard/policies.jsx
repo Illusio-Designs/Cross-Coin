@@ -27,6 +27,7 @@ export function Policies() {
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false); // opening edit must not reload the table
   const [error, setError] = useState(null);
   const [policies, setPolicies] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -70,12 +71,12 @@ export function Policies() {
 
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       const data = await policyService.getPolicyById(id);
       setFormData({ id: data.id, title: data.title || "", content: data.content || "" });
       setIsModalOpen(true);
     } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    finally { setEditLoading(false); }
   };
 
   const handleDelete = (id) => {

@@ -16,6 +16,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
   const [itemsPerPage] = useState(10);
   const [filterValue, setFilterValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false); // opening edit must not reload the table
   const [error, setError] = useState(null);
   const [seoData, setSeoData] = useState([]);
   const [formData, setFormData] = useState({
@@ -149,7 +150,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
 
   const handleEdit = async (pageName) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       setError(null);
       const response = await seoService.getSEOData(pageName, brandSlug);
       // Handle both direct data and nested data property
@@ -166,7 +167,7 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
     } catch (err) {
       setError(err.message || "Failed to fetch SEO data for editing");
     } finally {
-      setLoading(false);
+      setEditLoading(false);
     }
   };
 

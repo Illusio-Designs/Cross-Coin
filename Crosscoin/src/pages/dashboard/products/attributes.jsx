@@ -18,6 +18,9 @@ export default function Attributes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [loading, setLoading] = useState(false);
+  // Separate from `loading` (which gates the table) so opening the edit panel
+  // doesn't reload the whole table.
+  const [editLoading, setEditLoading] = useState(false);
   const [error, setError] = useState(null);
   const [attributes, setAttributes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,12 +61,12 @@ export default function Attributes() {
 
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       const data = await attributeService.getAttributeById(id);
       setFormData({ id: data.id, name: data.name || "", type: data.type || "select", isRequired: data.isRequired || false, values: data.AttributeValues?.map(v => v.value).join(", ") || "" });
       setIsModalOpen(true);
     } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    finally { setEditLoading(false); }
   };
 
   const handleDelete = (id) => {
@@ -115,7 +118,7 @@ export default function Attributes() {
       header: "Actions", accessor: "actions",
       cell: ({ id }) => (
         <div className="sl-actions">
-          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id)}>{IC.edit}</button>
+          <button className="sl-btn-edit" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>{IC.edit}</button>
           <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
         </div>
       )

@@ -25,6 +25,7 @@ export default function Coupons() {
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false); // opening edit must not reload the table
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [statusFilter, setStatusFilter] = useState("");
@@ -62,13 +63,13 @@ export default function Coupons() {
 
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       const data = await couponService.getCouponById(id);
       const fmt = (d) => d ? new Date(d).toISOString().split('T')[0] : "";
       setFormData({ id: data.id, code: data.code || "", description: data.description || "", type: data.type || "percentage", value: data.value || "", minPurchase: data.minPurchase || "", maxDiscount: data.maxDiscount || "", usageLimit: data.usageLimit || "", usageCount: data.usageCount || "", perUserLimit: data.perUserLimit || "", status: data.status || "active", applicableCategories: data.applicableCategories || [], applicableProducts: data.applicableProducts || [], startDate: fmt(data.startDate), endDate: fmt(data.endDate), paymentModeRestriction: data.paymentModeRestriction || "all", firstOrderOnly: data.firstOrderOnly || false, tieredDiscounts: data.tieredDiscounts || [], quantityBasedDiscounts: data.quantityBasedDiscounts || [] });
       setIsModalOpen(true);
     } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    finally { setEditLoading(false); }
   };
 
   const handleDelete = (id) => {

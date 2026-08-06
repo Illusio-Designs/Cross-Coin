@@ -43,6 +43,9 @@ export default function Categories() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  // Separate from `loading` (which gates the table) so opening the edit panel
+  // doesn't reload the whole table.
+  const [editLoading, setEditLoading] = useState(false);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -93,7 +96,7 @@ export default function Categories() {
 
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       setError(null);
       const data = await categoryService.getCategoryById(id);
       setFormData({
@@ -117,7 +120,7 @@ export default function Categories() {
       const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
       setError(errorMsg);
     }
-    finally { setLoading(false); }
+    finally { setEditLoading(false); }
   };
 
   const handleDelete = (id) => {
@@ -216,7 +219,7 @@ export default function Categories() {
       header: "Actions", accessor: "actions",
       cell: ({ id }) => (
         <div className="sl-actions">
-          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id)}>{IC.edit}</button>
+          <button className="sl-btn-edit" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>{IC.edit}</button>
           <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
         </div>
       )

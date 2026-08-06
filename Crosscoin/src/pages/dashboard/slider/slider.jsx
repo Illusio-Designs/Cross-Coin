@@ -41,6 +41,7 @@ export default function Slider() {
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false); // opening edit must not reload the table
   const [error, setError] = useState(null);
   const [sliders, setSliders] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -99,7 +100,7 @@ export default function Slider() {
 
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       const res = await sliderService.getSliderById(id);
       const data = res.slider || res;
       const brandIds = data.brands?.map(b => Number(typeof b === 'object' ? b.id : b)).filter(Boolean) || (data.brand_id ? [Number(data.brand_id)] : []);
@@ -109,7 +110,7 @@ export default function Slider() {
         brand_id: data.brand_id || "", brand_ids: brandIds });
       setIsModalOpen(true);
     } catch (err) { showError('loadingFailed', err.message); }
-    finally { setLoading(false); }
+    finally { setEditLoading(false); }
   };
 
   const handleDelete = (id) => {
