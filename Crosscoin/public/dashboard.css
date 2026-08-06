@@ -5892,6 +5892,18 @@
   /* grayscale ramp for shares / segments (flips on dark) */
   --rr1: #0a0a0a; --rr2: #3f3f46; --rr3: #71717a; --rr4: #a1a1aa; --rr5: #d4d4d8;
 }
+/* .obz-rep sits ON the .dashboard-sections element. By default that wrapper is
+   a white card — which made every white panel blend into it (white-on-white)
+   and look flat. Drop it to the grey canvas so the panels read as real cards
+   (like the prototype), and cap the width so cards don't stretch absurdly wide
+   on large monitors. */
+.dashboard-sections.obz-rep {
+  background: var(--ds-color-bg);
+  border-radius: 0;
+  padding: 0;
+  max-width: 1440px;
+  margin-inline: auto;
+}
 :root[data-theme="dark"] .obz-rep {
   --rr1: #fafafa; --rr2: #d4d4d8; --rr3: #a1a1aa; --rr4: #71717a; --rr5: #3f3f46;
 }
