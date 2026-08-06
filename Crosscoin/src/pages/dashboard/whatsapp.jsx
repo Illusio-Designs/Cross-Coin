@@ -1407,16 +1407,6 @@ export function WhatsAppManager() {
             </div>
           ))}
         </nav>
-
-        <div className="was-nav-footer">
-          <div className="was-shared-badge">
-            <span className="was-shared-dot" />
-            <div>
-              <div className="was-shared-title">Shared number</div>
-              <div className="was-shared-sub">All brands · one WhatsApp</div>
-            </div>
-          </div>
-        </div>
       </aside>
 
       {/* ══ MAIN CONTENT ══ */}
