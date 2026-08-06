@@ -6,13 +6,15 @@ import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { couponService } from "../../../services";
 import { queryKeys } from '../../../lib/queryClient';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Ticket01Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
-  coupon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
+  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
+  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />,
+  coupon: <HugeiconsIcon icon={Ticket01Icon} size={48} strokeWidth={1.5} />,
 };
 
 const EMPTY_FORM = { code: "", description: "", type: "percentage", value: "", minPurchase: "", maxDiscount: "", usageLimit: "", usageCount: "", perUserLimit: "", status: "active", applicableCategories: [], applicableProducts: [], startDate: "", endDate: "", paymentModeRestriction: "all", firstOrderOnly: false, tieredDiscounts: [], quantityBasedDiscounts: [] };
@@ -113,10 +115,10 @@ export default function Coupons() {
   const columns = [
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Code", accessor: "code", cell: ({ code }) => <span className="cat-name-cell" style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}>{code}</span> },
-    { header: "Type", accessor: "type", cell: (row) => <span className={`sl-status-badge sl-status-${row.type === 'percentage' ? 'active' : 'inactive'}`}>{row.type === 'percentage' ? `${row.value}%` : `₹${row.value}`}</span> },
+    { header: "Type", accessor: "type", cell: (row) => <span className="sl-cat-badge">{row.type === 'percentage' ? `${row.value}%` : `₹${row.value}`}</span> },
     { header: "Min Purchase", accessor: "minPurchase", cell: ({ minPurchase }) => minPurchase ? `₹${minPurchase}` : <span className="sl-na">—</span> },
     { header: "Usage", accessor: "usageCount", cell: (row) => <span>{row.usageCount || 0} / {row.usageLimit || '∞'}</span> },
-    { header: "Expires", accessor: "endDate", cell: ({ endDate }) => { if (!endDate) return <span className="sl-na">No expiry</span>; const d = new Date(endDate); const expired = d < new Date(); return <span style={{ color: expired ? '#CE1E36' : '#1a7a4a' }}>{d.toLocaleDateString()}</span>; } },
+    { header: "Expires", accessor: "endDate", cell: ({ endDate }) => { if (!endDate) return <span className="sl-na">No expiry</span>; const d = new Date(endDate); const expired = d < new Date(); return <span style={{ color: expired ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>{d.toLocaleDateString()}</span>; } },
     { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
     {
       header: "Actions", accessor: "actions",
