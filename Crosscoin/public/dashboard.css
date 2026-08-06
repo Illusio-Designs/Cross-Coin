@@ -7459,48 +7459,28 @@
   gap: 6px;
 }
 
+/* Outlined monochrome icon actions (edit / delete / toggle) — delete turns red
+   only on hover. This is the canonical rule (pages.css loads after slider.css). */
 .sl-btn-edit,
 .sl-btn-delete,
 .sl-btn-toggle {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ds-color-border);
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.15s, transform 0.15s;
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text-muted);
+  transition: color 0.15s, border-color 0.15s;
   flex-shrink: 0;
 }
 
-.sl-btn-edit {
-  background: var(--ds-color-bg);
-  color: var(--ds-color-text);
-}
-
-.sl-btn-edit:hover {
-  background: #e0d8ff;
-}
-
-.sl-btn-delete {
-  background: #fff0f2;
-  color: #dc2626;
-}
-
-.sl-btn-delete:hover {
-  background: #ffd6db;
-}
-
-.sl-btn-toggle {
-  background: var(--ds-color-surface-soft);
-  color: var(--ds-color-text-faint);
-}
-
-.sl-btn-toggle.active {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
+.sl-btn-edit:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
+.sl-btn-delete:hover { color: var(--ds-color-danger); border-color: var(--ds-color-danger); }
+.sl-btn-toggle.active { color: var(--ds-color-text); border-color: var(--ds-color-text); }
 
 .sl-btn-edit svg,
 .sl-btn-delete svg,

@@ -98,7 +98,7 @@ function LoadingAccess() {
           width: 34,
           height: 34,
           border: '3px solid #e5e7eb',
-          borderTopColor: '#2563eb',
+          borderTopColor: 'var(--ds-color-text)',
           borderRadius: '50%',
           animation: 'dashSpin 0.7s linear infinite'
         }}

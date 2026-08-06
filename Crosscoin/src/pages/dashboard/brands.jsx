@@ -283,10 +283,10 @@ export function BrandManager() {
                         <td style={cell}><span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span></td>
                         <td style={cell}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                            {isRef ? <span style={{ color: '#2563eb', fontWeight: 600 }}>Reference brand</span>
+                            {isRef ? <span style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>Reference brand</span>
                               : pending === null ? <span style={{ color: '#8a90a2' }}>—</span>
                               : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: pending === 0 ? '#16a34a' : '#d97706' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pending === 0 ? '#16a34a' : '#d97706' }} />{pending === 0 ? 'All set' : `${pending} of ${predefinedKeys.length} pending`}</span>}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : brand.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : brand.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
                               {isOpen ? '▴ Hide settings' : '▾ View settings'}
                             </button>
                           </div>
@@ -294,9 +294,9 @@ export function BrandManager() {
                         <td style={cell} onClick={(e) => e.stopPropagation()}>
                           {url ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12 }}>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
-                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
-                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Sitemap</button>
+                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
+                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
+                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Sitemap</button>
                             </div>
                           ) : <span style={{ color: '#b3b8c4', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
                         </td>
@@ -349,7 +349,7 @@ export function BrandManager() {
                                       const keyObj = { key: s.key, category: s.category || 'general', description: s.description || '' };
                                       return (
                                         <tr key={s.key}>
-                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{s.key} <span style={{ fontSize: 10, color: '#2563eb', fontWeight: 600, background: '#eff4ff', borderRadius: 4, padding: '1px 5px' }}>custom</span></td>
+                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{s.key} <span style={{ fontSize: 10, color: 'var(--ds-color-text)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', borderRadius: 4, padding: '1px 5px' }}>custom</span></td>
                                           <td style={{ ...cell, color: '#8a90a2', fontSize: 12 }}>{CATEGORY_LABEL[s.category] || s.category || '—'}</td>
                                           <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
                                           <td style={{ ...cell, textAlign: 'right' }}>
