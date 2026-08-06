@@ -57,6 +57,17 @@ export default function NotificationBell() {
     });
   };
 
+  // Dashboard pages switch via the URL path (see utils/dashboardRouting +
+  // the shell's popstate listener). Pushing the path and firing a popstate
+  // lets the shell swap the view without any prop threading.
+  const goTo = (view) => {
+    const url = view === 'main' ? '/dashboard' : `/dashboard/${view}`;
+    window.history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    setOpen(false);
+  };
+  const openNotification = (n) => goTo(n.type === 'order' ? 'orders' : 'whatsapp');
+
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
@@ -123,11 +134,14 @@ export default function NotificationBell() {
             </div>
           ) : (
             notifications.map(n => (
-              <div key={n.id} style={{
-                display: 'flex', gap: 10, padding: '10px 16px',
-                borderBottom: '1px solid var(--border, #f3f4f6)',
-                background: n.read ? 'transparent' : 'rgba(59,130,246,0.04)',
-              }}>
+              <div key={n.id} className="notif-item" role="button" tabIndex={0}
+                onClick={() => openNotification(n)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}
+                style={{
+                  display: 'flex', gap: 10, padding: '10px 16px', cursor: 'pointer',
+                  borderBottom: '1px solid var(--ds-color-border-soft, #f3f4f6)',
+                  background: n.read ? 'transparent' : 'var(--ds-color-surface-soft, rgba(10,10,10,0.03))',
+                }}>
                 <div style={{ flexShrink: 0, marginTop: 2 }}>{ICONS[n.type]}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text, #111827)' }}>

@@ -329,3 +329,5 @@
     max-height: 74vh;
   }
 }
+.notif-item { transition: background 0.12s; }
+.notif-item:hover { background: var(--ds-color-surface-soft, #f3f4f6) !important; }
