@@ -1405,9 +1405,24 @@ const ProductsPage = () => {
         title={formData.id ? "Edit Product" : "Add New Product"}
         closeOnOverlayClick={false}
         size="lg"
+        footer={
+          <>
+            {currentStep > 1 && (
+              <Button variant="secondary" size="medium" onClick={handlePrevStep} disabled={loading} type="button">Previous</Button>
+            )}
+            {currentStep < 3 ? (
+              <Button variant="primary" size="medium" onClick={handleNextStep} disabled={loading} type="button">Next</Button>
+            ) : (
+              <>
+                <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
+                <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading} type="button">{loading ? "Saving..." : "Save"}</Button>
+              </>
+            )}
+          </>
+        }
       >
         <form onSubmit={handleSubmit} className="seo-form">
-          {/* Step indicator — sticky, outside scrollable body */}
+          {/* Step indicator — sticky at the top of the scrollable body */}
           <div className="prod-steps">
             {['Basic Info', 'Variations', 'SEO'].map((label, i) => {
               const step = i + 1;
@@ -1426,53 +1441,7 @@ const ProductsPage = () => {
               );
             })}
           </div>
-          <div className="modal-body">
-            {renderModalStep()}
-          </div>
-          <div className="modal-footer">
-            {currentStep > 1 && (
-              <Button
-                variant="secondary"
-                size="medium"
-                onClick={handlePrevStep}
-                disabled={loading}
-                type="button"
-              >
-                Previous
-              </Button>
-            )}
-            {currentStep < 3 ? (
-              <Button
-                variant="primary"
-                size="medium"
-                onClick={handleNextStep}
-                disabled={loading}
-                type="button"
-              >
-                Next
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="secondary"
-                  size="medium"
-                  onClick={handleModalClose}
-                  disabled={loading}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="medium"
-                  disabled={loading}
-                >
-                  {loading ? "Saving..." : "Save"}
-                </Button>
-              </>
-            )}
-          </div>
+          {renderModalStep()}
         </form>
       </Modal>
 
