@@ -360,7 +360,7 @@ export function Blogs() {
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === t ? '#6366f1' : '#f3f4f6', color: tab === t ? '#fff' : '#374151' }}>
+            <button key={t} onClick={() => setTab(t)} style={{ padding: '6px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-surface, #fff)', color: tab === t ? '#fff' : 'var(--ds-color-text-muted, #6b6b73)', border: `1px solid ${tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-border, #e7e7ea)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
               {t}
             </button>
           ))}
@@ -457,9 +457,9 @@ export function Blogs() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {postForm.tags.map(t => (
-                  <span key={t} style={{ background: '#e0e7ff', color: '#4338ca', borderRadius: 4, padding: '2px 8px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span key={t} style={{ background: 'var(--ds-color-surface-soft, #fafafa)', color: 'var(--ds-color-text-muted, #6b6b73)', border: '1px solid var(--ds-color-border, #e7e7ea)', borderRadius: 4, padding: '2px 8px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                     {t}
-                    <button type="button" onClick={() => removeTag(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', lineHeight: 1 }}>×</button>
+                    <button type="button" onClick={() => removeTag(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ds-color-text-muted, #6b6b73)', lineHeight: 1 }}>×</button>
                   </span>
                 ))}
               </div>
@@ -504,7 +504,7 @@ export function Blogs() {
             </div>
 
             {/* SEO */}
-            <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 700, fontSize: 13, color: '#6366f1' }}>SEO Settings</div>
+            <div style={{ marginTop: 16, marginBottom: 8, fontWeight: 700, fontSize: 13, color: 'var(--ds-color-text, #0a0a0a)' }}>SEO Settings</div>
             <div className="dm-2col">
               {[
                 ['meta_title', 'Meta Title'], ['meta_description', 'Meta Description'],

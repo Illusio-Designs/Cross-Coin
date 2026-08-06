@@ -160,6 +160,12 @@
 }
 .ds-filterbar__search svg { width: 16px; height: 16px; color: var(--ds-color-text-faint); }
 .ds-filterbar__group { display: flex; gap: var(--ds-space-2); align-items: center; flex-wrap: wrap; }
+/* The custom <Select> container defaults to width:100% (for form fields).
+   Inside the filter bar it must size to its content and sit inline next to
+   the search box, not stretch full-width and stack each dropdown on its own
+   row. */
+.ds-filterbar__group > * { flex: 0 0 auto; }
+.ds-filterbar__group .sel-container { width: auto; min-width: 160px; }
 @media (max-width: 640px) {
   .ds-filterbar { padding: 0 0 var(--ds-space-3); }
   .ds-filterbar__search { min-width: 100%; }
