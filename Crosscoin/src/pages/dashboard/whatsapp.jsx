@@ -1076,9 +1076,22 @@ export function WhatsAppManager() {
     if (page !== 'inbox') return;
     let alive = true; let controller = null; let backoff = null;
     const sinceRef = { current: null };
+    // Floor between reconnects. The stream is meant to long-poll (~25s), but if
+    // the server returns quickly/empty, reconnecting with zero delay turns this
+    // into an unthrottled fetch loop that saturates the browser's 6-connection
+    // budget and starves every other request (stats, messages, media) — the
+    // "WhatsApp loads slowly" symptom. Guarantee a minimum spacing so a fast
+    // response can never hot-loop; a genuine long-poll (>floor) reconnects at once.
+    const MIN_INTERVAL = 3000;
     const loop = async () => {
       if (!alive) return;
       controller = new AbortController();
+      const startedAt = Date.now();
+      const reconnect = () => {
+        if (!alive) return;
+        const wait = Math.max(0, MIN_INTERVAL - (Date.now() - startedAt));
+        backoff = setTimeout(() => { if (alive) loop(); }, wait);
+      };
       try {
         const data = await whatsappService.streamUpdates(brandId, statusFilter, sinceRef.current, controller.signal);
         if (alive && data?.success) {
@@ -1094,11 +1107,13 @@ export function WhatsAppManager() {
           }
           setConversations(convs);
         }
-        if (alive) loop(); // reconnect immediately — the server does the waiting
+        reconnect(); // wait out the floor (if any) before reconnecting
       } catch (e) {
         if (!alive) return;
-        if (e?.name === 'CanceledError' || e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') { loop(); return; }
-        backoff = setTimeout(loop, 5000); // network error — back off
+        // Aborted by cleanup (tab/filter/brand change or unmount) — the fresh
+        // effect will start its own loop, so don't reconnect here.
+        if (e?.name === 'CanceledError' || e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') return;
+        backoff = setTimeout(() => { if (alive) loop(); }, 5000); // network error — back off
       }
     };
     loop();
