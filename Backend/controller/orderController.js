@@ -2185,7 +2185,7 @@
   module.exports.updateOrderAddress = async (req, res) => {
     try {
       const { id } = req.params;
-      const order = await Order.findByPk(id, { include: [{ model: ShippingAddress }] });
+      const order = await Order.findByPk(id, { include: [{ model: ShippingAddress, as: 'ShippingAddress' }] });
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
       if (!order.ShippingAddress) {
         return res.status(400).json({ success: false, message: 'This order has no shipping address to edit' });
