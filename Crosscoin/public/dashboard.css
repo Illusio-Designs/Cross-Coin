@@ -7298,6 +7298,10 @@
      instead of white cards on a white page. The surrounding .dashboard-content
      already supplies the 24px gutter. */
   background: var(--ds-color-bg);
+  /* The global body sets color:#000 — force the themed text colour here so any
+     descendant without an explicit colour (brand names, table keys, etc.)
+     inherits it and stays visible in dark mode instead of black-on-dark. */
+  color: var(--ds-color-text);
   /* Cap + centre so content doesn't stretch edge-to-edge on wide monitors
      (cards/table columns were spreading out with huge gaps). */
   max-width: 1440px;
