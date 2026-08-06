@@ -187,7 +187,7 @@
 }
 
 .payment-filter-dropdown:hover {
-  border-color: #cbd5e1;
+  border-color: var(--ds-color-border);
 }
 
 /* Payment Statistics */
@@ -1099,7 +1099,7 @@
 }
 
 .action-btn.status-select-action:hover {
-  border-color: #cbd5e1;
+  border-color: var(--ds-color-border);
   background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   transform: translateY(-1px);
 }
@@ -2669,7 +2669,7 @@
 }
 
 .sync-tag--unsynced {
-  background: #f5f5f7;
+  background: var(--ds-color-surface-soft);
   color: var(--ds-color-text-faint);
 }
 
@@ -3111,7 +3111,7 @@
   align-items: center;
   gap: 7px;
   padding: 10px 14px;
-  background: #f8f9fb;
+  background: var(--ds-color-surface-soft);
   border-bottom: 1px solid var(--ds-color-border);
   font-size: 12px;
   font-weight: 700;
@@ -3292,7 +3292,7 @@
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid var(--ds-color-border);
-  background: #f8f9fb;
+  background: var(--ds-color-surface-soft);
   flex-shrink: 0;
 }
 
@@ -3394,7 +3394,7 @@
 }
 
 .odm-total {
-  background: #f8f9fb;
+  background: var(--ds-color-surface-soft);
   font-size: 14px;
   font-weight: 700;
   color: var(--ds-color-text);

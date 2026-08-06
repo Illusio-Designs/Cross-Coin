@@ -329,7 +329,7 @@
 }
 
 .btn-icon.btn-save:hover {
-    background: #f0eef5;
+    background: var(--ds-color-surface-soft);
 }
 
 .btn-icon.btn-cancel {

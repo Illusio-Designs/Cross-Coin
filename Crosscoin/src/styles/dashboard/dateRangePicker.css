@@ -47,7 +47,7 @@
   gap: 8px;
   height: 38px;
   padding: 0 14px;
-  background: #fafafb;
+  background: var(--ds-color-surface-soft);
   border: 1.5px solid var(--ds-color-border);
   border-radius: 10px;
   font-size: 13px;
@@ -161,7 +161,7 @@
   padding: 12px;
   border-right: 1px solid var(--ds-color-border);
   min-width: 140px;
-  background: #fafafb;
+  background: var(--ds-color-surface-soft);
 }
 
 .drp-presets-title {

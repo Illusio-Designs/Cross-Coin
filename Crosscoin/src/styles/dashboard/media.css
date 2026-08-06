@@ -59,7 +59,7 @@
   width: 15px;
   height: 15px;
   cursor: pointer;
-  accent-color: #0a0a0a;
+  accent-color: var(--ds-color-text);
   flex-shrink: 0;
 }
 

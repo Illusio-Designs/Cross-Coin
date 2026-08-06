@@ -87,7 +87,7 @@
   padding-left: 10px !important;
   padding-right: 10px !important;
 }
-.tbl-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: #0a0a0a; }
+.tbl-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: var(--ds-color-text); }
 
 .tbl-loading {
   display: flex;
