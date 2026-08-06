@@ -720,34 +720,21 @@ const Orders = () => {
                                     <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB…"
                                         value={filterValue} onChange={handleSearchChange} />
                                 </div>
-                                <button className={`order-sync-main-btn${syncingAll || loading ? ' syncing' : ''}`}
-                                    title="Book all pending orders now with the shipping courier (manual, runs directly)"
-                                    onClick={syncOrders} disabled={loading || syncingAll || syncingOrders.size > 0}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncingAll ? 'animate-spin' : ''}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    {syncingAll ? 'Syncing…' : 'Sync New Orders'}
-                                </button>
                                 <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
                                     title="Update the tracking status of already-shipped, active orders"
-                                    onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}
-                                    style={{ borderColor: '#2563eb', color: '#2563eb' }}
-                                    onMouseEnter={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.color = '#fff'; } }}
-                                    onMouseLeave={e => { if (!refreshingStatus) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#2563eb'; } }}>
+                                    onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
                                     {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
                                 </button>
-                                <button className="order-sync-main-btn"
+                                <button className="order-sync-main-btn order-sync-main-btn--primary"
                                     title="Create a new order manually"
-                                    onClick={() => setIsManualOrderOpen(true)}
-                                    style={{ borderColor: '#16a34a', color: '#16a34a' }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = '#fff'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#16a34a'; }}>
+                                    onClick={() => setIsManualOrderOpen(true)}>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                     New Order
                                 </button>
-                                <button className="order-sync-main-btn"
+                                <button className="order-sync-main-btn order-sync-main-btn--ghost"
                                     title={liveUpdates ? 'Live updates on — the list refreshes quietly in the background. Click to pause.' : 'Live updates paused — the list stays still until you refresh. Click to resume.'}
-                                    onClick={() => setLiveUpdates(v => !v)}
-                                    style={liveUpdates ? { borderColor: '#16a34a', color: '#16a34a' } : { borderColor: '#9ca3af', color: '#6b7280' }}>
+                                    onClick={() => setLiveUpdates(v => !v)}>
                                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: liveUpdates ? '#22c55e' : '#9ca3af', display: 'inline-block', flexShrink: 0 }} />
                                     {liveUpdates ? 'Live' : 'Paused'}
                                 </button>
@@ -769,7 +756,7 @@ const Orders = () => {
 
                     {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
                     <DateRangePicker
-                        label="Filter by date — applies to the stats above and the orders list below"
+                        label="Filter by date"
                         startDate={statsStartDate}
                         endDate={statsEndDate}
                         onStartChange={setStatsStartDate}
@@ -784,10 +771,9 @@ const Orders = () => {
                     <div className="orders-analytics-toggle-row">
                         <button
                             type="button"
-                            className="order-sync-main-btn"
+                            className="order-sync-main-btn order-sync-main-btn--ghost"
                             onClick={() => setShowAnalytics(v => !v)}
                             aria-expanded={showAnalytics}
-                            style={{ borderColor: '#8b5cf6', color: '#8b5cf6' }}
                         >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
                             {showAnalytics ? 'Hide analytics charts' : 'Show analytics charts'}
@@ -802,33 +788,28 @@ const Orders = () => {
                         </div>
                     )}
 
-                    {/* ── Filters + Sort: sticky FilterBar on desktop, wraps on phones ── */}
+                    {/* ── Status tabs (segmented control, prototype style) ── */}
+                    <div className="ord-tabs" role="tablist" aria-label="Filter by order status">
+                        {[
+                            { v: 'all',       l: 'All' },
+                            { v: 'pending',   l: 'Pending' },
+                            { v: 'processing', l: 'Processing' },
+                            { v: 'shipped',   l: 'Shipped' },
+                            { v: 'delivered', l: 'Delivered' },
+                            { v: 'cancelled', l: 'Cancelled' },
+                            { v: 'rto',       l: 'RTO' },
+                        ].map((t) => (
+                            <button key={t.v} type="button" role="tab"
+                                aria-selected={statusFilter === t.v}
+                                className={`ord-tab${statusFilter === t.v ? ' on' : ''}`}
+                                onClick={() => setStatusFilter(t.v)}>
+                                {t.l}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── Secondary filters + sort (chips) ── */}
                     <FilterBar hideSearch>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={statusFilter}
-                                onChange={(v) => setStatusFilter(v || 'all')}
-                                options={[
-                                    { value: 'all', label: 'All Order Status' },
-                                    { value: 'pending', label: 'Pending' },
-                                    { value: 'processing', label: 'Processing' },
-                                    { value: 'booked', label: 'Booked' },
-                                    { value: 'pickup initiated', label: 'Pickup Initiated' },
-                                    { value: 'manifested', label: 'Manifested' },
-                                    { value: 'in transit', label: 'In Transit' },
-                                    { value: 'shipped', label: 'Shipped' },
-                                    { value: 'out for delivery', label: 'Out for Delivery' },
-                                    { value: 'delivered', label: 'Delivered' },
-                                    { value: 'undelivered', label: 'Undelivered' },
-                                    { value: 'rto', label: 'RTO' },
-                                    { value: 'rto delivered', label: 'RTO Delivered' },
-                                    { value: 'cancelled', label: 'Cancelled' },
-                                    { value: 'order cancelled', label: 'Order Cancelled' },
-                                    { value: 'exception', label: 'Exception' },
-                                ]}
-                                placeholder="All Order Status"
-                            />
-                        </div>
                         <div className="orders-filter-wrap">
                             <Select
                                 value={paymentTypeFilter}
