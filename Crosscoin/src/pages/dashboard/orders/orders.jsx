@@ -199,7 +199,7 @@ const Orders = () => {
             else if (data.failed > 0) message += `${data.failed} orders failed. `;
             if ((data.total || data.total_orders_processed || 0) === 0) message += 'No orders pending sync.';
             showSuccess('orderSynced', message);
-            fetchOrders(); fetchAllOrdersForStats();
+            fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to sync orders');
         } finally { setSyncingAll(false); }
@@ -217,7 +217,7 @@ const Orders = () => {
             if (data.errors > 0) message += `${data.errors} errors. `;
             if ((data.total || 0) === 0) message += 'No active orders to refresh.';
             showSuccess('orderSynced', message);
-            fetchOrders(); fetchAllOrdersForStats();
+            fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to refresh order statuses');
         } finally { setRefreshingStatus(false); }
@@ -234,7 +234,9 @@ const Orders = () => {
                     if (result.update_result.tracking_updated) message += ` Tracking updated.`;
                 }
                 showSuccess('orderSynced', message);
-                fetchOrders(); fetchAllOrdersForStats();
+                // Silent refetch: swap in fresh rows without blanking the table
+                // to a full-page skeleton (the updated row still flashes).
+                fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to update order'); }
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
     };
@@ -253,7 +255,7 @@ const Orders = () => {
                 } else if (result.data.pdfUrl) {
                     window.open(result.data.pdfUrl, '_blank');
                 }
-                fetchOrders();
+                fetchOrders(currentPage, { silent: true });
             } else {
                 showError('labelFailed', result.message || 'Failed to generate label');
             }
@@ -277,7 +279,7 @@ const Orders = () => {
                 const providerLabel = 'iThink';
                 const awb = result.data?.order?.waybill || result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated';
                 showSuccess('orderSynced', `Order ${orderNumber} synced via ${providerLabel}! AWB: ${awb}`);
-                fetchOrders(); fetchAllOrdersForStats();
+                fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to sync order'); }
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to sync order');
         } finally {
@@ -301,8 +303,9 @@ const Orders = () => {
             if (result.success) {
                 showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
                 highlightRow(orderId);
-                // Refresh orders + stats to reflect the new status.
-                await fetchOrders();
+                // Refresh orders + stats to reflect the new status — silent so the
+                // table doesn't blank to a skeleton while confirming.
+                await fetchOrders(currentPage, { silent: true });
                 await fetchAllOrdersForStats();
                 // Courier assignment is handled by the dedicated "Sync" action on
                 // each row (auto-selects the best available courier). We no longer
@@ -321,7 +324,7 @@ const Orders = () => {
             if (result.success) {
                 showSuccess('orderCancelled', `Order ${orderNumber} cancelled successfully`);
                 highlightRow(orderId);
-                fetchOrders();
+                fetchOrders(currentPage, { silent: true });
                 fetchAllOrdersForStats();
             }
             else { showError('saveFailed', result.message || 'Failed to cancel order'); }
@@ -339,7 +342,7 @@ const Orders = () => {
             const result = await orderService.adminDeleteOrder(orderId);
             if (result?.success !== false) {
                 showSuccess('orderDeleted', `Order ${orderNumber} deleted`);
-                fetchOrders();
+                fetchOrders(currentPage, { silent: true });
                 fetchAllOrdersForStats();
             } else {
                 showError('saveFailed', result.message || 'Failed to delete order');
