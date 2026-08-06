@@ -376,7 +376,7 @@ export function ProductInfo({ product, onColorChange }) {
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:px-2.5 sm:py-2.5',
+                      'no-touch-min flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:px-2.5 sm:py-2.5',
                       activeColor.name === color.name ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
                     )}
                   >

@@ -36,7 +36,7 @@ export function ExclusiveSection({ products = [] }) {
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [active, activeColor])
+  }, [active, activeColor, products.length])
 
   // Auto-advance the main image through the gallery every 3s (pause on hover).
   useEffect(() => {
@@ -275,13 +275,13 @@ export function ExclusiveSection({ products = [] }) {
                     {visibleColorOptions.map((c) => (
                       c.packColors ? (
                         <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
-                          className={cn('flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:p-2', c._index === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
+                          className={cn('no-touch-min flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:p-2', c._index === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
                         >
                           {c.packColors.map((pc, i) => <span key={`${pc.name}-${i}`} className="h-4 w-4 rounded-full border border-gray-200 sm:h-5 sm:w-5" style={{ backgroundColor: pc.hex }} />)}
                         </button>
                       ) : (
                         <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
-                          className={cn('h-5 w-5 rounded-full border-2 transition-all sm:h-7 sm:w-7', c._index === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
+                          className={cn('no-touch-min h-5 w-5 rounded-full border-2 transition-all sm:h-7 sm:w-7', c._index === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
                           style={{ backgroundColor: c.hex }}
                         />
                       )
