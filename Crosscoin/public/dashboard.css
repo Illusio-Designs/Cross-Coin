@@ -2243,6 +2243,15 @@
 .obz-ico svg { width: 15px; height: 15px; }
 .obz-sn { font-family: var(--ds-font-mono); color: var(--ds-color-text-faint); font-size: 12px; }
 
+/* Mobile: the header stacks and the search/brand/add controls go full width */
+@media (max-width: 640px) {
+  .obz-prod-head { flex-direction: column; align-items: stretch; }
+  .obz-prod-headR { width: 100%; }
+  .obz-search { min-width: 0; flex: 1; }
+  .obz-prod-headR > div { flex: 1; min-width: 0; }
+  .obz-add-btn { justify-content: center; }
+}
+
 /* Compact edit-product form: 3-up select row (Category / Status / Badge) */
 .obz-form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: start; }
 /* Zero the top margin inside the row so the dm-field (Category) and the Input
