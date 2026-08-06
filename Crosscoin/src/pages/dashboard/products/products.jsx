@@ -328,8 +328,12 @@ const ProductsPage = () => {
 
   // Update handleEdit to include badge
   const handleEdit = async (id) => {
+    // Open the panel immediately (with a loader) so it doesn't feel like the
+    // click did nothing while the product details are fetched.
+    setCurrentStep(1);
+    setEditLoading(true);
+    setIsModalOpen(true);
     try {
-      setEditLoading(true);
       const response = await productService.getProduct(id);
       const product = response;
       
@@ -459,9 +463,9 @@ const ProductsPage = () => {
       };
 
       setFormData(formData);
-      setIsModalOpen(true);
     } catch (err) {
       setError(err.response?.data?.message || "Error fetching product details");
+      setIsModalOpen(false); // close the panel if the fetch failed
     } finally {
       setEditLoading(false);
     }
@@ -1411,11 +1415,11 @@ const ProductsPage = () => {
               <Button variant="secondary" size="medium" onClick={handlePrevStep} disabled={loading} type="button">Previous</Button>
             )}
             {currentStep < 3 ? (
-              <Button variant="primary" size="medium" onClick={handleNextStep} disabled={loading} type="button">Next</Button>
+              <Button variant="primary" size="medium" onClick={handleNextStep} disabled={loading || editLoading} type="button">Next</Button>
             ) : (
               <>
                 <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-                <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading} type="button">{loading ? "Saving..." : "Save"}</Button>
+                <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading || editLoading} type="button">{loading ? "Saving..." : "Save"}</Button>
               </>
             )}
           </>
@@ -1441,7 +1445,9 @@ const ProductsPage = () => {
               );
             })}
           </div>
-          {renderModalStep()}
+          {editLoading
+            ? <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 260 }}><Loader /></div>
+            : renderModalStep()}
         </form>
       </Modal>
 
