@@ -207,6 +207,51 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       },
     });
 
+    // ── Period-over-period deltas + daily revenue trend ─────────────────────
+    // One 60-day pull powers both: last-30d vs prior-30d comparison (the KPI
+    // arrows) and a per-day revenue series (the area chart). Always a 30-day
+    // window regardless of the page date filter, matching the "vs prev 30d"
+    // labels in the design.
+    const DAY_MS = 86400000;
+    const sixtyDaysAgo = new Date(Date.now() - 60 * DAY_MS);
+    const trendOrders = await Order.findAll({
+      attributes: ['final_amount', 'status', 'createdAt'],
+      where: { ...brandWhere, createdAt: { [Op.gte]: sixtyDaysAgo } },
+      raw: true,
+    });
+    let curEarned = 0, prevEarned = 0, curTotal = 0, prevTotal = 0, curCnt = 0, prevCnt = 0, todayCnt = 0;
+    const dayRev = {};
+    const nowMs = Date.now();
+    const todayKey = new Date().toISOString().slice(0, 10);
+    for (const o of trendOrders) {
+      const amt = parseFloat(o.final_amount || 0);
+      const t = new Date(o.createdAt).getTime();
+      const ageDays = (nowMs - t) / DAY_MS;
+      const earned = o.status === 'delivered';
+      if (ageDays <= 30) {
+        curCnt++; curTotal += amt; if (earned) curEarned += amt;
+        const key = new Date(o.createdAt).toISOString().slice(0, 10);
+        dayRev[key] = (dayRev[key] || 0) + amt;
+        if (key === todayKey) todayCnt++;
+      } else if (ageDays <= 60) {
+        prevCnt++; prevTotal += amt; if (earned) prevEarned += amt;
+      }
+    }
+    const pctChange = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : (cur > 0 ? 100 : 0));
+    const curAov = curCnt > 0 ? curTotal / curCnt : 0;
+    const prevAov = prevCnt > 0 ? prevTotal / prevCnt : 0;
+    const deltas = {
+      revenue: { pct: pctChange(curEarned, prevEarned) },
+      orders: { pct: pctChange(curCnt, prevCnt), today: todayCnt },
+      aov: { pct: pctChange(curAov, prevAov) },
+      customersNew: recentCustomers, // new customers in the last 30 days
+    };
+    const revenueTrend = [];
+    for (let i = 29; i >= 0; i--) {
+      const key = new Date(nowMs - i * DAY_MS).toISOString().slice(0, 10);
+      revenueTrend.push(Math.round(dayRev[key] || 0));
+    }
+
     // Get recent orders list (Last 10 orders)
     const recentOrdersList = await Order.findAll({
       limit: 10,
@@ -630,6 +675,8 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
           statusDistribution: orderStatusDistribution,
           statusChart: orderStatusChart
         },
+        deltas,
+        revenueTrend,
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
           earned: parseFloat(earnedRevenue.toFixed(2)),

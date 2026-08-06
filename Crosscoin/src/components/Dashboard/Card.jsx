@@ -65,6 +65,46 @@ function getGreeting() {
   return 'Good evening';
 }
 
+/* ── KPI delta arrow (▲/▼ %) — green up, red down ── */
+function Delta({ pct }) {
+  if (pct === null || pct === undefined) return null;
+  const up = pct >= 0;
+  return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
+}
+
+/* ── Revenue area chart — cumulative daily revenue (smooth upward line) ── */
+function RevenueTrend({ data }) {
+  if (!Array.isArray(data) || data.length < 2 || data.every((v) => !v)) {
+    return <div className="h-hint">Not enough revenue history yet for a trend.</div>;
+  }
+  let sum = 0;
+  const cum = data.map((v) => (sum += (v || 0)));
+  const W = 640, H = 150, PAD = 6;
+  const max = Math.max(1, ...cum);
+  const pts = cum.map((v, i) => {
+    const x = (i / (cum.length - 1)) * W;
+    const y = H - PAD - (v / max) * (H - PAD * 2);
+    return [x, y];
+  });
+  // Smooth the polyline with a light Catmull-Rom → cubic-bezier pass.
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  const area = `${d} L${W} ${H} L0 ${H} Z`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="150" preserveAspectRatio="none" style={{ display: 'block' }} role="img" aria-label="Cumulative revenue trend, last 30 days">
+      <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+      <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+      <path d={area} fill="var(--ds-color-surface-soft)" />
+      <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /* ── KPI Tile ── */
 function KpiTile({ label, value, color, prefix = '' }) {
   return (
@@ -205,15 +245,7 @@ function CardGrid() {
   const segTotal = segs.reduce((a, s) => a + s.count, 0) || 1;
   const brandSales = stats.brandSales || [];
   const brandMax = Math.max(1, ...brandSales.map((b) => b.revenue || 0));
-  // Revenue breakdown as compact row-bars (matches Sales-by-brand), instead of
-  // the old oversized donut.
-  const revBars = [
-    { label: 'Earned',    value: revenue.earned || 0 },
-    { label: 'Active',    value: revenue.active || 0 },
-    { label: 'RTO',       value: revenue.breakdown?.rto || 0 },
-    { label: 'Cancelled', value: revenue.breakdown?.cancelled || 0 },
-  ].filter((b) => b.value > 0);
-  const revMax = Math.max(1, ...revBars.map((b) => b.value));
+  const deltas = stats.deltas || {};
 
   return (
     <div className="obz-home">
@@ -262,22 +294,22 @@ function CardGrid() {
         <div className="kpi">
           <div className="kl">Revenue (earned)</div>
           <div className="kv num">₹{fmt(revenue.earned)}</div>
-          <div className="kf"><span className="mut">of ₹{fmt(revenue.total)} total</span></div>
+          <div className="kf"><Delta pct={deltas.revenue?.pct} /> <span className="mut">vs prev 30d</span></div>
         </div>
         <div className="kpi">
           <div className="kl">Orders</div>
           <div className="kv num">{inr(totalOrders)}</div>
-          <div className="kf"><span className="mut">{inr(orders.recent || 0)} in last 30 days</span></div>
+          <div className="kf"><Delta pct={deltas.orders?.pct} /> <span className="mut">{inr(deltas.orders?.today ?? orders.recent ?? 0)} today</span></div>
         </div>
         <div className="kpi">
           <div className="kl">Customers</div>
           <div className="kv num">{inr(customers.total || 0)}</div>
-          <div className="kf"><span className="mut">total customers</span></div>
+          <div className="kf">{(deltas.customersNew ?? 0) > 0 && <span className="delta up">▲ {inr(deltas.customersNew)}</span>} <span className="mut">new this month</span></div>
         </div>
         <div className="kpi">
           <div className="kl">Avg order value</div>
           <div className="kv num">₹{fmt(revenue.average)}</div>
-          <div className="kf"><span className="mut">per order</span></div>
+          <div className="kf"><Delta pct={deltas.aov?.pct} /> <span className="mut">vs prev 30d</span></div>
         </div>
       </div>
 
@@ -290,15 +322,7 @@ function CardGrid() {
               Total ₹{fmt(revenue.total)} · Earned ₹{fmt(revenue.earned)} · Active ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
             </span>
           </div>
-          {revBars.length > 0 ? revBars.map((b) => (
-            <div className="rb" key={b.label}>
-              <span className="n">{b.label}</span>
-              <span className="t"><span className="f" style={{ width: `${Math.max(4, (b.value / revMax) * 100)}%` }} /></span>
-              <span className="v num">₹{inr(b.value)}</span>
-            </div>
-          )) : (
-            <div className="h-hint">No revenue data for this period yet.</div>
-          )}
+          <RevenueTrend data={stats.revenueTrend} />
         </div>
 
         <div className="panel">
