@@ -358,14 +358,25 @@ const Orders = () => {
     };
 
     // ── Shipping-address edit (fix pincode/phone/etc. that blocks shipping) ──
-    const startEditAddress = () => {
-        const a = selectedOrder?.ShippingAddress || {};
-        setAddressForm({
+    const buildAddressForm = (order) => {
+        const a = order?.ShippingAddress || {};
+        return {
             full_name: a.full_name || '', phone: a.phone || '', address: a.address || '',
             landmark: a.landmark || '', city: a.city || '', state: a.state || '',
             pincode: a.pincode || '', country: a.country || 'India',
-        });
+        };
+    };
+    const startEditAddress = () => {
+        setAddressForm(buildAddressForm(selectedOrder));
         setEditingAddress(true);
+    };
+    // Open the order panel straight into the address editor (row action).
+    const openAddressEditor = (row) => {
+        if (!row.ShippingAddress) { showError('updateFailed', 'This order has no shipping address to edit'); return; }
+        setSelectedOrder(row);
+        setAddressForm(buildAddressForm(row));
+        setEditingAddress(true);
+        setIsViewModalOpen(true);
     };
 
     const saveAddress = async () => {
@@ -664,9 +675,9 @@ const Orders = () => {
                                 </button>
                             </Tooltip>
                         )}
-                        <Tooltip text="Update or correct the Air Waybill number" position="top">
-                            <button className="order-action-btn order-awb-btn" onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        <Tooltip text="Edit shipping address (fix wrong pincode, phone, etc.)" position="top">
+                            <button className="order-action-btn order-address-btn" onClick={() => openAddressEditor(row)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                             </button>
                         </Tooltip>
                         {(row.Shipment?.waybill || row.fship_waybill) && (
