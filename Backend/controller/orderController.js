@@ -2089,7 +2089,7 @@
       // Date filter support (IST day boundaries; gate on hasRange — Op.* are
       // Symbols so Object.keys() is always 0 and must not be used to detect it).
       const { start_date, end_date } = req.query;
-      const { buildCreatedAtRange } = require('../utils/dateRange.js');
+      const { buildCreatedAtRange, dayStartTZ, dayEndTZ } = require('../utils/dateRange.js');
       const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
       const orderWhere = hasRange ? { createdAt: range } : {};
 
@@ -2098,14 +2098,19 @@
       // Total revenue = ALL orders (full picture)
       const totalRevenue = await Order.sum("final_amount", { where: orderWhere }) || 0;
 
-      // Count each status
+      // Count each status — must honour the SAME date filter as the counts above.
+      // (This previously gated on `hasDateFilter`, which was never defined, so the
+      //  status breakdown silently ignored the date range. Use `hasRange` and the
+      //  IST day boundaries so it matches totalOrders/totalRevenue.)
+      const rawStart = dayStartTZ(start_date) || new Date(0);
+      const rawEnd = dayEndTZ(end_date) || new Date();
       const [statusRows] = await sequelize.query(`
         SELECT status, COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
         FROM orders
-        ${hasDateFilter ? `WHERE created_at >= :startDate AND created_at <= :endDate` : ''}
+        ${hasRange ? `WHERE created_at >= :startDate AND created_at <= :endDate` : ''}
         GROUP BY status
       `, {
-        replacements: hasDateFilter ? { startDate: start_date, endDate: end_date ? new Date(new Date(end_date).setHours(23, 59, 59, 999)) : new Date() } : {},
+        replacements: hasRange ? { startDate: rawStart, endDate: rawEnd } : {},
       });
       const sc = {};
       const sr = {};
@@ -2162,7 +2167,7 @@
         totalDeliveredOrders: sc['delivered'] || 0,
         totalCancelledOrders,
         totalRtoOrders,
-        ...(hasDateFilter ? { dateFilter: { start_date, end_date } } : {}),
+        ...(hasRange ? { dateFilter: { start_date, end_date } } : {}),
       });
     } catch (error) {
       logger.error("Error fetching order statistics:", error);

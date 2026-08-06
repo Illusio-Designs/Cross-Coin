@@ -71,6 +71,7 @@ const Orders = () => {
     // under the admin while they work.
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [liveUpdates, setLiveUpdates] = useState(true);
+    const [filterOpen, setFilterOpen] = useState(false);
     // Manual courier picker — opened directly or auto-opened when an
     // auto-sync comes back failed (no serviceable courier).
 
@@ -513,7 +514,7 @@ const Orders = () => {
                 // cell shows only the name (no number, no email).
                 const name = String(rawName).replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim() || 'N/A';
                 return (
-                    <div className="customer-info">
+                    <div className="customer-info" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
                         <div className="customer-name" style={{ whiteSpace: 'nowrap' }}>{name}</div>
                         {row.rto_risk_level && (
                             <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
@@ -726,18 +727,15 @@ const Orders = () => {
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshingStatus ? 'animate-spin' : ''}><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
                                     {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
                                 </button>
-                                <button className="order-sync-main-btn order-sync-main-btn--primary"
-                                    title="Create a new order manually"
-                                    onClick={() => setIsManualOrderOpen(true)}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                    New Order
-                                </button>
-                                <button className="order-sync-main-btn order-sync-main-btn--ghost"
-                                    title={liveUpdates ? 'Live updates on — the list refreshes quietly in the background. Click to pause.' : 'Live updates paused — the list stays still until you refresh. Click to resume.'}
-                                    onClick={() => setLiveUpdates(v => !v)}>
-                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: liveUpdates ? '#22c55e' : '#9ca3af', display: 'inline-block', flexShrink: 0 }} />
-                                    {liveUpdates ? 'Live' : 'Paused'}
-                                </button>
+                                <DateRangePicker
+                                    label=""
+                                    startDate={statsStartDate}
+                                    endDate={statsEndDate}
+                                    onStartChange={setStatsStartDate}
+                                    onEndChange={setStatsEndDate}
+                                    onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
+                                    inline
+                                />
                             </>
                         }
                     />
@@ -754,150 +752,87 @@ const Orders = () => {
                         <StatTile label="Avg Order" value={parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)} prefix="₹" />
                     </StatGrid>
 
-                    {/* ── Date Filter (filters both KPI stats AND the orders list below) ── */}
-                    <DateRangePicker
-                        label="Filter by date"
-                        startDate={statsStartDate}
-                        endDate={statsEndDate}
-                        onStartChange={setStatsStartDate}
-                        onEndChange={setStatsEndDate}
-                        onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
-                        inline
-                    />
-
-                    {/* ── Analytics Charts: collapsed by default so the orders table
-                           sits near the top. Toggle to reveal the payment / shipping
-                           breakdown charts. ── */}
-                    <div className="orders-analytics-toggle-row">
-                        <button
-                            type="button"
-                            className="order-sync-main-btn order-sync-main-btn--ghost"
-                            onClick={() => setShowAnalytics(v => !v)}
-                            aria-expanded={showAnalytics}
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
-                            {showAnalytics ? 'Hide analytics charts' : 'Show analytics charts'}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAnalytics ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><polyline points="6 9 12 15 18 9" /></svg>
-                        </button>
-                    </div>
-                    {showAnalytics && (
-                        <div className="orders-analytics">
-                            <Panel><PaymentChart allOrdersStats={allOrdersStats} /></Panel>
-                            <Panel><PaymentStatusChart allOrdersStats={allOrdersStats} /></Panel>
-                            <Panel><ShippingChart orders={allOrdersData} allOrdersStats={allOrdersStats} /></Panel>
+                    {/* ── Status tabs (left) + Filter drawer trigger (right), one line ── */}
+                    <div className="ord-toolbar">
+                        <div className="ord-tabs" role="tablist" aria-label="Filter by order status">
+                            {[
+                                { v: 'all',       l: 'All' },
+                                { v: 'pending',   l: 'Pending' },
+                                { v: 'processing', l: 'Processing' },
+                                { v: 'shipped',   l: 'Shipped' },
+                                { v: 'delivered', l: 'Delivered' },
+                                { v: 'cancelled', l: 'Cancelled' },
+                                { v: 'rto',       l: 'RTO' },
+                            ].map((t) => (
+                                <button key={t.v} type="button" role="tab"
+                                    aria-selected={statusFilter === t.v}
+                                    className={`ord-tab${statusFilter === t.v ? ' on' : ''}`}
+                                    onClick={() => setStatusFilter(t.v)}>
+                                    {t.l}
+                                </button>
+                            ))}
                         </div>
-                    )}
-
-                    {/* ── Status tabs (segmented control, prototype style) ── */}
-                    <div className="ord-tabs" role="tablist" aria-label="Filter by order status">
-                        {[
-                            { v: 'all',       l: 'All' },
-                            { v: 'pending',   l: 'Pending' },
-                            { v: 'processing', l: 'Processing' },
-                            { v: 'shipped',   l: 'Shipped' },
-                            { v: 'delivered', l: 'Delivered' },
-                            { v: 'cancelled', l: 'Cancelled' },
-                            { v: 'rto',       l: 'RTO' },
-                        ].map((t) => (
-                            <button key={t.v} type="button" role="tab"
-                                aria-selected={statusFilter === t.v}
-                                className={`ord-tab${statusFilter === t.v ? ' on' : ''}`}
-                                onClick={() => setStatusFilter(t.v)}>
-                                {t.l}
+                        <div className="ord-toolbar-right">
+                            {selectedOrders.size > 0 && (
+                                <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
+                                    onClick={handleBulkDownload} disabled={isDownloadingBulk}>
+                                    <span className="sl-add-btn-icon">
+                                        <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </span>
+                                    {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
+                                </button>
+                            )}
+                            <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setFilterOpen(true)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                                Filter
                             </button>
-                        ))}
+                        </div>
                     </div>
-
-                    {/* ── Secondary filters + sort (chips) ── */}
-                    <FilterBar hideSearch>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={paymentTypeFilter}
-                                onChange={(v) => setPaymentTypeFilter(v || 'all')}
-                                options={[
-                                    { value: 'all', label: 'All Payment Types' },
-                                    { value: 'prepaid', label: 'Prepaid' },
-                                    { value: 'cod', label: 'Cash on Delivery' },
-                                ]}
-                                placeholder="All Payment Types"
-                            />
-                        </div>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={paymentStatusFilter}
-                                onChange={(v) => setPaymentStatusFilter(v || 'all')}
-                                options={[
-                                    { value: 'all', label: 'All Payment Status' },
-                                    { value: 'pending', label: 'Pending' },
-                                    { value: 'paid', label: 'Paid' },
-                                    { value: 'failed', label: 'Failed' },
-                                    { value: 'refunded', label: 'Refunded' },
-                                    { value: 'refund_pending', label: 'Refund Pending' },
-                                    { value: 'cancelled', label: 'Cancelled' },
-                                ]}
-                                placeholder="All Payment Status"
-                            />
-                        </div>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={brandFilter}
-                                onChange={(v) => setBrandFilter(v || 'all')}
-                                options={[
-                                    { value: 'all', label: 'All Brands' },
-                                    ...brands.map(b => ({ value: String(b.id), label: b.display_name || b.name }))
-                                ]}
-                                placeholder="All Brands"
-                            />
-                        </div>
-                        <div className="orders-filter-divider" />
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={sortBy}
-                                onChange={(v) => setSortBy(v || 'createdAt')}
-                                options={[
-                                    { value: 'createdAt', label: 'Sort: Date' },
-                                    { value: 'total', label: 'Sort: Total' },
-                                    { value: 'status', label: 'Sort: Status' },
-                                    { value: 'payment_status', label: 'Sort: Payment' },
-                                ]}
-                            />
-                        </div>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={sortOrder}
-                                onChange={(v) => setSortOrder(v || 'desc')}
-                                options={[
-                                    { value: 'desc', label: 'Newest First' },
-                                    { value: 'asc', label: 'Oldest First' },
-                                ]}
-                            />
-                        </div>
-                        <div className="orders-filter-wrap">
-                            <Select
-                                value={String(itemsPerPage)}
-                                onChange={(v) => { setItemsPerPage(Number(v || 10)); setCurrentPage(1); }}
-                                options={[
-                                    { value: '10', label: 'Show: 10' },
-                                    { value: '25', label: 'Show: 25' },
-                                    { value: '50', label: 'Show: 50' },
-                                    { value: '100', label: 'Show: 100' },
-                                ]}
-                            />
-                        </div>
-                        {selectedOrders.size > 0 && (
-                            <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
-                                onClick={handleBulkDownload} disabled={isDownloadingBulk}>
-                                <span className="sl-add-btn-icon">
-                                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </span>
-                                {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
-                            </button>
-                        )}
-                    </FilterBar>
 
                 </div>{/* end orders-header-container */}
+
+                {/* ── Filters drawer (right aside panel) ── */}
+                <Modal isOpen={filterOpen} onClose={() => setFilterOpen(false)} title="Filters" size="sm"
+                    footer={
+                        <>
+                            <Button variant="secondary" onClick={() => {
+                                setPaymentTypeFilter('all'); setPaymentStatusFilter('all'); setBrandFilter('all');
+                                setSortBy('createdAt'); setSortOrder('desc');
+                            }}>Reset</Button>
+                            <Button variant="primary" onClick={() => setFilterOpen(false)}>Done</Button>
+                        </>
+                    }>
+                    <div className="ord-filter-drawer">
+                        <label className="ord-filter-label">Payment type</label>
+                        <Select value={paymentTypeFilter} onChange={(v) => setPaymentTypeFilter(v || 'all')}
+                            options={[{ value: 'all', label: 'All Payment Types' }, { value: 'prepaid', label: 'Prepaid' }, { value: 'cod', label: 'Cash on Delivery' }]}
+                            placeholder="All Payment Types" />
+
+                        <label className="ord-filter-label">Payment status</label>
+                        <Select value={paymentStatusFilter} onChange={(v) => setPaymentStatusFilter(v || 'all')}
+                            options={[{ value: 'all', label: 'All Payment Status' }, { value: 'pending', label: 'Pending' }, { value: 'paid', label: 'Paid' }, { value: 'failed', label: 'Failed' }, { value: 'refunded', label: 'Refunded' }, { value: 'refund_pending', label: 'Refund Pending' }, { value: 'cancelled', label: 'Cancelled' }]}
+                            placeholder="All Payment Status" />
+
+                        <label className="ord-filter-label">Brand</label>
+                        <Select value={brandFilter} onChange={(v) => setBrandFilter(v || 'all')}
+                            options={[{ value: 'all', label: 'All Brands' }, ...brands.map(b => ({ value: String(b.id), label: b.display_name || b.name }))]}
+                            placeholder="All Brands" />
+
+                        <label className="ord-filter-label">Sort by</label>
+                        <Select value={sortBy} onChange={(v) => setSortBy(v || 'createdAt')}
+                            options={[{ value: 'createdAt', label: 'Sort: Date' }, { value: 'total', label: 'Sort: Total' }, { value: 'status', label: 'Sort: Status' }, { value: 'payment_status', label: 'Sort: Payment' }]} />
+
+                        <label className="ord-filter-label">Order</label>
+                        <Select value={sortOrder} onChange={(v) => setSortOrder(v || 'desc')}
+                            options={[{ value: 'desc', label: 'Newest First' }, { value: 'asc', label: 'Oldest First' }]} />
+
+                        <label className="ord-filter-label">Rows per page</label>
+                        <Select value={String(itemsPerPage)} onChange={(v) => { setItemsPerPage(Number(v || 10)); setCurrentPage(1); }}
+                            options={[{ value: '10', label: 'Show: 10' }, { value: '25', label: 'Show: 25' }, { value: '50', label: 'Show: 50' }, { value: '100', label: 'Show: 100' }]} />
+                    </div>
+                </Modal>
 
                 {/* Table Section */}
                 <section className="sl-table-wrap" aria-label="Orders table">
