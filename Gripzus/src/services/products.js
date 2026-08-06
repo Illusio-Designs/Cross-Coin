@@ -119,7 +119,11 @@ export function mapProduct(p) {
   const colors = [...colorMap.values()].map((e) => {
     const tagged = [...e.varIds].flatMap((id) => imagesByVar[id] || []);
     let own = [...new Set([...tagged, ...e.imgs])];
-    if (!own.length) own = generalImages.length ? generalImages : images.slice(0, 1);
+    // A colour with no photo of its own falls back to the product's MAIN
+    // gallery (the primary/first image, same one the base card shows) — NOT
+    // the untagged "general" pool, which can lead with a marketing banner.
+    // This keeps every card showing a clean product shot as its first image.
+    if (!own.length) own = images.length ? images : ['/assets/Gripzus.JPG.jpeg'];
     return { name: e.name, hex: e.hex, ...(e.packColors ? { packColors: e.packColors } : {}), images: own };
   });
 
