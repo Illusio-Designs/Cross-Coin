@@ -3244,10 +3244,10 @@
 /* FShip block */
 .odm-fship {
   margin: 0 14px 12px;
-  border: 1px solid #e0e7ff;
-  border-radius: 6px;
+  border: 1px solid var(--ds-color-border);
+  border-radius: 8px;
   overflow: hidden;
-  background: #f5f7ff;
+  background: var(--ds-color-surface-soft);
 }
 
 .odm-fship-title {
@@ -3257,11 +3257,11 @@
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 700;
-  color: #3730a3;
+  color: var(--ds-color-text);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 1px solid #e0e7ff;
-  background: #eef2ff;
+  border-bottom: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-soft);
 }
 
 .odm-fship .odm-info-grid {
