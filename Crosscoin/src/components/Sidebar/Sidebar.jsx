@@ -83,7 +83,6 @@ const ALL_MENU = [
       { label: 'Shipping Fees',  view: 'shippingFees' },
     ],
   },
-  { label: 'Payments',     icon: IC.payments,   view: 'payments',    roles: ['admin','order_manager'] },
   { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'] },
   { label: 'WhatsApp',     icon: IC.wa,         view: 'whatsapp',    roles: ['admin','whatsapp_manager'] },
   { label: 'Staff Users',  icon: IC.staffUsers, view: 'staff-users', roles: ['admin'] },

@@ -8,7 +8,6 @@ export const getPageTitle = (view) => {
     'orders': 'Orders',
     'consumers': 'Consumers',
     'shippingFees': 'Shipping Fees',
-    'payments': 'Payments',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',
