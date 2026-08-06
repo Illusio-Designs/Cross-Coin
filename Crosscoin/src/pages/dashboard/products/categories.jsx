@@ -320,7 +320,14 @@ export default function Categories() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Category" : "Add Category"} closeOnOverlayClick={false}>
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Category" : "Add Category"} closeOnOverlayClick={false}
+        footer={
+          <>
+            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
+            <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading} type="button">{loading ? "Saving..." : formData.id ? "Update Category" : "Add Category"}</Button>
+          </>
+        }
+      >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
             <div className="dm-field">
@@ -430,10 +437,6 @@ export default function Categories() {
                 </div>
               )}
             </div>
-          </div>
-          <div className="modal-footer">
-            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Category" : "Add Category"}</Button>
           </div>
         </form>
       </Modal>

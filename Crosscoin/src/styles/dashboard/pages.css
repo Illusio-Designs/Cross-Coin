@@ -950,11 +950,12 @@
   height: 18px;
 }
 
-.sl-stat-icon--blue  { background: #e8f0fe; color: #1a56db; }
-.sl-stat-icon--green { background: #e8f5e9; color: #1a7a4a; }
-.sl-stat-icon--yellow{ background: #fff8e1; color: #b45309; }
-.sl-stat-icon--red   { background: #ffeef0; color: #dc2626; }
-.sl-stat-icon--purple{ background: #f3e8ff; color: #7c3aed; }
+/* Monochrome stat icons — dark glyph on a soft neutral tile (was multi-colour) */
+.sl-stat-icon--blue,
+.sl-stat-icon--green,
+.sl-stat-icon--yellow,
+.sl-stat-icon--red,
+.sl-stat-icon--purple { background: var(--ds-color-surface-soft); color: var(--ds-color-text); border: 1px solid var(--ds-color-border); }
 
 .sl-stat-body {
   display: flex;
@@ -1104,7 +1105,6 @@
 .dm-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
   margin-bottom: 18px;
 }
 
@@ -1666,14 +1666,11 @@
 .modal-body .weight-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
 }
 .modal-body .dimensions-section h6 { margin: 0 0 10px; }
 .modal-body .dimensions-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 /* Variation item card */

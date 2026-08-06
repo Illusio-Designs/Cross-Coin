@@ -168,7 +168,14 @@ export default function Attributes() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Attribute" : "Add Attribute"} closeOnOverlayClick={false}>
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Attribute" : "Add Attribute"} closeOnOverlayClick={false}
+        footer={
+          <>
+            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
+            <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading} type="button">{loading ? "Saving..." : formData.id ? "Update Attribute" : "Add Attribute"}</Button>
+          </>
+        }
+      >
         <form onSubmit={handleSubmit} className="seo-form">
           {error && <div className="dm-error-banner">{error}</div>}
           <div className="modal-body">
@@ -203,10 +210,6 @@ export default function Attributes() {
                 <span className="dm-checkbox-label">Mark as Required</span>
               </label>
             </div>
-          </div>
-          <div className="modal-footer">
-            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Attribute" : "Add Attribute"}</Button>
           </div>
         </form>
       </Modal>
