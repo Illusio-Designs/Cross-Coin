@@ -5451,6 +5451,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px 20px;
 }
+/* Let grid/flex children shrink instead of pushing a track past the aside
+   panel's edge (which the panel then clips). Fixes right-side cut-off. */
+.odm-row-2 > *,
+.odm-info-grid > *,
+.odm-field { min-width: 0; }
+.odm-info-grid .odm-value,
+.odm-summary-row .odm-value { overflow-wrap: anywhere; word-break: break-word; }
 
 /* FShip block */
 .odm-fship {
