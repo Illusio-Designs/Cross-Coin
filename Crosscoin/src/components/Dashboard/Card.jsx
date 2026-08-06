@@ -37,6 +37,25 @@ const THEMES = {
 };
 
 const fmt = (n) => (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inr = (n) => (n || 0).toLocaleString('en-IN');
+
+/* Customer initials for the avatar chip (e.g. "Jay Maurya" → "JM"). */
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '—';
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
+
+/* Map an order status to a pill tone (good/info/warn/bad/mut). */
+function orderPill(status) {
+  const s = String(status || '').toLowerCase();
+  if (/deliver|complet/.test(s))                                return ['good', status || '—'];
+  if (/ship|transit|out for|booked|manifest|pickup|dispatch/.test(s)) return ['info', status];
+  if (/pend|await|process|confirm/.test(s))                     return ['warn', status];
+  if (/cancel|fail/.test(s))                                    return ['bad', status];
+  if (/rto|return/.test(s))                                     return ['mut', status];
+  return ['mut', status || '—'];
+}
 
 /* ── Greeting helper ── */
 function getGreeting() {
@@ -174,8 +193,21 @@ function CardGrid() {
   if (stats.rtoStats?.rtoRate > 0) alerts.push(`RTO rate: ${stats.rtoStats.rtoRate}%`);
   if (pendingCount > 0) alerts.push(`${pendingCount} orders pending`);
 
+  /* ── Segmented order-overview buckets (each order counted once) ── */
+  const segs = [
+    { label: 'Pending',       count: pendingCount,          color: 'var(--ds-color-warn)' },
+    { label: 'Confirmed',     count: confirmedCount,        color: 'var(--ds-color-info)' },
+    { label: 'Shipped',       count: shippedCount,          color: 'var(--ds-color-text)' },
+    { label: 'Delivered',     count: orders.completed || 0, color: 'var(--ds-color-success)' },
+    { label: 'Cancelled',     count: orders.cancelled || 0, color: 'var(--ds-color-danger)' },
+    { label: 'RTO / Returns', count: rtoCount,              color: 'var(--ds-color-text-faint)' },
+  ];
+  const segTotal = segs.reduce((a, s) => a + s.count, 0) || 1;
+  const brandSales = stats.brandSales || [];
+  const brandMax = Math.max(1, ...brandSales.map((b) => b.revenue || 0));
+
   return (
-    <div className="dashboard-sections">
+    <div className="obz-home">
 
       {/* ═══ 1. PAGE HEADER (greeting + date filter) ═══ */}
       <PageHeader
@@ -216,262 +248,122 @@ function CardGrid() {
         </div>
       )}
 
-      {/* ═══ 3. KPI STRIP — design-system StatTiles ═══ */}
-      <StatGrid style={{ marginBottom: 'var(--ds-space-4)' }}>
-        <StatTile label="Total Revenue"    value={fmt(revenue.total)}             prefix="₹" />
-        <StatTile label="Earned"           value={fmt(revenue.earned)}            prefix="₹" tone="good" />
-        <StatTile label="Active"           value={fmt(revenue.active)}            prefix="₹" tone="info" />
-        <StatTile label="Lost (RTO)"       value={fmt(revenue.breakdown?.rto)}    prefix="₹" tone="warn" />
-        <StatTile label="Lost (Cancelled)" value={fmt(revenue.breakdown?.cancelled)} prefix="₹" tone="danger" />
-        <StatTile label="Monthly"          value={fmt(revenue.monthly)}           prefix="₹" />
-        <StatTile label="Avg Order"        value={fmt(revenue.average)}           prefix="₹" tone="info" />
-        <StatTile label="Customers"        value={customers.total || 0} />
-        <StatTile label="Products"         value={`${products.active || 0}/${products.total || 0}`} sub="active / total" />
-        <StatTile label="Reviews"          value={`${reviews.approved || 0}/${reviews.total || 0}`} sub="approved / total" tone="warn" />
-      </StatGrid>
+      {/* ═══ 3. KPI ROW ═══ */}
+      <div className="kpis">
+        <div className="kpi">
+          <div className="kl">Revenue (earned)</div>
+          <div className="kv num">₹{fmt(revenue.earned)}</div>
+          <div className="kf"><span className="mut">of ₹{fmt(revenue.total)} total</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kl">Orders</div>
+          <div className="kv num">{inr(totalOrders)}</div>
+          <div className="kf"><span className="mut">{inr(orders.recent || 0)} in last 30 days</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kl">Customers</div>
+          <div className="kv num">{inr(customers.total || 0)}</div>
+          <div className="kf"><span className="mut">total customers</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kl">Avg order value</div>
+          <div className="kv num">₹{fmt(revenue.average)}</div>
+          <div className="kf"><span className="mut">per order</span></div>
+        </div>
+      </div>
 
-      {/* ═══ 4. ORDER PIPELINE + REVENUE DONUT (2-col on desktop, stacks on mobile) ═══ */}
-      <div className="dc-two-col">
-        <Panel title="Order Pipeline">
-          <div className="dc-pipeline">
-            <PipelineStep label="Pending" count={pendingCount} total={pipelineTotal} color="#f59e0b" />
-            <PipelineStep label="Confirmed" count={confirmedCount} total={pipelineTotal} color="#3b82f6" />
-            <PipelineStep label="Shipped" count={shippedCount} total={pipelineTotal} color="#0891b2" />
-            <PipelineStep label="Delivered" count={orders.completed || 0} total={pipelineTotal} color="#10b981" />
-            <PipelineStep label="Cancelled" count={orders.cancelled || 0} total={pipelineTotal} color="#ef4444" />
-            <PipelineStep label="RTO / Returns" count={rtoCount} total={pipelineTotal} color="#64748b" />
+      {/* ═══ 4. REVENUE + SALES BY BRAND ═══ */}
+      <div className="grid2">
+        <div className="panel">
+          <div className="panel-h">
+            <h3>Revenue</h3>
+            <span className="h-hint">
+              Total ₹{fmt(revenue.total)} · Earned ₹{fmt(revenue.earned)} · Active ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
+            </span>
           </div>
-          <div className="dc-pipe-footer">
-            <span>Total: {totalOrders}</span>
-            <span>Last 30 days: {orders.recent || 0}</span>
-            <span>COD: {codCount} · Prepaid: {prepaidCount}</span>
-          </div>
-        </Panel>
-
-        {revenue.donutChart?.length > 0 && (
-          <Panel>
+          {revenue.donutChart?.length > 0 ? (
             <DonutChart
               data={revenue.donutChart}
-              title="Revenue by Status"
-              subtitle="Where the money sits"
-              totalValue={`₹${(revenue.total || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}`}
+              title="" subtitle=""
+              totalValue={`₹${fmt(revenue.total)}`}
               totalLabel="Total Revenue"
-              size={160} strokeWidth={22} showLegend={true}
+              size={160} strokeWidth={22} showLegend
             />
-          </Panel>
-        )}
+          ) : (
+            <div className="h-hint">No revenue data for this period yet.</div>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-h"><h3>Sales by brand</h3></div>
+          {brandSales.length > 0 ? brandSales.map((b) => (
+            <div className="rb" key={b.brandId}>
+              <span className="n">{b.name}</span>
+              <span className="t"><span className="f" style={{ width: `${Math.max(4, ((b.revenue || 0) / brandMax) * 100)}%` }} /></span>
+              <span className="v num">₹{inr(b.revenue || 0)}</span>
+            </div>
+          )) : (
+            <div className="h-hint">No brand sales yet.</div>
+          )}
+        </div>
       </div>
 
-      {/* ═══ 5. ORDER STAT CARDS — design-system StatTiles ═══ */}
-      <Panel title="Order Overview" style={{ marginBottom: 'var(--ds-space-4)' }}>
-        <StatGrid>
-          <StatTile label="Total Orders" value={totalOrders} sub={hasDateFilter ? 'Filtered period' : 'All time'} />
-          <StatTile label="Pending"      value={pendingCount}          tone="warn"   sub="Awaiting processing" />
-          <StatTile label="Confirmed"    value={confirmedCount}        tone="info"   sub="Confirmed & processing" />
-          <StatTile label="Shipped"      value={shippedCount}          tone="info"   sub="In transit / delivery" />
-          <StatTile label="Delivered"    value={orders.completed || 0} tone="good"   sub={`${totalOrders > 0 ? Math.round(((orders.completed || 0)/totalOrders)*100) : 0}% success`} />
-          <StatTile label="Cancelled"    value={orders.cancelled || 0} tone="danger" sub={`${totalOrders > 0 ? Math.round(((orders.cancelled || 0)/totalOrders)*100) : 0}% of total`} />
-          <StatTile label="RTO / Returns" value={rtoCount}             tone="danger" sub={`${totalOrders > 0 ? Math.round((rtoCount/totalOrders)*100) : 0}% RTO rate`} />
-          <StatTile label="COD Orders"   value={codCount}              tone="warn"   sub={`${totalOrders > 0 ? Math.round((codCount/totalOrders)*100) : 0}% of total`} />
-          <StatTile label="Prepaid"      value={prepaidCount}          tone="good"   sub={`${totalOrders > 0 ? Math.round((prepaidCount/totalOrders)*100) : 0}% of total`} />
-          <StatTile label="Recent"       value={orders.recent || 0}    tone="info"   sub="Last 30 days" />
-        </StatGrid>
-      </Panel>
-
-      {/* ═══ 6. CHARTS ROW (2x2 → stacks under 768px) ═══ */}
-      <div className="dc-charts-2x2">
-        {stats.paymentDistribution?.chart?.length > 0 && (
-          <Panel><DonutChart data={stats.paymentDistribution.chart} title="Payment Methods" subtitle="COD vs Prepaid" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
-        )}
-        {stats.paymentStatusDistribution?.chart?.length > 0 && (
-          <Panel><DonutChart data={stats.paymentStatusDistribution.chart} title="Payment Status" subtitle="All payment statuses" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
-        )}
-        {orders.statusChart?.length > 0 && (
-          <Panel><DonutChart data={orders.statusChart} title="Order Pipeline" subtitle="Current pipeline" totalValue={`${totalOrders}`} totalLabel="Total Orders" size={160} strokeWidth={22} showLegend={true} /></Panel>
-        )}
-        {stats.rtoStats?.totalRTO > 0 && (
-          <Panel title="RTO Summary">
-            <StatGrid>
-              <StatTile label="Total RTO"      value={stats.rtoStats.totalRTO}            tone="warn" />
-              <StatTile label="Revenue Lost"   value={fmt(stats.rtoStats.rtoRevenue)}     prefix="₹" tone="danger" />
-              <StatTile label="RTO Rate"       value={`${stats.rtoStats.rtoRate}%`}       tone="warn" />
-              <StatTile label="Avg RTO Value"  value={fmt(stats.rtoStats.averageRTOValue)} prefix="₹" tone="info" />
-            </StatGrid>
-          </Panel>
-        )}
+      {/* ═══ 5. ORDER OVERVIEW — segmented bar + legend ═══ */}
+      <div className="panel">
+        <div className="panel-h">
+          <h3>Order overview</h3>
+          <span className="h-hint">every order counted once — reconciles to {inr(totalOrders)}</span>
+        </div>
+        <div className="seg">
+          {segs.map((s) => s.count > 0 && (
+            <span key={s.label} style={{ width: `${(s.count / segTotal) * 100}%`, background: s.color }} />
+          ))}
+        </div>
+        <div className="legend">
+          {segs.map((s) => (
+            <div className="leg" key={s.label}>
+              <span className="d" style={{ background: s.color }} />
+              <span><b className="num">{inr(s.count)}</b><small>{s.label}</small></span>
+            </div>
+          ))}
+        </div>
+        <div className="rb" style={{ marginTop: 6, paddingTop: 12, borderTop: '1px solid var(--ds-color-border-soft)', color: 'var(--ds-color-text-muted)', fontSize: 12, gap: 18 }}>
+          <span>COD: {inr(codCount)}</span>
+          <span>Prepaid: {inr(prepaidCount)}</span>
+          <span>Recent (30d): {inr(orders.recent || 0)}</span>
+        </div>
       </div>
 
-      {/* ═══ 6b. SALES BY BRAND ═══ */}
-      {stats.brandSales?.length > 0 && (
-        <div className="dc-two-col">
-          <Panel title="Sales by Brand" flush>
-            <ResponsiveTable
-              data={stats.brandSales}
-              rowKey="brandId"
-              emptyMessage="No brand sales yet"
-              columns={[
-                {
-                  key: 'brand',
-                  label: 'Brand',
-                  headerStyle: { minWidth: 140 },
-                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', whiteSpace: 'normal', overflowWrap: 'break-word', minWidth: 140 },
-                  render: (b) => (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 3, background: b.color, flexShrink: 0 }} />
-                      {b.name}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'orders',
-                  label: 'Orders',
-                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (b) => (b.orders || 0).toLocaleString('en-IN'),
-                },
-                {
-                  key: 'revenue',
-                  label: 'Revenue',
-                  cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (b) => `₹${(b.revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                },
-                {
-                  key: 'earned',
-                  label: 'Earned',
-                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (b) => `₹${(b.earned || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                },
-                {
-                  key: 'aov',
-                  label: 'Avg Order',
-                  cellStyle: { color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (b) => `₹${(b.avgOrderValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                },
-                {
-                  key: 'share',
-                  label: 'Share',
-                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (b) => `${b.share || 0}%`,
-                },
-              ]}
-            />
-          </Panel>
-
-          <Panel>
-            <DonutChart
-              data={stats.brandSales.map((b) => ({ label: b.name, value: b.revenue, color: b.color }))}
-              title="Revenue by Brand"
-              subtitle="Share of total revenue"
-              totalValue={`₹${(revenue.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-              totalLabel="Total Revenue"
-              size={160} strokeWidth={22} showLegend={true}
-            />
-          </Panel>
+      {/* ═══ 6. RECENT ORDERS ═══ */}
+      {stats.recentOrders?.length > 0 && (
+        <div className="panel" style={{ padding: 0 }}>
+          <div className="panel-h" style={{ padding: '18px 18px 0' }}>
+            <h3>Recent orders</h3>
+            <span className="h-hint">live</span>
+          </div>
+          <div className="tbl-wrap">
+            <table>
+              <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody>
+                {stats.recentOrders.slice(0, 8).map((o) => {
+                  const [tone, label] = orderPill(o.status);
+                  const pay = String(o.paymentType || '').toLowerCase();
+                  return (
+                    <tr key={o.id}>
+                      <td><span className="oid">{o.orderNumber}</span></td>
+                      <td><span className="cust"><span className="ca">{initialsOf(o.customerName)}</span>{o.customerName || '—'}</span></td>
+                      <td className="num cell-strong">₹{inr(o.amount || 0)}</td>
+                      <td><span className={`pill ${pay === 'cod' ? 'warn' : 'mut'}`}>{(o.paymentType || '—').toUpperCase()}</span></td>
+                      <td><span className={`pill ${tone}`}>{label}</span></td>
+                      <td className="mut">{o.date ? new Date(o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-
-      {/* ═══ 7. RECENT ORDERS + TOP PRODUCTS (side-by-side on desktop, stacked + as cards on mobile) ═══ */}
-      <div className="dc-two-col dc-two-col-tables">
-        {stats.recentOrders?.length > 0 && (
-          <Panel title="Recent Orders" flush>
-            <ResponsiveTable
-              data={stats.recentOrders}
-              rowKey="id"
-              emptyMessage="No recent orders"
-              columns={[
-                {
-                  key: 'orderNumber',
-                  label: 'Order #',
-                  cellStyle: { fontFamily: 'var(--ds-font-mono)', fontWeight: 600, color: '#7c3aed', fontSize: 12, whiteSpace: 'nowrap' },
-                  render: (o) => o.orderNumber,
-                },
-                {
-                  key: 'customer',
-                  label: 'Customer',
-                  cellStyle: { overflowWrap: 'break-word', minWidth: 120 },
-                  render: (o) => o.customerName || '—',
-                },
-                {
-                  key: 'amount',
-                  label: 'Amount',
-                  cellStyle: { fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (o) => `₹${(o.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                },
-                {
-                  key: 'payment',
-                  label: 'Payment',
-                  render: (o) => <span className={`payment-badge payment-${o.paymentType}`}>{o.paymentType?.toUpperCase()}</span>,
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  render: (o) => <span className={`status-badge status-${o.status?.toLowerCase().replace(/\s+/g, '-')}`}>{o.status}</span>,
-                },
-                {
-                  key: 'date',
-                  label: 'Date',
-                  cellStyle: { color: 'var(--ds-color-text-muted)', fontSize: 12, whiteSpace: 'nowrap' },
-                  render: (o) => o.date ? new Date(o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—',
-                },
-              ]}
-            />
-          </Panel>
-        )}
-
-        {stats.topProducts?.length > 0 && (
-          <Panel title="Top Products" flush>
-            <ResponsiveTable
-              data={stats.topProducts.slice(0, 5)}
-              rowKey="id"
-              emptyMessage="No products sold yet"
-              columns={[
-                {
-                  key: 'rank',
-                  label: '#',
-                  headerStyle: { width: 56 },
-                  cellStyle: { width: 56 },
-                  render: (_p, i) => (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 26, height: 26,
-                      borderRadius: 999,
-                      background: 'var(--ds-color-accent)',
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 700,
-                    }}>{i + 1}</span>
-                  ),
-                },
-                {
-                  key: 'name',
-                  label: 'Product',
-                  // Long product names should wrap to 2–3 comfortable lines, not
-                  // one word per line. A minWidth stops the auto table-layout
-                  // from collapsing this column, and overflowWrap (not the old
-                  // wordBreak:break-word) keeps the column's min-content sane so
-                  // it claims the remaining width instead of shrinking to ~1ch.
-                  headerStyle: { minWidth: 170 },
-                  cellStyle: { fontWeight: 600, color: 'var(--ds-color-brand)', whiteSpace: 'normal', overflowWrap: 'break-word', minWidth: 170 },
-                  render: (p) => p.name,
-                },
-                {
-                  key: 'sold',
-                  label: 'Sold',
-                  cellStyle: { fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (p) => `${(p.totalSold || 0).toLocaleString('en-IN')} units`,
-                },
-                {
-                  key: 'revenue',
-                  label: 'Revenue',
-                  cellStyle: { fontWeight: 700, color: 'var(--ds-color-success)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  render: (p) => `₹${(p.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                },
-              ]}
-            />
-          </Panel>
-        )}
-      </div>
 
       {/* ═══ 8. COLLAPSIBLE: MARKETING PERFORMANCE ═══ */}
       {stats.utmTracking && (stats.utmTracking.topSources?.length > 0 || stats.utmTracking.conversions?.length > 0) && (

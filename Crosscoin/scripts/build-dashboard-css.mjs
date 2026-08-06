@@ -25,6 +25,7 @@ const outFile = join(root, 'public', 'dashboard.css');
 // stays global because storefront pages (Products/SearchResults) use Pagination/
 // Modal from components/ui — do NOT move those here.
 const FILES = [
+  'dashboard-home.css',
   'manualOrder.css',
   'layout.css',
   'tables.css',
