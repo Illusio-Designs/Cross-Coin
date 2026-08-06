@@ -257,11 +257,12 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-stage { position: relative; }
         .excl3-stage-row { display: flex; gap: 12px; align-items: flex-start; }
 
-        /* Thumbnail rail — on the LEFT of the main image; shows exactly 3
-           thumbnails (64px × 3 + 2 gaps = 212px), the rest scroll and the rail
-           auto-follows the active image. */
-        .excl3-thumbs { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
-        .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
+        /* Thumbnail rail — on the LEFT of the main image; the rail is as tall as
+           the main image (inline max-height = frame height) so it shows as MANY
+           thumbnails as fit that height, and the rest scroll (auto-following the
+           active image). Small squares + tight gap so more fit per space. */
+        .excl3-thumbs { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; padding-right: 2px; }
+        .excl3-thumb { width: 60px; height: 60px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
         .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -335,9 +336,10 @@ export default function ExclusiveSection({ products = [] }) {
           .excl3-grid { gap: 30px; }
 
           .excl3-stage-row { gap: 10px; }
-          /* 3 thumbnails at 56px + 2 gaps = 188px */
-          .excl3-thumbs { max-height: 188px; -webkit-overflow-scrolling: touch; padding-right: 3px; }
-          .excl3-thumb { width: 56px; height: 56px; }
+          /* Rail height comes from the image (inline max-height); just enable
+             touch momentum here — no fixed cap, so it fills the image height. */
+          .excl3-thumbs { -webkit-overflow-scrolling: touch; padding-right: 3px; }
+          .excl3-thumb { width: 54px; height: 54px; }
           .excl3-frame { max-width: 100%; }
 
           .excl3-name { margin-top: 8px; }
