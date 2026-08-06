@@ -160,6 +160,33 @@
 .modal-footer .btn-primary { background: #0a0a0a; color: #fff; border: none; }
 .modal-footer .btn-primary:hover:not(:disabled) { background: #262626; }
 
+/* ── Pinned footers for every aside panel ────────────────────────────────
+   Footer-prop panels already pin the footer (it's a sibling of .modal-body).
+   Two other patterns existed where the footer scrolled away:
+     1. Form panels render .modal-footer INSIDE <form.seo-form>. Without a
+        scroll region the form clipped (modal-box is overflow:hidden) and the
+        actions were pushed off-screen.
+     2. Some panels render .modal-footer inside the scrolling .modal-body.
+   Make those scroll regions scrollable and pin the footer to their bottom.
+   Scoped via :has(> .modal-footer) so storefront modals (which have no
+   .modal-footer) are never affected. */
+.modal-box > form:has(> .modal-footer),
+.modal-box > .seo-form:has(> .modal-footer) {
+  overflow-y: auto;
+}
+.modal-box > form > .modal-footer,
+.modal-box > .seo-form > .modal-footer,
+.modal-body > .modal-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;   /* sit at the bottom when the form is short */
+  z-index: 3;
+}
+/* A footer nested in the padded body must bleed back to the panel edges. */
+.modal-body > .modal-footer {
+  margin: 16px -24px -24px;
+}
+
 .modal-box:focus { outline: none; }
 
 /* Tablet / mobile — the panel becomes full width and slides up slightly.
