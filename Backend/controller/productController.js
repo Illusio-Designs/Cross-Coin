@@ -1996,7 +1996,27 @@ module.exports.getExistingImages = async (req, res) => {
         productId: productId
       });
     }
-    
+
+    // Media library (source=products, no specific product): return the real
+    // ImageKit URLs stored in the DB. The local uploads/products dir holds the
+    // ORIGINAL filenames, but ImageKit stores them under suffixed names, so a
+    // directory listing produces CDN URLs that 404. The DB image_url is the
+    // source of truth for the ImageKit path.
+    if (source === 'products') {
+      const { ProductImage } = require('../model/associations.js');
+      const rows = await ProductImage.findAll({
+        attributes: ['image_url'],
+        order: [['createdAt', 'DESC']],
+      });
+      const seen = new Set();
+      const imagePaths = [];
+      for (const r of rows) {
+        const u = r.image_url;
+        if (u && !seen.has(u)) { seen.add(u); imagePaths.push(u); }
+      }
+      return res.json({ success: true, images: imagePaths, total: imagePaths.length, source: 'products' });
+    }
+
     let uploadsPath;
     if (source === 'uploads') {
       // Get all images from uploads directory

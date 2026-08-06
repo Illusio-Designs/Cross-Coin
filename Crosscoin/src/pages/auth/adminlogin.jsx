@@ -24,15 +24,14 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { adminLogin, logout } = useAuth();
+  const { adminLogin } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const response = await adminLogin({ email, password });
-      // Any staff role lands on dashboard
+      await adminLogin({ email, password });
       router.replace("/dashboard");
     } catch (err) {
       setError(err.message || "Invalid email or password.");
@@ -43,18 +42,18 @@ export default function AdminLogin() {
 
   return (
     <div className="al-page">
-      {/* Left — brand panel */}
+      {/* Left — brand panel (always dark, by design) */}
       <div className="al-brand">
         <div className="al-brand-inner">
-          <div className="al-brand-logo">
-            <img src="/crosscoin-icon.png" alt="CrossCoin" />
-            <span>CrossCoin</span>
+          <div className="al-logo">
+            <span className="al-logo-mark">O</span>
+            <span className="al-logo-text"><b>Obzus</b><span>Admin Panel</span></span>
           </div>
-          <h1 className="al-brand-headline">Admin Control<br />Centre</h1>
-          <p className="al-brand-sub">
-            Manage products, orders, customers, and brand settings from one powerful dashboard.
+          <h1 className="al-headline">Your store,<br /><em>run from one place.</em></h1>
+          <p className="al-sub">
+            Products, orders, customers, campaigns and brand settings — managed from a single monochrome control centre.
           </p>
-          <div className="al-brand-stats">
+          <div className="al-stats">
             <div className="al-stat">
               <span className="al-stat-num">50K+</span>
               <span className="al-stat-label">Customers</span>
@@ -76,15 +75,20 @@ export default function AdminLogin() {
       {/* Right — form panel */}
       <div className="al-form-panel">
         <div className="al-form-inner">
-          <div className="al-form-badge">Admin Portal</div>
-          <h2 className="al-form-title">Sign in to Dashboard</h2>
-          <p className="al-form-sub">Restricted access — authorised personnel only</p>
+          <div className="al-mobilelogo">
+            <span className="al-logo-mark">O</span>
+            <span className="al-logo-text"><b>Obzus</b><span>Admin Panel</span></span>
+          </div>
+          <span className="al-badge"><span className="al-badge-dot" /> Admin Portal</span>
+          <h2 className="al-title">Sign in to Dashboard</h2>
+          <p className="al-formsub">Restricted access — authorised personnel only.</p>
 
           <form className="al-form" onSubmit={handleLogin}>
             <div className="al-field">
-              <label htmlFor="al-email">Email Address</label>
+              <label htmlFor="al-email">Email address</label>
               <input
                 id="al-email"
+                className="al-input"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -97,9 +101,10 @@ export default function AdminLogin() {
 
             <div className="al-field">
               <label htmlFor="al-password">Password</label>
-              <div className="al-pw-wrap">
+              <div className="al-pw">
                 <input
                   id="al-password"
+                  className="al-input"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -108,7 +113,7 @@ export default function AdminLogin() {
                   disabled={loading}
                   autoComplete="current-password"
                 />
-                <button type="button" className="al-pw-eye" onClick={() => setShowPassword(v => !v)} tabIndex={-1}>
+                <button type="button" className="al-eye" onClick={() => setShowPassword(v => !v)} tabIndex={-1} aria-label="Toggle password visibility">
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
@@ -122,13 +127,22 @@ export default function AdminLogin() {
                   <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" className="al-spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
                   Signing in...
                 </>
-              ) : "Sign In"}
+              ) : (
+                <>
+                  Sign In
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </>
+              )}
             </button>
           </form>
 
-          <div className="al-footer-links">
+          <div className="al-links">
             <Link href="/auth/forgot-password" className="al-link">Forgot password?</Link>
-            <Link href="/" className="al-link">Back to store</Link>
+          </div>
+
+          <div className="al-secure">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            Secured with encrypted sign-in
           </div>
         </div>
       </div>
