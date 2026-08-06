@@ -60,7 +60,7 @@ function orderPill(status) {
   if (/ship|transit|out for|booked|manifest|pickup|dispatch/.test(s)) return ['info', status];
   if (/pend|await|process|confirm/.test(s))                     return ['warn', status];
   if (/cancel|fail/.test(s))                                    return ['bad', status];
-  if (/rto|return/.test(s))                                     return ['mut', status];
+  if (/rto|return/.test(s))                                     return ['rto', status];
   return ['mut', status || '—'];
 }
 
@@ -241,13 +241,15 @@ function CardGrid() {
   if (pendingCount > 0) alerts.push(`${pendingCount} orders pending`);
 
   /* ── Segmented order-overview buckets (each order counted once) ── */
+  // Explicit vivid hues (not neutral tokens) so every bucket reads as its own
+  // colour in both light and dark — matches the re-colorized status charts.
   const segs = [
-    { label: 'Pending',       count: pendingCount,          color: 'var(--ds-color-warn)' },
-    { label: 'Confirmed',     count: confirmedCount,        color: 'var(--ds-color-info)' },
-    { label: 'Shipped',       count: shippedCount,          color: 'var(--ds-color-text)' },
-    { label: 'Delivered',     count: orders.completed || 0, color: 'var(--ds-color-success)' },
-    { label: 'Cancelled',     count: orders.cancelled || 0, color: 'var(--ds-color-danger)' },
-    { label: 'RTO / Returns', count: rtoCount,              color: 'var(--ds-color-text-faint)' },
+    { label: 'Pending',       count: pendingCount,          color: '#f59e0b' }, // amber
+    { label: 'Confirmed',     count: confirmedCount,        color: '#3b82f6' }, // blue
+    { label: 'Shipped',       count: shippedCount,          color: '#06b6d4' }, // cyan
+    { label: 'Delivered',     count: orders.completed || 0, color: '#10b981' }, // green
+    { label: 'Cancelled',     count: orders.cancelled || 0, color: '#ef4444' }, // red
+    { label: 'RTO / Returns', count: rtoCount,              color: '#f97316' }, // orange
   ];
   const segTotal = segs.reduce((a, s) => a + s.count, 0) || 1;
   const brandSales = stats.brandSales || [];

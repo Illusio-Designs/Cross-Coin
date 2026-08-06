@@ -127,4 +127,5 @@
 .obz-home .pill.info { color: var(--ds-color-info);    background: var(--ds-color-info-bg); }
 .obz-home .pill.warn { color: var(--ds-color-warn);    background: var(--ds-color-warn-bg); }
 .obz-home .pill.bad  { color: var(--ds-color-danger);  background: var(--ds-color-danger-bg); }
+.obz-home .pill.rto  { color: #f97316; background: rgba(249, 115, 22, 0.13); }
 .obz-home .pill.mut  { color: var(--ds-color-text-muted); background: var(--ds-color-surface-soft); }

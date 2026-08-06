@@ -46,7 +46,7 @@ const EMPTY_CAT = { id: null, name: '', description: '', status: 'active' };
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const map = { published: '#0a0a0a', draft: '#9a9aa2', archived: '#6b6b73' };
+  const map = { published: '#16a34a', draft: '#d97706', archived: '#6b6b73', active: '#16a34a', inactive: '#6b6b73' };
   return (
     <span style={{ background: map[status] || '#6b6b73', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>
       {status}
