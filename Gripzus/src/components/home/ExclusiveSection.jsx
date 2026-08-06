@@ -296,7 +296,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-pack:hover { transform: translateY(-1px); } .excl3-pack.on { border-color: #fff; }
         .excl3-pack span { width: 16px; height: 16px; border-radius: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); }
 
-        .excl3-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.7; margin: 24px 0 0; max-width: 34rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .excl3-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.7; margin: 24px 0 0; max-width: 34rem; text-align: justify; text-justify: inter-word; hyphens: auto; }
 
         .excl3-actions { display: flex; align-items: stretch; gap: 12px; margin: 30px 0 0; flex-wrap: wrap; }
         .excl3-qty { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 0; padding: 11px 16px; }
@@ -317,6 +317,29 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .excl3-orow-price { flex: 0 0 auto; font-size: 14px; color: rgba(255,255,255,0.8); }
         .excl3-orow-price em { font-style: normal; color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 12px; margin-left: 6px; }
+
+        /* Mobile — thumbnail rail auto-scrolls beside the image (like Morbix /
+           Soxbae), the main image is capped so the rail stays a sensible length,
+           and the detail spacing is tightened so it reads cleanly. */
+        @media (max-width: 767px) {
+          .excl3 { padding: 52px 0; }
+          .excl3-head { margin-bottom: 30px; }
+          .excl3-title { font-size: clamp(1.6rem, 7vw, 2.2rem); }
+          .excl3-grid { gap: 30px; }
+
+          .excl3-stage-row { gap: 10px; }
+          .excl3-thumbs { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; padding-right: 3px; }
+          .excl3-thumb { width: 56px; height: 56px; }
+          .excl3-frame { max-width: 100%; display: grid; place-items: center; }
+          .excl3-img { width: auto; max-width: 100%; height: auto; max-height: 68vh; margin: 0 auto; }
+
+          .excl3-name { margin-top: 8px; }
+          .excl3-price { margin-top: 14px; }
+          .excl3-colors { margin-top: 20px; }
+          .excl3-desc { margin-top: 18px; font-size: 13.5px; }
+          .excl3-actions { margin-top: 22px; }
+          .excl3-others { margin-top: 26px; padding-top: 22px; }
+        }
 
         @media (prefers-reduced-motion: reduce) {
           .excl3-head, .excl3-frame, .excl3-info > *, .excl3-img { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }

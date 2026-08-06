@@ -53,6 +53,7 @@ export default function ProductDetail() {
   // Sticky bottom bar — shown once the Add-to-Bag / Buy-Now block scrolls away.
   const actionsRef = useRef(null);
   const [showBar, setShowBar] = useState(false);
+  const thumbsRef = useRef(null);
 
   // Fetch the product by slug.
   useEffect(() => {
@@ -117,6 +118,22 @@ export default function ProductDetail() {
     }, 3000);
     return () => clearTimeout(id);
   }, [product, paused, activeImg, color]);
+
+  // Keep the active thumbnail in view by scrolling ONLY the rail (horizontal on
+  // mobile, vertical on desktop) as the gallery auto-advances — never the page.
+  useEffect(() => {
+    const rail = thumbsRef.current;
+    if (!rail) return;
+    const el = rail.querySelector('[data-active="true"]');
+    if (!el) return;
+    const rr = rail.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    if (rail.scrollWidth > rail.clientWidth + 1) {
+      rail.scrollBy({ left: (er.left - rr.left) - (rail.clientWidth - el.clientWidth) / 2, behavior: 'smooth' });
+    } else if (rail.scrollHeight > rail.clientHeight + 1) {
+      rail.scrollBy({ top: (er.top - rr.top) - (rail.clientHeight - el.clientHeight) / 2, behavior: 'smooth' });
+    }
+  }, [activeImg, color]);
 
   // Watch the action block — when it leaves the viewport, reveal the bar.
   useEffect(() => {
@@ -218,13 +235,18 @@ export default function ProductDetail() {
             <div className="md:col-span-6 md:sticky md:top-24 md:self-start">
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:gap-3">
 
-                {/* Thumbnail rail — small squares */}
+                {/* Thumbnail rail — small squares; auto-scrolls to the active
+                    image (horizontal on mobile, vertical on desktop). */}
                 {images.length > 1 && (
-                  <div className="flex items-start gap-2 overflow-x-auto p-1 sm:max-h-[28rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto">
+                  <div
+                    ref={thumbsRef}
+                    className="flex items-start gap-2 overflow-x-auto p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] sm:max-h-[28rem] sm:flex-col sm:overflow-x-visible sm:overflow-y-auto"
+                  >
                     {images.slice(0, 8).map((img, i) => (
                       <button
                         key={i}
                         onClick={() => setActiveImg(i)}
+                        data-active={curImg === i ? 'true' : undefined}
                         aria-label={`View image ${i + 1}`}
                         className={`w-12 h-12 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
                           curImg === i
@@ -433,7 +455,7 @@ export default function ProductDetail() {
           {product.description && (
             <div>
               <p className="eyebrow text-ink-muted mb-4">The story</p>
-              <p className="prose-body text-base md:text-lg">{product.description}</p>
+              <p className="prose-body text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
             </div>
           )}
 
