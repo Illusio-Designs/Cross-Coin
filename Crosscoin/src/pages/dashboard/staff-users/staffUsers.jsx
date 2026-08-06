@@ -32,10 +32,10 @@ const getUserRoles = (u) => {
 
 function RoleBadge({ role }) {
   const r = ROLES.find(x => x.value === role);
-  if (!r) return <span style={{ fontSize: 12, color: '#9ca3af' }}>{role}</span>;
+  if (!r) return <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>{role}</span>;
   return (
-    <span className="brand-tag" style={{ color: r.color, background: r.color + '12', borderColor: r.color + '40' }}>
-      <span className="brand-tag-dot" style={{ backgroundColor: r.color }} />
+    <span className="brand-tag" style={{ color: 'var(--ds-color-text)', background: 'var(--ds-color-surface-soft)', borderColor: 'var(--ds-color-border)' }}>
+      <span className="brand-tag-dot" style={{ backgroundColor: 'var(--ds-color-text-faint)' }} />
       {r.label}
     </span>
   );

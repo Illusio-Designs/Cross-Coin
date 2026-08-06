@@ -61,8 +61,8 @@ function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobi
       </div>
       <div className="dh-right">
         {role && (
-          <span className="dh-role-badge" style={{ color, borderColor: color, background: color + '12' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
+          <span className="dh-role-badge" style={{ color: 'var(--ds-color-text)', borderColor: 'var(--ds-color-border)', background: 'var(--ds-color-surface-soft)' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-text-faint)', flexShrink: 0, display: 'inline-block' }} />
             {label}
           </span>
         )}
