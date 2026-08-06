@@ -103,7 +103,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
                 padding: '8px 16px',
                 border: 0,
                 background: isActive ? 'var(--ds-color-brand)' : 'transparent',
-                color: isActive ? '#fff' : 'var(--ds-color-text-muted)',
+                color: isActive ? 'var(--ds-color-surface)' : 'var(--ds-color-text-muted)',
                 fontSize: 'var(--ds-text-md)',
                 fontWeight: isActive ? 'var(--ds-weight-semi)' : 'var(--ds-weight-medium)',
                 borderRadius: 'var(--ds-radius-sm)',

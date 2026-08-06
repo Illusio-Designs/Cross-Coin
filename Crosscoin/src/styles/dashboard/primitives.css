@@ -331,3 +331,31 @@
 }
 .notif-item { transition: background 0.12s; }
 .notif-item:hover { background: var(--ds-color-surface-soft, #f3f4f6) !important; }
+
+/* ── Custom <Dropdown> on the dashboard ───────────────────────────────
+   common/Dropdown.css styles this control in the storefront red (#CE1E36)
+   with a white menu + navy text that doesn't flip in dark mode. The
+   dashboard always stamps data-theme on <html>, so scope monochrome,
+   theme-aware overrides to [data-theme] — the storefront (no data-theme
+   attribute) keeps its branded red untouched. */
+:root[data-theme] .dropdown-trigger {
+  border: 1px solid var(--ds-color-border);
+  background-color: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-family: var(--ds-font-sans);
+}
+:root[data-theme] .dropdown-trigger:hover:not(.disabled),
+:root[data-theme] .dropdown-trigger.open,
+:root[data-theme] .dropdown-trigger:focus {
+  border-color: var(--ds-color-text);
+  box-shadow: none;
+}
+:root[data-theme] .dropdown-trigger.disabled { background-color: var(--ds-color-surface-soft); }
+:root[data-theme] .dropdown-label { color: var(--ds-color-text-muted); }
+:root[data-theme] .dropdown-icon { color: var(--ds-color-text-muted); }
+:root[data-theme] .dropdown-menu { background: var(--ds-color-surface); border-color: var(--ds-color-border); }
+:root[data-theme] .dropdown-item { color: var(--ds-color-text); font-family: var(--ds-font-sans); }
+:root[data-theme] .dropdown-item:hover { background-color: var(--ds-color-surface-soft); color: var(--ds-color-text); }
+:root[data-theme] .dropdown-item.active { background-color: var(--ds-color-text); color: var(--ds-color-surface); }
+:root[data-theme] .dropdown-empty { color: var(--ds-color-text-faint); }
+:root[data-theme] .dropdown-menu::-webkit-scrollbar-thumb { background: var(--ds-color-text-faint); }

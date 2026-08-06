@@ -360,7 +360,7 @@ export function Blogs() {
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: '6px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-surface, #fff)', color: tab === t ? '#fff' : 'var(--ds-color-text-muted, #6b6b73)', border: `1px solid ${tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-border, #e7e7ea)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
+            <button key={t} onClick={() => setTab(t)} style={{ padding: '6px 18px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-surface, #fff)', color: tab === t ? 'var(--ds-color-surface, #fff)' : 'var(--ds-color-text-muted, #6b6b73)', border: `1px solid ${tab === t ? 'var(--ds-color-brand, #0a0a0a)' : 'var(--ds-color-border, #e7e7ea)'}`, transition: 'background 0.15s, border-color 0.15s' }}>
               {t}
             </button>
           ))}
