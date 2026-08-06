@@ -162,7 +162,7 @@ async function searchProducts(query, options = {}) {
   let imageMap = {};
   if (productIds.length > 0) {
     const [images] = await sequelize.query(`
-      SELECT product_id, image_url, is_primary
+      SELECT product_id, product_variation_id, image_url, is_primary
       FROM product_images
       WHERE product_id IN (:productIds)
       ORDER BY is_primary DESC
@@ -205,6 +205,9 @@ async function searchProducts(query, options = {}) {
     images: (imageMap[p.id] || []).map(img => ({
       image_url: img.image_url,
       is_primary: img.is_primary,
+      // Colour tag — lets the storefront group each image under its variation
+      // so every colour shows its OWN photo (not a shared fallback).
+      product_variation_id: img.product_variation_id,
     })),
     variations: (variationMap[p.id] || []).map(v => ({
       id: v.id,

@@ -243,9 +243,10 @@ export async function searchProducts(query) {
   try {
     const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`);
     const products = data?.data?.products || data?.products || data?.data || [];
-    // Search shows DISTINCT products (one card each) — not every colour variant,
-    // so "alignment" returns one pair, not 14 identical-looking colour cards.
-    return (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
+    // Explode each colour into its own card (same as the catalogue / listing
+    // pages) so a product with 14 colours shows 14 cards — each with its OWN
+    // photo now that the search API returns the variation-tagged images.
+    return explodeColorVariants((Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean));
   } catch {
     return [];
   }
