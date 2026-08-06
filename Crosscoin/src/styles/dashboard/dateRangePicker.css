@@ -44,15 +44,15 @@
 .drp-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 14px;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
   background: var(--ds-color-surface-soft);
   border: 1.5px solid var(--ds-color-border);
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
   font-family: inherit;
-  color: #1a1a2e;
+  color: var(--ds-color-text);
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   white-space: nowrap;
@@ -75,7 +75,7 @@
 }
 
 .drp-trigger-text {
-  color: #1a1a2e;
+  color: var(--ds-color-text);
 }
 
 /* ── Action Buttons ── */
@@ -94,7 +94,7 @@
 }
 
 .drp-apply-btn:hover {
-  background: #2a1a5e;
+  background: #262626;
 }
 
 .drp-apply-btn:active {
@@ -243,7 +243,7 @@
 .drp-cal-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--ds-color-text);
 }
 
 .drp-cal-days {
@@ -293,11 +293,11 @@
 .drp-cal-today {
   font-weight: 700;
   color: var(--ds-color-text);
-  background: #f0edf7;
+  background: var(--ds-color-surface-soft);
 }
 
 .drp-cal-today:hover {
-  background: #e4dff0;
+  background: var(--ds-color-border-soft);
 }
 
 .drp-cal-start,
@@ -309,13 +309,13 @@
 }
 
 .drp-cal-in-range {
-  background: #ede9f7;
+  background: var(--ds-color-surface-soft);
   color: var(--ds-color-text);
   border-radius: 4px;
 }
 
 .drp-cal-in-range:hover {
-  background: #ddd6f0;
+  background: var(--ds-color-border-soft);
 }
 
 /* ── Responsive ── */
