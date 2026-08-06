@@ -271,8 +271,13 @@ exports.receiveWebhook = async (req, res) => {
             msgBody    = msg.button?.payload || msg.button?.text || '';
             displayText = msg.button?.text   || 'Button tap';
           } else {
+            // Format the Cloud API can't deliver (e.g. type "unsupported"): keep a
+            // bracketed marker in the body (the chat bubble renders it nicely) but
+            // show a human label in the inbox preview.
             msgBody = `[${msg.type}]`;
-            displayText = `[${msg.type}]`;
+            displayText = msg.type === 'unsupported'
+              ? 'Unsupported message'
+              : `${String(msg.type || 'message').replace(/_/g, ' ')} message`;
           }
 
           // One thread per customer (shared number): key by phone only, and tag
@@ -1324,7 +1329,15 @@ exports.receiveWebhook = async (req, res) => {
             ? JSON.stringify({ url: mediaUrl, mime: mediaMime, caption: mediaCaption, text })
             : (msgType === 'button' ? (buttonPayload || text) : text);
 
-          const lastMsgPreview = msgType !== 'text' ? text : text;
+          // A bracketed token like "[unsupported]" is our marker for a format the
+          // Cloud API can't deliver (polls, view-once, newer interactive types).
+          // Keep the marker in `body` (the chat bubble renders it nicely) but show
+          // a human label in the inbox preview instead of the raw token.
+          const lastMsgPreview = /^\[[a-z_]+\]$/i.test(text)
+            ? (text === '[unsupported]'
+                ? 'Unsupported message'
+                : text.replace(/^\[|\]$/g, '').replace(/_/g, ' ') + ' message')
+            : text;
 
           // Prefer the brand the customer NAMED in this text ("...my Morbix
           // order") over the phone-based guess — that's what makes the inbox

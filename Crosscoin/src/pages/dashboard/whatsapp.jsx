@@ -527,6 +527,20 @@ function MsgContent({ msg, brandId = 1 }) {
     if (trimmed === '[reaction]') {
       return <span style={{ fontSize: 32, lineHeight: 1.2 }}>👍</span>;
     }
+    // WhatsApp sends type:"unsupported" (and we store "[unsupported]") when the
+    // customer sends a format the Cloud API can't deliver — polls, view-once,
+    // newer interactive types, etc. Show a clean note instead of the raw token.
+    if (effectiveType === 'unsupported' || /^\[[a-z_]+\]$/i.test(trimmed)) {
+      const kind = trimmed === '[unsupported]' || effectiveType === 'unsupported'
+        ? 'Unsupported message'
+        : trimmed.replace(/^\[|\]$/g, '').replace(/_/g, ' ') + ' message';
+      return (
+        <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:13, color:'#6b7280', fontStyle:'italic' }}>
+          <HugeiconsIcon icon={InformationCircleIcon} size={14} strokeWidth={2} />
+          {kind.charAt(0).toUpperCase() + kind.slice(1)} · view it in WhatsApp
+        </span>
+      );
+    }
     if (trimmed.startsWith('{')) {
       // It's JSON that wasn't detected as a known media type — show generic media unavailable
       return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>📎 Media (unavailable)</span>;
