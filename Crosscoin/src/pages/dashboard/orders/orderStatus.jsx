@@ -13,31 +13,36 @@ const OrderStatus = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [statusFilter, setStatusFilter] = useState("all");
-    const [dashboardOrderIds, setDashboardOrderIds] = useState([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [serverStats, setServerStats] = useState(null);
 
-    // Fetch dashboard orders and then status history
+    // Server-side pagination + filtering (no more fetching thousands of rows to
+    // join and paginate on the client). The backend scopes to the admin's brand.
     useEffect(() => {
-        const fetchOrdersAndHistory = async () => {
+        let alive = true;
+        const fetchHistory = async () => {
             setLoading(true);
             setError(null);
             try {
-                // Fetch all dashboard orders (like in orders.jsx)
-                const ordersData = await orderService.getAllOrders({ limit: 1000 });
-                const orderIds = ordersData.orders.map(order => order.id);
-                setDashboardOrderIds(orderIds);
-                // Fetch all status history
-                const historyData = await orderService.getAllOrderStatusHistory({ limit: 1000 });
-                // Only keep status history for dashboard orders
-                const filteredHistory = historyData.history.filter(entry => orderIds.includes(entry.order_id));
-                setHistory(filteredHistory);
+                const res = await orderService.getAllOrderStatusHistory({
+                    page: currentPage,
+                    limit: itemsPerPage,
+                    search: filterValue || undefined,
+                    status: statusFilter !== 'all' ? statusFilter : undefined,
+                });
+                if (!alive) return;
+                setHistory(res.history || []);
+                setTotalItems(res.pagination?.total || 0);
+                setServerStats(res.stats || null);
             } catch (err) {
-                setError(err.message || 'Failed to fetch status history');
+                if (alive) setError(err.message || 'Failed to fetch status history');
             } finally {
-                setLoading(false);
+                if (alive) setLoading(false);
             }
         };
-        fetchOrdersAndHistory();
-    }, []);
+        fetchHistory();
+        return () => { alive = false; };
+    }, [currentPage, itemsPerPage, filterValue, statusFilter]);
 
     const debouncedSearch = useCallback((searchTerm) => {
         const timeoutId = setTimeout(() => setFilterValue(searchTerm), 300);
@@ -53,47 +58,20 @@ const OrderStatus = () => {
         });
     };
 
-    // Helper function to get status statistics
-    const getStatusStats = () => {
-        const stats = {
-            total: history.length,
-            pending: 0,
-            processing: 0,
-            shipped: 0,
-            delivered: 0,
-            cancelled: 0
-        };
-
-        history.forEach(entry => {
-            const status = entry.status?.toLowerCase();
-            if (stats.hasOwnProperty(status)) {
-                stats[status]++;
-            }
-        });
-
-        return stats;
-    };
-
-    const filteredData = history.filter(entry => {
-        // Text search filter
-        if (filterValue) {
-            const searchTerm = filterValue.toLowerCase();
-            const matchesSearch = entry.Order?.order_number.toLowerCase().includes(searchTerm);
-            if (!matchesSearch) return false;
-        }
-        // Status filter
-        if (statusFilter !== "all") {
-            if (entry.status?.toLowerCase() !== statusFilter) {
-                return false;
-            }
-        }
-        return true;
+    // Status statistics come from the server (whole brand-scoped set), not just
+    // the current page.
+    const getStatusStats = () => ({
+        total: serverStats?.total ?? totalItems,
+        pending: serverStats?.pending ?? 0,
+        processing: serverStats?.processing ?? 0,
+        shipped: serverStats?.shipped ?? 0,
+        delivered: serverStats?.delivered ?? 0,
+        cancelled: serverStats?.cancelled ?? 0,
     });
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem).map((item, idx) => ({ ...item, serial_number: indexOfFirstItem + idx + 1 }));
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentItems = history.map((item, idx) => ({ ...item, serial_number: startIndex + idx + 1 }));
     
     useEffect(() => {
         setCurrentPage(1);
@@ -150,7 +128,7 @@ const OrderStatus = () => {
                     </div>
                 ) :
                     <>
-                        {filteredData.length === 0 ? <div className="sl-empty"><p>No status history found.</p></div> :
+                        {history.length === 0 ? <div className="sl-empty"><p>No status history found.</p></div> :
                             <>
                                 {/* Status Statistics */}
                                 <div className="payment-stats">
@@ -190,7 +168,7 @@ const OrderStatus = () => {
                                     <strong>Note:</strong> This shows the complete history of order status changes. Status updates are now automatically synchronized with the shipping courier. Manual status changes have been disabled to maintain sync integrity.
                                 </div>
                                 <Table columns={columns} data={currentItems} className="w-full" striped={true} hoverable={true} style={{ fontSize: '14px' }} />
-                                {filteredData.length > itemsPerPage && (
+                                {totalItems > itemsPerPage && (
                                     <div className="sl-pagination">
                                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                                     </div>
