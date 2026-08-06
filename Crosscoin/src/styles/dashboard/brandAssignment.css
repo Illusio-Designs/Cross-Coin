@@ -210,17 +210,19 @@
 .ba-placeholder { font-size: 13px; color: var(--ds-color-text-faint); }
 
 .ba-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: #fff5f5; border: 1px solid rgba(10, 10, 10, .2);
-  color: var(--ds-color-text); border-radius: 5px; padding: 2px 6px;
-  font-size: 12px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--ds-color-surface-soft); border: 1px solid var(--ds-color-border);
+  color: var(--ds-color-text); border-radius: 20px; padding: 3px 9px;
+  font-size: 12px; font-weight: 600;
 }
-.ba-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+/* neutral dot — the inline brand colour set on the element is overridden so the
+   selected-brand chip reads monochrome like the rest of the panel */
+.ba-tag-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--ds-color-text-faint) !important; }
 .ba-tag-remove {
-  background: none; border: none; cursor: pointer; color: #dc2626;
+  background: none; border: none; cursor: pointer; color: var(--ds-color-text-muted);
   font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; opacity: .7;
 }
-.ba-tag-remove:hover { opacity: 1; }
+.ba-tag-remove:hover { opacity: 1; color: var(--ds-color-danger); }
 
 .ba-chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--ds-color-text-faint); transition: transform .15s; }
 .ba-trigger--open .ba-chevron { transform: rotate(180deg); }

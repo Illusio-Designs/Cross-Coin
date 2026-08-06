@@ -170,12 +170,16 @@
    Make those scroll regions scrollable and pin the footer to their bottom.
    Scoped via :has(> .modal-footer) so storefront modals (which have no
    .modal-footer) are never affected. */
-.modal-box > form:has(> .modal-footer),
-.modal-box > .seo-form:has(> .modal-footer) {
+/* Only forms WITHOUT a .modal-body wrapper need this: their fields are direct
+   children so the form itself must scroll. Forms that DO have a .modal-body
+   (e.g. the product panel) already pin the footer via flex — leave them alone,
+   otherwise the double scroll region left a gap under the footer. */
+.modal-box > form:has(> .modal-footer):not(:has(> .modal-body)),
+.modal-box > .seo-form:has(> .modal-footer):not(:has(> .modal-body)) {
   overflow-y: auto;
 }
-.modal-box > form > .modal-footer,
-.modal-box > .seo-form > .modal-footer,
+.modal-box > form:not(:has(> .modal-body)) > .modal-footer,
+.modal-box > .seo-form:not(:has(> .modal-body)) > .modal-footer,
 .modal-body > .modal-footer {
   position: sticky;
   bottom: 0;

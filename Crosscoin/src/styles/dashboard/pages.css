@@ -1153,7 +1153,7 @@
 .dm-input::placeholder { color: #b0b0c0; }
 
 .dm-input:hover:not(:disabled) {
-  border-color: #c0b8e8;
+  border-color: var(--ds-color-text-faint);
   background: var(--ds-color-surface);
 }
 

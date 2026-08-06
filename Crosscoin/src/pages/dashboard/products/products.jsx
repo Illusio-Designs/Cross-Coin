@@ -38,6 +38,9 @@ const ProductsPage = () => {
     attributes: {}
   });
   const [loading, setLoading] = useState(false);
+  // Separate from `loading` (which gates the table skeleton) so opening the
+  // edit panel doesn't flash/reload the whole products table.
+  const [editLoading, setEditLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
@@ -308,7 +311,7 @@ const ProductsPage = () => {
       sortable: false,
       cell: ({ id }) => (
         <div className="obz-acts">
-          <button className="obz-ico" title="Edit" onClick={() => handleEdit(id)}>
+          <button className="obz-ico" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>
             <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"/>
             </svg>
@@ -326,7 +329,7 @@ const ProductsPage = () => {
   // Update handleEdit to include badge
   const handleEdit = async (id) => {
     try {
-      setLoading(true);
+      setEditLoading(true);
       const response = await productService.getProduct(id);
       const product = response;
       
@@ -460,7 +463,7 @@ const ProductsPage = () => {
     } catch (err) {
       setError(err.response?.data?.message || "Error fetching product details");
     } finally {
-      setLoading(false);
+      setEditLoading(false);
     }
   };
 
@@ -1176,7 +1179,7 @@ const ProductsPage = () => {
                 <h3>Product Variations</h3>
               </div>
               {formData.variations.map((variation, index) => {
-                const isOpen = openVariations[index] !== false; // default open
+                const isOpen = openVariations[index] === true; // default closed (keeps the step compact)
                 const skuLabel = variation.sku ? ` — ${variation.sku}` : '';
                 const priceLabel = variation.price ? ` · ₹${variation.price}` : '';
                 const attrEntries = Object.entries(variation.attributes || {}).filter(([, v]) => {
