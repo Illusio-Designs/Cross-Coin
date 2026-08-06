@@ -10,17 +10,19 @@ import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from '../../components/Dashboard/primitives';
 import { queryKeys } from '../../lib/queryClient';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon, ToggleOnIcon, ToggleOffIcon, Building01Icon, Copy01Icon, ArrowRight01Icon, FloppyDiskIcon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
-  toggle: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="16" cy="12" r="3" fill="currentColor"/></svg>,
-  toggleOff: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="8" cy="12" r="3" fill="currentColor"/></svg>,
-  brand: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  copy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
-  chevron: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
-  save: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
+  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
+  toggle: <HugeiconsIcon icon={ToggleOnIcon} size={20} strokeWidth={2} />,
+  toggleOff: <HugeiconsIcon icon={ToggleOffIcon} size={20} strokeWidth={2} />,
+  brand: <HugeiconsIcon icon={Building01Icon} size={20} strokeWidth={2} />,
+  copy: <HugeiconsIcon icon={Copy01Icon} size={16} strokeWidth={2} />,
+  chevron: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
+  save: <HugeiconsIcon icon={FloppyDiskIcon} size={16} strokeWidth={2} />,
 };
 
 const CATEGORY_LABEL = { general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', social_media: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };

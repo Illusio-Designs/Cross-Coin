@@ -5,13 +5,15 @@ import Loader from "../../../components/common/Loader";
 import { paymentService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
 import { ConfirmModal } from '../../../components/common/AlertModal';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon, ViewIcon, ArrowTurnBackwardIcon, CreditCardIcon, FilterIcon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  view: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  refund: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>,
-  payments: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-  filter: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
+  view: <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />,
+  refund: <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={16} strokeWidth={2} />,
+  payments: <HugeiconsIcon icon={CreditCardIcon} size={20} strokeWidth={2} />,
+  filter: <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />,
 };
 
 const METHOD_LABELS = { credit_card: "Credit Card", debit_card: "Debit Card", razorpay: "Razorpay", upi: "UPI", cod: "COD", wallet: "Wallet", bank_transfer: "Bank Transfer" };

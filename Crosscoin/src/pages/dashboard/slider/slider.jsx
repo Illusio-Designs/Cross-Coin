@@ -8,14 +8,16 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../../context/AuthContext';
 import { showSuccess, showError } from "../../../utils/toastNotification";
 import { ConfirmModal } from '../../../components/common/AlertModal';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon, SlideIcon } from '@hugeicons/core-free-icons';
 
 const IC = {
-  add: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
-  image: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
-  slides: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8"/><path d="M12 3v4"/></svg>,
+  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
+  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
+  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
+  trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
+  image: <HugeiconsIcon icon={Image02Icon} size={20} strokeWidth={2} />,
+  slides: <HugeiconsIcon icon={SlideIcon} size={20} strokeWidth={2} />,
 };
 
 const getImageUrl = (imagePath) => {
