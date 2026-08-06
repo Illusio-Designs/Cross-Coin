@@ -10,11 +10,11 @@
   gap: 5px;
   padding: 3px 8px;
   border-radius: 6px;
-  background: #f0eeff;
+  background: #f4f4f5;
   border: 1px solid #e0d8ff;
   font-size: 12px;
   font-weight: 500;
-  color: #180D3E;
+  color: #0a0a0a;
   font-family: 'DM Sans', sans-serif;
   white-space: nowrap;
   flex-shrink: 0;
@@ -25,15 +25,15 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #CE1E36;
+  background: #0a0a0a;
   flex-shrink: 0;
   display: inline-block;
   animation: anPing 1.5s ease-in-out infinite;
 }
 
 @keyframes anPing {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(206, 30, 54, .25); }
-  50% { box-shadow: 0 0 0 4px rgba(206, 30, 54, .08); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(10, 10, 10, .25); }
+  50% { box-shadow: 0 0 0 4px rgba(10, 10, 10, .08); }
 }
 
 /* ── Connected badge ── */
@@ -56,7 +56,7 @@
   align-items: center;
   padding: 6px 16px;
   border-radius: 8px;
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -72,13 +72,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(206, 30, 54, 0.1);
-  color: #CE1E36;
+  background: rgba(10, 10, 10, 0.1);
+  color: #0a0a0a;
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(206, 30, 54, 0.2);
+  border: 1px solid rgba(10, 10, 10, 0.2);
 }
 
 /* ── Spinner ── */
@@ -86,7 +86,7 @@
   width: 36px;
   height: 36px;
   border: 3px solid #e5e7eb;
-  border-top-color: #CE1E36;
+  border-top-color: #0a0a0a;
   border-radius: 50%;
   animation: anSpin 0.8s linear infinite;
 }

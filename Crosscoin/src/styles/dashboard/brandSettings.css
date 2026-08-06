@@ -45,13 +45,13 @@
 }
 
 .brand-selector:hover {
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 .brand-selector:focus {
     outline: none;
-    border-color: #180D3E;
-    box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.1);
+    border-color: #0a0a0a;
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
 }
 
 .loading-container {
@@ -127,7 +127,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 .form-actions {
@@ -164,13 +164,13 @@
 }
 
 .category-btn:hover {
-    border-color: #180D3E;
-    color: #180D3E;
+    border-color: #0a0a0a;
+    color: #0a0a0a;
 }
 
 .category-btn.active {
-    background: #180D3E;
-    border-color: #180D3E;
+    background: #0a0a0a;
+    border-color: #0a0a0a;
     color: white;
 }
 
@@ -273,7 +273,7 @@
 .setting-input {
     width: 100%;
     padding: 10px;
-    border: 2px solid #180D3E;
+    border: 2px solid #0a0a0a;
     border-radius: 6px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
@@ -325,7 +325,7 @@
 }
 
 .btn-icon.btn-save {
-    color: #180D3E;
+    color: #0a0a0a;
 }
 
 .btn-icon.btn-save:hover {
@@ -420,7 +420,7 @@
 
 .form-select:focus {
     outline: none;
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 .form-textarea {
@@ -436,7 +436,7 @@
 
 .form-textarea:focus {
     outline: none;
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 /* Modal Form Grid Override */

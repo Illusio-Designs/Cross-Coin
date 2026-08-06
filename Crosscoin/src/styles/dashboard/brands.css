@@ -98,7 +98,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 .color-input-group {
@@ -268,12 +268,12 @@
 
 .status-badge.active {
     background: #f0eef5;
-    color: #180D3E;
+    color: #0a0a0a;
 }
 
 .status-badge.inactive {
     background: #fce8ec;
-    color: #CE1E36;
+    color: #0a0a0a;
 }
 
 .brand-card-footer small {
@@ -302,7 +302,7 @@
 }
 
 .btn-icon.active {
-    color: #180D3E;
+    color: #0a0a0a;
 }
 
 .btn-icon.active:hover {
@@ -318,7 +318,7 @@
 }
 
 .btn-icon.btn-danger {
-    color: #CE1E36;
+    color: #dc2626;
 }
 
 .btn-icon.btn-danger:hover {
@@ -380,7 +380,7 @@
 
 .form-select:focus {
     outline: none;
-    border-color: #180D3E;
+    border-color: #0a0a0a;
 }
 
 /* Modal Form Grid Override */

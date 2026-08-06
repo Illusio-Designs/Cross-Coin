@@ -33,7 +33,7 @@
   justify-content: space-between;
   background: #ffffff;
   border-bottom: 1px solid #ebebf0;
-  box-shadow: 0 1px 4px rgba(24,13,62,0.04);
+  box-shadow: 0 1px 4px rgba(10, 10, 10,0.04);
   padding: 0 24px;
   box-sizing: border-box;
   transition: left 0.3s cubic-bezier(.4,0,.2,1);
@@ -50,7 +50,7 @@
 .dh-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -58,7 +58,7 @@
 }
 
 .dh-hamburger {
-  background: #180D3E;
+  background: #0a0a0a;
   border: none;
   cursor: pointer;
   color: #fff;
@@ -72,7 +72,7 @@
   transition: background 0.18s;
 }
 
-.dh-hamburger:hover { background: #CE1E36; }
+.dh-hamburger:hover { background: #0a0a0a; }
 
 .dh-right {
   display: flex;
@@ -85,7 +85,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #180D3E;
+  color: #0a0a0a;
   width: 34px;
   height: 34px;
   border-radius: 6px;

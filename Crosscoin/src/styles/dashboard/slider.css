@@ -19,15 +19,15 @@
 
 .sl-header-icon {
   width: 44px; height: 44px;
-  background: #f0eeff;
+  background: #f4f4f5;
   border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  color: #180D3E; flex-shrink: 0;
+  color: #0a0a0a; flex-shrink: 0;
 }
 .sl-header-icon svg { width: 20px; height: 20px; }
 
 .sl-page-title {
-  font-size: 20px; font-weight: 700; color: #180D3E; margin: 0 0 2px 0;
+  font-size: 20px; font-weight: 700; color: #0a0a0a; margin: 0 0 2px 0;
 }
 .sl-page-sub { font-size: 12px; color: #9ca3af; margin: 0; }
 
@@ -49,18 +49,18 @@
   transition: border-color 0.18s;
   font-family: 'DM Sans', sans-serif;
 }
-.sl-search-input:focus { border-color: #180D3E; }
+.sl-search-input:focus { border-color: #0a0a0a; }
 
 .sl-add-btn {
   display: flex; align-items: center; gap: 7px;
   height: 38px; padding: 0 16px;
-  background: #CE1E36; color: #fff;
+  background: #0a0a0a; color: #fff;
   border: none; border-radius: 6px;
   font-size: 13px; font-weight: 600; cursor: pointer;
   transition: background 0.18s;
   font-family: 'DM Sans', sans-serif; white-space: nowrap;
 }
-.sl-add-btn:hover { background: #a8172b; }
+.sl-add-btn:hover { background: #262626; }
 .sl-add-btn-icon { display: flex; }
 .sl-add-btn-icon svg { width: 16px; height: 16px; }
 
@@ -80,7 +80,7 @@
 }
 .sl-thumb-empty svg { width: 24px; height: 24px; }
 
-.sl-title-cell { font-weight: 600; color: #180D3E; font-size: 13px; }
+.sl-title-cell { font-weight: 600; color: #0a0a0a; font-size: 13px; }
 .sl-desc-cell {
   font-size: 12px; color: #6b7280; max-width: 180px;
   display: -webkit-box; -webkit-line-clamp: 2;
@@ -89,7 +89,7 @@
 
 .sl-cat-badge {
   display: inline-block; padding: 3px 10px;
-  background: #f0eeff; color: #180D3E;
+  background: #f4f4f5; color: #0a0a0a;
   border-radius: 6px; font-size: 11px; font-weight: 600;
 }
 .sl-na { color: #d1d5db; font-size: 13px; }
@@ -116,9 +116,9 @@
   cursor: pointer; transition: background 0.18s, color 0.18s;
 }
 .sl-btn-edit svg, .sl-btn-delete svg { width: 15px; height: 15px; }
-.sl-btn-edit  { background: #f0eeff; color: #7c3aed; }
+.sl-btn-edit  { background: #f4f4f5; color: #7c3aed; }
 .sl-btn-edit:hover  { background: #ede9fe; color: #6d28d9; }
-.sl-btn-delete { background: #fff0f0; color: #CE1E36; }
+.sl-btn-delete { background: #fff0f0; color: #dc2626; }
 .sl-btn-delete:hover { background: #fee2e2; color: #b91c1c; }
 
 .sl-empty {
@@ -129,14 +129,14 @@
 .sl-empty-icon svg { width: 48px; height: 48px; }
 .sl-empty p { font-size: 14px; margin: 0; }
 
-.sl-error { padding: 24px; text-align: center; color: #CE1E36; font-size: 14px; }
+.sl-error { padding: 24px; text-align: center; color: #dc2626; font-size: 14px; }
 .sl-pagination { padding: 14px 16px; border-top: 1px solid #f0f0f5; }
 
 /* Form fields */
 .sl-form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
 .sl-form-label { font-size: 13px; font-weight: 600; color: #374151; }
 .sl-form-hint { font-size: 11px; font-weight: 400; color: #9ca3af; }
-.sl-required { color: #CE1E36; margin-left: 2px; }
+.sl-required { color: #dc2626; margin-left: 2px; }
 
 .sl-multi-select {
   width: 100%; min-height: 110px;
@@ -145,7 +145,7 @@
   font-family: 'DM Sans', sans-serif; outline: none;
   transition: border-color 0.18s;
 }
-.sl-multi-select:focus { border-color: #180D3E; }
+.sl-multi-select:focus { border-color: #0a0a0a; }
 .sl-multi-select option { padding: 6px 8px; }
 
 .sl-selected-brands { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }

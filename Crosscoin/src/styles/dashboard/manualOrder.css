@@ -6,7 +6,7 @@
   padding: 16px; background: #fafafb; border-radius: 12px; border: 1px solid #f0f0f5;
 }
 .mo-section-title {
-  font-size: 13px; font-weight: 700; color: #180D3E; margin: 0 0 4px;
+  font-size: 13px; font-weight: 700; color: #0a0a0a; margin: 0 0 4px;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 .mo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
@@ -24,7 +24,7 @@
   font-family: inherit; color: #1a1a2e; background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s; outline: none;
 }
-.mo-search-input:focus { border-color: #180D3E; box-shadow: 0 0 0 3px rgba(24,13,62,0.08); }
+.mo-search-input:focus { border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10, 10, 10,0.08); }
 .mo-searching { position: absolute; right: 12px; font-size: 11px; color: #9ca3af; }
 
 .mo-search-results {
@@ -42,7 +42,7 @@
 .mo-search-item:hover { background: #f0edf7; }
 .mo-search-item-name { font-weight: 600; color: #1a1a2e; flex: 1; }
 .mo-search-item-var { font-size: 12px; color: #6b7280; min-width: 80px; }
-.mo-search-item-price { font-weight: 600; color: #180D3E; min-width: 60px; text-align: right; }
+.mo-search-item-price { font-weight: 600; color: #0a0a0a; min-width: 60px; text-align: right; }
 .mo-search-item-stock { font-size: 11px; color: #9ca3af; min-width: 60px; text-align: right; }
 
 /* ── Cart Items ── */
@@ -55,7 +55,7 @@
 .mo-cart-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .mo-cart-name { font-size: 13px; font-weight: 600; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mo-cart-var { font-size: 11px; color: #6b7280; }
-.mo-cart-price { font-size: 12px; font-weight: 600; color: #180D3E; }
+.mo-cart-price { font-size: 12px; font-weight: 600; color: #0a0a0a; }
 .mo-cart-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .mo-qty-btn {
   display: flex; align-items: center; justify-content: center;
@@ -83,7 +83,7 @@
   font-size: 13px; color: #6b7280;
 }
 .mo-discount { color: #16a34a; }
-.mo-total { font-size: 15px; font-weight: 700; color: #180D3E; border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 4px; }
+.mo-total { font-size: 15px; font-weight: 700; color: #0a0a0a; border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 4px; }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {

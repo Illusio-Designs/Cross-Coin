@@ -30,14 +30,14 @@
   background: #f5f5f7;
   border-color: #d1d5db;
 }
-.pgn-btn:focus-visible { outline: 2px solid #CE1E36; outline-offset: 2px; }
+.pgn-btn:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
 
 .pgn-sm .pgn-btn { width: 28px; height: 28px; font-size: 12px; }
 .pgn-md .pgn-btn { width: 34px; height: 34px; font-size: 13px; }
 .pgn-lg .pgn-btn { width: 40px; height: 40px; font-size: 14px; }
 
-.pgn-btn-active { background: #180D3E; border-color: #180D3E; color: #fff; }
-.pgn-btn-active:hover { background: #0f0828; border-color: #0f0828; }
+.pgn-btn-active { background: #0a0a0a; border-color: #0a0a0a; color: #fff; }
+.pgn-btn-active:hover { background: #050505; border-color: #050505; }
 
 .pgn-btn-disabled { background: #f5f5f7; border-color: #ebebf0; color: #9ca3af; cursor: not-allowed; }
 

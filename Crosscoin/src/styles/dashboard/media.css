@@ -10,7 +10,7 @@
 /* Error banner */
 .mg-error-banner {
   background: #ffeef0;
-  color: #CE1E36;
+  color: #dc2626;
   border: 1px solid #ffd6db;
   border-radius: 6px;
   padding: 10px 14px;
@@ -50,7 +50,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #180D3E;
+  color: #0a0a0a;
   cursor: pointer;
   user-select: none;
 }
@@ -59,7 +59,7 @@
   width: 15px;
   height: 15px;
   cursor: pointer;
-  accent-color: #CE1E36;
+  accent-color: #0a0a0a;
   flex-shrink: 0;
 }
 
@@ -70,7 +70,7 @@
   height: 32px;
   padding: 0 12px;
   background: #ffeef0;
-  color: #CE1E36;
+  color: #dc2626;
   border: 1px solid #ffd6db;
   border-radius: 6px;
   font-size: 12px;
@@ -114,13 +114,13 @@
 }
 
 .mg-view-btn.active {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
 }
 
 .mg-view-btn:hover:not(.active) {
   background: #f0f0f5;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 /* ---- Grid ---- */
@@ -142,13 +142,13 @@
 }
 
 .mg-card:hover {
-  border-color: #180D3E;
-  box-shadow: 0 4px 12px rgba(24,13,62,0.08);
+  border-color: #0a0a0a;
+  box-shadow: 0 4px 12px rgba(10, 10, 10,0.08);
 }
 
 .mg-card--selected {
-  border-color: #CE1E36;
-  box-shadow: 0 0 0 2px rgba(206,30,54,0.15);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.15);
 }
 
 .mg-card-img-wrap {
@@ -189,7 +189,7 @@
   right: 8px;
   width: 22px;
   height: 22px;
-  background: #CE1E36;
+  background: #0a0a0a;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -201,7 +201,7 @@
 .mg-card-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(24,13,62,0.5);
+  background: rgba(10, 10, 10,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +221,7 @@
   border: none;
   border-radius: 6px;
   background: rgba(255,255,255,0.9);
-  color: #180D3E;
+  color: #0a0a0a;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -234,7 +234,7 @@
 }
 
 .mg-overlay-btn--delete {
-  color: #CE1E36;
+  color: #dc2626;
 }
 
 .mg-card-info {
@@ -260,7 +260,7 @@
 
 .mg-list-th {
   background: #f9fafb;
-  color: #180D3E;
+  color: #0a0a0a;
   font-weight: 700;
   font-size: 11px;
   text-transform: uppercase;
@@ -289,7 +289,7 @@
 }
 
 .mg-list-row--selected {
-  background: rgba(206,30,54,0.04);
+  background: rgba(10, 10, 10, 0.04);
 }
 
 .mg-list-td {
@@ -324,7 +324,7 @@
 
 .mg-list-name {
   font-weight: 600;
-  color: #180D3E;
+  color: #0a0a0a;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -364,7 +364,7 @@
 .mg-stat-value {
   font-size: 20px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   line-height: 1;
 }
 

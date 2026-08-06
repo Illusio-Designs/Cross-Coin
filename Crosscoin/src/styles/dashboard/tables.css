@@ -40,7 +40,7 @@
 .reviews-table::-webkit-scrollbar-thumb,
 .policies-table::-webkit-scrollbar-thumb,
 .consumers-table::-webkit-scrollbar-thumb {
-  background: #180D3E;
+  background: #0a0a0a;
   border-radius: 4px;
 }
 
@@ -51,7 +51,7 @@
 .reviews-table::-webkit-scrollbar-thumb:hover,
 .policies-table::-webkit-scrollbar-thumb:hover,
 .consumers-table::-webkit-scrollbar-thumb:hover {
-  background: #CE1E36;
+  background: #0a0a0a;
 }
 
 /* Common table base */
