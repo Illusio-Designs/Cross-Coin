@@ -240,17 +240,23 @@ export async function getProductsByCategory(name) {
   }
 }
 
-/* Product search — GET /api/products/search?q= */
+/* Product search — searches via the CATALOG endpoint (same as every other
+   brand, e.g. Morbix). The catalogue returns full per-colour image data, so
+   each colour card shows its own photo — no backend search change needed. */
 export async function searchProducts(query) {
   const q = (query || '').trim();
   if (!q) return [];
   try {
-    const data = await brandFetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=24`);
+    const data = await brandFetch(`/api/products/catalog?search=${encodeURIComponent(q)}&limit=48`);
     const products = data?.data?.products || data?.products || data?.data || [];
-    // Explode each colour into its own card (same as the catalogue / listing
-    // pages) so a product with 14 colours shows 14 cards — each with its OWN
-    // photo now that the search API returns the variation-tagged images.
-    return explodeColorVariants((Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean));
+    const mapped = (Array.isArray(products) ? products : []).map(mapProduct).filter(Boolean);
+    // Narrow to real name / collection hits, then explode each colour into its
+    // own card so a 14-colour product shows 14 cards — each with its own photo.
+    const lower = q.toLowerCase();
+    const filtered = mapped.filter((p) =>
+      p.name?.toLowerCase().includes(lower) || p.collection?.toLowerCase().includes(lower)
+    );
+    return explodeColorVariants(filtered.length ? filtered : mapped);
   } catch {
     return [];
   }
