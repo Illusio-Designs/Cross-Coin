@@ -66,6 +66,11 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   indexes: [
     { name: 'idx_wa_msg_conv_id',   fields: ['conversation_id', 'id'] },
     { name: 'idx_wa_msg_wa_msg_id', fields: ['wa_message_id'] },
+    // Dashboard getStats groups outbound messages by status and windows the
+    // last 7 days by sent_at; both were full scans before. Mirrored in
+    // scripts/add-perf-indexes.js.
+    { name: 'idx_wa_msg_dir_status', fields: ['direction', 'status'] },
+    { name: 'idx_wa_msg_sent_at',    fields: ['sent_at'] },
   ],
 });
 

@@ -47,6 +47,12 @@ const INDEXES = {
   whatsapp_messages: [
     { name: 'idx_wa_msg_conv_id', columns: ['conversation_id', 'id'] },
     { name: 'idx_wa_msg_wa_msg_id', columns: ['wa_message_id'] },
+    // Dashboard getStats counted outbound/delivered/read by scanning the whole
+    // messages table 4× (direction, status, sent_at were all unindexed) — the
+    // "WhatsApp dashboard stuck loading" symptom. These cover the grouped
+    // status breakdown and the last-7-days sent_at window.
+    { name: 'idx_wa_msg_dir_status', columns: ['direction', 'status'] },
+    { name: 'idx_wa_msg_sent_at', columns: ['sent_at'] },
   ],
   // Storefront product listing (getAllProducts) joins these child/junction
   // tables on every page. The models DECLARE these indexes, but they were added
