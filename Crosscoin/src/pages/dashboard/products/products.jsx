@@ -1369,7 +1369,7 @@ const ProductsPage = () => {
                   loading={loading}
                   error={error}
                   className="w-full"
-                  striped={true}
+                  striped={false}
                   hoverable={true}
                 />
                 {totalProducts > itemsPerPage && (
