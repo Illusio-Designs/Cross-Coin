@@ -25,10 +25,15 @@ const IC = {
 };
 
 // A user's effective roles = primary `role` ∪ additional `roles` array.
+// `roles` is a MySQL JSON column; some drivers hand it back as a JSON string
+// instead of a parsed array, so parse defensively — otherwise a user with
+// multiple roles would collapse to just their primary role in the UI.
 const getUserRoles = (u) => {
   const set = new Set();
   if (u?.role) set.add(u.role);
-  if (Array.isArray(u?.roles)) u.roles.forEach(r => r && set.add(r));
+  let extra = u?.roles;
+  if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch { extra = []; } }
+  if (Array.isArray(extra)) extra.forEach(r => r && set.add(r));
   return [...set];
 };
 
@@ -213,15 +218,15 @@ export default function StaffUsers() {
             <div
               key={r.value}
               className={`sl-stat-card${filterRole === r.value ? ' sl-stat-card--active' : ''}`}
-              style={{ cursor: 'pointer', borderColor: filterRole === r.value ? r.color : undefined }}
+              style={{ cursor: 'pointer', borderColor: filterRole === r.value ? 'var(--ds-color-text)' : undefined }}
               onClick={() => setFilterRole(filterRole === r.value ? 'all' : r.value)}
             >
-              <div className="sl-stat-icon" style={{ background: r.color + '18', color: r.color }}>
+              <div className="sl-stat-icon" style={{ background: 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text)' }}>
                 {IC.users}
               </div>
               <div className="sl-stat-body">
                 <span className="sl-stat-label">{r.label}</span>
-                <span className="sl-stat-value" style={{ color: r.color }}>{counts[r.value] || 0}</span>
+                <span className="sl-stat-value" style={{ color: 'var(--ds-color-text)' }}>{counts[r.value] || 0}</span>
               </div>
             </div>
           ))}
@@ -309,8 +314,8 @@ export default function StaffUsers() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-                        border: `1.5px solid ${selected ? r.color : '#e5e7eb'}`,
-                        background: selected ? r.color + '0d' : '#fff',
+                        border: `1.5px solid ${selected ? 'var(--ds-color-text)' : 'var(--ds-color-border)'}`,
+                        background: selected ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)',
                         transition: 'border-color 0.15s, background 0.15s',
                       }}
                     >
@@ -318,15 +323,15 @@ export default function StaffUsers() {
                         type="checkbox" name="roles" value={r.value}
                         checked={selected}
                         onChange={toggle}
-                        style={{ accentColor: r.color, width: 15, height: 15, flexShrink: 0 }}
+                        style={{ accentColor: 'var(--ds-color-text)', width: 15, height: 15, flexShrink: 0 }}
                       />
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: selected ? 'var(--ds-color-text)' : 'var(--ds-color-text-faint)', flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#111827' }}>{r.label}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{r.desc}</p>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--ds-color-text)' }}>{r.label}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--ds-color-text-muted)', marginTop: 1 }}>{r.desc}</p>
                       </div>
                       {selected && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: r.color, background: r.color + '18', padding: '2px 8px', borderRadius: 10 }}>Selected</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ds-color-surface)', background: 'var(--ds-color-text)', padding: '2px 8px', borderRadius: 10 }}>Selected</span>
                       )}
                     </label>
                   );
