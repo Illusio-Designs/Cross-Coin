@@ -47,15 +47,15 @@ export function BrandSettingsManager() {
       const response = await brandService.getAllBrands(true);
       if (response.success && response.data.length > 0) {
         setBrands(response.data);
-        // Preselect the brand handed over from the Brands page ("Manage
-        // settings"), otherwise default to the first brand.
-        let preselect = response.data[0].id;
+        // Load settings ONLY on demand ("view setting"). We don't auto-select
+        // a brand here, so the initial page load only fetches the brand list —
+        // the settings API fires when the user picks a brand (or arrives from
+        // the Brands page "Manage settings", which hands over a brand id).
         try {
           const stored = sessionStorage.getItem('dash_settings_brand');
-          if (stored && response.data.some(b => String(b.id) === stored)) preselect = Number(stored);
+          if (stored && response.data.some(b => String(b.id) === stored)) setSelectedBrandId(Number(stored));
           sessionStorage.removeItem('dash_settings_brand');
         } catch { /* ignore */ }
-        setSelectedBrandId(preselect);
       }
     } catch { showError('loadingFailed'); }
   };
@@ -171,7 +171,13 @@ export function BrandSettingsManager() {
       </div>
 
       {/* Settings Grid */}
-      {loading ? (
+      {!selectedBrandId ? (
+        <EmptyState
+          icon={IC.settings}
+          title="Select a brand to view its settings"
+          message="Choose a brand above and its settings will load on demand."
+        />
+      ) : loading ? (
         <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
       ) : filteredSettings.length === 0 ? (
         <EmptyState
