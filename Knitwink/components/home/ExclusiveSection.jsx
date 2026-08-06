@@ -13,10 +13,21 @@ export function ExclusiveSection({ products = [] }) {
   const [activeThumb, setActiveThumb] = useState(0)
   const [activeColor, setActiveColor] = useState(0)
   const [paused, setPaused] = useState(false)
-  const [railH, setRailH] = useState(0)          // main-image height → rail height
+  const [railH, setRailH] = useState(0)          // main-image height → rail height (desktop)
+  const [isMobile, setIsMobile] = useState(false)
   const mainRef = useRef(null)
   const thumbsRef = useRef(null)
   const { addItem } = useCart()
+
+  // Mobile breakpoint — on phones the rail uses a fixed 265px height.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const on = () => setIsMobile(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
 
   // Resolve the current gallery (selected colour's images) — used by the effects
   // below, which must run before any early return.
@@ -173,7 +184,7 @@ export function ExclusiveSection({ products = [] }) {
           {colorImages.length > 1 && (
             <div
               ref={thumbsRef}
-              style={railH ? { maxHeight: railH } : undefined}
+              style={{ maxHeight: (isMobile ? 265 : railH) || undefined }}
               className="flex flex-col gap-2 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {colorImages.map((img, i) => (
@@ -188,8 +199,8 @@ export function ExclusiveSection({ products = [] }) {
               ))}
             </div>
           )}
-          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50 aspect-square sm:aspect-auto">
-            <img src={displayImage} alt={product.name} className="h-full w-full object-contain sm:object-fill sm:min-h-[260px] md:min-h-[300px]" />
+          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl">
+            <img src={displayImage} alt={product.name} className="w-full h-auto object-contain sm:h-full sm:object-fill sm:min-h-[260px] md:min-h-[300px]" />
             {product.badge && (
               <span className="absolute left-3 top-3 rounded-full bg-brand-black px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
                 {product.badge}
