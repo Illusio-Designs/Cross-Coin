@@ -192,8 +192,9 @@ function AppContent({ Component, pageProps, progressRef }) {
         }}
       />
 
-      {/* Back to top button */}
-      {hasMounted && showBackTop && (
+      {/* Back to top button — storefront only (kept off the dashboard, where it
+          overlapped panel actions like the CSV export buttons) */}
+      {!isDashboard && hasMounted && showBackTop && (
         <button
           className="back-to-top"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

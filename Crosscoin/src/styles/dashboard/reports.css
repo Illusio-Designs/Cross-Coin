@@ -64,7 +64,10 @@
 .rep-ph h3 { font-size: 14px; font-weight: 650; color: var(--ds-color-text); margin: 0; letter-spacing: -0.01em; }
 .rep-ph .hint { color: var(--ds-color-text-muted); font-size: 12px; }
 
-.rep-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* align-items:start so a short card (e.g. Revenue by Status) never stretches
+   to match a tall neighbour (e.g. Top Products) — that stretch was the source
+   of the big empty white space. Each panel is now its own content height. */
+.rep-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .rep-grid2--wide { grid-template-columns: 1.35fr 1fr; }
 @media (max-width: 860px) { .rep-grid2, .rep-grid2--wide { grid-template-columns: 1fr; } }
 .rep-grid2 > * { min-width: 0; }
@@ -127,8 +130,8 @@
 .rep-leg small { display: block; color: var(--ds-color-text-muted); font-size: 11px; margin-top: 2px; }
 
 /* ── Tiles ── */
-.rep-tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-@media (max-width: 560px) { .rep-tiles { grid-template-columns: 1fr 1fr; } }
+.rep-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 380px) { .rep-tiles { grid-template-columns: 1fr; } }
 .rep-tile { border: 1px solid var(--ds-color-border); border-radius: 10px; padding: 12px 13px; background: var(--ds-color-surface-soft); min-width: 0; }
 .rep-tl { color: var(--ds-color-text-muted); font-size: 11px; font-weight: 600; }
 .rep-tv { font-size: 19px; color: var(--ds-color-text); font-weight: 700; letter-spacing: -0.02em; margin-top: 5px; }

@@ -257,7 +257,7 @@ export default function Reports() {
             <div className="rep-panel rep-panel--flush">
               <div className="rep-ph">
                 <h3>Sales by Brand</h3>
-                <button type="button" className="rep-chip" onClick={exportBrandSales} disabled={!brandSales.length}>
+                <button type="button" className="order-sync-main-btn" onClick={exportBrandSales} disabled={!brandSales.length}>
                   <DlIcon /> Export CSV
                 </button>
               </div>
@@ -304,12 +304,12 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* ── Top products + revenue by status ── */}
+          {/* ── Top products + order status breakdown (both tall) ── */}
           <div className="rep-grid2 rep-grid2--wide">
             <div className="rep-panel rep-panel--flush">
               <div className="rep-ph">
                 <h3>Top Products</h3>
-                <button type="button" className="rep-chip" onClick={exportTopProducts} disabled={!topProducts.length}>
+                <button type="button" className="order-sync-main-btn" onClick={exportTopProducts} disabled={!topProducts.length}>
                   <DlIcon /> Export CSV
                 </button>
               </div>
@@ -335,23 +335,6 @@ export default function Reports() {
             </div>
 
             <div className="rep-panel">
-              <div className="rep-ph"><h3>Revenue by Status</h3><span className="hint">where the money sits</span></div>
-              <div className="rep-seg">
-                <span style={{ width: `${(earned / segTotal) * 100}%`, background: RAMP[0] }} />
-                <span style={{ width: `${(active / segTotal) * 100}%`, background: RAMP[2] }} />
-                <span style={{ width: `${(lost / segTotal) * 100}%`, background: RAMP[4] }} />
-              </div>
-              <div className="rep-legend">
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[0] }} /><div><b className="num">{moneyShort(earned)}</b><small>Earned · delivered</small></div></div>
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[2] }} /><div><b className="num">{moneyShort(active)}</b><small>Active · in pipeline</small></div></div>
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[4] }} /><div><b className="num">{moneyShort(lost)}</b><small>Lost · cancelled + RTO</small></div></div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Order status breakdown + payment ── */}
-          <div className="rep-grid2">
-            <div className="rep-panel">
               <div className="rep-ph"><h3>Order Status Breakdown</h3><span className="hint">{num(orders.total)} orders</span></div>
               <div className="rep-bars">
                 {statusRows.length === 0 ? (
@@ -365,6 +348,23 @@ export default function Reports() {
                     <div className="rep-track"><div className="rep-fill" style={{ width: `${Math.max(pct(r.value), 1)}%`, background: r.c }} /></div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Revenue by status + payment ── */}
+          <div className="rep-grid2">
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Revenue by Status</h3><span className="hint">where the money sits</span></div>
+              <div className="rep-seg">
+                <span style={{ width: `${(earned / segTotal) * 100}%`, background: RAMP[0] }} />
+                <span style={{ width: `${(active / segTotal) * 100}%`, background: RAMP[2] }} />
+                <span style={{ width: `${(lost / segTotal) * 100}%`, background: RAMP[4] }} />
+              </div>
+              <div className="rep-legend">
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[0] }} /><div><b className="num">{moneyShort(earned)}</b><small>Earned · delivered</small></div></div>
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[2] }} /><div><b className="num">{moneyShort(active)}</b><small>Active · in pipeline</small></div></div>
+                <div className="rep-leg"><span className="d" style={{ background: RAMP[4] }} /><div><b className="num">{moneyShort(lost)}</b><small>Lost · cancelled + RTO</small></div></div>
               </div>
             </div>
 
@@ -389,7 +389,7 @@ export default function Reports() {
                 Download a detailed CSV of all delivered orders for the selected date range (used for reconciliation &amp; accounting).
                 {!hasDateFilter && ' Pick a start and end date above first.'}
               </p>
-              <button type="button" className="rep-chip" onClick={exportDeliveredOrders} disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}>
+              <button type="button" className="order-sync-main-btn" onClick={exportDeliveredOrders} disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}>
                 <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered orders'}
               </button>
             </div>
