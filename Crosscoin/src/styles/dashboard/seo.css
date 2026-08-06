@@ -15,7 +15,7 @@
   width: 100%;
   border-radius: 6px;
   background: #fff;
-  border: 2px solid #180D3E;
+  border: 2px solid #0a0a0a;
   transition: all 0.2s ease;
 }
 
@@ -34,7 +34,7 @@
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #180D3E;
+  color: #0a0a0a;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -170,7 +170,7 @@
   padding: 20px 24px 16px 24px;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -277,8 +277,8 @@
 
 .seo-form .input-field:focus {
   outline: none;
-  border-color: #CE1E36;
-  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
 }
 
 .seo-image-preview {

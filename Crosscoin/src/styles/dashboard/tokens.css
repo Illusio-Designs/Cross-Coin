@@ -15,11 +15,11 @@
  */
 
 :root {
-  /* ── Color: brand ────────────────────────────────────────────────── */
-  --ds-color-brand:        #180D3E;
-  --ds-color-brand-soft:   #ede9fe;
-  --ds-color-brand-strong: #0f0830;
-  --ds-color-accent:       #CE1E36;
+  /* ── Color: brand (Obzus — monochrome) ───────────────────────────── */
+  --ds-color-brand:        #0a0a0a;
+  --ds-color-brand-soft:   #f4f4f5;
+  --ds-color-brand-strong: #000000;
+  --ds-color-accent:       #0a0a0a;
 
   /* ── Color: status ───────────────────────────────────────────────── */
   --ds-color-success:      #16a34a;
@@ -36,14 +36,14 @@
   --ds-color-info-bd:      #bfdbfe;
 
   /* ── Color: neutral ──────────────────────────────────────────────── */
-  --ds-color-bg:           #f7f7fb;       /* dashboard canvas */
+  --ds-color-bg:           #f6f6f7;       /* dashboard canvas */
   --ds-color-surface:      #ffffff;       /* cards */
-  --ds-color-surface-soft: #f9fafb;       /* table header / muted */
-  --ds-color-border:       #e5e7eb;
-  --ds-color-border-soft:  #f3f4f6;
-  --ds-color-text:         #111827;
-  --ds-color-text-muted:   #6b7280;
-  --ds-color-text-faint:   #9ca3af;
+  --ds-color-surface-soft: #fafafa;       /* table header / muted */
+  --ds-color-border:       #e7e7ea;
+  --ds-color-border-soft:  #f0f0f2;
+  --ds-color-text:         #0a0a0a;
+  --ds-color-text-muted:   #6b6b73;
+  --ds-color-text-faint:   #9a9aa2;
   --ds-color-link:         var(--ds-color-brand);
 
   /* ── Spacing scale (rems for accessibility) ─────────────────────── */
@@ -69,10 +69,10 @@
   --ds-shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.04);
   --ds-shadow-md:  0 2px 4px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
   --ds-shadow-lg:  0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px rgba(15, 23, 42, 0.08);
-  --ds-shadow-pop: 0 8px 24px rgba(24, 13, 62, 0.18);
+  --ds-shadow-pop: 0 8px 24px rgba(10, 10, 10, 0.18);
 
   /* ── Typography ──────────────────────────────────────────────────── */
-  --ds-font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ds-font-sans: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --ds-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   --ds-text-xs: 11px;

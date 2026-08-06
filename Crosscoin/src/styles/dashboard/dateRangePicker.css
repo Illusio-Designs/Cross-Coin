@@ -64,13 +64,13 @@
 }
 
 .drp-trigger:hover {
-  border-color: #180D3E;
+  border-color: #0a0a0a;
   background: #fff;
 }
 
 .drp-trigger--active {
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
   background: #fff;
 }
 
@@ -82,7 +82,7 @@
 .drp-apply-btn {
   height: 38px;
   padding: 0 18px;
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -189,7 +189,7 @@
 }
 
 .drp-preset-btn:hover {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
 }
 
@@ -292,7 +292,7 @@
 
 .drp-cal-today {
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   background: #f0edf7;
 }
 
@@ -302,7 +302,7 @@
 
 .drp-cal-start,
 .drp-cal-end {
-  background: #180D3E !important;
+  background: #0a0a0a !important;
   color: #fff !important;
   font-weight: 700;
   border-radius: 8px;
@@ -310,7 +310,7 @@
 
 .drp-cal-in-range {
   background: #ede9f7;
-  color: #180D3E;
+  color: #0a0a0a;
   border-radius: 4px;
 }
 

@@ -63,18 +63,18 @@
 }
 
 .date-input-group input:hover {
-  border-color: #180D3E;
+  border-color: #0a0a0a;
 }
 
 .date-input-group input:focus {
   outline: none;
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
 }
 
 .apply-filter-btn {
   padding: 8px 20px;
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   border-radius: 6px;
@@ -84,7 +84,7 @@
 }
 
 .apply-filter-btn:hover {
-  background: #a8172b;
+  background: #262626;
 }
 
 /* Stats Grid */
@@ -266,7 +266,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid #f3f4f6;
-  border-top: 3px solid #CE1E36;
+  border-top: 3px solid #0a0a0a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 15px;
@@ -290,7 +290,7 @@
 
 .retry-button {
   padding: 8px 20px;
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   border-radius: 6px;
@@ -300,7 +300,7 @@
 }
 
 .retry-button:hover {
-  background: #a8172b;
+  background: #262626;
 }
 
 .no-data {

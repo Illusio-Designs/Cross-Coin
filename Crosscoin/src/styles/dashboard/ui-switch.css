@@ -25,7 +25,7 @@
 .sw-md { width: 44px; height: 24px; }
 .sw-lg { width: 56px; height: 30px; }
 
-.sw-track-checked { background: #CE1E36; }
+.sw-track-checked { background: #0a0a0a; }
 .sw-track-disabled { cursor: not-allowed; background: #e5e7eb; }
 .sw-track-disabled.sw-track-checked { background: #f0a0a8; }
 
@@ -50,10 +50,10 @@
 .sw-description { font-size: 12px; color: #6b7280; line-height: 1.4; }
 
 .sw-container:hover:not(.sw-container-disabled) .sw-track { background: #b0b7c3; }
-.sw-container:hover:not(.sw-container-disabled) .sw-track-checked { background: #a8172b; }
+.sw-container:hover:not(.sw-container-disabled) .sw-track-checked { background: #262626; }
 
-.sw-input:focus + .sw-track { box-shadow: 0 0 0 3px rgba(206,30,54,0.15); }
-.sw-input:focus-visible + .sw-track { outline: 2px solid #CE1E36; outline-offset: 2px; }
+.sw-input:focus + .sw-track { box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.15); }
+.sw-input:focus-visible + .sw-track { outline: 2px solid #0a0a0a; outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .sw-track, .sw-thumb { transition: none; }

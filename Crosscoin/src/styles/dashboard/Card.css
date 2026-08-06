@@ -25,7 +25,7 @@
 }
 
 .dc-greeting { display: flex; flex-direction: column; gap: 2px; }
-.dc-greeting-text { font-size: 20px; font-weight: 700; color: #180D3E; }
+.dc-greeting-text { font-size: 20px; font-weight: 700; color: #0a0a0a; }
 .dc-greeting-sub { font-size: 13px; color: #9ca3af; }
 
 /* ===================================
@@ -59,7 +59,7 @@
 .dc-kpi-tile {
   background: #fff;
   border: 1px solid #ebebf0;
-  border-left: 3px solid #180D3E;
+  border-left: 3px solid #0a0a0a;
   border-radius: 8px;
   padding: 12px 14px;
   display: flex;
@@ -67,7 +67,7 @@
   gap: 4px;
   transition: box-shadow 0.18s ease;
 }
-.dc-kpi-tile:hover { box-shadow: 0 4px 16px rgba(24,13,62,0.07); }
+.dc-kpi-tile:hover { box-shadow: 0 4px 16px rgba(10, 10, 10,0.07); }
 
 .dc-kpi-label {
   font-size: 10px;
@@ -79,7 +79,7 @@
 .dc-kpi-value {
   font-size: 16px;
   font-weight: 800;
-  color: #180D3E;
+  color: #0a0a0a;
   word-break: break-word;
 }
 
@@ -184,7 +184,7 @@
   gap: 10px;
   font-size: 15px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   margin-bottom: 18px;
   padding-bottom: 14px;
   border-bottom: 1px solid #f0f0f5;
@@ -192,10 +192,10 @@
 
 .dc-section-icon {
   width: 32px; height: 32px;
-  background: #f0eeff;
+  background: #f4f4f5;
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  color: #180D3E;
+  color: #0a0a0a;
   flex-shrink: 0;
 }
 .dc-section-icon svg { width: 16px; height: 16px; }
@@ -244,7 +244,7 @@
 
 .dc-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(24,13,62,0.07);
+  box-shadow: 0 6px 20px rgba(10, 10, 10,0.07);
 }
 
 .dc-stat-icon {
@@ -269,7 +269,7 @@
 .dc-stat-value {
   font-size: 24px;
   font-weight: 800;
-  color: #180D3E;
+  color: #0a0a0a;
   line-height: 1;
   margin-bottom: 3px;
   word-break: break-word;
@@ -313,7 +313,7 @@
 }
 .dc-rto-mini-icon { width: 28px; height: 28px; color: #dc2626; background: #fee2e2; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
 .dc-rto-mini-icon svg { width: 14px; height: 14px; }
-.dc-rto-mini-title { font-size: 15px; font-weight: 700; color: #180D3E; }
+.dc-rto-mini-title { font-size: 15px; font-weight: 700; color: #0a0a0a; }
 .dc-rto-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .dc-rto-mini-item { display: flex; flex-direction: column; gap: 2px; }
 .dc-rto-mini-val { font-size: 20px; font-weight: 800; color: #dc2626; }
@@ -349,7 +349,7 @@
 
 .alert-content { flex: 1; min-width: 0; }
 .alert-title { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-.alert-value { font-size: 20px; font-weight: 700; color: #180D3E; margin-bottom: 3px; }
+.alert-value { font-size: 20px; font-weight: 700; color: #0a0a0a; margin-bottom: 3px; }
 .alert-description { font-size: 12px; color: #9ca3af; }
 
 /* ===================================
@@ -377,8 +377,8 @@
 .dashboard-table tbody tr:hover { background: #fafafa; }
 .dashboard-table td { padding: 10px 14px; color: #1a1a1a; }
 
-.table-rank { font-weight: 700; color: #CE1E36; font-size: 14px; }
-.table-product-name { font-weight: 600; color: #180D3E; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-rank { font-weight: 700; color: #0a0a0a; font-size: 14px; }
+.table-product-name { font-weight: 600; color: #0a0a0a; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-revenue { font-weight: 700; color: #059669; }
 .table-amount { font-weight: 600; }
 .table-order-number { font-family: 'Courier New', monospace; font-weight: 600; color: #7c3aed; font-size: 12px; }
@@ -435,7 +435,7 @@
    =================================== */
 .dashboard-subsection { margin-top: 16px; }
 .dashboard-subsection-title {
-  font-size: 13px; font-weight: 600; color: #180D3E;
+  font-size: 13px; font-weight: 600; color: #0a0a0a;
   margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f5;
 }
 

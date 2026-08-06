@@ -1,5 +1,5 @@
 .dashboard-title { 
-  color: #180d3e;
+  color: #0a0a0a;
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
@@ -53,7 +53,7 @@
 }
 
 .dashboard-content .product-price {
-  color: #ce1e36;
+  color: #0a0a0a;
   font-weight: 600;
   font-size: 1.2rem;
 }
@@ -75,12 +75,12 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 .variation-images-upload input[type="file"] {
   padding: 0.75rem 1rem;
-  border: 1px solid #180D3E;
+  border: 1px solid #0a0a0a;
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
@@ -91,12 +91,12 @@
 
 .variation-images-upload input[type="file"]:focus {
   outline: none;
-  border-color: #CE1E36;
-  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
 }
 
 .variation-images-upload input[type="file"]:hover {
-  border-color: #CE1E36;
+  border-color: #0a0a0a;
 }
 
 .variation-images-preview {
@@ -134,7 +134,7 @@
 
 /* File input button styling to match theme */
 .variation-images-upload input[type="file"]::-webkit-file-upload-button {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -151,7 +151,7 @@
 }
 
 .variation-images-upload input[type="file"]::file-selector-button {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -177,12 +177,12 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 .product-images-section input[type="file"] {
   padding: 0.75rem 1rem;
-  border: 1px solid #180D3E;
+  border: 1px solid #0a0a0a;
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
@@ -193,12 +193,12 @@
 
 .product-images-section input[type="file"]:focus {
   outline: none;
-  border-color: #CE1E36;
-  box-shadow: 0 0 0 2px rgba(206, 30, 54, 0.1);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
 }
 
 .product-images-section input[type="file"]:hover {
-  border-color: #CE1E36;
+  border-color: #0a0a0a;
 }
 
 .images-preview {
@@ -268,7 +268,7 @@
 
 /* File input button styling to match theme */
 .product-images-section input[type="file"]::-webkit-file-upload-button {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -285,7 +285,7 @@
 }
 
 .product-images-section input[type="file"]::file-selector-button {
-  background: #CE1E36;
+  background: #0a0a0a;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -323,7 +323,7 @@
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 .dimensions-inputs {

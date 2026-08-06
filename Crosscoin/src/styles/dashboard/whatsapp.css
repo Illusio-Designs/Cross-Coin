@@ -1950,7 +1950,7 @@
 .was-rp-pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .was-rp-pill--open { background: #e8f5f0; color: #0b7a5e; }
 .was-rp-pill--done { background: var(--wa-surface-2); color: var(--wa-text-3); }
-.was-rp-tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: #e8f5f0; color: #0b7a5e; border: 1px solid rgba(206,30,54,.2); }
+.was-rp-tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: #e8f5f0; color: #0b7a5e; border: 1px solid rgba(10, 10, 10, .2); }
 .was-rp-notes {
   width: 100%; min-height: 100px; padding: 9px 10px;
   border: 1px solid var(--wa-border); border-radius: var(--wa-radius-sm);

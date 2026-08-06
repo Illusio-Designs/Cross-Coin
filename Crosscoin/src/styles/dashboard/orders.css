@@ -9,7 +9,7 @@
   flex-wrap: wrap;
 }
 .ord-topbar-left { display: flex; align-items: baseline; gap: 12px; }
-.ord-title { font-size: 20px; font-weight: 700; color: #180D3E; margin: 0; }
+.ord-title { font-size: 20px; font-weight: 700; color: #0a0a0a; margin: 0; }
 .ord-subtitle { font-size: 13px; color: #9ca3af; font-weight: 500; }
 .ord-topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -22,7 +22,7 @@
 .ord-kpi {
   background: #fff;
   border: 1px solid #ebebf0;
-  border-left: 3px solid #180D3E;
+  border-left: 3px solid #0a0a0a;
   border-radius: 8px;
   padding: 10px 14px;
   display: flex;
@@ -30,9 +30,9 @@
   gap: 2px;
   transition: box-shadow 0.18s ease;
 }
-.ord-kpi:hover { box-shadow: 0 4px 16px rgba(24,13,62,0.07); }
+.ord-kpi:hover { box-shadow: 0 4px 16px rgba(10, 10, 10,0.07); }
 .ord-kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; }
-.ord-kpi-val { font-size: 16px; font-weight: 800; color: #180D3E; word-break: break-word; }
+.ord-kpi-val { font-size: 16px; font-weight: 800; color: #0a0a0a; word-break: break-word; }
 
 @media (max-width: 1200px) { .ord-kpi-strip { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 900px) {
@@ -182,8 +182,8 @@
 }
 
 .payment-filter-dropdown:focus {
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.1);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
 }
 
 .payment-filter-dropdown:hover {
@@ -1094,8 +1094,8 @@
 
 .action-btn.status-select-action:focus {
   outline: none;
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.1);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
 }
 
 .action-btn.status-select-action:hover {
@@ -2476,9 +2476,9 @@
   height: 38px;
   padding: 0 16px;
   border-radius: 8px;
-  border: 1.5px solid #180D3E;
+  border: 1.5px solid #0a0a0a;
   background: #fff;
-  color: #180D3E;
+  color: #0a0a0a;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2491,7 +2491,7 @@
   height: 16px;
 }
 .order-sync-main-btn:hover:not(:disabled) {
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
 }
 .order-sync-main-btn:disabled {
@@ -2845,7 +2845,7 @@
   gap: 8px;
   align-items: center;
   font-weight: 600;
-  color: #180D3E;
+  color: #0a0a0a;
   font-size: 14px;
 }
 
@@ -2889,12 +2889,12 @@
 }
 
 .orders-date-input:hover {
-  border-color: #180D3E;
+  border-color: #0a0a0a;
 }
 
 .orders-date-input:focus {
-  border-color: #180D3E;
-  box-shadow: 0 0 0 3px rgba(24, 13, 62, 0.08);
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
 }
 
 /* Modal order sections */
@@ -2913,7 +2913,7 @@
   border-bottom: 1px solid #ebebf0;
   font-size: 14px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 .order-section-content {
@@ -2931,7 +2931,7 @@
 
 .order-address-name {
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   margin-bottom: 4px;
 }
 
@@ -2975,7 +2975,7 @@
 }
 
 .order-label-link {
-  color: #180D3E;
+  color: #0a0a0a;
   text-decoration: underline;
   font-weight: 500;
 }
@@ -3013,7 +3013,7 @@
   border-top: 2px solid #ebebf0;
   font-size: 16px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 /* AWB Modal */
@@ -3029,7 +3029,7 @@
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #180D3E;
+  color: #0a0a0a;
   margin-bottom: 6px;
 }
 
@@ -3046,7 +3046,7 @@
 }
 
 .awb-input:focus {
-  border-color: #180D3E;
+  border-color: #0a0a0a;
 }
 
 @media (max-width: 768px) {
@@ -3115,14 +3115,14 @@
   border-bottom: 1px solid #ebebf0;
   font-size: 12px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .odm-count {
   margin-left: auto;
-  background: #180D3E;
+  background: #0a0a0a;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -3259,7 +3259,7 @@
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: #180D3E;
+  background: #0a0a0a;
   padding: 3px 10px;
   border-radius: 6px;
   text-decoration: none;
@@ -3366,7 +3366,7 @@
 .odm-item-subtotal {
   font-size: 13px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 /* ── Order Summary ── */
@@ -3389,7 +3389,7 @@
 .odm-summary-row:last-child { border-bottom: none; }
 
 .odm-discount {
-  color: #CE1E36;
+  color: #0a0a0a;
   font-weight: 600;
 }
 
@@ -3397,7 +3397,7 @@
   background: #f8f9fb;
   font-size: 14px;
   font-weight: 700;
-  color: #180D3E;
+  color: #0a0a0a;
 }
 
 /* Responsive */
