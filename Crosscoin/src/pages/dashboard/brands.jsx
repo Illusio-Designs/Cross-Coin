@@ -30,8 +30,10 @@ const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url:
 const IGNORED_KEY = /fship/i; // deprecated Fship shipping keys — not part of the canonical set
 
 const safeDate = (d) => { const t = d ? new Date(d) : null; return t && !isNaN(t) ? t.toLocaleDateString() : '—'; };
-const cell = { padding: '10px 14px', borderBottom: '1px solid #eef0f4', fontSize: 13, verticalAlign: 'middle' };
-const th = { ...cell, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', color: '#8a90a2', fontWeight: 700, background: '#f7f8fb' };
+const cell = { padding: '13px 16px', borderBottom: '1px solid var(--ds-color-border-soft)', fontSize: 13, verticalAlign: 'middle' };
+const th = { padding: '11px 16px', textAlign: 'left', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ds-color-text-muted)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', borderBottom: '1px solid var(--ds-color-border)' };
+const brandMono = (b) => (b.display_name || b.name || '?').trim().slice(0, 2).toUpperCase();
+const feedChip = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: 'var(--ds-color-text-muted)', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer' };
 
 export function BrandManager() {
   const queryClient = useQueryClient();
@@ -196,10 +198,10 @@ export function BrandManager() {
       />
 
       <StatGrid>
-        <StatTile label="Total brands" value={brands.length} tone="info" />
-        <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} tone="good" />
-        <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} tone="warn" />
-        <StatTile label="Settings pending" value={totalPending} tone={totalPending > 0 ? 'warn' : 'good'} />
+        <StatTile label="Total brands" value={brands.length} />
+        <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} />
+        <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} />
+        <StatTile label="Settings pending" value={totalPending} />
       </StatGrid>
 
       <Panel style={{ marginBottom: 16 }}>
@@ -220,7 +222,7 @@ export function BrandManager() {
             </div>
             {formData.domain?.trim() && (
               <div className="dm-field">
-                <label className="dm-label">Sitemap URL <span style={{ fontWeight: 400, color: '#8a90a2' }}>— submit this in Google Search Console</span></label>
+                <label className="dm-label">Sitemap URL <span style={{ fontWeight: 400, color: 'var(--ds-color-text-muted)' }}>— submit this in Google Search Console</span></label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="dm-input" readOnly value={`https://${cleanDomain(formData.domain)}/sitemap.xml`} style={{ flex: 1 }} onFocus={(e) => e.target.select()} />
                   <Button type="button" variant="secondary" onClick={() => copyText(`https://${cleanDomain(formData.domain)}/sitemap.xml`)}>Copy</Button>
@@ -273,34 +275,44 @@ export function BrandManager() {
                     .sort((a, b) => a.key.localeCompare(b.key));
                   return (
                     <React.Fragment key={brand.id}>
-                      <tr style={{ cursor: 'pointer', background: isOpen ? '#f7f8fb' : '#fff' }} onClick={() => setExpanded(isOpen ? null : brand.id)}>
-                        <td style={{ ...cell, textAlign: 'center' }}><span style={{ display: 'inline-flex', width: 16, height: 16, color: '#8a90a2', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>{IC.chevron}</span></td>
+                      <tr style={{ cursor: 'pointer', background: isOpen ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)' }} onClick={() => setExpanded(isOpen ? null : brand.id)}>
+                        <td style={{ ...cell, textAlign: 'center' }}><span style={{ display: 'inline-flex', width: 16, height: 16, color: 'var(--ds-color-text-faint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>{IC.chevron}</span></td>
                         <td style={cell}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ width: 10, height: 10, borderRadius: 3, background: brand.primary_color || '#ccc', flexShrink: 0 }} />
-                            <div><div style={{ fontWeight: 700 }}>{brand.display_name || brand.name}</div><div style={{ fontSize: 11, color: '#8a90a2' }}>{brand.slug}</div></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                            <span style={{ position: 'relative', width: 38, height: 38, borderRadius: 9, background: 'var(--ds-color-brand)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                              {brandMono(brand)}
+                              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: brand.primary_color || 'var(--ds-color-text-faint)' }} title={brand.primary_color || ''} />
+                            </span>
+                            <div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{brand.display_name || brand.name}</div><div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', fontFamily: 'var(--ds-font-mono, monospace)' }}>{brand.slug}</div></div>
                           </div>
                         </td>
-                        <td style={{ ...cell, color: '#5a6072' }}>{brand.domain || '—'}</td>
+                        <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono, monospace)', fontSize: 12 }}>{brand.domain || '—'}</td>
                         <td style={cell}><span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span></td>
                         <td style={cell}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                            {isRef ? <span style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>Reference brand</span>
-                              : pending === null ? <span style={{ color: '#8a90a2' }}>—</span>
-                              : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: pending === 0 ? '#16a34a' : '#d97706' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: pending === 0 ? '#16a34a' : '#d97706' }} />{pending === 0 ? 'All set' : `${pending} of ${predefinedKeys.length} pending`}</span>}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : brand.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                              {isOpen ? '▴ Hide settings' : '▾ View settings'}
-                            </button>
-                          </div>
+                          {isRef ? (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '2px 9px', background: 'var(--ds-color-surface-soft)' }}>Reference</span>
+                          ) : pending === null ? (
+                            <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>
+                          ) : (
+                            <div style={{ minWidth: 128 }}>
+                              <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontWeight: 600, marginBottom: 5, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                                <span>{pending === 0 ? 'All set' : 'Filled'}</span>
+                                <b style={{ color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums' }}>{predefinedKeys.length - pending}/{predefinedKeys.length}</b>
+                              </div>
+                              <div style={{ height: 5, borderRadius: 99, background: 'var(--ds-color-border)', overflow: 'hidden' }}>
+                                <span style={{ display: 'block', height: '100%', width: `${predefinedKeys.length ? Math.round((predefinedKeys.length - pending) / predefinedKeys.length * 100) : 0}%`, background: 'var(--ds-color-brand)', borderRadius: 99 }} />
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td style={cell} onClick={(e) => e.stopPropagation()}>
                           {url ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12 }}>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Google</button>
-                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Facebook</button>
-                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--ds-color-text)', cursor: 'pointer', padding: 0 }}><span style={{ width: 13, height: 13 }}>{IC.copy}</span> Sitemap</button>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Google</button>
+                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Facebook</button>
+                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Sitemap</button>
                             </div>
-                          ) : <span style={{ color: '#b3b8c4', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
+                          ) : <span style={{ color: 'var(--ds-color-text-faint)', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
                         </td>
                         <td style={{ ...cell, textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                           <div className="sl-actions" style={{ justifyContent: 'flex-end' }}>
@@ -313,15 +325,15 @@ export function BrandManager() {
 
                       {isOpen && (
                         <tr>
-                          <td colSpan={7} style={{ padding: 0, background: '#fbfcfe', borderBottom: '2px solid #e6e9f0' }}>
+                          <td colSpan={7} style={{ padding: 0, background: 'var(--ds-color-surface-soft)', borderBottom: '2px solid var(--ds-color-border)' }}>
                             <div style={{ padding: '10px 16px 16px' }}>
-                              <div style={{ fontSize: 12, color: '#8a90a2', margin: '4px 2px 8px', fontWeight: 600 }}>
+                              <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', margin: '4px 2px 8px', fontWeight: 600 }}>
                                 {isRef ? 'Reference brand — these are the canonical settings.' : `Fill the predefined settings for ${brand.display_name || brand.name}. Keys are fixed; only values are added.`}
                               </div>
                               {predefinedKeys.length === 0 ? (
-                                <div style={{ color: '#8a90a2', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to the Crosscoin reference brand first.</div>
+                                <div style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to the Crosscoin reference brand first.</div>
                               ) : (
-                                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #eef0f4', borderRadius: 8 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, overflow: 'hidden' }}>
                                   <thead>
                                     <tr><th style={th}>Key</th><th style={th}>Category</th><th style={th}>Value</th><th style={{ ...th, width: 110, textAlign: 'right' }}>Actions</th></tr>
                                   </thead>
@@ -333,8 +345,8 @@ export function BrandManager() {
                                       const missing = !s || s.value === '' || s.value == null;
                                       return (
                                         <tr key={k.key}>
-                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{k.key}{missing && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: '#d97706', display: 'inline-block' }} title="Not set" />}</td>
-                                          <td style={{ ...cell, color: '#8a90a2', fontSize: 12 }}>{CATEGORY_LABEL[k.category] || k.category}</td>
+                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{k.key}{missing && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-text-faint)', display: 'inline-block' }} title="Not set" />}</td>
+                                          <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{CATEGORY_LABEL[k.category] || k.category}</td>
                                           <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} placeholder={k.description || 'Enter value…'} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
                                           <td style={{ ...cell, textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -352,7 +364,7 @@ export function BrandManager() {
                                       return (
                                         <tr key={s.key}>
                                           <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{s.key} <span style={{ fontSize: 10, color: 'var(--ds-color-text)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', borderRadius: 4, padding: '1px 5px' }}>custom</span></td>
-                                          <td style={{ ...cell, color: '#8a90a2', fontSize: 12 }}>{CATEGORY_LABEL[s.category] || s.category || '—'}</td>
+                                          <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{CATEGORY_LABEL[s.category] || s.category || '—'}</td>
                                           <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
                                           <td style={{ ...cell, textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -370,7 +382,7 @@ export function BrandManager() {
                               {/* Add a custom setting (a key beyond the predefined set) */}
                               <div style={{ marginTop: 12 }}>
                                 {addRowFor === brand.id ? (
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', background: '#fff', border: '1px solid #eef0f4', borderRadius: 8, padding: 10 }}>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 10 }}>
                                     <input className="dm-input" style={{ flex: '1 1 200px', fontSize: 13, fontFamily: 'monospace' }} placeholder="KEY — e.g. GTM_ID" value={newSetting.key} onChange={e => setNewSetting(p => ({ ...p, key: e.target.value }))} />
                                     <div style={{ flex: '0 0 150px' }}>
                                       <Dropdown value={newSetting.category} onChange={val => setNewSetting(p => ({ ...p, category: val }))} options={[{ value: 'analytics', label: 'Analytics' }, { value: 'general', label: 'General' }, { value: 'payment', label: 'Payment' }, { value: 'shipping', label: 'Shipping' }, { value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }, { value: 'social', label: 'Social' }, { value: 'security', label: 'Security' }, { value: 'api', label: 'API Keys' }]} />
