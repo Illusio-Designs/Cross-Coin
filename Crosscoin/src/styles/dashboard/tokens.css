@@ -21,19 +21,20 @@
   --ds-color-brand-strong: #000000;
   --ds-color-accent:       #0a0a0a;
 
-  /* ── Color: status ───────────────────────────────────────────────── */
-  --ds-color-success:      #16a34a;
-  --ds-color-success-bg:   #f0fdf4;
-  --ds-color-success-bd:   #bbf7d0;
-  --ds-color-warn:         #d97706;
-  --ds-color-warn-bg:      #fffbeb;
-  --ds-color-warn-bd:      #fef3c7;
-  --ds-color-danger:       #dc2626;
-  --ds-color-danger-bg:    #fef2f2;
-  --ds-color-danger-bd:    #fecaca;
-  --ds-color-info:         #2563eb;
-  --ds-color-info-bg:      #eff6ff;
-  --ds-color-info-bd:      #bfdbfe;
+  /* ── Color: status (fully monochrome — no semantic hues) ─────────────
+     State is conveyed by the label text + fill weight, not colour. */
+  --ds-color-success:      #0a0a0a;
+  --ds-color-success-bg:   #f2f2f3;
+  --ds-color-success-bd:   #e0e0e3;
+  --ds-color-warn:         #6b6b73;
+  --ds-color-warn-bg:      #f2f2f3;
+  --ds-color-warn-bd:      #e0e0e3;
+  --ds-color-danger:       #0a0a0a;
+  --ds-color-danger-bg:    #f2f2f3;
+  --ds-color-danger-bd:    #d4d4d8;
+  --ds-color-info:         #0a0a0a;
+  --ds-color-info-bg:      #f2f2f3;
+  --ds-color-info-bd:      #e0e0e3;
 
   /* ── Color: neutral ──────────────────────────────────────────────── */
   --ds-color-bg:           #f6f6f7;       /* dashboard canvas */
@@ -121,11 +122,19 @@
   --ds-color-text-muted:   #a1a1aa;
   --ds-color-text-faint:   #71717a;
 
-  /* Status backgrounds need to darken so light text/badges stay readable. */
-  --ds-color-success-bg:   #0f2a1c;
-  --ds-color-warn-bg:      #2a2110;
-  --ds-color-danger-bg:    #2a1414;
-  --ds-color-info-bg:      #101d33;
+  /* Monochrome status on dark: light text on a dark neutral fill. */
+  --ds-color-success:      #f4f4f5;
+  --ds-color-warn:         #a1a1aa;
+  --ds-color-danger:       #f4f4f5;
+  --ds-color-info:         #f4f4f5;
+  --ds-color-success-bg:   #1e1e24;
+  --ds-color-warn-bg:      #1e1e24;
+  --ds-color-danger-bg:    #1e1e24;
+  --ds-color-info-bg:      #1e1e24;
+  --ds-color-success-bd:   #2b2b33;
+  --ds-color-warn-bd:      #2b2b33;
+  --ds-color-danger-bd:    #2b2b33;
+  --ds-color-info-bd:      #2b2b33;
 
   --ds-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.4);
   --ds-shadow-md:  0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
