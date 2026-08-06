@@ -3621,14 +3621,17 @@
   box-sizing: border-box;  /* keep inputs inside the narrow aside panel */
   border: 1px solid var(--ds-color-border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 9px 11px;
   font-size: 13px;
   font-weight: 500;
   color: var(--ds-color-text);
-  background: var(--ds-color-bg);
+  background: var(--ds-color-surface);   /* white fields read as editable */
   font-family: inherit;
   resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.oa-form input::placeholder,
+.oa-form textarea::placeholder { color: var(--ds-color-text-faint); }
 .oa-form input:focus,
 .oa-form textarea:focus { outline: none; border-color: #0a0a0a; background: var(--ds-color-surface); }
 .oa-row { display: flex; gap: 10px; }
@@ -3637,6 +3640,9 @@
    two-column form has room (it lives inside the half-width odm-row-2 grid
    otherwise, which squeezed the inputs and clipped them). */
 .odm-card--editing { grid-column: 1 / -1; }
+/* While editing, stack the whole Customer + Shipping row into one column so
+   the Customer card doesn't sit half-width with an empty gap beside it. */
+.odm-row-2--stack { grid-template-columns: 1fr; }
 /* Extra-narrow fallback: stack the paired fields so nothing is ever cut. */
 @media (max-width: 520px) {
   .oa-row { flex-direction: column; gap: 10px; }

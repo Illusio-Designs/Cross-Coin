@@ -939,12 +939,13 @@ const Orders = () => {
               role="dialog"
               aria-modal="true"
               aria-label={`Order details for order ${selectedOrder?.order_number}`}
+              footer={<Button variant="secondary" onClick={() => { setIsViewModalOpen(false); setEditingAddress(false); }}>Close</Button>}
             >
                 {selectedOrder && (
                     <div className="odm-body">
 
                         {/* ── Row 1: Customer + Shipping ── */}
-                        <div className="odm-row-2">
+                        <div className={`odm-row-2${editingAddress ? ' odm-row-2--stack' : ''}`}>
                             {/* Customer Information */}
                             <div className="odm-card">
                                 <div className="odm-card-title">
@@ -1251,10 +1252,6 @@ const Orders = () => {
                                 </div>
                             </div>
                         )}
-
-                        <div className="modal-footer">
-                            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
-                        </div>
                     </div>
                 )}
             </Modal>
