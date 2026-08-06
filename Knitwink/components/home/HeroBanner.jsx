@@ -96,7 +96,7 @@ export function HeroBanner({ slides = [] }) {
 
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 via-brand-black/10 to-transparent" />
 
-        <div className="relative z-10 max-w-xl p-5 pb-14 sm:p-8 sm:pb-12 md:max-w-2xl md:p-14 lg:max-w-3xl lg:p-20">
+        <div className="relative z-10 max-w-xl p-4 pb-14 sm:p-8 sm:pb-12 md:max-w-2xl md:p-14 lg:max-w-3xl lg:p-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -104,6 +104,7 @@ export function HeroBanner({ slides = [] }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="inline-block rounded-2xl bg-brand-black/25 p-4 backdrop-blur-md sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
             >
               {slide.title && (
                 <p className="mb-3 text-xs font-medium uppercase tracking-widest text-white/70">{slide.title}</p>
