@@ -376,12 +376,12 @@ export function ProductInfo({ product, onColorChange }) {
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'flex items-center gap-1 rounded-xl border-2 px-2.5 py-2.5 transition-all',
+                      'flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:px-2.5 sm:py-2.5',
                       activeColor.name === color.name ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
                     )}
                   >
                     {color.packColors.map((pc, i) => (
-                      <span key={`${pc.name}-${i}`} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />
+                      <span key={`${pc.name}-${i}`} className="h-4 w-4 rounded-full border border-gray-200 sm:h-5 sm:w-5" style={{ backgroundColor: pc.hex }} />
                     ))}
                   </button>
                 ) : (
@@ -392,7 +392,7 @@ export function ProductInfo({ product, onColorChange }) {
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
                     className={cn(
-                      'h-8 w-8 rounded-full border-2 transition-all',
+                      'h-6 w-6 rounded-full border-2 transition-all sm:h-8 sm:w-8',
                       activeColor.name === color.name ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400'
                     )}
                     style={{ backgroundColor: color.hex }}

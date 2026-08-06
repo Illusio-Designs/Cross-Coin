@@ -188,8 +188,8 @@ export function ExclusiveSection({ products = [] }) {
               ))}
             </div>
           )}
-          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50">
-            <img src={displayImage} alt={product.name} className="h-full w-full min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
+          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl bg-gray-50 aspect-square sm:aspect-auto">
+            <img src={displayImage} alt={product.name} className="h-full w-full object-contain sm:object-fill sm:min-h-[260px] md:min-h-[300px]" />
             {product.badge && (
               <span className="absolute left-3 top-3 rounded-full bg-brand-black px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
                 {product.badge}
@@ -275,13 +275,13 @@ export function ExclusiveSection({ products = [] }) {
                     {visibleColorOptions.map((c) => (
                       c.packColors ? (
                         <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
-                          className={cn('flex items-center gap-1 rounded-xl border-2 p-2 transition-all', c._index === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
+                          className={cn('flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:p-2', c._index === activeColor ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400')}
                         >
-                          {c.packColors.map((pc, i) => <span key={`${pc.name}-${i}`} className="h-5 w-5 rounded-full border border-gray-200" style={{ backgroundColor: pc.hex }} />)}
+                          {c.packColors.map((pc, i) => <span key={`${pc.name}-${i}`} className="h-4 w-4 rounded-full border border-gray-200 sm:h-5 sm:w-5" style={{ backgroundColor: pc.hex }} />)}
                         </button>
                       ) : (
                         <button key={c.name} title={c.name} onClick={() => selectColor(c._index)}
-                          className={cn('h-7 w-7 rounded-full border-2 transition-all', c._index === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
+                          className={cn('h-5 w-5 rounded-full border-2 transition-all sm:h-7 sm:w-7', c._index === activeColor ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400')}
                           style={{ backgroundColor: c.hex }}
                         />
                       )
@@ -296,22 +296,23 @@ export function ExclusiveSection({ products = [] }) {
             <p className="line-clamp-3 text-sm leading-relaxed text-gray-500">{product.description}</p>
           )}
 
-          {/* Qty + CTA row */}
-          <div className="flex items-center gap-2">
+          {/* Qty + CTA row — on mobile the qty + Add to Bag share a row and View
+              drops to its own full-width line; from sm up all three sit inline. */}
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 px-3 py-2.5">
               <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="text-gray-400 hover:text-brand-black"><Minus size={12} /></button>
               <span className="w-5 text-center text-sm font-medium text-brand-black">{qty}</span>
               <button onClick={() => setQty((q) => q + 1)} className="text-gray-400 hover:text-brand-black"><Plus size={12} /></button>
             </div>
             <button onClick={handleAdd}
-              className={cn('flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors',
+              className={cn('flex flex-1 basis-0 min-w-[140px] items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors',
                 added ? 'bg-green-500 text-white' : 'bg-brand-black text-white hover:bg-gray-800')}
             >
               <ShoppingBag size={13} />
               {added ? 'Added!' : 'Add to Bag'}
             </button>
             <Link href={`/products/${product.handle}`}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-gray-200 py-2.5 text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:border-brand-black"
+              className="flex flex-1 basis-full sm:basis-0 items-center justify-center gap-1.5 rounded-full border border-gray-200 py-2.5 text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:border-brand-black"
             >
               <Zap size={13} />
               View
