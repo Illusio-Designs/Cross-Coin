@@ -5778,6 +5778,28 @@
   box-shadow: 0 1px 2px rgba(10, 10, 10, 0.08);
 }
 
+/* ── Orders toolbar row: tabs left, filter trigger right ─────────────── */
+.ord-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: var(--ds-space-4);
+}
+.ord-toolbar .ord-tabs { margin-bottom: 0; }
+.ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Filters drawer body */
+.ord-filter-drawer { display: flex; flex-direction: column; gap: 6px; }
+.ord-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-color-text-muted);
+  margin-top: 12px;
+}
+.ord-filter-drawer > .ord-filter-label:first-child { margin-top: 0; }
+
 
 /* ===== dashboard/media.css ===== */
 /* ===================================
