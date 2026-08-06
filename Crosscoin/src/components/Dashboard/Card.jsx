@@ -205,6 +205,15 @@ function CardGrid() {
   const segTotal = segs.reduce((a, s) => a + s.count, 0) || 1;
   const brandSales = stats.brandSales || [];
   const brandMax = Math.max(1, ...brandSales.map((b) => b.revenue || 0));
+  // Revenue breakdown as compact row-bars (matches Sales-by-brand), instead of
+  // the old oversized donut.
+  const revBars = [
+    { label: 'Earned',    value: revenue.earned || 0 },
+    { label: 'Active',    value: revenue.active || 0 },
+    { label: 'RTO',       value: revenue.breakdown?.rto || 0 },
+    { label: 'Cancelled', value: revenue.breakdown?.cancelled || 0 },
+  ].filter((b) => b.value > 0);
+  const revMax = Math.max(1, ...revBars.map((b) => b.value));
 
   return (
     <div className="obz-home">
@@ -281,15 +290,13 @@ function CardGrid() {
               Total ₹{fmt(revenue.total)} · Earned ₹{fmt(revenue.earned)} · Active ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
             </span>
           </div>
-          {revenue.donutChart?.length > 0 ? (
-            <DonutChart
-              data={revenue.donutChart}
-              title="" subtitle=""
-              totalValue={`₹${fmt(revenue.total)}`}
-              totalLabel="Total Revenue"
-              size={160} strokeWidth={22} showLegend
-            />
-          ) : (
+          {revBars.length > 0 ? revBars.map((b) => (
+            <div className="rb" key={b.label}>
+              <span className="n">{b.label}</span>
+              <span className="t"><span className="f" style={{ width: `${Math.max(4, (b.value / revMax) * 100)}%` }} /></span>
+              <span className="v num">₹{inr(b.value)}</span>
+            </div>
+          )) : (
             <div className="h-hint">No revenue data for this period yet.</div>
           )}
         </div>
@@ -365,47 +372,6 @@ function CardGrid() {
         </div>
       )}
 
-      {/* ═══ 8. COLLAPSIBLE: MARKETING PERFORMANCE ═══ */}
-      {stats.utmTracking && (stats.utmTracking.topSources?.length > 0 || stats.utmTracking.conversions?.length > 0) && (
-        <CollapsibleSection icon={IC.chart} title="Marketing Performance (Last 30 Days)">
-          {stats.utmTracking.topSources?.length > 0 && (
-            <div className="dashboard-subsection">
-              <h3 className="dashboard-subsection-title">Top Traffic Sources</h3>
-              <ResponsiveTable
-                data={stats.utmTracking.topSources.slice(0, 5)}
-                rowKey={(r) => `${r.source}-${r.medium}-${r.campaign}`}
-                columns={[
-                  { key: 'source',   label: 'Source',     render: (s) => <span className="utm-badge source">{s.source}</span> },
-                  { key: 'medium',   label: 'Medium',     render: (s) => <span className="utm-badge medium">{s.medium}</span> },
-                  { key: 'campaign', label: 'Campaign',   render: (s) => <span className="utm-badge campaign">{s.campaign}</span> },
-                  { key: 'sessions', label: 'Sessions',   render: (s) => s.sessions },
-                  { key: 'reg',      label: 'Registered', render: (s) => s.registeredUsers },
-                  { key: 'guests',   label: 'Guests',     render: (s) => s.guestUsers },
-                ]}
-              />
-            </div>
-          )}
-          {stats.utmTracking.conversions?.length > 0 && (
-            <div className="dashboard-subsection">
-              <h3 className="dashboard-subsection-title">Conversion Performance</h3>
-              <ResponsiveTable
-                data={stats.utmTracking.conversions.slice(0, 5)}
-                rowKey={(r) => `${r.source}-${r.medium}`}
-                columns={[
-                  { key: 'source',   label: 'Source',    render: (c) => <span className="utm-badge source">{c.source}</span> },
-                  { key: 'medium',   label: 'Medium',    render: (c) => <span className="utm-badge medium">{c.medium}</span> },
-                  { key: 'sessions', label: 'Sessions',  render: (c) => c.sessions },
-                  { key: 'orders',   label: 'Orders',    render: (c) => c.orders },
-                  { key: 'rate',     label: 'Conv. Rate',
-                    render: (c) => <span className={`conversion-badge ${c.conversionRate>5?'high':c.conversionRate>2?'medium':'low'}`}>{c.conversionRate}%</span> },
-                  { key: 'revenue',  label: 'Revenue',
-                    render: (c) => <span className="table-revenue">₹{(c.revenue || 0).toLocaleString('en-IN',{minimumFractionDigits:2})}</span> },
-                ]}
-              />
-            </div>
-          )}
-        </CollapsibleSection>
-      )}
 
       {/* ═══ 9. COLLAPSIBLE: STOCK DETAILS ═══ */}
       {stats.lowStock && (stats.lowStock.lowStockCount > 0 || stats.lowStock.outOfStockCount > 0) && (

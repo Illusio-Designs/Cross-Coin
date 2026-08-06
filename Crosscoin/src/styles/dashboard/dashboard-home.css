@@ -84,7 +84,9 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .obz-home .rb .t { flex: 1; height: 7px; background: var(--ds-color-border-soft); border-radius: 5px; overflow: hidden; }
-.obz-home .rb .f { height: 100%; background: var(--ds-color-text); border-radius: 5px; }
+/* .f is a <span>; without display:block the width/height are ignored (inline),
+   so the fill never showed and the bars looked empty. */
+.obz-home .rb .f { display: block; height: 100%; background: var(--ds-color-text); border-radius: 5px; }
 .obz-home .rb .v { min-width: 76px; text-align: right; font-size: 12.5px; color: var(--ds-color-text); font-weight: 600; }
 
 /* ── Tables ──────────────────────────────────────────────────────────── */

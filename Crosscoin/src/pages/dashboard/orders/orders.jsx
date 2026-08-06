@@ -1221,7 +1221,7 @@ const Orders = () => {
                                     </svg>
                                     Shipping Label
                                 </div>
-                                <div style={{ paddingTop: '8px' }}>
+                                <div style={{ padding: '14px' }}>
                                     <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--ds-color-text-muted)' }}>
                                         Download the shipping label for this order.
                                     </p>

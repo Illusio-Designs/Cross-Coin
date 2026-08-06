@@ -3244,10 +3244,10 @@
 /* FShip block */
 .odm-fship {
   margin: 0 14px 12px;
-  border: 1px solid #e0e7ff;
-  border-radius: 6px;
+  border: 1px solid var(--ds-color-border);
+  border-radius: 8px;
   overflow: hidden;
-  background: #f5f7ff;
+  background: var(--ds-color-surface-soft);
 }
 
 .odm-fship-title {
@@ -3257,11 +3257,11 @@
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 700;
-  color: #3730a3;
+  color: var(--ds-color-text);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 1px solid #e0e7ff;
-  background: #eef2ff;
+  border-bottom: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-soft);
 }
 
 .odm-fship .odm-info-grid {
@@ -3604,7 +3604,9 @@
   transition: color 0.15s, border-color 0.15s;
 }
 .oa-edit-btn:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
-.oa-form { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+/* Match the padded look of .odm-fields so the edit form has the same inset
+   spacing on all sides as the rest of the cards (was flush to the edges). */
+.oa-form { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .oa-form label {
   display: flex;
   flex-direction: column;
