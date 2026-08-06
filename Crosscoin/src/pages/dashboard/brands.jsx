@@ -57,22 +57,27 @@ export function BrandManager() {
   const refetchBrands = () => queryClient.invalidateQueries({ queryKey: queryKeys.brandsAdmin });
   const fetchBrands = refetchBrands;
 
-  // Full settings (with values) for every brand — used for the completeness
-  // count and the inline settings editor.
-  const { data: settingsByBrand = {} } = useQuery({
-    queryKey: ['brandSettingsFull', brands.map(b => b.id).sort().join(',')],
-    enabled: brands.length > 0,
-    staleTime: 30 * 1000,
-    queryFn: async () => {
-      const entries = await Promise.all(brands.map(async (b) => {
-        try { const r = await brandSettingsService.getAllSettings(b.id); return [b.id, r?.success ? (r.data || []) : (Array.isArray(r) ? r : [])]; }
-        catch { return [b.id, []]; }
-      }));
-      return Object.fromEntries(entries);
-    },
-  });
-
   const referenceBrand = brands.find(b => b.slug?.toLowerCase() === 'crosscoin' || b.name?.toLowerCase() === 'crosscoin');
+
+  // Settings load ON DEMAND — the initial page load fetches ONLY the brand
+  // list. We then fetch the reference brand's settings (for the canonical key
+  // list) and the currently-expanded brand's settings — never every brand's.
+  const fetchSettings = (id) => brandSettingsService.getAllSettings(id).then(r => r?.success ? (r.data || []) : (Array.isArray(r) ? r : []));
+  const { data: refSettings = [] } = useQuery({
+    queryKey: ['brandSettings', referenceBrand?.id ?? 'none'],
+    enabled: !!referenceBrand?.id && expanded != null,
+    staleTime: 30 * 1000,
+    queryFn: () => fetchSettings(referenceBrand.id),
+  });
+  const { data: expandedSettings = [] } = useQuery({
+    queryKey: ['brandSettings', expanded ?? 'none'],
+    enabled: expanded != null,
+    staleTime: 30 * 1000,
+    queryFn: () => fetchSettings(expanded),
+  });
+  const settingsByBrand = {};
+  if (referenceBrand?.id) settingsByBrand[referenceBrand.id] = refSettings;
+  if (expanded != null) settingsByBrand[expanded] = expandedSettings;
 
   // Canonical, predefined key list = Crosscoin's settings (minus deprecated
   // Fship keys). Every brand is filled against this same set of names.
@@ -86,10 +91,10 @@ export function BrandManager() {
   const valueMap = (brandId) => new Map((settingsByBrand[brandId] || []).map(s => [s.key, s]));
   const pendingFor = (brand) => {
     if (!referenceBrand || predefinedKeys.length === 0 || brand.id === referenceBrand.id) return null;
+    if (!settingsByBrand[brand.id]) return null; // this brand's settings aren't loaded yet (loads on expand)
     const have = valueMap(brand.id);
     return predefinedKeys.filter(k => { const s = have.get(k.key); return !s || s.value === '' || s.value == null; }).length;
   };
-  const totalPending = brands.reduce((sum, b) => sum + (pendingFor(b) || 0), 0);
 
   const cleanDomain = (dom) => (dom || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const brandUrl = (brand, path) => { const d = cleanDomain(brand.domain); return d ? `https://${d}${path}` : null; };
@@ -133,7 +138,7 @@ export function BrandManager() {
       else await brandSettingsService.createSetting({ brand_id: brand.id, key: keyObj.key, value, category: keyObj.category, description: keyObj.description || null, is_encrypted: false });
       showSuccess('Setting saved');
       setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
-      queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
+      queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
     } catch { showError('Failed to save setting'); }
     finally { setSavingKey(null); }
   };
@@ -152,7 +157,7 @@ export function BrandManager() {
       showSuccess('Setting added');
       setNewSetting({ key: '', value: '', category: 'analytics' });
       setAddRowFor(null);
-      queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
+      queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
     } catch { showError('Failed to add setting'); }
     finally { setSavingKey(null); }
   };
@@ -174,7 +179,7 @@ export function BrandManager() {
           await brandSettingsService.deleteSetting(brand.id, keyObj.key);
           showSuccess('Setting deleted');
           setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
-          queryClient.invalidateQueries({ queryKey: ['brandSettingsFull'] });
+          queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
         } catch { showError('Failed to delete setting'); }
         finally { setSavingKey(null); }
       },
@@ -201,7 +206,6 @@ export function BrandManager() {
         <StatTile label="Total brands" value={brands.length} />
         <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} />
         <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} />
-        <StatTile label="Settings pending" value={totalPending} />
       </StatGrid>
 
       <Panel style={{ marginBottom: 16 }}>
@@ -292,7 +296,7 @@ export function BrandManager() {
                           {isRef ? (
                             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '2px 9px', background: 'var(--ds-color-surface-soft)' }}>Reference</span>
                           ) : pending === null ? (
-                            <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ds-color-text-muted)' }}>{isOpen ? 'Loading…' : 'View settings →'}</span>
                           ) : (
                             <div style={{ minWidth: 128 }}>
                               <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontWeight: 600, marginBottom: 5, display: 'flex', justifyContent: 'space-between', gap: 8 }}>

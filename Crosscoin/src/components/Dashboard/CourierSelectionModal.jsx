@@ -135,7 +135,7 @@ export default function CourierSelectionModal({ isOpen, orderId, orderNumber, au
                 border: '1px solid #e5e7eb', borderRadius: 10, padding: '10px 12px',
               }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ds-color-text)', textTransform: 'capitalize', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     <span style={{ textTransform: 'capitalize' }}>{c.sType}</span>
                     {c.days && <span>· ETA {c.days} day{String(c.days) === '1' ? '' : 's'}</span>}

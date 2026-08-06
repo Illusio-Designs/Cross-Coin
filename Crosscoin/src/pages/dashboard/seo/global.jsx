@@ -185,7 +185,7 @@ export default function GlobalSeoSettings({ brandId = 1 } = {}) {
 function Field({ field, value, onChange, dirty }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--ds-color-text-muted)', marginBottom: 4 }}>
         <span>{field.label}</span>
         <span style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'ui-monospace, monospace' }}>{field.key}</span>
         {dirty && <span style={{ fontSize: 10, color: '#d97706' }}>● unsaved</span>}

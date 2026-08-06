@@ -55,6 +55,12 @@ function CartProvider({ children }) {
 
   // Load cart from backend or localStorage on initial render or auth change
   useEffect(() => {
+    // The admin dashboard has no storefront cart — skip the cart fetch there
+    // so opening the dashboard doesn't fire /cart requests. Storefront routes
+    // are unaffected.
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+      return;
+    }
     // Don't fetch cart until hydrated and auth is checked
     if (!isHydrated || !authChecked) {
       return;

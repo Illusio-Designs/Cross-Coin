@@ -1571,7 +1571,7 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
         padding: 12,
         marginBottom: 16,
         fontSize: 13,
-        color: '#374151',
+        color: 'var(--ds-color-text-muted)',
       }}>
         Leave any field empty to use the auto-fill default. The defaults come from
         the product name, brand, description, variations and your global SEO settings.

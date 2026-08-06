@@ -209,8 +209,8 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
   );
 }
 
-const th = { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 };
-const td = { padding: '10px 12px', color: '#374151' };
+const th = { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
+const td = { padding: '10px 12px', color: 'var(--ds-color-text-muted)' };
 const cellInput = {
   width: '100%',
   padding: '6px 8px',
@@ -227,5 +227,5 @@ const pageBtn = {
   borderRadius: 6,
   cursor: 'pointer',
   fontSize: 13,
-  color: '#374151',
+  color: 'var(--ds-color-text-muted)',
 };

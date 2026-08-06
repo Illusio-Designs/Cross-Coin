@@ -174,7 +174,7 @@ const Select = forwardRef(({
                     )}
                     <span className="sel-option-label">{opt.label}</span>
                     {!multiple && isSel && (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#180D3E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ds-color-text)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}

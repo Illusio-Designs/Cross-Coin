@@ -18,7 +18,7 @@
 .headerContent h1 {
   font-size: 32px;
   font-weight: 700;
-  color: #111827;
+  color: var(--ds-color-text);
   margin: 0 0 8px 0;
   letter-spacing: -0.5px;
 }
@@ -67,7 +67,7 @@
   background: white;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  color: #111827;
+  color: var(--ds-color-text);
 }
 
 /* Tab Navigation */
@@ -94,7 +94,7 @@
 }
 
 .tab:hover {
-  color: #111827;
+  color: var(--ds-color-text);
 }
 
 .tab.active {
@@ -183,7 +183,7 @@
 .statusCard h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: var(--ds-color-text);
   margin: 0 0 16px 0;
 }
 
@@ -194,7 +194,7 @@
   margin-bottom: 16px;
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--ds-color-text);
 }
 
 .statusDot {
@@ -236,7 +236,7 @@
 }
 
 .statusRow strong {
-  color: #111827;
+  color: var(--ds-color-text);
   font-weight: 600;
 }
 
@@ -252,7 +252,7 @@
 .section h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: var(--ds-color-text);
   margin: 0 0 16px 0;
 }
 
@@ -272,7 +272,7 @@
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #111827;
+  color: var(--ds-color-text);
   border-bottom: 1px solid #E5E7EB;
 }
 

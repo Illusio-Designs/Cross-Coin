@@ -274,7 +274,7 @@ function AudioPlayer({ src }) {
   // the note can be opened in an app that supports it.
   if (loadState === 'unsupported' && blobUrl) return (
     <a href={blobUrl} download={`voice-note.${dlExt}`}
-       style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'#0b7a5e', textDecoration:'none',
+       style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'var(--ds-color-text-muted)', textDecoration:'none',
                background:'#e8f5f0', border:'1px solid #b8e0d4', borderRadius:8, padding:'8px 12px'}}>
       <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={2} />
       Download voice note
@@ -349,7 +349,7 @@ function ImageMsg({ src, caption }) {
           style={{ maxWidth:220, maxHeight:220, borderRadius:8, display:'block', cursor:'zoom-in', objectFit:'cover' }}
           onError={e => { e.target.style.display='none'; }}
         />
-        {caption && <div style={{ fontSize:12, marginTop:4, color:'#374151' }}>{caption}</div>}
+        {caption && <div style={{ fontSize:12, marginTop:4, color:'var(--ds-color-text-muted)' }}>{caption}</div>}
       </div>
       {open && (
         <div
@@ -394,7 +394,7 @@ function VideoMsg({ src, caption }) {
   return (
     <div style={{width:220}}>
       <video controls style={{width:'100%', maxHeight:160, borderRadius:8, display:'block', background:'#000', objectFit:'contain'}} src={blobUrl}/>
-      {caption && <div style={{fontSize:12,marginTop:4,color:'#374151'}}>{caption}</div>}
+      {caption && <div style={{fontSize:12,marginTop:4,color:'var(--ds-color-text-muted)'}}>{caption}</div>}
     </div>
   );
 }
@@ -511,7 +511,7 @@ function MsgContent({ msg, brandId = 1 }) {
           <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} color={isPdf ? '#0a0a0a' : '#6b6b73'} />
         </div>
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:13, fontWeight:600, color:'#111827', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
+          <div style={{ fontSize:13, fontWeight:600, color:'var(--ds-color-text)', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
           <div style={{ fontSize:11, color:'#6b7280', display:'flex', alignItems:'center', gap:4 }}>
             <HugeiconsIcon icon={Download01Icon} size={11} strokeWidth={2.5} />
             Download {isPdf ? 'PDF' : 'file'}
@@ -1434,7 +1434,7 @@ export function WhatsAppManager() {
                   background: seedResult.failed > 0 ? '#fef2f2' : '#f0fdf4',
                 }}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:12}}>
-                    <div style={{fontSize:13, fontWeight:600, color:'#111827'}}>
+                    <div style={{fontSize:13, fontWeight:600, color:'var(--ds-color-text)'}}>
                       Seed result — Created {seedResult.created} · Already existed {seedResult.skipped} · Failed {seedResult.failed}
                     </div>
                     <button onClick={() => setSeedResult(null)} style={{border:'none', background:'transparent', cursor:'pointer', color:'#6b7280', fontSize:18, lineHeight:1}}>×</button>
@@ -1444,8 +1444,8 @@ export function WhatsAppManager() {
                       <div style={{fontSize:12, fontWeight:600, color:'#b91c1c', marginBottom:4}}>Why these failed (from Meta):</div>
                       <ul style={{margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4}}>
                         {seedResult.errors.map((e, i) => (
-                          <li key={i} style={{fontSize:12.5, color:'#374151'}}>
-                            <strong style={{color:'#111827'}}>{e.name}</strong> — {e.error}
+                          <li key={i} style={{fontSize:12.5, color:'var(--ds-color-text-muted)'}}>
+                            <strong style={{color:'var(--ds-color-text)'}}>{e.name}</strong> — {e.error}
                           </li>
                         ))}
                       </ul>
@@ -1691,7 +1691,7 @@ export function WhatsAppManager() {
                                     maxWidth: '100%',
                                     overflow: 'hidden',
                                   }}>
-                                    <div style={{color:'#0b7a5e', fontWeight:700, fontSize:11, marginBottom:2}}>
+                                    <div style={{color:'var(--ds-color-text-muted)', fontWeight:700, fontSize:11, marginBottom:2}}>
                                       {msg._quotedMsg.direction === 'inbound' ? (activeConv?.customer_name || 'Customer') : 'You'}
                                     </div>
                                     <div style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
@@ -1785,7 +1785,7 @@ export function WhatsAppManager() {
                             fontSize:12,
                           }}>
                             <div style={{display:'flex', flexDirection:'column', gap:2, minWidth:0}}>
-                              <span style={{color:'#0b7a5e', fontWeight:700, fontSize:11}}>
+                              <span style={{color:'var(--ds-color-text-muted)', fontWeight:700, fontSize:11}}>
                                 {replyTo.direction === 'inbound' ? 'Customer' : 'You'}
                               </span>
                               <span style={{color:'#6b7280', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:300}}>
@@ -1875,7 +1875,7 @@ export function WhatsAppManager() {
                           </span>
                         </div>
                         <div className="was-rp-row"><span className="was-rp-label">Name</span><span className="was-rp-value">{activeConv.customer_name||'—'}</span></div>
-                        <div className="was-rp-row"><span className="was-rp-label">Phone</span><span className="was-rp-value" style={{color:'#0b7a5e'}}>+{activeConv.customer_phone}</span></div>
+                        <div className="was-rp-row"><span className="was-rp-label">Phone</span><span className="was-rp-value" style={{color:'var(--ds-color-text-muted)'}}>+{activeConv.customer_phone}</span></div>
                         <div className="was-rp-row"><span className="was-rp-label">Status</span>
                           <span className={`was-rp-pill ${activeConv.status==='open'?'was-rp-pill--open':'was-rp-pill--done'}`}>
                             {activeConv.status==='open'?'Open':'Resolved'}
@@ -2435,7 +2435,7 @@ export function WhatsAppManager() {
                         {selected && <HugeiconsIcon icon={Tick02Icon} size={10} strokeWidth={3} color="#fff" />}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:13, fontWeight:500, color:'#111827', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
+                        <div style={{ fontSize:13, fontWeight:500, color:'var(--ds-color-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
                         <div style={{ fontSize:11, color:'#6b7280' }}>₹{price}  · ID: {p.id}</div>
                       </div>
                     </div>
@@ -2444,7 +2444,7 @@ export function WhatsAppManager() {
             }
           </div>
           {selectedProducts.length > 0 && (
-            <div style={{ marginTop:10, fontSize:12, color:'#0b7a5e', fontWeight:500 }}>
+            <div style={{ marginTop:10, fontSize:12, color:'var(--ds-color-text-muted)', fontWeight:500 }}>
               {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
             </div>
           )}
@@ -2475,8 +2475,8 @@ export function WhatsAppManager() {
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
                   <span className={`was-cat-badge was-cat--${cat}`}>{catLabel(viewTpl.category)}</span>
                   <span className={`was-status-badge was-status--${st}`}><span className="was-status-dot" />{stLabel}</span>
-                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.language || 'en'}</span>
-                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'#374151' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
+                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)' }}>{viewTpl.language || 'en'}</span>
+                  <span className="was-cat-badge" style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)' }}>{viewTpl.isDefault ? 'Default' : 'Custom'}</span>
                 </div>
 
                 {viewTpl.status === 'rejected' && (
@@ -2520,18 +2520,18 @@ export function WhatsAppManager() {
                 {/* Raw fields */}
                 <div style={{ display:'flex', flexDirection:'column', gap:10, fontSize:13 }}>
                   <div>
-                    <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Body</div>
-                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word', background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'#111827' }}>{viewTpl.body || '—'}</div>
+                    <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Body</div>
+                    <div style={{ whiteSpace:'pre-wrap', wordBreak:'break-word', background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.body || '—'}</div>
                   </div>
                   {viewTpl.footer && (
                     <div>
-                      <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Footer</div>
-                      <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'#111827' }}>{viewTpl.footer}</div>
+                      <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Footer</div>
+                      <div style={{ background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:8, padding:'8px 10px', color:'var(--ds-color-text)' }}>{viewTpl.footer}</div>
                     </div>
                   )}
                   {!!(viewTpl.buttons && viewTpl.buttons.length) && (
                     <div>
-                      <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Buttons</div>
+                      <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Buttons</div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {viewTpl.buttons.map((b, i) => (
                           <span key={i} style={{ background:'#eef2ff', color:'#4338ca', borderRadius:6, padding:'4px 10px', fontSize:12, fontWeight:500 }}>
@@ -2542,11 +2542,11 @@ export function WhatsAppManager() {
                     </div>
                   )}
                   <div>
-                    <div style={{ fontWeight:600, color:'#374151', marginBottom:3 }}>Variables ({uniqVars.length})</div>
+                    <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Variables ({uniqVars.length})</div>
                     {uniqVars.length ? (
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {uniqVars.map(v => (
-                          <span key={v} style={{ background:'#f3f4f6', color:'#374151', borderRadius:6, padding:'4px 10px', fontSize:12, fontFamily:'monospace' }}>{v}</span>
+                          <span key={v} style={{ background:'#f3f4f6', color:'var(--ds-color-text-muted)', borderRadius:6, padding:'4px 10px', fontSize:12, fontFamily:'monospace' }}>{v}</span>
                         ))}
                       </div>
                     ) : <div style={{ color:'#9ca3af', fontSize:12 }}>None</div>}

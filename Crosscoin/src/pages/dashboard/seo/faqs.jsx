@@ -344,7 +344,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
 
 const Field = ({ label, children }) => (
   <label style={{ display: 'block' }}>
-    <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>{label}</div>
+    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ds-color-text-muted)', marginBottom: 4 }}>{label}</div>
     {children}
   </label>
 );
@@ -376,7 +376,7 @@ const btnSecondary = {
   borderRadius: 6,
   cursor: 'pointer',
   fontSize: 12,
-  color: '#374151',
+  color: 'var(--ds-color-text-muted)',
 };
 
 const btnDanger = {

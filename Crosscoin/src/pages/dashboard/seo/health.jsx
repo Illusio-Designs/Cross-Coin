@@ -167,5 +167,5 @@ function Stat({ label, count, total, tone = 'auto' }) {
   );
 }
 
-const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 };
-const td = { padding: '8px 10px', color: '#374151' };
+const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
+const td = { padding: '8px 10px', color: 'var(--ds-color-text-muted)' };

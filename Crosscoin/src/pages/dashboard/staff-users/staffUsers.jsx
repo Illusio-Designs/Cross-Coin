@@ -154,7 +154,7 @@ export default function StaffUsers() {
 
   const columns = [
     { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: '#9ca3af', fontSize: 13 }}>{r._sn}</span> },
-    { header: 'Name',    accessor: 'username',  cell: r => <span style={{ fontWeight: 600, color: '#111827' }}>{r.username}</span> },
+    { header: 'Name',    accessor: 'username',  cell: r => <span style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{r.username}</span> },
     { header: 'Email',   accessor: 'email',     cell: r => <span style={{ color: '#6b7280', fontSize: 13 }}>{r.email}</span> },
     { header: 'Roles',   accessor: 'role',      cell: r => <RoleBadges roles={getUserRoles(r)} /> },
     { header: 'Joined',  accessor: 'createdAt', cell: r => <span style={{ fontSize: 13, color: '#9ca3af' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '—'}</span> },
@@ -262,7 +262,7 @@ export default function StaffUsers() {
                   {IC.users}
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#111827' }}>{editUser.username}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: 'var(--ds-color-text)' }}>{editUser.username}</p>
                   <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{editUser.email}</p>
                 </div>
                 <RoleBadges roles={getUserRoles(editUser)} />

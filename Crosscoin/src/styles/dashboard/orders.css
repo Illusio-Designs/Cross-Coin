@@ -100,7 +100,7 @@
 .seo-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ds-color-text);
   margin: 0;
   text-align: left;
 }
@@ -1453,7 +1453,7 @@
 
 .order-details-modal h4 {
   margin: 1.5rem 0 1rem 0;
-  color: #1e293b;
+  color: var(--ds-color-text);
   font-size: 1.1rem;
   font-weight: 600;
   border-bottom: 2px solid var(--ds-color-border);
@@ -1498,7 +1498,7 @@
 
 .order-section h4 {
   margin: 0 0 0.75rem 0 !important;
-  color: #1e293b;
+  color: var(--ds-color-text);
   font-size: 1rem;
   font-weight: 600;
   display: flex;
@@ -1917,11 +1917,11 @@
 
 .sync-stat-value {
     font-weight: 600;
-    color: #1e293b;
+    color: var(--ds-color-text);
 }
 
 .sync-stat-value.complete {
-    color: #059669;
+    color: var(--ds-color-text-muted);
 }
 
 .sync-stat-value.partial {

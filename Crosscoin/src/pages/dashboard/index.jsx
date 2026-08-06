@@ -54,7 +54,7 @@ function NoAccess() {
       }}
     >
       <HugeiconsIcon icon={UnavailableIcon} size={48} strokeWidth={1.5} aria-hidden="true" />
-      <h2 style={{ fontSize: 18, fontWeight: 600, color: '#374151', margin: 0 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ds-color-text-muted)', margin: 0 }}>
         Access Denied
       </h2>
       <p style={{ fontSize: 14, margin: 0 }}>

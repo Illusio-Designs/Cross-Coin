@@ -404,7 +404,7 @@ export default function Categories() {
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>LIVE SEARCH PREVIEW</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ds-color-text-muted)', marginBottom: 6 }}>LIVE SEARCH PREVIEW</div>
                 <SerpPreview
                   title={formData.metaTitle || `${formData.name || 'Category'} | CrossCoin`}
                   description={formData.metaDescription || (formData.description || '').slice(0, 160)}

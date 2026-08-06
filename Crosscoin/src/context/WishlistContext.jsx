@@ -49,6 +49,11 @@ function WishlistProvider({ children }) {
 
   // Load wishlist from backend or localStorage after hydration
   useEffect(() => {
+    // Skip on the admin dashboard — it has no storefront wishlist, so opening
+    // the dashboard shouldn't fire /wishlist requests. Storefront unaffected.
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+      return;
+    }
     if (!isHydrated || apiCalledRef.current) return; // Prevent multiple calls and wait for hydration
     apiCalledRef.current = true;
     const fetchWishlist = async () => {
