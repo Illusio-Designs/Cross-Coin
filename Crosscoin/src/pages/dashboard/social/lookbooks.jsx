@@ -302,7 +302,7 @@ export default function AdminLookbooks() {
                   )}
                 </label>
                 <div
-                  style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : 'var(--ds-color-border)'}`, userSelect: 'none', background: '#f5f5f5' }}
+                  style={{ position: 'relative', cursor: 'crosshair', borderRadius: 8, overflow: 'hidden', border: `2px solid ${form.position_x ? 'var(--ds-color-text)' : 'var(--ds-color-border)'}`, userSelect: 'none', background: 'var(--ds-color-surface-soft)' }}
                   onClick={e => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
@@ -329,7 +329,7 @@ export default function AdminLookbooks() {
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#aaa', fontSize: 13, border: '2px dashed var(--ds-color-border)', borderRadius: 8 }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--ds-color-text-faint)', fontSize: 13, border: '2px dashed var(--ds-color-border)', borderRadius: 8 }}>
                 Select an image above to place the hotspot
               </div>
             )}

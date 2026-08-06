@@ -813,7 +813,7 @@
 
 .seo-empty-state {
   background: var(--ds-color-surface-soft);
-  color: #64748b;
+  color: var(--ds-color-text-muted);
   border-radius: 6px;
   padding: 2.5rem 1rem;
   text-align: center;
@@ -1911,7 +1911,7 @@
 }
 
 .sync-stat-label {
-    color: #64748b;
+    color: var(--ds-color-text-muted);
     font-weight: 500;
 }
 

@@ -110,7 +110,7 @@ function normalizeRejectReason(reason) {
 function PhonePreview({ tpl }) {
   if (!tpl) return (
     <div className="was-pp-empty">
-      <div style={{ width:40, height:40, color:'#d1d5db' }}>{IC.tpl}</div>
+      <div style={{ width:40, height:40, color:'var(--ds-color-text-faint)' }}>{IC.tpl}</div>
       <p>Select a template to preview</p>
     </div>
   );
@@ -1565,7 +1565,7 @@ export function WhatsAppManager() {
                 {convLoading ? <div style={{padding:20,textAlign:'center'}}><Loader /></div>
                 : filteredConvs.length === 0 ? (
                   <div className="was-empty-state">
-                    <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.msg}</div>
+                    <div style={{width:36,height:36,color:'var(--ds-color-text-faint)'}}>{IC.msg}</div>
                     <p>No {statusFilter} conversations</p>
                   </div>
                 ) : filteredConvs.map(conv => {
@@ -1598,7 +1598,7 @@ export function WhatsAppManager() {
             <div className="was-chat">
               {!activeConv ? (
                 <div className="was-chat-empty">
-                  <div style={{width:52,height:52,color:'#d1d5db'}}>{IC.wa}</div>
+                  <div style={{width:52,height:52,color:'var(--ds-color-text-faint)'}}>{IC.wa}</div>
                   <h3>Select a conversation</h3>
                   <p>Choose a chat from the left to start messaging</p>
                 </div>
@@ -2006,7 +2006,7 @@ export function WhatsAppManager() {
                 <div className="was-tpl-grid">
                   {filteredManager.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
-                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.tpl}</div>
+                      <div style={{width:36,height:36,color:'var(--ds-color-text-faint)'}}>{IC.tpl}</div>
                       <p>No templates match your filter.</p>
                     </div>
                   ) : filteredManager.map((t) => {
@@ -2144,7 +2144,7 @@ export function WhatsAppManager() {
                 <div className="was-tpl-grid">
                   {cannedResponses.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
-                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.tag}</div>
+                      <div style={{width:36,height:36,color:'var(--ds-color-text-faint)'}}>{IC.tag}</div>
                       <p>No canned responses yet. Create one to speed up replies.</p>
                     </div>
                   ) : cannedResponses.map(cr => (
@@ -2183,7 +2183,7 @@ export function WhatsAppManager() {
                 <div className="was-tpl-grid">
                   {broadcasts.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
-                      <div style={{width:36,height:36,color:'#d1d5db'}}>{IC.send}</div>
+                      <div style={{width:36,height:36,color:'var(--ds-color-text-faint)'}}>{IC.send}</div>
                       <p>No broadcasts yet. Create a campaign to reach all your customers at once.</p>
                     </div>
                   ) : broadcasts.map(b => {

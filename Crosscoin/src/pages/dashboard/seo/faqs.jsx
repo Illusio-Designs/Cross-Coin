@@ -352,7 +352,7 @@ const Field = ({ label, children }) => (
 const inputStyle = {
   width: '100%',
   padding: '8px 10px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--ds-color-border)',
   borderRadius: 6,
   fontSize: 14,
   outline: 'none',
@@ -361,7 +361,7 @@ const inputStyle = {
 
 const btnSmall = {
   padding: '2px 6px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--ds-color-border)',
   background: 'var(--ds-color-surface)',
   borderRadius: 4,
   cursor: 'pointer',
@@ -371,7 +371,7 @@ const btnSmall = {
 
 const btnSecondary = {
   padding: '6px 10px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--ds-color-border)',
   background: 'var(--ds-color-surface)',
   borderRadius: 6,
   cursor: 'pointer',

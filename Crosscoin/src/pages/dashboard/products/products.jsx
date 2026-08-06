@@ -1552,7 +1552,7 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
           style={{
             padding: '6px 12px',
             background: 'var(--ds-color-surface)',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--ds-color-border)',
             borderRadius: 6,
             cursor: editingProductId ? 'pointer' : 'not-allowed',
             fontSize: 13,

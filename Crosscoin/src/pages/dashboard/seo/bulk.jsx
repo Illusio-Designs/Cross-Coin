@@ -214,7 +214,7 @@ const td = { padding: '10px 12px', color: 'var(--ds-color-text-muted)' };
 const cellInput = {
   width: '100%',
   padding: '6px 8px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--ds-color-border)',
   borderRadius: 5,
   fontSize: 13,
   background: 'var(--ds-color-surface)',
@@ -222,7 +222,7 @@ const cellInput = {
 };
 const pageBtn = {
   padding: '6px 12px',
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--ds-color-border)',
   background: 'var(--ds-color-surface)',
   borderRadius: 6,
   cursor: 'pointer',
