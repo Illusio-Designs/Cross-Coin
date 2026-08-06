@@ -11,6 +11,9 @@
  * Still runnable manually if you want to apply indexes without a restart:
  *
  *   cd Backend && node scripts/add-perf-indexes.js
+ *
+ * (Re-deploy trigger: 2026-08-06 — ship the WhatsApp perf indexes + getMessages
+ * fix after the previous FTP run's deploy job timed out waiting for a runner.)
  */
 
 const { sequelize } = require('../config/db.js');
