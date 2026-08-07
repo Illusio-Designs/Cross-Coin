@@ -90,6 +90,34 @@ function formatTime(date) {
 }
 function catLabel(c) { return { MARKETING:'Marketing', UTILITY:'Utility', marketing:'Marketing', utility:'Utility', otp:'OTP/Auth' }[c] || c; }
 
+// The stats API only returns days that actually had outbound messages, so the
+// "last 7 days" chart came back with gaps (e.g. 5 bars, unevenly spaced). Build
+// a full 7-day window and fill missing days with 0 so it's always a clean,
+// evenly-spaced 7-bar chart. Additive — never drops a returned day.
+function fillLast7Days(rows) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const counts = new Map();
+  (rows || []).forEach((r) => {
+    const key = String(r.day || '').slice(0, 10);
+    if (key) counts.set(key, parseInt(r.count) || 0);
+  });
+  const out = [];
+  const seen = new Set();
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    out.push({ day: key, count: counts.get(key) || 0 });
+    seen.add(key);
+  }
+  (rows || []).forEach((r) => {
+    const key = String(r.day || '').slice(0, 10);
+    if (key && !seen.has(key)) out.push({ day: key, count: parseInt(r.count) || 0 });
+  });
+  out.sort((a, b) => (a.day < b.day ? -1 : 1));
+  return out;
+}
+
 // Meta returns rejected_reason as an enum (e.g. INVALID_FORMAT, ABUSIVE_CONTENT).
 // Turn it into a human sentence with a hint on how to fix it.
 function normalizeRejectReason(reason) {
@@ -1501,9 +1529,9 @@ export function WhatsAppManager() {
                   </div>
                   <div className="was-bar-chart">
                     {statsLoading ? <Loader /> : (() => {
-                      const days = stats?.last7Days || [];
+                      const days = fillLast7Days(stats?.last7Days);
                       const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
-                      return days.length === 0
+                      return days.every(d => (parseInt(d.count) || 0) === 0)
                         ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
                         : days.map(d => {
                           const val = parseInt(d.count) || 0;
@@ -2266,9 +2294,9 @@ export function WhatsAppManager() {
                 <div className="was-dash-card-head"><span className="was-dash-card-title">Messages — Last 7 Days</span></div>
                 <div className="was-bar-chart">
                   {statsLoading ? <Loader /> : (() => {
-                    const days = stats?.last7Days || [];
+                    const days = fillLast7Days(stats?.last7Days);
                     const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
-                    return days.length === 0
+                    return days.every(d => (parseInt(d.count) || 0) === 0)
                       ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
                       : days.map(d => {
                         const val = parseInt(d.count) || 0;

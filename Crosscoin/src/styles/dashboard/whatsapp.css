@@ -408,11 +408,12 @@
 }
 
 .was-bar-chart {
-  padding: 14px 16px 10px;
+  padding: 18px 16px 8px;
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  height: 120px;
+  gap: 8px;
+  height: 140px;
+  border-bottom: 1px solid var(--wa-border);   /* baseline axis */
 }
 
 .was-bar-col {
@@ -420,21 +421,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;   /* bars sit ON the baseline */
+  gap: 5px;
+  height: 100%;
 }
 
 .was-bar-val {
   font-size: 10px;
-  color: var(--wa-text-3);
-  font-weight: 500;
+  color: var(--wa-text-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .was-bar {
   width: 100%;
+  max-width: 36px;             /* proper bar width, not a wide block */
   border-radius: 4px 4px 0 0;
   background: var(--wa-green);
-  opacity: .8;
-  min-height: 4px;
+  opacity: .85;
+  min-height: 3px;
   transition: opacity var(--wa-transition);
 }
 
