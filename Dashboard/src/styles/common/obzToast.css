@@ -73,3 +73,10 @@
 
 /* On dark theme, deepen the shadow a touch. */
 :root[data-theme="dark"] .obz-toast { box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4); }
+
+/* Phones: react-toastify makes the container full-width, so give it side
+   gutters and let the card fill them instead of a fixed 400px pinned left. */
+@media (max-width: 480px) {
+  .Toastify__toast-container { width: 100vw; max-width: 100vw; padding: 10px; left: 0; margin: 0; }
+  .obz-toast { width: 100%; max-width: 100%; }
+}

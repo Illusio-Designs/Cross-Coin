@@ -44,6 +44,11 @@
   grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
   gap: 10px;
 }
+/* Guarantee a single column on narrow phones so the 232px min can never
+   overflow the panel. */
+@media (max-width: 430px) {
+  .obz-home .inbox-grid { grid-template-columns: 1fr; }
+}
 .obz-home .inbox-card {
   --tone: var(--ds-color-text-muted);
   --tone-bg: var(--ds-color-surface-soft);

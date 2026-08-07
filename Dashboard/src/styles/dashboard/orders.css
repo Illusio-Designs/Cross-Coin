@@ -3579,7 +3579,9 @@
   margin-bottom: var(--ds-space-4);
 }
 .ord-toolbar .ord-tabs { margin-bottom: 0; }
-.ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* flex-wrap so the New order / Live / bulk / Filter buttons drop to a second
+   line on narrow phones instead of overflowing the toolbar. */
+.ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* Filters drawer body */
 .ord-filter-drawer { display: flex; flex-direction: column; gap: 6px; }
