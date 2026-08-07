@@ -101,6 +101,9 @@ jobs:
           # Explicit FTPS — port 21, upgrades to TLS via AUTH TLS
           protocol: ftps
           port: 21
+          # Give the control-socket handshake more room — the default 30s can time
+          # out against a slow/loaded cPanel FTPS server (control socket timeout).
+          timeout: 120000
           local-dir: ./Backend/
           server-dir: ${{ secrets.FTP_SERVER_DIR || '/Backend/' }}
           # Exclude files that should never be uploaded
