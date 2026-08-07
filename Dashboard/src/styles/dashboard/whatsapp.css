@@ -2008,6 +2008,43 @@
 
 @media (max-width: 1200px) { .was-right-panel { display: none; } }
 
+/* Mobile/tablet: the right panel is hidden by default; the chat header's info
+   button opens it as a slide-over so brand reassignment, notes and stats stay
+   reachable there too (they were completely inaccessible below 1200px). */
+.was-chat-info-btn { display: none; }
+.was-rp-close { display: none; }
+.was-rp-backdrop { display: none; }
+@media (max-width: 1200px) {
+  .was-chat-info-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; flex-shrink: 0; margin-left: 2px;
+    border: none; background: transparent; color: var(--wa-text-2);
+    border-radius: 8px; cursor: pointer;
+  }
+  .was-chat-info-btn:hover { background: var(--wa-surface-3); color: var(--ds-color-text-muted); }
+  .was-rp-backdrop {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, .42); z-index: 1290; animation: wasFade .2s ease;
+  }
+  .was-right-panel.was-right-panel--open {
+    display: flex !important;
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(340px, 88vw); z-index: 1300;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, .28);
+    animation: wasRpIn .26s cubic-bezier(.22, 1, .36, 1);
+  }
+  .was-rp-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; top: 9px; right: 9px; z-index: 2;
+    width: 32px; height: 32px; border: none; background: transparent;
+    color: var(--wa-text-2); cursor: pointer; border-radius: 8px;
+  }
+  .was-rp-close:hover { background: var(--wa-surface-3); }
+  .was-right-panel--open .was-rp-tabs { padding-right: 44px; }
+}
+@keyframes wasRpIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes wasFade { from { opacity: 0; } to { opacity: 1; } }
+
 /* Brand chip — shows which brand a conversation is tagged to (shared number). */
 .was-brand-chip {
   display: inline-block;

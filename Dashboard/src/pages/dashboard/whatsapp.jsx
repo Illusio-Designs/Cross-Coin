@@ -631,6 +631,9 @@ export function WhatsAppManager() {
   const [reply, setReply] = useState('');
   const [replyTo, setReplyTo] = useState(null); // { id, body, direction, type }
   const [rightPanelTab, setRightPanelTab] = useState('customer'); // 'customer' | 'notes'
+  // On mobile/tablet (<1200px) the right panel is hidden; this opens it as a
+  // slide-over so brand reassignment, notes and stats stay reachable there too.
+  const [showInfo, setShowInfo] = useState(false);
   const [convNote, setConvNote] = useState('');
   const [convLoading, setConvLoading] = useState(false);
   const [msgLoading, setMsgLoading] = useState(false);
@@ -1685,7 +1688,7 @@ export function WhatsAppManager() {
               ) : (
                 <>
                   <div className="was-chat-hd">
-                    <button className="was-chat-back" onClick={() => { setActiveConv(null); setMessages([]); }} aria-label="Back to conversations" type="button">
+                    <button className="was-chat-back" onClick={() => { setActiveConv(null); setMessages([]); setShowInfo(false); }} aria-label="Back to conversations" type="button">
                       <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2.4} />
                     </button>
                     <div className="was-chat-av" style={{background:avatarColor(activeConv.customer_name||activeConv.customer_phone)}}>
@@ -1695,6 +1698,7 @@ export function WhatsAppManager() {
                       <div className="was-chat-name">{activeConv.customer_name||activeConv.customer_phone}</div>
                       <div className="was-chat-phone">+{activeConv.customer_phone}</div>
                     </div>
+                    <button className="was-chat-info-btn" onClick={() => setShowInfo(true)} aria-label="Customer details" type="button">{IC.info}</button>
                     {activeConv.status === 'open' ? (
                       <button className="was-resolve-btn" onClick={() => resolveConv(activeConv.id)}>
                         {IC.check} Resolve
@@ -1917,8 +1921,12 @@ export function WhatsAppManager() {
             </div>
 
             {/* ── RIGHT PANEL ── */}
+            {activeConv && showInfo && <div className="was-rp-backdrop" onClick={() => setShowInfo(false)} />}
             {activeConv && (
-              <div className="was-right-panel">
+              <div className={`was-right-panel${showInfo ? ' was-right-panel--open' : ''}`}>
+                <button className="was-rp-close" onClick={() => setShowInfo(false)} aria-label="Close details" type="button">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
                 <div className="was-rp-tabs">
                   {['customer','notes'].map(t => (
                     <button key={t} className={`was-rp-tab${rightPanelTab===t?' active':''}`} onClick={() => setRightPanelTab(t)}>
