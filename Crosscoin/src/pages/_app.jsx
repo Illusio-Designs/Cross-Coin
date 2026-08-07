@@ -46,7 +46,6 @@ import "../styles/pages/Policy.css";
 import "../styles/pages/Contact.css";
 import "../styles/pages/Collections.css";
 import "../styles/pages/About.css";
-import "../styles/pages/auth/adminlogin.css";
 import '../styles/pages/blog.css';
 import '../styles/pages/blog-details.css';
 import '../styles/pages/sitemap.css';
@@ -92,18 +91,11 @@ import "../styles/dashboard/ui-select.css";
 import "../styles/dashboard/ui-switch.css";
 import "../styles/dashboard/dateRangePicker.css";
 
-// ── Admin-PAGE dashboard CSS is intentionally NOT imported here. ──
-// manualOrder, layout, tables, Card, payments, products, orders, media,
-// utmAnalytics, attributes, slider, pages, brands, brandSettings, brandTags,
-// brandAssignment, seo, social, whatsapp, analytics were ~226KB of
-// render-blocking CSS that EVERY storefront page downloaded (Pages-Router
-// bundles all _app global CSS into one stylesheet) but only /dashboard uses.
-// They are now bundled into /public/dashboard.css by
-// scripts/build-dashboard-css.mjs and loaded via a <link> only on /dashboard
-// routes (see AppContent). This removes that weight from the storefront's
-// FCP/LCP critical path. The shared UI kit above (tokens / primitives / ui-* /
-// dateRangePicker) STAYS global — storefront Products/SearchResults use
-// Pagination + Modal from components/ui, which those styles back.
+// ── Admin dashboard now lives in the standalone `Dashboard/` app. ──
+// The storefront no longer ships any /dashboard or /auth admin pages. Only the
+// shared UI kit above (tokens / primitives / ui-* / dateRangePicker) stays
+// global — storefront Products/SearchResults use Pagination + Dropdown from
+// components/ui, which those styles back.
 import "../styles/components/WhatsAppChat.css";
 // Additional page CSS
 import "../styles/pages/Lookbook.css";
@@ -117,12 +109,10 @@ import "../styles/components/PhonePopupModal.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
-import { DASHBOARD_CSS_VERSION } from "../dashboardCssVersion";
 
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
   const { user } = useAuth();
-  const router = useRouter();
   const [showBackTop, setShowBackTop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -132,23 +122,10 @@ function AppContent({ Component, pageProps, progressRef }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-  
-  // Check if current route is a dashboard route
-  const isDashboard = router.pathname.startsWith('/dashboard');
-  const isAuthPage = router.pathname.startsWith('/auth');
 
   return (
     <>
       <SentryInit />
-      {/* Admin-page dashboard CSS — loaded ONLY on /dashboard routes so the
-          ~226KB bundle never touches the storefront's critical path. Rendered
-          into <head> server-side (via next/head) so there's no flash of
-          unstyled dashboard. Built by scripts/build-dashboard-css.mjs. */}
-      {isDashboard && (
-        <Head>
-          <link rel="stylesheet" href={`/dashboard.css?v=${DASHBOARD_CSS_VERSION}`} />
-        </Head>
-      )}
       {/* Global reading progress bar */}
       <div className="custom-scrollbar-progress">
         <div
@@ -157,17 +134,13 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ width: 0 }}
         />
       </div>
-      {!isDashboard && !isAuthPage && <Header />}
-      {!isDashboard && !isAuthPage && <Breadcrumb />}
-      {isDashboard || isAuthPage ? (
+      <Header />
+      <Breadcrumb />
+      <main id="main-content">
         <Component {...pageProps} />
-      ) : (
-        <main id="main-content">
-          <Component {...pageProps} />
-        </main>
-      )}
-      {!isDashboard && !isAuthPage && <Footer />}
-      <CartDrawer 
+      </main>
+      <Footer />
+      <CartDrawer
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}
         lastAddedItem={lastAddedItem}
@@ -193,9 +166,8 @@ function AppContent({ Component, pageProps, progressRef }) {
         }}
       />
 
-      {/* Back to top button — storefront only (kept off the dashboard, where it
-          overlapped panel actions like the CSV export buttons) */}
-      {!isDashboard && hasMounted && showBackTop && (
+      {/* Back to top button */}
+      {hasMounted && showBackTop && (
         <button
           className="back-to-top"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -206,7 +178,7 @@ function AppContent({ Component, pageProps, progressRef }) {
           </svg>
         </button>
       )}
-      {!isDashboard && !isAuthPage && hasMounted && <WhatsAppChat />}
+      {hasMounted && <WhatsAppChat />}
     </>
   );
 }
@@ -304,13 +276,9 @@ function App({ Component, pageProps }) {
       </Head>
       <UTMTracker />
       <Analytics />
-      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
-        <>
-          <Msg91Loader />
-          <SpeedInsights />
-          <VercelAnalytics />
-        </>
-      )}
+      <Msg91Loader />
+      <SpeedInsights />
+      <VercelAnalytics />
       <ErrorBoundary>
         <AppWrapper
           Component={Component}

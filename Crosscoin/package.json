@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/build-dashboard-css.mjs && node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev",
-    "build": "node scripts/build-dashboard-css.mjs && node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
+    "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
