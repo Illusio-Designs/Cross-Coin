@@ -617,6 +617,32 @@ const startServer = async () => {
             logger.error('ad_spends table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: contact_messages table (contact form leads) ──
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS contact_messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    brand_id INT NULL,
+                    name VARCHAR(120) NULL,
+                    email VARCHAR(160) NULL,
+                    phone VARCHAR(20) NULL,
+                    message TEXT NULL,
+                    createdAt DATETIME NOT NULL,
+                    updatedAt DATETIME NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            );
+        } catch (err) {
+            logger.error('contact_messages table migration failed: ' + err.message);
+        }
+
+        // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────
+        // orders_cancelled_backup (manual backup, no code refs), fship_warehouses
+        // (orphaned, no refs), coupon_usage (legacy duplicate of coupon_usages).
+        for (const t of ['orders_cancelled_backup', 'fship_warehouses', 'coupon_usage']) {
+            try { await sequelize.query(`DROP TABLE IF EXISTS \`${t}\``); }
+            catch (err) { logger.warn(`drop ${t} failed: ${err.message}`); }
+        }
+
         // ── Idempotent migration: WhatsApp inbox indexes (load speed) ─────────
         // The inbox was slow because these hot columns were unindexed: opening a
         // conversation scans whatsapp_messages by conversation_id, the inbound

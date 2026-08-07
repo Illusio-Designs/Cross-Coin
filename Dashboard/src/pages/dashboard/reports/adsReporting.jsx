@@ -15,9 +15,13 @@ const num = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0;
 const fmt = (v, dp = 0) => (Number.isFinite(v) ? v.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp }) : '—');
 const inr = (v) => `₹${fmt(v)}`;
 const pct = (v) => (Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '—');
-const iso = (d) => d.toISOString().slice(0, 10);
-const today = () => iso(new Date());
-const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+// Dates are IST (Asia/Kolkata) so the picker's locks flip at IST midnight,
+// aligned with the backend's report cut-off (the day changes at 12 AM IST).
+const istDateStr = (d = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const shiftDay = (dateStr, n) => { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const today = () => istDateStr();
+const daysAgo = (n) => shiftDay(istDateStr(), -n);
 
 // Ads reporting officially begins on this date — the report counts from here.
 const REPORT_START = '2026-08-04';

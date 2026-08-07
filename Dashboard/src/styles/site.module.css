@@ -164,6 +164,28 @@
 .contactCard p { font-size: 14px; line-height: 1.6; color: var(--muted); margin: 0 0 18px; }
 .contactLine { display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; text-decoration: none; color: var(--text); }
 .contactLine:hover { color: #000; }
+.cform { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+.cfield { display: flex; flex-direction: column; gap: 6px; }
+.cfield label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.cinput, .ctext {
+  font-family: inherit; font-size: 14px; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; width: 100%;
+}
+.cinput:focus, .ctext:focus { outline: none; border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10,10,10,.07); }
+.ctext { resize: vertical; min-height: 110px; }
+.cformRow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.csubmit {
+  align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; gap: 8px;
+  height: 46px; padding: 0 22px; border-radius: 11px; background: #0a0a0a; color: #fff;
+  border: none; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .18s, transform .12s;
+}
+.csubmit:hover:not(:disabled) { background: #262626; transform: translateY(-1px); }
+.csubmit:disabled { opacity: .6; cursor: default; }
+.cstatus { font-size: 13.5px; font-weight: 600; margin: 2px 0 0; }
+.cstatus.ok { color: #16a34a; }
+.cstatus.err { color: #dc2626; }
+@media (max-width: 520px) { .cformRow { grid-template-columns: 1fr; } }
+
 .contactBox { background: #0a0a0a; color: #fff; border-radius: 20px; padding: 40px 34px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
 .contactBox::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 24px 24px; pointer-events: none; }
 .contactBoxInner { position: relative; z-index: 1; }

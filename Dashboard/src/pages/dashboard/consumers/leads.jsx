@@ -3,12 +3,12 @@ import { leadService } from '../../../services';
 import { Button, Input } from '../../../components/ui';
 
 /**
- * Leads — phone numbers captured by the storefront popup (lead_captures).
- * Read-only list + search + CSV export.
+ * Leads — popup phone leads + contact-form messages (lead_captures +
+ * contact_messages), unified. Read-only + search + CSV export.
  */
 const fmtDate = (s) => {
   if (!s) return '—';
-  try { const d = new Date(s); return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+  try { return new Date(s).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
   catch { return s; }
 };
 
@@ -20,13 +20,17 @@ const S = {
   controls: { display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' },
   count: { fontSize: 12, fontWeight: 700, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono, monospace)' },
   tableWrap: { overflowX: 'auto', border: '1px solid var(--ds-color-border)', borderRadius: 16 },
-  table: { borderCollapse: 'collapse', width: '100%', minWidth: 720, fontSize: 13 },
+  table: { borderCollapse: 'collapse', width: '100%', minWidth: 900, fontSize: 13 },
   th: { background: 'var(--ds-color-surface-soft, #f6f6f7)', color: 'var(--ds-color-text-muted)', fontSize: 10.5, letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'left', padding: '12px 14px', whiteSpace: 'nowrap', borderBottom: '1px solid var(--ds-color-border)' },
-  td: { padding: '12px 14px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--ds-color-border-soft, #eee)', color: 'var(--ds-color-text)' },
+  td: { padding: '12px 14px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--ds-color-border-soft, #eee)', color: 'var(--ds-color-text)', verticalAlign: 'top' },
   mono: { fontFamily: 'var(--ds-font-mono, monospace)', fontVariantNumeric: 'tabular-nums' },
-  badge: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 },
+  msg: { whiteSpace: 'normal', maxWidth: 320, color: 'var(--ds-color-text-muted)', lineHeight: 1.45 },
+  badge: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 },
   hint: { fontSize: 12.5, color: 'var(--ds-color-text-muted)' },
 };
+const typeBadge = (t) => t === 'contact'
+  ? { ...S.badge, color: 'var(--ds-color-info,#2563eb)', background: 'var(--ds-color-info-bg,#dbeafe)' }
+  : { ...S.badge, color: 'var(--ds-color-text-muted)', background: 'var(--ds-color-surface-soft,#f1f1f1)' };
 
 export default function Leads() {
   const [leads, setLeads] = useState([]);
@@ -47,12 +51,12 @@ export default function Leads() {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return leads;
-    return leads.filter((l) => `${l.phone} ${l.brand} ${l.coupon_code || ''} ${l.source || ''}`.toLowerCase().includes(s));
+    return leads.filter((l) => `${l.name || ''} ${l.phone || ''} ${l.email || ''} ${l.brand || ''} ${l.message || ''} ${l.type}`.toLowerCase().includes(s));
   }, [leads, q]);
 
   const exportCsv = () => {
-    const rows = [['Phone', 'Brand', 'Source', 'WhatsApp sent', 'Captured at']];
-    filtered.forEach((l) => rows.push([l.phone, l.brand, l.source || '', l.wa_sent ? 'Yes' : 'No', fmtDate(l.createdAt)]));
+    const rows = [['Type', 'Name', 'Phone', 'Email', 'Brand', 'Message', 'Captured at']];
+    filtered.forEach((l) => rows.push([l.type, l.name || '', l.phone || '', l.email || '', l.brand || '', (l.message || '').replace(/\n/g, ' '), fmtDate(l.createdAt)]));
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -65,10 +69,10 @@ export default function Leads() {
       <div style={S.head}>
         <div>
           <h2 style={S.title}>Leads</h2>
-          <p style={S.sub}>Phone numbers captured by the storefront popup.</p>
+          <p style={S.sub}>Phone numbers from the storefront popup and messages from the contact form.</p>
         </div>
         <div style={S.controls}>
-          <Input placeholder="Search phone / brand" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Search name / phone / email / message" value={q} onChange={(e) => setQ(e.target.value)} />
           <Button variant="secondary" onClick={load} loading={loading}>Refresh</Button>
           <Button variant="primary" onClick={exportCsv} disabled={!filtered.length}>Export CSV</Button>
         </div>
@@ -80,25 +84,23 @@ export default function Leads() {
       <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr>
-            <th style={S.th}>Phone</th><th style={S.th}>Brand</th>
-            <th style={S.th}>Source</th><th style={S.th}>WhatsApp</th><th style={S.th}>Captured</th>
+            <th style={S.th}>Type</th><th style={S.th}>Name</th><th style={S.th}>Phone</th>
+            <th style={S.th}>Email</th><th style={S.th}>Brand</th><th style={S.th}>Message</th><th style={S.th}>Captured</th>
           </tr></thead>
           <tbody>
             {filtered.map((l) => (
               <tr key={l.id}>
-                <td style={{ ...S.td, ...S.mono, fontWeight: 700 }}>{l.phone}</td>
-                <td style={S.td}>{l.brand}</td>
-                <td style={S.td}>{l.source || '—'}</td>
-                <td style={S.td}>
-                  <span style={{ ...S.badge, color: l.wa_sent ? 'var(--ds-color-success,#16a34a)' : 'var(--ds-color-text-muted)', background: l.wa_sent ? 'var(--ds-color-success-bg, #dcfce7)' : 'var(--ds-color-surface-soft,#f1f1f1)' }}>
-                    {l.wa_sent ? 'Sent' : 'Not sent'}
-                  </span>
-                </td>
+                <td style={S.td}><span style={typeBadge(l.type)}>{l.type === 'contact' ? 'Contact' : 'Popup'}</span></td>
+                <td style={S.td}>{l.name || '—'}</td>
+                <td style={{ ...S.td, ...S.mono, fontWeight: 700 }}>{l.phone || '—'}</td>
+                <td style={S.td}>{l.email || '—'}</td>
+                <td style={S.td}>{l.brand || '—'}</td>
+                <td style={{ ...S.td, ...S.msg }}>{l.message || '—'}</td>
                 <td style={{ ...S.td, color: 'var(--ds-color-text-muted)' }}>{fmtDate(l.createdAt)}</td>
               </tr>
             ))}
             {!filtered.length && !loading && (
-              <tr><td style={{ ...S.td, textAlign: 'center', padding: 28, color: 'var(--ds-color-text-muted)' }} colSpan={5}>No leads yet.</td></tr>
+              <tr><td style={{ ...S.td, textAlign: 'center', padding: 28, color: 'var(--ds-color-text-muted)' }} colSpan={7}>No leads yet.</td></tr>
             )}
           </tbody>
         </table>
