@@ -231,14 +231,23 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     return { success: false, courier: null, permanent: true, notServiceable: true, error: msg };
   }
 
+  // 4b. SURFACE ONLY — every parcel ships surface, never air/express. Keep only
+  //     surface (economy) service options; fall back to the rest ONLY if the route
+  //     has no surface option at all, so orders are never stuck un-bookable.
+  const surfaceOptions = options.filter((o) => o.economy === 0);
+  const bookable = surfaceOptions.length ? surfaceOptions : options;
+  if (!surfaceOptions.length) {
+    logger.warn(`[auto-courier] ${order.order_number}: no surface service for ${destPin} — allowing non-surface as fallback`);
+  }
+
   // 5. Enabled couriers first, then a RANDOM shuffle (so orders spread across
-  //    them), then cheapest rate, then surface/"delivery" over air. Couriers not
-  //    in the list sort last. Book the first that succeeds — the serviceability
-  //    fallback: if the lead courier can't book, the next serviceable one is tried.
-  options.sort((a, b) => (a.listed - b.listed) || (a.shuffle - b.shuffle) || (a.rate - b.rate) || (a.economy - b.economy));
-  logger.info(`[auto-courier] ${order.order_number}: ${options.length} serviceable courier(s) — shuffled among [${priorityList.join(', ') || 'none'}], trying: ${options.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
+  //    them), then cheapest rate. Book the first that succeeds — the
+  //    serviceability fallback: if the lead courier can't book, the next
+  //    serviceable one is tried.
+  bookable.sort((a, b) => (a.listed - b.listed) || (a.shuffle - b.shuffle) || (a.rate - b.rate) || (a.economy - b.economy));
+  logger.info(`[auto-courier] ${order.order_number}: ${bookable.length} surface courier(s) — shuffled among [${priorityList.join(', ') || 'none'}], trying: ${bookable.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
   let lastError = null;
-  for (const opt of options) {
+  for (const opt of bookable) {
     try {
       const r = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', opt.logistics, opt.s_type);
       if (r.success) {
@@ -2221,6 +2230,16 @@ module.exports.getAvailableCouriers = async (req, res) => {
         ).toLowerCase();
         return !excludeList.some((tok) => name.includes(tok));
       });
+    }
+
+    // Surface only — every parcel ships surface, not air/express. Keep surface
+    // (economy) services when the route has any; fall back to all otherwise so
+    // the picker is never empty.
+    if (Array.isArray(couriers) && couriers.length) {
+      const sTypeOf = (c) => String(c?.s_type || c?.service_type || c?.serviceType || c?.service || '').toLowerCase();
+      const isSurface = (c) => { const t = sTypeOf(c); return !t || /econom|surface|ground|standard|deliver/i.test(t); };
+      const surface = couriers.filter(isSurface);
+      if (surface.length) couriers = surface;
     }
 
     return res.json({
