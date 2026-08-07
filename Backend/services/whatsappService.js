@@ -18,8 +18,19 @@ function formatE164(phone) {
 }
 
 // ─── Extract Meta error message ───────────────────────────────────────────────
+// Meta's top-level `message` is often the generic "Invalid parameter" (code 100).
+// The ACTUAL reason lives in error_user_msg / error_data.details / error_user_title
+// — surface it so template rejections say *why* instead of a useless generic line.
 function metaError(err) {
-  return err?.response?.data?.error?.message || err?.message || 'Unknown error';
+  const e = err?.response?.data?.error;
+  if (e) {
+    const base = e.message || 'Meta API error';
+    const detail = e.error_user_msg
+      || (typeof e.error_data?.details === 'string' ? e.error_data.details : null)
+      || e.error_user_title;
+    return detail && !base.includes(detail) ? `${base}: ${detail}` : base;
+  }
+  return err?.message || 'Unknown error';
 }
 
 // ─── Load credentials from brand settings ────────────────────────────────────
