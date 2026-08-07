@@ -1282,6 +1282,17 @@ export function WhatsAppManager() {
   const handleReplyChange = (val) => {
     setReply(val);
   };
+  // Auto-grow the composer: start at one line and expand with the message
+  // (typed or a picked canned reply) up to the CSS max-height, shrinking back
+  // to one line when it's cleared after send. Without this the fixed 2-row box
+  // read as a large empty block on mobile.
+  const replyRef = useRef(null);
+  useEffect(() => {
+    const el = replyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, [reply]);
   const pickCanned = (c) => {
     setReply(c.body || '');
     setShowEmoji(false);
@@ -1883,7 +1894,7 @@ export function WhatsAppManager() {
                             <HugeiconsIcon icon={Attachment01Icon} size={16} strokeWidth={2} />
                           )}
                         </button>
-                        <textarea className="was-reply-input" placeholder="Type a message…" value={reply}
+                        <textarea ref={replyRef} className="was-reply-input" placeholder="Type a message…" value={reply}
                           onChange={e => handleReplyChange(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === 'Escape' && cannedActive) { e.preventDefault(); setReply(''); return; }
@@ -1894,7 +1905,7 @@ export function WhatsAppManager() {
                               sendReply(e);
                             }
                           }}
-                          rows={2} />
+                          rows={1} />
                         <button type="submit" className="was-send-btn" disabled={sending||!reply.trim()}>{IC.send}</button>
                       </form>
                     </div>

@@ -1312,6 +1312,8 @@
 
 .was-reply-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 9px 13px;
   border: 1px solid var(--wa-border);
   border-radius: 20px;
@@ -1320,7 +1322,10 @@
   resize: none;
   outline: none;
   line-height: 1.5;
+  /* JS auto-grows the height from one line (see whatsapp.jsx); this caps it
+     and scrolls once the message gets long. */
   max-height: 120px;
+  overflow-y: auto;
   background: var(--wa-surface-2);
   transition: border-color var(--wa-transition);
 }
