@@ -1,46 +1,69 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { adsReportService } from '../../../services';
-import { Modal, Button, Input, Select } from '../../../components/ui';
+import { Modal, Button, Input, Select, DateRangePicker } from '../../../components/ui';
 
 /**
- * Ads Reporting — the ONLY manual input is daily ad spend per brand. Orders
- * (revenue, cancelled, RTO, prepaid/COD) are auto-counted from the backend for
- * each brand's date range; product cost (per brand) and shipping (global) are
- * admin-managed defaults. Everything is computed server-side; this page enters
- * spend / costs and displays the result.
+ * Ads Reporting — daily ad spend per brand is the only manual input; orders,
+ * revenue, cancels, RTO and profit are computed server-side. Futuristic
+ * KPI + chart view over the same data, themed via --ds tokens (light/dark).
  *
- *   CPP = Ad/T.O. · ROAS = Rev/Ad · AOV = Rev/T.O.
  *   G.P. = (AOV − CPP − Product − Shipping) × T.O.
  *   N.P. = G.P. − (Cancelled×CPP) − (RTO×(CPP+Shipping))
  */
 
 const num = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
 const fmt = (v, dp = 0) => (Number.isFinite(v) ? v.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp }) : '—');
+const inr = (v) => `₹${fmt(v)}`;
 const pct = (v) => (Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '—');
 const iso = (d) => d.toISOString().slice(0, 10);
 const today = () => iso(new Date());
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
 
+const POS = 'var(--ds-color-success, #16a34a)';
+const NEG = 'var(--ds-color-danger, #dc2626)';
+const WARN = 'var(--ds-color-warn, #d97706)';
+
 const S = {
-  wrap: { display: 'flex', flexDirection: 'column', gap: 18 },
-  panel: { background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-lg, 12px)', padding: 18 },
-  h3: { margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: 'var(--ds-color-text)' },
-  hint: { margin: 0, fontSize: 12.5, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 },
-  row: { display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 14 },
-  field: { display: 'flex', flexDirection: 'column', gap: 5 },
+  wrap: { display: 'flex', flexDirection: 'column', gap: 16 },
+  head: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
+  title: { margin: 0, fontSize: 21, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ds-color-text)' },
+  sub: { margin: '3px 0 0', fontSize: 12.5, color: 'var(--ds-color-text-muted)' },
+  controls: { display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' },
+  panel: { background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 16, padding: 18 },
+  hint: { margin: 0, fontSize: 12, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 },
   label: { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
-  input: { height: 34, padding: '0 10px', border: '1px solid var(--ds-color-border)', borderRadius: 8, background: 'var(--ds-color-bg)', color: 'var(--ds-color-text)', fontSize: 13, fontFamily: 'inherit' },
-  btn: { height: 34, padding: '0 14px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-bg)', color: 'var(--ds-color-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  btnDark: { height: 34, padding: '0 16px', borderRadius: 8, border: 'none', background: '#0a0a0a', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  tableWrap: { overflowX: 'auto', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-lg, 12px)' },
-  table: { borderCollapse: 'collapse', fontSize: 12, minWidth: 1700, width: '100%' },
-  th: { background: 'var(--ds-color-surface-soft, #f6f6f7)', color: 'var(--ds-color-text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', padding: '10px 8px', textAlign: 'right', borderBottom: '1px solid var(--ds-color-border)', whiteSpace: 'nowrap' },
-  thL: { textAlign: 'left' },
-  td: { padding: '8px', textAlign: 'right', borderBottom: '1px solid var(--ds-color-border-soft, #eee)', color: 'var(--ds-color-text)', whiteSpace: 'nowrap' },
-  tdL: { textAlign: 'left', fontWeight: 700 },
-  totalTd: { padding: '10px 8px', textAlign: 'right', fontWeight: 800, color: 'var(--ds-color-text)', borderTop: '2px solid var(--ds-color-border)', whiteSpace: 'nowrap' },
+  // KPI
+  kpis: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 },
+  kpi: { position: 'relative', overflow: 'hidden', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 16, padding: '16px 18px 14px' },
+  kLab: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
+  kDot: { width: 6, height: 6, borderRadius: '50%' },
+  kVal: { fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 27, fontWeight: 700, letterSpacing: '-0.02em', margin: '11px 0 3px', color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums' },
+  kFoot: { fontSize: 12, fontWeight: 600, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)' },
+  // charts
+  grid2: { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14 },
+  panelH: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  h3: { margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--ds-color-text)' },
+  chip: { fontSize: 10.5, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '3px 9px' },
+  bars: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 },
+  bar: { display: 'grid', gridTemplateColumns: '86px 1fr 96px', alignItems: 'center', gap: 12 },
+  bnm: { fontSize: 12.5, color: 'var(--ds-color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  track: { height: 24, borderRadius: 7, background: 'var(--ds-color-bg)', position: 'relative', overflow: 'hidden' },
+  bamt: { textAlign: 'right', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' },
+  donutWrap: { display: 'flex', alignItems: 'center', gap: 18, marginTop: 12 },
+  legend: { display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, color: 'var(--ds-color-text)' },
+  li: { display: 'flex', alignItems: 'center', gap: 9 },
+  sw: { width: 10, height: 10, borderRadius: 3, flexShrink: 0 },
+  roasGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginTop: 12 },
+  roasCard: { background: 'var(--ds-color-bg)', border: '1px solid var(--ds-color-border)', borderRadius: 12, padding: '12px 14px' },
+  // table
+  tableWrap: { overflowX: 'auto', border: '1px solid var(--ds-color-border)', borderRadius: 16 },
+  table: { borderCollapse: 'collapse', fontSize: 12, minWidth: 1180, width: '100%' },
+  th: { background: 'var(--ds-color-surface-soft, #f6f6f7)', color: 'var(--ds-color-text-muted)', fontSize: 10, letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'right', padding: '11px 9px', whiteSpace: 'nowrap', borderBottom: '1px solid var(--ds-color-border)' },
+  td: { padding: '10px 9px', textAlign: 'right', whiteSpace: 'nowrap', borderBottom: '1px solid var(--ds-color-border-soft, #eee)', color: 'var(--ds-color-text)', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontVariantNumeric: 'tabular-nums' },
+  totalTd: { padding: '12px 9px', textAlign: 'right', fontWeight: 800, color: 'var(--ds-color-text)', borderTop: '2px solid var(--ds-color-border)', whiteSpace: 'nowrap', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)' },
+  field: { display: 'flex', flexDirection: 'column', gap: 5 },
 };
-const pn = (v) => ({ color: v < 0 ? 'var(--ds-color-danger, #ef4444)' : 'var(--ds-color-text)' });
+const pn = (v) => ({ color: v < 0 ? NEG : 'var(--ds-color-text)' });
 
 export default function AdsReporting() {
   const [from, setFrom] = useState(daysAgo(30));
@@ -55,27 +78,19 @@ export default function AdsReporting() {
   const [spendOpen, setSpendOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
 
-  const brands = useMemo(
-    () => report.rows.map((r) => ({ id: r.brand_id, name: r.brand })),
-    [report.rows]
-  );
+  const brands = useMemo(() => report.rows.map((r) => ({ id: r.brand_id, name: r.brand })), [report.rows]);
 
   const loadReport = useCallback(async () => {
     setLoading(true); setError('');
     try {
       const data = await adsReportService.getReport(from, to);
-      if (data?.success) setReport(data);
-      else setError(data?.message || 'Failed to load report');
-    } catch (e) {
-      setError(e?.response?.data?.message || e.message || 'Failed to load report');
-    } finally { setLoading(false); }
+      if (data?.success) setReport(data); else setError(data?.message || 'Failed to load report');
+    } catch (e) { setError(e?.response?.data?.message || e.message || 'Failed to load report'); }
+    finally { setLoading(false); }
   }, [from, to]);
 
   const loadSettings = useCallback(async () => {
-    try {
-      const data = await adsReportService.getSettings();
-      if (data?.success) setSettings({ shipping: data.shipping, productCost: data.productCost || {} });
-    } catch { /* ignore */ }
+    try { const d = await adsReportService.getSettings(); if (d?.success) setSettings({ shipping: d.shipping, productCost: d.productCost || {} }); } catch { /* */ }
   }, []);
 
   useEffect(() => { loadSettings(); }, [loadSettings]);
@@ -84,48 +99,34 @@ export default function AdsReporting() {
   const saveSettings = async () => {
     setMsg('');
     try {
-      const data = await adsReportService.saveSettings({ shipping: num(settings.shipping), productCost: settings.productCost });
-      if (data?.success) { setSettings({ shipping: data.shipping, productCost: data.productCost || {} }); setMsg('Cost settings saved.'); loadReport(); }
+      const d = await adsReportService.saveSettings({ shipping: num(settings.shipping), productCost: settings.productCost });
+      if (d?.success) { setSettings({ shipping: d.shipping, productCost: d.productCost || {} }); setMsg('Saved.'); loadReport(); }
     } catch (e) { setMsg(e?.response?.data?.message || 'Save failed'); }
   };
 
   const loadSpend = useCallback(async (brandId) => {
     if (!brandId) { setSpendList([]); return; }
-    try {
-      const data = await adsReportService.getSpend(brandId);
-      if (data?.success) setSpendList(data.spend || []);
-    } catch { setSpendList([]); }
+    try { const d = await adsReportService.getSpend(brandId); if (d?.success) setSpendList(d.spend || []); } catch { setSpendList([]); }
   }, []);
-
-  const onPickBrand = (brand_id) => { setSpendForm((f) => ({ ...f, brand_id })); loadSpend(brand_id); };
+  const onPickBrand = (id) => { setSpendForm((f) => ({ ...f, brand_id: id })); loadSpend(id); };
 
   const addSpend = async () => {
     if (!spendForm.brand_id || !spendForm.date) { setMsg('Pick a brand and date.'); return; }
     setMsg('');
     try {
       await adsReportService.saveSpend([{ brand_id: Number(spendForm.brand_id), date: spendForm.date, amount: num(spendForm.amount) }]);
-      setSpendForm((f) => ({ ...f, amount: '' }));
-      await loadSpend(spendForm.brand_id);
-      await loadReport();
-      setMsg('Spend saved.');
+      setSpendForm((f) => ({ ...f, amount: '' })); await loadSpend(spendForm.brand_id); await loadReport(); setMsg('Spend saved.');
     } catch (e) { setMsg(e?.response?.data?.message || 'Save failed'); }
   };
+  const removeSpend = async (id) => { try { await adsReportService.deleteSpend(id); await loadSpend(spendForm.brand_id); await loadReport(); } catch { /* */ } };
+  const setProductCost = (id, v) => setSettings((s) => ({ ...s, productCost: { ...s.productCost, [id]: v } }));
 
-  const removeSpend = async (id) => {
-    try { await adsReportService.deleteSpend(id); await loadSpend(spendForm.brand_id); await loadReport(); } catch { /* ignore */ }
-  };
-
-  const setProductCost = (brandId, v) =>
-    setSettings((s) => ({ ...s, productCost: { ...s.productCost, [brandId]: v } }));
-
-  // Totals from returned rows.
   const totals = useMemo(() => {
     const t = report.rows.reduce((a, r) => {
       a.adSpend += num(r.adSpend); a.revenue += num(r.revenue); a.totalOrders += num(r.totalOrders);
       a.prepaid += num(r.prepaid); a.cod += num(r.cod); a.cancelled += num(r.cancelled); a.rto += num(r.rto);
       a.gp += num(r.gp); a.cancLoss += num(r.cancLoss); a.rtoLoss += num(r.rtoLoss); a.np += num(r.np);
-      a.days = Math.max(a.days, num(r.days));
-      return a;
+      a.days = Math.max(a.days, num(r.days)); return a;
     }, { adSpend: 0, revenue: 0, totalOrders: 0, prepaid: 0, cod: 0, cancelled: 0, rto: 0, gp: 0, cancLoss: 0, rtoLoss: 0, np: 0, days: 0 });
     t.cpp = t.totalOrders ? t.adSpend / t.totalOrders : 0;
     t.roas = t.adSpend ? t.revenue / t.adSpend : 0;
@@ -142,62 +143,182 @@ export default function AdsReporting() {
     return t;
   }, [report.rows]);
 
-  const HEAD = ['Brand', 'From', 'To', 'T.O.', 'Rev.', 'Ad Sp.', 'P.O.', 'C.O.', 'Canc.O', 'RTO O.', 'CPP', 'ROAS', 'A.O.V.', 'P.D.O.', 'P.O.R.', 'C.O.R.', 'G.P.', 'Canc', 'RTO', 'N.P.', 'Canc %', 'RTO %', 'A.D.', 'A.D.O.', 'A.D.R.', 'A.D.N.P.', 'O.P. %'];
+  // derived visuals
+  const maxAbsNP = Math.max(1, ...report.rows.map((r) => Math.abs(num(r.np))));
+  const delivered = Math.max(totals.totalOrders - totals.cancelled - totals.rto, 0);
+  const dPct = totals.totalOrders ? (delivered / totals.totalOrders) * 100 : 0;
+  const rPct = totals.totalOrders ? (totals.rto / totals.totalOrders) * 100 : 0;
+  const cPct = totals.totalOrders ? (totals.cancelled / totals.totalOrders) * 100 : 0;
+  const roasRows = report.rows.filter((r) => r.hasSpend).sort((a, b) => num(b.adSpend) - num(a.adSpend)).slice(0, 6);
+
+  const HEAD = ['Brand', 'From', 'T.O.', 'Rev.', 'Ad Sp.', 'CPP', 'ROAS', 'A.O.V.', 'Canc.', 'RTO', 'G.P.', 'N.P.', 'RTO %', 'O.P. %'];
 
   return (
     <div style={S.wrap}>
-      <div>
-        <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ds-color-text)' }}>Ads Reporting</h2>
-        <p style={S.hint}>Add daily ad spend per brand — orders, cancels, RTO and profit are calculated automatically.</p>
-      </div>
-
-      {/* Report window */}
-      <div style={S.panel}>
-        <h3 style={S.h3}>Report period</h3>
-        <div style={S.row}>
-          <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          <Button variant="primary" onClick={loadReport} loading={loading}>Run report</Button>
-          {error && <span style={{ ...S.hint, color: 'var(--ds-color-danger,#ef4444)' }}>{error}</span>}
-        </div>
-        <p style={{ ...S.hint, marginTop: 10, fontSize: 11.5 }}>Each brand&apos;s window starts on its first ad-spend day within this period.</p>
-      </div>
-
-      {/* Actions: add spend + manage costs (both open modals) */}
-      <div style={{ ...S.panel, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+      {/* Header + controls */}
+      <div style={S.head}>
         <div>
-          <h3 style={S.h3}>Daily ad spend</h3>
-          <p style={S.hint}>The only manual input — everything else is calculated from orders.</p>
+          <h2 style={S.title}>Ads Reporting</h2>
+          <p style={S.sub}>Per-brand ad-spend profitability. Add daily spend — everything else is calculated from orders.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={S.controls}>
+          <DateRangePicker label="Period" inline startDate={from} endDate={to}
+            onStartChange={setFrom} onEndChange={setTo} onApply={loadReport} />
+          <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
           <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
-          <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add ad spend</Button>
+          <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>
+        </div>
+      </div>
+      {error && <p style={{ ...S.hint, color: NEG }}>{error}</p>}
+
+      {/* KPI hero */}
+      <div style={S.kpis}>
+        <div style={{ ...S.kpi, boxShadow: totals.np >= 0 ? `0 0 0 1px color-mix(in srgb, ${POS} 25%, transparent)` : 'none' }}>
+          <div style={S.kLab}><span style={{ ...S.kDot, background: totals.np >= 0 ? POS : NEG }} />Net profit</div>
+          <div style={{ ...S.kVal, color: totals.np >= 0 ? POS : NEG }}>{inr(totals.np)}</div>
+          <div style={{ ...S.kFoot, color: 'var(--ds-color-text-muted)' }}>{pct(totals.opPct)} margin</div>
+        </div>
+        <div style={S.kpi}>
+          <div style={S.kLab}><span style={{ ...S.kDot, background: 'var(--ds-color-text)' }} />ROAS</div>
+          <div style={S.kVal}>{Number.isFinite(totals.roas) ? totals.roas.toFixed(2) : '0.00'}×</div>
+          <div style={{ ...S.kFoot, color: 'var(--ds-color-text-muted)' }}>blended</div>
+        </div>
+        <div style={S.kpi}>
+          <div style={S.kLab}><span style={{ ...S.kDot, background: 'var(--ds-color-text-muted)' }} />Ad spend</div>
+          <div style={S.kVal}>{inr(totals.adSpend)}</div>
+          <div style={{ ...S.kFoot, color: 'var(--ds-color-text-muted)' }}>{fmt(totals.totalOrders)} orders</div>
+        </div>
+        <div style={S.kpi}>
+          <div style={S.kLab}><span style={{ ...S.kDot, background: 'var(--ds-color-text)' }} />Revenue</div>
+          <div style={S.kVal}>{inr(totals.revenue)}</div>
+          <div style={{ ...S.kFoot, color: 'var(--ds-color-text-muted)' }}>AOV {inr(totals.aov)}</div>
         </div>
       </div>
 
-      {/* Add ad spend modal */}
-      <Modal
-        isOpen={spendOpen}
-        onClose={() => { setSpendOpen(false); setMsg(''); }}
-        title="Add daily ad spend"
-        description="Pick a brand and enter that day's spend. Add as many days as you need."
-        size="md"
-      >
+      {/* Charts */}
+      <div style={S.grid2}>
+        <div style={S.panel}>
+          <div style={S.panelH}><h3 style={S.h3}>Net profit by brand</h3><span style={S.chip}>₹ this period</span></div>
+          <p style={S.hint}>Green = profit · red = loss after ad spend, cancels &amp; RTO</p>
+          <div style={S.bars}>
+            {report.rows.map((r) => {
+              const np = num(r.np); const w = r.hasSpend ? Math.max(2, (Math.abs(np) / maxAbsNP) * 100) : 0;
+              return (
+                <div style={S.bar} key={r.brand_id}>
+                  <span style={{ ...S.bnm, color: r.hasSpend ? 'var(--ds-color-text-muted)' : 'var(--ds-color-text-faint,#aaa)' }}>{r.brand}</span>
+                  <div style={S.track}>{r.hasSpend && <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${w}%`, borderRadius: 7, background: np < 0 ? NEG : POS, opacity: np < 0 ? 0.85 : 1 }} />}</div>
+                  <span style={{ ...S.bamt, color: !r.hasSpend ? 'var(--ds-color-text-faint,#aaa)' : (np < 0 ? NEG : POS) }}>{r.hasSpend ? `${np < 0 ? '−' : '+'}${fmt(Math.abs(np))}` : '—'}</span>
+                </div>
+              );
+            })}
+            {report.rows.length === 0 && <p style={S.hint}>No data yet.</p>}
+          </div>
+        </div>
+
+        <div style={S.panel}>
+          <div style={S.panelH}><h3 style={S.h3}>Order outcomes</h3><span style={S.chip}>{fmt(totals.totalOrders)} total</span></div>
+          <p style={S.hint}>Where orders landed across all brands</p>
+          <div style={S.donutWrap}>
+            <svg width="140" height="140" viewBox="0 0 42 42" style={{ flexShrink: 0 }}>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--ds-color-bg)" strokeWidth="5" />
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke={POS} strokeWidth="5" strokeDasharray={`${dPct} ${100 - dPct}`} strokeDashoffset="25" />
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke={WARN} strokeWidth="5" strokeDasharray={`${rPct} ${100 - rPct}`} strokeDashoffset={`${25 - dPct}`} />
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke={NEG} strokeWidth="5" strokeDasharray={`${cPct} ${100 - cPct}`} strokeDashoffset={`${25 - dPct - rPct}`} />
+              <text x="21" y="20.5" textAnchor="middle" fill="var(--ds-color-text)" fontSize="7" fontWeight="700">{dPct.toFixed(0)}%</text>
+              <text x="21" y="26" textAnchor="middle" fill="var(--ds-color-text-muted)" fontSize="3.2">delivered</text>
+            </svg>
+            <div style={S.legend}>
+              <div style={S.li}><span style={{ ...S.sw, background: POS }} /><span><b>{fmt(delivered)}</b> Delivered · {dPct.toFixed(1)}%</span></div>
+              <div style={S.li}><span style={{ ...S.sw, background: WARN }} /><span><b>{fmt(totals.rto)}</b> RTO · {rPct.toFixed(1)}%</span></div>
+              <div style={S.li}><span style={{ ...S.sw, background: NEG }} /><span><b>{fmt(totals.cancelled)}</b> Cancelled · {cPct.toFixed(1)}%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ROAS strip */}
+      {roasRows.length > 0 && (
+        <div style={S.panel}>
+          <div style={S.panelH}><h3 style={S.h3}>Return on ad spend</h3><span style={S.chip}>baseline 1.0× = break-even</span></div>
+          <div style={S.roasGrid}>
+            {roasRows.map((r) => {
+              const roas = num(r.roas); const w = Math.min(100, (roas / 5) * 100); const good = roas >= 2;
+              return (
+                <div style={S.roasCard} key={r.brand_id}>
+                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{r.brand}</div>
+                  <div style={{ fontFamily: 'var(--ds-font-mono, monospace)', fontSize: 21, fontWeight: 700, marginTop: 5, color: good ? 'var(--ds-color-text)' : WARN }}>{roas.toFixed(2)}×</div>
+                  <div style={{ height: 5, borderRadius: 3, background: 'var(--ds-color-border)', marginTop: 8, position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${w}%`, borderRadius: 3, background: good ? POS : WARN }} />
+                    <span style={{ position: 'absolute', top: -3, bottom: -3, left: '20%', width: 1, background: 'var(--ds-color-text-faint,#aaa)' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={S.tableWrap}>
+        <table style={S.table}>
+          <thead><tr>{HEAD.map((h, i) => <th key={h} style={{ ...S.th, textAlign: i < 2 ? 'left' : 'right', paddingLeft: i === 0 ? 16 : 9 }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {report.rows.map((r) => (
+              <tr key={r.brand_id} style={{ opacity: r.hasSpend ? 1 : 0.5 }}>
+                <td style={{ ...S.td, textAlign: 'left', paddingLeft: 16, fontFamily: 'inherit', fontWeight: 700 }}>{r.brand}</td>
+                <td style={{ ...S.td, textAlign: 'left' }}>{r.from || '—'}</td>
+                <td style={S.td}>{fmt(r.totalOrders)}</td>
+                <td style={S.td}>{fmt(r.revenue)}</td>
+                <td style={S.td}>{fmt(r.adSpend)}</td>
+                <td style={S.td}>{fmt(r.cpp)}</td>
+                <td style={S.td}>{Number.isFinite(r.roas) ? r.roas.toFixed(2) : '—'}</td>
+                <td style={S.td}>{fmt(r.aov)}</td>
+                <td style={S.td}>{fmt(r.cancelled)}</td>
+                <td style={S.td}>{fmt(r.rto)}</td>
+                <td style={{ ...S.td, ...pn(r.gp) }}>{fmt(r.gp)}</td>
+                <td style={{ ...S.td, color: num(r.np) < 0 ? NEG : POS, fontWeight: 700 }}>{fmt(r.np)}</td>
+                <td style={S.td}>{pct(r.rtoPct)}</td>
+                <td style={{ ...S.td, ...pn(r.opPct) }}>{pct(r.opPct)}</td>
+              </tr>
+            ))}
+            {report.rows.length === 0 && !loading && (
+              <tr><td style={{ ...S.td, textAlign: 'center', padding: 24 }} colSpan={HEAD.length}>No data. Add ad spend, then Run.</td></tr>
+            )}
+          </tbody>
+          {report.rows.length > 0 && (
+            <tfoot><tr>
+              <td style={{ ...S.totalTd, textAlign: 'left', paddingLeft: 16, fontFamily: 'inherit' }}>Total</td>
+              <td style={S.totalTd}></td>
+              <td style={S.totalTd}>{fmt(totals.totalOrders)}</td>
+              <td style={S.totalTd}>{fmt(totals.revenue)}</td>
+              <td style={S.totalTd}>{fmt(totals.adSpend)}</td>
+              <td style={S.totalTd}>{fmt(totals.cpp)}</td>
+              <td style={S.totalTd}>{totals.roas.toFixed(2)}</td>
+              <td style={S.totalTd}>{fmt(totals.aov)}</td>
+              <td style={S.totalTd}>{fmt(totals.cancelled)}</td>
+              <td style={S.totalTd}>{fmt(totals.rto)}</td>
+              <td style={{ ...S.totalTd, ...pn(totals.gp) }}>{fmt(totals.gp)}</td>
+              <td style={{ ...S.totalTd, color: totals.np < 0 ? NEG : POS }}>{fmt(totals.np)}</td>
+              <td style={S.totalTd}>{pct(totals.rtoPct)}</td>
+              <td style={{ ...S.totalTd, ...pn(totals.opPct) }}>{pct(totals.opPct)}</td>
+            </tr></tfoot>
+          )}
+        </table>
+      </div>
+
+      {/* Add spend modal */}
+      <Modal isOpen={spendOpen} onClose={() => { setSpendOpen(false); setMsg(''); }} title="Add daily ad spend"
+        description="Pick a brand and enter that day's spend. Add as many days as you need." size="md">
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ minWidth: 170 }}>
-            <Select
-              label="Brand"
-              placeholder="Select brand"
-              value={spendForm.brand_id}
-              onChange={(val) => onPickBrand(val)}
-              options={brands.map((b) => ({ label: b.name, value: String(b.id) }))}
-            />
+            <Select label="Brand" placeholder="Select brand" value={spendForm.brand_id} onChange={(v) => onPickBrand(v)}
+              options={brands.map((b) => ({ label: b.name, value: String(b.id) }))} />
           </div>
           <Input label="Date" type="date" value={spendForm.date} onChange={(e) => setSpendForm((f) => ({ ...f, date: e.target.value }))} />
           <Input label="Spend (₹)" type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} />
           <Button variant="primary" onClick={addSpend}>Save</Button>
         </div>
-        {msg && <p style={{ ...S.hint, marginTop: 10, color: 'var(--ds-color-success,#10b981)' }}>{msg}</p>}
+        {msg && <p style={{ ...S.hint, marginTop: 10, color: POS }}>{msg}</p>}
         {spendForm.brand_id && (
           <div style={{ marginTop: 16 }}>
             <div style={{ ...S.label, marginBottom: 8 }}>Recorded days</div>
@@ -215,108 +336,25 @@ export default function AdsReporting() {
       </Modal>
 
       {/* Manage costs modal */}
-      <Modal
-        isOpen={costOpen}
-        onClose={() => { setCostOpen(false); setMsg(''); }}
-        title="Manage costs"
-        description="Defaults: product ₹140/order (per brand), shipping ₹90/order (global). Used for G.P. / N.P."
-        size="md"
+      <Modal isOpen={costOpen} onClose={() => { setCostOpen(false); setMsg(''); }} title="Manage costs"
+        description="Defaults: product ₹140/order (per brand), shipping ₹90/order (global). Used for G.P. / N.P." size="md"
         footer={(
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="ghost" onClick={() => setCostOpen(false)}>Close</Button>
             <Button variant="primary" onClick={saveSettings}>Save costs</Button>
           </div>
-        )}
-      >
+        )}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-          <Input label="Shipping / order (₹)" type="number" value={settings.shipping}
-            onChange={(e) => setSettings((s) => ({ ...s, shipping: e.target.value }))} />
+          <Input label="Shipping / order (₹)" type="number" value={settings.shipping} onChange={(e) => setSettings((s) => ({ ...s, shipping: e.target.value }))} />
         </div>
         <div style={{ ...S.label, margin: '16px 0 8px' }}>Product cost / order — per brand</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           {brands.map((b) => (
-            <Input key={b.id} label={`${b.name} (₹)`} type="number"
-              value={settings.productCost[b.id] ?? 140}
-              onChange={(e) => setProductCost(b.id, e.target.value)} />
+            <Input key={b.id} label={`${b.name} (₹)`} type="number" value={settings.productCost[b.id] ?? 140} onChange={(e) => setProductCost(b.id, e.target.value)} />
           ))}
         </div>
-        {msg && <p style={{ ...S.hint, marginTop: 10, color: 'var(--ds-color-success,#10b981)' }}>{msg}</p>}
+        {msg && <p style={{ ...S.hint, marginTop: 10, color: POS }}>{msg}</p>}
       </Modal>
-
-      {/* Report table */}
-      <div style={S.tableWrap}>
-        <table style={S.table}>
-          <thead><tr>{HEAD.map((h, i) => <th key={h} style={{ ...S.th, ...(i === 0 || i === 1 || i === 2 ? S.thL : {}) }}>{h}</th>)}</tr></thead>
-          <tbody>
-            {report.rows.map((r) => (
-              <tr key={r.brand_id} style={{ opacity: r.hasSpend ? 1 : 0.5 }}>
-                <td style={{ ...S.td, ...S.tdL }}>{r.brand}</td>
-                <td style={{ ...S.td, textAlign: 'left' }}>{r.from || '—'}</td>
-                <td style={{ ...S.td, textAlign: 'left' }}>{r.hasSpend ? r.to : '—'}</td>
-                <td style={S.td}>{fmt(r.totalOrders)}</td>
-                <td style={S.td}>{fmt(r.revenue)}</td>
-                <td style={S.td}>{fmt(r.adSpend)}</td>
-                <td style={S.td}>{fmt(r.prepaid)}</td>
-                <td style={S.td}>{fmt(r.cod)}</td>
-                <td style={S.td}>{fmt(r.cancelled)}</td>
-                <td style={S.td}>{fmt(r.rto)}</td>
-                <td style={S.td}>{fmt(r.cpp)}</td>
-                <td style={S.td}>{Number.isFinite(r.roas) ? r.roas.toFixed(2) : '—'}</td>
-                <td style={S.td}>{fmt(r.aov)}</td>
-                <td style={S.td}>{fmt(r.pdo)}</td>
-                <td style={S.td}>{pct(r.por)}</td>
-                <td style={S.td}>{pct(r.cor)}</td>
-                <td style={{ ...S.td, ...pn(r.gp) }}>{fmt(r.gp)}</td>
-                <td style={S.td}>{fmt(r.cancLoss)}</td>
-                <td style={S.td}>{fmt(r.rtoLoss)}</td>
-                <td style={{ ...S.td, ...pn(r.np), fontWeight: 700 }}>{fmt(r.np)}</td>
-                <td style={S.td}>{pct(r.cancPct)}</td>
-                <td style={S.td}>{pct(r.rtoPct)}</td>
-                <td style={S.td}>{fmt(r.days)}</td>
-                <td style={S.td}>{Number.isFinite(r.ado) ? r.ado.toFixed(2) : '—'}</td>
-                <td style={S.td}>{fmt(r.adr, 2)}</td>
-                <td style={{ ...S.td, ...pn(r.adnp) }}>{fmt(r.adnp, 2)}</td>
-                <td style={{ ...S.td, ...pn(r.opPct) }}>{pct(r.opPct)}</td>
-              </tr>
-            ))}
-            {report.rows.length === 0 && !loading && (
-              <tr><td style={{ ...S.td, textAlign: 'center', padding: 24 }} colSpan={HEAD.length}>No brands / data. Add ad spend above, then Run report.</td></tr>
-            )}
-          </tbody>
-          {report.rows.length > 0 && (
-            <tfoot>
-              <tr>
-                <td style={{ ...S.totalTd, textAlign: 'left' }}>Total</td>
-                <td style={S.totalTd}></td><td style={S.totalTd}></td>
-                <td style={S.totalTd}>{fmt(totals.totalOrders)}</td>
-                <td style={S.totalTd}>{fmt(totals.revenue)}</td>
-                <td style={S.totalTd}>{fmt(totals.adSpend)}</td>
-                <td style={S.totalTd}>{fmt(totals.prepaid)}</td>
-                <td style={S.totalTd}>{fmt(totals.cod)}</td>
-                <td style={S.totalTd}>{fmt(totals.cancelled)}</td>
-                <td style={S.totalTd}>{fmt(totals.rto)}</td>
-                <td style={S.totalTd}>{fmt(totals.cpp)}</td>
-                <td style={S.totalTd}>{totals.roas.toFixed(2)}</td>
-                <td style={S.totalTd}>{fmt(totals.aov)}</td>
-                <td style={S.totalTd}>{fmt(totals.pdo)}</td>
-                <td style={S.totalTd}>{pct(totals.por)}</td>
-                <td style={S.totalTd}>{pct(totals.cor)}</td>
-                <td style={{ ...S.totalTd, ...pn(totals.gp) }}>{fmt(totals.gp)}</td>
-                <td style={S.totalTd}>{fmt(totals.cancLoss)}</td>
-                <td style={S.totalTd}>{fmt(totals.rtoLoss)}</td>
-                <td style={{ ...S.totalTd, ...pn(totals.np) }}>{fmt(totals.np)}</td>
-                <td style={S.totalTd}>{pct(totals.cancPct)}</td>
-                <td style={S.totalTd}>{pct(totals.rtoPct)}</td>
-                <td style={S.totalTd}>{fmt(totals.days)}</td>
-                <td style={S.totalTd}>{totals.ado.toFixed(2)}</td>
-                <td style={S.totalTd}>{fmt(totals.adr, 2)}</td>
-                <td style={{ ...S.totalTd, ...pn(totals.adnp) }}>{fmt(totals.adnp, 2)}</td>
-                <td style={{ ...S.totalTd, ...pn(totals.opPct) }}>{pct(totals.opPct)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
     </div>
   );
 }

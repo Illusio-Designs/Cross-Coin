@@ -21,7 +21,19 @@ const CATEGORIES = [
   { name: 'Kids', note: 'Socks, toys & more' },
 ];
 
-const MARKETS = ['Amazon', 'Flipkart', 'Meesho', 'AJIO', 'JioMart', 'Myntra', 'Shopsy', 'Blinkit', 'Zepto', 'Instamart'];
+// Brand-coloured wordmarks (swap for official logo images when available).
+const MARKETS = [
+  { name: 'amazon', color: '#FF9900' },
+  { name: 'Flipkart', color: '#2874F0' },
+  { name: 'Meesho', color: '#F43397' },
+  { name: 'AJIO', color: '#2C4152' },
+  { name: 'JioMart', color: '#008ECC' },
+  { name: 'Myntra', color: '#FF3F6C' },
+  { name: 'Shopsy', color: '#7B4FFF' },
+  { name: 'Blinkit', color: '#E8A200' },
+  { name: 'Zepto', color: '#6C3DF4' },
+  { name: 'Instamart', color: '#FC8019' },
+];
 
 const CONTACT_EMAIL = 'Obzusindia@gmail.com';
 
@@ -107,7 +119,11 @@ export default function Home() {
           <h2 className={styles.h2}>Wherever you shop.</h2>
           <p className={styles.lead}>Our brands are on all the leading platforms — plus our own websites.</p>
           <div className={styles.markets}>
-            {MARKETS.map((m) => <span className={styles.market} key={m}>{m}</span>)}
+            {MARKETS.map((m) => (
+              <span className={styles.market} key={m.name}>
+                <b style={{ color: m.color }}>{m.name}</b>
+              </span>
+            ))}
             <span className={styles.market}><b>+ Our websites</b></span>
           </div>
         </div>
