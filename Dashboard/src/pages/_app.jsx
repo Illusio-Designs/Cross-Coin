@@ -5,9 +5,6 @@ import { queryClient } from "../lib/queryClient";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { CartProvider, useCart } from "../context/CartContext";
-import { WishlistProvider } from "../context/WishlistContext";
-import { BreadcrumbProvider } from "../components/common/Breadcrumb";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Loader from "../components/common/Loader";
@@ -172,18 +169,16 @@ function AppContent({ Component, pageProps, progressRef }) {
 function AppWrapper({ Component, pageProps, progressRef }) {
   return (
     <QueryClientProvider client={queryClient}>
+      {/* No storefront Cart/Wishlist providers here — this app is the public
+          Obzus site + admin dashboard only. They used to fetch /api/cart and
+          /api/wishlist on the public pages, which 401'd and wiped the admin
+          token (forcing a re-login when returning to /dashboard). */}
       <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <BreadcrumbProvider>
-              <AppContent 
-                Component={Component} 
-                pageProps={pageProps}
-                progressRef={progressRef}
-              />
-            </BreadcrumbProvider>
-          </WishlistProvider>
-        </CartProvider>
+        <AppContent
+          Component={Component}
+          pageProps={pageProps}
+          progressRef={progressRef}
+        />
       </AuthProvider>
     </QueryClientProvider>
   );
