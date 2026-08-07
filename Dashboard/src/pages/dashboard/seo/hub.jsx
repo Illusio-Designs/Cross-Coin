@@ -110,6 +110,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
                 cursor: 'pointer',
                 transition: 'background var(--ds-trans-fast), color var(--ds-trans-fast)',
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {t.label}

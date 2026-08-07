@@ -4,6 +4,10 @@
   background: var(--ds-color-surface);
   color: var(--ds-color-text);
   height: 100vh;
+  /* dvh excludes the mobile browser chrome / home indicator, so the footer
+     ("Need help?" support button) isn't pushed below the visible viewport on
+     phones the way 100vh does. */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -339,6 +343,8 @@
 /* ── Footer ─────────────────────────────────────────────────── */
 .sb-footer {
   padding: 12px 10px;
+  /* keep the button clear of the iOS home indicator */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--ds-color-border-soft);
   flex-shrink: 0;
 }

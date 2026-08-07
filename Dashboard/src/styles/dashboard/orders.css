@@ -3540,15 +3540,24 @@
 
 /* ── Status tabs — segmented control like the prototype ──────────────── */
 .ord-tabs {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: nowrap;
   background: var(--ds-color-bg);
   border: 1px solid var(--ds-color-border);
   border-radius: 9px;
   padding: 3px;
   gap: 2px;
-  flex-wrap: wrap;
   margin-bottom: var(--ds-space-3);
+  /* Scroll horizontally on one line instead of wrapping onto multiple rows. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.ord-tabs::-webkit-scrollbar { display: none; }
 .ord-tab {
   padding: 6px 14px;
   border-radius: 7px;
@@ -3559,6 +3568,7 @@
   border: none;
   background: none;
   white-space: nowrap;
+  flex-shrink: 0;
   font-family: 'DM Sans', sans-serif;
   transition: background 0.15s, color 0.15s;
 }
