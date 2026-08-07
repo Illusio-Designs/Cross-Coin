@@ -637,7 +637,10 @@ class IThinkService {
         },
       };
 
-      const response = await this.axiosInstance.post('/api/order/cancel.json', payload);
+      // Use the v3 cancel endpoint — orders are created via /api_v3/order/add.json,
+      // so cancelling through the old /api/order/cancel.json silently failed to
+      // match them and the shipment stayed active in iThink.
+      const response = await this.axiosInstance.post('/api_v3/order/cancel.json', payload);
       // iThink returns HTTP 200 even when the cancel is rejected, so inspect the
       // body. Log the raw response so the exact shape is visible in production.
       logger.info(`iThink cancel response for AWB ${awbStr}: ` + JSON.stringify(response.data).slice(0, 400));
