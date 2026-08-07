@@ -4,7 +4,6 @@ export { default } from './index';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
-import Loader from '../../components/common/Loader';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
 import { inlineHtml } from '../../utils/sanitizeHtml';
@@ -132,6 +131,17 @@ function normalizeRejectReason(reason) {
     NONE: '',
   };
   return MAP[reason] || reason.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase());
+}
+
+// ─── WhatsApp 3-dot loader ────────────────────────────────────────────────────
+// Monochrome, theme-aware typing-style loader used across the WhatsApp page
+// instead of the storefront's purple spinner.
+function WaLoad({ label }) {
+  return (
+    <div className="wa-loader" role="status" aria-label={label || 'Loading'}>
+      <span /><span /><span />
+    </div>
+  );
 }
 
 // ─── Phone Preview ────────────────────────────────────────────────────────────
@@ -1503,7 +1513,7 @@ export function WhatsAppManager() {
 
               {/* Stats */}
               <div className="was-stats-grid">
-                {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
+                {statsLoading ? <div style={{padding:20}}><WaLoad /></div> : [
                   { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#0a0a0a', icon: IC.send },
                   { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#6b6b73', icon: IC.check },
                   { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#6b6b73', icon: IC.eye },
@@ -1528,7 +1538,7 @@ export function WhatsAppManager() {
                     <span className="was-dash-card-title">Messages — Last 7 Days</span>
                   </div>
                   <div className="was-bar-chart">
-                    {statsLoading ? <Loader /> : (() => {
+                    {statsLoading ? <WaLoad /> : (() => {
                       const days = fillLast7Days(stats?.last7Days);
                       const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
                       return days.every(d => (parseInt(d.count) || 0) === 0)
@@ -1555,7 +1565,7 @@ export function WhatsAppManager() {
                     <button className="was-dash-link" onClick={() => setPage('inbox')}>View all</button>
                   </div>
                   <div className="was-activity">
-                    {statsLoading ? <Loader /> : [
+                    {statsLoading ? <WaLoad /> : [
                       { dot:'green', text: <><strong>{stats?.openConversations ?? 0}</strong> open conversations</>, time:'' },
                       { dot:'blue',  text: <><strong>{stats?.resolvedConversations ?? 0}</strong> resolved conversations</>, time:'' },
                       { dot:'amber', text: <><strong>{stats?.unreadCount ?? 0}</strong> unread messages</>, time:'' },
@@ -1609,7 +1619,7 @@ export function WhatsAppManager() {
                 ))}
               </div>
               <div className="was-thread-scroll">
-                {convLoading ? <div style={{padding:20,textAlign:'center'}}><Loader /></div>
+                {convLoading ? <div style={{padding:20,textAlign:'center'}}><WaLoad /></div>
                 : filteredConvs.length === 0 ? (
                   <div className="was-empty-state">
                     <div style={{width:36,height:36,color:'var(--ds-color-text-faint)'}}>{IC.msg}</div>
@@ -1680,7 +1690,7 @@ export function WhatsAppManager() {
                         </button>
                       </div>
                     )}
-                    {msgLoading ? <div style={{textAlign:'center',padding:20}}><Loader /></div>
+                    {msgLoading ? <div style={{textAlign:'center',padding:20}}><WaLoad /></div>
                     : messages.length === 0 ? <div className="was-no-msgs">No messages yet</div>
                     : (() => {
                         const items = [];
@@ -2049,7 +2059,7 @@ export function WhatsAppManager() {
                 </button>
               </div>
 
-              {listLoading && !managerRows.length ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+              {listLoading && !managerRows.length ? <div style={{padding:40,textAlign:'center'}}><WaLoad /></div> : (
                 <div className="was-tpl-grid">
                   {filteredManager.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
@@ -2187,7 +2197,7 @@ export function WhatsAppManager() {
                   <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>Seed Defaults
                 </button>
               </div>
-              {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+              {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><WaLoad /></div> : (
                 <div className="was-tpl-grid">
                   {cannedResponses.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
@@ -2226,7 +2236,7 @@ export function WhatsAppManager() {
                   <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Campaign
                 </button>
               </div>
-              {broadcastLoading ? <div style={{padding:40,textAlign:'center'}}><Loader /></div> : (
+              {broadcastLoading ? <div style={{padding:40,textAlign:'center'}}><WaLoad /></div> : (
                 <div className="was-tpl-grid">
                   {broadcasts.length === 0 ? (
                     <div className="was-empty-state" style={{gridColumn:'1/-1'}}>
@@ -2273,7 +2283,7 @@ export function WhatsAppManager() {
 
               {/* Stats row */}
               <div className="was-stats-grid">
-                {statsLoading ? <div style={{padding:20}}><Loader /></div> : [
+                {statsLoading ? <div style={{padding:20}}><WaLoad /></div> : [
                   { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#0a0a0a', icon: IC.send },
                   { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#6b6b73', icon: IC.check },
                   { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#6b6b73', icon: IC.eye },
@@ -2293,7 +2303,7 @@ export function WhatsAppManager() {
               <div className="was-dash-card" style={{marginTop:20}}>
                 <div className="was-dash-card-head"><span className="was-dash-card-title">Messages — Last 7 Days</span></div>
                 <div className="was-bar-chart">
-                  {statsLoading ? <Loader /> : (() => {
+                  {statsLoading ? <WaLoad /> : (() => {
                     const days = fillLast7Days(stats?.last7Days);
                     const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
                     return days.every(d => (parseInt(d.count) || 0) === 0)
@@ -2458,7 +2468,7 @@ export function WhatsAppManager() {
           />
           <div style={{ maxHeight:320, overflowY:'auto', display:'flex', flexDirection:'column', gap:6 }}>
             {productLoading
-              ? <div style={{ textAlign:'center', padding:20 }}><Loader /></div>
+              ? <div style={{ textAlign:'center', padding:20 }}><WaLoad /></div>
               : productList.length === 0
                 ? <div style={{ textAlign:'center', color:'var(--ds-color-text-faint)', fontSize:13, padding:20 }}>No products found</div>
                 : productList.map(p => {
