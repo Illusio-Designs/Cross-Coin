@@ -284,6 +284,36 @@ async function syncOrderToFShip(order) {
   const { sequelize } = require('../config/db.js');
 
   try {
+    // iThink mandates an explicit courier (no default). The FShip-style booking
+    // below sends no courier, so iThink throws "Courier selection is REQUIRED"
+    // and the order is marked failed — this fired on every prepaid order the
+    // moment payment was confirmed. Route iThink through enhancedSyncSingleOrder,
+    // which auto-selects the best serviceable courier (with fallback) exactly
+    // like the manual Sync button and the queue worker — so prepaid AND COD book
+    // automatically. FShip keeps its existing courier-less flow untouched.
+    const providerNameEarly = await shippingProviderFactory.getProviderName(order.brand_id || 1);
+    if (providerNameEarly === 'ithink') {
+      const orderShippingController = require('../controller/orderShippingController.js');
+      const fresh = await Order.findByPk(order.id);
+      if (!fresh) return;
+      if (fresh.fship_order_id && fresh.fship_waybill) {
+        logger.info(`[Shipping] Skipping ${order.order_number} — already booked (iThink)`);
+        return;
+      }
+      const r = await orderShippingController.enhancedSyncSingleOrder(fresh);
+      if (r && r.success) {
+        logger.info(`[Shipping] iThink auto-synced ${order.order_number} → courier ${r.courier || '?'}`);
+      } else {
+        const msg = (r && r.error) || 'iThink auto-sync failed';
+        logger.warn(`[Shipping] iThink auto-sync ${order.order_number}: ${msg}`);
+        await Order.update(
+          { fship_sync_status: 'failed', fship_sync_error: String(msg).slice(0, 1000) },
+          { where: { id: order.id } }
+        ).catch(() => {});
+      }
+      return;
+    }
+
     // Atomic status check + update to prevent double sync
     const [affectedRows] = await sequelize.query(
       `UPDATE orders SET fship_sync_status = 'syncing', fship_sync_attempts = fship_sync_attempts + 1
