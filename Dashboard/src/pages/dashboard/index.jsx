@@ -31,6 +31,7 @@ import AdminLookbooks from "./social/lookbooks";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
+import AdsReporting from "./reports/adsReporting";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
@@ -252,6 +253,7 @@ function Dashboard() {
       case 'media-gallery':   return <MediaGallery />;
       case 'utm-analytics':   return <UTMAnalytics />;
       case 'reports':         return <Reports />;
+      case 'ads-reporting':   return <AdsReporting />;
       case 'staff-users':     return <StaffUsers />;
       // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the
       // in-app System Monitoring panel (5s polling) was removed.

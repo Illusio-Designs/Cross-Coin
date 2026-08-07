@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import Layout from '../components/Layout';
-import { Ico, Check, ArrowRight } from '../components/icons';
+import Layout from '../components/site/Layout';
+import { Ico, Check, ArrowRight } from '../components/site/icons';
 import { BRANDS } from '../data/brands';
 import styles from '../styles/site.module.css';
 

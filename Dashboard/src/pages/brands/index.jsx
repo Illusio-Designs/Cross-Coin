@@ -1,5 +1,5 @@
-import Layout from '../../components/Layout';
-import BrandCard from '../../components/BrandCard';
+import Layout from '../../components/site/Layout';
+import BrandCard from '../../components/site/BrandCard';
 import { BRANDS } from '../../data/brands';
 import styles from '../../styles/site.module.css';
 

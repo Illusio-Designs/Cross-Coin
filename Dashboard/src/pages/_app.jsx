@@ -120,30 +120,16 @@ import ErrorBoundary from "../components/common/ErrorBoundary";
 import { DASHBOARD_CSS_VERSION } from "../dashboardCssVersion";
 
 function AppContent({ Component, pageProps, progressRef }) {
-  const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
-  const { user } = useAuth();
   const router = useRouter();
-  const [showBackTop, setShowBackTop] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
 
-  useEffect(() => {
-    setHasMounted(true);
-    const onScroll = () => setShowBackTop(window.scrollY > 400);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  
-  // Check if current route is a dashboard route
+  // This app serves the public Obzus site (own Layout) + the admin dashboard
+  // (own Sidebar/Header) + /login. There is NO storefront chrome here — the
+  // dashboard CSS bundle is still loaded only on /dashboard routes.
   const isDashboard = router.pathname.startsWith('/dashboard');
-  const isAuthPage = router.pathname.startsWith('/auth');
 
   return (
     <>
       <SentryInit />
-      {/* Admin-page dashboard CSS — loaded ONLY on /dashboard routes so the
-          ~226KB bundle never touches the storefront's critical path. Rendered
-          into <head> server-side (via next/head) so there's no flash of
-          unstyled dashboard. Built by scripts/build-dashboard-css.mjs. */}
       {isDashboard && (
         <Head>
           <link rel="stylesheet" href={`/dashboard.css?v=${DASHBOARD_CSS_VERSION}`} />
@@ -157,22 +143,9 @@ function AppContent({ Component, pageProps, progressRef }) {
           style={{ width: 0 }}
         />
       </div>
-      {!isDashboard && !isAuthPage && <Header />}
-      {!isDashboard && !isAuthPage && <Breadcrumb />}
-      {isDashboard || isAuthPage ? (
-        <Component {...pageProps} />
-      ) : (
-        <main id="main-content">
-          <Component {...pageProps} />
-        </main>
-      )}
-      {!isDashboard && !isAuthPage && <Footer />}
-      <CartDrawer 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)}
-        lastAddedItem={lastAddedItem}
-      />
-      
+
+      <Component {...pageProps} />
+
       <ToastContainer
         position="top-right"
         autoClose={1500}
@@ -192,21 +165,6 @@ function AppContent({ Component, pageProps, progressRef }) {
           pauseOnFocusLoss: false,
         }}
       />
-
-      {/* Back to top button — storefront only (kept off the dashboard, where it
-          overlapped panel actions like the CSV export buttons) */}
-      {!isDashboard && hasMounted && showBackTop && (
-        <button
-          className="back-to-top"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Back to top"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-        </button>
-      )}
-      {!isDashboard && !isAuthPage && hasMounted && <WhatsAppChat />}
     </>
   );
 }

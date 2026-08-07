@@ -48,7 +48,7 @@ export const ROLE_VIEWS = {
     'lookbooks',
   ],
   order_manager: [
-    'main', 'orders', 'reports', 'payments', 'coupons', 'shippingFees',
+    'main', 'orders', 'reports', 'ads-reporting', 'payments', 'coupons', 'shippingFees',
     'reviews', 'consumers',
   ],
   whatsapp_manager: [

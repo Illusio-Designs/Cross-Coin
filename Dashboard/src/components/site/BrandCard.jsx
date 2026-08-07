@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from './icons';
-import styles from '../styles/site.module.css';
+import styles from '../../styles/site.module.css';
 
 /** Brand card → links to the internal brand detail page (/brands/[slug]). */
 export default function BrandCard({ brand }) {

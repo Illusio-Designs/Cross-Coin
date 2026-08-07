@@ -12,7 +12,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Set explicitly so the public site keeps its own type regardless of the
+     admin app's global font (the two share one deployment). */
+  font-family: 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
+.page *, .page *::before, .page *::after { box-sizing: border-box; }
 
 /* ── Nav ── */
 .nav {

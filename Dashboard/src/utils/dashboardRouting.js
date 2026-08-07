@@ -26,6 +26,7 @@ export const getPageTitle = (view) => {
     'media-gallery': 'Media Gallery',
     'utm-analytics': 'UTM Analytics',
     'reports': 'Reports',
+    'ads-reporting': 'Ads Reporting',
     'lookbooks': 'Lookbooks',
     'staff-users': 'Staff Users',
   };
@@ -34,7 +35,7 @@ export const getPageTitle = (view) => {
 
 export const handleViewChange = (view, setCurrentView) => {
   if (view === 'logout') {
-    window.location.href = '/auth/adminlogin';
+    window.location.href = '/login';
   } else {
     setCurrentView(view);
     // Update URL without page reload using browser history API

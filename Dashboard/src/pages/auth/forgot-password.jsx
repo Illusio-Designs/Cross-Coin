@@ -13,7 +13,7 @@ export default function ForgotPassword() {
         />
         <button className="login-btn">Send Reset Link</button>
         <div className="login-back-link">
-          <Link href="/auth/adminlogin" className="login-link">Back to Login</Link>
+          <Link href="/login" className="login-link">Back to Login</Link>
         </div>
       </div>
     </div>

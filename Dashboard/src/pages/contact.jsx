@@ -1,5 +1,5 @@
-import Layout from '../components/Layout';
-import { Mail, ArrowUpRight } from '../components/icons';
+import Layout from '../components/site/Layout';
+import { Mail, ArrowUpRight } from '../components/site/icons';
 import styles from '../styles/site.module.css';
 
 const CONTACT_EMAIL = 'illusiodesigns@gmail.com';

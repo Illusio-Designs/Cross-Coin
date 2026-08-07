@@ -1,14 +1,9 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import ObzusLogo from './ObzusLogo';
+import ObzusLogo from '../common/ObzusLogo';
 import { ArrowUpRight } from './icons';
-import styles from '../styles/site.module.css';
-
-// The admin dashboard is a SEPARATE app on its own domain. Set
-// NEXT_PUBLIC_ADMIN_URL (e.g. https://admin.obzus.com) on Vercel to surface the
-// "Admin sign in" link; left blank, the public site shows "Contact" instead.
-const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || '';
+import styles from '../../styles/site.module.css';
 
 const NAV = [
   { href: '/', label: 'Home' },
@@ -47,9 +42,7 @@ export default function Layout({ children, title, description, activePath }) {
               </Link>
             ))}
           </div>
-          {ADMIN_URL
-            ? <a className={styles.signin} href={ADMIN_URL}>Admin sign in <ArrowUpRight /></a>
-            : <Link className={styles.signin} href="/contact">Get in touch <ArrowUpRight /></Link>}
+          <Link className={styles.signin} href="/login">Login <ArrowUpRight /></Link>
         </nav>
 
         {children}
@@ -60,7 +53,7 @@ export default function Layout({ children, title, description, activePath }) {
             <Link href="/about">About</Link>
             <Link href="/brands">Brands</Link>
             <Link href="/contact">Contact</Link>
-            {ADMIN_URL && <a href={ADMIN_URL}>Admin</a>}
+            <Link href="/login">Login</Link>
           </div>
           <span>© {new Date().getFullYear()} Obzus. All rights reserved.</span>
         </footer>

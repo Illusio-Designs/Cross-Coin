@@ -13,9 +13,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     if (loading) return;
 
     if (!user) {
-      if (router.pathname !== "/auth/adminlogin") {
+      if (router.pathname !== "/login") {
         setRedirecting(true);
-        router.replace("/auth/adminlogin");
+        router.replace("/login");
       }
       return;
     }

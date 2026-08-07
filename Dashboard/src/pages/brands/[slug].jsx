@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import Layout from '../../components/Layout';
-import BrandCard from '../../components/BrandCard';
-import { Check, ArrowUpRight, ArrowLeft } from '../../components/icons';
+import Layout from '../../components/site/Layout';
+import BrandCard from '../../components/site/BrandCard';
+import { Check, ArrowUpRight, ArrowLeft } from '../../components/site/icons';
 import { BRANDS, getBrand } from '../../data/brands';
 import styles from '../../styles/site.module.css';
 
