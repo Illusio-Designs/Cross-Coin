@@ -337,7 +337,7 @@ function CardGrid() {
         <div className="kpi">
           <div className="kl">Orders</div>
           <div className="kv num">{inr(totalOrders)}</div>
-          <div className="kf"><Delta pct={deltas.orders?.pct} /> <span className="mut">{inr(deltas.orders?.today ?? orders.recent ?? 0)} today</span></div>
+          <div className="kf"><Delta pct={deltas.orders?.pct} /> <span className="mut">{inr(deltas.orders?.today ?? 0)} today</span></div>
         </div>
         <div className="kpi">
           <div className="kl">Customers</div>

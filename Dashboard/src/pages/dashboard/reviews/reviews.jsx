@@ -35,6 +35,12 @@ export default function Reviews() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Debounce the search box so typing issues one server query, not one per key.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -57,10 +63,11 @@ export default function Reviews() {
       setLoading(true);
       setError(null);
       const selectedBrand = (Array.isArray(brands) ? brands : []).find(b => String(b.id) === brandFilter);
-      const response = await reviewService.getAllReviews('all', {
-        page: currentPage, limit: itemsPerPage, status: 'all',
+      const response = await reviewService.getAllReviews(statusFilter || 'all', {
+        page: currentPage, limit: itemsPerPage,
         brandId: brandFilter || undefined,
         brandSlug: selectedBrand?.slug || undefined,
+        search: debouncedSearch || undefined,
       });
       const list = response?.reviews || response || [];
       setReviews(list.map(r => ({
@@ -82,7 +89,7 @@ export default function Reviews() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, brandFilter]);
+  }, [currentPage, itemsPerPage, brandFilter, statusFilter, debouncedSearch]);
 
   const fetchStatusCounts = useCallback(async () => {
     try {
@@ -102,16 +109,13 @@ export default function Reviews() {
 
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
   useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);
-  useEffect(() => { setCurrentPage(1); }, [search, brandFilter]);
+  // Reset to page 1 whenever a server-side filter changes, so we never land on
+  // a now-out-of-range page.
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, brandFilter, statusFilter]);
 
-  const filteredData = reviews.filter(item => {
-    if (statusFilter && item.status !== statusFilter) return false;
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return item.customerName?.toLowerCase().includes(s) ||
-           item.productName?.toLowerCase().includes(s) ||
-           item.review?.toLowerCase().includes(s);
-  });
+  // Status + search are applied server-side (across all pages), so the loaded
+  // page is already the filtered result — no client-side re-filtering.
+  const filteredData = reviews;
 
   const currentItemsWithSN = filteredData.map((item, idx) => ({
     ...item, serial_number: (currentPage - 1) * itemsPerPage + idx + 1,

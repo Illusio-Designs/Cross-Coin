@@ -1489,14 +1489,14 @@ export const couponService = {
 export const reviewService = {
   getAllReviews: async (status = "all", params = {}) => {
     try {
-      const { page = 1, limit = 10, brandId } = params;
+      const { page = 1, limit = 10, brandId, search } = params;
       const headers = {};
       if (brandId) {
         // Find brand slug from brandId — pass as X-Brand-Name header for backend filtering
         headers['X-Brand-Name'] = params.brandSlug || brandId;
       }
       const response = await adminApi.get(`/api/reviews/admin/all`, {
-        params: { status, page, limit },
+        params: { status, page, limit, ...(search ? { search } : {}) },
         headers,
       });
       if (response.data) return response.data;

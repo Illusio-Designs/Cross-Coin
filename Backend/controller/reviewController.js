@@ -703,7 +703,7 @@ module.exports.deleteReview = async (req, res) => {
 // Get all reviews (Admin purpose)
 module.exports.getAllReviews = async (req, res) => {
     try {
-        const { page = 1, limit = 10, status, sort = 'createdAt_desc' } = req.query;
+        const { page = 1, limit = 10, status, search, sort = 'createdAt_desc' } = req.query;
         const cappedLimit = Math.min(parseInt(limit) || 20, 100);
         const offset = (parseInt(page) - 1) * cappedLimit;
 
@@ -716,12 +716,26 @@ module.exports.getAllReviews = async (req, res) => {
         if (status && status !== 'all') whereClause.status = status;
         if (req.brandId) whereClause.brandId = req.brandId;
 
+        // Server-side search so it matches across ALL pages, not just the loaded
+        // page. Spans the review text, the guest name, and the joined registered
+        // user / product names (subQuery must be off for the $assoc.col$ filters
+        // to apply alongside limit/offset; distinct still counts unique reviews).
+        const q = (search || '').trim();
+        if (q) {
+            whereClause[Op.or] = [
+                { review: { [Op.like]: `%${q}%` } },
+                { guestName: { [Op.like]: `%${q}%` } },
+                { '$User.username$': { [Op.like]: `%${q}%` } },
+                { '$Product.name$': { [Op.like]: `%${q}%` } },
+            ];
+        }
+
         const productInclude = {
             model: Product,
             as: 'Product',
             attributes: ['id', 'name'],
         };
-        
+
         const reviews = await Review.findAndCountAll({
             where: whereClause,
             include: [
@@ -733,7 +747,8 @@ module.exports.getAllReviews = async (req, res) => {
             order,
             limit: cappedLimit,
             offset,
-            distinct: true
+            distinct: true,
+            ...(q ? { subQuery: false } : {}),
         });
         
         res.json({

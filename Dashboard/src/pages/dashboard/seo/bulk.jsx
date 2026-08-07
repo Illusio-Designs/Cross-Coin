@@ -78,7 +78,11 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
     setSaving(true);
     try {
       const res = await seoAdminService.bulkUpdate(dirtyItems);
-      showSuccess('saved', `Saved ${res.updated_count} products. ${res.error_count} failed.`);
+      if (res.error_count > 0) {
+        showError('saveFailed', `Saved ${res.updated_count}, but ${res.error_count} failed.`);
+      } else {
+        showSuccess('saved', `Saved ${res.updated_count} product${res.updated_count === 1 ? '' : 's'}.`);
+      }
       setEdits({});
       load();
     } catch (err) {

@@ -101,7 +101,10 @@ const UTMAnalytics = () => {
     const campaignMap = new Map();
 
     trackingData.forEach(item => {
-      const key = `${item.utm_source || 'direct'}_${item.utm_campaign || 'none'}`;
+      // Include utm_medium in the key — grouping on source+campaign only
+      // collapsed rows that differ by medium and showed whichever medium
+      // arrived first, corrupting the Medium column and "Orders by Medium".
+      const key = `${item.utm_source || 'direct'}_${item.utm_medium || 'none'}_${item.utm_campaign || 'none'}`;
       
       if (!campaignMap.has(key)) {
         campaignMap.set(key, {

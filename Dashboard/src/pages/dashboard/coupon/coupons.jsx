@@ -224,8 +224,10 @@ export default function Coupons() {
                   options={[
                     { value: 'percentage', label: 'Percentage' },
                     { value: 'fixed', label: 'Fixed Amount' },
-                    { value: 'tiered', label: 'Tiered Discount' },
-                    { value: 'quantity_based', label: 'Quantity Based' },
+                    // 'tiered' / 'quantity_based' removed — the form has no UI to
+                    // configure their tiers, so selecting them produced a coupon
+                    // with empty rules and a meaningless flat value. Re-add with
+                    // the tier/quantity editors when that UI exists.
                   ]}
                   value={formData.type}
                   onChange={v => setFormData(prev => ({ ...prev, type: v }))}
