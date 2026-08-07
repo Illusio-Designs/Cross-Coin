@@ -2087,9 +2087,18 @@
     flex-shrink: 0;
   }
 
-  /* Inbox: one pane at a time */
-  .was-inbox-wrap { position: relative; }
-  .was-thread-list { width: 100%; border-right: none; }
+  /* Inbox: one pane at a time. Override the ≤900px block's stacked-layout caps
+     (max-height:280px on the list, height:auto on the wrap) so the visible pane
+     fills the whole studio instead of leaving a dead gap below a short list. */
+  .was-inbox-wrap { position: relative; flex: 1; height: auto; min-height: 0; }
+  .was-thread-list {
+    width: 100%;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-right: none;
+    border-bottom: none;
+  }
   .was-inbox-wrap .was-chat { display: none; }
   .was-inbox-wrap.has-active .was-thread-list { display: none; }
   .was-inbox-wrap.has-active .was-chat {
@@ -2132,8 +2141,10 @@
   .was-stat-icon svg { width: 13px; height: 13px; }
   .was-page-head { flex-wrap: wrap; gap: 8px; }
   .was-thread-list { min-width: 0; }
-  .was-nav-label { display: none; }        /* icon-only rail on tiny screens */
-  .was-nav-item { padding: 8px 12px; }
+  /* Keep the icon+label tab rail (it scrolls horizontally) rather than a
+     mystery icon-only bar — each WhatsApp section stays identifiable. */
+  .was-nav-item { padding: 6px 10px; }
+  .was-nav-label { font-size: 10px; }
 }
 
 /* ── Template Manager (SaaS-style seed/update) ────────────────────────────── */
