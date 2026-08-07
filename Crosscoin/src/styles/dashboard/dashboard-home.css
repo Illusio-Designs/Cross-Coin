@@ -6,6 +6,10 @@
  */
 
 .obz-home { display: flex; flex-direction: column; gap: 18px; }
+/* The flex `gap` already spaces the header from the first section — drop the
+   PageHeader's own margin so the two don't stack into a big empty gap. */
+.obz-home .ds-pageheader { margin-bottom: 0; }
+@media (max-width: 640px) { .obz-home { gap: 14px; } }
 .obz-home .num { font-variant-numeric: tabular-nums; }
 .obz-home .mut { color: var(--ds-color-text-muted); }
 
