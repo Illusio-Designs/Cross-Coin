@@ -41,6 +41,11 @@
 }
 .signin:hover { background: #262626; transform: translateY(-1px); }
 
+/* Grouping wrapper for the links + Login button (so they collapse together
+   into the mobile dropdown). Hamburger is hidden until the mobile breakpoint. */
+.navMenu { display: flex; align-items: center; gap: 28px; }
+.navToggle { display: none; }
+
 /* ── Buttons ── */
 .btnPrimary {
   display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 24px;
@@ -211,6 +216,29 @@
 @media (max-width: 860px) {
   .aboutGrid, .brandTop, .contactGrid { grid-template-columns: 1fr; gap: 30px; }
   .brandLogoBox { height: 180px; }
+}
+/* Collapse the nav into a hamburger dropdown once the inline links + Login
+   stop fitting. */
+@media (max-width: 720px) {
+  .navToggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 9px; flex-shrink: 0;
+    border: 1px solid var(--border); background: transparent; color: var(--text);
+    cursor: pointer;
+  }
+  .navMenu {
+    position: absolute; top: 100%; left: 0; right: 0;
+    display: none;
+    flex-direction: column; align-items: stretch; gap: 0;
+    padding: 8px 16px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 16px 30px -20px rgba(0, 0, 0, 0.35);
+  }
+  .navMenuOpen { display: flex; }
+  .navMenu .navLinks { flex-direction: column; align-items: stretch; gap: 0; width: 100%; }
+  .navMenu .navLink { padding: 13px 4px; font-size: 15px; border-bottom: 1px solid var(--border); }
+  .navMenu .signin { width: 100%; justify-content: center; height: 46px; margin-top: 12px; }
 }
 @media (max-width: 640px) {
   .nav { padding: 12px 16px; }

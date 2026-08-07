@@ -45,14 +45,14 @@ const S = {
   hint: { margin: 0, fontSize: 12, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 },
   label: { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
   // KPI
-  kpis: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 },
+  kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 },
   kpi: { position: 'relative', overflow: 'hidden', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 16, padding: '16px 18px 14px' },
   kLab: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
   kDot: { width: 6, height: 6, borderRadius: '50%' },
   kVal: { fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 27, fontWeight: 700, letterSpacing: '-0.02em', margin: '11px 0 3px', color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums' },
   kFoot: { fontSize: 12, fontWeight: 600, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)' },
   // charts
-  grid2: { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14 },
+  grid2: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 },
   panelH: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   h3: { margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--ds-color-text)' },
   chip: { fontSize: 10.5, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '3px 9px' },
