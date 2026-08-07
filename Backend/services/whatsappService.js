@@ -237,7 +237,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '✅ Order Confirmed' },
+        { type: 'HEADER', format: 'TEXT', text: 'Order Confirmed' },
         {
           type: 'BODY',
           text: `Thank you, {{1}}! 🎉\n\nYour *{{2}}* order *#{{3}}* (₹{{4}}) is confirmed and we're preparing it for dispatch now.\n\nWe'll share your tracking details as soon as it ships. We appreciate your trust in us!`,
@@ -249,7 +249,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_packed', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '📦 Order Packed & Ready' },
+        { type: 'HEADER', format: 'TEXT', text: 'Order Packed & Ready' },
         {
           type: 'BODY',
           text: `Good news, {{1}}! 📦\n\nYour *{{2}}* order *#{{3}}* has been packed and is ready for shipping.\n\nThank you for your patience — your tracking details will be shared shortly.`,
@@ -261,7 +261,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_shipped', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🚚 Your Order Is On Its Way!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Your Order Is On Its Way!' },
         {
           type: 'BODY',
           text: `Great news, {{1}}! 🚚\n\nYour *{{2}}* order *#{{3}}* has been dispatched and is heading your way.\n\n🔖 *Tracking (AWB):* {{4}}\n📍 *Track live:* {{5}}\n\nThanks for staying connected — we'll notify you the moment it's delivered.`,
@@ -273,7 +273,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_out_for_delivery', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🚛 Out for Delivery Today!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Out for Delivery Today!' },
         {
           type: 'BODY',
           text: `Out for delivery today, {{1}}! 🚛\n\nYour *{{2}}* order *#{{3}}* is arriving today via {{4}}.\n\nPlease keep your phone handy and make sure someone is available to receive the package.`,
@@ -285,7 +285,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_delivered', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎉 Order Delivered!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Order Delivered!' },
         {
           type: 'BODY',
           text: `Delivered! ✅\n\nYour *{{2}}* order *#{{3}}* has arrived — we hope you love it, {{1}}! 😊\n\nThank you for shopping with *{{2}}*. If anything's not right or the package arrived damaged, just reply here within 48 hours and we'll help right away.`,
@@ -297,7 +297,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'order_cancelled', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '❌ Order Cancelled' },
+        { type: 'HEADER', format: 'TEXT', text: 'Order Cancelled' },
         {
           type: 'BODY',
           text: `Hi {{1}}, your *{{2}}* order *#{{3}}* has been cancelled.\n\n💳 *Refund:* {{4}}\n\nIf this was unexpected or you have any questions, just reply here and our team will help right away.`,
@@ -309,7 +309,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'cod_order_confirmation', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🛒 Confirm Your COD Order' },
+        { type: 'HEADER', format: 'TEXT', text: 'Confirm Your COD Order' },
         {
           type: 'BODY',
           text: `Hi {{1}}! 🛒\n\nYour *{{2}}* order *#{{3}}* for ₹{{4}} (Cash on Delivery) has been placed successfully.\n\n📍 *Deliver to:* {{5}}\n\nPlease reply *YES* to confirm, or tap *Confirm Address* below. Reply *NO* if you'd like to cancel.`,
@@ -328,7 +328,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'address_request', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '📍 Share Your Correct Address' },
+        { type: 'HEADER', format: 'TEXT', text: 'Share Your Correct Address' },
         {
           type: 'BODY',
           text: `No problem, {{1}}! 📍\n\nTo update your *{{2}}* order *#{{3}}*, please reply with your *full delivery address*, landmark and 6-digit pincode in a single message.\n\n_Example: Flat 4B, MG Road, near City Mall, Pune, Maharashtra 411001_`,
@@ -340,7 +340,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'refund_processed', category: 'UTILITY', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '💳 Refund Initiated' },
+        { type: 'HEADER', format: 'TEXT', text: 'Refund Initiated' },
         {
           type: 'BODY',
           text: `Hi {{1}}, your refund for the *{{2}}* order *#{{3}}* has been initiated.\n\n💰 *Amount:* ₹{{4}}\n🏦 *Mode:* {{5}}\n⏳ *Expected credit:* 5–7 working days\n\nThe exact timing can vary by bank. If you don't see it within 7 working days, reply here and we'll look into it right away.`,
@@ -353,7 +353,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'review_request', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '⭐ Share Your Experience!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Share Your Experience!' },
         {
           type: 'BODY',
           text: `Thanks for your order, {{1}}! 🌟\n\nHow did we do? Please take a moment to rate your experience with *{{2}}* or leave a quick review — it means the world to us and helps other shoppers.\n\n👉 Share your feedback: {{3}}`,
@@ -365,7 +365,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'popup_coupon', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🎁 Exclusive Offer Just for You!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Exclusive Offer Just for You!' },
         {
           type: 'BODY',
           text: `Here's a special discount crafted exclusively for you at *{{1}}*!\n\n🏷️ *Coupon Code:* {{2}}\n✅ *Valid on:* Prepaid orders only\n⏰ *Offer expires:* Limited time — don't wait!\n\nApply the code at checkout to avail your discount. Happy shopping!`,
@@ -377,7 +377,7 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: 'cart_abandoned', category: 'MARKETING', language: 'en',
       components: [
-        { type: 'HEADER', format: 'TEXT', text: '🛒 Your Cart Is Waiting!' },
+        { type: 'HEADER', format: 'TEXT', text: 'Your Cart Is Waiting!' },
         {
           type: 'BODY',
           text: `Hi {{1}}!\n\nIt looks like you left something behind — your *{{2}}* is still waiting in your *{{3}}* cart.\n\nTo make it easier for you to complete your purchase, we are offering you an *additional 10% OFF* with code *{{4}}*. This offer is valid for the next 24 hours only!\n\nDon't let your favourites sell out — complete your order before it's too late.`,
