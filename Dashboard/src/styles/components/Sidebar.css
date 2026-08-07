@@ -94,13 +94,12 @@
   min-width: 0;
 }
 
-.sb-logo-name {
-  font-size: 1.05rem;
-  font-weight: 700;
+/* Obzus wordmark (outlined SVG) — inherits `color` via currentColor, so it's
+   dark on the light sidebar and would flip automatically under a dark theme. */
+.sb-logo-wordmark {
   color: var(--ds-color-text);
-  letter-spacing: -0.3px;
-  white-space: nowrap;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  height: 20px;
+  width: auto;
 }
 
 .sb-logo-sub {

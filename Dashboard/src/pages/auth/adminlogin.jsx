@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import ObzusLogo from "../../components/common/ObzusLogo";
 
 const EyeIcon = () => (
   <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -46,8 +47,7 @@ export default function AdminLogin() {
       <div className="al-brand">
         <div className="al-brand-inner">
           <div className="al-logo">
-            <span className="al-logo-mark">O</span>
-            <span className="al-logo-text"><b>Obzus</b><span>Admin Panel</span></span>
+            <span className="al-logo-text"><ObzusLogo className="al-wordmark" height={26} /><span>Admin Panel</span></span>
           </div>
           <h1 className="al-headline">Your store,<br /><em>run from one place.</em></h1>
           <p className="al-sub">
@@ -76,8 +76,7 @@ export default function AdminLogin() {
       <div className="al-form-panel">
         <div className="al-form-inner">
           <div className="al-mobilelogo">
-            <span className="al-logo-mark">O</span>
-            <span className="al-logo-text"><b>Obzus</b><span>Admin Panel</span></span>
+            <span className="al-logo-text"><ObzusLogo className="al-wordmark" height={22} /><span>Admin Panel</span></span>
           </div>
           <span className="al-badge"><span className="al-badge-dot" /> Admin Portal</span>
           <h2 className="al-title">Sign in to Dashboard</h2>

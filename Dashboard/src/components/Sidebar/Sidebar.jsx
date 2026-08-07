@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import ObzusLogo from '../common/ObzusLogo';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   DashboardSquare01Icon, SlidersHorizontalIcon, Package01Icon, ShoppingBag02Icon,
@@ -188,10 +189,10 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
         {/* Header */}
         <div className="sb-header">
           <div className="sb-logo">
-            <span className="sb-logo-mark" aria-hidden="true">O</span>
+            {!expanded && <span className="sb-logo-mark" aria-hidden="true">O</span>}
             {expanded && (
               <div className="sb-logo-text">
-                <span className="sb-logo-name">Obzus</span>
+                <ObzusLogo className="sb-logo-wordmark" height={20} />
                 <span className="sb-logo-sub">ADMIN PANEL</span>
               </div>
             )}

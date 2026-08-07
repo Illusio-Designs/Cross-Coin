@@ -1,0 +1,33 @@
+import React from 'react';
+
+/**
+ * Obzus wordmark — outlined vector paths (Poppins SemiBold), so it renders
+ * pixel-identically regardless of which webfonts have loaded. Uses
+ * `fill="currentColor"`, so it inherits the surrounding text `color`: black on
+ * the light sidebar, white on the dark login panel — one asset, both themes.
+ *
+ * Sizing: set a `height` via prop or CSS; width scales from the 3111×789
+ * viewBox (aspect ≈ 3.94). The public copy lives at /obzus-logo.svg.
+ */
+export default function ObzusLogo({ height = 18, className = '', style, title = 'Obzus' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 3111 789"
+      height={height}
+      width={height * (3111 / 789)}
+      fill="currentColor"
+      role="img"
+      aria-label={title}
+      style={{ display: 'block', ...style }}
+    >
+      <g transform="translate(-15,760) scale(1,-1)">
+        <path d="M35 351Q35 453 83.0 534.5Q131 616 213.0 662.0Q295 708 393 708Q492 708 573.5 662.0Q655 616 702.5 534.5Q750 453 750 351Q750 248 702.5 166.5Q655 85 573.0 39.0Q491 -7 393 -7Q295 -7 213.0 39.0Q131 85 83.0 166.5Q35 248 35 351ZM606 351Q606 421 579.0 473.5Q552 526 504.0 554.0Q456 582 393 582Q330 582 281.5 554.0Q233 526 206.0 473.5Q179 421 179 351Q179 281 206.0 228.0Q233 175 281.5 146.5Q330 118 393 118Q456 118 504.0 146.5Q552 175 579.0 228.0Q606 281 606 351Z" />
+        <path transform="translate(785,0)" d="M392 563Q463 563 520.5 528.0Q578 493 611.5 428.5Q645 364 645 279Q645 194 611.5 128.5Q578 63 520.5 27.0Q463 -9 392 -9Q330 -9 283.5 15.5Q237 40 209 79V0H69V740H209V473Q236 513 283.5 538.0Q331 563 392 563ZM355 440Q317 440 283.5 420.5Q250 401 229.5 364.0Q209 327 209 277Q209 227 229.5 190.0Q250 153 283.5 133.5Q317 114 355 114Q394 114 427.5 134.0Q461 154 481.5 191.0Q502 228 502 279Q502 329 481.5 365.5Q461 402 427.5 421.0Q394 440 355 440Z" />
+        <path transform="translate(1463,0)" d="M197 115H444V0H38V113L280 439H39V554H441V441Z" />
+        <path transform="translate(1946,0)" d="M592 554V0H451V70Q424 34 380.5 13.5Q337 -7 286 -7Q221 -7 171.0 20.5Q121 48 92.5 101.5Q64 155 64 229V554H204V249Q204 183 237.0 147.5Q270 112 327 112Q385 112 418.0 147.5Q451 183 451 249V554Z" />
+        <path transform="translate(2607,0)" d="M39 175H180Q184 143 211.5 122.0Q239 101 280 101Q320 101 342.5 117.0Q365 133 365 158Q365 185 337.5 198.5Q310 212 250 228Q188 243 148.5 259.0Q109 275 80.5 308.0Q52 341 52 397Q52 443 78.5 481.0Q105 519 154.5 541.0Q204 563 271 563Q370 563 429.0 513.5Q488 464 494 380H360Q357 413 332.5 432.5Q308 452 267 452Q229 452 208.5 438.0Q188 424 188 399Q188 371 216.0 356.5Q244 342 303 327Q363 312 402.0 296.0Q441 280 469.5 246.5Q498 213 499 158Q499 110 472.5 72.0Q446 34 396.5 12.5Q347 -9 281 -9Q213 -9 159.0 15.5Q105 40 73.5 82.0Q42 124 39 175Z" />
+      </g>
+    </svg>
+  );
+}

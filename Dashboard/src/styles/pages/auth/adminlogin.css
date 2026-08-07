@@ -60,6 +60,9 @@
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 22px; flex-shrink: 0;
 }
+/* Obzus wordmark (outlined SVG) — inherits currentColor: white on the dark
+   brand panel, theme text colour on the light form panel (mobile logo). */
+.al-wordmark { display: block; margin-bottom: 7px; }
 .al-logo-text b { display: block; font-size: 17px; font-weight: 700; letter-spacing: .02em; line-height: 1.1; }
 .al-logo-text span { font-size: 10px; letter-spacing: .22em; color: #8a8a92; text-transform: uppercase; }
 
