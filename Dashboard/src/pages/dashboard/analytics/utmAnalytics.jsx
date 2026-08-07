@@ -268,6 +268,7 @@ const UTMAnalytics = () => {
           />
         ) : (
           <>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table className="utm-table">
               <thead>
                 <tr>
@@ -303,7 +304,8 @@ const UTMAnalytics = () => {
                 ))}
               </tbody>
             </table>
-            
+            </div>
+
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="seo-pagination-container">

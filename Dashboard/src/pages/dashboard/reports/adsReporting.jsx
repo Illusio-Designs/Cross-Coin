@@ -46,10 +46,10 @@ const S = {
   label: { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
   // KPI
   kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 },
-  kpi: { position: 'relative', overflow: 'hidden', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 16, padding: '16px 18px 14px' },
+  kpi: { position: 'relative', minWidth: 0, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 16, padding: '16px 18px 14px' },
   kLab: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' },
   kDot: { width: 6, height: 6, borderRadius: '50%' },
-  kVal: { fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 27, fontWeight: 700, letterSpacing: '-0.02em', margin: '11px 0 3px', color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums' },
+  kVal: { fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 'clamp(18px, 5.4vw, 27px)', fontWeight: 700, letterSpacing: '-0.02em', margin: '11px 0 3px', color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   kFoot: { fontSize: 12, fontWeight: 600, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)' },
   // charts
   grid2: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 },
@@ -61,7 +61,7 @@ const S = {
   bnm: { fontSize: 12.5, color: 'var(--ds-color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   track: { height: 24, borderRadius: 7, background: 'var(--ds-color-bg)', position: 'relative', overflow: 'hidden' },
   bamt: { textAlign: 'right', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' },
-  donutWrap: { display: 'flex', alignItems: 'center', gap: 18, marginTop: 12 },
+  donutWrap: { display: 'flex', alignItems: 'center', gap: 18, marginTop: 12, flexWrap: 'wrap' },
   legend: { display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, color: 'var(--ds-color-text)' },
   li: { display: 'flex', alignItems: 'center', gap: 9 },
   sw: { width: 10, height: 10, borderRadius: 3, flexShrink: 0 },

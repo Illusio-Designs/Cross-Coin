@@ -173,15 +173,15 @@ export default function StaffUsers() {
       <div className="dashboard-page">
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
           <div className="sl-header-icon" style={{ flexShrink: 0 }}>{IC.users}</div>
           <div style={{ flexShrink: 0 }}>
             <h1 className="sl-page-title">Staff Users</h1>
             <p className="sl-page-sub">{filtered.length} staff member{filtered.length !== 1 ? 's' : ''}</p>
           </div>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div className="sl-search-wrap">
+          <div style={{ flex: 1, minWidth: 12 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: '1 1 260px', justifyContent: 'flex-end' }}>
+            <div className="sl-search-wrap" style={{ flex: '1 1 150px' }}>
               <span className="sl-search-icon">{IC.search}</span>
               <input
                 type="text"
@@ -189,10 +189,10 @@ export default function StaffUsers() {
                 placeholder="Search..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ width: 180, height: 38 }}
+                style={{ width: '100%', height: 38 }}
               />
             </div>
-            <div style={{ width: 150 }}>
+            <div style={{ flex: '0 1 150px', minWidth: 120 }}>
               <Select
                 options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
                 value={filterRole}

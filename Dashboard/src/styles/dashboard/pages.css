@@ -1037,6 +1037,13 @@
     width: 100%;
   }
 
+  /* Undo the analytics "keep on one line" rule on mobile — it also matches the
+     Policies header (brand dropdown + search + Add), cramming them into one
+     un-wrapping row on phones. Same specificity as line ~82 so this wins here. */
+  .sl-page-header .sl-header-right:has(.bset-brand-select) {
+    flex-wrap: wrap;
+  }
+
   .sl-search-input {
     width: 100%;
   }

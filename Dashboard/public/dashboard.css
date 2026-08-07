@@ -6121,6 +6121,12 @@
 /* flex-wrap so the New order / Live / bulk / Filter buttons drop to a second
    line on narrow phones instead of overflowing the toolbar. */
 .ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* On phones give the button group its own full-width line so the scrollable
+   status-tab strip keeps the whole row (otherwise the flex algorithm shrinks
+   .ord-tabs to a ~50px sliver to keep the buttons alongside it). */
+@media (max-width: 640px) {
+  .ord-toolbar-right { flex-basis: 100%; justify-content: flex-start; }
+}
 
 /* Filters drawer body */
 .ord-filter-drawer { display: flex; flex-direction: column; gap: 6px; }
@@ -8588,6 +8594,13 @@
 
   .sl-header-right {
     width: 100%;
+  }
+
+  /* Undo the analytics "keep on one line" rule on mobile — it also matches the
+     Policies header (brand dropdown + search + Add), cramming them into one
+     un-wrapping row on phones. Same specificity as line ~82 so this wins here. */
+  .sl-page-header .sl-header-right:has(.bset-brand-select) {
+    flex-wrap: wrap;
   }
 
   .sl-search-input {

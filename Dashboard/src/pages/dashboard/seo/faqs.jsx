@@ -249,7 +249,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 12 }}>
         {editing ? 'Edit FAQ' : 'New FAQ'}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 10 }}>
         <Field label="Scope">
           <select
             value={form.attached_to_type}

@@ -287,7 +287,7 @@ const MediaGallery = () => {
               })}
             </div>
           ) : (
-            <div className="sl-table-wrap">
+            <div className="sl-table-wrap" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table className="mg-list-table">
                 <thead>
                   <tr>
