@@ -63,6 +63,19 @@ export default function Document({ tracking }) {
   return (
     <Html lang="en">
       <Head>
+        {/* Pre-paint theme: the admin dashboard applies data-theme via JS after
+            mount, which flashed white→dark on reload. Set it here before first
+            paint (dashboard routes only — public pages stay light), reading the
+            same 'obzus-theme' key + OS preference the shell uses. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var p=location.pathname;if(p.indexOf('/dashboard')!==0)return;" +
+              "var s=localStorage.getItem('obzus-theme')||'auto';" +
+              "var e=s==='auto'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;" +
+              "document.documentElement.setAttribute('data-theme',e);}catch(x){}})();",
+          }}
+        />
         {/* Deploy resilience (no Vercel Pro / Skew Protection): if a Next.js CSS
             chunk fails to load — deploy skew, or a flaky mobile connection — the
             page renders unstyled ("raw HTML"). Reload ONCE to fetch the current

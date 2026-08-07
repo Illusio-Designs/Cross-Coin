@@ -206,17 +206,22 @@ html, body {
 .custom-scrollbar-progress-fill {
   height: 3px;
   width: 0%;
-  background: #CE1E36;
+  background: #0a0a0a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   transition: width 0.1s linear;
 }
 
-/* Dashboard only ([data-theme] is set on <html> by the admin shell, never the
-   storefront): the scroll-progress bar goes monochrome with a soft shadow so
-   it matches the black-and-white admin chrome. Storefront keeps its brand red. */
+/* On the dashboard the bar follows the theme text colour (white on dark). */
 :root[data-theme] .custom-scrollbar-progress-fill {
   background: var(--ds-color-text);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* Pre-paint: once the dashboard sets data-theme on <html> (in _document, before
+   first paint), give the page canvas the theme background so a reload never
+   flashes white before the admin shell renders. Public pages set no data-theme
+   and stay on the default white. */
+:root[data-theme] { background: var(--ds-color-bg); }
+:root[data-theme] body { background: var(--ds-color-bg); }
 
 .shimmer-placeholder {
   position: absolute;
