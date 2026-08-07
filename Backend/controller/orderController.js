@@ -1595,10 +1595,12 @@
       // Payment type filter
       if (payment_type && payment_type !== 'all') {
         if (payment_type === 'prepaid') {
-          // Prepaid includes all payment types except COD
-          filter.payment_type = {
-            [Op.in]: ['credit_card', 'debit_card', 'upi', 'wallet', 'razorpay']
-          };
+          // Prepaid = anything that ISN'T COD. The old allow-list of specific
+          // methods (razorpay/upi/…) silently dropped prepaid orders stored under
+          // any other payment_type value (online, prepaid, phonepe, netbanking…).
+          filter.payment_type = { [Op.notIn]: ['cod', 'COD'] };
+        } else if (payment_type === 'cod') {
+          filter.payment_type = { [Op.in]: ['cod', 'COD'] };
         } else {
           filter.payment_type = payment_type;
         }
