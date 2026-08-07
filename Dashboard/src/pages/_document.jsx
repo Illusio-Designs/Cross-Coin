@@ -194,10 +194,13 @@ export default function Document({ tracking }) {
         <meta name="format-detection" content="telephone=no" />
 
         {/* Theme color for mobile browsers */}
-        <meta name="theme-color" content="#180D3E" />
+        <meta name="theme-color" content="#0a0a0a" />
 
-        {/* Favicon */}
-        <link rel="icon" href="/crosscoin-icon.png" />
+        {/* Favicon — Obzus "O" monogram */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Prevent dark mode */}
         <meta name="color-scheme" content="light" />
@@ -237,7 +240,7 @@ export default function Document({ tracking }) {
         <noscript>
           <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f5f5f5', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div>
-              <h1>Cross Coin</h1>
+              <h1>Obzus</h1>
               <p>Please enable JavaScript to view this website.</p>
             </div>
           </div>

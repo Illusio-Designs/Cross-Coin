@@ -299,8 +299,11 @@ function App({ Component, pageProps }) {
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
         />
-        <title>Cross Coin</title>
-        <link rel="icon" href="/crosscoin-icon.png" />
+        <title>Obzus Admin</title>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </Head>
       <UTMTracker />
       <Analytics />
