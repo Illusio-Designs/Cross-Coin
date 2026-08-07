@@ -51,8 +51,8 @@ export default function Leads() {
   }, [leads, q]);
 
   const exportCsv = () => {
-    const rows = [['Phone', 'Brand', 'Coupon', 'Source', 'WhatsApp sent', 'Captured at']];
-    filtered.forEach((l) => rows.push([l.phone, l.brand, l.coupon_code || '', l.source || '', l.wa_sent ? 'Yes' : 'No', fmtDate(l.createdAt)]));
+    const rows = [['Phone', 'Brand', 'Source', 'WhatsApp sent', 'Captured at']];
+    filtered.forEach((l) => rows.push([l.phone, l.brand, l.source || '', l.wa_sent ? 'Yes' : 'No', fmtDate(l.createdAt)]));
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -65,10 +65,10 @@ export default function Leads() {
       <div style={S.head}>
         <div>
           <h2 style={S.title}>Leads</h2>
-          <p style={S.sub}>Phone numbers captured by the storefront popup, with the coupon sent.</p>
+          <p style={S.sub}>Phone numbers captured by the storefront popup.</p>
         </div>
         <div style={S.controls}>
-          <Input placeholder="Search phone / brand / coupon" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Search phone / brand" value={q} onChange={(e) => setQ(e.target.value)} />
           <Button variant="secondary" onClick={load} loading={loading}>Refresh</Button>
           <Button variant="primary" onClick={exportCsv} disabled={!filtered.length}>Export CSV</Button>
         </div>
@@ -80,7 +80,7 @@ export default function Leads() {
       <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr>
-            <th style={S.th}>Phone</th><th style={S.th}>Brand</th><th style={S.th}>Coupon</th>
+            <th style={S.th}>Phone</th><th style={S.th}>Brand</th>
             <th style={S.th}>Source</th><th style={S.th}>WhatsApp</th><th style={S.th}>Captured</th>
           </tr></thead>
           <tbody>
@@ -88,7 +88,6 @@ export default function Leads() {
               <tr key={l.id}>
                 <td style={{ ...S.td, ...S.mono, fontWeight: 700 }}>{l.phone}</td>
                 <td style={S.td}>{l.brand}</td>
-                <td style={{ ...S.td, ...S.mono }}>{l.coupon_code || '—'}</td>
                 <td style={S.td}>{l.source || '—'}</td>
                 <td style={S.td}>
                   <span style={{ ...S.badge, color: l.wa_sent ? 'var(--ds-color-success,#16a34a)' : 'var(--ds-color-text-muted)', background: l.wa_sent ? 'var(--ds-color-success-bg, #dcfce7)' : 'var(--ds-color-surface-soft,#f1f1f1)' }}>
@@ -99,7 +98,7 @@ export default function Leads() {
               </tr>
             ))}
             {!filtered.length && !loading && (
-              <tr><td style={{ ...S.td, textAlign: 'center', padding: 28, color: 'var(--ds-color-text-muted)' }} colSpan={6}>No leads yet.</td></tr>
+              <tr><td style={{ ...S.td, textAlign: 'center', padding: 28, color: 'var(--ds-color-text-muted)' }} colSpan={5}>No leads yet.</td></tr>
             )}
           </tbody>
         </table>
