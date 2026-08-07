@@ -43,7 +43,7 @@
   --ds-color-border-soft:  #f0f0f2;
   --ds-color-text:         #0a0a0a;
   --ds-color-text-muted:   #6b6b73;
-  --ds-color-text-faint:   #9a9aa2;
+  --ds-color-text-faint:   #74747d;  /* was #9a9aa2 (~2.6:1 on white — failed AA); now ~4.6:1 */
   --ds-color-link:         var(--ds-color-brand);
 
   /* ── Spacing scale (rems for accessibility) ─────────────────────── */
@@ -119,7 +119,7 @@
   --ds-color-border-soft:  #232329;
   --ds-color-text:         #f4f4f5;
   --ds-color-text-muted:   #a1a1aa;
-  --ds-color-text-faint:   #71717a;
+  --ds-color-text-faint:   #8b8b94;  /* was #71717a (~3.4:1 on dark — failed AA); now ~5:1 */
 
   /* Status backgrounds darken so the coloured text/badges stay readable. */
   --ds-color-success-bg:   #0f2a1c;

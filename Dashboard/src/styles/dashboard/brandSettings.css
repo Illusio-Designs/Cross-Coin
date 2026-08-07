@@ -234,6 +234,14 @@
 .category-badge.shipping { background: #fff3e0; color: #f57c00; }
 .category-badge.email { background: #e8f5e9; color: #388e3c; }
 .category-badge.sms { background: #fce4ec; color: #c2185b; }
+/* Dark mode: the pastel light backgrounds above became glaring light islands
+   on the dark canvas — retint to dark-appropriate translucent fills with
+   legible light text per category. */
+:root[data-theme="dark"] .category-badge.general  { background: rgba(59,130,246,.16); color: #93c5fd; }
+:root[data-theme="dark"] .category-badge.payment  { background: rgba(168,85,247,.16); color: #d8b4fe; }
+:root[data-theme="dark"] .category-badge.shipping { background: rgba(249,115,22,.16); color: #fdba74; }
+:root[data-theme="dark"] .category-badge.email    { background: rgba(34,197,94,.16);  color: #86efac; }
+:root[data-theme="dark"] .category-badge.sms      { background: rgba(236,72,153,.16); color: #f9a8d4; }
 .category-badge.social { background: #e0f2f1; color: #00796b; }
 .category-badge.analytics { background: #fff9c4; color: #f57f17; }
 .category-badge.security { background: #ffebee; color: #c62828; }

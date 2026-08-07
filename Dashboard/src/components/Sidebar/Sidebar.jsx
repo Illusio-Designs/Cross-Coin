@@ -231,6 +231,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
               >
                 <button
                   className={`sb-link${active ? ' sb-link--active' : ''}`}
+                  aria-current={active && !item.submenu ? 'page' : undefined}
                   onClick={() => handleItemClick(item, idx)}
                 >
                   <span className="sb-icon">{item.icon}</span>
@@ -246,6 +247,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
                       <button
                         key={s.label}
                         className={`sb-sub-link${currentView === s.view ? ' sb-sub-link--active' : ''}`}
+                        aria-current={currentView === s.view ? 'page' : undefined}
                         onClick={() => handleSubClick(s.view)}
                       >
                         {s.label}

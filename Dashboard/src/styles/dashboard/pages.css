@@ -216,6 +216,20 @@
 .sl-btn-delete:hover { color: var(--ds-color-danger); border-color: var(--ds-color-danger); }
 .sl-btn-toggle.active { color: var(--ds-color-text); border-color: var(--ds-color-text); }
 
+/* Keyboard focus was invisible on these icon actions; add a ring. */
+.sl-btn-edit:focus-visible,
+.sl-btn-delete:focus-visible,
+.sl-btn-toggle:focus-visible {
+  outline: 2px solid var(--ds-color-text);
+  outline-offset: 2px;
+}
+/* Meet the ~40px minimum touch target on mobile (they're 30px on desktop). */
+@media (max-width: 768px) {
+  .sl-btn-edit,
+  .sl-btn-delete,
+  .sl-btn-toggle { width: 40px; height: 40px; }
+}
+
 .sl-btn-edit svg,
 .sl-btn-delete svg,
 .sl-btn-toggle svg {
