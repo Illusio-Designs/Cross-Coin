@@ -728,6 +728,9 @@ const Orders = () => {
             />
             <ConfirmModal
                 message={confirmPrompt ? `Are you sure you want to confirm order ${confirmPrompt.orderNumber}? This will trigger shipping provider sync.` : null}
+                title="Confirm order"
+                confirmLabel="Confirm order"
+                tone="primary"
                 onConfirm={handleConfirmOrder}
                 onCancel={() => setConfirmPrompt(null)}
             />
