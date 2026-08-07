@@ -901,6 +901,18 @@ export function WhatsAppManager() {
     setConvLoading(false);
   };
 
+  // Warm the message cache in the background (on hover) so opening the chat is
+  // instant — the fetchMessages spinner only shows on a genuine cold open.
+  const prefetchingRef = useRef(new Set());
+  const prefetchMessages = (conv) => {
+    if (!conv || messagesCacheRef.current.has(conv.id) || prefetchingRef.current.has(conv.id)) return;
+    prefetchingRef.current.add(conv.id);
+    whatsappService.getMessages(conv.id)
+      .then(data => { if (data?.success) messagesCacheRef.current.set(conv.id, data.messages || []); })
+      .catch(() => {})
+      .finally(() => prefetchingRef.current.delete(conv.id));
+  };
+
   const fetchMessages = async (conv) => {
     setActiveConv(conv);
     // Show cached messages instantly if we've opened this chat before; only
@@ -1628,7 +1640,7 @@ export function WhatsAppManager() {
                 ) : filteredConvs.map(conv => {
                   const col = avatarColor(conv.customer_name||conv.customer_phone);
                   return (
-                    <div key={conv.id} className={`was-thread-item${activeConv?.id===conv.id?' active':''}`} onClick={() => fetchMessages(conv)}>
+                    <div key={conv.id} className={`was-thread-item${activeConv?.id===conv.id?' active':''}`} onClick={() => fetchMessages(conv)} onMouseEnter={() => prefetchMessages(conv)}>
                       <div className="was-thread-av" style={{background:col}}>{initials(conv.customer_name||conv.customer_phone)}</div>
                       <div className="was-thread-body">
                         <div className="was-thread-row">
