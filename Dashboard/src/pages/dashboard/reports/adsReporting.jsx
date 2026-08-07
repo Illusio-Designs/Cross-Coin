@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { adsReportService } from '../../../services';
+import Modal from '../../../components/ui/Modal';
 
 /**
  * Ads Reporting — the ONLY manual input is daily ad spend per brand. Orders
@@ -51,6 +52,7 @@ export default function AdsReporting() {
   const [spendForm, setSpendForm] = useState({ brand_id: '', date: today(), amount: '' });
   const [spendList, setSpendList] = useState([]);
   const [msg, setMsg] = useState('');
+  const [spendOpen, setSpendOpen] = useState(false);
 
   const brands = useMemo(
     () => report.rows.map((r) => ({ id: r.brand_id, name: r.brand })),
@@ -160,34 +162,50 @@ export default function AdsReporting() {
         <p style={{ ...S.hint, marginTop: 10, fontSize: 11.5 }}>Each brand&apos;s window starts on its first ad-spend day within this period.</p>
       </div>
 
-      {/* Add daily spend */}
-      <div style={S.panel}>
-        <h3 style={S.h3}>Add daily ad spend</h3>
-        <div style={S.row}>
+      {/* Add daily spend — opens a modal */}
+      <div style={{ ...S.panel, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <div>
+          <h3 style={S.h3}>Daily ad spend</h3>
+          <p style={S.hint}>The only manual input — everything else is calculated from orders.</p>
+        </div>
+        <button style={S.btnDark} onClick={() => setSpendOpen(true)}>+ Add ad spend</button>
+      </div>
+
+      <Modal
+        isOpen={spendOpen}
+        onClose={() => { setSpendOpen(false); setMsg(''); }}
+        title="Add daily ad spend"
+        description="Pick a brand and enter that day's spend. Add as many days as you need."
+        size="md"
+      >
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={S.field}>
             <label style={S.label}>Brand</label>
-            <select style={{ ...S.input, minWidth: 150 }} value={spendForm.brand_id} onChange={(e) => onPickBrand(e.target.value)}>
+            <select style={{ ...S.input, minWidth: 160 }} value={spendForm.brand_id} onChange={(e) => onPickBrand(e.target.value)}>
               <option value="">Select brand</option>
               {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div style={S.field}><label style={S.label}>Date</label><input style={S.input} type="date" value={spendForm.date} onChange={(e) => setSpendForm((f) => ({ ...f, date: e.target.value }))} /></div>
           <div style={S.field}><label style={S.label}>Spend (₹)</label><input style={{ ...S.input, width: 120 }} type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} /></div>
-          <button style={S.btnDark} onClick={addSpend}>Save spend</button>
-          {msg && <span style={{ ...S.hint, color: 'var(--ds-color-success,#10b981)' }}>{msg}</span>}
+          <button style={S.btnDark} onClick={addSpend}>Save</button>
         </div>
+        {msg && <p style={{ ...S.hint, marginTop: 10, color: 'var(--ds-color-success,#10b981)' }}>{msg}</p>}
         {spendForm.brand_id && (
-          <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {spendList.length === 0 && <span style={S.hint}>No spend records yet for this brand.</span>}
-            {spendList.map((s) => (
-              <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, background: 'var(--ds-color-bg)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: '5px 10px' }}>
-                {s.date} · ₹{fmt(num(s.amount))}
-                <button onClick={() => removeSpend(s.id)} title="Delete" style={{ border: 'none', background: 'none', color: 'var(--ds-color-text-muted)', cursor: 'pointer', fontSize: 13 }}>✕</button>
-              </span>
-            ))}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ ...S.label, marginBottom: 8 }}>Recorded days</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+              {spendList.length === 0 && <span style={S.hint}>No spend records yet for this brand.</span>}
+              {spendList.map((s) => (
+                <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, background: 'var(--ds-color-bg)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: '5px 10px' }}>
+                  {s.date} · ₹{fmt(num(s.amount))}
+                  <button onClick={() => removeSpend(s.id)} title="Delete" style={{ border: 'none', background: 'none', color: 'var(--ds-color-text-muted)', cursor: 'pointer', fontSize: 13 }}>✕</button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </Modal>
 
       {/* Cost settings */}
       <div style={S.panel}>
