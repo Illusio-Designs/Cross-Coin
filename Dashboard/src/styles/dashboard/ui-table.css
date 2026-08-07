@@ -133,3 +133,49 @@
 @media (prefers-reduced-motion: reduce) {
   .tbl-row, .tbl-sort-icon, .tbl-spinner { transition: none; animation: none; }
 }
+
+/* ── Card-on-mobile (opt-in via <Table cardOnMobile />) ──────────────────
+   Under 768px, rows become label/value cards instead of a wide table that
+   forces horizontal scroll. Labels come from the data-label the component
+   stamps on each <td> from the column header. */
+@media (max-width: 768px) {
+  .tbl.tbl--auto thead { display: none; }
+  /* override the base .tbl min-width:600px so cards fill the viewport instead
+     of pushing the value cells off-screen inside the scroll container. */
+  .tbl.tbl--auto,
+  .tbl.tbl--auto tbody,
+  .tbl.tbl--auto tr { display: block; width: 100%; min-width: 0; }
+  .tbl.tbl--auto tr {
+    border: 1px solid var(--ds-color-border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: var(--ds-color-surface);
+    padding: 4px 6px;
+  }
+  .tbl.tbl--auto tbody td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 14px;
+    min-width: 0;
+    padding: 9px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--ds-color-border-soft);
+  }
+  .tbl.tbl--auto tbody tr td:last-child { border-bottom: 0; }
+  .tbl.tbl--auto tbody td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ds-color-text-muted);
+    flex-shrink: 0;
+    text-align: left;
+  }
+  /* cells with no label (non-string headers) span the full width */
+  .tbl.tbl--auto tbody td:not([data-label])::before { content: none; }
+  /* the select checkbox is redundant per-card — hide its row */
+  .tbl.tbl--auto tbody td.tbl-select-col { display: none; }
+}

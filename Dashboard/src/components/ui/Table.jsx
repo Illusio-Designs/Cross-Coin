@@ -23,6 +23,7 @@ const Table = ({
   stickyHeader = false,
   getRowStyle = null,
   getRowClassName = null,
+  cardOnMobile = false,
   ...props
 }) => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
@@ -63,6 +64,7 @@ const Table = ({
     `tbl-${size}`,
     variant !== 'default' && `tbl-${variant}`,
     stickyHeader && 'tbl-sticky-header',
+    cardOnMobile && 'tbl--auto',
     className
   ].filter(Boolean).join(' ');
 
@@ -123,7 +125,7 @@ const Table = ({
               style={getRowStyle ? getRowStyle(row) : {}}
               onClick={() => onRowClick && onRowClick(row, ri)}>
               {selectable && (
-                <td className="tbl-cell tbl-select-col">
+                <td className="tbl-cell tbl-select-col" data-label="Select">
                   <input type="checkbox" checked={selectedRows.includes(row.id)}
                     onChange={(e) => { e.stopPropagation(); handleRowSelect(row.id, e.target.checked); }}
                     className="tbl-checkbox" />
@@ -131,6 +133,7 @@ const Table = ({
               )}
               {columns.map((col, ci) => (
                 <td key={col.accessor || col.key || ci}
+                  data-label={typeof col.header === 'string' ? col.header : undefined}
                   className={['tbl-cell', col.align && `tbl-align-${col.align}`].filter(Boolean).join(' ')}>
                   {col.cell
                     ? col.cell({ ...row, rowIndex: ri, value: row[col.accessor] })

@@ -1366,6 +1366,7 @@ const ProductsPage = () => {
                   className="w-full"
                   striped={false}
                   hoverable={true}
+                  cardOnMobile
                 />
                 {totalProducts > itemsPerPage && (
                   <div className="sl-pagination">

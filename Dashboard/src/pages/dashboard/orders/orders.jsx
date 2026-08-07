@@ -907,6 +907,7 @@ const Orders = () => {
                                     data={currentItemsWithSN}
                                     striped={false}
                                     hoverable={true}
+                                    cardOnMobile
                                     getRowStyle={(row) => {
                                         // Clean rows like the prototype — no per-row colour stripe
                                         // (status is already shown by the pill). Keep only the
