@@ -13,11 +13,8 @@ import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
-import PaymentChart from '../../../components/Dashboard/PaymentChart';
-import ShippingChart from '../../../components/Dashboard/ShippingChart';
-import PaymentStatusChart from '../../../components/Dashboard/PaymentStatusChart';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
-import { PageHeader, Panel, StatGrid, StatTile, FilterBar } from '../../../components/Dashboard/primitives';
+import { PageHeader, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
     ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
@@ -51,13 +48,9 @@ const Orders = () => {
         paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0,
         paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0
     });
-    const [allOrdersData, setAllOrdersData] = useState([]);
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [syncingAll, setSyncingAll] = useState(false);
     const [refreshingStatus, setRefreshingStatus] = useState(false);
-    const [exportStartDate, setExportStartDate] = useState('');
-    const [exportEndDate, setExportEndDate] = useState('');
-    const [isExporting, setIsExporting] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
     const [awbNumber, setAwbNumber] = useState('');
@@ -76,7 +69,6 @@ const Orders = () => {
     // UI: analytics charts are collapsed by default so the orders table sits
     // near the top; live updates can be paused so the table never refreshes
     // under the admin while they work.
-    const [showAnalytics, setShowAnalytics] = useState(false);
     const [liveUpdates, setLiveUpdates] = useState(true);
     const [filterOpen, setFilterOpen] = useState(false);
     // Shipping-address editor (fix wrong pincode/phone that blocks courier booking)
@@ -181,7 +173,6 @@ const Orders = () => {
                     stats.prepaid = dashStats.paymentDistribution.prepaid?.count || 0;
                 }
                 setAllOrdersStats(stats);
-                if (dashStats.recentOrders) setAllOrdersData(dashStats.recentOrders);
             }
         } catch (err) {
             setAllOrdersStats({ total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0, totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0, paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0, paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0 });
@@ -421,17 +412,6 @@ const Orders = () => {
         }
     };
 
-    const handleExportDeliveredOrders = async () => {
-        if (!exportStartDate || !exportEndDate) { showError('selectDates'); return; }
-        if (new Date(exportStartDate) > new Date(exportEndDate)) { showError('dateError'); return; }
-        setIsExporting(true);
-        try {
-            await orderService.exportDeliveredOrders(exportStartDate, exportEndDate);
-            showSuccess('exported', 'Delivered orders exported successfully!');
-        } catch (error) { showError('exportFailed', error.message || 'Failed to export delivered orders');
-        } finally { setIsExporting(false); }
-    };
-
     const fetchLabelStats = async () => {
         try {
             const stats = await orderService.getLabelDownloadStats();
@@ -514,19 +494,6 @@ const Orders = () => {
                 return newSet;
             });
         }, 2500);
-    };
-
-    const getRowBorderColor = (status) => {
-        const borderColorMap = {
-            confirmed: '#0a0a0a',
-            processing: '#6b6b73',
-            booked: '#0a0a0a',
-            'in transit': '#6b6b73',
-            delivered: '#0a0a0a',
-            'pending sync': '#6b6b73',
-            'failed sync': '#3f3f46'
-        };
-        return borderColorMap[status?.toLowerCase()] || 'var(--ds-color-border)';
     };
 
     const formatDate = (dateString) => {
@@ -737,11 +704,6 @@ const Orders = () => {
             }
         }
     ];
-
-    const showNotification = (message, type = 'info') => {
-        if (type === 'error') showError(null, message);
-        else showSuccess(null, message);
-    };
 
     return (
         <>

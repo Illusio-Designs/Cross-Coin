@@ -2,7 +2,7 @@
 export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Modal, Button, Table, Pagination, Input, Select, Switch } from "../../components/ui";
+import { Modal, Button, Table, Pagination, Input, Select } from "../../components/ui";
 import { PageHeader, Panel, FilterBar, EmptyState } from "../../components/Dashboard/primitives";
 import Loader from "../../components/common/Loader";
 import { blogService, productService } from "../../services";

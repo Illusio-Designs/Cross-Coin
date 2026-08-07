@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -45,19 +45,13 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
     checkAdminAccess();
   }, [router]);
 
-  // Debounced search function
-  const debouncedSearch = useCallback((searchTerm) => {
-    const timeoutId = setTimeout(() => {
-      setFilterValue(searchTerm);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, []);
+  // Debounced search — one memoized lodash debouncer so rapid typing issues a
+  // single filter update. The previous version created a fresh setTimeout per
+  // keystroke and discarded its cancel, so nothing was actually debounced.
+  const debouncedSetFilter = useMemo(() => debounce((v) => setFilterValue(v), 300), []);
+  useEffect(() => () => debouncedSetFilter.cancel(), [debouncedSetFilter]);
 
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    debouncedSearch(value);
-  };
+  const handleSearchChange = (e) => debouncedSetFilter(e.target.value);
 
   // Fetch SEO data
   const fetchSEOData = async () => {

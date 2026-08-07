@@ -224,12 +224,3 @@ const cellInput = {
   background: 'var(--ds-color-surface)',
   outline: 'none',
 };
-const pageBtn = {
-  padding: '6px 12px',
-  border: '1px solid var(--ds-color-border)',
-  background: 'var(--ds-color-surface)',
-  borderRadius: 6,
-  cursor: 'pointer',
-  fontSize: 13,
-  color: 'var(--ds-color-text-muted)',
-};
