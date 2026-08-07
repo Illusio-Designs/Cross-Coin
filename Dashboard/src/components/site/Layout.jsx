@@ -30,6 +30,16 @@ export default function Layout({ children, title, description, activePath }) {
     router.events?.on('routeChangeComplete', closeMenu);
     return () => router.events?.off('routeChangeComplete', closeMenu);
   }, [router]);
+  // Lock body scroll and close on Escape while the mobile menu is open
+  // (menuOpen is only ever true below the mobile breakpoint).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); };
+  }, [menuOpen]);
 
   return (
     <>
@@ -72,6 +82,7 @@ export default function Layout({ children, title, description, activePath }) {
             <Link className={styles.signin} href="/login" onClick={closeMenu}>Login <ArrowUpRight /></Link>
           </div>
         </nav>
+        {menuOpen && <div className={styles.navScrim} onClick={closeMenu} aria-hidden="true" />}
 
         {children}
 

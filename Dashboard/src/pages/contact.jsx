@@ -64,12 +64,17 @@ export default function Contact() {
                 </div>
                 <div className={styles.cfield}>
                   <label htmlFor="c-msg">Message</label>
-                  <textarea id="c-msg" className={styles.ctext} value={form.message} onChange={set('message')} placeholder="How can we help?" />
+                  <textarea id="c-msg" className={styles.ctext} value={form.message} onChange={set('message')} placeholder="How can we help?"
+                    required aria-required="true"
+                    aria-invalid={status === 'err' && !form.message.trim() ? 'true' : undefined} />
                 </div>
                 <button className={styles.csubmit} type="submit" disabled={status === 'sending'}>
                   {status === 'sending' ? 'Sending…' : 'Send message'} <ArrowUpRight />
                 </button>
-                {note && <p className={`${styles.cstatus} ${status === 'ok' ? styles.ok : status === 'err' ? styles.err : ''}`}>{note}</p>}
+                {/* Live region so screen readers hear sending / success / error. */}
+                <div role="status" aria-live="polite">
+                  {note && <p className={`${styles.cstatus} ${status === 'ok' ? styles.ok : status === 'err' ? styles.err : ''}`}>{note}</p>}
+                </div>
               </form>
             </div>
 

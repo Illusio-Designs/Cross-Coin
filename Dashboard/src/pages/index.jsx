@@ -138,7 +138,10 @@ export default function Home() {
               <p>Partnerships, wholesale, press or general enquiries — reach the Obzus team.</p>
               <Link className={styles.contactBtn} href="/contact">Get in touch <ArrowRight /></Link>
               <p style={{ color: '#8a8a92', fontSize: 13, marginTop: 16 }}>
-                {CONTACT_EMAIL} · +91 97128 91700 · India
+                <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'inherit', textDecoration: 'none' }}>{CONTACT_EMAIL}</a>
+                {' · '}
+                <a href="tel:+919712891700" style={{ color: 'inherit', textDecoration: 'none' }}>+91 97128 91700</a>
+                {' · India'}
               </p>
             </div>
           </div>

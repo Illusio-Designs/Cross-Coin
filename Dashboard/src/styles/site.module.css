@@ -34,17 +34,26 @@
 .navLink { font-size: 13.5px; font-weight: 600; color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
 .navLink:hover { color: var(--text); }
 .navLinkActive { color: var(--text); }
+/* Login is an internal/admin action, not a marketing CTA — keep it a quiet
+   outline link so the filled marketing CTAs (.btnPrimary) win attention. */
 .signin {
   display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px;
-  border-radius: 9px; background: #0a0a0a; color: #fff; font-size: 13px; font-weight: 600;
-  text-decoration: none; transition: transform 0.12s ease, background 0.18s ease;
+  border-radius: 9px; background: transparent; color: var(--text);
+  border: 1px solid var(--border); font-size: 13px; font-weight: 600;
+  text-decoration: none; transition: border-color 0.18s ease, color 0.18s ease;
 }
-.signin:hover { background: #262626; transform: translateY(-1px); }
+.signin:hover { border-color: var(--text); }
 
 /* Grouping wrapper for the links + Login button (so they collapse together
    into the mobile dropdown). Hamburger is hidden until the mobile breakpoint. */
 .navMenu { display: flex; align-items: center; gap: 28px; }
 .navToggle { display: none; }
+/* Scrim behind the open mobile menu — sits under the sticky nav (z 20) but over
+   page content, and closes the menu on tap. */
+.navScrim { display: none; }
+@media (max-width: 720px) {
+  .navScrim { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 15; }
+}
 
 /* ── Buttons ── */
 .btnPrimary {
@@ -247,4 +256,33 @@
   .pageHero { padding: 52px 18px 12px; }
   .section { padding: 44px 18px; }
   .metaRow { gap: 28px; }
+}
+
+/* ── Accessibility ───────────────────────────────────────────────────── */
+/* Visible keyboard focus on every interactive element (only inputs had one). */
+.navLink:focus-visible,
+.navLogo:focus-visible,
+.signin:focus-visible,
+.navToggle:focus-visible,
+.btnPrimary:focus-visible,
+.btnSecondary:focus-visible,
+.csubmit:focus-visible,
+.brandCard:focus-visible,
+.footerLogo:focus-visible,
+.footerLinks a:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Honour reduced-motion: the site animates button/card lifts and arrow slides. */
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .btnPrimary:hover, .btnSecondary:hover, .signin:hover,
+  .brandCard:hover, .navLogo:hover { transform: none !important; }
 }
