@@ -11,6 +11,9 @@ const SHIPPING_KEY = 'ADS_SHIPPING_COST';
 const PRODUCT_KEY = 'ADS_PRODUCT_COST';
 const GLOBAL_BRAND = 1; // holder for the global shipping setting
 
+// Ads reporting officially begins on this date — never count before it.
+const REPORT_START = '2026-08-04';
+
 const CANCELLED_STATUSES = ['cancelled', 'order cancelled'];
 const RTO_STATUSES = ['rto', 'rto delivered', 'returned_rto'];
 
@@ -104,7 +107,8 @@ exports.deleteSpend = async (req, res) => {
 exports.getReport = async (req, res) => {
     try {
         const to = req.query.to || todayStr();
-        const from = req.query.from || addDays(to, -90);
+        let from = req.query.from || REPORT_START;
+        if (from < REPORT_START) from = REPORT_START; // clamp: reporting starts 2026-08-04
         const toEnd = addDays(to, 1); // exclusive upper bound → include the whole `to` day
 
         const { shipping, productCost } = await getCostSettings();
@@ -124,8 +128,10 @@ exports.getReport = async (req, res) => {
         for (const b of brands) {
             const s = spendByBrand[b.id];
             const adSpend = s ? s.spend : 0;
-            // Each brand's window starts at its first ad-spend day (matches the sheet).
-            const brandFrom = s?.firstDate || from;
+            // Each brand's window starts at its first ad-spend day (matches the
+            // sheet), but never before the fixed reporting start.
+            let brandFrom = s?.firstDate || from;
+            if (brandFrom < REPORT_START) brandFrom = REPORT_START;
             const brandFromEnd = brandFrom;
 
             const [agg] = await sequelize.query(

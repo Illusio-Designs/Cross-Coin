@@ -132,6 +132,7 @@ const DateRangePicker = ({
   label = 'Date Range',
   showIcon = true,
   inline = false,
+  single = false, // single-date mode: one click picks a date and closes
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
@@ -178,6 +179,13 @@ const DateRangePicker = ({
   // reopening a completed range), which made the picker occasionally treat
   // an end-date click as a new start — or close before the end registered.
   const handleSelect = useCallback((dayStr) => {
+    if (single) {
+      // One click picks the date and closes (unless an explicit Apply is used).
+      onStartChange(dayStr);
+      if (!onApply) setOpen(false);
+      setSelecting('start');
+      return;
+    }
     const rangeComplete = startDate && endDate;
     if (!startDate || rangeComplete) {
       // Begin a fresh range: set start, clear any old end. Never close here.
@@ -197,7 +205,7 @@ const DateRangePicker = ({
       if (!onApply) setOpen(false);
       setSelecting('start');
     }
-  }, [startDate, endDate, onStartChange, onEndChange, onApply]);
+  }, [startDate, endDate, onStartChange, onEndChange, onApply, single]);
 
   const handlePreset = (key) => {
     const range = getPresetRange(key);
@@ -239,11 +247,13 @@ const DateRangePicker = ({
         <button type="button" className={`drp-trigger ${open ? 'drp-trigger--active' : ''}`} onClick={handleToggle}>
           <CalendarIcon />
           <span className="drp-trigger-text">
-            {startDate && endDate
-              ? `${formatDisplay(startDate)}  —  ${formatDisplay(endDate)}`
-              : startDate
-                ? `${formatDisplay(startDate)}  —  Select end`
-                : 'Select dates'}
+            {single
+              ? (startDate ? formatDisplay(startDate) : 'Select date')
+              : startDate && endDate
+                ? `${formatDisplay(startDate)}  —  ${formatDisplay(endDate)}`
+                : startDate
+                  ? `${formatDisplay(startDate)}  —  Select end`
+                  : 'Select dates'}
           </span>
         </button>
 
@@ -263,7 +273,8 @@ const DateRangePicker = ({
       {open && (
         <div className={`drp-dropdown${alignRight ? ' drp-dropdown--right' : ''}`}>
           <div className="drp-dropdown-body">
-            {/* Presets */}
+            {/* Presets — range mode only */}
+            {!single && (
             <div className="drp-presets">
               <span className="drp-presets-title">Quick Select</span>
               {[
@@ -279,11 +290,14 @@ const DateRangePicker = ({
                 </button>
               ))}
             </div>
+            )}
 
             {/* Calendar */}
             <div className="drp-cal-wrap">
               <div className="drp-selecting-hint">
-                {(!startDate || (startDate && endDate)) ? 'Select start date' : 'Select end date'}
+                {single
+                  ? 'Select date'
+                  : (!startDate || (startDate && endDate)) ? 'Select start date' : 'Select end date'}
               </div>
               <CalendarGrid
                 year={calYear}

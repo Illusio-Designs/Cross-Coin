@@ -19,6 +19,10 @@ const iso = (d) => d.toISOString().slice(0, 10);
 const today = () => iso(new Date());
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
 
+// Ads reporting officially begins on this date — the report counts from here.
+const REPORT_START = '2026-08-04';
+const REPORT_START_LABEL = '4 Aug 2026';
+
 const POS = 'var(--ds-color-success, #16a34a)';
 const NEG = 'var(--ds-color-danger, #dc2626)';
 const WARN = 'var(--ds-color-warn, #d97706)';
@@ -66,7 +70,7 @@ const S = {
 const pn = (v) => ({ color: v < 0 ? NEG : 'var(--ds-color-text)' });
 
 export default function AdsReporting() {
-  const [from, setFrom] = useState(daysAgo(30));
+  const [from, setFrom] = useState(REPORT_START);
   const [to, setTo] = useState(today());
   const [report, setReport] = useState({ rows: [], shipping: 90 });
   const [settings, setSettings] = useState({ shipping: 90, productCost: {} });
@@ -170,6 +174,12 @@ export default function AdsReporting() {
         </div>
       </div>
       {error && <p style={{ ...S.hint, color: NEG }}>{error}</p>}
+
+      {/* Reporting-start note */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 10, background: 'var(--ds-color-surface-soft, #f6f6f7)', border: '1px solid var(--ds-color-border)', fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>
+        Ads reporting starts from <b style={{ color: 'var(--ds-color-text)', fontWeight: 700, margin: '0 2px' }}>{REPORT_START_LABEL}</b> — all figures are counted from this date.
+      </div>
 
       {/* KPI hero */}
       <div style={S.kpis}>
@@ -314,7 +324,10 @@ export default function AdsReporting() {
             <Select label="Brand" placeholder="Select brand" value={spendForm.brand_id} onChange={(v) => onPickBrand(v)}
               options={brands.map((b) => ({ label: b.name, value: String(b.id) }))} />
           </div>
-          <Input label="Date" type="date" value={spendForm.date} onChange={(e) => setSpendForm((f) => ({ ...f, date: e.target.value }))} />
+          <div style={{ minWidth: 170 }}>
+            <DateRangePicker single inline label="Date" startDate={spendForm.date}
+              onStartChange={(d) => setSpendForm((f) => ({ ...f, date: d }))} />
+          </div>
           <Input label="Spend (₹)" type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} />
           <Button variant="primary" onClick={addSpend}>Save</Button>
         </div>
