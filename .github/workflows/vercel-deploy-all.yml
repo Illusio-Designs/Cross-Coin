@@ -69,6 +69,7 @@ jobs:
           VERCEL_HOOK_KNITWINK:  ${{ secrets.VERCEL_HOOK_KNITWINK }}
           VERCEL_HOOK_VELMIQUE:  ${{ secrets.VERCEL_HOOK_VELMIQUE }}
           VERCEL_HOOK_VELQUIRA:  ${{ secrets.VERCEL_HOOK_VELQUIRA }}
+          VERCEL_HOOK_DASHBOARD: ${{ secrets.VERCEL_HOOK_DASHBOARD }}
           FORCE: ${{ github.event.inputs.brand }}
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
@@ -113,4 +114,8 @@ jobs:
           fire velmique  Velmique  "$VERCEL_HOOK_VELMIQUE"
           fire velquira  Velquira  "$VERCEL_HOOK_VELQUIRA"
 
-          [ "$any" = "1" ] && echo "Done — deployed the changed storefront(s)." || echo "No storefront folders changed — nothing to deploy."
+          # Standalone admin dashboard — fires its own Vercel deploy hook when
+          # anything under Dashboard/ changes, same mechanism as the storefronts.
+          fire dashboard Dashboard "$VERCEL_HOOK_DASHBOARD"
+
+          [ "$any" = "1" ] && echo "Done — deployed the changed target(s)." || echo "No deployable folders changed — nothing to deploy."
