@@ -338,6 +338,10 @@ async function handlePaymentSuccess({
     // "1 item" for multi-item prepaid/magic orders.
     try { order._itemCount = Array.isArray(session.items) ? session.items.length : undefined; } catch (_) {}
     setImmediate(() => {
+      // Fire order.created too (payment-first prepaid orders skip the checkout
+      // controller's emit) so Telegram / Web Push / dashboard-sound alerts go out
+      // for prepaid orders exactly like COD — not just order.confirmed.
+      try { orderEmitter.emit('order.created', order); } catch (e) { logger.warn('[OrderCreation] order.created emit failed:', e.message); }
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[OrderCreation] order.confirmed emit failed:', e.message); }
       syncOrderToFShip(order).catch(e => logger.warn('[OrderCreation] FShip sync failed:', e.message));
     });
