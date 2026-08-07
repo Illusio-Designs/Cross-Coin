@@ -19,8 +19,18 @@ orderEmitter.on('order.created', (order) => {
   // Reliable off-dashboard alerts (fire-and-forget, never blocks order flow).
   setImmediate(async () => {
     try {
+      // Resolve the brand name from the Brand row (per-brand correct). The
+      // STORE_NAME setting falls back to the GLOBAL env var when a brand has no
+      // row of its own — which showed "CrossCoin" on e.g. Soxbae orders.
       const settingsHelper = require('./settingsHelper');
-      const brand = (await settingsHelper.getSetting(order.brand_id || 1, 'STORE_NAME')) || 'Cross Coin';
+      let brand = 'Cross Coin';
+      try {
+        const Brand = require('../model/brandModel.js');
+        const b = order.brand_id ? await Brand.findByPk(order.brand_id, { attributes: ['name', 'display_name'] }) : null;
+        brand = b?.display_name || b?.name
+          || (await settingsHelper.getSetting(order.brand_id || 1, 'STORE_NAME'))
+          || 'Cross Coin';
+      } catch (_) { /* keep default */ }
       const amount = order.final_amount != null ? `₹${order.final_amount}` : '';
       const pay = String(order.payment_type || '').toUpperCase() || 'N/A';
       const items = order._itemCount ? ` · ${order._itemCount} item(s)` : '';
