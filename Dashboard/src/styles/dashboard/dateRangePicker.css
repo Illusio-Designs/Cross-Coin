@@ -286,6 +286,13 @@
   cursor: default;
 }
 
+/* Dates outside the allowed [minDate, maxDate] window. */
+.drp-cal-disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .drp-cal-cell:not(.drp-cal-empty):hover {
   background: var(--ds-color-bg);
 }

@@ -249,6 +249,13 @@ const makeRateLimitedCall = async (endpoint, requestFn, dedupeKey = null, enable
 };
 
 // Shipping Fee Services
+export const leadService = {
+  getLeads: async () => {
+    const { data } = await adminApi.get('/api/leads');
+    return data;
+  },
+};
+
 export const adsReportService = {
   getReport: async (from, to) => {
     const { data } = await adminApi.get('/api/ads-report/report', { params: { from, to } });

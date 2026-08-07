@@ -6,6 +6,22 @@ const { logger } = require('../config/logging.js');
 
 const COUPON_CODE = process.env.POPUP_COUPON_CODE || 'PREPAID10';
 
+// Admin: list captured phone leads (newest first) with brand names.
+exports.getLeads = async (req, res) => {
+  try {
+    const Brand = require('../model/brandModel.js');
+    const leads = await LeadCapture.findAll({ order: [['createdAt', 'DESC']], raw: true });
+    const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name'], raw: true });
+    const bmap = {};
+    brands.forEach((b) => { bmap[b.id] = b.display_name || b.name; });
+    const rows = leads.map((l) => ({ ...l, brand: bmap[l.brand_id] || `Brand #${l.brand_id}` }));
+    res.json({ success: true, count: rows.length, leads: rows });
+  } catch (err) {
+    logger.error('getLeads error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 exports.capturePhoneLead = async (req, res) => {
   try {
     const { phone, brandId = 1 } = req.body;

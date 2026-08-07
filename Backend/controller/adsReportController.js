@@ -18,7 +18,12 @@ const CANCELLED_STATUSES = ['cancelled', 'order cancelled'];
 const RTO_STATUSES = ['rto', 'rto delivered', 'returned_rto'];
 
 const num = (v, d = 0) => { const x = parseFloat(v); return Number.isFinite(x) ? x : d; };
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// All day boundaries are IST (Asia/Kolkata). created_at is stored UTC, so an IST
+// calendar day D → UTC range [D 00:00 IST, D+1 00:00 IST) = [(D-1) 18:30 UTC, D 18:30 UTC).
+const istDateStr = (d = new Date()) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const istMidnightToUtc = (dateStr) =>
+    new Date(dateStr + 'T00:00:00+05:30').toISOString().slice(0, 19).replace('T', ' ');
 const addDays = (dateStr, n) => {
     const d = new Date(dateStr + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() + n);
@@ -84,6 +89,7 @@ exports.saveSpend = async (req, res) => {
         if (!entries.length) return res.status(400).json({ success: false, message: 'No entries' });
         for (const e of entries) {
             if (!e.brand_id || !e.date) continue;
+            if (e.date < REPORT_START) continue; // no spend before the reporting start
             await AdSpend.upsert({ brand_id: Number(e.brand_id), date: e.date, amount: num(e.amount) });
         }
         res.json({ success: true, saved: entries.length });
@@ -106,10 +112,15 @@ exports.deleteSpend = async (req, res) => {
 // GET /report?from=&to=
 exports.getReport = async (req, res) => {
     try {
-        const to = req.query.to || todayStr();
+        // Only completed IST days count — cap `to` at yesterday (today's orders
+        // are still coming in, so a partial day would understate the report).
+        const yesterday = addDays(istDateStr(), -1);
+        let to = req.query.to || yesterday;
+        if (to > yesterday) to = yesterday;
         let from = req.query.from || REPORT_START;
         if (from < REPORT_START) from = REPORT_START; // clamp: reporting starts 2026-08-04
-        const toEnd = addDays(to, 1); // exclusive upper bound → include the whole `to` day
+        // Exclusive upper bound at IST midnight of the day after `to`, in UTC.
+        const toEnd = istMidnightToUtc(addDays(to, 1));
 
         const { shipping, productCost } = await getCostSettings();
         const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name'], raw: true });
@@ -132,7 +143,7 @@ exports.getReport = async (req, res) => {
             // sheet), but never before the fixed reporting start.
             let brandFrom = s?.firstDate || from;
             if (brandFrom < REPORT_START) brandFrom = REPORT_START;
-            const brandFromEnd = brandFrom;
+            const fromUtc = istMidnightToUtc(brandFrom); // IST day start → UTC
 
             const [agg] = await sequelize.query(
                 `SELECT
@@ -143,8 +154,8 @@ exports.getReport = async (req, res) => {
                     COALESCE(SUM(status IN (:canc)),0) AS cancelled,
                     COALESCE(SUM(status IN (:rto)),0) AS rto
                  FROM orders
-                 WHERE brand_id = :brandId AND created_at >= :from AND created_at < :toEnd`,
-                { replacements: { brandId: b.id, from: brandFromEnd, toEnd, canc: CANCELLED_STATUSES, rto: RTO_STATUSES }, type: sequelize.QueryTypes.SELECT }
+                 WHERE brand_id = :brandId AND created_at >= :fromUtc AND created_at < :toEnd`,
+                { replacements: { brandId: b.id, fromUtc, toEnd, canc: CANCELLED_STATUSES, rto: RTO_STATUSES }, type: sequelize.QueryTypes.SELECT }
             );
 
             const total = num(agg.total);

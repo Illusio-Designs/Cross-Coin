@@ -71,7 +71,7 @@ const pn = (v) => ({ color: v < 0 ? NEG : 'var(--ds-color-text)' });
 
 export default function AdsReporting() {
   const [from, setFrom] = useState(REPORT_START);
-  const [to, setTo] = useState(today());
+  const [to, setTo] = useState(daysAgo(1)); // up to yesterday — a day only counts once it has ended
   const [report, setReport] = useState({ rows: [], shipping: 90 });
   const [settings, setSettings] = useState({ shipping: 90, productCost: {} });
   const [loading, setLoading] = useState(false);
@@ -167,7 +167,8 @@ export default function AdsReporting() {
         </div>
         <div style={S.controls}>
           <DateRangePicker label="Period" inline startDate={from} endDate={to}
-            onStartChange={setFrom} onEndChange={setTo} onApply={loadReport} />
+            onStartChange={setFrom} onEndChange={setTo} onApply={loadReport}
+            minDate={REPORT_START} maxDate={daysAgo(1)} />
           <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
           <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
           <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>
@@ -178,7 +179,7 @@ export default function AdsReporting() {
       {/* Reporting-start note */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', borderRadius: 10, background: 'var(--ds-color-surface-soft, #f6f6f7)', border: '1px solid var(--ds-color-border)', fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>
-        Ads reporting starts from <b style={{ color: 'var(--ds-color-text)', fontWeight: 700, margin: '0 2px' }}>{REPORT_START_LABEL}</b> — all figures are counted from this date.
+        Ads reporting starts from <b style={{ color: 'var(--ds-color-text)', fontWeight: 700, margin: '0 2px' }}>{REPORT_START_LABEL}</b> and counts completed days only — up to yesterday (today&apos;s orders are counted after the day ends).
       </div>
 
       {/* KPI hero */}
@@ -326,7 +327,8 @@ export default function AdsReporting() {
           </div>
           <div style={{ minWidth: 170 }}>
             <DateRangePicker single inline label="Date" startDate={spendForm.date}
-              onStartChange={(d) => setSpendForm((f) => ({ ...f, date: d }))} />
+              onStartChange={(d) => setSpendForm((f) => ({ ...f, date: d }))}
+              minDate={REPORT_START} maxDate={today()} />
           </div>
           <Input label="Spend (₹)" type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} />
           <Button variant="primary" onClick={addSpend}>Save</Button>

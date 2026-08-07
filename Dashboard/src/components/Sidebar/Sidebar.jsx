@@ -65,6 +65,7 @@ const ALL_MENU = [
     submenu: [
       { label: 'Coupons',       view: 'coupons' },
       { label: 'Reviews',       view: 'reviews' },
+      { label: 'Leads',         view: 'leads', roles: ['admin'] },
       { label: 'UTM Analytics', view: 'utm-analytics', roles: ['admin'] },
     ],
   },

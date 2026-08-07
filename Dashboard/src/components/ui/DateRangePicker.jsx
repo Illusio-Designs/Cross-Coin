@@ -43,7 +43,7 @@ const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
 const getFirstDayOfWeek = (year, month) => new Date(year, month, 1).getDay();
 
 /* ── Calendar Grid ── */
-const CalendarGrid = ({ year, month, onMonthChange, startDate, endDate, onSelect, selecting }) => {
+const CalendarGrid = ({ year, month, onMonthChange, startDate, endDate, onSelect, selecting, minDate, maxDate }) => {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfWeek(year, month);
   const today = new Date();
@@ -85,15 +85,18 @@ const CalendarGrid = ({ year, month, onMonthChange, startDate, endDate, onSelect
           const isEnd = dayStr === endDate;
           const inRange = isInRange(dayStr);
           const isToday = dayStr === todayStr;
+          const disabled = (minDate && dayStr < minDate) || (maxDate && dayStr > maxDate);
           const cls = [
             'drp-cal-cell',
             isStart && 'drp-cal-start',
             isEnd && 'drp-cal-end',
             inRange && !isStart && !isEnd && 'drp-cal-in-range',
             isToday && !isStart && !isEnd && 'drp-cal-today',
+            disabled && 'drp-cal-disabled',
           ].filter(Boolean).join(' ');
           return (
-            <button key={dayStr} type="button" className={cls} onClick={() => onSelect(dayStr)}>
+            <button key={dayStr} type="button" className={cls} disabled={disabled}
+              onClick={disabled ? undefined : () => onSelect(dayStr)}>
               {day}
             </button>
           );
@@ -133,6 +136,8 @@ const DateRangePicker = ({
   showIcon = true,
   inline = false,
   single = false, // single-date mode: one click picks a date and closes
+  minDate = '',   // 'YYYY-MM-DD' — dates before this are disabled
+  maxDate = '',   // 'YYYY-MM-DD' — dates after this are disabled
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
@@ -210,8 +215,12 @@ const DateRangePicker = ({
   const handlePreset = (key) => {
     const range = getPresetRange(key);
     if (range) {
-      onStartChange(range.start);
-      onEndChange(range.end);
+      let { start, end } = range;
+      // Keep presets inside the allowed [minDate, maxDate] window.
+      if (minDate) { if (start < minDate) start = minDate; if (end < minDate) end = minDate; }
+      if (maxDate) { if (end > maxDate) end = maxDate; if (start > maxDate) start = maxDate; }
+      onStartChange(start);
+      onEndChange(end);
       if (!onApply) setOpen(false);
       setSelecting('start');
     }
@@ -307,6 +316,8 @@ const DateRangePicker = ({
                 endDate={endDate}
                 onSelect={handleSelect}
                 selecting={selecting}
+                minDate={minDate}
+                maxDate={maxDate}
               />
             </div>
           </div>

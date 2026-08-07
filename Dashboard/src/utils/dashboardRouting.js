@@ -27,6 +27,7 @@ export const getPageTitle = (view) => {
     'utm-analytics': 'UTM Analytics',
     'reports': 'Reports',
     'ads-reporting': 'Ads Reporting',
+    'leads': 'Leads',
     'lookbooks': 'Lookbooks',
     'staff-users': 'Staff Users',
   };
