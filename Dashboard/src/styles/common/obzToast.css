@@ -1,0 +1,75 @@
+/* ============================================================
+   Obzus toast — strips react-toastify's default chrome and
+   renders our own card (<ToastMessage/>). Colours come from the
+   design-system tokens, so it follows the dashboard light/dark
+   theme (and stays light on public pages, which set no data-theme).
+   ============================================================ */
+
+/* Container + let our card own the look */
+.Toastify__toast-container { width: auto; max-width: 420px; padding: 0; }
+.Toastify__toast {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 0 12px !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  font-family: inherit;
+}
+.Toastify__toast-body { padding: 0 !important; margin: 0 !important; }
+.Toastify__toast-icon { display: none !important; }
+
+/* The card */
+.obz-toast {
+  --accent: var(--ds-color-info, #3b82f6);
+  --tint: var(--ds-color-info-bg, #eef4ff);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  background: var(--ds-color-surface, #fff);
+  border: 1px solid var(--ds-color-border, #eef0f3);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 26px -12px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+}
+.obz-toast::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, var(--tint), transparent 46%);
+  pointer-events: none;
+}
+.obz-toast > * { position: relative; }
+.obz-toast__chip {
+  flex-shrink: 0;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: grid; place-items: center;
+  background: var(--ds-color-bg, #fafafa);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.obz-toast__body { flex: 1; min-width: 0; }
+.obz-toast__title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; color: var(--ds-color-text, #111318); }
+.obz-toast__msg { margin: 3px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ds-color-text-muted, #6b7280); word-break: break-word; }
+.obz-toast__x {
+  flex-shrink: 0; align-self: flex-start;
+  width: 26px; height: 26px; margin: -2px -4px 0 0;
+  border: none; background: transparent; color: var(--ds-color-text-faint, #9aa1ac);
+  border-radius: 8px; display: grid; place-items: center; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.obz-toast__x:hover { background: color-mix(in srgb, var(--ds-color-text) 10%, transparent); color: var(--ds-color-text); }
+
+/* Accent per type (semantic tokens) */
+.obz-toast--success { --accent: var(--ds-color-success, #16a34a); --tint: var(--ds-color-success-bg, #e9f9ef); }
+.obz-toast--error   { --accent: var(--ds-color-danger,  #ef4444); --tint: var(--ds-color-danger-bg,  #fdeeee); }
+.obz-toast--warning { --accent: var(--ds-color-warn,    #f59e0b); --tint: var(--ds-color-warn-bg,    #fdf6e6); }
+.obz-toast--info    { --accent: var(--ds-color-info,    #3b82f6); --tint: var(--ds-color-info-bg,    #eef4ff); }
+
+/* On dark theme, deepen the shadow a touch. */
+:root[data-theme="dark"] .obz-toast { box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4); }

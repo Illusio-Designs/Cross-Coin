@@ -1,5 +1,7 @@
+import React from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import ToastMessage from '../components/common/ToastMessage';
 
 /**
  * Global axios interceptors — installed once from _app.jsx via
@@ -95,7 +97,7 @@ export function installApiInterceptors() {
         // one identical toast per failure. Keying the toastId to the message
         // means react-toastify collapses them into a single visible toast —
         // the same pattern src/utils/toast.js already uses.
-        toast.error(msg, { toastId: `api-error:${msg}`, autoClose: 4000, hideProgressBar: false });
+        toast(React.createElement(ToastMessage, { type: 'error', message: msg }), { toastId: `api-error:${msg}`, autoClose: 4000, hideProgressBar: true, icon: false, closeButton: false });
       } catch { /* never let the interceptor itself throw */ }
       return Promise.reject(error);
     },

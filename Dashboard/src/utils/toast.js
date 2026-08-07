@@ -1,47 +1,31 @@
+import React from 'react';
 import { toast } from 'react-toastify';
+import ToastMessage from '../components/common/ToastMessage';
 
+// Render the custom Obzus toast (see components/common/ToastMessage +
+// styles/common/obzToast.css). icon/closeButton off — our card owns them.
 const baseConfig = {
-  position: "top-right",
-  autoClose: 1500,
+  position: 'top-right',
+  autoClose: 3000,
   hideProgressBar: true,
-  closeOnClick: true,
-  pauseOnHover: false,
+  closeOnClick: false,
+  pauseOnHover: true,
   pauseOnFocusLoss: false,
   draggable: false,
-  theme: "light",
+  icon: false,
+  closeButton: false,
 };
 
-// Success toasts
-export const showSuccessToast = (message, toastId) => {
-  const id = toastId || message;
+const push = (type, message, toastId) => {
+  const id = toastId || (typeof message === 'string' ? message : type);
   toast.dismiss(id);
-  toast.success(message, { ...baseConfig, toastId: id });
-  setTimeout(() => toast.dismiss(id), 1500);
+  toast(React.createElement(ToastMessage, { type, message }), { ...baseConfig, toastId: id });
 };
 
-// Error toasts
-export const showErrorToast = (message, toastId) => {
-  const id = toastId || message;
-  toast.dismiss(id);
-  toast.error(message, { ...baseConfig, toastId: id });
-  setTimeout(() => toast.dismiss(id), 1500);
-};
-
-// Info toasts
-export const showInfoToast = (message, toastId) => {
-  const id = toastId || message;
-  toast.dismiss(id);
-  toast.info(message, { ...baseConfig, toastId: id });
-  setTimeout(() => toast.dismiss(id), 1500);
-};
-
-// Warning toasts
-export const showWarningToast = (message, toastId) => {
-  const id = toastId || message;
-  toast.dismiss(id);
-  toast.warning(message, { ...baseConfig, toastId: id });
-  setTimeout(() => toast.dismiss(id), 1500);
-};
+export const showSuccessToast = (message, toastId) => push('success', message, toastId);
+export const showErrorToast = (message, toastId) => push('error', message, toastId);
+export const showInfoToast = (message, toastId) => push('info', message, toastId);
+export const showWarningToast = (message, toastId) => push('warning', message, toastId);
 
 // Specific action toasts
 export const showLoginSuccessToast = () => {

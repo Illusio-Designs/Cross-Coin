@@ -1,22 +1,24 @@
-// Re-export from toast.js with showSuccess/showError aliases
+// showSuccess/showError aliases — render the custom Obzus toast.
+import React from 'react';
 import { toast } from 'react-toastify';
+import ToastMessage from '../components/common/ToastMessage';
 
 const config = {
   position: 'top-right',
-  autoClose: 1500,
+  autoClose: 3000,
   hideProgressBar: true,
-  closeOnClick: true,
-  pauseOnHover: false,
+  closeOnClick: false,
+  pauseOnHover: true,
   pauseOnFocusLoss: false,
   draggable: false,
-  theme: 'light',
+  icon: false,
+  closeButton: false,
 };
 
 const show = (type, message, toastId) => {
-  const id = toastId || message;
+  const id = toastId || (typeof message === 'string' ? message : type);
   toast.dismiss(id);
-  toast[type](message, { ...config, toastId: id });
-  setTimeout(() => toast.dismiss(id), 1500);
+  toast(React.createElement(ToastMessage, { type, message }), { ...config, toastId: id });
 };
 
 export const showSuccess = (key, customMessage) => show('success', customMessage || key || 'Success!');

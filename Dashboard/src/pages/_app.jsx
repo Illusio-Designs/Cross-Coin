@@ -18,6 +18,7 @@ import SentryInit from '../components/SentryInit';
 // CSS has been removed; only shared globals, the admin login, the dashboard
 // sidebar, and the design-system tokens/ui-kit stay global.
 import "../styles/common/globals.css";
+import "../styles/common/obzToast.css";
 import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
@@ -80,22 +81,17 @@ function AppContent({ Component, pageProps, progressRef }) {
 
       <ToastContainer
         position="top-right"
-        autoClose={1500}
+        autoClose={3000}
         hideProgressBar={true}
         newestOnTop={true}
-        closeOnClick={true}
-        closeButton={true}
+        closeOnClick={false}
+        closeButton={false}
+        icon={false}
         rtl={false}
         pauseOnFocusLoss={false}
         draggable={false}
-        pauseOnHover={false}
-        theme="light"
+        pauseOnHover={true}
         limit={3}
-        toastOptions={{
-          autoClose: 1500,
-          pauseOnHover: false,
-          pauseOnFocusLoss: false,
-        }}
       />
     </>
   );
