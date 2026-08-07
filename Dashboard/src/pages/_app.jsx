@@ -4,79 +4,32 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { AuthProvider, useAuth } from "../context/AuthContext";
-import { useState, useEffect, useRef } from "react";
+import { AuthProvider } from "../context/AuthContext";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import Loader from "../components/common/Loader";
-import CartDrawer from "../components/cart/CartDrawer";
-import Breadcrumb from "../components/common/Breadcrumb";
-import Header from "../components/layout/Header";
-import Footer from "../components/layout/Footer";
 import { monitoring } from '../utils/monitoring';
 import { installLinkHardening } from '../utils/sanitizeHtml';
 import { installApiInterceptors } from '../utils/apiInterceptors';
 import { installErrorReporter } from '../utils/errorReporter';
 import { tryInitSentry } from '../utils/sentryAdapter';
 import SentryInit from '../components/SentryInit';
-// Global CSS — all imports must live here (Next.js Pages Router rule)
+// ── Global CSS (Pages Router: all global CSS must be imported here) ──
+// Obzus app = public site + admin dashboard + /login. Storefront page/component
+// CSS has been removed; only shared globals, the admin login, the dashboard
+// sidebar, and the design-system tokens/ui-kit stay global.
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
 import "../styles/common/DonutChart.css";
-import "../styles/common/FomoElements.css";
-// Components
-import "../styles/components/InfiniteReviewsSlider.css";
-import "../styles/components/ReviewForm.css";
-// Pages
-import "../styles/pages/Home.css";
-import "../styles/pages/Login.css";
-import "../styles/pages/Profile.css";
-import "../styles/pages/products.css";
-import "../styles/pages/ProductDetails.css";
-import "../styles/pages/Wishlist.css";
-import "../styles/pages/ThankYou.css";
-import "../styles/pages/OrderTracking.css";
-import "../styles/pages/SearchResults.css";
-import "../styles/pages/Policy.css";
-import "../styles/pages/Contact.css";
-import "../styles/pages/Collections.css";
-import "../styles/pages/About.css";
-import "../styles/pages/auth/adminlogin.css";
-import '../styles/pages/blog.css';
-import '../styles/pages/blog-details.css';
-import '../styles/pages/sitemap.css';
-import '../styles/pages/NotFound.css';
-
-// Components - Layout
-import "../styles/components/Header.css";
-import "../styles/components/Footer.css";
-import "../styles/components/Breadcrumb.css";
-
-// Components - Products
-import "../styles/components/ProductCard.css";
-import "../styles/components/HeroSlider.css";
-import "../styles/components/SlidingCollection.css";
-import "../styles/components/UnlockedExclusives.css";
-
-// Components - Common
-import "../styles/components/Testimonials.css";
-import "../styles/components/TrustBadges.css";
-import "../styles/components/CouponStrip.css";
-import "../styles/components/Toast.css";
-import "../styles/components/blog-section.css";
-
-import "../styles/components/Sidebar.css";
-import "../styles/components/CartDrawer.css";
-import "../styles/components/SizeChartModal.css";
-import "../styles/components/ProductFilterDrawer.css";
-import "../styles/components/FomoBar.css";
 import "../styles/common/Dropdown.css";
-
-// UI Components CSS
-// Design-system tokens + primitives (used by new admin pages and any
-// legacy page migrated to <PageHeader> / <Panel> / <StatTile> etc.)
+import "../styles/components/Toast.css";
+import "../styles/components/Sidebar.css";
+import "../styles/components/ProductFilterDrawer.css"; // used by the dashboard products page
+import "../styles/pages/auth/adminlogin.css";
+import "../styles/pages/NotFound.css";
+// Design-system tokens + primitives (dashboard pages + shared components/ui/*)
 import "../styles/dashboard/tokens.css";
 import "../styles/dashboard/primitives.css";
 import "../styles/dashboard/ui-button.css";
@@ -88,29 +41,11 @@ import "../styles/dashboard/ui-badge.css";
 import "../styles/dashboard/ui-select.css";
 import "../styles/dashboard/ui-switch.css";
 import "../styles/dashboard/dateRangePicker.css";
-
-// ── Admin-PAGE dashboard CSS is intentionally NOT imported here. ──
-// manualOrder, layout, tables, Card, payments, products, orders, media,
-// utmAnalytics, attributes, slider, pages, brands, brandSettings, brandTags,
-// brandAssignment, seo, social, whatsapp, analytics were ~226KB of
-// render-blocking CSS that EVERY storefront page downloaded (Pages-Router
-// bundles all _app global CSS into one stylesheet) but only /dashboard uses.
-// They are now bundled into /public/dashboard.css by
-// scripts/build-dashboard-css.mjs and loaded via a <link> only on /dashboard
-// routes (see AppContent). This removes that weight from the storefront's
-// FCP/LCP critical path. The shared UI kit above (tokens / primitives / ui-* /
-// dateRangePicker) STAYS global — storefront Products/SearchResults use
-// Pagination + Modal from components/ui, which those styles back.
-import "../styles/components/WhatsAppChat.css";
-// Additional page CSS
-import "../styles/pages/Lookbook.css";
+// Heavy admin-page CSS is bundled into /public/dashboard.css and loaded via a
+// <link> on /dashboard routes only (see AppContent).
 
 import Analytics from "../components/common/Analytics";
-import Msg91Loader from "../components/common/Msg91Loader";
 import UTMTracker from "../components/common/UTMTracker";
-import WhatsAppChat from "../components/common/WhatsAppChat";
-import PhonePopupModal from "../components/common/PhonePopupModal";
-import "../styles/components/PhonePopupModal.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
@@ -260,9 +195,8 @@ function App({ Component, pageProps }) {
       </Head>
       <UTMTracker />
       <Analytics />
-      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
+      {!router.pathname.startsWith('/dashboard') && (
         <>
-          <Msg91Loader />
           <SpeedInsights />
           <VercelAnalytics />
         </>

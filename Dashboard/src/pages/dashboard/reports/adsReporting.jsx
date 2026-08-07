@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { adsReportService } from '../../../services';
-import Modal from '../../../components/ui/Modal';
+import { Modal, Button, Input, Select } from '../../../components/ui';
 
 /**
  * Ads Reporting — the ONLY manual input is daily ad spend per brand. Orders
@@ -38,7 +38,7 @@ const S = {
   thL: { textAlign: 'left' },
   td: { padding: '8px', textAlign: 'right', borderBottom: '1px solid var(--ds-color-border-soft, #eee)', color: 'var(--ds-color-text)', whiteSpace: 'nowrap' },
   tdL: { textAlign: 'left', fontWeight: 700 },
-  totalTd: { padding: '10px 8px', textAlign: 'right', fontWeight: 800, borderTop: '2px solid var(--ds-color-border)', whiteSpace: 'nowrap' },
+  totalTd: { padding: '10px 8px', textAlign: 'right', fontWeight: 800, color: 'var(--ds-color-text)', borderTop: '2px solid var(--ds-color-border)', whiteSpace: 'nowrap' },
 };
 const pn = (v) => ({ color: v < 0 ? 'var(--ds-color-danger, #ef4444)' : 'var(--ds-color-text)' });
 
@@ -53,6 +53,7 @@ export default function AdsReporting() {
   const [spendList, setSpendList] = useState([]);
   const [msg, setMsg] = useState('');
   const [spendOpen, setSpendOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
 
   const brands = useMemo(
     () => report.rows.map((r) => ({ id: r.brand_id, name: r.brand })),
@@ -154,23 +155,27 @@ export default function AdsReporting() {
       <div style={S.panel}>
         <h3 style={S.h3}>Report period</h3>
         <div style={S.row}>
-          <div style={S.field}><label style={S.label}>From</label><input style={S.input} type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-          <div style={S.field}><label style={S.label}>To</label><input style={S.input} type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-          <button style={S.btnDark} onClick={loadReport} disabled={loading}>{loading ? 'Loading…' : 'Run report'}</button>
+          <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <Button variant="primary" onClick={loadReport} loading={loading}>Run report</Button>
           {error && <span style={{ ...S.hint, color: 'var(--ds-color-danger,#ef4444)' }}>{error}</span>}
         </div>
         <p style={{ ...S.hint, marginTop: 10, fontSize: 11.5 }}>Each brand&apos;s window starts on its first ad-spend day within this period.</p>
       </div>
 
-      {/* Add daily spend — opens a modal */}
+      {/* Actions: add spend + manage costs (both open modals) */}
       <div style={{ ...S.panel, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div>
           <h3 style={S.h3}>Daily ad spend</h3>
           <p style={S.hint}>The only manual input — everything else is calculated from orders.</p>
         </div>
-        <button style={S.btnDark} onClick={() => setSpendOpen(true)}>+ Add ad spend</button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
+          <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add ad spend</Button>
+        </div>
       </div>
 
+      {/* Add ad spend modal */}
       <Modal
         isOpen={spendOpen}
         onClose={() => { setSpendOpen(false); setMsg(''); }}
@@ -179,16 +184,18 @@ export default function AdsReporting() {
         size="md"
       >
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={S.field}>
-            <label style={S.label}>Brand</label>
-            <select style={{ ...S.input, minWidth: 160 }} value={spendForm.brand_id} onChange={(e) => onPickBrand(e.target.value)}>
-              <option value="">Select brand</option>
-              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+          <div style={{ minWidth: 170 }}>
+            <Select
+              label="Brand"
+              placeholder="Select brand"
+              value={spendForm.brand_id}
+              onChange={(val) => onPickBrand(val)}
+              options={brands.map((b) => ({ label: b.name, value: String(b.id) }))}
+            />
           </div>
-          <div style={S.field}><label style={S.label}>Date</label><input style={S.input} type="date" value={spendForm.date} onChange={(e) => setSpendForm((f) => ({ ...f, date: e.target.value }))} /></div>
-          <div style={S.field}><label style={S.label}>Spend (₹)</label><input style={{ ...S.input, width: 120 }} type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} /></div>
-          <button style={S.btnDark} onClick={addSpend}>Save</button>
+          <Input label="Date" type="date" value={spendForm.date} onChange={(e) => setSpendForm((f) => ({ ...f, date: e.target.value }))} />
+          <Input label="Spend (₹)" type="number" value={spendForm.amount} onChange={(e) => setSpendForm((f) => ({ ...f, amount: e.target.value }))} />
+          <Button variant="primary" onClick={addSpend}>Save</Button>
         </div>
         {msg && <p style={{ ...S.hint, marginTop: 10, color: 'var(--ds-color-success,#10b981)' }}>{msg}</p>}
         {spendForm.brand_id && (
@@ -207,25 +214,34 @@ export default function AdsReporting() {
         )}
       </Modal>
 
-      {/* Cost settings */}
-      <div style={S.panel}>
-        <h3 style={S.h3}>Cost settings</h3>
-        <p style={S.hint}>Defaults: product ₹140/order (per brand), shipping ₹90/order (global). Used for G.P. / N.P.</p>
-        <div style={S.row}>
-          <div style={S.field}><label style={S.label}>Shipping / order (₹)</label><input style={{ ...S.input, width: 110 }} type="number" value={settings.shipping} onChange={(e) => setSettings((s) => ({ ...s, shipping: e.target.value }))} /></div>
+      {/* Manage costs modal */}
+      <Modal
+        isOpen={costOpen}
+        onClose={() => { setCostOpen(false); setMsg(''); }}
+        title="Manage costs"
+        description="Defaults: product ₹140/order (per brand), shipping ₹90/order (global). Used for G.P. / N.P."
+        size="md"
+        footer={(
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button variant="ghost" onClick={() => setCostOpen(false)}>Close</Button>
+            <Button variant="primary" onClick={saveSettings}>Save costs</Button>
+          </div>
+        )}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          <Input label="Shipping / order (₹)" type="number" value={settings.shipping}
+            onChange={(e) => setSettings((s) => ({ ...s, shipping: e.target.value }))} />
         </div>
-        <div style={{ ...S.row, marginTop: 12 }}>
+        <div style={{ ...S.label, margin: '16px 0 8px' }}>Product cost / order — per brand</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           {brands.map((b) => (
-            <div style={S.field} key={b.id}>
-              <label style={S.label}>{b.name} — product ₹</label>
-              <input style={{ ...S.input, width: 110 }} type="number"
-                value={settings.productCost[b.id] ?? 140}
-                onChange={(e) => setProductCost(b.id, e.target.value)} />
-            </div>
+            <Input key={b.id} label={`${b.name} (₹)`} type="number"
+              value={settings.productCost[b.id] ?? 140}
+              onChange={(e) => setProductCost(b.id, e.target.value)} />
           ))}
         </div>
-        <div style={{ marginTop: 14 }}><button style={S.btnDark} onClick={saveSettings}>Save cost settings</button></div>
-      </div>
+        {msg && <p style={{ ...S.hint, marginTop: 10, color: 'var(--ds-color-success,#10b981)' }}>{msg}</p>}
+      </Modal>
 
       {/* Report table */}
       <div style={S.tableWrap}>
