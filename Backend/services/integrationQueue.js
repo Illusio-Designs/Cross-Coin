@@ -64,6 +64,12 @@ function buildRedisConfig() {
 function tryInit() {
   if (queue !== null) return;
   try {
+    // Bull opens a few ioredis connections and registers error/ready/end
+    // listeners on each for every processor we mount (~11), tripping Node's
+    // default 10-listener leak heuristic with a harmless startup warning. Raise
+    // the default so those legitimate one-time listeners don't warn (a genuine
+    // per-request leak would still climb past this).
+    require('events').EventEmitter.defaultMaxListeners = 25;
     const Bull = require('bull');
     queue = new Bull('integrations', {
       redis: buildRedisConfig(),

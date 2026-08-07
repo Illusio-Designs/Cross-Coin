@@ -556,11 +556,15 @@ module.exports.getAllProducts = async (req, res) => {
       : [
           { model: Category },
           {
+            // separate:true → batched "WHERE productId IN (…)" query instead of a
+            // hasMany JOIN, so a page of products no longer explodes into
+            // products×variations×images rows (the 1–2s slow query).
             model: ProductVariation,
             as: "ProductVariations",
-            include: [{ model: ProductImage, as: "VariationImages" }],
+            separate: true,
+            include: [{ model: ProductImage, as: "VariationImages", separate: true }],
           },
-          { model: ProductImage, as: "ProductImages" },
+          { model: ProductImage, as: "ProductImages", separate: true },
           { model: ProductSEO, as: "ProductSEO" },
           brandInclude,
         ];
@@ -1612,8 +1616,9 @@ module.exports.getProductsByCategory = async (req, res) => {
     const products = await Product.findAndCountAll({
       where: { categoryId },
       include: [
-        { model: ProductVariation },
-        { model: ProductImage },
+        // separate:true avoids the hasMany row-explosion (products×variations×images).
+        { model: ProductVariation, separate: true },
+        { model: ProductImage, separate: true },
         { model: ProductSEO },
       ],
       limit: parseInt(limit),
