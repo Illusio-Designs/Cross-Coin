@@ -11,7 +11,7 @@ export const BRANDS = [
     name: 'CrossCoin',
     logo: '/brands/crosscoin.webp',
     url: 'https://crosscoin.in',
-    category: 'Lifestyle & essentials',
+    category: 'Socks',
     blurb: 'Everyday lifestyle essentials with a bold, modern edge.',
     about: [
       'CrossCoin is a lifestyle brand built around everyday essentials — pieces designed to be worn on repeat, made to look good and last longer.',
@@ -24,7 +24,7 @@ export const BRANDS = [
     name: 'Gripzus',
     logo: '/brands/gripzus.jpeg',
     url: 'https://gripzus.com',
-    category: 'Everyday performance',
+    category: 'Socks',
     blurb: 'Performance-minded products for people always on the move.',
     about: [
       'Gripzus is built for everyday performance — products engineered to keep up with an active, on-the-go lifestyle.',
@@ -37,7 +37,7 @@ export const BRANDS = [
     name: 'Morbix',
     logo: '/brands/morbix.png',
     url: 'https://morbixsocks.com',
-    category: 'Socks & basics',
+    category: 'Socks',
     blurb: 'Comfortable, colourful socks and everyday basics.',
     about: [
       'Morbix makes socks and everyday basics that add a little colour and a lot of comfort to the daily routine.',
@@ -50,7 +50,7 @@ export const BRANDS = [
     name: 'Soxbae',
     logo: '/brands/soxbae.png',
     url: 'https://soxbaesocks.com',
-    category: 'Socks — happiness in feet',
+    category: 'Socks',
     blurb: 'Happiness in feet — socks that feel as good as they look.',
     about: [
       'Soxbae is all about happiness in feet — socks designed to keep you comfortable from the first step to the last.',
@@ -63,7 +63,7 @@ export const BRANDS = [
     name: 'Knitwink',
     logo: '/brands/knitwink.webp',
     url: 'https://knitwink.com',
-    category: 'Premium knitwear',
+    category: 'Socks',
     blurb: 'Luxury in every step — elevated, finely knit essentials.',
     about: [
       'Knitwink brings luxury to every step, with finely knit essentials that feel premium and look refined.',
@@ -76,7 +76,7 @@ export const BRANDS = [
     name: 'Velmique',
     logo: '/brands/velmique.webp',
     url: 'https://velmique.co.in',
-    category: 'Refined & modern',
+    category: 'Perfume',
     blurb: 'Refined, modern pieces with an understated elegance.',
     about: [
       'Velmique is a refined, modern brand built on understated elegance — pieces that feel considered without trying too hard.',

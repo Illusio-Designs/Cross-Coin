@@ -1,8 +1,9 @@
 import Layout from '../components/site/Layout';
-import { Mail, ArrowUpRight } from '../components/site/icons';
+import { Mail, Phone, ArrowUpRight } from '../components/site/icons';
 import styles from '../styles/site.module.css';
 
-const CONTACT_EMAIL = 'illusiodesigns@gmail.com';
+const CONTACT_EMAIL = 'Obzusindia@gmail.com';
+const CONTACT_PHONE = '+91 97128 91700';
 
 export default function Contact() {
   return (
@@ -25,6 +26,10 @@ export default function Contact() {
               <a className={styles.contactLine} href={`mailto:${CONTACT_EMAIL}`}>
                 <Mail /> {CONTACT_EMAIL}
               </a>
+              <a className={styles.contactLine} style={{ marginTop: 12 }} href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`}>
+                <Phone /> {CONTACT_PHONE}
+              </a>
+              <p style={{ marginTop: 12, marginBottom: 0 }}>Obzus India Pvt. Ltd. · Based in India</p>
             </div>
             <div className={styles.contactBox}>
               <div className={styles.contactBoxInner}>
