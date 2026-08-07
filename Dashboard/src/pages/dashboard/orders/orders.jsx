@@ -666,6 +666,14 @@ const Orders = () => {
                                 <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
+                        {!isSynced && (
+                            <Tooltip text="Enter AWB / courier manually (for orders booked outside the system)" position="top">
+                                <button className="order-action-btn order-update-btn"
+                                    onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
+                                    <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />
+                                </button>
+                            </Tooltip>
+                        )}
                         {(row.Shipment?.waybill || row.fship_waybill) && (
                             <Tooltip text="Generate shipping label for this order" position="top">
                                 <button className={`order-action-btn order-label-btn${generatingLabel.has(row.id) ? ' disabled' : ''}`}
@@ -801,6 +809,16 @@ const Orders = () => {
                             ))}
                         </div>
                         <div className="ord-toolbar-right">
+                            <button type="button" className="order-sync-main-btn" onClick={() => setIsManualOrderOpen(true)}>
+                                <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} />
+                                New order
+                            </button>
+                            <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost"
+                                onClick={() => setLiveUpdates((v) => !v)}
+                                title={liveUpdates ? 'Live updates on — the table auto-refreshes' : 'Live updates paused — the table won’t move under you'}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: liveUpdates ? 'var(--ds-color-success)' : 'var(--ds-color-text-faint)' }} />
+                                {liveUpdates ? 'Live' : 'Paused'}
+                            </button>
                             {selectedOrders.size > 0 && (
                                 <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
                                     onClick={handleBulkDownload} disabled={isDownloadingBulk}>

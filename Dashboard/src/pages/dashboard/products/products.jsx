@@ -12,7 +12,6 @@ import AttributeSelector from '../../../components/products/AttributeSelector';
 import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
 import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
-import ProductFilterDrawer from '../../../components/products/ProductFilterDrawer';
 import SerpPreview from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { showSuccess, showError } from '../../../utils/toastNotification';
@@ -27,18 +26,10 @@ const Editor = dynamic(() => import('../../../components/common/Editor'), {
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalProducts, setTotalProducts] = useState(0);
   const [filterValue, setFilterValue] = useState("");
-  const [activeFilters, setActiveFilters] = useState({
-    categories: [],
-    priceRange: { min: 0, max: 10000 },
-    status: [],
-    badge: [],
-    attributes: {}
-  });
   const [loading, setLoading] = useState(false);
   // Separate from `loading` (which gates the table skeleton) so opening the
   // edit panel doesn't flash/reload the whole products table.
@@ -196,11 +187,6 @@ const ProductsPage = () => {
   }, [fetchProducts]);
 
   // Handle filter application
-  const handleApplyFilters = (filters) => {
-    setActiveFilters(filters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
   // Backend handles filtering and pagination
   const filteredData = products;
 
@@ -1463,14 +1449,6 @@ const ProductsPage = () => {
         productId={formData.id} // Pass the product ID when editing
       />
 
-      {/* Product Filter Drawer */}
-      <ProductFilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        onApplyFilters={handleApplyFilters}
-        categories={categories}
-        attributes={attributes}
-      />
     </div>
     </>
   );
