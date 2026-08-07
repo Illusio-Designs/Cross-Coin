@@ -86,6 +86,17 @@ const Orders = () => {
     // Manual courier picker — opened directly or auto-opened when an
     // auto-sync comes back failed (no serviceable courier).
 
+    // Deep-link from the home "Needs attention" inbox: it stashes a status in
+    // sessionStorage before navigating here so the table lands pre-filtered.
+    useEffect(() => {
+        let hint;
+        try { hint = sessionStorage.getItem('obz-orders-status'); } catch {}
+        if (hint) {
+            try { sessionStorage.removeItem('obz-orders-status'); } catch {}
+            setStatusFilter(hint);
+        }
+    }, []);
+
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
     useEffect(() => {

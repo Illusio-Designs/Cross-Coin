@@ -10,8 +10,19 @@ import {
   MoneyBag02Icon, ShoppingCart01Icon, Clock01Icon, Tick02Icon, RefreshIcon,
   Package01Icon, StarIcon, CreditCardIcon, UndoIcon, Alert02Icon,
   Analytics01Icon, ChartUpIcon, UserMultiple02Icon, DeliveryTruck01Icon,
-  ArrowDown01Icon, ArrowUp01Icon,
+  ArrowDown01Icon, ArrowUp01Icon, ArrowRight01Icon,
 } from '@hugeicons/core-free-icons';
+
+/* Navigate the dashboard shell to another view (same pattern as the
+   notification bell): push the path and fire popstate so index.jsx swaps
+   the mounted view without any prop threading. An optional order-status
+   hint is stashed in sessionStorage so the Orders page lands pre-filtered. */
+function goToView(view, orderStatus) {
+  if (orderStatus) { try { sessionStorage.setItem('obz-orders-status', orderStatus); } catch {} }
+  const url = view === 'main' ? '/dashboard' : `/dashboard/${view}`;
+  window.history.pushState({}, '', url);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
 
 /* ── Icons ── */
 const IC = {
@@ -31,7 +42,22 @@ const IC = {
   truck: <HugeiconsIcon icon={DeliveryTruck01Icon} size={16} strokeWidth={2} />,
   chevDown: <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={2} />,
   chevUp: <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={2} />,
+  arrow: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
 };
+
+/* ── Action inbox card — one actionable queue, click-through to act ── */
+function ActionCard({ tone, icon, count, label, hint, onClick }) {
+  return (
+    <button type="button" className={`inbox-card tone-${tone}`} onClick={onClick}>
+      <span className="ic-chip">{icon}</span>
+      <span className="ic-body">
+        <span className="ic-top"><b className="num">{count}</b><span className="ic-label">{label}</span></span>
+        <span className="ic-hint">{hint}</span>
+      </span>
+      <span className="ic-go" aria-hidden="true">{IC.arrow}</span>
+    </button>
+  );
+}
 
 const THEMES = {
   primary: { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
@@ -233,12 +259,22 @@ function CardGrid() {
   const totalOrders = orders.total || 0;
   const pipelineTotal = totalOrders || 1;
 
-  /* ── Alert items ── */
-  const alerts = [];
-  if (stats.lowStock?.outOfStockCount > 0) alerts.push(`${stats.lowStock.outOfStockCount} out of stock`);
-  if (stats.lowStock?.lowStockCount > 0) alerts.push(`${stats.lowStock.lowStockCount} low stock`);
-  if (stats.rtoStats?.rtoRate > 0) alerts.push(`RTO rate: ${stats.rtoStats.rtoRate}%`);
-  if (pendingCount > 0) alerts.push(`${pendingCount} orders pending`);
+  /* ── Action inbox — "needs attention" queues, each click-throughs to the
+     page where the operator can act. Only non-empty queues are shown, most
+     urgent first; counts always match what the destination page displays. ── */
+  const outOfStock = stats.lowStock?.outOfStockCount || 0;
+  const lowStock = stats.lowStock?.lowStockCount || 0;
+  // Prefer the exact pending-moderation count; fall back to total-approved for
+  // any Redis-cached payload written before the backend added reviews.pending.
+  const reviewsPending = reviews.pending ?? Math.max(0, (reviews.total || 0) - (reviews.approved || 0));
+
+  const inbox = [
+    { key: 'confirm', tone: 'warn',   icon: IC.clock, count: pendingCount, label: 'Orders to confirm', hint: 'Awaiting confirmation', onClick: () => goToView('orders', 'pending') },
+    { key: 'rto',     tone: 'danger', icon: IC.undo,  count: rtoCount,     label: 'RTO / returns',     hint: 'Review & re-attempt',   onClick: () => goToView('orders', 'rto') },
+    { key: 'oos',     tone: 'danger', icon: IC.warn,  count: outOfStock,   label: 'Out of stock',      hint: 'Restock now',           onClick: () => goToView('products') },
+    { key: 'low',     tone: 'warn',   icon: IC.box,   count: lowStock,     label: 'Low stock',         hint: 'Below 10 units',        onClick: () => goToView('products') },
+    { key: 'reviews', tone: 'info',   icon: IC.star,  count: reviewsPending, label: 'Reviews to moderate', hint: 'Awaiting approval',   onClick: () => goToView('reviews') },
+  ].filter((i) => i.count > 0);
 
   /* ── Segmented order-overview buckets (each order counted once) ── */
   // Explicit vivid hues (not neutral tokens) so every bucket reads as its own
@@ -276,25 +312,18 @@ function CardGrid() {
         }
       />
 
-      {/* ═══ 2. ALERT BAR ═══ */}
-      {alerts.length > 0 && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 14px',
-            background: 'var(--ds-color-warn-bg)',
-            border: '1px solid var(--ds-color-warn-bd)',
-            borderRadius: 'var(--ds-radius-md)',
-            color: 'var(--ds-color-warn)',
-            fontSize: 'var(--ds-text-md)',
-            fontWeight: 'var(--ds-weight-semi)',
-            marginBottom: 'var(--ds-space-4)',
-          }}
-        >
-          <span style={{ display: 'inline-flex' }} aria-hidden="true">{IC.warn}</span>
-          <span>{alerts.join('  ·  ')}</span>
+      {/* ═══ 2. ACTION INBOX — needs attention ═══ */}
+      {inbox.length > 0 && (
+        <div className="panel inbox" role="region" aria-label="Needs attention">
+          <div className="panel-h">
+            <h3>Needs attention</h3>
+            <span className="h-hint">{inbox.length} {inbox.length === 1 ? 'queue' : 'queues'} · tap to act</span>
+          </div>
+          <div className="inbox-grid">
+            {inbox.map((i) => (
+              <ActionCard key={i.key} tone={i.tone} icon={i.icon} count={inr(i.count)} label={i.label} hint={i.hint} onClick={i.onClick} />
+            ))}
+          </div>
         </div>
       )}
 

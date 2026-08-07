@@ -198,6 +198,13 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       where: { status: "approved" },
     });
 
+    // Reviews still awaiting moderation (drives the home "Needs attention"
+    // inbox). Kept separate from total-minus-approved so rejected reviews
+    // don't inflate the actionable count.
+    const pendingReviews = await Review.count({
+      where: { status: "pending" },
+    });
+
     // Get recent orders (last 30 days)
     const recentOrders = await Order.count({
       where: {
@@ -745,6 +752,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         reviews: {
           total: totalReviews,
           approved: approvedReviews,
+          pending: pendingReviews,
         },
         recentOrders: formattedRecentOrders,
         topProducts: formattedTopProducts,

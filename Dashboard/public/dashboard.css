@@ -42,6 +42,72 @@
 .obz-home .delta.up   { color: var(--ds-color-success); }
 .obz-home .delta.down { color: var(--ds-color-danger); }
 
+/* ── Action inbox ("Needs attention") ───────────────────────────────── */
+.obz-home .inbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 10px;
+}
+.obz-home .inbox-card {
+  --tone: var(--ds-color-text-muted);
+  --tone-bg: var(--ds-color-surface-soft);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 12px 12px 13px;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+  font: inherit;
+  color: var(--ds-color-text);
+  transition: transform 0.14s cubic-bezier(.22,1,.36,1), border-color 0.14s, box-shadow 0.14s;
+}
+.obz-home .inbox-card::before {
+  content: "";
+  position: absolute; left: 0; top: 10px; bottom: 10px;
+  width: 3px; border-radius: 3px; background: var(--tone);
+}
+.obz-home .inbox-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--tone) 45%, var(--ds-color-border));
+  box-shadow: 0 6px 18px -12px rgba(0,0,0,0.35);
+}
+.obz-home .inbox-card:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 2px;
+}
+.obz-home .inbox-card .ic-chip {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--tone-bg);
+  color: var(--tone);
+}
+.obz-home .inbox-card .ic-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.obz-home .inbox-card .ic-top { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.obz-home .inbox-card .ic-top b { font-size: 19px; font-weight: 750; letter-spacing: -0.02em; color: var(--ds-color-text); line-height: 1; }
+.obz-home .inbox-card .ic-label {
+  font-size: 13px; font-weight: 600; color: var(--ds-color-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.obz-home .inbox-card .ic-hint { font-size: 11.5px; color: var(--ds-color-text-muted); }
+.obz-home .inbox-card .ic-go {
+  flex-shrink: 0; display: grid; place-items: center;
+  color: var(--ds-color-text-faint);
+  transition: transform 0.14s, color 0.14s;
+}
+.obz-home .inbox-card:hover .ic-go { color: var(--tone); transform: translateX(2px); }
+
+.obz-home .inbox-card.tone-warn   { --tone: var(--ds-color-warn);    --tone-bg: var(--ds-color-warn-bg); }
+.obz-home .inbox-card.tone-danger { --tone: var(--ds-color-danger);  --tone-bg: var(--ds-color-danger-bg); }
+.obz-home .inbox-card.tone-info   { --tone: var(--ds-color-info);    --tone-bg: var(--ds-color-info-bg); }
+.obz-home .inbox-card.tone-success{ --tone: var(--ds-color-success); --tone-bg: var(--ds-color-success-bg); }
+
 /* ── Panels ──────────────────────────────────────────────────────────── */
 .obz-home .panel {
   background: var(--ds-color-surface);
