@@ -32,6 +32,14 @@ name: Deploy changed storefronts to Vercel
 on:
   push:
     branches: [ main ]
+    # Don't run (or even show) a storefront deploy when a push only touches the
+    # backend / infra — otherwise every backend-only push shows a second,
+    # no-op Vercel run alongside the FTP deploy.
+    paths-ignore:
+      - 'Backend/**'
+      - 'docs/**'
+      - '.github/**'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       brand:
