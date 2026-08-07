@@ -11194,12 +11194,11 @@
 }
 
 .was-bar-chart {
-  padding: 18px 16px 8px;
+  padding: 18px 16px 10px;
   display: flex;
   align-items: flex-end;
   gap: 8px;
   height: 140px;
-  border-bottom: 1px solid var(--wa-border);   /* baseline axis */
 }
 
 .was-bar-col {
