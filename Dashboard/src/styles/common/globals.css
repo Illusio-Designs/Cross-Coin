@@ -142,18 +142,26 @@
   src: local('Poppins Bold'), local('Poppins-Bold');
 }
 
-/* Force light mode - disable dark mode */
-html {
+/* Force light mode on the PUBLIC Obzus site only.
+   The admin dashboard stamps data-theme on <html> (light or dark) and owns
+   its own theming via the --ds tokens, so these forced-light rules must NOT
+   reach it. Scoping to html:not([data-theme]) excludes every /dashboard
+   route (which always has data-theme set). Previously the unscoped
+   `color: #180D3E !important` forced navy text onto every dashboard element
+   that inherits `color` — the "blue font" bug on unstyled titles such as the
+   notification-panel header. */
+html:not([data-theme]) {
   color-scheme: light !important;
 }
-
-html, body {
+html:not([data-theme]),
+html:not([data-theme]) body {
   background-color: #ffffff !important;
   color: #180D3E !important;
 }
-
-/* Prevent any dark mode classes */
-.dark, .dark-mode, [data-theme="dark"] {
+/* Prevent any stray dark-mode class from darkening the public site (the
+   dashboard's real dark mode uses [data-theme="dark"], handled by tokens). */
+html:not([data-theme]) .dark,
+html:not([data-theme]) .dark-mode {
   background-color: #ffffff !important;
   color: #180D3E !important;
 }

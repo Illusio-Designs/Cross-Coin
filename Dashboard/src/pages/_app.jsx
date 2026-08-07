@@ -25,7 +25,6 @@ import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
 import "../styles/common/DonutChart.css";
 import "../styles/common/Dropdown.css";
-import "../styles/components/Toast.css";
 import "../styles/components/Sidebar.css";
 import "../styles/components/ProductFilterDrawer.css"; // used by the dashboard products page
 import "../styles/pages/auth/adminlogin.css";

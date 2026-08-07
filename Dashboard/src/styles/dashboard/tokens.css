@@ -155,6 +155,18 @@
    --bp-xl: 1280px;   widescreen layouts
 */
 
+/* ── Dashboard themed baseline ────────────────────────────────────────
+   The public "force light" globals are scoped to html:not([data-theme]),
+   so on the dashboard (html always has data-theme) the <body> no longer
+   gets a forced colour. Set the inherited baseline here so every element
+   OUTSIDE .dashboard-content — the header, notification panel, react-
+   toastify portal, modals — inherits themed text instead of the browser
+   default (which read as navy/black on the dark canvas). */
+html[data-theme] body {
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
+}
+
 /* ── Generic dashboard reset to match the new chrome ──────────────── */
 .ds-canvas {
   background: var(--ds-color-bg);
