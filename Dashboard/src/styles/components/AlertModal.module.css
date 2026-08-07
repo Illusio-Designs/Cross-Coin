@@ -1,0 +1,99 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.box {
+  background: var(--ds-color-surface, #fff);
+  color: var(--ds-color-text, #0a0a0a);
+  border: 1px solid var(--ds-color-border, #e7e7ea);
+  border-radius: 14px;
+  padding: 28px 32px;
+  min-width: 280px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.message {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ds-color-text, #0a0a0a);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Primary / OK — solid monochrome */
+.btn {
+  background: var(--ds-color-text, #0a0a0a);
+  color: var(--ds-color-surface, #fff);
+  border: 1px solid var(--ds-color-text, #0a0a0a);
+  border-radius: 9px;
+  padding: 10px 32px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+.btn:hover { opacity: 0.9; }
+
+.btnRow {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btnCancel {
+  background: var(--ds-color-surface, #fff);
+  color: var(--ds-color-text, #0a0a0a);
+  border: 1px solid var(--ds-color-border, #e7e7ea);
+  border-radius: 9px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.btnCancel:hover { border-color: var(--ds-color-text-faint, #9a9aa2); }
+
+/* Confirm — solid monochrome (matches the black-and-white theme) */
+.btnDanger {
+  background: var(--ds-color-text, #0a0a0a);
+  color: var(--ds-color-surface, #fff);
+  border: 1px solid var(--ds-color-text, #0a0a0a);
+  border-radius: 9px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+.btnDanger:hover { opacity: 0.9; }
+
+.input {
+  width: 100%;
+  border: 1.5px solid var(--ds-color-border, #e7e7ea);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: var(--ds-color-surface, #fff);
+  color: var(--ds-color-text, #0a0a0a);
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.input:focus { border-color: var(--ds-color-text, #0a0a0a); }

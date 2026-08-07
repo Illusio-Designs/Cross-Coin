@@ -1,0 +1,63 @@
+/* UI Pagination Component */
+
+.pgn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: 'DM Sans', sans-serif;
+}
+.pgn-disabled { opacity: 0.5; pointer-events: none; }
+.pgn-md { gap: 4px; }
+.pgn-lg { gap: 6px; }
+
+.pgn-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 6px;
+  outline: none;
+  font-size: 13px;
+}
+.pgn-btn:hover:not(.pgn-btn-disabled):not(.pgn-btn-active) {
+  background: var(--ds-color-surface-soft);
+  border-color: var(--ds-color-border);
+}
+.pgn-btn:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+
+.pgn-sm .pgn-btn { width: 28px; height: 28px; font-size: 12px; }
+.pgn-md .pgn-btn { width: 34px; height: 34px; font-size: 13px; }
+.pgn-lg .pgn-btn { width: 40px; height: 40px; font-size: 14px; }
+
+.pgn-btn-active { background: #0a0a0a; border-color: #0a0a0a; color: #fff; }
+.pgn-btn-active:hover { background: #050505; border-color: #050505; }
+
+.pgn-btn-disabled { background: var(--ds-color-surface-soft); border-color: var(--ds-color-border); color: var(--ds-color-text-faint); cursor: not-allowed; }
+
+.pgn-ellipsis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-color-text-muted);
+  font-weight: 600;
+  user-select: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.pgn-sm .pgn-ellipsis { width: 28px; height: 28px; font-size: 12px; }
+.pgn-md .pgn-ellipsis { width: 34px; height: 34px; font-size: 13px; }
+.pgn-lg .pgn-ellipsis { width: 40px; height: 40px; font-size: 14px; }
+
+@media (max-width: 480px) {
+  .pgn-md .pgn-btn, .pgn-lg .pgn-btn { width: 30px; height: 30px; font-size: 12px; }
+  .pgn-md .pgn-ellipsis, .pgn-lg .pgn-ellipsis { width: 30px; height: 30px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pgn-btn { transition: none; }
+}

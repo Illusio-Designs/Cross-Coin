@@ -1,0 +1,365 @@
+/* DM Sans loaded via _document.jsx preload for non-render-blocking delivery */
+
+/* ─── Visually-hidden utility ────────────────────────────────────────
+   Renders content for screen-readers while keeping it off-screen for
+   sighted users. Use on h1s where the design has no visible page
+   title, or on form labels that would clutter the layout. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Skip-to-main link ──────────────────────────────────────────────
+   Hidden off-screen until focused (keyboard tab). First focusable
+   element on every page so screen-reader / keyboard users can jump
+   past the nav directly to the page content. */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100000;
+  padding: 12px 20px;
+  background: #180D3E;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+  transition: left 0.1s ease;
+}
+.skip-to-main:focus {
+  left: 0;
+  outline: 2px solid #CE1E36;
+  outline-offset: 2px;
+}
+
+:root {
+  --theme-color: #180D3E;
+  
+  /* ============================================
+     CROSSCOIN UI DESIGN TOKENS
+     ============================================ */
+  
+  /* Primary Colors - Crosscoin Brand */
+  --color-primary: #CE1E36;
+  --color-primary-dark: #a01729;
+  --color-primary-darker: #8a1220;
+  
+  /* Secondary Colors - Purple */
+  --color-secondary: #180D3E;
+  --color-secondary-dark: #2a1a4d;
+  --color-secondary-darker: #1e1438;
+  
+  /* Semantic Colors */
+  --color-success: #4CAF50;
+  --color-success-dark: #218838;
+  --color-success-darker: #1e7e34;
+  
+  --color-danger: #F44336;
+  --color-danger-dark: #c82333;
+  --color-danger-darker: #bd2130;
+  
+  --color-warning: #FF9800;
+  --color-info: #2196F3;
+  
+  /* Neutral Colors */
+  --color-white: #FFFFFF;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-500: #6B7280;
+  --color-text: #111827;
+  
+  /* Spacing Scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Section Padding - use this for all page/section wrappers */
+  --section-padding: 60px;
+  --section-padding-tablet: 40px 20px;
+  --section-padding-mobile: 28px 14px;
+  
+  /* Typography */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-weight-semibold: 600;
+  
+  /* Border Radius */
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  
+  /* Transitions */
+  --transition-base: all 0.2s ease;
+}
+
+/* Font Optimization - Use font-display: swap for better performance */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Poppins'), local('Poppins-Regular');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Poppins Medium'), local('Poppins-Medium');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Poppins SemiBold'), local('Poppins-SemiBold');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Poppins Bold'), local('Poppins-Bold');
+}
+
+/* Force light mode - disable dark mode */
+html {
+  color-scheme: light !important;
+}
+
+html, body {
+  background-color: #ffffff !important;
+  color: #180D3E !important;
+}
+
+/* Prevent any dark mode classes */
+.dark, .dark-mode, [data-theme="dark"] {
+  background-color: #ffffff !important;
+  color: #180D3E !important;
+}
+*{
+  margin: 0;
+  padding: 0;
+}
+body{
+  font-family: Poppins, sans-serif;
+}
+
+:fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+  overflow: hidden !important;
+}
+:fullscreen body, :-webkit-full-screen body, :-moz-full-screen body, :-ms-fullscreen body {
+  overflow: hidden !important;
+}
+
+/* Product Card Images - Force contain to show full image without cropping */
+.product-card-image-contain {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: auto !important;
+  background: #ffffff !important;
+}
+
+/* Hide all scrollbars site-wide */
+*::-webkit-scrollbar { display: none !important; }
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+html, body {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  max-width: 100%;
+}
+
+/* ── GLOBAL READING PROGRESS BAR (top horizontal) ── */
+.custom-scrollbar-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 3px;
+  background: transparent;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.custom-scrollbar-progress-fill {
+  height: 3px;
+  width: 0%;
+  background: #CE1E36;
+  transition: width 0.1s linear;
+}
+
+/* Dashboard only ([data-theme] is set on <html> by the admin shell, never the
+   storefront): the scroll-progress bar goes monochrome with a soft shadow so
+   it matches the black-and-white admin chrome. Storefront keeps its brand red. */
+:root[data-theme] .custom-scrollbar-progress-fill {
+  background: var(--ds-color-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.shimmer-placeholder {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  z-index: 2;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Image Loading Shimmer Effect */
+.image-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.shimmer-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.shimmer {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer-slide 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* Smooth image fade-in when loaded */
+img {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* ── BACK TO TOP BUTTON ── */
+.back-to-top {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  background: #CE1E36;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9998;
+  box-shadow: 0 4px 16px rgba(206, 30, 54, 0.35);
+  transition: background 0.2s ease, transform 0.2s ease, bottom 0.3s ease;
+  animation: btt-fade-in 0.25s ease;
+}
+
+.back-to-top:hover {
+  background: #a01729;
+  transform: translateY(-3px);
+}
+
+.back-to-top svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes btt-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Lift above sticky bar (pdt-sticky ~68px tall) on all screen sizes */
+body:has(.pdt-sticky.visible) .back-to-top {
+  bottom: 172px;
+}
+
+@media (max-width: 768px) {
+  .back-to-top {
+    bottom: 84px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+
+  body:has(.pdt-sticky.visible) .back-to-top {
+    bottom: 170px;
+  }
+}
+
+@media (max-width: 600px) {
+    body:has(.pdt-sticky.visible) .back-to-top {
+        bottom: 200px;
+    }
+}
+/* Screen Reader Only - hide visually but keep accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* deploy-refresh 2026-07-31: force Vercel rebuild */
+
+/* iOS input auto-zoom guard: inputs must be >=16px to prevent Safari zoom on focus */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}

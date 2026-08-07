@@ -1,0 +1,69 @@
+# robots.txt for CrossCoin — https://www.crosscoin.in
+# Crawlers obey ONLY the most specific matching User-agent group, so each
+# AI-crawler group below repeats the private-path rules to keep them protected.
+
+# ---------------------------------------------------------------------------
+# Default: all crawlers
+# ---------------------------------------------------------------------------
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# ---------------------------------------------------------------------------
+# AI crawlers — explicitly allowed to crawl public content
+# ---------------------------------------------------------------------------
+
+# OpenAI (ChatGPT search/indexing)
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# Google AI (Gemini / Vertex AI training signal)
+User-agent: Google-Extended
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /api/
+
+# ---------------------------------------------------------------------------
+# Sitemap
+# ---------------------------------------------------------------------------
+Sitemap: https://www.crosscoin.in/sitemap.xml

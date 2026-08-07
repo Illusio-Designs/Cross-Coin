@@ -1,0 +1,269 @@
+/* ── VARIABLES ── */
+:root {
+  --black: #1a1a1a;
+  --red: #CE1E36;
+  --gray-border: #e4e4e4;
+  --gray-bg: #f7f6f4;
+  --gray-mid: #777;
+  --gray-light: #aaa;
+  --white: #fff;
+  --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── BASE ── */
+.sitemap-page {
+  background: var(--white);
+  color: var(--black);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ── PAGE TITLE ── */
+.page-title {
+  padding: 60px;
+  background: var(--white);
+}
+
+.page-title h1 {
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: var(--black);
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--gray-mid);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+/* ── MAIN LAYOUT ── */
+.sitemap-wrap {
+  padding: 60px;
+}
+
+/* ── SECTION BLOCK ── */
+.section-block {
+  margin-bottom: 60px;
+}
+
+.section-heading {
+  display: inline-block;
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  color: var(--black);
+  margin-bottom: 12px;
+  padding-bottom: 0;
+  border-bottom: none;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.section-heading:hover {
+  color: var(--red);
+}
+
+.section-desc {
+  font-size: 13px;
+  color: var(--gray-mid);
+  max-width: 700px;
+  line-height: 1.8;
+  margin-bottom: 32px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* ── CATEGORY GRID ── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px 32px;
+}
+
+/* ── CATEGORY COLUMN ── */
+.cat-col {
+}
+
+.cat-heading {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--black);
+  margin-bottom: 16px;
+  display: block;
+  padding-bottom: 0;
+  border-bottom: none;
+  transition: color 0.15s;
+  cursor: pointer;
+}
+
+.cat-heading:hover {
+  color: var(--red);
+}
+
+.cat-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+
+.cat-links li a {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--gray-mid);
+  transition: color 0.15s;
+  display: block;
+  padding: 2px 0;
+  letter-spacing: 0.01em;
+}
+
+.cat-links li a:hover {
+  color: var(--black);
+}
+
+/* Standalone link (no sub-items) */
+.cat-standalone {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--black);
+  padding-bottom: 0;
+  border-bottom: none;
+  display: block;
+  margin-bottom: 16px;
+  transition: color 0.15s;
+  cursor: pointer;
+}
+
+.cat-standalone:hover {
+  color: var(--red);
+}
+
+/* ── DIVIDER ── */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--gray-border);
+  margin: 0 0 60px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px 24px;
+  }
+
+  .sitemap-wrap {
+    padding: 40px;
+  }
+
+  .page-title {
+    padding: 40px;
+  }
+
+  .page-title h1 {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 20px;
+  }
+
+  .sitemap-wrap {
+    padding: 40px;
+  }
+
+  .page-title {
+    padding: 40px;
+  }
+
+  .page-title h1 {
+    font-size: 24px;
+  }
+
+  .section-block {
+    margin-bottom: 48px;
+  }
+
+  .section-divider {
+    margin: 0 0 48px;
+  }
+}
+
+@media (max-width: 600px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .page-title h1 {
+    font-size: 20px;
+  }
+
+  .page-subtitle {
+    font-size: 12px;
+  }
+
+  .section-heading {
+    font-size: 16px;
+  }
+
+  .section-desc {
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+
+  .sitemap-wrap {
+    padding: 28px;
+  }
+
+  .page-title {
+    padding: 28px;
+  }
+
+  .cat-heading {
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+
+  .cat-links li a {
+    font-size: 12px;
+  }
+
+  .section-block {
+    margin-bottom: 32px;
+  }
+
+  .section-divider {
+    margin: 0 0 32px;
+  }
+}
+
+/* Checkout button styled as link */
+.sitemap-btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}

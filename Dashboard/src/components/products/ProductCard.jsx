@@ -1,0 +1,189 @@
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import SafeImage from "../common/SafeImage";
+import { FiHeart } from "react-icons/fi";
+import { useWishlist } from "../../context/WishlistContext";
+import { getBadgeDisplay, formatBadge } from "../../config/badgeConfig";
+import { selectProductImage } from "../../utils/productImageSelector";
+import colorMap from "./colorMap";
+import { getPublicProductReviews } from "../../services/publicApi";
+
+// Filter options data - This should come from API in real implementation
+export const filterOptions = {
+  categories: ["Ankle", "Long", "Short"],
+  materials: ["Winter Wear", "Summer Wear", "Cotton", "Wools", "Silk", "Net", "Rubber"],
+  colors: ["red", "blue", "green", "yellow", "black", "gray"],
+  sizes: ["S", "M", "L", "XL"],
+  genders: ["Men", "Women", "Kids"],
+};
+
+const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const router = useRouter();
+
+  // Navigate on click. Prefer the caller's handler, but fall back to routing
+  // by the product's own slug so the card still works if a page forgets to
+  // pass onProductClick (which is exactly what broke the collection page).
+  const handleCardClick = () => {
+    if (onProductClick) onProductClick(product);
+    else if (product?.slug) router.push(`/products/${product.slug}`);
+  };
+
+
+  const variation = product?.variations?.[0];
+  const imageData = selectProductImage(product, variation);
+  const price = parseFloat(variation?.price || product?.price || 0);
+  const comparePrice = parseFloat(variation?.comparePrice || product?.comparePrice || 0);
+
+  const [reviewCount, setReviewCount] = useState(product?.reviewCount ?? product?.review_count ?? 0);
+  const [avgRating, setAvgRating] = useState(product?.avgRating ?? product?.avg_rating ?? null);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    // If already provided by API with a real rating, use them directly
+    if (product.avgRating != null) {
+      setReviewCount(product.reviewCount ?? 0);
+      setAvgRating(product.avgRating);
+      return;
+    }
+    if (product.avg_rating != null) {
+      setReviewCount(product.review_count ?? 0);
+      setAvgRating(parseFloat(product.avg_rating));
+      return;
+    }
+    // Otherwise fetch from API
+    getPublicProductReviews(product.id, { limit: 100 })
+      .then(data => {
+        const reviews = data?.reviews || data || [];
+        const count = Array.isArray(reviews) ? reviews.length : 0;
+        const avg = count > 0
+          ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / count).toFixed(1))
+          : null;
+        setReviewCount(count);
+        setAvgRating(avg);
+      })
+      .catch(() => {});
+  }, [product?.id]);
+
+  const [showAllColors, setShowAllColors] = useState(false);
+
+  const handleWishlistClick = (e) => {
+    e.stopPropagation();
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist({
+        ...product,
+        variationImages: variation?.images?.map((img) => img.image_url || img.url || img) || [],
+      });
+    }
+  };
+
+  // Collect unique colors from all variations
+  const colors = [];
+  (product?.variations || []).forEach((v) => {
+    const attrs = typeof v.attributes === "string" ? JSON.parse(v.attributes) : v.attributes;
+    const varColors = Array.isArray(attrs?.color) ? attrs.color : attrs?.color ? [attrs.color] : [];
+    varColors.forEach((c) => { if (c && !colors.includes(c)) colors.push(c); });
+  });
+
+  return (
+    <div className="product-card" onClick={handleCardClick} style={{ cursor: "pointer" }}>
+      <div className="product-image">
+        <div className="product-image__inner">
+          <SafeImage
+            imageData={imageData}
+            alt={product?.name || "Product Image"}
+            priority={index < 6}
+            fetchPriority={index < 6 ? "high" : "low"}
+            quality={75}
+            isProductCard={true}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        </div>
+
+        {product?.badge && product.badge !== "none" && product.badge !== "" && (
+          <div className="product-badge__ribbon" aria-label={getBadgeDisplay(product.badge).label}>
+            <span>{formatBadge(product.badge)}</span>
+          </div>
+        )}
+
+        {avgRating ? (
+          <div className="rating-pill">
+            <span className="rating-pill__star">★</span>
+            <span className="rating-pill__score">{avgRating}/5</span>
+            <span className="rating-pill__count">{reviewCount}</span>
+          </div>
+        ) : null}
+
+        {comparePrice > 0 && price < comparePrice && (
+          <div className="product-discount-badge">
+            {Math.round(((comparePrice - price) / comparePrice) * 100)}% OFF
+          </div>
+        )}
+
+        <button
+          className={`wishlist-btn ${isInWishlist(product?.id) ? "active" : ""}`}
+          onClick={handleWishlistClick}
+          aria-label={isInWishlist(product?.id) ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <FiHeart />
+        </button>
+      </div>
+
+      <div className="product-info">
+        <h3 className="product-name">{product?.name}</h3>
+
+        {colors.length > 0 && (
+          <div className="product-colors">
+            {(showAllColors ? colors : colors.slice(0, 5)).map((color, i) => (
+              <span
+                key={i}
+                className="product-color-dot"
+                style={{ background: colorMap[color?.toLowerCase()] || color }}
+                title={color}
+              />
+            ))}
+            {colors.length > 5 && !showAllColors && (
+              <button
+                className="product-color-more-btn"
+                onClick={(e) => { e.stopPropagation(); setShowAllColors(true); }}
+                aria-label="Show more colors"
+              >
+                +{colors.length - 5}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="product-footer">
+          <span className="product-price">
+            ₹{price}
+            {comparePrice > 0 && <span className="original-price">₹{comparePrice}</span>}
+          </span>
+          <button
+            className="add-to-bag-btn"
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (onAddToCart) {
+                const selectedColor = colors.length > 0 ? colors[0] : null;
+                const variation = product?.variations?.[0];
+                onAddToCart(e, product, selectedColor, null, variation?.id);
+              }
+            }}
+            aria-label="Add to bag"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="btn-text">ADD TO BAG</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default React.memo(ProductCard);

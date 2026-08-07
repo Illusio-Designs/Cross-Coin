@@ -1,0 +1,100 @@
+.nf-page {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #fff;
+}
+
+.nf-content {
+  text-align: center;
+  max-width: 480px;
+}
+
+.nf-code-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.nf-four {
+  font-size: 120px;
+  font-weight: 900;
+  color: #180D3E;
+  line-height: 1;
+  letter-spacing: -4px;
+}
+
+.nf-zero {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nf-zero svg {
+  width: 100%;
+  height: 100%;
+}
+
+.nf-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #180D3E;
+  margin: 0 0 12px;
+}
+
+.nf-sub {
+  font-size: 15px;
+  color: #666;
+  margin: 0 0 32px;
+  line-height: 1.6;
+}
+
+.nf-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.nf-btn-primary {
+  background: #180D3E;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nf-btn-primary:hover { background: #2a1a6e; }
+
+.nf-btn-outline {
+  background: #fff;
+  color: #180D3E;
+  border: 2px solid #180D3E;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nf-btn-outline:hover {
+  background: #180D3E;
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .nf-four { font-size: 80px; }
+  .nf-zero { width: 68px; height: 68px; }
+  .nf-title { font-size: 20px; }
+}

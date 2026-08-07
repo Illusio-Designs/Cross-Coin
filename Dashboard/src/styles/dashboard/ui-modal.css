@@ -1,0 +1,211 @@
+/* UI Modal Component — rendered as a right-docked "aside" slide-in panel.
+   Class names are kept identical to the old centered-modal so no JSX
+   changes are needed; only the layout/motion is re-skinned. */
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 10, 10, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: stretch;          /* full height */
+  justify-content: flex-end;     /* dock to the right edge */
+  z-index: 1000;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-overlay-visible { opacity: 1; visibility: visible; }
+
+.modal-box {
+  background: var(--ds-color-surface, var(--ds-color-surface));
+  color: var(--ds-color-text);
+  border-radius: 0;
+  box-shadow: -8px 0 24px rgba(10, 10, 10, 0.12), -1px 0 0 rgba(10, 10, 10, 0.06);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  position: relative;
+  /* slide in from the right */
+  transform: translateX(24px);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+.modal-box-visible { transform: translateX(0); opacity: 1; }
+/* The panel always docks to the right, regardless of the `centered` prop. */
+.modal-box-centered { margin: 0 0 0 auto; }
+
+/* Panel widths (docked right). Wider than the old modals since it's full-height. */
+.modal-sm { max-width: 420px; }
+.modal-md { max-width: 560px; }
+.modal-lg { max-width: 760px; }
+.modal-xl { max-width: 980px; }
+.modal-full { width: 100vw; height: 100vh; max-width: none; max-height: none; }
+
+/* Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  flex-shrink: 0;
+  background: #0a0a0a;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--ds-font-sans, 'Helvetica Neue', Helvetica, Arial, sans-serif);
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.modal-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.modal-close-btn:focus-visible { outline: 2px solid rgba(255,255,255,0.5); outline-offset: 2px; }
+
+/* form.seo-form is a direct child of modal-box —
+   flex column so body scrolls and footer pins */
+.modal-box > form,
+.modal-box > .seo-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Step bar — sticks to the top of the scrolling body (the product form now
+   lives inside the Modal's .modal-body so its footer can pin via the footer
+   prop). Negative margins bleed it back to the panel edges over the 24px body
+   padding so it reads as a fixed sub-header. */
+.modal-box .prod-steps {
+  padding: 14px 24px 12px;
+  border-bottom: 1px solid var(--ds-color-border-soft, var(--ds-color-border));
+  background: var(--ds-color-surface, var(--ds-color-surface));
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: -24px -24px 16px;
+}
+
+/* Body — only this scrolls */
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  color: var(--ds-color-text, var(--ds-color-text));
+  line-height: 1.6;
+  background: var(--ds-color-surface, var(--ds-color-surface));
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #d0d0d8 transparent;
+}
+/* Media/blocks inside a panel never force the body wider than the box. */
+.modal-body img,
+.modal-body video,
+.modal-body table { max-width: 100%; }
+.modal-body::-webkit-scrollbar { width: 5px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: #d0d0d8; border-radius: 10px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: #b0b0b8; }
+
+/* Footer — pinned, full width background, buttons on right */
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--ds-color-border, var(--ds-color-border));
+  background: var(--ds-color-surface-soft, var(--ds-color-surface-soft));
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+
+/* Footer buttons — normal size, not stretched */
+.modal-footer .btn {
+  flex: none;
+  border-radius: 8px;
+  height: 38px;
+  font-size: 13px;
+  padding: 0 20px;
+}
+.modal-footer .btn-secondary {
+  background: transparent;
+  color: var(--ds-color-text);
+  border: 1.5px solid var(--ds-color-border);
+}
+.modal-footer .btn-secondary:hover:not(:disabled) { background: var(--ds-color-bg); border-color: #0a0a0a; }
+.modal-footer .btn-primary { background: #0a0a0a; color: #fff; border: none; }
+.modal-footer .btn-primary:hover:not(:disabled) { background: #262626; }
+
+/* ── Pinned footers for aside panels ─────────────────────────────────────
+   The Modal component wraps children in .modal-body, so panels that render a
+   .modal-footer inside their children (directly, or nested in a <form>) end up
+   with the footer INSIDE the scrolling body — it scrolled away. Pin any such
+   footer to the bottom of the scrolling body. Panels that use the Modal
+   `footer` prop instead render .modal-footer as a sibling of .modal-body
+   (a direct child of .modal-box) and are pinned by flex — the descendant
+   selector below deliberately does not match those. Storefront modals have no
+   .modal-footer, so they're untouched. */
+.modal-body .modal-footer {
+  position: sticky;
+  bottom: -24px;                /* cancel the body's 24px bottom padding */
+  margin: 16px -24px -24px;     /* bleed to the panel edges, sit flush */
+  z-index: 3;
+}
+
+.modal-box:focus { outline: none; }
+
+/* Tablet / mobile — the panel becomes full width and slides up slightly.
+   Below 768px a right-docked panel would be too narrow, so it fills the
+   screen edge-to-edge (still a full-height sheet, not a centered modal). */
+@media (max-width: 768px) {
+  .modal-sm, .modal-md, .modal-lg, .modal-xl { max-width: 100vw; }
+  .modal-box { width: 100vw; }
+  .modal-header { padding: 0 18px; height: 56px; }
+  .modal-body { padding: 18px; }
+  .modal-box .prod-steps { padding: 12px 18px 10px; }
+  .modal-footer { padding: 12px 18px; gap: 8px; }
+  .modal-footer > .btn { flex: 1; }
+}
+@media (max-width: 480px) {
+  .modal-header { height: 52px; padding: 0 16px; }
+  .modal-title { font-size: 14px; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 10px 16px; }
+  .modal-box .prod-steps { padding: 10px 16px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .modal-box { transition: none; }
+  .modal-box { transform: none; opacity: 1; }
+}

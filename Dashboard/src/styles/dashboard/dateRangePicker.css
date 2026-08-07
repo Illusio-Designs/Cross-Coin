@@ -1,0 +1,417 @@
+/* ── DateRangePicker Container ── */
+.drp {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--ds-color-surface);
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 12px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.drp--inline {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+.drp-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ds-color-text-muted);
+  white-space: nowrap;
+}
+
+.drp-label svg {
+  color: var(--ds-color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Trigger Row ── */
+.drp-trigger-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drp-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--ds-color-surface);
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--ds-color-text);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+
+.drp-trigger svg {
+  color: var(--ds-color-text-muted);
+  flex-shrink: 0;
+}
+
+.drp-trigger:hover {
+  border-color: #0a0a0a;
+  background: var(--ds-color-surface);
+}
+
+.drp-trigger--active {
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+  background: var(--ds-color-surface);
+}
+
+.drp-trigger-text {
+  color: var(--ds-color-text);
+}
+
+/* ── Action Buttons ── */
+.drp-apply-btn {
+  height: 34px;
+  padding: 0 16px;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.drp-apply-btn:hover {
+  background: #262626;
+}
+
+.drp-apply-btn:active {
+  transform: scale(0.97);
+}
+
+.drp-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text-muted);
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.drp-clear-btn:hover {
+  background: var(--ds-color-border);
+  border-color: var(--ds-color-text-faint);
+}
+
+/* ── Dropdown ── */
+.drp-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  background: var(--ds-color-surface);
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  animation: drpFadeIn 0.15s ease-out;
+}
+
+@keyframes drpFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Opens leftward when the trigger is close to the viewport's right edge,
+   so the calendar half is never clipped off-screen. */
+.drp-dropdown--right {
+  left: auto;
+  right: 0;
+}
+
+.drp-dropdown-body {
+  display: flex;
+}
+
+/* ── Presets Sidebar ── */
+.drp-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-right: 1px solid var(--ds-color-border);
+  min-width: 140px;
+  background: var(--ds-color-surface-soft);
+}
+
+.drp-presets-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ds-color-text-faint);
+  padding: 4px 8px 8px;
+}
+
+.drp-preset-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ds-color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drp-preset-btn:hover {
+  background: #0a0a0a;
+  color: #fff;
+}
+
+/* ── Calendar Wrapper ── */
+.drp-cal-wrap {
+  padding: 12px 16px 16px;
+  min-width: 280px;
+}
+
+.drp-selecting-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-text-muted);
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Calendar ── */
+.drp-calendar {
+  user-select: none;
+}
+
+.drp-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.drp-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ds-color-text-muted);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.drp-cal-nav:hover {
+  background: var(--ds-color-bg);
+  border-color: var(--ds-color-border);
+}
+
+.drp-cal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ds-color-text);
+}
+
+.drp-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.drp-cal-day-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-text-faint);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.drp-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.drp-cal-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 34px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ds-color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.drp-cal-empty {
+  cursor: default;
+}
+
+.drp-cal-cell:not(.drp-cal-empty):hover {
+  background: var(--ds-color-bg);
+}
+
+.drp-cal-today {
+  font-weight: 700;
+  color: var(--ds-color-text);
+  background: var(--ds-color-surface-soft);
+}
+
+.drp-cal-today:hover {
+  background: var(--ds-color-border-soft);
+}
+
+.drp-cal-start,
+.drp-cal-end {
+  background: #0a0a0a !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.drp-cal-in-range {
+  background: var(--ds-color-surface-soft);
+  color: var(--ds-color-text);
+  border-radius: 4px;
+}
+
+.drp-cal-in-range:hover {
+  background: var(--ds-color-border-soft);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .drp {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .drp-trigger-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .drp-trigger {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* On phones the calendar becomes a bottom sheet pinned to the viewport so it
+     never gets clipped by a narrow trigger container or the screen edge. */
+  .drp-dropdown,
+  .drp-dropdown--right {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 12px;
+    width: auto;
+    max-height: 82vh;
+    overflow-y: auto;
+  }
+
+  .drp-dropdown-body {
+    flex-direction: column;
+  }
+
+  .drp-presets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid var(--ds-color-border);
+    min-width: unset;
+    padding: 10px;
+    gap: 4px;
+  }
+
+  .drp-presets-title {
+    width: 100%;
+    padding: 2px 4px 6px;
+  }
+
+  .drp-preset-btn {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid var(--ds-color-border);
+    border-radius: 20px;
+  }
+
+  .drp-cal-wrap {
+    min-width: unset;
+    padding: 12px;
+  }
+
+  .drp-cal-cell {
+    width: 100%;
+  }
+
+  .drp-apply-btn,
+  .drp-clear-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .drp-label {
+    font-size: 12px;
+  }
+
+  .drp-trigger {
+    height: 36px;
+    font-size: 12px;
+    padding: 0 10px;
+  }
+
+  .drp-cal-cell {
+    width: 100%;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .drp-cal-title {
+    font-size: 13px;
+  }
+}
