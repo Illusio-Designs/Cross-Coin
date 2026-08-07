@@ -168,7 +168,7 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
   // tiebreak. If the chosen courier can't book, the loop below falls through to
   // the next serviceable one. Couriers NOT in the list are used only as a last
   // resort (cheapest of them).
-  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees');
+  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees, dtdc');
   const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   // 0 = an enabled/listed courier (gets shuffled), 1 = not in the list (last resort).
   const listedRank = (name) => {
@@ -176,10 +176,10 @@ async function autoSelectCourierWithFallback(order, provider, transaction = null
     return priorityList.some((tok) => n.includes(tok)) ? 0 : 1;
   };
 
-  // Blocklist — couriers to never book (matched case-insensitively as a substring
-  // of the courier name/code), for BOTH COD and prepaid. DTDC is excluded by
-  // default; override via the COURIER_EXCLUDE brand setting.
-  const excludeRaw = await settingsHelper.getSetting(brandId, 'COURIER_EXCLUDE', 'dtdc');
+  // Optional blocklist — couriers to never book (case-insensitive substring of
+  // the courier name/code), for BOTH COD and prepaid. Empty by default (DTDC is
+  // allowed); set the COURIER_EXCLUDE brand setting to block specific couriers.
+  const excludeRaw = await settingsHelper.getSetting(brandId, 'COURIER_EXCLUDE', '');
   const excludeList = String(excludeRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   const isExcluded = (name) => {
     const n = String(name || '').toLowerCase();
@@ -2219,9 +2219,9 @@ module.exports.getAvailableCouriers = async (req, res) => {
       couriers = Array.isArray(rates) ? rates : (rates?.data || []);
     }
 
-    // Blocklist — hide excluded couriers (DTDC by default) from the picker, for
-    // both COD and prepaid. Override via the COURIER_EXCLUDE brand setting.
-    const excludeRaw = await settingsHelper.getSetting(order.brand_id || 1, 'COURIER_EXCLUDE', 'dtdc');
+    // Optional blocklist — hide excluded couriers from the picker (empty by
+    // default, so DTDC is shown). Set COURIER_EXCLUDE to block specific couriers.
+    const excludeRaw = await settingsHelper.getSetting(order.brand_id || 1, 'COURIER_EXCLUDE', '');
     const excludeList = String(excludeRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (excludeList.length && Array.isArray(couriers)) {
       couriers = couriers.filter((c) => {
