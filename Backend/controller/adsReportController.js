@@ -150,16 +150,16 @@ exports.getReport = async (req, res) => {
             const pc = num(productCost[b.id], DEFAULT_PRODUCT_COST);
 
             const days = s ? (Math.round((new Date(to) - new Date(brandFrom)) / 86400000) + 1) : 0;
-            const delivered = Math.max(total - cancelled - rto, 0);
             const cpp = total ? adSpend / total : 0;
             const roas = adSpend ? revenue / adSpend : 0;
             const aov = total ? revenue / total : 0;
             const pdo = days ? total / days : 0;
             const por = total ? prepaid / total : 0;
             const cor = total ? cod / total : 0;
-            const cancLoss = cancelled * cpp;
-            const rtoLoss = rto * (cpp + shipping);
-            const gp = revenue - adSpend - pc * delivered - shipping * delivered;
+            const cancLoss = cancelled * cpp;                 // cancelled: CPP only
+            const rtoLoss = rto * (cpp + shipping);           // RTO: CPP + shipping
+            // GP per order = AOV − CPP − product − shipping, × total orders of the period.
+            const gp = (aov - cpp - pc - shipping) * total;
             const np = gp - cancLoss - rtoLoss;
 
             rows.push({

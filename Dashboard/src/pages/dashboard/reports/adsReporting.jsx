@@ -9,9 +9,8 @@ import { adsReportService } from '../../../services';
  * spend / costs and displays the result.
  *
  *   CPP = Ad/T.O. · ROAS = Rev/Ad · AOV = Rev/T.O.
- *   Canc loss = Cancelled×CPP · RTO loss = RTO×(CPP+Shipping)
- *   G.P. = Rev − Ad − Product×Delivered − Shipping×Delivered
- *   N.P. = G.P. − Canc loss − RTO loss
+ *   G.P. = (AOV − CPP − Product − Shipping) × T.O.
+ *   N.P. = G.P. − (Cancelled×CPP) − (RTO×(CPP+Shipping))
  */
 
 const num = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
