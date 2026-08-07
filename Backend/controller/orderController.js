@@ -2016,6 +2016,12 @@
       // Emit lifecycle events
       if (status === 'shipped') setImmediate(() => { try { orderEmitter.emit('order.shipped', order); } catch (e) { logger.warn('order.shipped emit failed:', e.message); } });
       if (status === 'delivered') setImmediate(() => { try { orderEmitter.emit('order.delivered', order); } catch (e) { logger.warn('order.delivered emit failed:', e.message); } });
+      // Cancelling via the status dropdown must also cancel at the courier
+      // (iThink/FShip), same as the dedicated Cancel action — otherwise the
+      // shipment stays active at the courier while our DB shows cancelled.
+      if (status === 'cancelled' || status === 'order cancelled') {
+        orderService.cancelAtCourier(order, notes || 'Order cancelled');
+      }
 
       res.json({ success: true, message: `Order status updated to ${status}`, order });
     } catch (error) {

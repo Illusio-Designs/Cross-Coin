@@ -785,7 +785,7 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
           fship_sync_attempts: sequelize.literal('fship_sync_attempts + 1')
         }, { transaction: orderTransaction });
 
-        const syncResult = await this.enhancedSyncSingleOrder(order, orderTransaction);
+        const syncResult = await module.exports.enhancedSyncSingleOrder(order, orderTransaction);
 
         if (syncResult.success) {
           await order.update({ fship_sync_status: 'synced' }, { transaction: orderTransaction });
@@ -943,7 +943,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
 
       logger.debug(`📝 Order ${order.order_number} not synced. Creating in ${providerName}...`);
 
-      const createResult = await this.createOrderInFShip(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
+      const createResult = await module.exports.createOrderInFShip(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
 
       if (createResult.success) {
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
@@ -978,7 +978,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       // STEP 3: Order already synced — update status from provider
       logger.debug(`🔄 Order ${order.order_number} already synced (${providerName}). Checking for updates...`);
 
-      const updateResult = await this.updateOrderStatusFromFShip(order, localTransaction, provider, providerName);
+      const updateResult = await module.exports.updateOrderStatusFromFShip(order, localTransaction, provider, providerName);
 
       if (updateResult.success) {
         logger.debug(`✅ Order ${order.order_number} status updated via ${providerName}`);
@@ -1076,7 +1076,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
     }
 
     // Validate order data before sending to FShip
-    const validationIssues = this.validateOrderForFShip(order);
+    const validationIssues = module.exports.validateOrderForFShip(order);
     if (validationIssues.length > 0) {
       const errorMsg = validationIssues.join('; ');
       logger.error(`❌ Order ${order.order_number} failed FShip validation: ${errorMsg}`);
@@ -1097,7 +1097,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
-    const fshipOrderData = await this.prepareFShipOrderData(order, providerName, selectedLogistics, serviceType);
+    const fshipOrderData = await module.exports.prepareFShipOrderData(order, providerName, selectedLogistics, serviceType);
 
     // Create order using the resolved provider
     const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
@@ -1905,7 +1905,7 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     }
 
     // Use enhanced sync logic with the resolved provider
-    const syncResult = await this.enhancedSyncSingleOrder(order, transaction, provider, providerName);
+    const syncResult = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, providerName);
 
     if (syncResult.success) {
       await transaction.commit();
