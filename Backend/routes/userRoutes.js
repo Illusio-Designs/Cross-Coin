@@ -4,7 +4,7 @@ const {
     forgotPassword, resetPassword, verifyEmail,
     getCurrentUser, getProfile, updateProfile, updateUser,
     updatePassword, changePassword, deleteUser,
-    getAllUsers, refreshToken, upload, updateUserRole, createStaffUser
+    getAllUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser
 } = require('../controller/userController.js');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
@@ -88,6 +88,7 @@ router.delete('/delete', isAuthenticated, deleteUser);  // backward compat
 
 // Admin
 router.get('/all', isAuthenticated, isAdmin, getAllUsers);
+router.get('/guests', isAuthenticated, isAdmin, getGuestUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
 

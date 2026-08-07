@@ -28,6 +28,7 @@ export const getPageTitle = (view) => {
     'reports': 'Reports',
     'ads-reporting': 'Ads Reporting',
     'leads': 'Leads',
+    'loyalty': 'Loyalty',
     'lookbooks': 'Lookbooks',
     'staff-users': 'Staff Users',
   };

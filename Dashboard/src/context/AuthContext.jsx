@@ -49,7 +49,7 @@ export const ROLE_VIEWS = {
   ],
   order_manager: [
     'main', 'orders', 'reports', 'payments', 'coupons', 'shippingFees',
-    'reviews', 'consumers',
+    'reviews', 'consumers', 'loyalty',
   ],
   whatsapp_manager: [
     'main', 'whatsapp', 'whatsapp-chat',

@@ -26,8 +26,14 @@ export default function Consumers() {
   const { data: consumers = [], isLoading: loading, error } = useQuery({
     queryKey: queryKeys.consumersAdmin,
     queryFn: async () => {
-      const data = await userService.getAllUsers();
-      return Array.isArray(data) ? data : data?.users || data?.data || [];
+      // Registered customers + guest (unregistered) customers, merged.
+      const [usersRes, guestsRes] = await Promise.all([
+        userService.getAllUsers(),
+        userService.getGuestUsers().catch(() => ({ guests: [] })),
+      ]);
+      const users = Array.isArray(usersRes) ? usersRes : usersRes?.users || usersRes?.data || [];
+      const guests = guestsRes?.guests || [];
+      return [...users, ...guests];
     },
     staleTime: 60 * 1000,  // 1 min — consumer list doesn't change frequently
   });

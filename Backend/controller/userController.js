@@ -582,6 +582,28 @@ module.exports.getAllUsers = async (req, res) => {
     }
 };
 
+// Guest (unregistered) customers — mapped into the same shape the consumers
+// list uses, so they can be shown alongside registered customers.
+module.exports.getGuestUsers = async (req, res) => {
+    try {
+        const guests = await GuestUser.findAll({ order: [['createdAt', 'DESC']], limit: 2000, raw: true });
+        const mapped = guests.map((g) => ({
+            id: `g${g.id}`,
+            username: [g.first_name, g.last_name].filter(Boolean).join(' ') || null,
+            email: g.email || null,
+            phone: g.phone || null,
+            role: 'guest',
+            isGuest: true,
+            status: g.status,
+            createdAt: g.createdAt,
+        }));
+        res.json({ guests: mapped, total: mapped.length });
+    } catch (error) {
+        logger.error('Get guest users error:', error);
+        res.status(500).json({ message: 'Error getting guest users' });
+    }
+};
+
 // Get user profile
 module.exports.getProfile = async (req, res) => {
     try {

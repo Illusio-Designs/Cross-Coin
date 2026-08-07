@@ -256,6 +256,13 @@ export const leadService = {
   },
 };
 
+export const loyaltyService = {
+  getTransactions: async (page = 1, limit = 50) => {
+    const { data } = await adminApi.get('/api/admin/loyalty/transactions', { params: { page, limit } });
+    return data;
+  },
+};
+
 export const adsReportService = {
   getReport: async (from, to) => {
     const { data } = await adminApi.get('/api/ads-report/report', { params: { from, to } });
@@ -1061,6 +1068,16 @@ export const userService = {
   getAllUsers: async () => {
     try {
       const response = await adminApi.get("/api/users/all?limit=1000");
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  // Guest (unregistered) customers, mapped into the consumer shape.
+  getGuestUsers: async () => {
+    try {
+      const response = await adminApi.get("/api/users/guests");
       return response.data;
     } catch (error) {
       throw handleApiError(error);

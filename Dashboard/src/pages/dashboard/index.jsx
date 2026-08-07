@@ -13,6 +13,7 @@ import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
+import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
@@ -256,6 +257,7 @@ function Dashboard() {
       case 'reports':         return <Reports />;
       case 'ads-reporting':   return <AdsReporting />;
       case 'leads':           return <Leads />;
+      case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;
       // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the
       // in-app System Monitoring panel (5s polling) was removed.
