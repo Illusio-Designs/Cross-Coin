@@ -11,8 +11,6 @@ import { monitoring } from '../utils/monitoring';
 import { installLinkHardening } from '../utils/sanitizeHtml';
 import { installApiInterceptors } from '../utils/apiInterceptors';
 import { installErrorReporter } from '../utils/errorReporter';
-import { tryInitSentry } from '../utils/sentryAdapter';
-import SentryInit from '../components/SentryInit';
 // ── Global CSS (Pages Router: all global CSS must be imported here) ──
 // Obzus app = public site + admin dashboard + /login. Storefront page/component
 // CSS has been removed; only shared globals, the admin login, the dashboard
@@ -61,7 +59,6 @@ function AppContent({ Component, pageProps, progressRef }) {
 
   return (
     <>
-      <SentryInit />
       {isDashboard && (
         <Head>
           <link rel="stylesheet" href={`/dashboard.css?v=${DASHBOARD_CSS_VERSION}`} />
@@ -127,10 +124,8 @@ function App({ Component, pageProps }) {
     installLinkHardening();
     // Wire axios interceptors: timeout, error toast, CSRF token mirror.
     installApiInterceptors();
-    // Drain render errors + unhandled rejections. If @sentry/nextjs is
-    // installed AND NEXT_PUBLIC_SENTRY_DSN is set, errors go to Sentry;
-    // otherwise they fall through to /api/client-errors.
-    installErrorReporter(tryInitSentry() || undefined);
+    // Drain render errors + unhandled rejections to /api/client-errors.
+    installErrorReporter();
   }, []);
 
   useEffect(() => {

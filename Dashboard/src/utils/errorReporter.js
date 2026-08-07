@@ -7,15 +7,10 @@
  * event. The axios interceptor surfaces API failures to toasts. What's
  * missing is a single place to ship those signals to a real monitor.
  *
- * Drop-in Sentry wiring (once the SDK is installed):
- *
- *   import * as Sentry from '@sentry/nextjs';
- *   Sentry.init({ dsn: process.env.NEXT_PUBLIC_SENTRY_DSN });
- *   installErrorReporter((err) => Sentry.captureException(err));
- *
- * Without a reporter installed it logs to console in dev and posts to
- * /api/client-errors in prod (a tiny endpoint you can build later that
- * just writes to logger.error). No PII is ever included.
+ * A custom sink can be passed — installErrorReporter((entry) => ...) — to
+ * forward entries to any monitor. Without one, it logs to console in dev and
+ * posts to /api/client-errors in prod (a tiny endpoint that just writes to
+ * logger.error). No PII is ever included.
  *
  * Call installErrorReporter() once from _app.jsx, AFTER
  * installLinkHardening() and installApiInterceptors().

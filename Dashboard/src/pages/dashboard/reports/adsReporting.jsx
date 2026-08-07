@@ -31,6 +31,10 @@ const POS = 'var(--ds-color-success, #16a34a)';
 const NEG = 'var(--ds-color-danger, #dc2626)';
 const WARN = 'var(--ds-color-warn, #d97706)';
 
+// Break-even ROAS for the current cost structure — at/above this a brand's ad
+// spend is profitable; below it, the campaign loses money. Marks the ROAS strip.
+const BREAKEVEN_ROAS = 1.85;
+
 const S = {
   wrap: { display: 'flex', flexDirection: 'column', gap: 16 },
   head: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
@@ -254,17 +258,17 @@ export default function AdsReporting() {
       {/* ROAS strip */}
       {roasRows.length > 0 && (
         <div style={S.panel}>
-          <div style={S.panelH}><h3 style={S.h3}>Return on ad spend</h3><span style={S.chip}>baseline 1.0× = break-even</span></div>
+          <div style={S.panelH}><h3 style={S.h3}>Return on ad spend</h3><span style={S.chip}>{BREAKEVEN_ROAS.toFixed(2)}× = break-even</span></div>
           <div style={S.roasGrid}>
             {roasRows.map((r) => {
-              const roas = num(r.roas); const w = Math.min(100, (roas / 5) * 100); const good = roas >= 2;
+              const roas = num(r.roas); const w = Math.min(100, (roas / 5) * 100); const good = roas >= BREAKEVEN_ROAS;
               return (
                 <div style={S.roasCard} key={r.brand_id}>
                   <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{r.brand}</div>
                   <div style={{ fontFamily: 'var(--ds-font-mono, monospace)', fontSize: 21, fontWeight: 700, marginTop: 5, color: good ? 'var(--ds-color-text)' : WARN }}>{roas.toFixed(2)}×</div>
                   <div style={{ height: 5, borderRadius: 3, background: 'var(--ds-color-border)', marginTop: 8, position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${w}%`, borderRadius: 3, background: good ? POS : WARN }} />
-                    <span style={{ position: 'absolute', top: -3, bottom: -3, left: '20%', width: 1, background: 'var(--ds-color-text-faint,#aaa)' }} />
+                    <span style={{ position: 'absolute', top: -3, bottom: -3, left: `${(BREAKEVEN_ROAS / 5) * 100}%`, width: 1, background: 'var(--ds-color-text-faint,#aaa)' }} />
                   </div>
                 </div>
               );
