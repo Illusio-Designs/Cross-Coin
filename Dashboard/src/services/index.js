@@ -249,6 +249,33 @@ const makeRateLimitedCall = async (endpoint, requestFn, dedupeKey = null, enable
 };
 
 // Shipping Fee Services
+export const adsReportService = {
+  getReport: async (from, to) => {
+    const { data } = await adminApi.get('/api/ads-report/report', { params: { from, to } });
+    return data;
+  },
+  getSettings: async () => {
+    const { data } = await adminApi.get('/api/ads-report/settings');
+    return data;
+  },
+  saveSettings: async (payload) => {
+    const { data } = await adminApi.post('/api/ads-report/settings', payload);
+    return data;
+  },
+  getSpend: async (brand_id, from, to) => {
+    const { data } = await adminApi.get('/api/ads-report/spend', { params: { brand_id, from, to } });
+    return data;
+  },
+  saveSpend: async (entries) => {
+    const { data } = await adminApi.post('/api/ads-report/spend', { entries });
+    return data;
+  },
+  deleteSpend: async (id) => {
+    const { data } = await adminApi.delete(`/api/ads-report/spend/${id}`);
+    return data;
+  },
+};
+
 export const shippingFeeService = {
   getAllShippingFees: async () => {
     try {

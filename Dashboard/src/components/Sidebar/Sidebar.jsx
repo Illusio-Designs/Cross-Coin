@@ -48,7 +48,7 @@ const ALL_MENU = [
     label: 'Reports', icon: IC.reports, roles: ['admin','order_manager'],
     submenu: [
       { label: 'Overview',      view: 'reports' },
-      { label: 'Ads Reporting', view: 'ads-reporting' },
+      { label: 'Ads Reporting', view: 'ads-reporting', roles: ['admin'] },
     ],
   },
   {
