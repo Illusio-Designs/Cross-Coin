@@ -308,13 +308,13 @@
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: 320px;
-  max-height: 420px;
+  width: 360px;
+  max-height: 460px;
   overflow-y: auto;
   background: var(--ds-color-surface, #fff);
   border: 1px solid var(--ds-color-border, #e5e7eb);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.32), 0 2px 6px rgba(0, 0, 0, 0.08);
   z-index: 9999;
 }
 /* On phones the fixed-width panel anchored to the right edge overflowed the
@@ -322,15 +322,66 @@
 @media (max-width: 640px) {
   .notif-panel {
     position: fixed;
-    top: 60px;
+    top: 62px;
     right: 10px;
     left: 10px;
     width: auto;
-    max-height: 76vh;
+    max-height: 78vh;
   }
 }
-.notif-item { transition: background 0.12s; }
-.notif-item:hover { background: var(--ds-color-surface-soft, #f3f4f6) !important; }
+
+/* Header */
+.notif-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px 10px; position: sticky; top: 0; z-index: 2;
+  background: var(--ds-color-surface);
+}
+.notif-h-title { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 14.5px; letter-spacing: -0.01em; color: var(--ds-color-text); }
+.notif-count { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 20px; background: var(--ds-color-text); color: var(--ds-color-surface); font-size: 10.5px; font-weight: 700; display: grid; place-items: center; line-height: 1; font-variant-numeric: tabular-nums; }
+.notif-h-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.notif-alerts { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--ds-color-success); }
+.notif-enable, .notif-clear { background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 600; padding: 0; }
+.notif-enable { color: var(--ds-color-text); }
+.notif-clear { color: var(--ds-color-text-muted); }
+.notif-clear:hover { color: var(--ds-color-text); }
+.notif-empty { padding: 34px 16px; text-align: center; color: var(--ds-color-text-faint); font-size: 13px; }
+
+/* One notification = one card, with a colour wash spreading like the toast. */
+.notif-list { display: flex; flex-direction: column; gap: 10px; padding: 2px 12px 14px; }
+.notif-card {
+  position: relative; display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
+  padding: 12px 12px 12px 14px; border-radius: 14px; font: inherit; cursor: pointer; color: var(--ds-color-text);
+  background: var(--ds-color-surface); border: 1px solid var(--ds-color-border-soft, var(--ds-color-border));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px -10px rgba(0, 0, 0, 0.18);
+  overflow: hidden; transition: transform 0.14s cubic-bezier(.22, 1, .36, 1), border-color 0.14s;
+}
+.notif-card::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, var(--nt-wash), transparent 52%); }
+.notif-card > * { position: relative; }
+.notif-card:hover { transform: translateY(-1px); }
+.notif-card:focus-visible { outline: 2px solid var(--nt); outline-offset: 2px; }
+.notif-card.is-read { box-shadow: none; background: transparent; }
+.notif-card.is-read::before { opacity: 0.5; }
+.notif-chip {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--ds-color-bg); color: var(--nt);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nt) 26%, transparent);
+}
+.notif-card.is-read .notif-chip { box-shadow: inset 0 0 0 1px var(--ds-color-border); }
+.notif-c-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.notif-c-top { display: flex; align-items: center; gap: 7px; }
+.notif-c-title { font-size: 13.5px; font-weight: 650; letter-spacing: -0.01em; color: var(--ds-color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif-live { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--nt); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nt) 18%, transparent); }
+.notif-c-desc { font-size: 12.5px; color: var(--ds-color-text-muted); margin: 3px 0 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif-amt { color: var(--ds-color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.notif-c-time { font-size: 11px; color: var(--ds-color-text-faint); margin-top: 5px; font-variant-numeric: tabular-nums; }
+
+.notif-card--order { --nt: var(--ds-color-success); --nt-wash: var(--ds-color-success-bg); }
+.notif-card--whatsapp { --nt: #0ea371; --nt-wash: rgba(14, 163, 113, 0.10); }
+:root[data-theme="dark"] .notif-card--whatsapp { --nt: #34d9a3; --nt-wash: rgba(52, 217, 163, 0.11); }
+@media (prefers-reduced-motion: reduce) {
+  .notif-card { transition: none; }
+  .notif-card:hover { transform: none; }
+}
 
 /* ── Custom <Dropdown> on the dashboard ───────────────────────────────
    common/Dropdown.css styles this control in the storefront red (#CE1E36)

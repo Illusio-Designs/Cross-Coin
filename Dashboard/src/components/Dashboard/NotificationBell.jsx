@@ -13,8 +13,8 @@ function timeAgo(date) {
 }
 
 const ICONS = {
-  order: <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} color="#6b6b73" />,
-  whatsapp: <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} color="#6b6b73" />,
+  order: <HugeiconsIcon icon={Package01Icon} size={18} strokeWidth={2} />,
+  whatsapp: <HugeiconsIcon icon={WhatsappIcon} size={18} strokeWidth={2} />,
 };
 
 export default function NotificationBell() {
@@ -95,69 +95,53 @@ export default function NotificationBell() {
 
       {open && (
         <div className="notif-panel">
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', borderBottom: '1px solid var(--ds-color-border)',
-            position: 'sticky', top: 0, background: 'var(--ds-color-surface)',
-          }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Notifications</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="notif-head">
+            <div className="notif-h-title">
+              Notifications
+              {unreadCount > 0 && <span className="notif-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+            </div>
+            <div className="notif-h-actions">
               {pushSupported() && (
                 pushOn ? (
-                  <span style={{ fontSize: 11, color: '#0a0a0a', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} />
-                    Alerts on
-                  </span>
+                  <span className="notif-alerts"><HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} /> Alerts on</span>
                 ) : (
-                  <button onClick={handleEnablePush} disabled={pushBusy} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', fontSize: 12,
-                    color: '#0a0a0a', fontWeight: 600, padding: 0,
-                  }}>
+                  <button className="notif-enable" onClick={handleEnablePush} disabled={pushBusy}>
                     {pushBusy ? 'Enabling…' : 'Enable alerts'}
                   </button>
                 )
               )}
-            {notifications.length > 0 && (
-              <button onClick={clearAll} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 12, color: 'var(--ds-color-text-muted)',
-              }}>Clear all</button>
-            )}
+              {notifications.length > 0 && (
+                <button className="notif-clear" onClick={clearAll}>Clear all</button>
+              )}
             </div>
           </div>
 
-          {/* List */}
           {notifications.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--ds-color-text-faint)', fontSize: 13 }}>
-              No notifications yet
-            </div>
+            <div className="notif-empty">No notifications yet</div>
           ) : (
-            notifications.map(n => (
-              <div key={n.id} className="notif-item" role="button" tabIndex={0}
-                onClick={() => openNotification(n)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotification(n); } }}
-                style={{
-                  display: 'flex', gap: 10, padding: '10px 16px', cursor: 'pointer',
-                  borderBottom: '1px solid var(--ds-color-border-soft, #f3f4f6)',
-                  background: n.read ? 'transparent' : 'var(--ds-color-surface-soft, rgba(10,10,10,0.03))',
-                }}>
-                <div style={{ flexShrink: 0, marginTop: 2 }}>{ICONS[n.type]}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ds-color-text)' }}>
-                    {n.type === 'order'
-                      ? `New order #${n.data.orderNumber}`
-                      : `New WhatsApp message`}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {n.type === 'order'
-                      ? `₹${Number(n.data.amount).toFixed(2)} · ${n.data.paymentType?.toUpperCase()}`
-                      : n.data.message}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', marginTop: 3 }}>{timeAgo(n.time)}</div>
-                </div>
-              </div>
-            ))
+            <div className="notif-list">
+              {notifications.map(n => (
+                <button key={n.id} type="button"
+                  className={`notif-card notif-card--${n.type}${n.read ? ' is-read' : ''}`}
+                  onClick={() => openNotification(n)}>
+                  <span className="notif-chip">{ICONS[n.type]}</span>
+                  <span className="notif-c-body">
+                    <span className="notif-c-top">
+                      <span className="notif-c-title">
+                        {n.type === 'order' ? `New order · #${n.data.orderNumber}` : 'New WhatsApp message'}
+                      </span>
+                      {!n.read && <span className="notif-live" aria-hidden="true" />}
+                    </span>
+                    <span className="notif-c-desc">
+                      {n.type === 'order'
+                        ? <><span className="notif-amt">₹{Number(n.data.amount).toFixed(2)}</span> · {n.data.paymentType?.toUpperCase()}</>
+                        : n.data.message}
+                    </span>
+                    <span className="notif-c-time">{timeAgo(n.time)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
