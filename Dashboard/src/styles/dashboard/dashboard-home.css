@@ -200,3 +200,9 @@
 .obz-home .pill.bad  { color: var(--ds-color-danger);  background: var(--ds-color-danger-bg); }
 .obz-home .pill.rto  { color: #f97316; background: rgba(249, 115, 22, 0.13); }
 .obz-home .pill.mut  { color: var(--ds-color-text-muted); background: var(--ds-color-surface-soft); }
+
+/* Tighten the home's section rhythm on phones so the top doesn't read as
+   empty (the desktop 18px gap felt large stacked on a narrow screen). */
+@media (max-width: 640px) {
+  .obz-home { gap: 12px; }
+}

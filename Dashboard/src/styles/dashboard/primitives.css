@@ -33,7 +33,9 @@
   align-items: center;
 }
 @media (max-width: 640px) {
-  .ds-pageheader { flex-direction: column; align-items: stretch; }
+  /* Tighten the top-of-page block on phones — the stacked title + subtitle +
+     actions with the desktop gaps left a lot of empty space before content. */
+  .ds-pageheader { flex-direction: column; align-items: stretch; gap: var(--ds-space-3); margin-bottom: var(--ds-space-4); }
   .ds-pageheader__title { font-size: var(--ds-text-xl); }
 }
 
