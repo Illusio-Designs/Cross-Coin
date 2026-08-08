@@ -108,6 +108,73 @@ exports.deleteSpend = async (req, res) => {
     }
 };
 
+/* ── Meta (Facebook) ad-spend sync ───────────────────────────────── */
+const metaAdsService = require('../services/metaAdsService.js');
+const META_ACCOUNT_KEY = 'META_AD_ACCOUNT_ID';
+
+// GET /meta/config — per-brand Meta ad-account id + whether a token resolves.
+exports.getMetaConfig = async (req, res) => {
+    try {
+        const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name'], raw: true });
+        const config = [];
+        for (const b of brands) {
+            const adAccountId = await metaAdsService.resolveAdAccountId(b.id);
+            const token = await metaAdsService.resolveToken(b.id);
+            config.push({
+                brand_id: b.id,
+                brand: b.display_name || b.name,
+                ad_account_id: adAccountId || '',
+                hasToken: !!token,
+            });
+        }
+        res.json({ success: true, config });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+// POST /meta/config  { config: [{ brand_id, ad_account_id }] } — upsert per brand.
+exports.saveMetaConfig = async (req, res) => {
+    try {
+        const entries = Array.isArray(req.body?.config) ? req.body.config : [];
+        const by = req.user?.id || null;
+        for (const e of entries) {
+            if (!e.brand_id) continue;
+            // Strip an "act_" prefix if the admin pasted the full account id.
+            const val = String(e.ad_account_id ?? '').trim().replace(/^act_/i, '');
+            await setBrandSetting(Number(e.brand_id), META_ACCOUNT_KEY, val, false, 'ads', 'Meta ad account id for spend sync', by);
+        }
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+// POST /meta/sync  { from?, to?, brand_id? } — pull daily spend from Meta into
+// ad_spends. One brand when brand_id is given, else every configured brand.
+exports.syncMetaSpend = async (req, res) => {
+    try {
+        const { from, to, brand_id } = req.body || {};
+        const results = brand_id
+            ? [await metaAdsService.syncBrandSpend(Number(brand_id), from, to)]
+            : await metaAdsService.syncAllBrandsSpend(from, to);
+        const synced = results.filter((r) => !r.error && !r.skipped);
+        const failed = results.filter((r) => r.error);
+        res.json({
+            success: true,
+            results,
+            summary: {
+                brands: results.length,
+                synced: synced.length,
+                failed: failed.length,
+                totalSpend: Math.round(synced.reduce((a, r) => a + (r.total || 0), 0) * 100) / 100,
+            },
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
 /* ── Report (computed server-side) ───────────────────────────────── */
 // GET /report?from=&to=
 exports.getReport = async (req, res) => {

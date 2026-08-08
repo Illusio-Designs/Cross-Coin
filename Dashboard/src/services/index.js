@@ -288,6 +288,19 @@ export const adsReportService = {
     const { data } = await adminApi.delete(`/api/ads-report/spend/${id}`);
     return data;
   },
+  // ── Meta (Facebook) spend sync ──
+  getMetaConfig: async () => {
+    const { data } = await adminApi.get('/api/ads-report/meta/config');
+    return data;
+  },
+  saveMetaConfig: async (config) => {
+    const { data } = await adminApi.post('/api/ads-report/meta/config', { config });
+    return data;
+  },
+  syncMeta: async ({ from, to, brand_id } = {}) => {
+    const { data } = await adminApi.post('/api/ads-report/meta/sync', { from, to, brand_id });
+    return data;
+  },
 };
 
 export const shippingFeeService = {

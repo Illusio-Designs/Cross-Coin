@@ -89,6 +89,11 @@ export default function AdsReporting() {
   const [msg, setMsg] = useState('');
   const [spendOpen, setSpendOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  // Meta (Facebook) spend sync
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [metaConfig, setMetaConfig] = useState([]);
+  const [metaSyncing, setMetaSyncing] = useState(false);
+  const [metaResults, setMetaResults] = useState(null);
 
   const brands = useMemo(() => report.rows.map((r) => ({ id: r.brand_id, name: r.brand })), [report.rows]);
 
@@ -132,6 +137,36 @@ export default function AdsReporting() {
   };
   const removeSpend = async (id) => { try { await adsReportService.deleteSpend(id); await loadSpend(spendForm.brand_id); await loadReport(); } catch { /* */ } };
   const setProductCost = (id, v) => setSettings((s) => ({ ...s, productCost: { ...s.productCost, [id]: v } }));
+
+  // ── Meta (Facebook) spend sync ──
+  const openMeta = async () => {
+    setMetaOpen(true); setMetaResults(null); setMsg('');
+    try { const d = await adsReportService.getMetaConfig(); if (d?.success) setMetaConfig(d.config || []); } catch { setMetaConfig([]); }
+  };
+  const setMetaAccount = (brandId, v) =>
+    setMetaConfig((c) => c.map((r) => (r.brand_id === brandId ? { ...r, ad_account_id: v } : r)));
+  const saveMetaConfig = async () => {
+    setMsg('');
+    try {
+      await adsReportService.saveMetaConfig(metaConfig.map((r) => ({ brand_id: r.brand_id, ad_account_id: r.ad_account_id })));
+      setMsg('Meta accounts saved.');
+      const d = await adsReportService.getMetaConfig(); if (d?.success) setMetaConfig(d.config || []);
+    } catch (e) { setMsg(e?.response?.data?.message || 'Save failed'); }
+  };
+  const runMetaSync = async () => {
+    setMetaSyncing(true); setMetaResults(null); setMsg('');
+    try {
+      // Persist any edited account ids first so the sync uses them.
+      await adsReportService.saveMetaConfig(metaConfig.map((r) => ({ brand_id: r.brand_id, ad_account_id: r.ad_account_id })));
+      // Manual fetch pulls THROUGH today so the running day's spend is included
+      // (whatever Meta reports right now). The report table still counts orders
+      // only up to yesterday, but the ad_spends rows are stored up to today.
+      const d = await adsReportService.syncMeta({ from, to: today() });
+      if (d?.success) { setMetaResults(d); await loadReport(); }
+      else setMsg(d?.message || 'Sync failed');
+    } catch (e) { setMsg(e?.response?.data?.message || e.message || 'Sync failed'); }
+    finally { setMetaSyncing(false); }
+  };
 
   const totals = useMemo(() => {
     const t = report.rows.reduce((a, r) => {
@@ -180,6 +215,7 @@ export default function AdsReporting() {
           <div className="ads-actions">
             <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
             <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
+            <Button variant="secondary" onClick={openMeta}>⚡ Sync from Meta</Button>
             <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>
           </div>
         </div>
@@ -378,6 +414,60 @@ export default function AdsReporting() {
             <Input key={b.id} label={`${b.name} (₹)`} type="number" value={settings.productCost[b.id] ?? 140} onChange={(e) => setProductCost(b.id, e.target.value)} />
           ))}
         </div>
+        {msg && <p style={{ ...S.hint, marginTop: 10, color: POS }}>{msg}</p>}
+      </Modal>
+
+      {/* Sync from Meta modal */}
+      <Modal isOpen={metaOpen} onClose={() => { setMetaOpen(false); setMsg(''); setMetaResults(null); }} title="Sync ad spend from Meta"
+        description="Set each brand's Meta ad account, then pull daily spend straight into the report. Uses the brand's Facebook token (needs the ads_read permission)." size="md"
+        footer={(
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button variant="ghost" onClick={() => setMetaOpen(false)}>Close</Button>
+            <Button variant="secondary" onClick={saveMetaConfig}>Save accounts</Button>
+            <Button variant="primary" onClick={runMetaSync} loading={metaSyncing}>
+              {metaSyncing ? 'Syncing…' : `Sync ${from} → ${today()} (incl. today)`}
+            </Button>
+          </div>
+        )}>
+        <div style={{ ...S.label, marginBottom: 8 }}>Meta ad account per brand (numeric id — the “act_” prefix is optional)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {metaConfig.length === 0 && <span style={S.hint}>No brands found.</span>}
+          {metaConfig.map((r) => (
+            <div key={r.brand_id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 130, fontSize: 13, color: 'var(--ds-color-text)' }}>{r.brand}</div>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <Input placeholder="e.g. 1837181420281602" value={r.ad_account_id || ''}
+                  onChange={(e) => setMetaAccount(r.brand_id, e.target.value)} />
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, whiteSpace: 'nowrap',
+                color: r.hasToken ? POS : WARN, background: r.hasToken ? 'var(--ds-color-success-bg, #dcfce7)' : 'var(--ds-color-warn-bg, #fef3c7)' }}>
+                {r.hasToken ? 'token ✓' : 'no token'}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {metaResults && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ ...S.label, marginBottom: 8 }}>
+              Result — {metaResults.summary?.synced || 0} synced, {metaResults.summary?.failed || 0} failed · {inr(metaResults.summary?.totalSpend || 0)} pulled
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+              {(metaResults.results || []).map((r) => (
+                <div key={r.brand_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5,
+                  padding: '7px 10px', borderRadius: 8, border: '1px solid var(--ds-color-border)',
+                  background: r.error ? 'var(--ds-color-danger-bg, #fee2e2)' : 'var(--ds-color-bg)' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{r.brand}</span>
+                  <span style={{ color: r.error ? NEG : 'var(--ds-color-text-muted)', textAlign: 'right' }}>
+                    {r.error ? r.error
+                      : r.skipped ? r.reason
+                      : `${r.days} day${r.days === 1 ? '' : 's'} · ${inr(r.total)}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {msg && <p style={{ ...S.hint, marginTop: 10, color: POS }}>{msg}</p>}
       </Modal>
     </div>
