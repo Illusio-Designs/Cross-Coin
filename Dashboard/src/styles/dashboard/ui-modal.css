@@ -29,6 +29,10 @@
   width: 100%;
   height: 100vh;
   max-height: 100vh;
+  /* dvh excludes the mobile browser chrome / home indicator, so the pinned
+     footer isn't pushed below the visible viewport (100vh over-shoots on iOS). */
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   position: relative;
   /* slide in from the right */
@@ -45,7 +49,7 @@
 .modal-md { max-width: 560px; }
 .modal-lg { max-width: 760px; }
 .modal-xl { max-width: 980px; }
-.modal-full { width: 100vw; height: 100vh; max-width: none; max-height: none; }
+.modal-full { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
 
 /* Header */
 .modal-header {
@@ -195,7 +199,7 @@
   .modal-header { padding: 0 18px; height: 56px; }
   .modal-body { padding: 18px; }
   .modal-box .prod-steps { padding: 12px 18px 10px; }
-  .modal-footer { padding: 12px 18px; gap: 8px; }
+  .modal-footer { padding: 12px 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
   .modal-footer > .btn { flex: 1; }
 }
 @media (max-width: 480px) {
