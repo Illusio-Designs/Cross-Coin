@@ -8625,6 +8625,10 @@
   .sl-page-header {
     flex-direction: column;
     align-items: flex-start;
+    /* The desktop 24px bottom margin reads as a big empty gap once the header
+       stacks into a column on phones — tighten it so the table/content sits
+       closer to the title. */
+    margin-bottom: 16px;
   }
 
   .sl-header-right {

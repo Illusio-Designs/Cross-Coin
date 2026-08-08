@@ -1582,9 +1582,26 @@
         filter.brand_id = parseInt(brand_id);
       }
 
-      // Status filter
+      // Status filter.
+      // The dashboard's status tabs (Pending / Processing / Shipped / Delivered /
+      // Cancelled / RTO) are *buckets*, but orders are stored under granular raw
+      // statuses (every order starts as 'awaiting_confirmation', not 'pending';
+      // "processing" is stored as 'confirmed'/'processing'; a shipped order may be
+      // 'booked'/'in transit'/'out for delivery'/…). An exact `status = <tab>` match
+      // therefore returned almost nothing for Pending/Processing/Shipped/RTO. Expand
+      // each tab into its raw statuses (same mapping the stats revenueBreakdown uses)
+      // so the tab shows every order that belongs in it.
       if (status && status !== 'all') {
-        filter.status = status;
+        const STATUS_BUCKETS = {
+          pending: ['pending', 'awaiting_confirmation'],
+          processing: ['processing', 'confirmed'],
+          shipped: ['shipped', 'in transit', 'out for delivery', 'booked', 'pickup initiated', 'manifested'],
+          delivered: ['delivered'],
+          cancelled: ['cancelled', 'order cancelled'],
+          rto: ['rto', 'rto delivered', 'returned_rto', 'return_initiated'],
+        };
+        const bucket = STATUS_BUCKETS[String(status).toLowerCase()];
+        filter.status = bucket ? { [Op.in]: bucket } : status;
       }
 
       // Payment status filter
