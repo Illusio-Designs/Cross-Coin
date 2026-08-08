@@ -6380,6 +6380,21 @@
 
 .rep-state { text-align: center; padding: 48px 0; color: var(--ds-color-text-muted); }
 
+/* ── Ads Reporting controls ──────────────────────────────────────────────
+   The ads page is built from inline styles (can't media-query), so the
+   header controls are classed here. Desktop: one inline row. Mobile: the
+   date picker goes full-width, then the actions become an even 2-col grid
+   with "+ Add spend" spanning the full width — no more ragged wrapping. */
+.ads-controls { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.ads-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .ads-controls { flex-direction: column; align-items: stretch; }
+  .ads-controls > * { width: 100%; }
+  .ads-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ads-actions .btn { width: 100%; }
+  .ads-actions .btn-primary { grid-column: 1 / -1; }
+}
+
 
 /* ===== dashboard/media.css ===== */
 /* ===================================

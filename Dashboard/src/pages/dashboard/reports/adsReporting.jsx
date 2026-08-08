@@ -173,13 +173,15 @@ export default function AdsReporting() {
           <h2 style={S.title}>Ads Reporting</h2>
           <p style={S.sub}>Per-brand ad-spend profitability. Add daily spend — everything else is calculated from orders.</p>
         </div>
-        <div style={S.controls}>
+        <div className="ads-controls">
           <DateRangePicker label="Period" inline startDate={from} endDate={to}
             onStartChange={setFrom} onEndChange={setTo} onApply={loadReport}
             minDate={REPORT_START} maxDate={daysAgo(1)} />
-          <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
-          <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
-          <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>
+          <div className="ads-actions">
+            <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
+            <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
+            <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>
+          </div>
         </div>
       </div>
       {error && <p style={{ ...S.hint, color: NEG }}>{error}</p>}
