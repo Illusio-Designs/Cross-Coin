@@ -2,8 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryClient';
 import { dashboardService } from '../../services';
 
-/** Dashboard stats — 5 min stale, supports date filter */
-export const useDashboardStats = (dateFilter = {}) =>
+/**
+ * Dashboard stats — 5 min stale, supports date filter.
+ * `enabled` gates the fetch so roles that never see the reporting home
+ * (e.g. WhatsApp / product managers) don't pull store-wide financials.
+ */
+export const useDashboardStats = (dateFilter = {}, { enabled = true } = {}) =>
   useQuery({
     queryKey: [...queryKeys.dashboard, dateFilter.start_date || '', dateFilter.end_date || ''],
     queryFn: async () => {
@@ -15,4 +19,5 @@ export const useDashboardStats = (dateFilter = {}) =>
       throw new Error('Failed to load dashboard statistics');
     },
     staleTime: 5 * 60 * 1000,
+    enabled,
   });

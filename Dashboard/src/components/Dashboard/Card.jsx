@@ -11,6 +11,8 @@ import {
   Package01Icon, StarIcon, CreditCardIcon, UndoIcon, Alert02Icon,
   Analytics01Icon, ChartUpIcon, UserMultiple02Icon, DeliveryTruck01Icon,
   ArrowDown01Icon, ArrowUp01Icon, ArrowRight01Icon,
+  WhatsappIcon, Building01Icon, SlidersHorizontalIcon, News01Icon,
+  Share08Icon, Search01Icon, File01Icon, DashboardSquare01Icon,
 } from '@hugeicons/core-free-icons';
 
 /* Navigate the dashboard shell to another view (same pattern as the
@@ -206,13 +208,75 @@ function PipelineStep({ label, count, total, color }) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   ROLE HOME — non-reporting staff (WhatsApp / product / content
+   managers) never see the store's financial overview. They land on a
+   clean home with quick links to only the sections their role can open.
+   ══════════════════════════════════════════════════════════════ */
+const ic = (icon) => <HugeiconsIcon icon={icon} size={20} strokeWidth={2} />;
+// Curated primary destinations (sub-tabs like seo-health / whatsapp-chat are
+// intentionally omitted). Order here = order shown on the home.
+const QUICK_LINKS = [
+  { view: 'whatsapp',      label: 'WhatsApp',   hint: 'Reply to customer chats',   tone: 'success', icon: ic(WhatsappIcon) },
+  { view: 'products',      label: 'Products',   hint: 'Manage catalog & stock',    tone: 'info',    icon: ic(Package01Icon) },
+  { view: 'categories',    label: 'Categories', hint: 'Organize the catalog',      tone: 'info',    icon: ic(DashboardSquare01Icon) },
+  { view: 'media-gallery', label: 'Media',      hint: 'Images & brand assets',     tone: 'info',    icon: ic(File01Icon) },
+  { view: 'brands',        label: 'Brands',     hint: 'Brand pages & settings',    tone: 'info',    icon: ic(Building01Icon) },
+  { view: 'slider',        label: 'Sliders',    hint: 'Homepage banners',          tone: 'info',    icon: ic(SlidersHorizontalIcon) },
+  { view: 'blogs',         label: 'Blogs',      hint: 'Articles & content',        tone: 'info',    icon: ic(News01Icon) },
+  { view: 'lookbooks',     label: 'Lookbooks',  hint: 'Social commerce',           tone: 'info',    icon: ic(Share08Icon) },
+  { view: 'seo',           label: 'SEO',        hint: 'Search optimization',       tone: 'info',    icon: ic(Search01Icon) },
+];
+
+function RoleHome() {
+  const { user, canAccessView } = useAuth();
+  const links = QUICK_LINKS.filter((l) => canAccessView(l.view));
+  return (
+    <div className="obz-home">
+      <PageHeader
+        title={`${getGreeting()}, ${user?.username || 'there'}`}
+        subtitle="Here's your workspace"
+      />
+      {links.length > 0 ? (
+        <div className="panel">
+          <div className="panel-h">
+            <h3>Quick access</h3>
+            <span className="h-hint">{links.length} {links.length === 1 ? 'section' : 'sections'} · tap to open</span>
+          </div>
+          <div className="inbox-grid">
+            {links.map((l) => (
+              <button key={l.view} type="button" className={`inbox-card tone-${l.tone}`} onClick={() => goToView(l.view)}>
+                <span className="ic-chip">{l.icon}</span>
+                <span className="ic-body">
+                  <span className="ic-top"><span className="ic-label">{l.label}</span></span>
+                  <span className="ic-hint">{l.hint}</span>
+                </span>
+                <span className="ic-go" aria-hidden="true">{IC.arrow}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="panel"><div className="h-hint">Use the menu on the left to get started.</div></div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════════════ */
 function CardGrid() {
   const [dateFilter, setDateFilter] = useState({});
-  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats(dateFilter);
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  // The home's revenue/order reporting is only for roles that can open the
+  // Orders + Reports views (admin, order_manager). Everyone else (WhatsApp /
+  // product / content managers) gets a role-appropriate home and never pulls
+  // store-wide financials. Gate BOTH the fetch and the render on this.
+  const canSeeReporting = roles.includes('admin') || roles.includes('order_manager');
+  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats(dateFilter, { enabled: canSeeReporting });
   const error = queryError ? 'Failed to load dashboard statistics' : null;
+
+  if (!canSeeReporting) return <RoleHome />;
 
   const handleDateChange = (field, value) => {
     setDateFilter(prev => {
