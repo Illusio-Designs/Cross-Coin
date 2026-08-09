@@ -16,6 +16,11 @@ self.addEventListener('push', (event) => {
     badge: '/favicon.ico',
     tag: data.tag || undefined,
     renotify: !!data.tag,
+    // Deliver as a normal alert so the OS plays its default notification sound
+    // (a web app can't play its own custom sound while it's closed — the sound
+    // is the phone's system notification sound, gated by device settings/DND).
+    silent: false,
+    requireInteraction: false,
     data: { url: data.url || '/dashboard/orders' },
     vibrate: [120, 60, 120],
   };
