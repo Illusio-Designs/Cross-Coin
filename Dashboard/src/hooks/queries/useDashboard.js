@@ -18,6 +18,10 @@ export const useDashboardStats = (dateFilter = {}, { enabled = true } = {}) =>
       if (res.success) return res.stats;
       throw new Error('Failed to load dashboard statistics');
     },
-    staleTime: 5 * 60 * 1000,
+    // Keep the figures fresh: 60s stale (matches the backend cache TTL) and a
+    // refetch when the admin returns to the tab, so the dashboard reflects new
+    // orders / confirms quickly instead of showing 5-minute-old numbers.
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
     enabled,
   });

@@ -179,6 +179,21 @@ orderEmitter.on('order.cancelled', async (order) => {
   } catch (e) { logger.error('[Event] order.cancelled error:', e.message); }
 });
 
+// Dashboard figures go stale otherwise: the cached stats were only cleared on
+// order CREATION, so confirm/ship/deliver/cancel didn't move the numbers until
+// the TTL expired. Drop the cache on every figure-moving transition so the
+// dashboard reflects the change within seconds.
+const invalidateDashboardOnChange = (order) => {
+  setImmediate(async () => {
+    try {
+      const { invalidateDashboardCache } = require('./dashboardService.js');
+      await invalidateDashboardCache(order?.user_id || 'admin');
+    } catch (e) { logger.warn('[Event] dashboard cache invalidation failed: ' + e.message); }
+  });
+};
+['order.created', 'order.confirmed', 'order.shipped', 'order.delivered', 'order.cancelled']
+  .forEach((evt) => orderEmitter.on(evt, invalidateDashboardOnChange));
+
 // order.analytics — fire FB + GA events
 orderEmitter.on('order.analytics', async ({ event, payload }) => {
   try {

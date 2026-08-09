@@ -4,7 +4,10 @@ const { Op, QueryTypes } = require("sequelize");
 const cacheManager = require("./cacheManager.js");
 
 // Cache configuration
-const DASHBOARD_CACHE_TTL = 5 * 60; // 5 minutes in seconds
+// 60s: the figures must feel live. Order actions (confirm/cancel/ship/deliver)
+// also actively invalidate the cache via the order event bus, so this TTL is
+// just the backstop for anything that doesn't emit an event.
+const DASHBOARD_CACHE_TTL = 60; // seconds
 const DASHBOARD_CACHE_KEY = (userId, brandId) => `dashboard:brand:${brandId || 'all'}:stats`;
 
 /**

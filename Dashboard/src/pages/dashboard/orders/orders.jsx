@@ -317,16 +317,18 @@ const Orders = () => {
         try {
             const result = await orderService.confirmOrder(orderId);
             if (result.success) {
-                showSuccess('orderConfirmed', `Order ${orderNumber} confirmed successfully!`);
+                showSuccess('orderConfirmed', `Order ${orderNumber} confirmed — booking courier…`);
                 highlightRow(orderId);
                 // Refresh orders + stats to reflect the new status — silent so the
                 // table doesn't blank to a skeleton while confirming.
                 await fetchOrders(currentPage, { silent: true });
                 await fetchAllOrdersForStats();
-                // Courier assignment is handled by the dedicated "Sync" action on
-                // each row (auto-selects the best available courier). We no longer
-                // try to auto-open a courier picker here — that path referenced an
-                // undefined handler and read a stale orders snapshot.
+                // Confirm now also BOOKS the courier (best available) in one step —
+                // the old standalone "Sync" button is gone. syncSingleOrder runs its
+                // own refresh + toasts and is non-fatal: if booking fails (e.g. no
+                // serviceable courier) the order stays confirmed and a "Pending Sync"
+                // retry button appears on the row.
+                await syncSingleOrder(orderId, orderNumber);
             }
             else { showError('saveFailed', result.message || 'Failed to confirm order'); }
         } catch (error) { showError('saveFailed', error.message || 'Failed to confirm order'); }
@@ -636,6 +638,12 @@ const Orders = () => {
                 // hide the Sync button (the Refresh-tracking button takes over).
                 const isSynced = !!(row.Shipment?.waybill || row.fship_waybill);
                 const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
+                // Confirming an order now books the courier automatically, so the
+                // Sync button is no longer shown on unconfirmed rows. It only stays
+                // as a RETRY for orders that were confirmed but whose booking hasn't
+                // landed yet (the "Pending Sync" state) — e.g. no serviceable
+                // courier on the first attempt.
+                const pendingSync = !isSynced && !isFinal && !canConfirm;
                 // Admin can cancel any non-dispatched order (COD or prepaid),
                 // including confirmed / processing / synced-&-booked ones — the
                 // backend restores stock, refunds prepaid, and cancels the
@@ -652,16 +660,14 @@ const Orders = () => {
                                 <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
-                        {!isSynced && divider}
-                        {!isSynced && (
-                        <Tooltip text={isFinal ? `Order is ${row.status}` : 'Sync now — book this order with the best available courier'} position="top">
-                            <button className={`order-action-btn order-sync-btn${isFinal || isSyncing ? ' disabled' : ''}`}
+                        {pendingSync && divider}
+                        {pendingSync && (
+                        <Tooltip text="Pending sync — retry booking this order with the best available courier" position="top">
+                            <button className={`order-action-btn order-sync-btn${isSyncing ? ' disabled' : ''}`}
                                 onClick={() => syncSingleOrder(row.id, row.order_number)}
-                                disabled={isSyncing || isFinal}>
+                                disabled={isSyncing}>
                             {isSyncing ? (
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            ) : isFinal ? (
-                                <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={2} />
                             ) : (
                                 <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                             )}
@@ -680,7 +686,7 @@ const Orders = () => {
                                 <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
-                        {!isSynced && (
+                        {pendingSync && (
                             <Tooltip text="Enter AWB / courier manually (for orders booked outside the system)" position="top">
                                 <button className="order-action-btn order-update-btn"
                                     onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
