@@ -93,7 +93,6 @@ function RevenueTrend({ data }) {
 export default function Reports() {
   const [dateFilter, setDateFilter] = useState({});
   const { data: stats, isLoading, error } = useDashboardStats(dateFilter);
-  const [exportingOrders, setExportingOrders] = useState(false);
   const [exportingGst, setExportingGst] = useState(false);
 
   const setDate = (field, value) =>
@@ -164,22 +163,6 @@ export default function Reports() {
       [{ label: 'Metric', value: (r) => r.k }, { label: 'Value', value: (r) => r.v }], rows);
   };
 
-  const exportDeliveredOrders = async () => {
-    if (!dateFilter.start_date || !dateFilter.end_date) {
-      showError('selectDates', 'Pick a start and end date to export delivered orders.');
-      return;
-    }
-    setExportingOrders(true);
-    try {
-      await orderService.exportDeliveredOrders(dateFilter.start_date, dateFilter.end_date);
-      showSuccess('exported', 'Delivered orders exported.');
-    } catch (e) {
-      showError('exportFailed', e.message || 'Failed to export delivered orders');
-    } finally {
-      setExportingOrders(false);
-    }
-  };
-
   const exportGstReport = async () => {
     if (!dateFilter.start_date || !dateFilter.end_date) {
       showError('selectDates', 'Pick a start and end date to export the GST report.');
@@ -230,24 +213,13 @@ export default function Reports() {
             <button
               type="button"
               className="order-sync-main-btn"
-              onClick={exportDeliveredOrders}
-              disabled={exportingOrders || !dateFilter.start_date || !dateFilter.end_date}
-              title={(!dateFilter.start_date || !dateFilter.end_date)
-                ? 'Pick a start and end date to export delivered orders'
-                : 'Export a detailed CSV of delivered orders for the selected range'}
-            >
-              <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered'}
-            </button>
-            <button
-              type="button"
-              className="order-sync-main-btn"
               onClick={exportGstReport}
               disabled={exportingGst || !dateFilter.start_date || !dateFilter.end_date}
               title={(!dateFilter.start_date || !dateFilter.end_date)
-                ? 'Pick a start and end date to export the GST report'
+                ? 'Pick a start and end date to export delivered orders'
                 : 'Export the GST sales report (delivered orders, per line item) for the selected range'}
             >
-              <DlIcon /> {exportingGst ? 'Exporting…' : 'GST report'}
+              <DlIcon /> {exportingGst ? 'Exporting…' : 'Export delivered'}
             </button>
           </div>
         }
