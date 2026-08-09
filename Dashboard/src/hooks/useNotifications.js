@@ -135,35 +135,41 @@ export function useNotifications() {
       }
     };
 
-    // One long-poll cycle: the server HOLDS the request until an event or ~25s,
-    // then we reconnect. RESOURCE-SAVER: only the VISIBLE tab long-polls — a
-    // hidden/background tab releases its held connection entirely and relies on
-    // Web Push for alerts, so N background tabs cost 0 held Passenger workers.
+    // Delivery has two modes so a BACKGROUND tab still gets alerts instead of
+    // depending only on Web Push (which may not land):
+    //   • VISIBLE tab → long-poll: the server HOLDS the request up to ~25s and
+    //     returns the instant an event fires → near-instant delivery.
+    //   • HIDDEN tab  → a quick check (wait=0, nothing held on the server) every
+    //     ~60s, so a missed push still surfaces within a minute instead of only
+    //     when the tab is refocused. Nothing is held in the background, so idle
+    //     background tabs still cost 0 Passenger workers.
     let running = false;
+    const schedule = (ms) => { clearTimeout(backoffTimer); backoffTimer = setTimeout(loop, ms); };
     const loop = async () => {
-      if (!alive || document.hidden) { running = false; return; } // paused in background
+      if (!alive) { running = false; return; }
       const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) { running = false; backoffTimer = setTimeout(loop, 5000); return; } // wait for login
+      if (!token) { running = false; schedule(5000); return; } // wait for login
 
       running = true;
+      const hidden = typeof document !== 'undefined' && document.hidden;
       controller = new AbortController();
       try {
-        const res = await fetch(
-          `${API_BASE}/api/notifications/poll?since=${encodeURIComponent(sinceRef.current)}`,
-          { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
-        );
-        if (res.status === 401) { running = false; return; } // stop on auth failure (page reload restarts)
+        const url = `${API_BASE}/api/notifications/poll?since=${encodeURIComponent(sinceRef.current)}${hidden ? '&wait=0' : ''}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+        running = false;
+        if (res.status === 401) return; // stop on auth failure (page reload restarts)
         if (res.ok) {
           const data = await res.json();
           if (data.serverTime) sinceRef.current = data.serverTime;
           process(data);
         }
-        return loop(); // reconnect (loop() itself pauses if now hidden)
+        // Visible: reconnect immediately (re-hold). Hidden: check again in ~60s.
+        schedule(document.hidden ? 60000 : 0);
       } catch (e) {
-        if (!alive) { running = false; return; }
-        if (e.name === 'AbortError') { return loop(); } // hidden→pauses, visible→reconnects
         running = false;
-        backoffTimer = setTimeout(loop, 5000); // network error — back off
+        if (!alive) return;
+        if (e.name === 'AbortError') { schedule(document.hidden ? 60000 : 0); return; }
+        schedule(document.hidden ? 60000 : 5000); // network error — back off
       }
     };
 
@@ -213,17 +219,16 @@ export function useNotifications() {
     };
     seed();
 
-    const start = setTimeout(loop, 2000);
+    schedule(2000);
 
-    // Hidden → abort the held request (frees the worker); Visible → catch up now.
-    // The `since` timestamp means the first poll on resume returns everything
+    // On any visibility change, abort the in-flight request and re-run in the
+    // right mode straight away: hold when visible (instant), quick+60s when
+    // hidden. The `since` timestamp means the resume poll returns everything
     // missed while the tab was in the background, so nothing is lost.
     const onVisible = () => {
-      if (document.hidden) {
-        if (controller) { try { controller.abort(); } catch (_) {} }
-      } else if (!running) {
-        loop();
-      }
+      if (!alive) return;
+      if (controller) { try { controller.abort(); } catch (_) {} }
+      if (!running) schedule(document.hidden ? 60000 : 0);
     };
     document.addEventListener('visibilitychange', onVisible);
 
@@ -234,7 +239,6 @@ export function useNotifications() {
 
     return () => {
       alive = false;
-      clearTimeout(start);
       clearTimeout(backoffTimer);
       if (controller) { try { controller.abort(); } catch (_) {} }
       document.removeEventListener('visibilitychange', onVisible);
