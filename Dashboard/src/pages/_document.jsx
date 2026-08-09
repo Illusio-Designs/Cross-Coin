@@ -209,6 +209,15 @@ export default function Document({ tracking }) {
         {/* Theme color for mobile browsers */}
         <meta name="theme-color" content="#0a0a0a" />
 
+        {/* PWA: installable, standalone home-screen app. Also the requirement
+            for iOS web-push — Safari/WebKit only allows the Notification API
+            once the site is added to the Home Screen as a standalone app. */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <meta name="apple-mobile-web-app-title" content="Obzus" />
+
         {/* Favicon — Obzus "O" monogram */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
