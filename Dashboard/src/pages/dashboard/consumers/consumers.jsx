@@ -120,7 +120,7 @@ export default function Consumers() {
             />
           ) : (
             <>
-              <Table columns={columns} data={currentItems} striped hoverable />
+              <Table columns={columns} data={currentItems} striped hoverable cardOnMobile />
               {filteredData.length > itemsPerPage && (
                 <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />

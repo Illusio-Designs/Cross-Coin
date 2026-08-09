@@ -255,7 +255,7 @@ export default function Reviews() {
             />
           ) : (
             <>
-              <Table columns={columns} data={currentItemsWithSN} striped hoverable />
+              <Table columns={columns} data={currentItemsWithSN} striped hoverable cardOnMobile />
               {totalReviews > itemsPerPage && (
                 <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />

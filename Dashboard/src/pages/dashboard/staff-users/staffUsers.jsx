@@ -220,7 +220,7 @@ export default function StaffUsers() {
             </div>
           ) : (
             <>
-              <Table columns={columns} data={pageItems} striped hoverable />
+              <Table columns={columns} data={pageItems} striped hoverable cardOnMobile />
               {filtered.length > itemsPerPage && (
                 <div className="sl-pagination">
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
