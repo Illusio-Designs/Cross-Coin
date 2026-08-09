@@ -247,7 +247,10 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         prevCnt++; prevTotal += amt; if (earned) prevEarned += amt;
       }
     }
-    const pctChange = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : (cur > 0 ? 100 : 0));
+    // No previous-period baseline (e.g. the store just launched) → return null
+    // so the UI shows "New" instead of a misleading fake 100%. A real prior
+    // period gives the true percentage.
+    const pctChange = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null);
     const curAov = curCnt > 0 ? curTotal / curCnt : 0;
     const prevAov = prevCnt > 0 ? prevTotal / prevCnt : 0;
     const deltas = {

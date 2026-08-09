@@ -104,8 +104,9 @@ function getGreeting() {
    When the previous period was ~0, the percentage explodes (e.g. 13000%) and
    reads like a bug. Show a clean "New" for those instead of a giant number. */
 function Delta({ pct }) {
-  if (pct === null || pct === undefined) return null;
-  if (!Number.isFinite(pct) || Math.abs(pct) >= 1000) {
+  if (pct === undefined) return null; // delta data absent → show nothing
+  // null = no previous period to compare (fresh store); huge = grew from ~0.
+  if (pct === null || !Number.isFinite(pct) || Math.abs(pct) >= 1000) {
     return <span className="delta up">▲ New</span>;
   }
   const up = pct >= 0;
