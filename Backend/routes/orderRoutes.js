@@ -19,7 +19,7 @@ const {
     requeueFailedShipments,
 } = require('../controller/orderShippingController.js');
 const {
-    exportDeliveredOrders,
+    exportDeliveredOrders, exportDeliveredGSTReport,
     markLabelDownloaded, downloadLabel, bulkDownloadLabels,
     getPendingLabels, getLabelDownloadStats,
 } = require('../controller/orderLabelController.js');
@@ -65,6 +65,7 @@ const trackByAwbSchema = z.object({
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
 router.get('/stats',                     isAuthenticated, isOrderManager, getOrderStats);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
+router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
 // The /shipping/* paths are the canonical names. The /fship/* paths are
 // kept as aliases so existing dashboard JS keeps working.

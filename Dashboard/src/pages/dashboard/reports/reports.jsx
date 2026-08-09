@@ -94,6 +94,7 @@ export default function Reports() {
   const [dateFilter, setDateFilter] = useState({});
   const { data: stats, isLoading, error } = useDashboardStats(dateFilter);
   const [exportingOrders, setExportingOrders] = useState(false);
+  const [exportingGst, setExportingGst] = useState(false);
 
   const setDate = (field, value) =>
     setDateFilter((prev) => {
@@ -179,6 +180,23 @@ export default function Reports() {
     }
   };
 
+  const exportGstReport = async () => {
+    if (!dateFilter.start_date || !dateFilter.end_date) {
+      showError('selectDates', 'Pick a start and end date to export the GST report.');
+      return;
+    }
+    setExportingGst(true);
+    try {
+      const r = await orderService.exportGstReport(dateFilter.start_date, dateFilter.end_date);
+      if (r?.success) showSuccess('exported', 'GST report downloaded.');
+      else showError('exportFailed', r?.message || 'No delivered orders in that range.');
+    } catch (e) {
+      showError('exportFailed', e.message || 'Failed to export GST report');
+    } finally {
+      setExportingGst(false);
+    }
+  };
+
   const totalOrders = Number(orders.total) || 0;
   const pct = (v) => (totalOrders > 0 ? Math.round((v / totalOrders) * 1000) / 10 : 0);
   const statusRows = [
@@ -219,6 +237,17 @@ export default function Reports() {
                 : 'Export a detailed CSV of delivered orders for the selected range'}
             >
               <DlIcon /> {exportingOrders ? 'Exporting…' : 'Export delivered'}
+            </button>
+            <button
+              type="button"
+              className="order-sync-main-btn"
+              onClick={exportGstReport}
+              disabled={exportingGst || !dateFilter.start_date || !dateFilter.end_date}
+              title={(!dateFilter.start_date || !dateFilter.end_date)
+                ? 'Pick a start and end date to export the GST report'
+                : 'Export the GST sales report (delivered orders, per line item) for the selected range'}
+            >
+              <DlIcon /> {exportingGst ? 'Exporting…' : 'GST report'}
             </button>
           </div>
         }

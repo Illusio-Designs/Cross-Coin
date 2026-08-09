@@ -495,6 +495,25 @@ const startServer = async () => {
             logger.error('WhatsApp catalog column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: products.gst_rate ────────────────────────
+        // Per-product GST rate used by the delivered-orders GST report. Default
+        // 5% (socks). Guarded by information_schema → no-op once applied.
+        try {
+            const [gstCol] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'gst_rate'`
+            );
+            if (!gstCol.length) {
+                logger.info('Migrating: adding products.gst_rate column…');
+                await sequelize.query(
+                    `ALTER TABLE products ADD COLUMN gst_rate DECIMAL(5,2) NOT NULL DEFAULT 5.00 COMMENT 'GST rate percent for this product'`
+                );
+                logger.info('✓ products.gst_rate column added');
+            }
+        } catch (err) {
+            logger.error('products.gst_rate column migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: whatsapp_messages.type ENUM (+reaction,+button) ─
         // Inbound reactions and quick-reply button taps use these types; without
         // them MySQL rejects the insert ("Data truncated for column 'type'") and

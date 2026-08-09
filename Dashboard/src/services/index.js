@@ -684,6 +684,35 @@ export const orderService = {
     }
   },
 
+  // GST sales report for delivered orders (per line item, filtered by order date)
+  exportGstReport: async (startDate, endDate) => {
+    try {
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      const response = await adminApi.get('/api/orders/export/gst-report', {
+        params, responseType: 'blob', timeout: 60000,
+      });
+      // An empty range returns JSON (not a blob) — detect and surface it.
+      if (response.data?.type === 'application/json') {
+        const text = await response.data.text();
+        const json = JSON.parse(text || '{}');
+        return { success: false, message: json.message || 'No delivered orders found for the selected range' };
+      }
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GST_Report_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      return { success: true, message: 'GST report downloaded' };
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Update AWB number manually
   updateAwbNumber: async (orderId, data) => {
     try {

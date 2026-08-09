@@ -384,6 +384,113 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 };
 
 // ============================================
+// GST Report — delivered orders (per line item)
+// ============================================
+// Produces the GST sales report for DELIVERED orders, one row per order line
+// item, matching the accountant's template:
+//   Order Date | Order ID | Order Status | Place of Supply | Invoice Number |
+//   Custom SKU ID | Product Name | Unit Sold | RATE | AMOUNT | TAXABLE VELUE |
+//   SGST | CGST | IGST | NET AMOUNT
+// Tax logic: the GST rate is per-PRODUCT (products.gst_rate, e.g. socks = 5%).
+// Taxable Value = Amount ÷ (1 + rate). The intra/inter-state split is applied
+// on top: orders shipped to the home state (GST_HOME_STATE, default Gujarat)
+// are split CGST + SGST (half each); all other states are charged IGST.
+// Filter is by ORDER date (createdAt), per the report's Order Date column.
+module.exports.exportDeliveredGSTReport = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const HOME_STATE = String(process.env.GST_HOME_STATE || 'gujarat').trim().toLowerCase();
+
+    const where = { status: 'delivered' };
+    const { buildCreatedAtRange } = require('../utils/dateRange.js');
+    const { range, hasRange } = buildCreatedAtRange(startDate, endDate);
+    if (hasRange) where.createdAt = range;
+
+    const orders = await Order.findAll({
+      where,
+      include: [
+        { model: ShippingAddress, as: 'ShippingAddress', attributes: ['state', 'city'], required: false },
+        {
+          model: OrderItem, as: 'OrderItems', required: false,
+          include: [
+            { model: Product, as: 'Product', attributes: ['id', 'name', 'gst_rate'], required: false },
+            { model: ProductVariation, as: 'ProductVariation', attributes: ['id', 'sku'], required: false },
+          ],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    const fmtDateTime = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(dt);
+      const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(dt);
+      return `${date} ${time}`;
+    };
+    const n = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
+
+    const rows = [];
+    for (const order of orders) {
+      const placeOfSupply = String(order.ShippingAddress?.state || '').trim().toLowerCase();
+      const intra = placeOfSupply === HOME_STATE;
+      const items = order.OrderItems || [];
+      for (const item of items) {
+        const units = n(item.quantity) || 1;
+        // AMOUNT = the line total the customer paid for this item (gross, incl GST).
+        const amount = n(item.subtotal) || n(item.price) * units;
+        const rate = units ? amount / units : amount;
+        const gstRate = n(item.Product?.gst_rate) || 5; // % — per product
+        const taxable = amount / (1 + gstRate / 100);
+        const taxTotal = amount - taxable;
+        rows.push({
+          'Order Date': fmtDateTime(order.createdAt),
+          'Order ID': order.order_number,
+          'Order Status': 'Delivered',
+          'Place of Supply': placeOfSupply,
+          'Invoice Number': order.invoice_number || '',
+          'Custom SKU ID': item.ProductVariation?.sku || '',
+          'Product Name': item.Product?.name || '',
+          'Unit Sold': units,
+          'RATE': rate,
+          'AMOUNT': amount,
+          'TAXABLE VELUE': taxable,
+          'SGST': intra ? taxTotal / 2 : 0,
+          'CGST': intra ? taxTotal / 2 : 0,
+          'IGST': intra ? 0 : taxTotal,
+          'NET AMOUNT': amount,
+        });
+      }
+    }
+
+    if (rows.length === 0) {
+      return res.status(200).json({ success: true, message: 'No delivered orders found for the selected range', count: 0 });
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ['Order Date', 'Order ID', 'Order Status', 'Place of Supply', 'Invoice Number',
+        'Custom SKU ID', 'Product Name', 'Unit Sold', 'RATE', 'AMOUNT', 'TAXABLE VELUE',
+        'SGST', 'CGST', 'IGST', 'NET AMOUNT'],
+    });
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 22 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 24 }, { wch: 46 },
+      { wch: 9 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 12 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'GST Report');
+    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    const filename = `GST_Report_${startDate || 'All'}_to_${endDate || 'All'}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(excelBuffer);
+  } catch (error) {
+    logger.error('=== Error exporting GST report ===', error.message);
+    res.status(500).json({ success: false, message: 'Failed to export GST report', error: error.message });
+  }
+};
+
+// ============================================
 // FShip Label Management Functions
 // ============================================
 

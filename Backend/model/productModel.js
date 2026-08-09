@@ -102,6 +102,15 @@ const Product = sequelize.define('Product', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         comment: 'Whether this product has been synced to WhatsApp catalog'
+    },
+    // GST rate (%) applied to this product in the delivered-orders GST report.
+    // Depends on the product, not the state (e.g. socks = 5%). The intra/inter
+    // state split (CGST+SGST vs IGST) is applied on top of this rate.
+    gst_rate: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: false,
+        defaultValue: 5.00,
+        comment: 'GST rate percent for this product (e.g. 5.00, 12.00)'
     }
 }, {
     tableName: 'products',
