@@ -323,6 +323,7 @@ module.exports.createProduct = async (req, res) => {
           ? JSON.parse(req.body.dimensions)
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
+        gst_rate: req.body.gst_rate != null && req.body.gst_rate !== '' ? Number(req.body.gst_rate) : 5,
         brand_id: brandIds[0] ? Number(brandIds[0]) : null,
       },
       { transaction }
@@ -788,6 +789,9 @@ module.exports.updateProduct = async (req, res) => {
           ? JSON.parse(req.body.dimensions)
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
+        ...(req.body.gst_rate != null && req.body.gst_rate !== ''
+          ? { gst_rate: Number(req.body.gst_rate) }
+          : {}),
       },
       { transaction }
     );

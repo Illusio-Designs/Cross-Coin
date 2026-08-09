@@ -112,7 +112,7 @@ export default function ShippingFees() {
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
         {error && (
-          <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div role="alert" style={{ backgroundColor: 'var(--ds-color-danger-bg)', border: '1px solid var(--ds-color-danger)', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: 'var(--ds-color-danger)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{error}</span>
             <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
           </div>

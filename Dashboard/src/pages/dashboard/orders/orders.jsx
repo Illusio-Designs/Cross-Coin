@@ -69,7 +69,13 @@ const Orders = () => {
     // UI: analytics charts are collapsed by default so the orders table sits
     // near the top; live updates can be paused so the table never refreshes
     // under the admin while they work.
-    const [liveUpdates, setLiveUpdates] = useState(true);
+    const [liveUpdates, setLiveUpdates] = useState(() => {
+        // Remember the admin's choice so pausing stays paused across visits.
+        try { return localStorage.getItem('obz-orders-live') !== 'off'; } catch { return true; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('obz-orders-live', liveUpdates ? 'on' : 'off'); } catch {}
+    }, [liveUpdates]);
     const [filterOpen, setFilterOpen] = useState(false);
     // Shipping-address editor (fix wrong pincode/phone that blocks courier booking)
     const [editingAddress, setEditingAddress] = useState(false);

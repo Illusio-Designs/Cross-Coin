@@ -68,6 +68,15 @@ export default function NotificationBell() {
   };
   const openNotification = (n) => goTo(n.type === 'order' ? 'orders' : 'whatsapp');
 
+  // On iPhone/iPad, web-push only works once the site is added to the Home
+  // Screen as a standalone app. When it isn't, show a hint instead of an
+  // "Enable alerts" button that would just fail.
+  const iosNeedsInstall = typeof window !== 'undefined'
+    && /iphone|ipad|ipod/i.test(window.navigator.userAgent || '')
+    && !(window.navigator.standalone === true
+      || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches))
+    && !pushSupported();
+
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
@@ -115,6 +124,16 @@ export default function NotificationBell() {
               )}
             </div>
           </div>
+
+          {iosNeedsInstall && (
+            <div style={{
+              margin: '0 0 8px', padding: '9px 11px', borderRadius: 10,
+              background: 'var(--ds-color-surface-soft)', border: '1px solid var(--ds-color-border)',
+              color: 'var(--ds-color-text-muted)', fontSize: 12, lineHeight: 1.45,
+            }}>
+              📲 To get order alerts on iPhone: tap <b style={{ color: 'var(--ds-color-text)' }}>Share → Add to Home Screen</b>, then open the app from that icon and enable alerts here.
+            </div>
+          )}
 
           {notifications.length === 0 ? (
             <div className="notif-empty">No notifications yet</div>

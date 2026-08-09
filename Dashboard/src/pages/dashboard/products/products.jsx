@@ -60,6 +60,7 @@ const ProductsPage = () => {
     weightUnit: "g",
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
+    gst_rate: "5",
     brandIds: [], // Will be set by BrandAssignment component
     variations: [{
       price: "",
@@ -364,6 +365,7 @@ const ProductsPage = () => {
         weightUnit: product.weightUnit || 'g',
         dimensions: product.dimensions || { length: '', width: '', height: '' },
         dimensionUnit: product.dimensionUnit || 'cm',
+        gst_rate: product.gst_rate != null ? String(product.gst_rate) : '5',
         variations: product.variations?.map(variation => {
           // Parse attributes if it's a string and ensure proper object structure
           let attributes = variation.attributes || {}; // Directly get attributes from attributes from variation
@@ -482,6 +484,7 @@ const ProductsPage = () => {
       weightUnit: "g",
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
+      gst_rate: "5",
       brandIds: [],
       variations: [{
         price: "",
@@ -526,6 +529,7 @@ const ProductsPage = () => {
       weightUnit: "g",
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
+      gst_rate: "5",
       variations: [{
         price: "",
         comparePrice: "",
@@ -829,6 +833,7 @@ const ProductsPage = () => {
         formDataToSend.append('weightUnit', formData.weightUnit || 'g');
         formDataToSend.append('dimensions', JSON.stringify(formData.dimensions));
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
+        formDataToSend.append('gst_rate', formData.gst_rate ?? '5');
         
         // Add brand IDs
         formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
@@ -1110,6 +1115,14 @@ const ProductsPage = () => {
                     { value: 'oz', label: 'Ounces (oz)' }
                   ]}
                 />
+                <Input
+                  label="GST rate (%)"
+                  type="number"
+                  name="gst_rate"
+                  value={formData.gst_rate ?? '5'}
+                  onChange={handleInputChange}
+                  placeholder="5"
+                />
               </div>
               <div className="dimensions-section">
                 <h6>Dimensions</h6>
@@ -1311,7 +1324,7 @@ const ProductsPage = () => {
     <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       {error && (
-        <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div role="alert" style={{ backgroundColor: 'var(--ds-color-danger-bg)', border: '1px solid var(--ds-color-danger)', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: 'var(--ds-color-danger)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{error}</span>
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>

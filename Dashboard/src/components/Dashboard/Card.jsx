@@ -100,9 +100,14 @@ function getGreeting() {
   return 'Good evening';
 }
 
-/* ── KPI delta arrow (▲/▼ %) — green up, red down ── */
+/* ── KPI delta arrow (▲/▼ %) — green up, red down ──
+   When the previous period was ~0, the percentage explodes (e.g. 13000%) and
+   reads like a bug. Show a clean "New" for those instead of a giant number. */
 function Delta({ pct }) {
   if (pct === null || pct === undefined) return null;
+  if (!Number.isFinite(pct) || Math.abs(pct) >= 1000) {
+    return <span className="delta up">▲ New</span>;
+  }
   const up = pct >= 0;
   return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
 }
