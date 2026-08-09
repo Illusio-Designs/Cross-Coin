@@ -167,6 +167,52 @@ export function useNotifications() {
       }
     };
 
+    // One-time seed: the bell is otherwise empty until a live event arrives while
+    // the page is open (and resets on every reload) — which reads as "notifications
+    // don't show". Pull the last 24h of activity once (wait=0 → immediate, no hold)
+    // and add it as READ + SILENT: it appears in the list, but plays no sound and
+    // never inflates the unread badge. The live loop below still fires sound +
+    // unread for genuinely new events (deduped via seenIds).
+    const seed = async () => {
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) return;
+      try {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const res = await fetch(
+          `${API_BASE}/api/notifications/poll?since=${encodeURIComponent(since)}&wait=0`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!alive || !res.ok) return;
+        const data = await res.json();
+        const items = [];
+        for (const order of (data.orders || [])) {
+          if (seenIds.current.orders.has(order.id)) continue;
+          seenIds.current.orders.add(order.id);
+          items.push({
+            id: `order-${order.id}`, type: 'order', read: true,
+            time: order.createdAt ? new Date(order.createdAt) : new Date(),
+            data: { id: order.id, orderNumber: order.order_number, amount: order.final_amount, paymentType: order.payment_type },
+          });
+        }
+        for (const conv of (data.whatsapp || [])) {
+          const inboundMsg = conv.Messages?.[0];
+          const key = `${conv.id}-${inboundMsg?.createdAt || conv.last_message_at}`;
+          if (seenIds.current.whatsapp.has(key)) continue;
+          seenIds.current.whatsapp.add(key);
+          items.push({
+            id: `whatsapp-${conv.id}`, type: 'whatsapp', read: true,
+            time: conv.last_message_at ? new Date(conv.last_message_at) : new Date(),
+            data: { id: conv.id, phone: conv.customer_phone, message: conv.last_message },
+          });
+        }
+        if (alive && items.length) {
+          items.sort((a, b) => new Date(b.time) - new Date(a.time));
+          setNotifications(prev => [...items, ...prev].slice(0, MAX_NOTIFICATIONS));
+        }
+      } catch (_) { /* seeding is best-effort */ }
+    };
+    seed();
+
     const start = setTimeout(loop, 2000);
 
     // Hidden → abort the held request (frees the worker); Visible → catch up now.

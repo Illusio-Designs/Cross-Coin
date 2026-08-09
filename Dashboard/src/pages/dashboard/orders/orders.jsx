@@ -99,19 +99,16 @@ const Orders = () => {
     // Drop stale responses when user types fast / changes filters quickly
     const requestIdRef = useRef(0);
 
-    const fetchOrders = useCallback(async (page = currentPage, { silent = false } = {}) => {
+    const fetchOrders = useCallback(async (page = currentPage, { silent = false, _attempt = 0 } = {}) => {
         const reqId = ++requestIdRef.current;
-        setError(null);
+        let willRetry = false;
         // Foreground fetches (page change, filter change, manual refresh) show the
-        // skeleton and clear the visible rows so the previous page's data doesn't
-        // sit on screen during the fetch. A *silent* fetch (the 30s background
-        // poll) keeps the current rows on screen and swaps in fresh data when it
-        // arrives — otherwise the whole table blanks out to a skeleton every 30s
-        // while the admin is working.
-        if (!silent) {
-            setLoading(true);
-            setOrders([]);
-        }
+        // skeleton. We DON'T clear the visible rows anymore — a transient network
+        // blip on a cold backend would otherwise blank the whole table. The rows
+        // are swapped only on a successful response; on failure the last-good rows
+        // stay put behind the (dismissible) error. A *silent* fetch (the 30s
+        // background poll) never touches the skeleton.
+        if (!silent) { setError(null); setLoading(true); }
         try {
             const params = {
                 page, limit: itemsPerPage,
@@ -136,12 +133,29 @@ const Orders = () => {
             const totalOrdersCount = data.total || 0;
             setTotalPages(Math.ceil(totalOrdersCount / itemsPerPage));
             setTotalOrders(totalOrdersCount);
+            setError(null);
         } catch (err) {
             if (reqId !== requestIdRef.current) return;
+            // Transient network blips (cold backend boot, worker saturation) show
+            // up as "Network Error" / timeout with no response. Silently auto-retry
+            // once before surfacing anything, so a one-off hiccup self-heals.
+            const isTransient = err?.message === 'Network Error' || err?.code === 'ECONNABORTED' || !err?.response;
+            if (isTransient && _attempt < 1) {
+                willRetry = true;
+                setTimeout(() => fetchOrders(page, { silent, _attempt: _attempt + 1 }), 1500);
+                return;
+            }
             // A failed background poll must not wipe the table the admin is using.
-            if (!silent) setError(err.message || 'Failed to fetch orders');
+            if (!silent) {
+                const friendly = err?.message === 'Network Error'
+                    ? "Couldn't reach the server — check your connection and try again. Your orders are safe."
+                    : err?.code === 'ECONNABORTED'
+                        ? 'The server took too long to respond. Please try again.'
+                        : (err?.message || 'Failed to fetch orders');
+                setError(friendly);
+            }
         } finally {
-            if (reqId === requestIdRef.current && !silent) setLoading(false);
+            if (reqId === requestIdRef.current && !silent && !willRetry) setLoading(false);
         }
     }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
@@ -741,9 +755,20 @@ const Orders = () => {
             />
             <div className="dashboard-page">
                 {error && (
-                    <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: '#991B1B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{error}</span>
-                        <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+                    <div role="alert" style={{
+                        background: 'var(--ds-color-danger-bg)', border: '1px solid var(--ds-color-danger)',
+                        borderRadius: 'var(--ds-radius-md, 10px)', padding: '11px 14px', marginBottom: 12,
+                        color: 'var(--ds-color-danger)', display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'center', gap: 12, fontSize: 13.5
+                    }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                            <HugeiconsIcon icon={Alert02Icon} size={17} strokeWidth={2} style={{ flexShrink: 0 }} />
+                            <span>{error}</span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                            <button onClick={() => fetchOrders(currentPage)} style={{ background: 'none', border: '1px solid currentColor', borderRadius: 8, cursor: 'pointer', color: 'inherit', fontSize: 12, fontWeight: 600, padding: '4px 10px' }}>Retry</button>
+                            <button onClick={() => setError(null)} aria-label="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button>
+                        </span>
                     </div>
                 )}
                 <div className="orders-header-container">
