@@ -251,12 +251,17 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     // so the UI shows "New" instead of a misleading fake 100%. A real prior
     // period gives the true percentage.
     const pctChange = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null);
+    // Only show a comparison % once the prior 30-day window has a solid sample.
+    // Below this, a handful of early orders produces a real-but-meaningless
+    // percentage (e.g. AOV −44%), so surface "New" (null) until there's history.
+    const MIN_BASELINE_ORDERS = 10;
+    const hasBaseline = prevCnt >= MIN_BASELINE_ORDERS;
     const curAov = curCnt > 0 ? curTotal / curCnt : 0;
     const prevAov = prevCnt > 0 ? prevTotal / prevCnt : 0;
     const deltas = {
-      revenue: { pct: pctChange(curEarned, prevEarned) },
-      orders: { pct: pctChange(curCnt, prevCnt), today: todayCnt },
-      aov: { pct: pctChange(curAov, prevAov) },
+      revenue: { pct: hasBaseline ? pctChange(curEarned, prevEarned) : null },
+      orders: { pct: hasBaseline ? pctChange(curCnt, prevCnt) : null, today: todayCnt },
+      aov: { pct: hasBaseline ? pctChange(curAov, prevAov) : null },
       customersNew: recentCustomers, // new customers in the last 30 days
     };
     const revenueTrend = [];
