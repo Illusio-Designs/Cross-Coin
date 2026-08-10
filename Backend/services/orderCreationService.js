@@ -163,7 +163,9 @@ async function createOrderFromSession({
       const rtoCount = await Order.count({
         where: {
           user_id: session.user_id,
-          status: 'returned_rto',
+          // Real returns land on 'rto' / 'rto delivered' (courier webhook),
+          // not only 'returned_rto' — count all so the score actually rises.
+          status: { [Op.in]: ['rto', 'rto delivered', 'returned_rto'] },
           createdAt: { [Op.gte]: sixMonthsAgo },
         },
         transaction: t,

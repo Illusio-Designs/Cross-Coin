@@ -143,6 +143,12 @@
   /**
    * Get count of RTO orders for a phone number in the last 6 months.
    */
+  // RTO statuses a real return actually lands on. The courier webhook maps
+  // returns to 'rto' / 'rto delivered' (see iThinkService.mapStatusToCrossCoin);
+  // 'returned_rto' is only set by one legacy path. Counting ONLY 'returned_rto'
+  // (the old bug) meant real RTOs never raised the risk score.
+  const RTO_STATUSES = ['rto', 'rto delivered', 'returned_rto'];
+
   async function getRtoCount(phone, userId) {
     if (!userId) return 0;
     const sixMonthsAgo = new Date();
@@ -150,7 +156,7 @@
     return Order.count({
       where: {
         user_id: userId,
-        status: 'returned_rto',
+        status: { [Op.in]: RTO_STATUSES },
         createdAt: { [Op.gte]: sixMonthsAgo },
       },
     });

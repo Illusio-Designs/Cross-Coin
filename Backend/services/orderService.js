@@ -470,10 +470,13 @@ async function checkCodEligibility(phone, brandId = 1) {
 
   const addressIds = addresses.map(a => a.id);
 
+  // Count every status a real return lands on — the courier webhook sets
+  // 'rto' / 'rto delivered', not 'returned_rto'. Counting only 'returned_rto'
+  // meant repeat-RTO customers were never flagged and COD was never blocked.
   const rtoCount = await Order.count({
     where: {
       shipping_address_id: { [Op.in]: addressIds },
-      status: 'returned_rto',
+      status: { [Op.in]: ['rto', 'rto delivered', 'returned_rto'] },
       created_at: { [Op.gte]: sixMonthsAgo },
     },
   });
