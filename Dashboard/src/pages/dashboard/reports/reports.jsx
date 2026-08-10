@@ -51,9 +51,14 @@ const DlIcon = () => (
   <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
 );
 
-/* KPI delta arrow (▲/▼ %) — green up, red down (matches dashboard home) */
+/* KPI delta arrow (▲/▼ %) — green up, red down (matches dashboard home).
+   No previous-period baseline (null) or an off-the-charts jump (>=1000%) shows
+   "New" instead of a fake/absurd percentage; absent data shows nothing. */
 function Delta({ pct }) {
-  if (pct === null || pct === undefined) return null;
+  if (pct === undefined) return null;
+  if (pct === null || !Number.isFinite(pct) || Math.abs(pct) >= 1000) {
+    return <span className="delta up">▲ New</span>;
+  }
   const up = pct >= 0;
   return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
 }
