@@ -160,10 +160,10 @@ button { font-family: inherit; cursor: pointer; }
 .cd-item-prices { display: flex; align-items: baseline; gap: 8px; }
 .cd-item-bot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 12px; gap: 10px; }
 .cd-qty button:disabled { opacity: .4; }
-.cd-qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; flex-shrink: 0; }
-.cd-qty button { width: 30px; height: 30px; border: 0; background: transparent; font-size: 16px; color: var(--ink); cursor: pointer; }
+.cd-qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; flex-shrink: 0; height: 32px; }
+.cd-qty button { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; font-size: 18px; line-height: 1; color: var(--ink); cursor: pointer; -webkit-appearance: none; appearance: none; }
 .cd-qty button:hover:not(:disabled) { background: var(--line-soft); }
-.cd-qty span { min-width: 26px; text-align: center; font-weight: 700; font-size: 13px; }
+.cd-qty span { min-width: 28px; text-align: center; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; line-height: 1; }
 .cd-item-price { font-weight: 800; font-size: 16px; color: var(--sale); }
 .cd-foot { flex-shrink: 0; border-top: 1px solid var(--line); padding: 16px 20px calc(18px + env(safe-area-inset-bottom)); background: var(--bg); }
 .cd-trust { display: flex; justify-content: center; gap: 18px; margin-bottom: 12px; }
