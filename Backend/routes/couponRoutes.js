@@ -29,9 +29,6 @@ const applyCouponSchema = z.object({
 router.get('/listing',    getPublicCoupons);
 router.post('/validate',  validateBody(validateCouponSchema), validateCoupon);
 
-// Authenticated
-router.post('/apply',     authenticate, validateBody(applyCouponSchema), applyCoupon);
-
 // Admin
 router.post('/',          isAuthenticated, isOrderManager, createCoupon);
 router.get('/',           isAuthenticated, isOrderManager, getAllCoupons);

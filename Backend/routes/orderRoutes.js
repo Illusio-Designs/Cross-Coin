@@ -4,7 +4,7 @@ const {
     createOrder, createGuestOrder,
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, adminDeleteOrder, confirmOrder,
-    getOrderStats, updateAwbNumber, initiateReturn,
+    updateAwbNumber, initiateReturn,
     adminCreateManualOrder, updateOrderAddress,
 } = require('../controller/orderController.js');
 // checkAddressQuality has been migrated to the domain-grouped file.
@@ -15,7 +15,7 @@ const {
     handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
     validateOrderForShipping, getAvailableCouriers, syncWithCourier,
-    generateLabel, generateLabelForOrder, downloadOrderLabel,
+    generateLabelForOrder,
     requeueFailedShipments,
 } = require('../controller/orderShippingController.js');
 const {
@@ -63,7 +63,6 @@ const trackByAwbSchema = z.object({
 
 // ── Admin / Order Manager ─────────────────────────────────────────────────
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
-router.get('/stats',                     isAuthenticated, isOrderManager, getOrderStats);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
@@ -76,10 +75,8 @@ router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getFShi
 router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
-router.post('/labels/generate',         isAuthenticated, isOrderManager, generateLabel);
 router.get('/:id/labels/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
 router.post('/:id/labels/generate',     isAuthenticated, isOrderManager, generateLabelForOrder);
-router.get('/labels/download/:labelId', isAuthenticated, isOrderManager, downloadOrderLabel);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
 router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabelDownloadStats);
 router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDownloadLabels);
