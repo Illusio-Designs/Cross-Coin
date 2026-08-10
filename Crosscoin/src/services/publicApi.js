@@ -36,4 +36,4 @@ export { createRazorpayOrder, updateOrderPayment, initiateCheckout, initiateGues
 export { getPublicCategories, getPublicCategoryByName, getPublicSliders, getPublicLookbooks, getPublicLookbookBySlug, getPublicProductBySlug, getAllPublicProducts, searchProducts, getPublicCoupons, validateCoupon, getPublicProductReviews, createPublicReview, getAllPublicReviews, getSeoByPageName, getPublicPolicyByName, getPublicBlogs, getPublicBlogBySlug, getPublicBlogTags, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress, createGuestShippingAddress, getGuestShippingAddresses } from './api/productApi';
 
 // ── Coupons & Offers ──────────────────────────────────────────────────────
-export { CouponIntegrationService, couponIntegrationService, offerAPIService } from './api/couponApi';
+export { CouponIntegrationService, couponIntegrationService } from './api/couponApi';

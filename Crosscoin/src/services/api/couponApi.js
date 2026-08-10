@@ -1,5 +1,4 @@
 import { getPublicCoupons, validateCoupon } from "./productApi";
-import { offerAPI } from "./config";
 
 export class CouponIntegrationService {
   constructor() {
@@ -93,25 +92,3 @@ export class CouponIntegrationService {
 }
 
 export const couponIntegrationService = new CouponIntegrationService();
-
-export const offerAPIService = {
-  getCartUpsellRecommendations: async (cartItems, cartTotal) => { const r = await offerAPI.get('/cart/upsell-recommendations', { params: { cartItems: JSON.stringify(cartItems), cartTotal } }); return r.data; },
-  getFreeShippingThreshold: async () => { const r = await offerAPI.get('/cart/free-shipping-threshold'); return r.data; },
-  getPrepaidIncentive: async (cartTotal) => { const r = await offerAPI.get('/cart/prepaid-incentive', { params: { cartTotal } }); return r.data; },
-  trackUpsellInteraction: async (upsellType, productId, action) => { const r = await offerAPI.post('/cart/track-upsell-interaction', { upsellType, productId, action }); return r.data; },
-  applyOfferDiscount: async (cartItems, offerId, offerType) => { const r = await offerAPI.post('/cart/apply-offer', { cartItems, offerId, offerType }); return r.data; },
-  validateOfferEligibility: async (cartItems, cartTotal, offerId, offerType) => { const r = await offerAPI.post('/cart/validate-offer', { cartItems, cartTotal, offerId, offerType }); return r.data; },
-  admin: {
-    getUpsellRules: async () => { const r = await offerAPI.get('/admin/upsell-rules'); return r.data; },
-    createUpsellRule: async (ruleData) => { const r = await offerAPI.post('/admin/upsell-rules', ruleData); return r.data; },
-    updateUpsellRule: async (ruleId, ruleData) => { const r = await offerAPI.put(`/admin/upsell-rules/${ruleId}`, ruleData); return r.data; },
-    deleteUpsellRule: async (ruleId) => { const r = await offerAPI.delete(`/admin/upsell-rules/${ruleId}`); return r.data; },
-    getFreeShippingSettings: async () => { const r = await offerAPI.get('/admin/free-shipping-settings'); return r.data; },
-    updateFreeShippingSettings: async (settings) => { const r = await offerAPI.put('/admin/free-shipping-settings', settings); return r.data; },
-    getPrepaidIncentives: async () => { const r = await offerAPI.get('/admin/prepaid-incentives'); return r.data; },
-    createPrepaidIncentive: async (data) => { const r = await offerAPI.post('/admin/prepaid-incentives', data); return r.data; },
-    updatePrepaidIncentive: async (id, data) => { const r = await offerAPI.put(`/admin/prepaid-incentives/${id}`, data); return r.data; },
-    deletePrepaidIncentive: async (id) => { const r = await offerAPI.delete(`/admin/prepaid-incentives/${id}`); return r.data; },
-    getUpsellAnalytics: async (startDate, endDate, type) => { const r = await offerAPI.get('/admin/upsell-analytics', { params: { startDate, endDate, type } }); return r.data; },
-  },
-};
