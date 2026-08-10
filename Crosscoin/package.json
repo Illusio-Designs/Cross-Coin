@@ -46,5 +46,14 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "webpack-bundle-analyzer": "^4.10.1"
-  }
+  },
+  "browserslist": [
+    "chrome >= 79",
+    "edge >= 79",
+    "firefox >= 70",
+    "safari >= 13",
+    "ios_saf >= 13",
+    "not dead",
+    "not op_mini all"
+  ]
 }

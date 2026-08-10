@@ -78,19 +78,9 @@ export default function Document({ tracking }) {
               "}catch(_){}})();",
           }}
         />
-        {/* ── Google Tag Manager — loaded as high as possible (server-rendered
-            so GTM's own preview / Tag Assistant detect it) ── */}
-        {gtmId && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html:
-                "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});" +
-                "var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';" +
-                "j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;" +
-                "f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gtmId + "');",
-            }}
-          />
-        )}
+        {/* Analytics/pixels (GTM, GA/Ads, Facebook, Clarity) are set up as
+            lightweight stubs immediately and the heavy scripts are DEFERRED —
+            see the single bootstrap script below the preconnects. */}
 
         {/* Preconnect — critical image/API + font origins */}
         <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
@@ -104,61 +94,49 @@ export default function Document({ tracking }) {
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
         <link rel="dns-prefetch" href="https://verify.msg91.com" />
 
-        {/* ── Google tag: GA4 + Google Ads (server-rendered so it's detectable) ──
-            gtag.js is shared by Analytics (G-…) and Ads (AW-…), so we load the
-            library once and issue a config() per configured destination. */}
-        {(gaId || adsId) && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}`} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html:
-                  "window.dataLayer = window.dataLayer || [];" +
-                  "function gtag(){var _p=window.location.pathname;" +
-                  "if(_p.indexOf('/dashboard')===0||_p.indexOf('/auth')===0)return;" +
-                  "dataLayer.push(arguments);}" +
-                  "gtag('js', new Date());" +
-                  (gaId ? `gtag('config', '${gaId}');` : "") +
-                  (adsId ? `gtag('config', '${adsId}');` : "") +
-                  // Expose the Ads id + conversion labels so funnel pages can
-                  // fire Google Ads conversions (no-op until a label is set).
-                  (adsId ? `window.__gAdsId='${adsId}';` : "") +
-                  (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
-                  (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : ""),
-              }}
-            />
-          </>
-        )}
-
-        {/* ── Facebook Pixel (server-rendered) ── */}
-        {fbId && (
+        {/* ── Deferred analytics/pixels bootstrap ─────────────────────────────
+            The LCP breakdown showed ~3.3s of "element render delay" — the hero
+            image was ready in ~0.3s but couldn't paint because the main thread
+            was busy running these third-party scripts during load. So we:
+              1. Define lightweight STUBS + queue every call NOW (dataLayer/gtag,
+                 fbq, clarity) so no PageView/config/conversion event is lost.
+              2. DEFER the heavy external scripts (gtm.js, gtag.js, fbevents.js,
+                 clarity.js) until the browser is idle OR the visitor first
+                 interacts (whichever comes first). Queued events flush the
+                 moment each script loads.
+            This is the same idea as Shopify's deferred Web Pixels, without a
+            Web Worker sandbox. Everything still tracks — just after first paint. */}
+        {(gaId || adsId || fbId || clarityId || gtmId) && (
           <script
             dangerouslySetInnerHTML={{
               __html:
-                "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?" +
-                "n.callMethod.apply(n,arguments):n.queue.push(arguments)};" +
-                "if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';" +
-                "n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;" +
-                "s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}" +
-                "(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');" +
-                `window._fbqId='${fbId}';fbq('init', '${fbId}');fbq('track', 'PageView');`,
-            }}
-          />
-        )}
-
-        {/* ── Microsoft Clarity (server-rendered) ── */}
-        {clarityId && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html:
-                "(function(c,l,a,r,i,t,y){" +
-                "var _p=window.location.pathname;" +
-                "if(_p.indexOf('/dashboard')===0||_p.indexOf('/auth')===0)return;" +
-                "c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};" +
-                "t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;" +
-                "y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);" +
-                `})(window,document,'clarity','script','${clarityId}');`,
+                "(function(){var P=location.pathname,BLOCK=(P.indexOf('/dashboard')===0||P.indexOf('/auth')===0);" +
+                // dataLayer + gtag stub (queues into dataLayer)
+                "window.dataLayer=window.dataLayer||[];" +
+                "window.gtag=function(){if(BLOCK)return;dataLayer.push(arguments);};" +
+                (gtmId ? "dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});" : "") +
+                ((gaId || adsId) ? "gtag('js',new Date());" : "") +
+                (gaId ? `gtag('config','${gaId}');` : "") +
+                (adsId ? `gtag('config','${adsId}');` : "") +
+                (adsId ? `window.__gAdsId='${adsId}';` : "") +
+                (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
+                (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : "") +
+                // Facebook pixel stub (queues) + PageView
+                (fbId ? "!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);" : "") +
+                (fbId ? `window._fbqId='${fbId}';fbq('init','${fbId}');fbq('track','PageView');` : "") +
+                // Clarity stub (queues)
+                (clarityId ? "window.clarity=window.clarity||function(){(clarity.q=clarity.q||[]).push(arguments)};" : "") +
+                // Deferred loader for the heavy external scripts
+                "var done=false;function inj(u){var s=document.createElement('script');s.async=true;s.src=u;document.head.appendChild(s);}" +
+                "function boot(){if(done)return;done=true;" +
+                (gtmId ? `inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
+                ((gaId || adsId) ? `inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
+                (fbId ? "inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
+                (clarityId ? `if(!BLOCK)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
+                "}" +
+                "['pointerdown','keydown','touchstart','scroll'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
+                "if('requestIdleCallback'in window){requestIdleCallback(boot,{timeout:4000});}else{setTimeout(boot,3500);}" +
+                "})();",
             }}
           />
         )}
