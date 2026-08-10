@@ -1496,11 +1496,23 @@ module.exports.getBestSellers = async (req, res) => {
     // Pagination
     const offset = (page - 1) * limit;
 
+    // Scope to the requesting storefront's brand the SAME way the public
+    // catalog does — via the Brands M2M (a product appears on a brand's shop
+    // when it's linked through ProductBrand), not the source brand_id column.
+    // Without this a per-brand storefront would show other brands' bestsellers.
+    const brandFilter = req.brand && req.brand.id ? req.brand.id : null;
+    const include = brandFilter
+      ? [{ model: Brand, as: "Brands", attributes: [], through: { attributes: [] }, required: true, where: { id: brandFilter } }]
+      : [];
+
     const bestSellers = await Product.findAndCountAll({
       where: { total_sold: { [Op.gt]: 0 } },
+      include,
       order: [["total_sold", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
+      distinct: true,
+      subQuery: false,
     });
 
     const totalPages = Math.ceil(bestSellers.count / limit);

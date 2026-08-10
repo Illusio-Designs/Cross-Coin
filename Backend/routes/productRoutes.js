@@ -2,7 +2,7 @@ const express = require('express');
 const {
     createProduct, getAllProducts, getProduct, updateProduct, deleteProduct,
     getProductsByCategory, searchProducts,
-    getPublicProductBySlug, getAllPublicProducts,
+    getPublicProductBySlug, getAllPublicProducts, getBestSellers,
     getExistingImages, uploadImages, deleteImages, regenerateProductSeo
 } = require('../controller/productController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
@@ -41,6 +41,7 @@ const productSearchSchema = z.object({
 
 // ── Public ────────────────────────────────────────────────────────────────
 router.get('/catalog',              getAllPublicProducts);
+router.get('/best-sellers',         getBestSellers);
 router.get('/by-slug/:slug',        getPublicProductBySlug);
 router.get('/search',               validateQuery(productSearchSchema), searchProducts);
 router.get('/category/:categoryId', getProductsByCategory);
