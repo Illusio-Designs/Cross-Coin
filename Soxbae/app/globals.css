@@ -1214,6 +1214,22 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-rail::-webkit-scrollbar { display: none; }
 .pdx-main { position: relative; flex: 1; min-width: 0; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
 .pdx-main img { width: 100%; height: 100%; object-fit: contain; }
+/* Tap-to-zoom main image + overlays + lightbox (matches the CrossCoin gallery) */
+.pdx-main-zoom { all: unset; display: block; width: 100%; height: 100%; cursor: zoom-in; position: relative; }
+.pdx-style-badge { position: absolute; left: 10px; bottom: 10px; background: rgba(24,13,62,.72); color: #fff; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 6px; letter-spacing: .02em; }
+.pdx-zoom-hint { position: absolute; right: 10px; top: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.9); color: #1a2450; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.pdx-lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(10,8,18,.92); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.pdx-lb-img { max-width: 92vw; max-height: 88vh; width: auto; height: auto; object-fit: contain; border-radius: 12px; }
+.pdx-lb-close { position: absolute; top: 16px; right: 18px; background: none; border: 0; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; }
+.pdx-lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.14); border: 0; color: #fff; width: 46px; height: 46px; border-radius: 50%; font-size: 30px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.pdx-lb-nav.prev { left: 12px; } .pdx-lb-nav.next { right: 12px; }
+.pdx-lb-nav:hover { background: rgba(255,255,255,.26); }
+/* Phones: stack gallery — big main image on top, horizontal thumbnail strip below. */
+@media (max-width: 600px) {
+  .pdx-gallery { flex-direction: column-reverse; gap: 10px; }
+  .pdx-rail { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 2px; }
+  .pdx-thumb { width: 62px; height: 62px; flex: 0 0 auto; }
+}
 .pdx-badge { position: absolute; top: 16px; left: 16px; background: var(--ink); color: #fbfaf6; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 7px 13px; border-radius: 999px; }
 .pdx-badge-off { left: auto; right: 16px; background: var(--accent); }
 .pdx-thumb { flex: 0 0 auto; width: 82px; height: 82px; border-radius: 12px; overflow: hidden; background: var(--card); border: 1.5px solid var(--line); padding: 0; cursor: pointer; transition: border-color .15s ease; }

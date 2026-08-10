@@ -7,6 +7,15 @@ import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
 
+// Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
+function ik(src, w) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+  }
+  return src;
+}
+
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
 // strip beneath it (left), a calm serif buy panel (right, sticky), then a
 // full-width "details" band pairing the story with a specifications card.
@@ -25,6 +34,7 @@ export default function ProductShowcase({ product, initialColor }) {
   })();
   const [color, setColor] = useState(initialColorIndex);
   const [active, setActive] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
@@ -122,12 +132,21 @@ export default function ProductShowcase({ product, initialColor }) {
     urls.forEach((u) => { const im = new Image(); im.src = u; });
   }, [product]);
 
-  // Auto-advance the main image through the strip every 3.5s.
+  // Auto-advance the main image through the strip every 3.5s — paused while the
+  // zoom lightbox is open.
   useEffect(() => {
-    if (shown.length <= 1) return;
+    if (shown.length <= 1 || lightbox) return;
     const t = setInterval(() => setActive((a) => (a + 1) % shown.length), 3500);
     return () => clearInterval(t);
-  }, [shown.length, color]);
+  }, [shown.length, color, lightbox]);
+
+  // Close the zoom lightbox on Escape.
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   // Keep the active thumbnail in view by scrolling ONLY the rail (vertical on
   // desktop, horizontal when it wraps to a row on mobile) — never the page.
@@ -186,20 +205,44 @@ export default function ProductShowcase({ product, initialColor }) {
                 <button key={src + i} type="button" data-thumb={i}
                   className={`pdx-thumb${i === active ? ' active' : ''}`}
                   onClick={() => setActive(i)} aria-label={`View image ${i + 1}`}>
-                  <img src={src} alt={`${product.name} view ${i + 1}`} loading="lazy" />
+                  <img src={ik(src, 160)} alt={`${product.name} view ${i + 1}`} loading="lazy" />
                 </button>
               ))}
             </div>
           )}
 
           <div className="pdx-main" ref={mainRef}>
-            {mainSrc
-              ? <img src={mainSrc} alt={product.name} />
-              : <span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5 }}><Icon name="Footprints" size={80} /></span>}
+            {mainSrc ? (
+              <button type="button" className="pdx-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
+                <img src={ik(mainSrc, 900)} alt={product.name} fetchPriority="high" decoding="async" />
+                {sku && <span className="pdx-style-badge">Style: #{sku}</span>}
+                <span className="pdx-zoom-hint" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </span>
+              </button>
+            ) : (
+              <span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5 }}><Icon name="Footprints" size={80} /></span>
+            )}
             {product.badge === 'new' && <span className="pdx-badge">New</span>}
             {off > 0 && <span className="pdx-badge pdx-badge-off">{off}% off</span>}
           </div>
         </div>
+
+        {lightbox && mainSrc && (
+          <div className="pdx-lightbox" role="dialog" aria-modal="true" aria-label="Product image"
+            onClick={(e) => { if (e.target === e.currentTarget) setLightbox(false); }}>
+            <button type="button" className="pdx-lb-close" onClick={() => setLightbox(false)} aria-label="Close">×</button>
+            {shown.length > 1 && (
+              <button type="button" className="pdx-lb-nav prev" aria-label="Previous"
+                onClick={() => setActive((a) => (a - 1 + shown.length) % shown.length)}>‹</button>
+            )}
+            <img className="pdx-lb-img" src={ik(shown[Math.min(active, shown.length - 1)] || mainSrc, 1200)} alt={product.name} />
+            {shown.length > 1 && (
+              <button type="button" className="pdx-lb-nav next" aria-label="Next"
+                onClick={() => setActive((a) => (a + 1) % shown.length)}>›</button>
+            )}
+          </div>
+        )}
 
         {/* Buy panel */}
         <div className="pdx-buy">
