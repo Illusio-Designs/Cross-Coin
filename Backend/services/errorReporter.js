@@ -64,4 +64,31 @@ async function report(kind, err, context = {}) {
   } catch (_) { /* the reporter must never throw */ }
 }
 
-module.exports = { report };
+/**
+ * Plain operational alert (not an exception) — e.g. "a courier booking gave up".
+ * Deduped like report(). Pass a stable dedupeKey (e.g. per order) so the same
+ * event doesn't re-alert within the window.
+ * @param {string} title
+ * @param {string|string[]} lines
+ * @param {{dedupeKey?:string}} opts
+ */
+async function notify(title, lines = [], { dedupeKey } = {}) {
+  try {
+    if (String(process.env.ERROR_ALERTS).toLowerCase() === 'off') return;
+    const key = `notify:${dedupeKey || title}`;
+    const now = Date.now();
+    const last = _recent.get(key);
+    if (last && now - last < DEDUP_MS) return;
+    _recent.set(key, now);
+    _prune();
+
+    const arr = Array.isArray(lines) ? lines : [lines];
+    const body = [`<b>${esc(title)}</b>`, ...arr.filter(Boolean).map((l) => esc(String(l).slice(0, 300)))].join('\n');
+    try {
+      const { sendTelegram } = require('./telegramService.js');
+      await sendTelegram(body);
+    } catch (_) { /* telegram not configured */ }
+  } catch (_) { /* never throw */ }
+}
+
+module.exports = { report, notify };

@@ -93,12 +93,14 @@ function registerWorkers() {
             fship_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
           }).catch(() => {});
           logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
+          try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err, 'Needs manual attention (pick a courier / fix the address).'], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
           return { success: false, permanent: true, error: err };
         }
         // Transient — retry with backoff, but surface it as failed on the last try.
         if (isLastAttempt) {
           await markFailed(err);
           logger.warn(`[queue] shipping:sync-order FAILED after ${attempts} attempts — ${fullOrder.order_number}: ${err}`);
+          try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err, `Gave up after ${attempts} attempts.`], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
         }
         throw new Error(err);
       }
@@ -111,6 +113,7 @@ function registerWorkers() {
       if (isLastAttempt && fullOrder.fship_sync_status !== 'failed') {
         await markFailed(err.message || err);
         logger.warn(`[queue] shipping:sync-order FAILED after ${attempts} attempts — ${fullOrder.order_number}: ${err.message || err}`);
+        try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err.message || String(err), `Gave up after ${attempts} attempts.`], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
       }
       throw err;
     }
