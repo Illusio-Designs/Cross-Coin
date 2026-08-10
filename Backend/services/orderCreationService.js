@@ -64,16 +64,25 @@ const _brandPrefixCache = new Map();
 async function resolveOrderPrefix(brandId) {
   if (!brandId) return DEFAULT_ORDER_PREFIX;
   if (_brandPrefixCache.has(brandId)) return _brandPrefixCache.get(brandId);
-  let prefix = DEFAULT_ORDER_PREFIX;
   try {
     const brand = await Brand.findByPk(brandId, { attributes: ['slug'] });
     const slug = brand?.slug?.toLowerCase();
-    if (slug && BRAND_ORDER_PREFIXES[slug]) prefix = BRAND_ORDER_PREFIXES[slug];
+    if (slug && BRAND_ORDER_PREFIXES[slug]) {
+      // Only ever cache a REAL hit. Caching the fallback would be a footgun:
+      // a single transient DB error (or a not-yet-mapped slug) on the first
+      // lookup for a brand would pin it to "CC" for the whole process life —
+      // which is exactly how a Morbix (MX) order ended up numbered "CC-…".
+      const prefix = BRAND_ORDER_PREFIXES[slug];
+      _brandPrefixCache.set(brandId, prefix);
+      return prefix;
+    }
+    logger.warn(`resolveOrderPrefix: brand ${brandId} slug "${slug}" not in prefix map — using default (not cached)`);
   } catch (err) {
-    logger.warn(`resolveOrderPrefix: defaulting prefix for brand ${brandId}: ${err.message}`);
+    logger.warn(`resolveOrderPrefix: lookup failed for brand ${brandId} — using default (not cached): ${err.message}`);
   }
-  _brandPrefixCache.set(brandId, prefix);
-  return prefix;
+  // Unmatched slug or lookup error → default, but do NOT cache, so the next
+  // order retries the lookup instead of being stuck on the fallback forever.
+  return DEFAULT_ORDER_PREFIX;
 }
 
 function generateOrderNumber(prefix = DEFAULT_ORDER_PREFIX) {
