@@ -52,6 +52,22 @@ function validateAddress(a) {
   if (!isValidMobile(a.phone_number || a.phoneNumber || a.phone)) return 'A valid 10-digit mobile number is required.';
   return null;
 }
+// Collect EVERY address problem at once (for the issues popup) plus soft,
+// non-blocking warnings (e.g. suggest a landmark). Mirrors validateAddress.
+function validateAddressAll(a) {
+  const errors = [];
+  if (!a) return { errors: ['Please add a delivery address.'], warnings: [] };
+  if (String(a.full_name || a.fullName || '').trim().length < 2) errors.push('Enter a valid full name.');
+  const addr = String(a.address || '').trim();
+  if (addr.length < 10) errors.push('Enter a complete street address.');
+  if (!String(a.city || '').trim()) errors.push('City is required.');
+  if (!String(a.state || '').trim()) errors.push('State is required.');
+  if (!/^\d{6}$/.test(String(a.postal_code || a.postalCode || '').replace(/\D/g, ''))) errors.push('PIN code must be 6 digits.');
+  if (!isValidMobile(a.phone_number || a.phoneNumber || a.phone)) errors.push('A valid 10-digit mobile number is required.');
+  const warnings = [];
+  if (addr.length >= 10 && addr.length < 20) warnings.push('Add a nearby landmark to your address for smoother delivery.');
+  return { errors, warnings };
+}
 function loadRazorpay() {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') return resolve(false);
@@ -98,6 +114,8 @@ export default function CartDrawer() {
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  // Address validation popup: { errors:[], warnings:[] } while shown, else null.
+  const [addrIssues, setAddrIssues] = useState(null);
   const [retryState, setRetryState] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [urgencySeconds, setUrgencySeconds] = useState(600);
@@ -121,6 +139,14 @@ export default function CartDrawer() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, closeCart]);
+  // Close the address-issues popup on Escape (capture phase so it wins over the
+  // drawer's own Escape-to-close).
+  useEffect(() => {
+    if (!addrIssues) return;
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setAddrIssues(null); } };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [addrIssues]);
 
   // Clear transient state whenever the drawer closes
   useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); } }, [open]);
@@ -207,9 +233,9 @@ export default function CartDrawer() {
       address: form.address, city: form.city, state: form.state, postal_code: form.postalCode,
       phone_number: isAuthenticated ? form.phoneNumber : guest.phone,
     };
-    const err = validateAddress(candidate);
-    if (err) { setError(err); return; }
-    if (!isAuthenticated && !isValidEmail(guest.email)) { setError('Please enter a valid email address.'); return; }
+    const issues = validateAddressAll(candidate);
+    if (!isAuthenticated && !isValidEmail(guest.email)) issues.errors.push('Please enter a valid email address.');
+    if (issues.errors.length) { setAddrIssues(issues); return; }
     setSavingAddr(true);
     try {
       if (isAuthenticated) {
@@ -357,8 +383,8 @@ export default function CartDrawer() {
 
   const placeOrder = async () => {
     setError('');
-    const addrErr = validateAddress(selectedAddress);
-    if (addrErr) { setError(addrErr); return; }
+    const addrIssuesNow = validateAddressAll(selectedAddress);
+    if (addrIssuesNow.errors.length) { setAddrIssues(addrIssuesNow); return; }
     if (serviceability && serviceability.serviceable === false) { setError("Sorry, we don’t deliver to this PIN code yet. Please try a different address."); return; }
     if (!selectedFee) { setError('Please select a payment method.'); return; }
     if (!isAuthenticated && (!String(guest.fullName).trim() || !isValidEmail(guest.email) || !isValidMobile(guest.phone))) {
@@ -407,6 +433,41 @@ export default function CartDrawer() {
     <>
       <div className={`cd-backdrop${open ? ' show' : ''}`} onClick={closeCart} />
       <aside className={`cd-drawer${open ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden={!open}>
+
+        {/* Address validation popup — lists EVERY problem at once (not just the
+            first) plus advisory tips. Shown on a failed save / checkout. */}
+        {addrIssues && (
+          <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setAddrIssues(null); }}
+            style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+            <div role="alertdialog" aria-modal="true" aria-label="Fix your delivery address"
+              style={{ background: '#fff', borderRadius: 14, boxShadow: '0 12px 40px rgba(15,20,40,.28)', width: '100%', maxWidth: 340, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, color: '#c9433c' }}>
+                  <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: '#fbecea', border: '1px solid #eab4ae', color: '#c9433c', display: 'grid', placeItems: 'center', fontSize: 13, flex: '0 0 auto' }}>!</span>
+                  {addrIssues.errors.length > 0 ? `Please fix ${addrIssues.errors.length} thing${addrIssues.errors.length > 1 ? 's' : ''}` : 'A quick tip'}
+                </div>
+                <button type="button" aria-label="Close" onClick={() => setAddrIssues(null)}
+                  style={{ border: 'none', background: 'transparent', color: '#999', fontSize: 20, lineHeight: 1, cursor: 'pointer', padding: '0 2px' }}>×</button>
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                {addrIssues.errors.map((er, i) => (
+                  <li key={`e${i}`} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: '#2a2d3a', lineHeight: 1.35 }}>
+                    <span aria-hidden="true" style={{ color: '#c9433c', fontWeight: 700, flex: '0 0 auto' }}>✕</span>{er}
+                  </li>
+                ))}
+                {addrIssues.warnings.map((wr, i) => (
+                  <li key={`w${i}`} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#8a5a12', lineHeight: 1.35, borderTop: addrIssues.errors.length ? '1px dashed #eee' : 'none', paddingTop: addrIssues.errors.length ? 8 : 0 }}>
+                    <span aria-hidden="true" style={{ fontWeight: 700, flex: '0 0 auto' }}>💡</span>{wr}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setAddrIssues(null)}
+                style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: 'var(--navy, #1a2450)', color: '#fff', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
+                Fix my address
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="cd-header">

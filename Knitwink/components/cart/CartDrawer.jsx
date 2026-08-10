@@ -203,6 +203,8 @@ export function CartDrawer() {
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressSaving, setAddressSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  // Address validation popup: { errors:[], warnings:[] } while shown, else null.
+  const [addrIssues, setAddrIssues] = useState(null);
   const [addressPhoneError, setAddressPhoneError] = useState('');
 
   // Shipping
@@ -258,6 +260,14 @@ export function CartDrawer() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen, closeDrawer]);
+  // Close the address-issues popup on Escape (capture phase so it wins over the
+  // drawer's own Escape-to-close).
+  useEffect(() => {
+    if (!addrIssues) return;
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setAddrIssues(null); } };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [addrIssues]);
 
   // ── Meta funnel: InitiateCheckout ─────────────────────────────────────────
   // Fire once when the drawer opens with items (this drawer is the full
@@ -468,7 +478,7 @@ export function CartDrawer() {
       phone_number: isAuthenticated ? formData.phoneNumber : guestInfo.phone,
     };
     const validation = validateShippingAddress(addrToValidate);
-    if (!validation.valid) { showError(validation.errors[0]); return; }
+    if (!validation.valid) { setAddrIssues({ errors: validation.errors, warnings: validation.warnings || [] }); return; }
 
     // Email is required for guest checkout but isn't part of
     // validateShippingAddress (address has no email column). Check
@@ -772,7 +782,7 @@ export function CartDrawer() {
   const handlePlaceOrder = async () => {
     const addrValidation = validateShippingAddress(selectedAddress);
     if (!addrValidation.valid) {
-      showError(addrValidation.errors[0]);
+      setAddrIssues({ errors: addrValidation.errors, warnings: addrValidation.warnings || [] });
       scrollDrawerTo('cd-section-address');
       return;
     }
@@ -853,6 +863,41 @@ export function CartDrawer() {
     <>
       <div className={`cd-backdrop ${drawerOpen ? 'cd-backdrop-active' : ''}`} onClick={closeDrawer} />
       <div ref={trapRef} className={`cd-drawer ${drawerOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
+
+        {/* Address validation popup — lists EVERY problem at once (not just the
+            first) plus advisory tips. Shown on a failed save / checkout. */}
+        {addrIssues && (
+          <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setAddrIssues(null); }}
+            style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}>
+            <div role="alertdialog" aria-modal="true" aria-label="Fix your delivery address"
+              style={{ background: '#fff', borderRadius: 14, boxShadow: '0 12px 40px rgba(15,20,40,.28)', width: '100%', maxWidth: 340, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, color: '#c9433c' }}>
+                  <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: '#fbecea', border: '1px solid #eab4ae', color: '#c9433c', display: 'grid', placeItems: 'center', fontSize: 13, flex: '0 0 auto' }}>!</span>
+                  {addrIssues.errors.length > 0 ? `Please fix ${addrIssues.errors.length} thing${addrIssues.errors.length > 1 ? 's' : ''}` : 'A quick tip'}
+                </div>
+                <button type="button" aria-label="Close" onClick={() => setAddrIssues(null)}
+                  style={{ border: 'none', background: 'transparent', color: '#999', fontSize: 20, lineHeight: 1, cursor: 'pointer', padding: '0 2px' }}>×</button>
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                {addrIssues.errors.map((er, i) => (
+                  <li key={`e${i}`} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: '#2a2d3a', lineHeight: 1.35 }}>
+                    <span aria-hidden="true" style={{ color: '#c9433c', fontWeight: 700, flex: '0 0 auto' }}>✕</span>{er}
+                  </li>
+                ))}
+                {addrIssues.warnings.map((wr, i) => (
+                  <li key={`w${i}`} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#8a5a12', lineHeight: 1.35, borderTop: addrIssues.errors.length ? '1px dashed #eee' : 'none', paddingTop: addrIssues.errors.length ? 8 : 0 }}>
+                    <span aria-hidden="true" style={{ fontWeight: 700, flex: '0 0 auto' }}>💡</span>{wr}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setAddrIssues(null)}
+                style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: 'var(--navy, #1a2450)', color: '#fff', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
+                Fix my address
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="cd-header">
