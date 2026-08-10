@@ -133,12 +133,15 @@ const LookbookShowcase = () => {
               {currentImage && (
                 <div className="lb-img-inner">
                   <img
-                    src={ikTransform(currentImage.image_url, 800)}
+                    src={ikTransform(currentImage.image_url, 600)}
+                    srcSet={`${ikTransform(currentImage.image_url, 490)} 490w, ${ikTransform(currentImage.image_url, 600)} 600w, ${ikTransform(currentImage.image_url, 900)} 900w`}
+                    sizes="(max-width: 600px) 90vw, 490px"
                     alt={currentImage.alt_text || selectedLb.title}
                     className="lb-main-img"
                     width={600}
                     height={600}
                     loading="lazy"
+                    decoding="async"
                   />
                   {(currentImage.Hotspots || []).map(hs => (
                     <div key={hs.id}

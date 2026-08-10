@@ -97,7 +97,6 @@ import "../styles/components/WhatsAppChat.css";
 import "../styles/pages/Lookbook.css";
 
 import Analytics from "../components/common/Analytics";
-import Msg91Loader from "../components/common/Msg91Loader";
 import UTMTracker from "../components/common/UTMTracker";
 import WhatsAppChat from "../components/common/WhatsAppChat";
 import PhonePopupModal from "../components/common/PhonePopupModal";
@@ -272,7 +271,8 @@ function App({ Component, pageProps }) {
       </Head>
       <UTMTracker />
       <Analytics />
-      <Msg91Loader />
+      {/* Msg91Loader moved to the login page — the 351 KiB OTP widget is only
+          used for phone login, so it no longer loads on every other page. */}
       <SpeedInsights />
       <VercelAnalytics />
       <ErrorBoundary>

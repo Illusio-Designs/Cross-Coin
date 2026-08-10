@@ -2,6 +2,7 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
+import Msg91Loader from "../components/common/Msg91Loader";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
@@ -107,6 +108,8 @@ export default function Login() {
 
   return (
     <main className="auth-page" role="main">
+      {/* Load the MSG91 OTP widget only here — it's only used for phone login. */}
+      <Msg91Loader />
       <div className="auth-split">
         <section className="auth-brand-panel" aria-label="Brand information">
           <div className="auth-brand-inner">
