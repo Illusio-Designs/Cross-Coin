@@ -1662,11 +1662,15 @@
           { '$User.email$': { [Op.like]: `%${searchTerm}%` } }
         );
 
-        // Search in associated GuestUser
+        // Search in associated GuestUser. NOTE: use the real DB column names
+        // (first_name / last_name) — the GuestUser model maps firstName→first_name
+        // via `field`, but Sequelize does NOT apply that mapping inside a nested
+        // `$GuestUser.firstName$` where-clause, so it emitted a non-existent
+        // `GuestUser.firstName` column and every order search 500'd.
         searchConditions.push(
           { '$GuestUser.email$': { [Op.like]: `%${searchTerm}%` } },
-          { '$GuestUser.firstName$': { [Op.like]: `%${searchTerm}%` } },
-          { '$GuestUser.lastName$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.first_name$': { [Op.like]: `%${searchTerm}%` } },
+          { '$GuestUser.last_name$': { [Op.like]: `%${searchTerm}%` } },
           { '$GuestUser.phone$': { [Op.like]: `%${searchTerm}%` } }
         );
 
