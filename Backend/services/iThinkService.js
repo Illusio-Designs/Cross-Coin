@@ -49,10 +49,10 @@ class IThinkService {
         pickupAddressId: this.pickupAddressId,
       });
 
-      // iThink's order/add.json can be slow under load; 60s occasionally clipped
-      // a still-working booking and surfaced it as "Network error". Give it more
-      // headroom (override with ITHINK_TIMEOUT_MS).
-      const timeoutMs = Number(process.env.ITHINK_TIMEOUT_MS) || 90000;
+      // Booking runs in the background queue now, so we no longer need a huge
+      // window that pins a worker — 45s is plenty for iThink's order/add.json and
+      // releases the connection far sooner (override with ITHINK_TIMEOUT_MS).
+      const timeoutMs = Number(process.env.ITHINK_TIMEOUT_MS) || 45000;
       this.axiosInstance = axios.create({
         baseURL: this.baseURL,
         timeout: timeoutMs,

@@ -773,111 +773,31 @@ module.exports.syncOrdersWithFShip = async (req, res) => {
       errors_list: []
     };
 
-    // STEP 3: Process each order with its OWN transaction (one failure won't roll back others)
+    // STEP 3: Enqueue each order for booking in the BACKGROUND queue instead of
+    // calling the slow courier API inline for every order (which held a single
+    // worker for up to N × the per-order timeout and starved other requests).
+    // The shipping:sync-order worker books each order with retries and records
+    // the AWB / error; this endpoint returns immediately.
+    const { enqueue } = require('../services/integrationQueue.js');
     for (const order of ordersToSync) {
-      const orderTransaction = await sequelize.transaction();
       try {
-        logger.debug(`\n🔄 Processing order: ${order.order_number} (Status: ${order.status})`);
-
-        // Mark as syncing and increment attempt counter before processing
-        await order.update({
-          fship_sync_status: 'syncing',
-          fship_sync_attempts: sequelize.literal('fship_sync_attempts + 1')
-        }, { transaction: orderTransaction });
-
-        const syncResult = await module.exports.enhancedSyncSingleOrder(order, orderTransaction);
-
-        if (syncResult.success) {
-          await order.update({ fship_sync_status: 'synced' }, { transaction: orderTransaction });
-          await upsertShipment(order.id, { sync_status: 'synced' }, orderTransaction);
-
-          if (syncResult.action === 'synced') {
-            results.synced++;
-          } else if (syncResult.action === 'updated') {
-            results.updated++;
-          } else {
-            results.skipped++;
-          }
-
-          results.details.push({
-            order_number: order.order_number,
-            action: syncResult.action,
-            status: syncResult.status,
-            fship_order_id: syncResult.fship_order_id,
-            waybill: syncResult.waybill,
-            message: syncResult.message
-          });
-        } else {
-          const permanent = isPermanentShippingFailure(syncResult.error);
-          await order.update({
-            fship_sync_status: 'failed',
-            fship_sync_error: syncResult.error || null,
-            // Permanent failures can't succeed on retry — jump straight to the
-            // attempt cap so the next cron cycle skips this order instead of
-            // re-calling the courier API for a pincode that isn't serviceable.
-            ...(permanent && { fship_sync_attempts: MAX_SYNC_ATTEMPTS }),
-          }, { transaction: orderTransaction });
-          results.errors++;
-          results.errors_list.push({
-            order_number: order.order_number,
-            error: syncResult.error,
-            permanent,
-          });
-        }
-
-        await orderTransaction.commit();
-      } catch (error) {
-        await orderTransaction.rollback();
-        logger.error(`❌ Error processing order ${order.order_number}:`, error.message);
-        const permanent = isPermanentShippingFailure(error.message);
-        await order.update({
-          fship_sync_status: 'failed',
-          fship_sync_error: error.message || null,
-          ...(permanent && { fship_sync_attempts: MAX_SYNC_ATTEMPTS }),
-        }).catch(() => {});
+        await order.update({ fship_sync_status: 'pending', fship_sync_error: null });
+        await enqueue('shipping:sync-order', { orderId: order.id, auto: false },
+          { attempts: 3, backoff: { type: 'exponential', delay: 8000 } });
+        results.synced++; // count as "queued for booking"
+      } catch (e) {
+        logger.warn(`[sync] enqueue failed for ${order.order_number}: ${e.message}`);
         results.errors++;
-        results.errors_list.push({
-          order_number: order.order_number,
-          error: error.message,
-          permanent,
-        });
+        results.errors_list.push({ order_number: order.order_number, error: e.message });
       }
     }
-
-    // Warn about orders that JUST exhausted all sync attempts — exactly once.
-    // Previously this alerted on every cron cycle for the same stuck orders,
-    // producing an endless every-2-hours alert loop. We now alert only for
-    // orders in the [MAX_SYNC_ATTEMPTS, PARKED_ATTEMPTS) window, then bump them
-    // to the PARKED sentinel so they are never retried nor re-alerted again.
-    const exhaustedOrders = await Order.findAll({
-      where: {
-        fship_sync_status: 'failed',
-        fship_sync_attempts: { [Op.gte]: MAX_SYNC_ATTEMPTS, [Op.lt]: PARKED_ATTEMPTS },
-        status: { [Op.notIn]: ['cancelled', 'delivered', 'rto delivered'] }
-      },
-      attributes: ['id', 'order_number', 'fship_sync_attempts', 'fship_sync_error']
-    });
-    if (exhaustedOrders.length > 0) {
-      logger.warn(`⚠️ ADMIN ALERT: ${exhaustedOrders.length} order(s) need manual shipping attention (giving up auto-sync): ` +
-        exhaustedOrders.map(o => `${o.order_number}${o.fship_sync_error ? ` (${o.fship_sync_error})` : ''}`).join(', ')
-      );
-      // Park them so this alert fires once per order, not every cron run.
-      await Order.update(
-        { fship_sync_attempts: PARKED_ATTEMPTS },
-        { where: { id: { [Op.in]: exhaustedOrders.map(o => o.id) } } }
-      ).catch((e) => logger.warn(`Failed to park exhausted orders: ${e.message}`));
-    }
-
-    logger.debug("\n=== SYNC SUMMARY ===");
-    logger.debug(`📦 Total: ${results.total}`);
-    logger.debug(`✅ Synced: ${results.synced}`);
-    logger.debug(`🔄 Updated: ${results.updated}`);
-    logger.debug(`⏭️ Skipped: ${results.skipped}`);
-    logger.debug(`❌ Errors: ${results.errors}`);
+    results.queued = results.synced;
 
     return res.json({
       success: true,
-      message: "Enhanced FShip sync completed",
+      message: results.total > 0
+        ? `Queued ${results.synced} order${results.synced === 1 ? '' : 's'} for courier booking — they'll book in the background.`
+        : 'No orders pending sync.',
       data: results
     });
 
@@ -1835,124 +1755,43 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
 
 // Enhanced single order sync endpoint
 module.exports.syncSingleOrderWithFShip = async (req, res) => {
-  const transaction = await sequelize.transaction();
-
   try {
     const { id } = req.params;
 
-    logger.debug(`=== ENHANCED SINGLE ORDER SYNC: ${id} ===`);
-
-    // Find the order
+    // Light lookup only — the slow courier booking runs in the background queue,
+    // never inside this request, so the response is instant and a slow iThink
+    // call can't tie up a Passenger worker (which surfaced as "Network Error" on
+    // other requests).
     const order = await Order.findByPk(id, {
-      include: [
-        {
-          model: OrderItem,
-          as: "OrderItems",
-          include: [
-            { model: Product, as: "Product" },
-            { model: ProductVariation, as: "ProductVariation" }  // ✅ Include ProductVariation for SKU
-          ]
-        },
-        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
-        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
-        { model: ShippingAddress, as: "ShippingAddress" },
-      ]
+      attributes: ['id', 'order_number', 'status', 'fship_sync_status', 'fship_waybill'],
     });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    if (!order) {
-      await transaction.rollback();
-      return res.status(404).json({
-        success: false,
-        message: "Order not found"
-      });
-    }
-
-    logger.debug(`Found order: ${order.order_number} - Status: ${order.status}`);
-
-    // Skip sync for cancelled orders (but allow delivered for status updates)
     if (order.status === 'cancelled') {
-      await transaction.rollback();
-      return res.json({
-        success: true,
-        message: `Order ${order.order_number} is cancelled. No sync needed.`,
-        data: {
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            status: order.status,
-            action: 'skipped'
-          }
-        }
-      });
+      return res.json({ success: true, skipped: true, message: `Order ${order.order_number} is cancelled. No sync needed.` });
+    }
+    if (order.fship_waybill || order.fship_sync_status === 'synced') {
+      return res.json({ success: true, queued: false, message: `Order ${order.order_number} is already booked.` });
     }
 
-    // Resolve provider for THIS order's brand and test the connection
-    const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-    try {
-      const testResult = await provider.testConnection();
-      if (!testResult.success) {
-        throw new Error(testResult.message);
-      }
-      logger.debug(`✅ ${providerName} connection successful`);
-    } catch (authError) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `${providerName} connection failed`,
-        provider: providerName,
-        error: authError.message
-      });
-    }
+    // Mark "booking in progress" so the row shows Pending Sync, then hand the
+    // actual courier booking to the shipping:sync-order worker (auto-selects the
+    // best courier, retries on transient failure, records the AWB / error).
+    await order.update({ fship_sync_status: 'pending', fship_sync_error: null });
 
-    // Use enhanced sync logic with the resolved provider
-    const syncResult = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, providerName);
+    const { enqueue } = require('../services/integrationQueue.js');
+    await enqueue('shipping:sync-order', { orderId: order.id, auto: false },
+      { attempts: 3, backoff: { type: 'exponential', delay: 8000 } });
 
-    if (syncResult.success) {
-      await transaction.commit();
-
-      return res.json({
-        success: true,
-        message: `Order ${order.order_number} synced via ${providerName}`,
-        data: {
-          provider: providerName,
-          order: {
-            id: order.id,
-            order_number: order.order_number,
-            status: syncResult.status,
-            provider: providerName,
-            provider_order_id: syncResult.fship_order_id,
-            fship_order_id: syncResult.fship_order_id,
-            waybill: syncResult.waybill,
-            action: syncResult.action
-          },
-          result: syncResult
-        }
-      });
-    } else {
-      // Save the sync error to the order so it's visible in the orders table
-      await order.update({
-        fship_sync_status: 'failed',
-        fship_sync_error: syncResult.error || 'Sync failed — unknown error',
-      }, { transaction });
-
-      await transaction.commit();
-
-      return res.status(400).json({
-        success: false,
-        message: `Failed to sync order ${order.order_number}`,
-        error: syncResult.error
-      });
-    }
-
-  } catch (error) {
-    logger.error("❌ SINGLE ORDER SYNC FAILED:", error);
-    await transaction.rollback();
-
-    return res.status(500).json({
-      success: false,
-      message: "Single order sync failed",
-      error: error.message
+    return res.json({
+      success: true,
+      queued: true,
+      message: `Booking started for ${order.order_number} — the AWB will appear here shortly.`,
+      data: { order: { id: order.id, order_number: order.order_number, status: order.status } },
     });
+  } catch (error) {
+    logger.error('❌ SINGLE ORDER SYNC (enqueue) FAILED:', error);
+    return res.status(500).json({ success: false, message: 'Could not start booking', error: error.message });
   }
 };
 

@@ -259,22 +259,11 @@ const Orders = () => {
         if (syncingAll || syncingOrders.size > 0) { showError('syncInProgress'); return; }
         setSyncingAll(true);
         try {
+            // Booking now happens in the background queue — the API returns
+            // immediately with how many orders were queued. The rows show
+            // "Pending sync" and flip to booked (AWB) as the live poll refreshes.
             const result = await orderService.syncOrdersWithFShip();
-            const data = result.data || result.results || {};
-            const providerLabel = 'iThink';
-            let message = `${providerLabel} sync completed! `;
-            if (data.total > 0) message += `Processed ${data.total} orders. `;
-            else if (data.total_orders_processed > 0) message += `Processed ${data.total_orders_processed} orders. `;
-            if (data.synced > 0) message += `${data.synced} new orders synced. `;
-            else if (data.new_orders_synced > 0) message += `${data.new_orders_synced} new orders synced. `;
-            if (data.updated > 0) message += `${data.updated} orders updated. `;
-            else if (data.existing_orders_updated > 0) message += `${data.existing_orders_updated} existing orders updated. `;
-            if (data.skipped > 0) message += `${data.skipped} orders skipped. `;
-            else if (data.skipped_final_state > 0) message += `${data.skipped_final_state} orders skipped. `;
-            if (data.errors > 0) message += `${data.errors} orders failed. `;
-            else if (data.failed > 0) message += `${data.failed} orders failed. `;
-            if ((data.total || data.total_orders_processed || 0) === 0) message += 'No orders pending sync.';
-            showSuccess('orderSynced', message);
+            showSuccess('orderSynced', result.message || 'Orders queued for courier booking.');
             fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to sync orders');
@@ -352,9 +341,10 @@ const Orders = () => {
             setSyncingOrders(prev => new Set(prev).add(orderId));
             const result = await orderService.syncSingleOrderWithFShip(orderId);
             if (result.success) {
-                const providerLabel = 'iThink';
-                const awb = result.data?.order?.waybill || result.data?.fship_response?.waybill || result.data?.order?.fship_waybill || 'Generated';
-                showSuccess('orderSynced', `Order ${orderNumber} synced via ${providerLabel}! AWB: ${awb}`);
+                // Booking runs in the background queue now — the response is
+                // instant. The row shows "Pending sync" and flips to booked (AWB)
+                // as the live poll refreshes, so no more long spinner / hang.
+                showSuccess('orderSynced', result.message || `Booking started for ${orderNumber} — the AWB will appear shortly.`);
                 fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
             } else { showError('syncFailed', result.message || 'Failed to sync order'); }
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to sync order');
