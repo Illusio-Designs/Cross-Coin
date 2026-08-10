@@ -25,6 +25,50 @@ const orderEmitter = require('../services/orderEvents.js');
 const { getAddressHash } = require('../services/addressQualityService.js');
 const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
 const { auditLog: orderAuditLog } = require('../services/orderService.js');
+const crypto = require('crypto');
+
+// ── Shipment status progression guard ───────────────────────────────────────
+// Courier webhooks can arrive out of order or be re-delivered (a late
+// "manifested" scan landing after "delivered"). Rank each status so we only
+// ever advance an order's status forward — a lower-ranked (stale/duplicate)
+// event is logged as a raw event but must NOT move the order backward.
+const SHIPMENT_STATUS_PRIORITY = {
+  'pending': 0,
+  'awaiting_confirmation': 0,
+  'processing': 10,
+  'confirmed': 10,
+  'manifested': 20,
+  'booked': 25,
+  'pickup initiated': 30,
+  'shipped': 40,
+  'in transit': 45,
+  'out for delivery': 60,
+  'undelivered': 70,
+  'delivered': 100,
+  'rto': 80,
+  'return_initiated': 80,
+  'rto delivered': 110,
+  'returned_rto': 110,
+  'cancelled': 100,
+  'order cancelled': 100,
+};
+
+// Terminal/exception states are ALWAYS allowed even if "lower" ranked, because
+// they legitimately follow a delivery attempt (NDR, RTO, cancellation).
+const ALWAYS_ALLOW_STATUS = new Set([
+  'undelivered', 'rto', 'return_initiated', 'rto delivered', 'returned_rto',
+  'cancelled', 'order cancelled',
+]);
+
+function shouldAdvanceOrderStatus(current, incoming) {
+  if (!incoming) return false;
+  if (!current) return true;
+  if (incoming === current) return false;                 // no-op / duplicate
+  if (ALWAYS_ALLOW_STATUS.has(incoming)) return true;     // NDR / RTO / cancel
+  const cur = SHIPMENT_STATUS_PRIORITY[current] ?? -1;
+  const inc = SHIPMENT_STATUS_PRIORITY[incoming] ?? -1;
+  return inc >= cur;                                       // only forward
+}
 
 // ── Shipping sync retry policy ──────────────────────────────────────────────
 // A transient failure (provider timeout / 5xx / auth blip) is worth retrying.
@@ -299,6 +343,7 @@ async function upsertShipment(orderId, data, transaction = null) {
 // Handle FShip webhook for order updates
 module.exports.handleFShipWebhook = async (req, res) => {
   const transaction = await sequelize.transaction();
+  let webhookEventId = null;   // hoisted so the catch can flag a failed event
 
   try {
     const raw = req.body || {};
@@ -329,6 +374,44 @@ module.exports.handleFShipWebhook = async (req, res) => {
     if (!waybill && !order_id) {
       await transaction.rollback();
       return res.status(400).json({ message: "Waybill or Order ID is required" });
+    }
+
+    // ── Deduplicate + persist the raw event ──────────────────────────────────
+    // event_key collapses repeat deliveries of the SAME status; distinct
+    // statuses (out for delivery → delivered) get distinct keys, so a real
+    // transition is never suppressed but an exact duplicate is. Stored on a
+    // separate connection (no txn) so the audit row survives a later rollback.
+    const mappedIncoming = status
+      ? shippingProviderFactory.getProviderByName('ithink', 1).mapFShipStatusToCrossCoin(status)
+      : null;
+    const eventKey = (waybill || order_id)
+      ? `ithink:${waybill || order_id}:${String(status || '').toLowerCase().trim()}:${delivery_date || ''}`
+      : crypto.createHash('sha256').update(JSON.stringify(raw)).digest('hex');
+
+    try {
+      const [dup] = await sequelize.query(
+        'SELECT id, processed FROM shipment_webhook_events WHERE event_key = ? LIMIT 1',
+        { replacements: [eventKey] }
+      );
+      if (dup.length && dup[0].processed) {
+        await transaction.rollback();
+        logger.info(`↩︎ Duplicate shipping webhook ignored (event_key=${eventKey})`);
+        return res.status(200).json({ success: true, message: 'Webhook already processed (duplicate)' });
+      }
+      if (dup.length) {
+        webhookEventId = dup[0].id;   // a previous attempt failed — reprocess it
+      } else {
+        const [ins] = await sequelize.query(
+          `INSERT INTO shipment_webhook_events
+             (provider, event_key, waybill, order_ref, courier_status, mapped_status, payload, processed, createdAt)
+           VALUES ('ithink', ?, ?, ?, ?, ?, ?, false, NOW())`,
+          { replacements: [eventKey, waybill || null, order_id || null, status || null, mappedIncoming, JSON.stringify(raw).slice(0, 60000)] }
+        );
+        webhookEventId = ins?.insertId ?? null;
+      }
+    } catch (err) {
+      // Never let audit-storage failure break the actual status update.
+      logger.warn('shipment_webhook_events store failed: ' + err.message);
     }
 
     // Find order by FShip waybill or order ID
@@ -376,18 +459,29 @@ module.exports.handleFShipWebhook = async (req, res) => {
     if (waybill) updateData.tracking_number = waybill;
     if (courier_name) updateData.courier_name = courier_name;
 
-    // Map FShip status to our order status
+    // Map FShip status to our order status — but only ever move FORWARD.
     let orderStatus = order.status;
+    let statusAdvanced = false;
     let webhookNotes = `FShip webhook: ${status}`;
 
     if (status) {
-      orderStatus = shippingProviderFactory.getProviderByName('ithink', 1).mapFShipStatusToCrossCoin(status);
-      updateData.status = orderStatus;
+      const mappedStatus = mappedIncoming;
+      if (shouldAdvanceOrderStatus(order.status, mappedStatus)) {
+        orderStatus = mappedStatus;
+        updateData.status = orderStatus;
+        statusAdvanced = true;
 
-      if (waybill) webhookNotes += ` - AWB: ${waybill}`;
-      if (courier_name) webhookNotes += ` - Courier: ${courier_name}`;
-      if (remark) webhookNotes += ` - Remark: ${remark}`;
-      if (rto_reason) webhookNotes += ` - RTO Reason: ${rto_reason}`;
+        if (waybill) webhookNotes += ` - AWB: ${waybill}`;
+        if (courier_name) webhookNotes += ` - Courier: ${courier_name}`;
+        if (remark) webhookNotes += ` - Remark: ${remark}`;
+        if (rto_reason) webhookNotes += ` - RTO Reason: ${rto_reason}`;
+      } else {
+        // Stale / out-of-order / duplicate scan — keep the order where it is.
+        // The raw event is still stored above for the audit trail; we just
+        // don't let it drag the order status backward.
+        logger.info(`↩︎ Non-forward status "${mappedStatus}" ignored for ${order.order_number} (current: ${order.status})`);
+        webhookNotes = `FShip webhook (kept ${order.status}, ignored non-forward ${mappedStatus})`;
+      }
     }
 
     // ===== AUTOMATIC RTO HANDLING =====
@@ -488,7 +582,8 @@ module.exports.handleFShipWebhook = async (req, res) => {
       }, transaction);
 
       // Credit loyalty points when an authenticated user's order is delivered.
-      if (orderStatus === "delivered" && order.user_id) {
+      // Gated on statusAdvanced so a duplicate "delivered" never double-credits.
+      if (statusAdvanced && orderStatus === "delivered" && order.user_id) {
         try {
           await loyaltyService.creditPoints(
             order.user_id,
@@ -504,13 +599,17 @@ module.exports.handleFShipWebhook = async (req, res) => {
         }
       }
 
-      // Add status history entry
-      await OrderStatusHistory.create({
-        order_id: order.id,
-        status: orderStatus,
-        notes: webhookNotes,
-        created_by: "fship_webhook",
-      }, { transaction });
+      // Add a status-history entry only on a real forward transition, so the
+      // order timeline isn't polluted by tracking-only refreshes or ignored
+      // out-of-order scans (those still live in shipment_webhook_events).
+      if (statusAdvanced) {
+        await OrderStatusHistory.create({
+          order_id: order.id,
+          status: orderStatus,
+          notes: webhookNotes,
+          created_by: "fship_webhook",
+        }, { transaction });
+      }
 
       logger.debug(`✅ Order ${order.order_number} updated:`, {
         status: orderStatus,
@@ -522,6 +621,14 @@ module.exports.handleFShipWebhook = async (req, res) => {
 
     await transaction.commit();
 
+    // Mark the raw event as successfully processed (best-effort).
+    if (webhookEventId) {
+      sequelize.query(
+        'UPDATE shipment_webhook_events SET processed = true, processedAt = NOW() WHERE id = ?',
+        { replacements: [webhookEventId] }
+      ).catch(() => {});
+    }
+
     res.json({
       success: true,
       message: "Webhook processed successfully",
@@ -529,8 +636,9 @@ module.exports.handleFShipWebhook = async (req, res) => {
       status: orderStatus
     });
 
-    // Send WhatsApp status notifications (fire-and-forget)
-    setImmediate(async () => {
+    // Send WhatsApp status notifications only on a real forward transition,
+    // so a duplicate/out-of-order webhook never re-pings the customer.
+    if (statusAdvanced) setImmediate(async () => {
       try {
         const whatsappService = require('../services/whatsappService.js');
         const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
@@ -574,6 +682,13 @@ module.exports.handleFShipWebhook = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     logger.error("❌ Error processing FShip webhook:", error);
+    // Flag the stored raw event so it can be retried/inspected (best-effort).
+    if (webhookEventId) {
+      sequelize.query(
+        'UPDATE shipment_webhook_events SET processed = false, processing_error = ? WHERE id = ?',
+        { replacements: [String(error.message).slice(0, 1000), webhookEventId] }
+      ).catch(() => {});
+    }
     res.status(500).json({
       success: false,
       message: "Failed to process webhook",

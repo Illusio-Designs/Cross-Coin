@@ -654,6 +654,33 @@ const startServer = async () => {
             logger.error('contact_messages table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: shipment_webhook_events (raw + dedup) ───────
+        // Stores every inbound shipping webhook verbatim for audit, and its
+        // unique event_key deduplicates repeat deliveries so the same courier
+        // event is never processed twice.
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS shipment_webhook_events (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    provider VARCHAR(32) NOT NULL DEFAULT 'ithink',
+                    event_key VARCHAR(255) NOT NULL UNIQUE,
+                    waybill VARCHAR(100) NULL,
+                    order_ref VARCHAR(100) NULL,
+                    courier_status VARCHAR(150) NULL,
+                    mapped_status VARCHAR(50) NULL,
+                    payload LONGTEXT NULL,
+                    processed BOOLEAN NOT NULL DEFAULT false,
+                    processing_error TEXT NULL,
+                    createdAt DATETIME NOT NULL,
+                    processedAt DATETIME NULL,
+                    INDEX idx_swe_waybill (waybill),
+                    INDEX idx_swe_processed (processed)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            );
+        } catch (err) {
+            logger.error('shipment_webhook_events table migration failed: ' + err.message);
+        }
+
         // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────
         // orders_cancelled_backup (manual backup, no code refs), fship_warehouses
         // (orphaned, no refs), coupon_usage (legacy duplicate of coupon_usages).
