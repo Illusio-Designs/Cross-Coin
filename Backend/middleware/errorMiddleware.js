@@ -76,6 +76,15 @@ function errorMiddleware(err, req, res, next) {
       method: req.method,
       ip: req.ip,
     });
+    // Surface real server faults (5xx / programming errors) to Telegram so they
+    // aren't invisible in logs. Deduped + best-effort — never blocks the response.
+    if (statusCode >= 500) {
+      try {
+        require('../services/errorReporter.js').report('Server error', err, {
+          method: req.method, url: req.originalUrl, userId: req.user?.id,
+        });
+      } catch (_) { /* reporter is best-effort */ }
+    }
   }
 
   const response = {

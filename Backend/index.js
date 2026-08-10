@@ -836,11 +836,13 @@ const startServer = async () => {
         process.on('uncaughtException', (error) => {
             logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
             logMemoryUsage();
+            try { require('./services/errorReporter.js').report('Uncaught exception', error); } catch (_) {}
         });
-        
+
         process.on('unhandledRejection', (reason) => {
             logger.error('Unhandled Rejection:', { message: reason?.message || String(reason), stack: reason?.stack });
             logMemoryUsage();
+            try { require('./services/errorReporter.js').report('Unhandled rejection', reason); } catch (_) {}
         });
         
     } catch (error) {
