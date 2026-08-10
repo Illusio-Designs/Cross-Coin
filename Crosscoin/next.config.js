@@ -191,6 +191,10 @@ const nextConfig = {
 
   // Experimental features for better performance
   experimental: {
+    // Inline above-the-fold CSS and defer the rest — fixes the render-blocking
+    // 63 KiB global stylesheet (only ~10 KiB is used above the fold on the
+    // homepage). Uses critters/beasties under the hood.
+    optimizeCss: true,
     optimizePackageImports: ['react-icons', 'lucide-react'],
   },
 };
