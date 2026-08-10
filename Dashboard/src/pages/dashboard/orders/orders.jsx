@@ -636,9 +636,11 @@ const Orders = () => {
                 // The name sometimes carries a trailing "(phone)" — strip it so the
                 // cell shows only the name (no number, no email).
                 const name = String(rawName).replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim() || 'N/A';
+                // Stacked: name (wraps instead of forcing a wide column) with the
+                // RTO risk badge below it.
                 return (
-                    <div className="customer-info" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-                        <div className="customer-name" style={{ whiteSpace: 'nowrap' }}>{name}</div>
+                    <div className="customer-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
+                        <div className="customer-name" style={{ lineHeight: 1.25, whiteSpace: 'normal', wordBreak: 'break-word' }}>{name}</div>
                         {row.rto_risk_level && (
                             <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
                                 <span className="rto-dot" />
@@ -648,7 +650,8 @@ const Orders = () => {
                         )}
                     </div>
                 );
-            }
+            },
+            width: "150px"
         },
         {
             header: "Brand",
