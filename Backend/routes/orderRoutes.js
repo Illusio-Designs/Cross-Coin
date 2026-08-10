@@ -66,15 +66,9 @@ router.get('/',                          isAuthenticated, isOrderManager, getAll
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
-// The /shipping/* paths are the canonical names. The /fship/* paths are
-// kept as aliases so existing dashboard JS keeps working.
 router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getFShipCouriers);
-// Legacy aliases (deprecated — use /shipping/*).
-router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
-router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
-router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);
 router.get('/:id/labels/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
 router.post('/:id/labels/generate',     isAuthenticated, isOrderManager, generateLabelForOrder);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
@@ -83,7 +77,6 @@ router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDow
 router.post('/labels/:orderId/downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
 router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
 router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
-router.put('/:id/fship/sync',          isAuthenticated, isOrderManager, syncSingleOrderWithFShip);  // legacy alias
 router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
@@ -124,7 +117,7 @@ router.get('/my-orders',                isAuthenticated, getUserOrders);
 router.get('/:id',                      isAuthenticated, getOrder);
 router.put('/:id/cancel',              isAuthenticated, validateBody(schemas.cancelOrder), cancelOrder);
 router.post('/:id/return',             isAuthenticated, zValidateBody(returnOrderSchema), initiateReturn);
-router.get('/:id/fship/tracking',      isAuthenticated, getFShipTrackingForOrder);
-router.get('/:id/fship/label',         isAuthenticated, getFShipLabelForOrder);
+router.get('/:id/shipping/tracking',   isAuthenticated, getFShipTrackingForOrder);
+router.get('/:id/shipping/label',      isAuthenticated, getFShipLabelForOrder);
 
 module.exports = router;

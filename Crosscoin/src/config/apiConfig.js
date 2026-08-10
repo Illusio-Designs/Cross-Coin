@@ -36,7 +36,7 @@ export const getTimeoutForEndpoint = (endpoint) => {
   // Long-running operations
   if (endpoint.includes('/checkout') || 
       endpoint.includes('/payment') ||
-      endpoint.includes('/orders/fship/sync') ||
+      endpoint.includes('/orders/shipping/sync') ||
       endpoint.includes('/sync')) {
     return API_TIMEOUTS.longRunning;
   }

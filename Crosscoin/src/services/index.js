@@ -440,7 +440,7 @@ export const orderService = {
   syncOrdersWithFShip: async () => {
     try {
       const response = await adminApi.post(
-        "/api/orders/fship/sync",
+        "/api/orders/shipping/sync",
         {},
         { timeout: 60000 }
       );
@@ -454,7 +454,7 @@ export const orderService = {
   updateSingleOrderFromFShip: async (orderId) => {
     try {
       const response = await adminApi.put(
-        `/api/orders/${orderId}/fship/sync`,
+        `/api/orders/${orderId}/shipping/sync`,
         {},
         { timeout: 30000 }
       );
@@ -468,7 +468,7 @@ export const orderService = {
   refreshOrderStatus: async (orderId) => {
     try {
       const response = await adminApi.put(
-        `/api/orders/${orderId}/fship/sync`,
+        `/api/orders/${orderId}/shipping/sync`,
         {},
         { timeout: 30000 }
       );
@@ -482,7 +482,7 @@ export const orderService = {
   bulkRefreshFShipStatus: async () => {
     try {
       const response = await adminApi.post(
-        "/api/orders/fship/refresh-status",
+        "/api/orders/shipping/refresh-status",
         {},
         { timeout: 60000 }
       );
@@ -496,7 +496,7 @@ export const orderService = {
   syncSingleOrderWithFShip: async (orderId) => {
     try {
       const response = await adminApi.put(
-        `/api/orders/${orderId}/fship/sync`,
+        `/api/orders/${orderId}/shipping/sync`,
         {},
         { timeout: 30000 }
       );
@@ -509,7 +509,7 @@ export const orderService = {
   // Get FShip tracking for order
   getFShipTracking: async (orderId) => {
     try {
-      const response = await adminApi.get(`/api/orders/${orderId}/fship/tracking`);
+      const response = await adminApi.get(`/api/orders/${orderId}/shipping/tracking`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -519,7 +519,7 @@ export const orderService = {
   // Get FShip shipping label for order
   getFShipLabel: async (orderId) => {
     try {
-      const response = await adminApi.get(`/api/orders/${orderId}/fship/label`);
+      const response = await adminApi.get(`/api/orders/${orderId}/shipping/label`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -529,7 +529,7 @@ export const orderService = {
   // Get FShip couriers list
   getFShipCouriers: async () => {
     try {
-      const response = await adminApi.get("/api/orders/fship/couriers");
+      const response = await adminApi.get("/api/orders/shipping/couriers");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -539,7 +539,7 @@ export const orderService = {
   // Cancel orders in FShip
   cancelOrdersInFShip: async (orderIds) => {
     try {
-      const response = await adminApi.post("/api/orders/fship/cancel", { orderIds });
+      const response = await adminApi.post("/api/orders/shipping/cancel", { orderIds });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
