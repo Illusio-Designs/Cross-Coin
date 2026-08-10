@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loyaltyService } from '../../../services';
-import { Button } from '../../../components/ui';
+import { Button, Modal, Input } from '../../../components/ui';
+import { showSuccess, showError } from '../../../utils/toastNotification';
 
 /** Loyalty — points transactions (earned / redeemed / expired / adjusted / refunded). */
 const fmtDate = (s) => {
@@ -47,6 +48,33 @@ export default function Loyalty() {
   }, []);
   useEffect(() => { load(page); }, [page, load]);
 
+  // ── Adjust points (admin add/deduct) ──
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ userId: '', points: '', description: '' });
+
+  const openAdjust = (userId = '') => {
+    setForm({ userId: String(userId || ''), points: '', description: '' });
+    setAdjustOpen(true);
+  };
+
+  const submitAdjust = async () => {
+    const pts = Number(form.points);
+    if (!form.userId || String(form.points).trim() === '') { showError('fieldRequired', 'Enter a customer ID and points.'); return; }
+    if (!Number.isFinite(pts) || pts === 0) { showError('fieldRequired', 'Points must be a non-zero number (use a minus sign to deduct).'); return; }
+    setSaving(true);
+    try {
+      const d = await loyaltyService.adjustPoints({ userId: form.userId, points: pts, description: form.description });
+      if (d?.success) {
+        showSuccess('saved', `Points adjusted: ${pts > 0 ? '+' : ''}${pts} for customer #${form.userId}.`);
+        setAdjustOpen(false);
+        load(page);
+      } else showError('saveFailed', d?.message || 'Failed to adjust points');
+    } catch (e) {
+      showError('saveFailed', e?.response?.data?.message || e.message || 'Failed to adjust points');
+    } finally { setSaving(false); }
+  };
+
   const txns = data.transactions || [];
 
   return (
@@ -56,7 +84,10 @@ export default function Loyalty() {
           <h2 style={S.title}>Loyalty</h2>
           <p style={S.sub}>Points earned, redeemed, expired and adjusted across customers.</p>
         </div>
-        <Button variant="secondary" onClick={() => load(page)} loading={loading}>Refresh</Button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Button variant="secondary" onClick={() => load(page)} loading={loading}>Refresh</Button>
+          <Button variant="primary" onClick={() => openAdjust()}>Adjust points</Button>
+        </div>
       </div>
 
       {error && <p style={{ ...S.hint, color: 'var(--ds-color-danger,#dc2626)' }}>{error}</p>}
@@ -74,7 +105,12 @@ export default function Loyalty() {
               const positive = ['earned', 'refunded', 'adjusted'].includes(t.type) && pts >= 0;
               return (
                 <tr key={t.id}>
-                  <td style={S.td}>{t.User?.username || t.User?.email || `User #${t.user_id}`}</td>
+                  <td style={S.td}>
+                    <button type="button" onClick={() => openAdjust(t.user_id)} title="Adjust this customer's points"
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--ds-color-text)', font: 'inherit', textDecoration: 'underline dotted', textUnderlineOffset: 3 }}>
+                      {t.User?.username || t.User?.email || `User #${t.user_id}`}
+                    </button>
+                  </td>
                   <td style={S.td}><span style={{ ...S.badge, color: fg, background: bg }}>{t.type}</span></td>
                   <td style={{ ...S.td, ...S.mono, textAlign: 'right', fontWeight: 700, color: positive ? 'var(--ds-color-success,#16a34a)' : 'var(--ds-color-text)' }}>{positive ? '+' : ''}{fmtNum(pts)}</td>
                   <td style={{ ...S.td, ...S.mono, textAlign: 'right' }}>{fmtNum(t.balance_after)}</td>
@@ -96,6 +132,25 @@ export default function Loyalty() {
         <Button variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || loading}>Prev</Button>
         <Button variant="secondary" onClick={() => setPage((p) => (p < data.totalPages ? p + 1 : p))} disabled={page >= data.totalPages || loading}>Next</Button>
       </div>
+
+      <Modal isOpen={adjustOpen} onClose={() => setAdjustOpen(false)} title="Adjust loyalty points"
+        description="Add or deduct a customer's points. Use a minus sign to deduct (e.g. -100). Tip: click a customer in the list to pre-fill their ID."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setAdjustOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={submitAdjust} loading={saving}>Save adjustment</Button>
+          </>
+        }>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Input label="Customer ID" type="number" value={form.userId}
+            onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))} placeholder="e.g. 42" />
+          <Input label="Points (+ add / − deduct)" type="number" value={form.points}
+            onChange={(e) => setForm((f) => ({ ...f, points: e.target.value }))} placeholder="e.g. 100 or -50" />
+          <Input label="Reason (shown in history)" value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="e.g. Goodwill credit" />
+        </div>
+      </Modal>
     </div>
   );
 }

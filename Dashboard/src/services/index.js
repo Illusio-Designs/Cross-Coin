@@ -261,6 +261,13 @@ export const loyaltyService = {
     const { data } = await adminApi.get('/api/admin/loyalty/transactions', { params: { page, limit } });
     return data;
   },
+  // Admin add/deduct a customer's points (points may be negative to deduct).
+  adjustPoints: async ({ userId, points, description }) => {
+    const { data } = await adminApi.post('/api/admin/loyalty/adjust', {
+      userId: Number(userId), points: Number(points), description: description || '',
+    });
+    return data;
+  },
 };
 
 export const adsReportService = {
