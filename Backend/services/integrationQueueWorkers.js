@@ -138,31 +138,8 @@ function registerWorkers() {
     return await fn(phone, params || {}, brandId || 1);
   });
 
-  // ── cron:shipping-sync ────────────────────────────────────────────
-  // Provider-agnostic: runs the bulk sync controller, which itself goes
-  // through shippingProviderFactory to pick iThink/FShip per brand.
-  // Bull gives us automatic retries on transient provider outages.
-  // Both 'cron:shipping-sync' and the legacy 'cron:fship-sync' name
-  // resolve to the same handler.
-  const shippingSyncHandler = async () => {
-    // Manual booking mode (default): skip the bulk auto-sync entirely.
-    if (!require('./shippingAutoSync.js').isAutoSyncEnabled()) {
-      logger.info('[queue] cron:shipping-sync skipped — manual mode (SHIPPING_AUTO_SYNC is off)');
-      return { skipped: true, manual: true };
-    }
-    const orderShippingController = require('../controller/orderShippingController.js');
-    const mockReq = { user: { id: 'system', username: 'cron_job' }, query: { limit: 50 } };
-    let result = null;
-    const mockRes = {
-      json: (data) => { result = data; },
-      status: () => ({ json: () => {} }),
-    };
-    await orderShippingController.syncOrdersWithFShip(mockReq, mockRes);
-    logger.info(`[queue] cron:shipping-sync done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
-    return result || { ok: true };
-  };
-  registerProcessor('cron:shipping-sync', 1, shippingSyncHandler);
-  registerProcessor('cron:fship-sync', 1, shippingSyncHandler);  // back-compat
+  // (cron:shipping-sync removed — bulk auto-booking is gone; orders are booked
+  // per-order from the dashboard via the shipping:sync-order job above.)
 
   // ── cron:shipping-status-refresh ─────────────────────────────────
   const shippingStatusRefreshHandler = async () => {

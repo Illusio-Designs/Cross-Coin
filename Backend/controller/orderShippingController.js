@@ -696,120 +696,6 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
 };
 
 // Enhanced sync functions with comprehensive order management
-module.exports.syncOrdersWithFShip = async (req, res) => {
-  try {
-    // Determine which provider to use based on the requested brand (default 1).
-    // Different brands may be on different providers; if no brand is specified
-    // we test the default brand's provider here for fast-fail and then resolve
-    // per-order inside the loop.
-    const defaultBrandId = parseInt(req.query?.brand_id, 10) || 1;
-    const defaultProvider = await shippingProviderFactory.getShippingProvider(defaultBrandId);
-    const defaultProviderName = await shippingProviderFactory.getProviderName(defaultBrandId);
-
-    logger.debug(`=== ${defaultProviderName.toUpperCase()} SYNC PROCESS START ===`);
-
-    // STEP 1: Test the provider connection
-    try {
-      logger.debug(`=== STEP 1: TESTING ${defaultProviderName.toUpperCase()} CONNECTION ===`);
-      const testResult = await defaultProvider.testConnection();
-      if (!testResult.success) {
-        throw new Error(testResult.message);
-      }
-      logger.debug(`✅ ${defaultProviderName.toUpperCase()} CONNECTION SUCCESS`);
-    } catch (authError) {
-      logger.error(`❌ ${defaultProviderName.toUpperCase()} CONNECTION FAILED`);
-      return res.status(400).json({
-        success: false,
-        message: `${defaultProviderName} connection failed`,
-        provider: defaultProviderName,
-        error: authError.message,
-        step: "connection"
-      });
-    }
-
-    // STEP 2: Get orders for sync (exclude cancelled and delivered)
-    logger.debug("=== STEP 2: FETCHING ORDERS FOR SYNC ===");
-
-    // Get limit from request (default 50 for cron, can be overridden by admin)
-    const limit = parseInt(req.query?.limit) || 50;
-    logger.debug(`📊 Sync limit set to: ${limit} orders`);
-
-    // Prioritize orders that haven't been synced or have failed, within attempt limit
-    const ordersToSync = await Order.findAll({
-      where: {
-        status: { [Op.notIn]: ['awaiting_confirmation', 'pending', 'cancelled', 'delivered', 'rto delivered'] }, // Only sync confirmed+ orders, skip unconfirmed and final states
-        order_number: { [Op.notLike]: '%TEST%' }, // Exclude test orders
-        fship_sync_status: { [Op.in]: ['pending', 'failed'] },
-        fship_sync_attempts: { [Op.lt]: MAX_SYNC_ATTEMPTS }
-      },
-      include: [
-        {
-          model: OrderItem,
-          as: "OrderItems",
-          include: [
-            { model: Product, as: "Product" },
-            { model: ProductVariation, as: "ProductVariation" }  // ✅ Include ProductVariation for SKU
-          ]
-        },
-        { model: User, as: "User", attributes: ["id", "username", "email"], required: false },
-        { model: GuestUser, as: "GuestUser", attributes: ["id", "email", "firstName", "lastName", "phone"], required: false },
-        { model: ShippingAddress, as: "ShippingAddress" },
-      ],
-      limit: limit, // Add limit to prevent processing too many orders at once
-      order: [
-        ['created_at', 'ASC']
-      ]
-    });
-
-    logger.debug(`📦 Found ${ordersToSync.length} orders to process`);
-
-    const results = {
-      total: ordersToSync.length,
-      synced: 0,
-      updated: 0,
-      skipped: 0,
-      errors: 0,
-      details: [],
-      errors_list: []
-    };
-
-    // STEP 3: Enqueue each order for booking in the BACKGROUND queue instead of
-    // calling the slow courier API inline for every order (which held a single
-    // worker for up to N × the per-order timeout and starved other requests).
-    // The shipping:sync-order worker books each order with retries and records
-    // the AWB / error; this endpoint returns immediately.
-    const { enqueue } = require('../services/integrationQueue.js');
-    for (const order of ordersToSync) {
-      try {
-        await order.update({ fship_sync_status: 'pending', fship_sync_error: null });
-        await enqueue('shipping:sync-order', { orderId: order.id, auto: false },
-          { attempts: 3, backoff: { type: 'exponential', delay: 8000 } });
-        results.synced++; // count as "queued for booking"
-      } catch (e) {
-        logger.warn(`[sync] enqueue failed for ${order.order_number}: ${e.message}`);
-        results.errors++;
-        results.errors_list.push({ order_number: order.order_number, error: e.message });
-      }
-    }
-    results.queued = results.synced;
-
-    return res.json({
-      success: true,
-      message: results.total > 0
-        ? `Queued ${results.synced} order${results.synced === 1 ? '' : 's'} for courier booking — they'll book in the background.`
-        : 'No orders pending sync.',
-      data: results
-    });
-
-  } catch (error) {
-    logger.error("❌ SYNC PROCESS FAILED:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Sync process failed",
-      error: error.message
-    });
-  }
-};
 
 // Enhanced single order sync with comprehensive logic
 module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
@@ -2451,7 +2337,6 @@ module.exports.downloadOrderLabel = async (req, res) => {
 // you next touch one of the FShip-named functions, rename it AND update
 // the alias to point at the new name — keep the legacy export for
 // backwards compatibility.
-module.exports.syncShipments              = module.exports.syncOrdersWithFShip;
 module.exports.refreshShipmentStatuses    = module.exports.bulkRefreshFShipStatus;
 module.exports.cancelShipments            = module.exports.cancelOrdersInFShip;
 module.exports.handleShippingWebhook      = module.exports.handleFShipWebhook;

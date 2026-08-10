@@ -12,7 +12,7 @@ const { checkAddressQuality } = require('../controller/orders/createController.j
 const {
     cancelOrdersInFShip,
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
-    syncOrdersWithFShip, handleFShipWebhook, syncSingleOrderWithFShip,
+    handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
     validateOrderForShipping, getAvailableCouriers, syncWithCourier,
     generateLabel, generateLabelForOrder, downloadOrderLabel,
@@ -69,12 +69,10 @@ router.get('/export/gst-report',         isAuthenticated, isOrderManager, export
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
 // The /shipping/* paths are the canonical names. The /fship/* paths are
 // kept as aliases so existing dashboard JS keeps working.
-router.post('/shipping/sync',           isAuthenticated, isOrderManager, syncOrdersWithFShip);
 router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getFShipCouriers);
 // Legacy aliases (deprecated — use /shipping/*).
-router.post('/fship/sync',              isAuthenticated, isOrderManager, syncOrdersWithFShip);
 router.post('/fship/refresh-status',    isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
 router.post('/fship/cancel',            isAuthenticated, isOrderManager, cancelOrdersInFShip);
 router.get('/fship/couriers',           isAuthenticated, isOrderManager, getFShipCouriers);

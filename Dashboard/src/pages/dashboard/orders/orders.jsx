@@ -103,7 +103,6 @@ const Orders = () => {
         paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0
     });
     const [syncingOrders, setSyncingOrders] = useState(new Set());
-    const [syncingAll, setSyncingAll] = useState(false);
     const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
@@ -253,23 +252,6 @@ const Orders = () => {
         }
     }, [statsStartDate, statsEndDate]);
 
-    // Bulk "Sync New Orders" — books every pending order directly (the endpoint
-    // loops and calls the provider synchronously; no background queue).
-    const syncOrders = async () => {
-        if (syncingAll || syncingOrders.size > 0) { showError('syncInProgress'); return; }
-        setSyncingAll(true);
-        try {
-            // Booking now happens in the background queue — the API returns
-            // immediately with how many orders were queued. The rows show
-            // "Pending sync" and flip to booked (AWB) as the live poll refreshes.
-            const result = await orderService.syncOrdersWithFShip();
-            showSuccess('orderSynced', result.message || 'Orders queued for courier booking.');
-            fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
-        } catch (error) {
-            showError('syncFailed', error.message || error.error || 'Failed to sync orders');
-        } finally { setSyncingAll(false); }
-    };
-
     const refreshOrderStatuses = async () => {
         if (refreshingStatus) return;
         setRefreshingStatus(true);
@@ -336,7 +318,7 @@ const Orders = () => {
     };
 
     const syncSingleOrder = async (orderId, orderNumber) => {
-        if (syncingOrders.has(orderId) || syncingAll) { showError('syncInProgress'); return; }
+        if (syncingOrders.has(orderId)) { showError('syncInProgress'); return; }
         try {
             setSyncingOrders(prev => new Set(prev).add(orderId));
             const result = await orderService.syncSingleOrderWithFShip(orderId);
@@ -702,7 +684,7 @@ const Orders = () => {
             header: "Actions",
             cell: (row) => {
                 const isFinal = row.status === 'delivered' || row.status === 'cancelled';
-                const isSyncing = syncingOrders.has(row.id) || syncingAll;
+                const isSyncing = syncingOrders.has(row.id);
                 // Once an order has a waybill it's already booked with a courier —
                 // hide the Sync button (the Refresh-tracking button takes over).
                 const isSynced = !!(row.Shipment?.waybill || row.fship_waybill);

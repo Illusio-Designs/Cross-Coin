@@ -488,20 +488,6 @@ export const orderService = {
   },
 
   // FShip Integration Services
-  
-  // Sync orders with FShip - Comprehensive sync includes new orders and status updates
-  syncOrdersWithFShip: async () => {
-    try {
-      const response = await adminApi.post(
-        "/api/orders/fship/sync",
-        {},
-        { timeout: 60000 }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 
   // Update single order from FShip
   updateSingleOrderFromFShip: async (orderId) => {

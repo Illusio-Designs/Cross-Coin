@@ -54,13 +54,8 @@ function initializeCronJobs() {
     };
   }
 
-  // Shipping order sync (provider-agnostic) — twice a day at 6:05 AM & 6:05 PM
-  // to keep load light (was every 2 hours). The handler reads SHIPPING_PROVIDER
-  // per brand and dispatches to iThink (live today) or FShip.
-  cron.schedule('5 6,18 * * *', () => {
-    console.log('\n⏰ [CRON] enqueue cron:shipping-sync at:', new Date().toISOString());
-    trigger('cron:shipping-sync');
-  });
+  // (Bulk order-sync cron removed — booking is per-order via the dashboard, and
+  // the bulk sweep was a no-op in manual mode anyway.)
 
   // Shipping status refresh — twice daily at 6 AM & 6 PM
   cron.schedule('0 6,18 * * *', () => {
