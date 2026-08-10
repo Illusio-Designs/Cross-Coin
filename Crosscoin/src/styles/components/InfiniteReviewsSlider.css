@@ -111,7 +111,7 @@
 /* ── EMPTY STATE ── */
 .irs-empty {
   text-align: center;
-  color: #aaa;
+  color: #4b5563; /* was #aaa — too light; #4b5563 passes WCAG AA on white */
   font-size: 14px;
   padding: 24px;
 }

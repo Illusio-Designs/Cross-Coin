@@ -133,9 +133,9 @@ const LookbookShowcase = () => {
               {currentImage && (
                 <div className="lb-img-inner">
                   <img
-                    src={ikTransform(currentImage.image_url, 600)}
-                    srcSet={`${ikTransform(currentImage.image_url, 490)} 490w, ${ikTransform(currentImage.image_url, 600)} 600w, ${ikTransform(currentImage.image_url, 900)} 900w`}
-                    sizes="(max-width: 600px) 90vw, 490px"
+                    src={ikTransform(currentImage.image_url, 500)}
+                    srcSet={`${ikTransform(currentImage.image_url, 400)} 400w, ${ikTransform(currentImage.image_url, 500)} 500w, ${ikTransform(currentImage.image_url, 640)} 640w`}
+                    sizes="(max-width: 600px) 88vw, 490px"
                     alt={currentImage.alt_text || selectedLb.title}
                     className="lb-main-img"
                     width={600}

@@ -77,10 +77,13 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(255, 255, 255, 0.18);
+  /* Was translucent white — white text over it vanished on light blog images
+     (contrast failure). Dark-navy tint keeps the glass look but guarantees the
+     white label is readable on any image. */
+  background: rgba(24, 13, 62, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;

@@ -91,7 +91,7 @@ const nextConfig = {
               // (+ *.razorpay.com for its sub-scripts). Without these the payment
               // script is blocked by CSP → "Failed to load Razorpay script" and
               // prepaid checkout can't open.
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://*.msg91.com https://checkout.razorpay.com https://*.razorpay.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://*.clarity.ms https://*.msg91.com https://checkout.razorpay.com https://*.razorpay.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Tracking beacons (1x1 pixels) and FB / GA pixel images.
               "img-src 'self' data: blob: https:",
@@ -105,7 +105,7 @@ const nextConfig = {
               // stats.g.doubleclick.net is GA4's Google Signals / remarketing
               // beacon (demographics + audiences); without it those features
               // are refused even though basic page_view hits succeed.
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.razorpay.com https://lumberjack.razorpay.com",
+              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://ad.doubleclick.net https://www.googleadservices.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.razorpay.com https://lumberjack.razorpay.com",
               "frame-ancestors 'none'",
             ].join('; ') + ';'
           },
