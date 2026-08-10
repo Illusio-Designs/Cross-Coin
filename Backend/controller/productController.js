@@ -555,7 +555,7 @@ module.exports.getAllProducts = async (req, res) => {
           { ...brandInclude, attributes: ['id', 'name', 'slug', 'display_name'] },
         ]
       : [
-          { model: Category },
+          { model: Category, attributes: ['id', 'name', 'slug'] },
           {
             // separate:true → batched "WHERE productId IN (…)" query instead of a
             // hasMany JOIN, so a page of products no longer explodes into
@@ -566,7 +566,10 @@ module.exports.getAllProducts = async (req, res) => {
             include: [{ model: ProductImage, as: "VariationImages", separate: true }],
           },
           { model: ProductImage, as: "ProductImages", separate: true },
-          { model: ProductSEO, as: "ProductSEO" },
+          // ProductSEO is intentionally NOT joined here: listing cards never
+          // render per-product SEO (page-level SEO is fetched separately), so
+          // joining + serializing it for every product was pure overhead. The
+          // product DETAIL endpoint (getProduct) still includes it.
           brandInclude,
         ];
 

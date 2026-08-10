@@ -715,6 +715,9 @@ const startServer = async () => {
         await ensureIndex('whatsapp_conversations', 'idx_wac_phone', 'customer_phone');
         await ensureIndex('whatsapp_conversations', 'idx_wac_brand_last', 'brand_id, last_message_at');
         await ensureIndex('whatsapp_conversations', 'idx_wac_last', 'last_message_at');
+        // The catalog listing batch-loads variation images by product_variation_id;
+        // without this index that WHERE … IN (…) was a full product_images scan.
+        await ensureIndex('product_images', 'idx_pi_variation_id', 'product_variation_id');
 
         // ── One-time backfill: re-attribute existing WhatsApp conversations ──
         // Older chats were all tagged with the shared brand (CrossCoin); tag

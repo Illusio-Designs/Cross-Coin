@@ -53,6 +53,12 @@ const ProductImage = sequelize.define('ProductImage', {
             fields: ['product_id']
         },
         {
+            // The catalog listing batch-loads variation images with
+            // "WHERE product_variation_id IN (…)"; without this index that was
+            // a full table scan of product_images on every listing load.
+            fields: ['product_variation_id']
+        },
+        {
             fields: ['display_order']
         }
     ]
