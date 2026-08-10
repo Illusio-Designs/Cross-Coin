@@ -175,27 +175,3 @@ module.exports.clearWishlist = async (req, res) => {
     }
 };
 
-// Move product from wishlist to cart — requires authenticated user since
-// Cart is keyed by userId. Guests should add directly to cart instead.
-module.exports.moveToCart = async (req, res) => {
-    try {
-        if (!req.user?.id) {
-            return res.status(401).json({ message: 'Sign in required to move items to cart' });
-        }
-        const { productId } = req.params;
-        const userId = req.user.id;
-
-        const wishlistItem = await Wishlist.findOne({ where: { userId, productId } });
-        if (!wishlistItem) {
-            return res.status(404).json({ message: 'Product not found in wishlist' });
-        }
-
-        const cartItem = await Cart.create({ userId, productId, quantity: 1 });
-        await wishlistItem.destroy();
-
-        res.status(200).json({ message: 'Product moved to cart successfully', cartItem });
-    } catch (error) {
-        logger.error('Error moving product to cart:', error);
-        res.status(500).json({ message: 'Failed to move product to cart', error: error.message });
-    }
-};

@@ -1,6 +1,6 @@
 const express = require('express');
 const { optionalAuth } = require('../middleware/authMiddleware.js');
-const { getWishlist, addToWishlist, removeFromWishlist, clearWishlist, moveToCart } = require('../controller/wishlistController.js');
+const { getWishlist, addToWishlist, removeFromWishlist, clearWishlist } = require('../controller/wishlistController.js');
 
 const router = express.Router();
 
@@ -13,6 +13,5 @@ router.get('/',                          getWishlist);
 router.post('/:productId',               addToWishlist);
 router.delete('/:productId',             removeFromWishlist);
 router.delete('/',                       clearWishlist);
-router.post('/:productId/move-to-cart',  moveToCart);
 
 module.exports = router;
