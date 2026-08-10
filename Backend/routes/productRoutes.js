@@ -1,8 +1,8 @@
 const express = require('express');
 const {
     createProduct, getAllProducts, getProduct, updateProduct, deleteProduct,
-    getProductsByCategory, searchProducts, getFeaturedProducts,
-    getNewArrivals, getBestSellers, getPublicProductBySlug, getAllPublicProducts,
+    getProductsByCategory, searchProducts,
+    getPublicProductBySlug, getAllPublicProducts,
     getExistingImages, uploadImages, deleteImages, regenerateProductSeo
 } = require('../controller/productController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
@@ -43,9 +43,6 @@ const productSearchSchema = z.object({
 router.get('/catalog',              getAllPublicProducts);
 router.get('/by-slug/:slug',        getPublicProductBySlug);
 router.get('/search',               validateQuery(productSearchSchema), searchProducts);
-router.get('/featured',             getFeaturedProducts);
-router.get('/new-arrivals',         getNewArrivals);
-router.get('/best-sellers',         getBestSellers);
 router.get('/category/:categoryId', getProductsByCategory);
 
 // ── Admin / Product Manager ───────────────────────────────────────────────

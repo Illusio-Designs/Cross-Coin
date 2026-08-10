@@ -8,10 +8,8 @@ router.use('/', authenticate, isProductManager);
 
 // Product brand assignments
 router.post('/products/:productId/brands', brandAssignmentController.assignBrandsToProduct);
-router.get('/products/with-brands', brandAssignmentController.getAllProductsWithBrands);
 
 // Category brand assignments
 router.post('/categories/:categoryId/brands', brandAssignmentController.assignBrandsToCategory);
-router.get('/categories/with-brands', brandAssignmentController.getAllCategoriesWithBrands);
 
 module.exports = router;

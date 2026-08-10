@@ -14,9 +14,8 @@ const {
     getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
     handleFShipWebhook, syncSingleOrderWithFShip,
     bulkRefreshFShipStatus,
-    validateOrderForShipping, getAvailableCouriers, syncWithCourier,
+    getAvailableCouriers, syncWithCourier,
     generateLabelForOrder,
-    requeueFailedShipments,
 } = require('../controller/orderShippingController.js');
 const {
     exportDeliveredOrders, exportDeliveredGSTReport,
@@ -73,10 +72,8 @@ router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDow
 router.post('/labels/:orderId/downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
 router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
 router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
-router.get('/:id/shipping/validate',   isAuthenticated, isOrderManager, validateOrderForShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
-router.post('/shipping/requeue-failed', isAuthenticated, isOrderManager, requeueFailedShipments);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
