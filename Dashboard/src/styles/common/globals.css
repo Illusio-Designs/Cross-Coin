@@ -376,3 +376,38 @@ body:has(.pdt-sticky.visible) .back-to-top {
 @media (max-width: 768px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* Orders row overflow menu ("⋯ more") — portaled to <body>, so it's global.
+   Kept here (ships via _app) rather than the dashboard bundle. */
+.ord-menu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 200px;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: 10px;
+  box-shadow: 0 14px 38px -14px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ord-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  color: var(--ds-color-text);
+  font: inherit;
+  font-size: 13px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.ord-menu-item:hover { background: var(--ds-color-surface-soft); }
+.ord-menu-item.danger { color: var(--ds-color-danger); }
+.ord-menu-ic { display: inline-flex; align-items: center; color: var(--ds-color-text-muted); flex-shrink: 0; }
+.ord-menu-item.danger .ord-menu-ic { color: var(--ds-color-danger); }

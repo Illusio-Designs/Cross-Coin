@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { orderService, dashboardService, brandService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import Tooltip from "../../../components/ui/Tooltip";
@@ -22,6 +23,59 @@ import {
     Package01Icon, UserIcon, PencilEdit02Icon, Calendar01Icon,
     DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon
 } from '@hugeicons/core-free-icons';
+
+// Compact row overflow menu ("⋯ more"). Rendered through a portal so it isn't
+// clipped by the table's horizontal-scroll container. Keeps the actions column
+// narrow: only View + the one relevant action stay inline; the rest live here.
+function OverflowMenu({ items }) {
+    const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState(null);
+    const btnRef = useRef(null);
+    useEffect(() => {
+        if (!open) return;
+        const onDoc = (e) => { if (!btnRef.current || !btnRef.current.contains(e.target)) setOpen(false); };
+        const onLeave = () => setOpen(false);
+        const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('mousedown', onDoc);
+        window.addEventListener('scroll', onLeave, true);
+        window.addEventListener('resize', onLeave);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            window.removeEventListener('scroll', onLeave, true);
+            window.removeEventListener('resize', onLeave);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open]);
+    if (!items.length) return null;
+    const toggle = () => {
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 4, left: Math.max(8, r.right - 200) });
+        }
+        setOpen(o => !o);
+    };
+    return (
+        <>
+            <button ref={btnRef} type="button" className="order-action-btn" title="More actions"
+                aria-haspopup="menu" aria-expanded={open} onClick={toggle}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" />
+                </svg>
+            </button>
+            {open && pos && createPortal(
+                <div className="ord-menu" role="menu" style={{ top: pos.top, left: pos.left }}>
+                    {items.map((it, i) => (
+                        <button key={i} type="button" role="menuitem"
+                            className={`ord-menu-item${it.tone === 'danger' ? ' danger' : ''}`}
+                            onClick={() => { setOpen(false); it.onClick(); }}>
+                            <span className="ord-menu-ic">{it.icon}</span>{it.label}
+                        </button>
+                    ))}
+                </div>, document.body)}
+        </>
+    );
+}
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -557,10 +611,22 @@ const Orders = () => {
                     checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.fship_label_url).length}
                     onChange={selectAllOrdersWithLabels} title="Select all orders with labels" />
             ),
-            cell: (row) => row.fship_label_url ? (
-                <input type="checkbox" className="order-select-checkbox"
-                    checked={selectedOrders.has(row.id)} onChange={() => toggleOrderSelection(row.id)} />
-            ) : null
+            // Always render a checkbox so the column is consistent on every row.
+            // Only orders that already have a shipping label are selectable (bulk
+            // label download); the rest show a faded, disabled box with a hint —
+            // instead of the checkbox appearing on some rows and vanishing on
+            // others, which read as a bug.
+            cell: (row) => {
+                const hasLabel = !!row.fship_label_url;
+                return (
+                    <input type="checkbox" className="order-select-checkbox"
+                        checked={hasLabel && selectedOrders.has(row.id)}
+                        onChange={() => hasLabel && toggleOrderSelection(row.id)}
+                        disabled={!hasLabel}
+                        title={hasLabel ? 'Select for bulk label download' : 'No shipping label yet — generate one to select this order'}
+                        style={hasLabel ? undefined : { opacity: 0.3, cursor: 'not-allowed' }} />
+                );
+            }
         },
         { header: "Order ID", cell: (row) => <span style={{ fontFamily: 'var(--ds-font-mono)', fontWeight: 600, color: 'var(--ds-color-text)', whiteSpace: 'nowrap' }}>{row.order_number}</span>, width: "140px" },
         {
@@ -596,15 +662,16 @@ const Orders = () => {
         { header: "Date", cell: (row) => formatDate(row.createdAt), width: "130px" },
         { header: "Payment", cell: (row) => {
             const label = formatPaymentType(row.payment_type);
+            // Stacked (chip over status) so the column stays narrow.
             return (
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                     <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>
                     <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>
                 </div>
             );
-        }, width: "180px" },
-        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "90px" },
-        { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "160px" },
+        }, width: "104px" },
+        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "88px" },
+        { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "128px" },
         {
             // Consolidated shipment column — status + AWB/courier + label, so the
             // table reads clean like the prototype. All shipment ACTIONS (sync,
@@ -622,18 +689,21 @@ const Orders = () => {
                 }
                 const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || waybill ? 'synced' : 'pending');
                 const syncError = s.sync_error || row.fship_sync_error;
+                // Stacked: status on top, then AWB, then courier — keeps the row
+                // narrow instead of one long horizontal line.
                 return (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
                         <ShipmentStatusBadge status={status} syncError={syncError} />
                         {waybill && (
-                            <span style={{ fontSize: '11px', color: 'var(--ds-color-text-muted)' }}>
-                                {waybill}{courier ? ` · ${courier}` : ''}
-                            </span>
+                            <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: '11.5px', color: 'var(--ds-color-text)', whiteSpace: 'nowrap' }}>{waybill}</span>
+                        )}
+                        {waybill && courier && (
+                            <span style={{ fontSize: '11px', color: 'var(--ds-color-text-muted)', whiteSpace: 'nowrap' }}>{courier}</span>
                         )}
                     </div>
                 );
             },
-            width: "190px"
+            width: "140px"
         },
         {
             header: "Actions",
@@ -657,7 +727,16 @@ const Orders = () => {
                 // the server's admin-cancellable statuses; dispatched/final
                 // orders (shipped, delivered, cancelled…) never show it.
                 const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
-                const divider = <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--ds-color-border)', margin: '0 3px', flexShrink: 0 }} />;
+                const hasWaybill = !!(row.Shipment?.waybill || row.fship_waybill);
+                // Everything that isn't View + the one contextual button moves into
+                // the ⋯ menu, so the Actions column stays narrow.
+                const menu = [
+                    { icon: <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />, label: 'Edit address', onClick: () => openAddressEditor(row) },
+                    ...(pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
+                    ...(hasWaybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Generate label', onClick: () => generateLabelForOrder(row.id) }] : []),
+                    ...(canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
+                    { icon: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />, label: 'Delete order', tone: 'danger', onClick: () => deleteOrder(row.id, row.order_number) },
+                ];
                 return (
                     <div className="sl-actions">
                         <Tooltip text="View order details and customer information" position="top">
@@ -666,73 +745,34 @@ const Orders = () => {
                                 <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />
                             </button>
                         </Tooltip>
-                        {pendingSync && divider}
-                        {pendingSync && (
-                        <Tooltip text="Pending sync — retry booking this order with the best available courier" position="top">
-                            <button className={`order-action-btn order-sync-btn${isSyncing ? ' disabled' : ''}`}
-                                onClick={() => syncSingleOrder(row.id, row.order_number)}
-                                disabled={isSyncing}>
-                            {isSyncing ? (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            ) : (
-                                <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
-                            )}
-                        </button>
-                        </Tooltip>
+                        {canConfirm && (
+                            <Tooltip text="Confirm order & book courier" position="top">
+                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
+                                    ✓
+                                </button>
+                            </Tooltip>
                         )}
-                        {isSynced && (
+                        {!canConfirm && pendingSync && (
+                            <Tooltip text="Pending sync — retry booking this order with the best available courier" position="top">
+                                <button className={`order-action-btn order-sync-btn${isSyncing ? ' disabled' : ''}`}
+                                    onClick={() => syncSingleOrder(row.id, row.order_number)}
+                                    disabled={isSyncing}>
+                                    {isSyncing ? (
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    ) : (
+                                        <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
+                                    )}
+                                </button>
+                            </Tooltip>
+                        )}
+                        {!canConfirm && !pendingSync && isSynced && (
                             <Tooltip text="Refresh tracking information from courier" position="top">
                                 <button className="order-action-btn order-update-btn" onClick={() => updateSingleOrder(row.id)}>
                                     <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                                 </button>
                             </Tooltip>
                         )}
-                        <Tooltip text="Edit shipping address (fix wrong pincode, phone, etc.)" position="top">
-                            <button className="order-action-btn order-address-btn" onClick={() => openAddressEditor(row)}>
-                                <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />
-                            </button>
-                        </Tooltip>
-                        {pendingSync && (
-                            <Tooltip text="Enter AWB / courier manually (for orders booked outside the system)" position="top">
-                                <button className="order-action-btn order-update-btn"
-                                    onClick={() => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name)}>
-                                    <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />
-                                </button>
-                            </Tooltip>
-                        )}
-                        {(row.Shipment?.waybill || row.fship_waybill) && (
-                            <Tooltip text="Generate shipping label for this order" position="top">
-                                <button className={`order-action-btn order-label-btn${generatingLabel.has(row.id) ? ' disabled' : ''}`}
-                                    onClick={() => generateLabelForOrder(row.id)}
-                                    disabled={generatingLabel.has(row.id)}>
-                                    {generatingLabel.has(row.id) ? (
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    ) : (
-                                        <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />
-                                    )}
-                                </button>
-                            </Tooltip>
-                        )}
-                        {(canConfirm || canCancel) && divider}
-                        {canConfirm && (
-                            <Tooltip text="Confirm order and proceed to shipping" position="top">
-                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
-                                    ✓
-                                </button>
-                            </Tooltip>
-                        )}
-                        {canCancel && (
-                            <Tooltip text="Cancel this order permanently" position="top">
-                                <button className="sl-btn-delete" onClick={() => cancelOrder(row.id, row.order_number)}>
-                                    <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
-                                </button>
-                            </Tooltip>
-                        )}
-                        <Tooltip text="Delete this order permanently (removes all its data)" position="top">
-                            <button className="sl-btn-delete order-delete-btn" onClick={() => deleteOrder(row.id, row.order_number)}>
-                                <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
-                            </button>
-                        </Tooltip>
+                        <OverflowMenu items={menu} />
                     </div>
                 );
             }
