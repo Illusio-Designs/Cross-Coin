@@ -6,6 +6,9 @@ import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { fetchPageFaqs } from '../utils/fetchPageFaqs';
 
 export async function getServerSideProps(ctx) {
+  // Near-static page — cache aggressively at the edge (fresh 1h, stale-served
+  // for a day while revalidating) so it never re-renders per visit.
+  ctx.res?.setHeader?.('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   const [seoData, faqs] = await Promise.all([
     fetchPageSeo('about', ctx),
     fetchPageFaqs('about', ctx),

@@ -36,7 +36,7 @@ export async function getServerSideProps(ctx) {
   // CDN-cache the rendered page for 5 min so most visitors get it from the edge.
   ctx.res?.setHeader?.(
     'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=600'
+    'public, s-maxage=300, stale-while-revalidate=86400'
   );
   return { props: { seoData, pageFaqs: faqs.pageFaqs, globalFaqs: faqs.globalFaqs, initialCategories } };
 }

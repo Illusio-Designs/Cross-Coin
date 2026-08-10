@@ -63,7 +63,7 @@ export async function getServerSideProps({ params, res }) {
   // copy while we revalidate in the background.
   res?.setHeader?.(
     'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=600'
+    'public, s-maxage=300, stale-while-revalidate=86400'
   );
 
   return {

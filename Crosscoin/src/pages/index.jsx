@@ -28,10 +28,12 @@ export async function getServerSideProps(ctx) {
   // helpers below only set it on success, which meant a slow API (our exact
   // problem) left the homepage uncached and re-running SSR on every hit. With
   // this, repeat visitors are served from Vercel's edge and never wait on the
-  // cPanel API. 5-min fresh window + 10-min stale-while-revalidate.
+  // cPanel API. Fresh 5 min, then served instantly from the edge (stale) for up
+  // to a day while it revalidates in the background — so the slow cold render
+  // is rare instead of happening whenever the short window lapsed.
   ctx.res?.setHeader?.(
     'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=600'
+    'public, s-maxage=300, stale-while-revalidate=86400'
   );
 
   // Fetch the SEO meta AND the above-the-fold content (hero slides, categories,

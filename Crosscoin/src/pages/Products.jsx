@@ -45,6 +45,17 @@ async function fetchProductsJson(url) {
 }
 
 export async function getServerSideProps(ctx) {
+  // Edge-cache the listing HTML on Vercel (set up-front so it applies even if a
+  // backend call is slow). The shop page is identical for everyone on a brand,
+  // so caching is safe — and it stops every visit from doing a full SSR against
+  // the cPanel API (the main TTFB cost). Fresh 5 min, then served instantly
+  // from the edge (stale) for up to a day while it revalidates in the
+  // background — so the slow cold-render happens rarely, not on every hit.
+  ctx.res?.setHeader?.(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=86400'
+  );
+
   // Server-render the default product listing + categories so the grid ships in
   // the initial HTML instead of after a client fetch waterfall. When a category
   // filter is in the URL we skip the product prefetch — that path needs the

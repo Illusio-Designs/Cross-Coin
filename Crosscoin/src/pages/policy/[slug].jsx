@@ -52,7 +52,7 @@ export async function getServerSideProps(ctx) {
     fetchPageSeo(`policy-${slug}`, ctx),
   ]);
   if (!policy) return { notFound: true };
-  ctx.res?.setHeader?.('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  ctx.res?.setHeader?.('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
   return { props: { slug, initialPolicy: policy, seoData } };
 }
 
