@@ -118,14 +118,23 @@ export default function ProductShowcase({ product, initialColor }) {
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
 
-  // Preload every gallery image once so switching colour/thumbnail is instant
-  // (no network wait, no shimmer flash — the swap looks immediate).
+  // Preload the ACTIVE colour's gallery (not every colour's images), and only
+  // when the browser is idle — so thumbnail swaps still feel instant without a
+  // burst of full-size downloads on PDP load competing with the LCP image.
   useEffect(() => {
-    const urls = new Set();
-    (product.images || []).forEach((u) => urls.add(u));
-    (product.colorImages || []).forEach((arr) => (arr || []).forEach((u) => urls.add(u)));
-    urls.forEach((u) => { const im = new Image(); im.src = u; });
-  }, [product]);
+    if (typeof window === 'undefined') return;
+    const perColorImgs = product.colorImages?.[color];
+    const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
+    if (!urls.length) return;
+    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = u; });
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(preload, { timeout: 1500 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(preload, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [color, product?.id]);
 
   // Auto-advance the main image through the thumbnails, one by one, every 3s.
   useEffect(() => {

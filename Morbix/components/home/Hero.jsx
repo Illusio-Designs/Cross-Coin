@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Icon from '@/components/Icon';
+
+// Ask ImageKit for a sized, format-negotiated hero image instead of the
+// full-resolution original (big LCP win on the largest image on the page).
+function heroSrc(src) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-1200,q-78,f-auto`;
+  }
+  return src;
+}
 
 // Hero driven by the backend sliders API: each slide's real title, description
 // and button + image are shown, cycling every 5s (same idea as the other
@@ -30,8 +41,12 @@ export default function Hero({ features = [], slides = [] }) {
           <h1>{title}</h1>
           <p>{desc}</p>
           <div className="hero-cta">
-            <a href={ctaHref} className="btn btn-primary">{ctaText} <span className="arrow"><Icon name="ArrowRight" size={14} /></span></a>
-            <a href="/collections" className="btn btn-ghost">Collections</a>
+            {/^https?:\/\//i.test(ctaHref) ? (
+              <a href={ctaHref} className="btn btn-primary">{ctaText} <span className="arrow"><Icon name="ArrowRight" size={14} /></span></a>
+            ) : (
+              <Link href={ctaHref} className="btn btn-primary">{ctaText} <span className="arrow"><Icon name="ArrowRight" size={14} /></span></Link>
+            )}
+            <Link href="/collections" className="btn btn-ghost">Collections</Link>
           </div>
           {hasSlides && slides.length > 1 && (
             <div className="hero-dots">
@@ -46,9 +61,11 @@ export default function Hero({ features = [], slides = [] }) {
           {hasSlides ? (
             <div className="hero-slider">
               {slides.map((s, i) => (
-                <img key={i} src={s.image} alt={s.title || 'Morbix'}
+                <img key={i} src={heroSrc(s.image)} alt={s.title || 'Morbix'}
                   className={`hero-slide-img${i === current ? ' active' : ''}`}
-                  loading={i === 0 ? 'eager' : 'lazy'} />
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={i === 0 ? 'high' : 'auto'}
+                  decoding="async" />
               ))}
             </div>
           ) : (

@@ -1,4 +1,5 @@
 import Icon from '@/components/Icon';
+import ContactForm from '@/components/contact/ContactForm';
 
 export const metadata = { title: 'Contact' };
 
@@ -28,14 +29,7 @@ export default function ContactPage() {
           ))}
         </div>
 
-        <form className="contact-form" action="#" method="post">
-          <div className="field-row">
-            <label>Name<input type="text" name="name" placeholder="Your name" required /></label>
-            <label>Email<input type="email" name="email" placeholder="you@email.com" required /></label>
-          </div>
-          <label>Message<textarea name="message" rows={5} placeholder="How can we help?" required /></label>
-          <button type="submit" className="btn btn-primary">Send message <Icon name="Send" size={16} /></button>
-        </form>
+        <ContactForm />
       </div>
     </div>
   );

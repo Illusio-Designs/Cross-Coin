@@ -111,7 +111,3 @@ export async function removeFromWishlist(productId) {
 export async function clearWishlist() {
   return request('', { method: 'DELETE' });
 }
-
-export async function moveWishlistItemToCart(productId) {
-  return request(`/${productId}/move-to-cart`, { method: 'POST' });
-}
