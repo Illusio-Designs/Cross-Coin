@@ -51,7 +51,7 @@ export default function Analytics() {
     <>
       {fbId && (
         <>
-          <Script id="fb-pixel" strategy="afterInteractive"
+          <Script id="fb-pixel" strategy="lazyOnload"
             dangerouslySetInnerHTML={{ __html: `
               !function(f,b,e,v,n,t,s)
               {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -75,8 +75,8 @@ export default function Analytics() {
 
       {gaId && (
         <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
-          <Script id="ga4-init" strategy="afterInteractive"
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
+          <Script id="ga4-init" strategy="lazyOnload"
             dangerouslySetInnerHTML={{ __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
@@ -89,7 +89,7 @@ export default function Analytics() {
       )}
 
       {clarityId && (
-        <Script id="ms-clarity" strategy="afterInteractive"
+        <Script id="ms-clarity" strategy="lazyOnload"
           dangerouslySetInnerHTML={{ __html: `
             (function(c,l,a,r,i,t,y){
               c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};

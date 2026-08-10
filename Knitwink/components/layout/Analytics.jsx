@@ -63,12 +63,12 @@ export default function Analytics() {
         <>
           <Script
             id="ga4-loader"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`}
           />
           <Script
             id="ga4-init"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 window.dataLayer = window.dataLayer || [];
@@ -84,7 +84,7 @@ export default function Analytics() {
       {fbPixelId && (
         <Script
           id="fb-pixel-init"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)
@@ -105,7 +105,7 @@ export default function Analytics() {
       {clarityId && (
         <Script
           id="clarity-init"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               (function(c,l,a,r,i,t,y){
