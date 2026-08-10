@@ -15,6 +15,15 @@ import { fbTrack } from '@/utils/pixel';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
+// Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
+const ik = (src, w) => {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+  }
+  return src;
+};
+
 export default function ProductPage({ initialProduct = null, initialReviewsPayload = null }) {
   const params = useParams();
   const router = useRouter();
@@ -27,6 +36,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
   const [selectedSize,  setSelectedSize]  = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [activeImg,     setActiveImg]     = useState(0);
+  const [lightbox,      setLightbox]      = useState(false);
   const [qty,           setQty]           = useState(1);
   const [added,         setAdded]         = useState(false);
 
@@ -91,14 +101,23 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
     return product.images || [];
   }, [product, activeVariation]);
 
-  // Auto-rotate through gallery images every 3 seconds.
+  // Auto-rotate through gallery images every 3 seconds — paused while the
+  // zoom lightbox is open.
   useEffect(() => {
-    if (gallery.length <= 1) return;
+    if (gallery.length <= 1 || lightbox) return;
     const id = setInterval(() => {
       setActiveImg(prev => (prev + 1) % gallery.length);
     }, 3000);
     return () => clearInterval(id);
-  }, [gallery.length]);
+  }, [gallery.length, lightbox]);
+
+  // Close the zoom lightbox on Escape.
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   const displayPrice    = activeVariation?.price ?? product?.price ?? 0;
   const displayCompare  = activeVariation?.comparePrice ?? product?.originalPrice;
@@ -240,18 +259,30 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   {gallery.map((img, i) => (
                     <button key={`${img}-${i}`} onClick={() => setActiveImg(i)}
                       className={`shrink-0 aspect-square overflow-hidden rounded-xl border-2 transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-transparent opacity-60 hover:opacity-100'}`}>
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={ik(img, 160)} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
               <div className="flex-1 overflow-hidden rounded-2xl bg-[var(--surface-2)] relative">
-                <img
-                  key={gallery[activeImg]}
-                  src={gallery[activeImg]}
-                  alt={product.name}
-                  className="w-full h-auto object-contain transition-opacity duration-500"
-                />
+                <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block w-full cursor-zoom-in relative">
+                  <img
+                    key={gallery[activeImg]}
+                    src={ik(gallery[activeImg], 900)}
+                    alt={product.name}
+                    fetchPriority="high"
+                    decoding="async"
+                    className="w-full h-auto object-contain transition-opacity duration-500"
+                  />
+                  {(activeVariation?.sku || product.sku) && (
+                    <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 rounded-md text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>
+                      Style: #{activeVariation?.sku || product.sku}
+                    </span>
+                  )}
+                  <span className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-white/90 grid place-items-center shadow-md z-10 text-[var(--ink)]" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                  </span>
+                </button>
                 {product.badge && (
                   <span className="absolute top-5 left-5 text-[10px] tracking-[0.3em] uppercase px-4 py-1.5 font-body rounded-full bg-white text-[var(--ink)] z-10">
                     {product.badge}
@@ -271,9 +302,27 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 {gallery.map((img, i) => (
                   <button key={`m-${img}-${i}`} onClick={() => setActiveImg(i)}
                     className={`shrink-0 w-16 aspect-square overflow-hidden rounded-lg border-2 transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-transparent opacity-60'}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={ik(img, 160)} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Full-screen zoom lightbox (same as the CrossCoin gallery) */}
+            {lightbox && gallery[activeImg] && (
+              <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6" style={{ background: 'rgba(10,8,18,.92)' }}
+                role="dialog" aria-modal="true" aria-label="Product image"
+                onClick={(e) => { if (e.target === e.currentTarget) setLightbox(false); }}>
+                <button type="button" onClick={() => setLightbox(false)} aria-label="Close" className="absolute top-4 right-4 text-white"><X size={26} /></button>
+                {gallery.length > 1 && (
+                  <button type="button" aria-label="Previous" onClick={() => setActiveImg((a) => (a - 1 + gallery.length) % gallery.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">‹</button>
+                )}
+                <img src={ik(gallery[activeImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl" />
+                {gallery.length > 1 && (
+                  <button type="button" aria-label="Next" onClick={() => setActiveImg((a) => (a + 1) % gallery.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">›</button>
+                )}
               </div>
             )}
           </aside>

@@ -8,6 +8,15 @@ import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVari
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
+
+// Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
+const ik = (src, w) => {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+  }
+  return src;
+};
 import { checkServiceability } from '../../services/serviceability';
 
 export default function ProductDetail() {
@@ -23,6 +32,7 @@ export default function ProductDetail() {
   const [notFound, setNotFound] = useState(false);
 
   const [activeImg, setActiveImg] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
   const [size, setSize]   = useState('');
   const [color, setColor] = useState('');
   const [qty, setQty]     = useState(1);
@@ -126,12 +136,20 @@ export default function ProductDetail() {
   useEffect(() => {
     const count = (product?.colors?.find((c) => c.name === color)?.images?.filter(Boolean).length)
       || product?.images?.length || 0;
-    if (count < 2 || paused) return;
+    if (count < 2 || paused || lightbox) return;
     const id = setTimeout(() => {
       setActiveImg((i) => (i + 1) % count);
     }, 3000);
     return () => clearTimeout(id);
-  }, [product, paused, activeImg, color]);
+  }, [product, paused, activeImg, color, lightbox]);
+
+  // Close the zoom lightbox on Escape.
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   // Match the thumbnail rail height to the main image so the 3 thumbnails fill
   // exactly its height (extras scroll). Re-measures on resize / product change.
@@ -281,7 +299,7 @@ export default function ProductDetail() {
                             : 'opacity-45 hover:opacity-100'
                         }`}
                       >
-                        <img src={img} alt="" className="block h-full w-full object-cover" />
+                        <img src={ik(img, 160)} alt="" loading="lazy" className="block h-full w-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -296,12 +314,22 @@ export default function ProductDetail() {
                   onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
                   onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
                 >
-                  <img
-                    key={curImg}
-                    src={images[curImg]}
-                    alt={product.name}
-                    className="gz-pdp-img block h-full w-full object-contain sm:h-auto sm:max-h-[26rem] sm:mx-auto"
-                  />
+                  <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block h-full w-full cursor-zoom-in relative">
+                    <img
+                      key={curImg}
+                      src={ik(images[curImg], 900)}
+                      alt={product.name}
+                      fetchPriority="high"
+                      decoding="async"
+                      className="gz-pdp-img block h-full w-full object-contain sm:h-auto sm:max-h-[26rem] sm:mx-auto"
+                    />
+                    {product.sku && (
+                      <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 rounded-md text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>Style: #{product.sku}</span>
+                    )}
+                    <span className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-white/90 grid place-items-center shadow z-10 text-ink" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                    </span>
+                  </button>
 
                   <style jsx>{`
                     .gz-pdp-img {
@@ -315,6 +343,24 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Full-screen zoom lightbox (same as the CrossCoin gallery) */}
+            {lightbox && images[curImg] && (
+              <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6" style={{ background: 'rgba(10,8,18,.92)' }}
+                role="dialog" aria-modal="true" aria-label="Product image"
+                onClick={(e) => { if (e.target === e.currentTarget) setLightbox(false); }}>
+                <button type="button" onClick={() => setLightbox(false)} aria-label="Close" className="absolute top-4 right-4 text-white text-3xl leading-none">×</button>
+                {images.length > 1 && (
+                  <button type="button" aria-label="Previous" onClick={() => setActiveImg((i) => (i - 1 + images.length) % images.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">‹</button>
+                )}
+                <img src={ik(images[curImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl" />
+                {images.length > 1 && (
+                  <button type="button" aria-label="Next" onClick={() => setActiveImg((i) => (i + 1) % images.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">›</button>
+                )}
+              </div>
+            )}
 
             {/* Info — airy, generous spacing */}
             <div className="md:col-span-6 md:py-2">
