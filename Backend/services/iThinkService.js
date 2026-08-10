@@ -999,6 +999,11 @@ class IThinkService {
     const s = iThinkStatus.toLowerCase().trim();
 
     const mapping = {
+      // iThink "Push Order Statuses" panel can emit these channel labels
+      // (Ready to Ship → "Shipped"). Map them so a pushed status never
+      // falls through to the "processing" default and moves an order backward.
+      'shipped':                'shipped',
+      'ready to ship':          'shipped',
       'manifested':             'manifested',
       'picked up':              'pickup initiated',
       'not picked':             'booked',
