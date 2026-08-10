@@ -697,6 +697,51 @@ module.exports.handleFShipWebhook = async (req, res) => {
   }
 };
 
+// ── Webhook diagnostics ──────────────────────────────────────────────────
+// Lists the most recent inbound shipping webhooks (from shipment_webhook_events)
+// so an admin can SEE whether the courier is actually pushing to us — without
+// digging through server logs. Empty list => provider isn't reaching this
+// backend yet (callback URL not set to api.<domain>/api/orders/shipping/webhook).
+module.exports.getShippingWebhookEvents = async (req, res) => {
+  try {
+    // Clamped to a safe integer and inlined (LIMIT placeholders bind as
+    // strings in MySQL and can error); never user-controlled SQL text.
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 200));
+
+    const [rows] = await sequelize.query(
+      `SELECT id, provider, event_key, waybill, order_ref, courier_status,
+              mapped_status, processed, processing_error, createdAt, processedAt
+         FROM shipment_webhook_events
+        ORDER BY id DESC
+        LIMIT ${limit}`
+    );
+
+    const [[summary]] = await sequelize.query(
+      `SELECT
+          COUNT(*)                                                   AS total,
+          MAX(createdAt)                                             AS last_received_at,
+          SUM(CASE WHEN createdAt >= (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS last_24h,
+          SUM(CASE WHEN processed = 0 AND processing_error IS NOT NULL THEN 1 ELSE 0 END) AS failed
+         FROM shipment_webhook_events`
+    );
+
+    res.json({
+      success: true,
+      summary: {
+        total: Number(summary?.total || 0),
+        last24h: Number(summary?.last_24h || 0),
+        failed: Number(summary?.failed || 0),
+        lastReceivedAt: summary?.last_received_at || null,
+        pushWorking: !!summary?.last_received_at,
+      },
+      events: rows,
+    });
+  } catch (error) {
+    logger.error('getShippingWebhookEvents error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to load webhook events', error: error.message });
+  }
+};
+
 // Get tracking info for an order — uses the provider that issued the AWB.
 module.exports.getFShipTrackingForOrder = async (req, res) => {
   try {

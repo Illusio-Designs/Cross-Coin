@@ -92,6 +92,7 @@ const ALL_MENU = [
     submenu: [
       { label: 'Brands & Settings', view: 'brands' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
+      { label: 'Courier Webhooks', view: 'webhook-events' },
     ],
   },
   { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'] },

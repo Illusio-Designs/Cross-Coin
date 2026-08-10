@@ -8,6 +8,7 @@ export const getPageTitle = (view) => {
     'orders': 'Orders',
     'consumers': 'Consumers',
     'shippingFees': 'Shipping Fees',
+    'webhook-events': 'Courier Webhooks',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',

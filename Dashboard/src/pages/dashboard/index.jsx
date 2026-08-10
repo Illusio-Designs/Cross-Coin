@@ -15,6 +15,7 @@ import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
+import WebhookEvents from "./shipping/webhookEvents";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
 import SEO from "./seo/seo";
@@ -232,6 +233,7 @@ function Dashboard() {
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
       case 'shippingFees':    return <ShippingFees />;
+      case 'webhook-events':  return <WebhookEvents />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
       // The new unified SEO hub. Legacy seo-* views still work as

@@ -552,6 +552,17 @@ export const orderService = {
     }
   },
 
+  // Recent inbound shipping webhooks — proves whether the courier is actually
+  // pushing status updates to this backend (empty => callback URL not set).
+  getShippingWebhookEvents: async (limit = 50) => {
+    try {
+      const response = await adminApi.get(`/api/orders/shipping/webhook-events`, { params: { limit } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Get FShip tracking for order
   getFShipTracking: async (orderId) => {
     try {
