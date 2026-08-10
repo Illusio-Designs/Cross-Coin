@@ -260,6 +260,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   // COD: direct (no OTP)
   const [fieldErrors, setFieldErrors] = useState({});
+  // Address validation popup: { errors:[], warnings:[] } while shown, else null.
+  const [addrIssues, setAddrIssues] = useState(null);
+  // Advisory warnings (e.g. "add a landmark") shown inline under the form.
+  const [addrWarnings, setAddrWarnings] = useState([]);
   const [otpSending] = useState(false);
 
   // Order
@@ -449,6 +453,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
         errs.email = 'Enter a valid email (e.g. name@example.com).';
       }
       setFieldErrors(errs);
+      // Advisory warnings (e.g. "add a landmark") — non-blocking, shown inline.
+      setAddrWarnings(result.warnings || []);
     }, 400);
     return () => clearTimeout(t);
   }, [showAddressForm, addressForm, guestInfo, isAuthenticated]);
@@ -487,6 +493,15 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddressForm, addressForm, guestInfo, fieldErrors, pincodeServiceability, addressSaving, isAuthenticated, editingAddressId]);
+
+  // Close the address-issues popup on Escape (capture phase so it wins over the
+  // drawer's own Escape-to-close handler).
+  useEffect(() => {
+    if (!addrIssues) return;
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setAddrIssues(null); } };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [addrIssues]);
 
   // ── Body class for back-to-top hiding ──────────────────────────────────
   useEffect(() => {
@@ -660,11 +675,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
     };
     const validation = validateShippingAddress(addrToValidate);
     if (!validation.valid) {
-      showValidationErrorToast(validation.errors[0]);
+      // Show EVERY problem at once in a popup (not just the first, fading toast).
+      setAddrIssues({ errors: validation.errors, warnings: validation.warnings });
       return;
-    }
-    if (validation.warnings.length > 0) {
-      // Show first warning as a soft notice but don't block
     }
 
     setAddressSaving(true);
@@ -881,7 +894,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     // ── Comprehensive address validation before placing order ──────────────
     const addrValidation = validateShippingAddress(selectedAddress);
     if (!addrValidation.valid) {
-      showValidationErrorToast(addrValidation.errors[0]);
+      setAddrIssues({ errors: addrValidation.errors, warnings: addrValidation.warnings });
       scrollDrawerTo('cd-section-address');
       return;
     }
@@ -1093,6 +1106,47 @@ const CartDrawer = ({ isOpen, onClose }) => {
     <>
       <div className={`cd-backdrop ${isOpen ? 'cd-backdrop-active' : ''}`} onClick={onClose} />
       <div ref={trapRef} className={`cd-drawer ${isOpen ? 'cd-drawer-open' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart">
+
+        {/* Address validation popup — lists every problem at once (replaces the
+            old single fading toast). Errors block checkout; warnings advise. */}
+        {addrIssues && (
+          <div
+            className="cd-vpop-overlay"
+            role="presentation"
+            onClick={(e) => { if (e.target === e.currentTarget) setAddrIssues(null); }}
+            style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(24,13,62,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18 }}
+          >
+            <div role="alertdialog" aria-modal="true" aria-labelledby="cd-vpop-title"
+              style={{ background: '#fff', borderRadius: 14, boxShadow: '0 12px 40px rgba(24,13,62,.28)', width: '100%', maxWidth: 340, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div id="cd-vpop-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, color: '#c9433c' }}>
+                  <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: '#fbecea', border: '1px solid #eab4ae', color: '#c9433c', display: 'grid', placeItems: 'center', fontSize: 13, flex: '0 0 auto' }}>!</span>
+                  {addrIssues.errors.length > 0
+                    ? `Please fix ${addrIssues.errors.length} thing${addrIssues.errors.length > 1 ? 's' : ''}`
+                    : 'A quick tip'}
+                </div>
+                <button type="button" aria-label="Close" onClick={() => setAddrIssues(null)}
+                  style={{ border: 'none', background: 'transparent', color: '#999', fontSize: 20, lineHeight: 1, cursor: 'pointer', padding: '0 2px' }}>×</button>
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                {addrIssues.errors.map((er, i) => (
+                  <li key={`e${i}`} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: '#2a2d3a', lineHeight: 1.35 }}>
+                    <span aria-hidden="true" style={{ color: '#c9433c', fontWeight: 700, flex: '0 0 auto' }}>✕</span>{er}
+                  </li>
+                ))}
+                {addrIssues.warnings.map((wr, i) => (
+                  <li key={`w${i}`} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#8a5a12', lineHeight: 1.35, borderTop: addrIssues.errors.length ? '1px dashed #eee' : 'none', paddingTop: addrIssues.errors.length ? 8 : 0 }}>
+                    <span aria-hidden="true" style={{ fontWeight: 700, flex: '0 0 auto' }}>💡</span>{wr}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setAddrIssues(null)}
+                style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: '#180D3E', color: '#fff', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
+                Fix my address
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="cd-header">
@@ -1494,6 +1548,15 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             <div className="cd-form-group cd-form-full"><label className="cd-checkbox-label"><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddrChange} /> Set as default address</label></div>
                           )}
                         </div>
+                        {addrWarnings.length > 0 && (
+                          <div className="cd-addr-warnings" role="note" style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '2px 0 8px', padding: '9px 11px', background: '#fdf6e3', border: '1px solid #e6cf9a', borderRadius: 8 }}>
+                            {addrWarnings.map((w, i) => (
+                              <p key={i} style={{ margin: 0, fontSize: 12.5, color: '#8a5a12', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                                <span aria-hidden="true">💡</span>{w}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         <div className="cd-form-actions">
                           <p className="cd-autosave-hint" aria-live="polite" style={{ flex: 1, margin: 0, fontSize: 12.5, color: addressSaving ? '#180D3E' : '#777', display: 'flex', alignItems: 'center', gap: 6 }}>
                             {addressSaving ? (
