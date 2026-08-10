@@ -1,10 +1,21 @@
 'use strict';
 
 const axios = require('axios');
+const https = require('https');
 const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper.js');
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
+
+// Shared client for Meta Graph API text/template calls. keepAlive reuses the TLS
+// connection between sends (a fresh handshake added ~200ms to every message),
+// and the timeout makes a slow/hung Meta request fail fast instead of leaving
+// the composer spinning. Media uploads keep the default client (big files need a
+// longer window).
+const WA_HTTP = axios.create({
+  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 64 }),
+  timeout: 20000,
+});
 
 // ─── Phone normaliser ─────────────────────────────────────────────────────────
 function formatE164(phone) {
@@ -547,7 +558,7 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
     logger.info(`[WhatsApp] Sending reply with context message_id: ${contextMessageId}`);
   }
 
-  const res = await axios.post(
+  const res = await WA_HTTP.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     payload,
     { headers: authHeader(token) }

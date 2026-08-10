@@ -754,13 +754,19 @@ exports.sendReply = async (req, res) => {
       sent_at:           new Date(),
     });
 
-    // Stamp the SLA first-response time on the first agent reply (not on
-    // automated notification deliveries) so "avg first response" is accurate.
-    const convUpdate = { last_message: message.trim(), last_message_at: new Date() };
-    if (!conv.first_response_at) convUpdate.first_response_at = new Date();
-    await conv.update(convUpdate);
-
+    // Respond immediately — the composer's optimistic bubble flips to "sent" the
+    // moment this returns. The conversation metadata (last message + the SLA
+    // first-response stamp) is updated in the background so it never delays the
+    // send. first_response_at is only stamped for genuine agent replies.
     res.json({ success: true, message: saved });
+
+    setImmediate(async () => {
+      try {
+        const convUpdate = { last_message: message.trim(), last_message_at: new Date() };
+        if (!conv.first_response_at) convUpdate.first_response_at = new Date();
+        await conv.update(convUpdate);
+      } catch (_) { /* best-effort metadata — never blocks the send */ }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }
