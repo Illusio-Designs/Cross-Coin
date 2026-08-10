@@ -23,10 +23,6 @@ const {
     markLabelDownloaded, downloadLabel, bulkDownloadLabels,
     getPendingLabels, getLabelDownloadStats,
 } = require('../controller/orderLabelController.js');
-const {
-    markOrderAsRTO, getRTOOrders, getRTOStats,
-    bulkMarkOrdersAsRTO, getStockRestorationHistory,
-} = require('../controller/orderRTOController.js');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
 const { validateBody: zValidateBody, validateQuery: zValidateQuery, z, schemas: zSchemas } = require('../middleware/validate.js');
@@ -88,13 +84,9 @@ router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidat
 router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
 router.put('/:id/status',              isAuthenticated, isOrderManager, updateOrderStatus);
 router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
-
-// ── RTO ───────────────────────────────────────────────────────────────────
-router.get('/rto',                       isAuthenticated, isOrderManager, getRTOOrders);
-router.get('/rto/stats',                 isAuthenticated, isOrderManager, getRTOStats);
-router.get('/rto/stock-restoration',     isAuthenticated, isOrderManager, getStockRestorationHistory);
-router.post('/rto/bulk',                 isAuthenticated, isOrderManager, bulkMarkOrdersAsRTO);
-router.put('/:id/rto',                   isAuthenticated, isOrderManager, markOrderAsRTO);
+// (RTO management module removed — RTO is handled automatically by the courier
+//  webhook in orderShippingController: it sets RTO status, restores stock and
+//  refunds prepaid orders. The old standalone /rto endpoints were unused.)
 
 // ── Public ────────────────────────────────────────────────────────────────
 router.post('/guest-checkout',          validateBody(schemas.checkout), createGuestOrder);
