@@ -62,7 +62,6 @@ const Breadcrumb = () => {
     "/Products": "Products",
     "/product-details": "Product Details",
     "/ProductDetails": "Product Details",
-    "/product-test": "Product",
     "/search-results": "Search Results",
     "/wishlist": "Wishlist",
     "/profile": "My Profile",

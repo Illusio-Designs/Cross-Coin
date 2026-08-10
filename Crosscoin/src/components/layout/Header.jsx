@@ -45,7 +45,7 @@ const UserIcon = () => (
     <path d="M4 20C4 17.3333 6.66667 14 12 14C17.3333 14 20 17.3333 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 
 const Header = () => {
   const { cartCount, setIsDrawerOpen } = useCart();

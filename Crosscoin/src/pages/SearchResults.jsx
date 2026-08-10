@@ -93,7 +93,7 @@ const SearchResults = ({ seoData }) => {
   };
 
   const handleProductClick = (product) => {
-    router.push(`/product-test?slug=${encodeURIComponent(product.slug)}`);
+    router.push(`/products/${encodeURIComponent(product.slug)}`);
   };
 
   const handleAddToCart = (e, product, color, size, variationId) => {

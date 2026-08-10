@@ -1,56 +1,35 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Skeleton from './Skeleton';
-import { getImageUrl, getOptimizedImageUrl } from '../../utils/imageHandler';
+import { getImageUrl } from '../../utils/imageHandler';
 
 /**
- * Detect browser support for modern image formats
- * Returns the best format supported by the browser
- * ✅ MEMOIZED: Only runs once per browser session
+ * Compute the final <img> src SYNCHRONOUSLY (SSR-safe). Doing this during
+ * render — instead of in a useEffect — means the URL is present in the
+ * server-rendered HTML, so the browser starts downloading the image before
+ * JS hydration. This is the key LCP fix: previously imageSrc was null on
+ * first paint and every image waited for hydration + an effect to load.
  */
-const SUPPORTED_FORMAT = (() => {
-  if (typeof window === 'undefined') {
-    // Server-side: default to JPEG for compatibility
-    return 'jpeg';
+function computeImageSrc({ imageData, fallbackSrc, isLogo, isProductCard, isSlider }) {
+  let newSrc = null;
+  if (imageData) {
+    newSrc = getImageUrl(imageData);
+    // Optimize ImageKit images with ImageKit's real transform syntax
+    // (tr=w-…,q-…,f-auto). Width-only so aspect ratio is preserved; f-auto
+    // delivers WebP/AVIF automatically based on the browser's Accept header.
+    if (newSrc && newSrc.includes('ik.imagekit.io') && !/[?&]tr=/.test(newSrc)) {
+      const w = isSlider ? 1600 : (isProductCard ? 600 : 800);
+      newSrc = `${newSrc.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+    }
   }
-
-  // Check for AVIF support
-  const canvas = document.createElement('canvas');
-  if (canvas.toDataURL('image/avif').indexOf('image/avif') === 0) {
-    return 'avif';
+  if (!newSrc && !isLogo && !isProductCard) newSrc = fallbackSrc;
+  // Logos with an /assets/ path are used verbatim.
+  if (isLogo && imageData && typeof imageData === 'string' && imageData.startsWith('/assets/')) {
+    newSrc = imageData;
   }
-
-  // Check for WebP support
-  if (canvas.toDataURL('image/webp').indexOf('image/webp') === 0) {
-    return 'webp';
-  }
-
-  // Fallback to JPEG
-  return 'jpeg';
-})();
-
-/**
- * Get responsive sizing parameters based on viewport width
- * Returns query parameters for image optimization
- */
-function getResponsiveSizingParams(sizes) {
-  if (typeof window === 'undefined') {
-    return { width: 500, quality: 80 };
-  }
-
-  const viewportWidth = window.innerWidth;
-
-  if (viewportWidth < 640) {
-    return { width: 300, quality: 78 };
-  }
-
-  if (viewportWidth < 1024) {
-    return { width: 400, quality: 80 };
-  }
-
-  return { width: 500, quality: 80 };
+  return newSrc;
 }
 
-const SafeImage = ({ 
+const SafeImage = ({
   imageData, 
   alt = "Product Image", 
   className = "", 
@@ -69,62 +48,29 @@ const SafeImage = ({
   ...props 
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageSrc, setImageSrc] = useState(null);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  // ✅ Use memoized format detection instead of state
-  const supportedFormat = useMemo(() => SUPPORTED_FORMAT, []);
+  // Whether a load error made us fall back to fallbackSrc (non-logo images).
+  const [useFallback, setUseFallback] = useState(false);
 
-  useEffect(() => {
-    let newSrc = null;
-    
-    if (imageData) {
-      newSrc = getImageUrl(imageData);
-
-      // Optimize ImageKit images with ImageKit's real transform syntax
-      // (tr=w-…,q-…,f-auto). The previous ?w=&q=&fmt= params were NOT understood
-      // by ImageKit, so full-resolution images were being served. Width-only so
-      // the aspect ratio is preserved (no square cropping); f-auto delivers
-      // WebP/AVIF automatically.
-      if (newSrc && newSrc.includes('ik.imagekit.io') && !/[?&]tr=/.test(newSrc)) {
-        const w = isSlider ? 1600 : (isProductCard ? 600 : 800);
-        newSrc = `${newSrc.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-      }
-    }
-    
-    if (!newSrc && !isLogo && !isProductCard) {
-      newSrc = fallbackSrc;
-    }
-    
-    // For logos with /assets/ path, use directly without modification
-    if (isLogo && imageData && typeof imageData === 'string' && imageData.startsWith('/assets/')) {
-      newSrc = imageData;
-    }
-    
-    // Only reset loading state if the source URL actually changed
-    if (newSrc !== imageSrc) {
-      setImageSrc(newSrc);
-      setImageError(false);
-      setImageLoading(true);
-    }
-  }, [imageData, fallbackSrc, isLogo, isProductCard, imageSrc, supportedFormat]);
+  // Computed during render → present in SSR HTML (see computeImageSrc note).
+  const computedSrc = useMemo(
+    () => computeImageSrc({ imageData, fallbackSrc, isLogo, isProductCard, isSlider }),
+    [imageData, fallbackSrc, isLogo, isProductCard, isSlider]
+  );
+  const imageSrc = (useFallback && !isLogo && !isProductCard) ? fallbackSrc : computedSrc;
 
   const handleError = (event) => {
     if (!imageError) {
       setImageError(true);
-      setImageLoading(false);
-      if (isLogo) {
-        // For logos, keep trying to show the image, don't set to null
-        // This allows the fallback text to show
-      }
-      else if (!isProductCard && imageSrc !== fallbackSrc) {
-        setImageSrc(fallbackSrc);
+      // For logos, keep the element so any text fallback shows. For other
+      // non-card images, swap to the fallback source once.
+      if (!isLogo && !isProductCard && computedSrc !== fallbackSrc) {
+        setUseFallback(true);
       }
     }
   };
 
   const handleLoad = () => {
-    setImageLoading(false);
     setShowSkeleton(false);
     if (onLoadingComplete) {
       onLoadingComplete();

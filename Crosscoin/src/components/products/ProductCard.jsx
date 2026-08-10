@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import SafeImage from "../common/SafeImage";
 import { FiHeart } from "react-icons/fi";
@@ -37,10 +37,13 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
   const [reviewCount, setReviewCount] = useState(product?.reviewCount ?? product?.review_count ?? 0);
   const [avgRating, setAvgRating] = useState(product?.avgRating ?? product?.avg_rating ?? null);
+  const cardRef = useRef(null);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
     if (!product?.id) return;
-    // If already provided by API with a real rating, use them directly
+    // If the catalog payload already carries a rating, use it directly — no
+    // network call. (The listing endpoint returns avg_rating/review_count.)
     if (product.avgRating != null) {
       setReviewCount(product.reviewCount ?? 0);
       setAvgRating(product.avgRating);
@@ -51,18 +54,38 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
       setAvgRating(parseFloat(product.avg_rating));
       return;
     }
-    // Otherwise fetch from API
-    getPublicProductReviews(product.id, { limit: 100 })
-      .then(data => {
-        const reviews = data?.reviews || data || [];
-        const count = Array.isArray(reviews) ? reviews.length : 0;
-        const avg = count > 0
-          ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / count).toFixed(1))
-          : null;
-        setReviewCount(count);
-        setAvgRating(avg);
-      })
-      .catch(() => {});
+
+    // Otherwise fetch the rating LAZILY — only once the card scrolls near the
+    // viewport. A homepage/grid renders dozens of cards; firing every review
+    // fetch on load (each parsing up to 100 reviews on the main thread) was a
+    // major hit to interactivity. IntersectionObserver defers off-screen cards.
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      // Fallback: environments without IO just fetch (rare).
+      runFetch();
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) { io.disconnect(); runFetch(); }
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+
+    function runFetch() {
+      if (fetchedRef.current) return;
+      fetchedRef.current = true;
+      getPublicProductReviews(product.id, { limit: 100 })
+        .then(data => {
+          const reviews = data?.reviews || data || [];
+          const count = Array.isArray(reviews) ? reviews.length : 0;
+          const avg = count > 0
+            ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / count).toFixed(1))
+            : null;
+          setReviewCount(count);
+          setAvgRating(avg);
+        })
+        .catch(() => {});
+    }
   }, [product?.id]);
 
   const [showAllColors, setShowAllColors] = useState(false);
@@ -88,7 +111,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
   });
 
   return (
-    <div className="product-card" onClick={handleCardClick} style={{ cursor: "pointer" }}>
+    <div ref={cardRef} className="product-card" onClick={handleCardClick} style={{ cursor: "pointer" }}>
       <div className="product-image">
         <div className="product-image__inner">
           <SafeImage

@@ -27,8 +27,6 @@ import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
-import "../styles/common/DonutChart.css";
-import "../styles/common/FomoElements.css";
 // Components
 import "../styles/components/InfiniteReviewsSlider.css";
 import "../styles/components/ReviewForm.css";
@@ -63,7 +61,6 @@ import "../styles/components/SlidingCollection.css";
 import "../styles/components/UnlockedExclusives.css";
 
 // Components - Common
-import "../styles/components/Testimonials.css";
 import "../styles/components/TrustBadges.css";
 import "../styles/components/CouponStrip.css";
 import "../styles/components/Toast.css";
@@ -73,7 +70,6 @@ import "../styles/components/Sidebar.css";
 import "../styles/components/CartDrawer.css";
 import "../styles/components/SizeChartModal.css";
 import "../styles/components/ProductFilterDrawer.css";
-import "../styles/components/FomoBar.css";
 import "../styles/common/Dropdown.css";
 
 // UI Components CSS

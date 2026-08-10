@@ -64,8 +64,11 @@ const HeroSlider = ({ slides = [] }) => {
             srcSet={getHeroSrcSet(slides[current])}
             sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
             alt={slides[current].title}
+            width={1920}
+            height={1080}
             fetchpriority="high"
             loading="eager"
+            decoding="async"
           />
         </div>
         <div className="hero-slide__content">
