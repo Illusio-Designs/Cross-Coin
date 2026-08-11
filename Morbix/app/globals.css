@@ -793,8 +793,11 @@ button { font-family: inherit; cursor: pointer; }
   .pdp { grid-template-columns: 1fr; gap: 24px; }
   /* Keep the vertical thumbnail rail beside the main image (top-to-bottom
      scroll only), just smaller on narrow screens. */
-  .pdp-thumbs { width: 76px; }
-  .pdp-thumb { width: 76px; height: 76px; }
+  /* Stack the gallery on phones — big main image on top, horizontal
+     scrollable thumbnail strip below (matches the CrossCoin gallery). */
+  .pdp-gallery { flex-direction: column-reverse; gap: 10px; }
+  .pdp-thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 2px; }
+  .pdp-thumb { width: 64px; height: 64px; }
   .pdp-highlights { grid-template-columns: 1fr; }
   .cart-layout { grid-template-columns: 1fr; }
   .cart-summary { position: static; }
