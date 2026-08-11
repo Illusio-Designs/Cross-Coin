@@ -6,12 +6,12 @@ import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useAuth } from "../../context/AuthContext";
 
-// Hamburger Icon (3 lines)
+// Hamburger Icon — bolder 3-line menu, matching the other header icons' ink.
 const HamburgerIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M3 6H21" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 12H21" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 18H21" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" className="icon">
+    <path d="M4 7H20" stroke="#221F20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M4 12H20" stroke="#221F20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M4 17H20" stroke="#221F20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
