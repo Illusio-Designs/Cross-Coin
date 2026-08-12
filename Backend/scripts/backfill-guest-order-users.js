@@ -32,7 +32,9 @@
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-const { logger } = require('../config/logging.js');
+// CLI script → print straight to the console. The app's file logger suppresses
+// `info` in production (MIN_LEVEL=warn), which would hide all progress/results.
+const logger = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 const { Order } = require('../model/orderModel.js');
 const { User } = require('../model/userModel.js');
 const { GuestUser } = require('../model/guestUserModel.js');

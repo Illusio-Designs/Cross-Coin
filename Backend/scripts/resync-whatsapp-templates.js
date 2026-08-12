@@ -31,9 +31,9 @@
  * Dashboard → Settings (the same credentials the live app already uses).
  */
 
-// (Redeploy trigger: 2026-08-12 — previous FTP sync timed out; re-run deploy.)
+// CLI script → print straight to the console. The app's file logger suppresses
+// `info` in production (MIN_LEVEL=warn), which would hide all progress/results.
 const whatsappService = require('../services/whatsappService.js');
-const { logger } = require('../config/logging.js');
 
 const SHARED_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
 
@@ -42,26 +42,26 @@ async function main() {
   const namesArg = process.argv[3];
   const names = namesArg ? namesArg.split(',').map(s => s.trim()).filter(Boolean) : null;
 
-  logger.info(`[resync-wa] Re-syncing WhatsApp templates for brand ${brandId}` +
+  console.log(`[resync-wa] Re-syncing WhatsApp templates for brand ${brandId}` +
     (names ? ` (only: ${names.join(', ')})` : ' (all templates)') +
-    ' — this delete+recreates each on Meta (re-enters PENDING review).');
+    ' — delete+recreate each on Meta (re-enters PENDING review). This takes ~1 min…');
 
   const results = await whatsappService.updateAllTemplates(brandId, names);
 
   let updated = 0, errored = 0;
   for (const r of results) {
-    if (r.status === 'updated') { updated++; logger.info(`  ✓ ${r.name} → recreated (id: ${r.id})`); }
-    else { errored++; logger.error(`  ✗ ${r.name} → ${r.error || r.status}`); }
+    if (r.status === 'updated') { updated++; console.log(`  ✓ ${r.name} → recreated (id: ${r.id})`); }
+    else { errored++; console.error(`  ✗ ${r.name} → ${r.error || r.status}`); }
   }
 
-  logger.info(`[resync-wa] Done: ${updated} recreated, ${errored} failed. ` +
+  console.log(`[resync-wa] Done: ${updated} recreated, ${errored} failed. ` +
     `Recreated templates are PENDING on Meta until re-approved.`);
 }
 
 if (require.main === module) {
   main()
     .then(() => process.exit(0))
-    .catch((e) => { logger.error('[resync-wa] fatal: ' + e.message); process.exit(1); });
+    .catch((e) => { console.error('[resync-wa] fatal: ' + (e.stack || e.message)); process.exit(1); });
 }
 
 module.exports = { main };
