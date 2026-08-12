@@ -31,6 +31,7 @@
  * Dashboard → Settings (the same credentials the live app already uses).
  */
 
+// (Redeploy trigger: 2026-08-12 — previous FTP sync timed out; re-run deploy.)
 const whatsappService = require('../services/whatsappService.js');
 const { logger } = require('../config/logging.js');
 
