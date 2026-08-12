@@ -17,6 +17,8 @@ const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisga
 
 const EMPTY_ADDR = { full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false };
 
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'booked'];
+
 function toAbsoluteUrl(url) {
   if (!url) return '';
   if (url.startsWith('http')) return url;
@@ -30,7 +32,7 @@ function getOrderImage(item) {
 }
 
 function getInitials(name) {
-  if (!name) return 'G';
+  if (!name) return 'U';
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
@@ -39,6 +41,27 @@ function formatDate(d) {
   try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
   catch { return ''; }
 }
+
+function badgeClass(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'delivered') return 'delivered';
+  if (s === 'cancelled' || s === 'order_cancelled') return 'cancelled';
+  return 'active';
+}
+
+// ── Nav icons ────────────────────────────────────────────────────────
+const IconOrders = () => (
+  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+);
+const IconAddress = () => (
+  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+);
+const IconUser = () => (
+  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+);
+const IconLogout = () => (
+  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+);
 
 export default function AccountPage() {
   const { user, loading, logout, fetchUser } = useAuth();
@@ -132,6 +155,8 @@ export default function AccountPage() {
     finally { setCancellingId(null); }
   };
 
+  const handleLogout = async () => { await logout(); window.location.replace('/'); };
+
   // ── Gates ─────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -153,197 +178,219 @@ export default function AccountPage() {
     );
   }
 
+  const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
+  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const hasPoints = Number(user.loyalty_points) > 0;
+
   const NAV = [
-    { key: 'orders',    label: 'Orders',          value: orders.length },
-    { key: 'addresses', label: 'Addresses',       value: addresses.length },
-    { key: 'details',   label: 'Account Details', value: null },
+    { key: 'orders', label: 'My Orders', icon: <IconOrders /> },
+    { key: 'addresses', label: 'Addresses', icon: <IconAddress /> },
+    { key: 'details', label: 'Account Details', icon: <IconUser /> },
   ];
 
   return (
     <SeoWrapper pageName="profile">
-      <main className="bg-paper">
+      <main className="acc-page">
 
-        {/* Hero — light, consistent with the site's PageHero header */}
-        <section className="bg-paper-warm border-b border-line text-center px-6 py-14 md:py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-ink text-paper font-display font-bold text-xl">
-            {getInitials(user.username)}
+        {/* Hero — graphite gradient card, light type */}
+        <section className="acc-hero">
+          <div className="wrap">
+            <div className="acc-hero-inner">
+              <div className="acc-avatar">{getInitials(user.username)}</div>
+              <div className="acc-hero-info">
+                <div className="acc-greeting">Welcome back,</div>
+                <div className="acc-name">{user.username || 'Gripzus member'}</div>
+                <div className="acc-contact">
+                  {user.email && <span>{user.email}</span>}
+                  {user.phone && <span>+91 {user.phone}</span>}
+                </div>
+              </div>
+              <button className="acc-logout-btn" onClick={handleLogout}>
+                <IconLogout />
+                Sign Out
+              </button>
+            </div>
           </div>
-          <p className="eyebrow text-ink-muted">My Account</p>
-          <h1 className="h-display text-ink text-3xl md:text-4xl mt-2">{user.username || 'Gripzus member'}</h1>
-          <p className="text-ink-soft text-sm mt-2">{user.email}</p>
-          {user.phone && <p className="text-ink-muted text-xs mt-1">+91 {user.phone}</p>}
-          <button
-            onClick={async () => { await logout(); window.location.replace('/'); }}
-            className="mt-5 inline-flex items-center gap-2 border border-line px-5 py-2 text-[11px] tracking-[0.14em] uppercase text-ink-soft transition-colors hover:border-ink hover:text-ink"
-          >
-            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-            Sign Out
-          </button>
         </section>
 
-        {/* Section nav — these three are the tabs */}
-        <div className="border-b border-line">
-          <div className="max-w-site mx-auto grid grid-cols-3 divide-x divide-line">
-            {NAV.map((n) => {
-              const active = tab === n.key;
-              return (
-                <button
-                  key={n.key}
-                  onClick={() => setTab(n.key)}
-                  className={`relative py-6 text-center transition-colors ${active ? 'bg-paper-warm' : 'hover:bg-paper-warm/50'}`}
-                >
-                  {n.value !== null ? (
-                    <p className={`h-display text-2xl md:text-3xl ${active ? 'text-ink' : 'text-ink-muted'}`}>{n.value}</p>
-                  ) : (
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={`mx-auto ${active ? 'text-ink' : 'text-ink-muted'}`}>
-                      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" strokeLinecap="round" />
-                    </svg>
-                  )}
-                  <p className={`eyebrow mt-1.5 ${active ? 'text-ink' : ''}`}>{n.label}</p>
-                  {active && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-ink" />}
-                </button>
-              );
-            })}
+        {/* Stats */}
+        <div className="wrap">
+          <div className={`acc-stats${hasPoints ? ' has-points' : ''}`}>
+            <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{activeCount}</div><div className="acc-stat-label">Active</div></div>
+            {hasPoints && (
+              <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
+                <div className="acc-stat-val">{user.loyalty_points}</div>
+                <div className="acc-stat-label">Points</div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Body */}
-        <div className="wrap py-10 md:py-12">
-          <div>
+        <div className="wrap">
+          <div className="acc-body">
 
-            {/* ORDERS */}
-            {tab === 'orders' && (
-              <div>
-                <h2 className="h-display text-2xl text-ink mb-6">My Orders</h2>
-                {loadingOrders ? (
-                  <p className="py-12 text-center eyebrow">Loading orders…</p>
-                ) : orders.length === 0 ? (
-                  <div className="py-16 text-center rounded-xl border border-line">
-                    <p className="h-display text-2xl text-ink mb-3">No orders yet</p>
-                    <Link href="/products" className="eyebrow text-clay-deep hover:text-ink">Start shopping →</Link>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {orders.map((o) => {
-                      const status = (o.status || '').toLowerCase();
-                      const canCancel = ['pending', 'confirmed', 'processing'].includes(status);
-                      return (
-                        <div key={o.id} className="rounded-xl border border-line p-5 md:p-6">
-                          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
-                            <div>
-                              <p className="font-display uppercase text-ink text-base tracking-[-0.01em]" style={{ fontWeight: 700 }}>#{o.order_number}</p>
-                              <p className="eyebrow mt-1">{formatDate(o.createdAt)}</p>
-                            </div>
-                            <span className={`font-mono text-[10px] tracking-[0.2em] uppercase px-2.5 py-1 ${
-                              status === 'delivered' ? 'bg-ink text-paper' :
-                              status === 'cancelled' ? 'border border-line text-ink-muted' :
-                              'bg-clay text-paper'
-                            }`}>{(o.status || '').replace(/_/g, ' ')}</span>
-                          </div>
-
-                          {o.OrderItems?.map((item) => (
-                            <div key={item.id} className="flex items-center gap-3 py-3 border-b border-line">
-                              <div className="w-14 h-14 rounded-lg bg-paper-deep border border-line overflow-hidden shrink-0">
-                                {getOrderImage(item) && <img src={getOrderImage(item)} alt="" className="w-full h-full object-cover" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-ink line-clamp-1">{item.Product?.name || item.product_name}</p>
-                                <p className="eyebrow mt-0.5">Qty {item.quantity}</p>
-                              </div>
-                              <p className="text-sm font-display font-bold text-ink">₹{parseFloat(item.subtotal || 0).toLocaleString('en-IN')}</p>
-                            </div>
-                          ))}
-
-                          <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                            <p className="font-display font-bold text-ink">Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}</p>
-                            <div className="flex items-center gap-4">
-                              <Link href={`/track-order?order=${o.order_number}`} className="eyebrow text-clay-deep hover:text-ink">Track Order →</Link>
-                              {canCancel && (
-                                <button
-                                  onClick={() => handleCancelOrder(o.id)}
-                                  disabled={cancellingId === o.id}
-                                  className="eyebrow text-clay-deep hover:text-ink disabled:opacity-50"
-                                >
-                                  {cancellingId === o.id ? 'Cancelling…' : 'Cancel'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ADDRESSES */}
-            {tab === 'addresses' && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="h-display text-2xl text-ink">Saved Addresses</h2>
-                  <button onClick={openAddAddr} className="cta !py-2.5 !px-4 text-[11px]">+ Add Address</button>
-                </div>
-                {loadingAddresses ? (
-                  <p className="py-12 text-center eyebrow">Loading addresses…</p>
-                ) : addresses.length === 0 ? (
-                  <div className="py-16 text-center rounded-xl border border-dashed border-line">
-                    <p className="eyebrow">No addresses saved.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {addresses.map((a) => (
-                      <div key={a.id} className={`rounded-xl border p-6 ${a.is_default ? 'border-ink' : 'border-line'}`}>
-                        <div className="flex items-start justify-between mb-3">
-                          <p className="font-display uppercase text-ink text-lg tracking-[-0.02em]" style={{ fontWeight: 700 }}>{a.full_name}</p>
-                          {a.is_default && <span className="font-mono text-[9px] tracking-[0.2em] uppercase bg-ink text-paper px-2 py-0.5">Default</span>}
-                        </div>
-                        <p className="prose-body text-sm">
-                          {a.address}<br />
-                          {[a.city, a.state].filter(Boolean).join(', ')}{(a.postal_code || a.pincode) ? ` — ${a.postal_code || a.pincode}` : ''}
-                        </p>
-                        {(a.phone_number || a.phone) && <p className="eyebrow mt-2">{a.phone_number || a.phone}</p>}
-                        <div className="flex gap-4 mt-4 pt-4 border-t border-line">
-                          {!a.is_default && <button onClick={() => handleSetDefault(a.id)} className="eyebrow hover:text-ink">Set default</button>}
-                          <button onClick={() => openEditAddr(a)} className="eyebrow hover:text-ink">Edit</button>
-                          <button onClick={() => handleDeleteAddr(a.id)} className="eyebrow hover:text-clay-deep">Delete</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* DETAILS */}
-            {tab === 'details' && (
-              <div>
-                <h2 className="h-display text-2xl text-ink mb-6">Account Details</h2>
-                <form onSubmit={handleProfileUpdate} className="rounded-xl border border-line p-7 md:p-8 max-w-2xl">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field label="Name" value={profile.username} onChange={(v) => setProfile({ ...profile, username: v })} />
-                    <Field label="Email" type="email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
-                    {user.phone && (
-                      <div>
-                        <p className="eyebrow mb-2">Phone</p>
-                        <input value={`+91 ${user.phone}`} readOnly className="w-full rounded-lg bg-paper-deep border border-line px-4 py-3 text-sm text-ink-muted" />
-                      </div>
-                    )}
-                  </div>
-                  <button type="submit" disabled={savingProfile} className="cta mt-8 disabled:opacity-50">
-                    {savingProfile ? 'Saving…' : 'Update Profile'}
+            {/* Sidebar */}
+            <aside className="acc-sidebar">
+              <nav className="acc-nav">
+                {NAV.map((n) => (
+                  <button
+                    key={n.key}
+                    className={`acc-nav-btn${tab === n.key ? ' active' : ''}`}
+                    onClick={() => setTab(n.key)}
+                  >
+                    {n.icon}
+                    {n.label}
                   </button>
-                </form>
-              </div>
-            )}
+                ))}
+                <button className="acc-nav-btn danger" onClick={handleLogout}>
+                  <IconLogout />
+                  Log out
+                </button>
+              </nav>
+            </aside>
 
+            {/* Main */}
+            <div className="acc-main">
+
+              {/* ORDERS */}
+              {tab === 'orders' && (
+                <div>
+                  <div className="acc-section-header">
+                    <h2 className="acc-section-title">My Orders</h2>
+                  </div>
+                  {loadingOrders ? (
+                    <p className="acc-note" style={{ padding: '48px 0', textAlign: 'center' }}>Loading orders…</p>
+                  ) : orders.length === 0 ? (
+                    <div className="acc-empty">
+                      <p className="acc-empty-title">No orders yet</p>
+                      <Link href="/products" className="link-line">Start shopping</Link>
+                    </div>
+                  ) : (
+                    <div className="acc-orders">
+                      {orders.map((o) => {
+                        const status = (o.status || '').toLowerCase();
+                        const canCancel = ['pending', 'confirmed', 'processing'].includes(status);
+                        return (
+                          <div key={o.id} className="acc-order-card">
+                            <div className="acc-order-head">
+                              <div>
+                                <div className="acc-order-num">#{o.order_number}</div>
+                                <div className="acc-order-date">{formatDate(o.createdAt)}</div>
+                              </div>
+                              <span className={`acc-badge ${badgeClass(o.status)}`}>{(o.status || 'pending').replace(/_/g, ' ')}</span>
+                            </div>
+
+                            {o.OrderItems?.map((item) => (
+                              <div key={item.id} className="acc-order-item">
+                                <div className="acc-order-img">
+                                  {getOrderImage(item) && <img src={getOrderImage(item)} alt="" />}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div className="acc-order-item-name">{item.Product?.name || item.product_name}</div>
+                                  <div className="acc-order-item-meta">Qty {item.quantity}</div>
+                                </div>
+                                <div className="acc-order-item-total">₹{parseFloat(item.subtotal || 0).toLocaleString('en-IN')}</div>
+                              </div>
+                            ))}
+
+                            <div className="acc-order-foot">
+                              <div className="acc-order-total">Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}</div>
+                              <div className="acc-order-actions">
+                                <Link href={`/track-order?order=${o.order_number}`} className="acc-link">Track Order</Link>
+                                {canCancel && (
+                                  <button
+                                    onClick={() => handleCancelOrder(o.id)}
+                                    disabled={cancellingId === o.id}
+                                    className="acc-link"
+                                  >
+                                    {cancellingId === o.id ? 'Cancelling…' : 'Cancel'}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ADDRESSES */}
+              {tab === 'addresses' && (
+                <div>
+                  <div className="acc-section-header">
+                    <h2 className="acc-section-title">Saved Addresses</h2>
+                    <button onClick={openAddAddr} className="cta !py-2.5 !px-4 text-[11px]">+ Add Address</button>
+                  </div>
+                  {loadingAddresses ? (
+                    <p className="acc-note" style={{ padding: '48px 0', textAlign: 'center' }}>Loading addresses…</p>
+                  ) : addresses.length === 0 ? (
+                    <div className="acc-empty">
+                      <p className="acc-note">No addresses saved.</p>
+                    </div>
+                  ) : (
+                    <div className="acc-addr-grid">
+                      {addresses.map((a) => (
+                        <div key={a.id} className={`acc-addr-card${a.is_default ? ' default' : ''}`}>
+                          <div className="acc-addr-top">
+                            <div className="acc-addr-name">{a.full_name}</div>
+                            {a.is_default && <span className="acc-addr-default">Default</span>}
+                          </div>
+                          <div className="acc-addr-text">
+                            {a.address}<br />
+                            {[a.city, a.state].filter(Boolean).join(', ')}{(a.postal_code || a.pincode) ? ` — ${a.postal_code || a.pincode}` : ''}
+                            {a.country && <><br />{a.country}</>}
+                          </div>
+                          {(a.phone_number || a.phone) && <div className="acc-addr-phone">{a.phone_number || a.phone}</div>}
+                          <div className="acc-addr-actions">
+                            {!a.is_default && <button onClick={() => handleSetDefault(a.id)} className="acc-link">Set default</button>}
+                            <button onClick={() => openEditAddr(a)} className="acc-link">Edit</button>
+                            <button onClick={() => handleDeleteAddr(a.id)} className="acc-link">Delete</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* DETAILS */}
+              {tab === 'details' && (
+                <div>
+                  <div className="acc-section-header">
+                    <h2 className="acc-section-title">Account Details</h2>
+                  </div>
+                  <form onSubmit={handleProfileUpdate} className="acc-form">
+                    <div className="acc-form-grid">
+                      <Field label="Name" value={profile.username} onChange={(v) => setProfile({ ...profile, username: v })} />
+                      <Field label="Email" type="email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
+                      {user.phone && (
+                        <div className="acc-field">
+                          <label>Phone</label>
+                          <input value={`+91 ${user.phone}`} readOnly />
+                        </div>
+                      )}
+                    </div>
+                    <button type="submit" disabled={savingProfile} className="cta mt-8 disabled:opacity-50">
+                      {savingProfile ? 'Saving…' : 'Update Profile'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
 
         {/* Address modal */}
         {showAddrModal && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-[2px] px-4" onClick={() => setShowAddrModal(false)}>
-            <div className="bg-paper rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-paper w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between border-b border-line px-6 py-5">
                 <h3 className="h-display text-xl text-ink">{editingAddr ? 'Edit address' : 'Add address'}</h3>
                 <button onClick={() => setShowAddrModal(false)} aria-label="Close" className="text-ink hover:text-ink-soft">
@@ -394,11 +441,10 @@ export default function AccountPage() {
 
 function Field({ label, value, onChange, placeholder, type = 'text' }) {
   return (
-    <div>
-      <label className="eyebrow block mb-2">{label}</label>
+    <div className="acc-field">
+      <label>{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required
-        className="w-full bg-paper-deep rounded-lg border border-line focus:border-ink outline-none px-4 py-3 text-sm text-ink placeholder:text-ink-muted transition-colors"
       />
     </div>
   );
