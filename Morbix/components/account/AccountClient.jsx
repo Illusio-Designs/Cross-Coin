@@ -16,8 +16,27 @@ const EMPTY = { full_name: '', phone: '', address: '', city: '', state: '', pinc
 function statusClass(s) {
   const v = (s || '').toLowerCase();
   if (v === 'delivered') return 'ok';
-  if (v === 'cancelled') return 'bad';
+  if (v === 'cancelled' || v === 'order_cancelled') return 'bad';
   return 'pending';
+}
+
+function statusLabel(s) {
+  if (!s) return 'Pending';
+  return String(s).split(/[_\s]+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function getInitials(name) {
+  if (!name) return 'U';
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'U';
+  return parts.map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return ''; }
 }
 
 const TABS = [
@@ -25,6 +44,8 @@ const TABS = [
   { label: 'Addresses', icon: 'MapPin' },
   { label: 'Account details', icon: 'User' },
 ];
+
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'booked', 'out_for_delivery'];
 
 function Dashboard() {
   const router = useRouter();
@@ -105,14 +126,35 @@ function Dashboard() {
   const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); toast.success('Default address updated'); } catch { toast.error('Could not update default'); } };
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
+  const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
+  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
-      <div className="account-head">
-        <div className="page-hero">
-          <span className="eyebrow">Account</span>
-          <h1>Hi{user?.username ? `, ${user.username}` : ''}</h1>
-          <p>{user?.email || user?.phone || 'Welcome back to Morbix.'}</p>
+      {/* Hero */}
+      <div className="acc-hero">
+        <div className="acc-hero-avatar">{getInitials(user?.username)}</div>
+        <div className="acc-hero-info">
+          <span className="acc-hero-greeting">Welcome back,</span>
+          <h1 className="acc-hero-name">{user?.username || 'User'}</h1>
+          <p className="acc-hero-contact">{user?.email || user?.phone || user?.phone_number || 'Welcome back to Morbix.'}</p>
         </div>
+        <button className="acc-hero-logout" onClick={doLogout}>
+          <Icon name="ArrowUpRight" size={15} /> <span>Sign Out</span>
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="acc-stats">
+        <div className="acc-stat"><span className="acc-stat-val">{orders.length}</span><span className="acc-stat-label">Orders</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{addresses.length}</span><span className="acc-stat-label">Addresses</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{deliveredCount}</span><span className="acc-stat-label">Delivered</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{activeCount}</span><span className="acc-stat-label">Active</span></div>
+        {user?.loyalty_points > 0 && (
+          <div className="acc-stat acc-stat-points" title="Earn points on every delivery. Redeem on future orders.">
+            <span className="acc-stat-val">★ {user.loyalty_points}</span><span className="acc-stat-label">Points</span>
+          </div>
+        )}
       </div>
 
       <div className="account-layout">
@@ -135,17 +177,27 @@ function Dashboard() {
                 <Link href="/account/orders" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
               </div>
               {loadingOrders ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={64} radius={14} /><Skeleton height={64} radius={14} /></div>
+                <div style={{ display: 'grid', gap: 12 }}><Skeleton height={92} radius={16} /><Skeleton height={92} radius={16} /></div>
               ) : orders.length === 0 ? (
                 <div className="empty">No orders yet. <Link href="/products" className="btn btn-primary">Start shopping</Link></div>
               ) : (
-                <div className="order-list">
+                <div className="acc-order-list">
                   {orders.map((o) => (
-                    <Link href={`/account/orders/${o.id}`} className="order-row" key={o.id}>
-                      <div><b>#{o.order_number}</b><span className="muted">{o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></div>
-                      <span className={`order-status ${statusClass(o.status)}`}>{o.status}</span>
-                      <b>₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
-                    </Link>
+                    <div className="acc-order-card" key={o.id}>
+                      <div className="acc-order-top">
+                        <div className="acc-order-meta">
+                          <span className="acc-order-num">#{o.order_number}</span>
+                          <span className="acc-order-date">{formatDate(o.created_at || o.createdAt)}</span>
+                        </div>
+                        <span className={`order-status ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
+                      </div>
+                      <div className="acc-order-bottom">
+                        <span className="acc-order-total">₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</span>
+                        <Link href={`/account/orders/${o.id}`} className="acc-order-link">
+                          View / Track <Icon name="ArrowRight" size={14} />
+                        </Link>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
