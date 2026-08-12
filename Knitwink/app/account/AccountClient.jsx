@@ -3,17 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
-import { updateProfile, changePassword } from '@/lib/api/auth'
+import { updateProfile } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { queryKeys } from '@/lib/queryClient'
 import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
-const TABS = ['My Orders', 'Addresses', 'Account Details', 'Reset Password']
+const TABS = ['My Orders', 'Addresses', 'Account Details']
 
 const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu and Kashmir','Ladakh','Puducherry','Chandigarh']
 
@@ -33,7 +32,7 @@ function getOrderImage(item) {
 }
 
 function getInitials(name) {
-  if (!name) return 'K'
+  if (!name) return 'U'
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
@@ -90,11 +89,6 @@ export default function AccountClient() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [profileMsg, setProfileMsg] = useState('')
-
-  // Password
-  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [showPw, setShowPw] = useState({ cur: false, new: false, con: false })
-  const [pwMsg, setPwMsg] = useState('')
 
   useEffect(() => {
     if (user) { setUsername(user.username || ''); setEmail(user.email || '') }
@@ -153,18 +147,6 @@ export default function AccountClient() {
     } catch (err) { setProfileMsg(err.message || 'Update failed') }
   }
 
-  // Password update
-  const handlePasswordUpdate = async (e) => {
-    e.preventDefault()
-    setPwMsg('')
-    if (pwForm.newPassword !== pwForm.confirmPassword) { setPwMsg('Passwords do not match'); return }
-    try {
-      await changePassword({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword })
-      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      setPwMsg('Password updated successfully.')
-    } catch (err) { setPwMsg(err.message || 'Update failed') }
-  }
-
   if (loading) return (
     <div className="pf-fullpage-loader"><div className="pf-spinner" /><p>Loading your profile...</p></div>
   )
@@ -179,32 +161,38 @@ export default function AccountClient() {
   return (
     <SeoWrapper pageName="profile">
     <div className="pf-page">
-      {/* Hero — matches site style */}
-      <section className="relative overflow-hidden bg-brand-black px-4 pt-32 pb-12 text-center sm:px-6 sm:pt-36 sm:pb-16 md:px-10 md:pt-40 md:pb-20">
-        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/[0.03]" />
-        <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-white/[0.03]" />
-        <div className="relative">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white">
-            {getInitials(user.username)}
+      {/* Hero — CrossCoin-style gradient card */}
+      <div className="acc-hero-wrap">
+        <div className="acc-hero">
+          <div className="acc-avatar">{getInitials(user.username)}</div>
+          <div className="acc-hero-info">
+            <div className="acc-greeting">Welcome back,</div>
+            <div className="acc-name">{user.username || 'User'}</div>
+            <div className="acc-contact">
+              {user.email}
+              {user.phone && <span className="acc-contact-sep"> · +91 {user.phone}</span>}
+            </div>
           </div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/30">My Account</p>
-          <h1 className="mt-2 text-3xl font-bold text-white lg:text-4xl">{user.username}</h1>
-          <p className="mt-2 text-sm text-white/45">{user.email}</p>
-          {user.phone && <p className="mt-1 text-xs text-white/30">+91 {user.phone}</p>}
-          <button onClick={handleLogout} className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-white/50 hover:text-white">
+          <button onClick={handleLogout} className="acc-signout">
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
           </button>
         </div>
-      </section>
+      </div>
 
       {/* Stats */}
-      <div className="pf-stats-wrap">
-        <div className="pf-stats">
-          <div className="pf-stat"><div className="pf-stat-val">{orders.length}</div><div className="pf-stat-label">Orders</div></div>
-          <div className="pf-stat"><div className="pf-stat-val">{addresses.length}</div><div className="pf-stat-label">Addresses</div></div>
-          <div className="pf-stat"><div className="pf-stat-val">{orders.filter(o => o.status === 'delivered').length}</div><div className="pf-stat-label">Delivered</div></div>
-          <div className="pf-stat"><div className="pf-stat-val">{user.loyalty_points || 0}</div><div className="pf-stat-label">Points</div></div>
+      <div className="acc-stats-wrap">
+        <div className="acc-stats">
+          <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{orders.filter(o => o.status === 'delivered').length}</div><div className="acc-stat-label">Delivered</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{orders.filter(o => ['pending', 'confirmed', 'processing', 'shipped', 'booked'].includes(o.status)).length}</div><div className="acc-stat-label">Active</div></div>
+          {user?.loyalty_points > 0 && (
+            <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
+              <div className="acc-stat-val acc-stat-points">⭐ {user.loyalty_points}</div>
+              <div className="acc-stat-label">Points</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -222,6 +210,10 @@ export default function AccountClient() {
                 {tab}
               </button>
             ))}
+            <button className="pf-nav-btn acc-nav-logout" onClick={handleLogout}>
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Log out
+            </button>
           </nav>
         </aside>
 
@@ -353,30 +345,6 @@ export default function AccountClient() {
                 )}
                 {profileMsg && <p style={{ fontSize: '0.85rem', color: profileMsg.includes('success') ? '#2e7d32' : '#c62828' }}>{profileMsg}</p>}
                 <button type="submit" className="pf-btn-primary pf-btn-full">Update Profile</button>
-              </form>
-            </div>
-          )}
-
-          {/* RESET PASSWORD */}
-          {activeTab === 3 && (
-            <div className="pf-section">
-              <div className="pf-section-title">Reset Password</div>
-              <form className="pf-form" onSubmit={handlePasswordUpdate}>
-                {[
-                  { label: 'Current Password', key: 'currentPassword', show: showPw.cur, toggle: () => setShowPw(p => ({ ...p, cur: !p.cur })) },
-                  { label: 'New Password', key: 'newPassword', show: showPw.new, toggle: () => setShowPw(p => ({ ...p, new: !p.new })) },
-                  { label: 'Confirm Password', key: 'confirmPassword', show: showPw.con, toggle: () => setShowPw(p => ({ ...p, con: !p.con })) },
-                ].map(({ label, key, show, toggle }) => (
-                  <div className="pf-form-group" key={key}>
-                    <label>{label}</label>
-                    <div className="pf-pw-wrap">
-                      <input type={show ? 'text' : 'password'} value={pwForm[key]} onChange={e => setPwForm(p => ({ ...p, [key]: e.target.value }))} required />
-                      <button type="button" className="pf-pw-eye" onClick={toggle}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-                    </div>
-                  </div>
-                ))}
-                {pwMsg && <p style={{ fontSize: '0.85rem', color: pwMsg.includes('success') ? '#2e7d32' : '#c62828' }}>{pwMsg}</p>}
-                <button type="submit" className="pf-btn-primary pf-btn-full">Update Password</button>
               </form>
             </div>
           )}

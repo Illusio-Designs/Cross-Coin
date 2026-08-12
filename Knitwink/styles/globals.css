@@ -1171,6 +1171,158 @@ body.cd-drawer-open-body .wachat-greet {
   }
 }
 
+/* Account page — CrossCoin-style hero + stats (acc-) */
+.acc-hero-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 7rem 1.5rem 0;
+}
+.acc-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  background: linear-gradient(120deg, #262626, #0a0a0a);
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  color: #fafafa;
+  box-shadow: 0 8px 24px rgba(10, 10, 10, 0.18);
+}
+.acc-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: rgba(250, 250, 250, 0.1);
+  border: 1px solid rgba(250, 250, 250, 0.14);
+  color: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.acc-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+.acc-greeting {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(250, 250, 250, 0.45);
+  margin-bottom: 4px;
+}
+.acc-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fafafa;
+  line-height: 1.1;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.acc-contact {
+  font-size: 0.82rem;
+  color: rgba(250, 250, 250, 0.55);
+  word-break: break-word;
+}
+.acc-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  align-self: flex-start;
+  border: 1.5px solid rgba(250, 250, 250, 0.25);
+  background: transparent;
+  color: #fafafa;
+  border-radius: 999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.acc-signout:hover {
+  border-color: #fafafa;
+  background: rgba(250, 250, 250, 0.08);
+}
+.acc-stats-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0;
+}
+.acc-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  background: #e5e5e5;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.acc-stat {
+  padding: 1.25rem;
+  text-align: center;
+  background: #fff;
+}
+.acc-stat-val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0a0a0a;
+  line-height: 1;
+}
+.acc-stat-points {
+  color: #b45309;
+}
+.acc-stat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #737373;
+  margin-top: 4px;
+}
+.acc-nav-logout {
+  color: #737373;
+}
+.acc-nav-logout:hover {
+  color: #0a0a0a;
+}
+@media (max-width: 768px) {
+  .acc-hero-wrap {
+    padding: 6.5rem 1.5rem 0;
+  }
+  .acc-stats-wrap {
+    padding: 1rem 1.5rem 0;
+  }
+}
+@media (max-width: 480px) {
+  .acc-hero-wrap {
+    padding: 6rem 1rem 0;
+  }
+  .acc-hero {
+    padding: 1.25rem;
+  }
+  .acc-signout {
+    margin-left: 0;
+  }
+  .acc-stats-wrap {
+    padding: 0.75rem 1rem 0;
+  }
+  .acc-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .acc-stat {
+    padding: 0.875rem;
+  }
+  .acc-stat-val {
+    font-size: 1.4rem;
+  }
+}
+
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
