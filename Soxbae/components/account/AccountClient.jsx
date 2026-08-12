@@ -20,6 +20,19 @@ function statusClass(s) {
   return 'pending';
 }
 
+function getInitials(name) {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch { return ''; }
+}
+
+const ACTIVE_STATUSES = ['pending', 'processing', 'shipped', 'confirmed'];
+
 const TABS = [
   { label: 'My orders', icon: 'ShoppingBag' },
   { label: 'Addresses', icon: 'MapPin' },
@@ -105,14 +118,36 @@ function Dashboard() {
   const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); toast.success('Default address updated'); } catch { toast.error('Could not update default'); } };
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
+  const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
+  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const points = Number(user?.loyalty_points || 0);
+
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
-      <div className="account-head">
-        <div className="page-hero">
-          <span className="eyebrow">Account</span>
-          <h1>Hi{user?.username ? `, ${user.username}` : ''}</h1>
-          <p>{user?.email || user?.phone || 'Welcome back to Soxbae.'}</p>
+      {/* Hero */}
+      <div className="acc-hero">
+        <div className="acc-avatar">{getInitials(user?.username)}</div>
+        <div className="acc-hero-info">
+          <span className="acc-hero-greeting">Welcome back,</span>
+          <h1 className="acc-hero-name">{user?.username || 'there'}</h1>
+          <p className="acc-hero-sub">{user?.email || user?.phone || 'Welcome back to Soxbae.'}</p>
         </div>
+        <button className="acc-signout" onClick={doLogout}>
+          <Icon name="ArrowUpRight" size={16} /> <span>Sign out</span>
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="acc-stats">
+        <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{activeCount}</div><div className="acc-stat-label">Active</div></div>
+        {points > 0 && (
+          <div className="acc-stat acc-stat-points" title="Earn points on every delivery. Redeem on future orders.">
+            <div className="acc-stat-val">{points}</div><div className="acc-stat-label">Points</div>
+          </div>
+        )}
       </div>
 
       <div className="account-layout">
@@ -139,13 +174,23 @@ function Dashboard() {
               ) : orders.length === 0 ? (
                 <div className="empty">No orders yet. <Link href="/products" className="btn btn-primary">Start shopping</Link></div>
               ) : (
-                <div className="order-list">
+                <div className="acc-order-list">
                   {orders.map((o) => (
-                    <Link href={`/account/orders/${o.id}`} className="order-row" key={o.id}>
-                      <div><b>#{o.order_number}</b><span className="muted">{o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></div>
-                      <span className={`order-status ${statusClass(o.status)}`}>{o.status}</span>
-                      <b>₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
-                    </Link>
+                    <div className="acc-order-card" key={o.id}>
+                      <div className="acc-order-main">
+                        <div className="acc-order-top">
+                          <b className="acc-order-num">#{o.order_number}</b>
+                          <span className={`acc-badge ${statusClass(o.status)}`}>{o.status}</span>
+                        </div>
+                        <span className="acc-order-date">{fmtDate(o.created_at)}</span>
+                      </div>
+                      <div className="acc-order-side">
+                        <b className="acc-order-total">₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
+                        <Link href={`/account/orders/${o.id}`} className="acc-order-link">
+                          View <Icon name="ArrowRight" size={14} />
+                        </Link>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
