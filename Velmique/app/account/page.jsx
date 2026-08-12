@@ -35,6 +35,13 @@ const EMPTY_ADDR = {
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
+const ACTIVE_STATUSES = ['pending', 'processing', 'shipped', 'confirmed', 'awaiting_confirmation'];
+
+function getInitials(name) {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
+}
+
 function fmtDate(d) {
   if (!d) return '—';
   const date = new Date(d);
@@ -79,10 +86,21 @@ export default function AccountPage() {
   const [tab, setTab] = useState('orders');
   const [toast, setToast] = useState(null);
 
+  // Lightweight data for the hero stats row. The tab panels below keep their
+  // own independent fetching/refresh wiring — this is read-only for counts.
+  const [statOrders, setStatOrders] = useState([]);
+  const [statAddrs, setStatAddrs] = useState([]);
+
   // Auth gate
   useEffect(() => {
     if (!loading && !isAuthenticated) router.replace('/login');
   }, [loading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getUserOrders({ limit: 100 }).then((d) => setStatOrders(Array.isArray(d) ? d : (d?.orders || []))).catch(() => {});
+    getAddresses().then((d) => setStatAddrs(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [isAuthenticated]);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -112,26 +130,33 @@ export default function AccountPage() {
 
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
 
-        {/* Profile header card */}
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7 mb-6 flex flex-col sm:flex-row sm:items-center gap-5">
-          <div className="flex items-center gap-5 flex-1 min-w-0">
-            <div className="w-16 h-16 rounded-full bg-[var(--surface-2)] flex items-center justify-center shrink-0">
-              <User size={26} className="text-[var(--gold-deep)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="font-serif italic text-[var(--ink)] text-2xl truncate">{user.username || 'Velmique Member'}</h2>
-              <p className="text-[var(--ink-soft)] text-sm font-body truncate">{user.email || user.phone}</p>
-              <p className="text-[var(--gold-deep)] text-[10px] font-body mt-1 tracking-[0.3em] uppercase">
-                Velmique Inner Circle
-              </p>
-            </div>
+        {/* Hero */}
+        <div className="acc-hero">
+          <div className="acc-avatar">{getInitials(user.username || user.name)}</div>
+          <div className="acc-hero-info">
+            <span className="acc-hero-greeting">Welcome back,</span>
+            <h2 className="acc-hero-name">{user.username || 'Velmique Member'}</h2>
+            <p className="acc-hero-sub">{user.email || user.phone}</p>
           </div>
           <button
+            className="acc-signout"
             onClick={async () => { await logout(); router.replace('/login'); }}
-            className="inline-flex items-center justify-center gap-2 text-[var(--ink-muted)] hover:text-red-600 transition-colors text-[10px] tracking-[0.3em] uppercase font-body shrink-0 w-full sm:w-auto py-3 sm:py-0 border sm:border-0 border-[var(--border)] rounded-full"
           >
             <LogOut size={14} /> Sign Out
           </button>
+        </div>
+
+        {/* Stats */}
+        <div className="acc-stats">
+          <div className="acc-stat"><div className="acc-stat-val">{statOrders.length}</div><div className="acc-stat-label">Orders</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{statAddrs.length}</div><div className="acc-stat-label">Addresses</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{statOrders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length}</div><div className="acc-stat-label">Delivered</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{statOrders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length}</div><div className="acc-stat-label">Active</div></div>
+          {Number(user?.loyalty_points || 0) > 0 && (
+            <div className="acc-stat acc-stat-points" title="Earn points on every delivery. Redeem on future orders.">
+              <div className="acc-stat-val">{user.loyalty_points}</div><div className="acc-stat-label">Points</div>
+            </div>
+          )}
         </div>
 
         {/* Tabs nav */}
