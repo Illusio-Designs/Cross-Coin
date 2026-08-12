@@ -55,8 +55,8 @@ const User = sequelize.define('User', {
     },
     phone: {
         type: DataTypes.STRING(20),
-        allowNull: true,
-        unique: true
+        allowNull: true
+        // Uniqueness is per-brand — see the composite index below.
     },
     deleted_at: {
         type: DataTypes.DATE,
@@ -73,9 +73,18 @@ const User = sequelize.define('User', {
     timestamps: true,
     tableName: 'users',
     indexes: [
+        // Consumers are scoped per brand: the same phone/email may exist once per
+        // storefront, so uniqueness is composite with source_brand_id rather than
+        // global. (Migration in index.js swaps the legacy global uniques to these.)
         {
             unique: true,
-            fields: ['email']
+            name: 'uniq_users_email_brand',
+            fields: ['email', 'source_brand_id']
+        },
+        {
+            unique: true,
+            name: 'uniq_users_phone_brand',
+            fields: ['phone', 'source_brand_id']
         },
         {
             unique: true,

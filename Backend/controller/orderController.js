@@ -959,23 +959,33 @@
       const bcrypt = require('bcrypt');
       const jwt = require('jsonwebtoken');
 
-      // Find or create user by phone (primary) or email (fallback)
-      let user = await User.findOne({ where: { phone: digits } });
+      // Find or create user by phone (primary) or email (fallback), scoped to
+      // THIS brand so each storefront keeps its own consumer namespace.
+      const brandId = req.brandId || (req.brand && req.brand.id) || null;
+      let user = await User.findOne({ where: { phone: digits, source_brand_id: brandId } });
       if (!user) {
-        user = await User.findOne({ where: { email: email.toLowerCase() } });
+        user = await User.findOne({ where: { email: email.toLowerCase(), source_brand_id: brandId } });
       }
       if (!user) {
         const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
         const fullName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
-        user = await User.create({
-          username: `${fullName} (${digits})`,
-          email: email.toLowerCase(),
-          phone: digits,
-          password: tempPassword,
-          role: 'consumer',
-          source_brand_id: req.brandId || null,
-        });
-        logger.debug(`createGuestOrder: Created new consumer user ${user.id} for ${email}`);
+        try {
+          user = await User.create({
+            username: `${fullName} (${digits}·b${brandId || 0})`,
+            email: email.toLowerCase(),
+            phone: digits,
+            password: tempPassword,
+            role: 'consumer',
+            source_brand_id: brandId,
+          });
+          logger.debug(`createGuestOrder: Created new consumer user ${user.id} for ${email} on brand ${brandId}`);
+        } catch (createErr) {
+          // Pre-isolation schema (global unique) → reuse existing account.
+          logger.warn(`createGuestOrder: create fell back to existing account: ${createErr.message}`);
+          user = await User.findOne({ where: { phone: digits } }) || await User.findOne({ where: { email: email.toLowerCase() } });
+          if (!user) throw createErr;
+          if (brandId && !user.source_brand_id) await user.update({ source_brand_id: brandId });
+        }
       } else {
         // Update name if user has a generated username
         if (user.username && user.username.startsWith('user_')) {

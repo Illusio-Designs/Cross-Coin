@@ -681,6 +681,72 @@ const startServer = async () => {
             logger.error('shipment_webhook_events table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: brand-scoped consumer accounts ─────────────
+        // Each storefront gets its own consumer namespace so a customer of one
+        // brand cannot log into another. This requires the identity columns to be
+        // unique PER BRAND rather than globally: we backfill source_brand_id from
+        // each user's earliest order, add the composite uniques, then drop the old
+        // global uniques. Ordered so a guard always exists (add before drop) and
+        // guarded by information_schema so the whole block is a no-op once applied.
+        try {
+            // 1. Backfill source_brand_id from the brand of each user's earliest
+            //    order (smallest order id). Consumers with no orders / staff stay
+            //    NULL and get adopted into a brand on first login.
+            await sequelize.query(
+                `UPDATE users u
+                 JOIN (
+                     SELECT o.user_id, o.brand_id
+                     FROM orders o
+                     JOIN (SELECT user_id, MIN(id) AS mid FROM orders
+                           WHERE user_id IS NOT NULL GROUP BY user_id) m
+                       ON m.user_id = o.user_id AND m.mid = o.id
+                     WHERE o.brand_id IS NOT NULL
+                 ) o ON o.user_id = u.id
+                 SET u.source_brand_id = o.brand_id
+                 WHERE u.source_brand_id IS NULL`
+            );
+
+            // 2. Add composite uniques (guarded by name). Safe to add: phone and
+            //    email are globally unique today, so no (col, brand) pair collides.
+            const addCompositeUnique = async (indexName, columns) => {
+                const [rows] = await sequelize.query(
+                    `SELECT 1 FROM information_schema.STATISTICS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = ? LIMIT 1`,
+                    { replacements: [indexName] }
+                );
+                if (!rows.length) {
+                    logger.info(`Migrating: adding composite unique ${indexName} on users(${columns})…`);
+                    await sequelize.query(`ALTER TABLE users ADD UNIQUE INDEX ${indexName} (${columns})`);
+                    logger.info(`✓ ${indexName} added`);
+                }
+            };
+            await addCompositeUnique('uniq_users_phone_brand', 'phone, source_brand_id');
+            await addCompositeUnique('uniq_users_email_brand', 'email, source_brand_id');
+
+            // 3. Drop the legacy single-column global uniques on phone / email
+            //    (Sequelize may have created several duplicates: phone, phone_2…).
+            //    Never touches the composite ones (2 columns) or PRIMARY.
+            const dropSingleColUniques = async (column) => {
+                const [idx] = await sequelize.query(
+                    `SELECT INDEX_NAME FROM information_schema.STATISTICS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+                       AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'
+                     GROUP BY INDEX_NAME
+                     HAVING COUNT(*) = 1 AND MAX(COLUMN_NAME) = ?`,
+                    { replacements: [column] }
+                );
+                for (const r of idx) {
+                    logger.info(`Migrating: dropping legacy global unique ${r.INDEX_NAME} on users(${column})…`);
+                    await sequelize.query(`ALTER TABLE users DROP INDEX \`${r.INDEX_NAME}\``);
+                    logger.info(`✓ dropped ${r.INDEX_NAME}`);
+                }
+            };
+            await dropSingleColUniques('phone');
+            await dropSingleColUniques('email');
+        } catch (err) {
+            logger.error('brand-scoped consumer migration failed: ' + err.message);
+        }
+
         // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────
         // orders_cancelled_backup (manual backup, no code refs), fship_warehouses
         // (orphaned, no refs), coupon_usage (legacy duplicate of coupon_usages).

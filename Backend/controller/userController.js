@@ -52,7 +52,10 @@ module.exports.register = async (req, res) => {
             return res.status(400).json({ message: strengthCheck.message });
         }
 
-        const existingUser = await User.findOne({ where: { email } });
+        // Email is unique per brand (each storefront has its own consumer
+        // namespace), so only reject a duplicate within this brand.
+        const brandId = req.brandId || (req.brand && req.brand.id) || null;
+        const existingUser = await User.findOne({ where: { email, source_brand_id: brandId } });
         if (existingUser) return res.status(400).json({ message: 'Email already exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -63,7 +66,7 @@ module.exports.register = async (req, res) => {
             password: hashedPassword,
             phone: phone ? String(phone).replace(/\D/g, '').slice(-10) : null,
             role,
-            source_brand_id: req.brandId || null
+            source_brand_id: brandId
         });
 
         // Guest-to-member conversion: link guest orders by email and phone
@@ -85,12 +88,18 @@ module.exports.register = async (req, res) => {
         }
 
         if (guestIds.length > 0) {
-            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: guestIds } });
-            // Re-assign ALL guest orders (not just delivered)
-            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
+            // Re-assign this brand's guest orders (keep other brands' guest
+            // orders isolated). Only mark the guest converted once nothing is left.
+            const regOrderWhere = { guest_user_id: guestIds, user_id: null };
+            if (brandId) regOrderWhere.brand_id = brandId;
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: regOrderWhere });
             // Re-assign guest shipping addresses
             const { ShippingAddress } = require('../model/shippingAddressModel.js');
             await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestIds, user_id: null } });
+            const regRemaining = await Order.count({ where: { guest_user_id: guestIds, user_id: null } });
+            if (regRemaining === 0) {
+                await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: guestIds } });
+            }
 
             // Credit loyalty for delivered orders
             const deliveredGuestOrders = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
@@ -193,20 +202,65 @@ module.exports.login = async (req, res) => {
             return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
         }
 
-        // Find user by phone — do NOT auto-create (register first)
-        let user = await User.findOne({ where: { phone: digits } });
-
-        if (!user) {
-            return res.status(404).json({ 
-                message: 'No account found with this phone number. Please register first.',
-                code: 'USER_NOT_FOUND'
-            });
-        }
-
-        // Guest-to-member: re-assign guest orders by email (primary) since phone is encrypted
+        // ── Resolve the consumer for THIS brand ───────────────────────────────
+        // Storefront auth is phone + OTP only — there is no separate password
+        // registration step. A verified OTP proves the person owns this number,
+        // so we upsert the consumer here (the standard phone-OTP identity model)
+        // instead of turning first-time / prepaid-guest shoppers away with a 404.
+        //
+        // Accounts are brand-scoped: each brand has its own consumer namespace,
+        // so a customer of one storefront cannot log into another. We therefore
+        // match within req.brandId first, then fall back to a legacy account with
+        // no source_brand_id (created before brand stamping) and adopt it into
+        // this brand.
         const { Op } = require('sequelize');
         const { ShippingAddress } = require('../model/shippingAddressModel.js');
+        const brandId = req.brandId || (req.brand ? req.brand.id : null);
 
+        let user = brandId
+            ? await User.findOne({ where: { phone: digits, source_brand_id: brandId } })
+            : await User.findOne({ where: { phone: digits } });
+
+        if (!user && brandId) {
+            // Legacy account (pre-isolation) for this phone with no brand stamp:
+            // adopt it into the brand it's logging in from.
+            const legacy = await User.findOne({ where: { phone: digits, source_brand_id: null } });
+            if (legacy) {
+                await legacy.update({ source_brand_id: brandId });
+                user = legacy;
+            }
+        }
+
+        if (!user) {
+            // First login for this phone on this brand → create the consumer.
+            const placeholderEmail = `${digits}@phone.crosscoin.in`;
+            const emailTaken = await User.findOne({ where: { email: placeholderEmail } });
+            const email = emailTaken ? `${digits}.b${brandId || 0}@phone.crosscoin.in` : placeholderEmail;
+            try {
+                user = await User.create({
+                    username: `User ${digits} (b${brandId || 0})`,
+                    email,
+                    phone: digits,
+                    role: 'consumer',
+                    source_brand_id: brandId,
+                    password: require('crypto').randomBytes(16).toString('hex'),
+                });
+                logger.info(`[Login] Auto-created consumer ${user.id} for ${digits} on brand ${brandId}`);
+            } catch (createErr) {
+                // Pre-isolation schema still has a global unique on phone/email/
+                // username → creating a second per-brand account throws. Fall back
+                // to the existing account for this phone so login never hard-fails,
+                // and stamp its brand if missing.
+                logger.warn(`[Login] Auto-create fell back to existing account: ${createErr.message}`);
+                user = await User.findOne({ where: { phone: digits } });
+                if (!user) throw createErr;
+                if (brandId && !user.source_brand_id) await user.update({ source_brand_id: brandId });
+            }
+        }
+
+        // Guest-to-member: re-assign this brand's guest orders by email (primary,
+        // since User.phone stores plaintext but guest phone is encrypted). Skip
+        // placeholder emails (auto-created phone-only accounts have no real email).
         const guestsByEmail = user.email && !user.email.endsWith('@phone.crosscoin.in')
             ? await GuestUser.findAll({ where: { email: user.email.toLowerCase(), status: 'active' } })
             : [];
@@ -214,9 +268,17 @@ module.exports.login = async (req, res) => {
         const matchedIds = guestsByEmail.map(g => g.id);
 
         if (matchedIds.length > 0) {
-            await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
-            await Order.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            // Only relink guest orders/addresses that belong to THIS brand so a
+            // shared-email guest on another storefront stays isolated.
+            const orderWhere = { guest_user_id: matchedIds, user_id: null };
+            if (brandId) orderWhere.brand_id = brandId;
+            await Order.update({ user_id: user.id, guest_user_id: null }, { where: orderWhere });
             await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: matchedIds, user_id: null } });
+            // Mark the guest converted only once its orders on every brand are linked.
+            const remaining = await Order.count({ where: { guest_user_id: matchedIds, user_id: null } });
+            if (remaining === 0) {
+                await GuestUser.update({ status: 'converted', convertedAt: new Date() }, { where: { id: matchedIds } });
+            }
             const delivered = await Order.findAll({ where: { user_id: user.id, status: 'delivered' } });
             for (const o of delivered) {
                 try { await loyaltyService.creditPoints(user.id, o.id, o.final_amount, o.brand_id || 1); } catch (e) { logger.warn('[Login] Failed to credit loyalty points:', e.message); }

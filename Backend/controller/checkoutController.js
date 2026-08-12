@@ -499,21 +499,40 @@ exports.initiateGuestCheckout = async (req, res) => {
 
     const normalizedPhone = String(phone).replace(/\D/g, '').slice(-10);
     const { Op } = require('sequelize');
+    const brandId = req.brandId || (req.brand && req.brand.id) || 1;
 
+    // Brand-scoped consumer: each storefront has its own consumer namespace, so
+    // match within this brand only. A same-phone/email shopper on another brand
+    // stays a separate account.
     let user = await User.findOne({
-      where: { [Op.or]: [{ phone: { [Op.like]: `%${normalizedPhone}` } }, { email }] },
+      where: {
+        source_brand_id: brandId,
+        [Op.or]: [{ phone: { [Op.like]: `%${normalizedPhone}` } }, { email }],
+      },
     });
     if (!user) {
       const baseName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
-      const uniqueUsername = `${baseName} (${normalizedPhone})`;
-      user = await User.create({
-        username: uniqueUsername,
-        email,
-        phone: normalizedPhone,
-        role: 'consumer',
-        password: require('crypto').randomBytes(16).toString('hex'),
-      });
-      logger.info(`Guest checkout: created user ${user.id} for phone ${normalizedPhone}`);
+      const uniqueUsername = `${baseName} (${normalizedPhone}·b${brandId})`;
+      try {
+        user = await User.create({
+          username: uniqueUsername,
+          email,
+          phone: normalizedPhone,
+          role: 'consumer',
+          source_brand_id: brandId,
+          password: require('crypto').randomBytes(16).toString('hex'),
+        });
+        logger.info(`Guest checkout: created user ${user.id} for phone ${normalizedPhone} on brand ${brandId}`);
+      } catch (createErr) {
+        // Pre-isolation schema (global unique on phone/email) → reuse the
+        // existing account for this phone/email so checkout never breaks.
+        logger.warn(`Guest checkout: create fell back to existing account: ${createErr.message}`);
+        user = await User.findOne({
+          where: { [Op.or]: [{ phone: { [Op.like]: `%${normalizedPhone}` } }, { email }] },
+        });
+        if (!user) throw createErr;
+        if (!user.source_brand_id) await user.update({ source_brand_id: brandId });
+      }
     }
 
     let guestUser = await GuestUser.findOne({ where: { phone: normalizedPhone } });
