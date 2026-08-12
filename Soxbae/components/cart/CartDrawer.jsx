@@ -262,6 +262,28 @@ export default function CartDrawer() {
     }
   };
 
+  // "Fix my address" (from the issues popup) must actually REVEAL the address
+  // form — not just dismiss the popup. Open the editable form, prefill it from
+  // any selected address so the customer only corrects what's wrong, and scroll
+  // the delivery section into view (it sits above the payment box / popup).
+  const deliveryRef = useRef(null);
+  const openAddressForm = () => {
+    setAddrIssues(null);
+    if (selectedAddress) {
+      setForm({
+        fullName: selectedAddress.full_name || selectedAddress.fullName || '',
+        phoneNumber: selectedAddress.phone_number || selectedAddress.phoneNumber || '',
+        address: selectedAddress.address || '', city: selectedAddress.city || '',
+        state: selectedAddress.state || '', postalCode: selectedAddress.postal_code || selectedAddress.postalCode || '',
+        country: selectedAddress.country || 'India', isDefault: false,
+      });
+    }
+    setShowForm(true);
+    setTimeout(() => {
+      try { deliveryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    }, 60);
+  };
+
   // Auto-save the delivery address once all details are valid (debounced), so the
   // customer never has to hit a "Save" button. Signature guard prevents re-saving
   // the same address repeatedly.
@@ -461,7 +483,7 @@ export default function CartDrawer() {
                   </li>
                 ))}
               </ul>
-              <button type="button" onClick={() => setAddrIssues(null)}
+              <button type="button" onClick={openAddressForm}
                 style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: 'var(--navy, #1a2450)', color: '#fff', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
                 Fix my address
               </button>
@@ -544,7 +566,7 @@ export default function CartDrawer() {
               </div>
 
               {/* Delivery details — contact + address in ONE box (like the other brands) */}
-              <div className="cd-co-section">
+              <div className="cd-co-section" ref={deliveryRef}>
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery address' : 'Delivery details'}</div>
                 {!isAuthenticated && (
                   <p className="muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>Have an account? <Link href="/login" onClick={closeCart} style={{ color: 'var(--navy)', fontWeight: 600 }}>Sign in</Link></p>
