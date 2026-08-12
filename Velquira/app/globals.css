@@ -966,6 +966,79 @@ button { font-family: inherit; cursor: pointer; }
 .article-body img { border-radius: var(--r); margin: 16px 0; }
 
 /* ============================================================================
+   ACCOUNT — hero + stats (CrossCoin-style, Velquira tokens)
+   ========================================================================== */
+.acc-hero {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  background: linear-gradient(120deg, var(--teal) 0%, var(--navy) 78%);
+  border-radius: var(--r-lg); padding: 28px 30px; color: #fff;
+  box-shadow: var(--shadow-soft); position: relative; overflow: hidden;
+}
+.acc-hero-avatar {
+  width: 64px; height: 64px; border-radius: var(--r); flex-shrink: 0;
+  display: grid; place-items: center; font-family: var(--font-serif);
+  font-size: 24px; font-weight: 700; color: var(--navy);
+  background: linear-gradient(150deg, #fff 0%, var(--gold-lite) 100%);
+  box-shadow: 0 6px 18px -8px rgba(0,0,0,.4);
+}
+.acc-hero-info { flex: 1 1 auto; min-width: 0; }
+.acc-hero-greeting { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+.acc-hero-name { font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; color: #fff; margin: 4px 0 3px; overflow-wrap: break-word; }
+.acc-hero-contact { font-size: 13.5px; color: rgba(255,255,255,.72); overflow-wrap: break-word; }
+.acc-hero-logout {
+  display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08);
+  color: #fff; border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 600;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.acc-hero-logout:hover { background: #fff; border-color: #fff; color: var(--navy); }
+.acc-hero-logout svg { transition: color .2s; }
+
+.acc-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px;
+}
+.acc-stat {
+  background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r);
+  padding: 18px 14px; text-align: center; display: grid; gap: 5px; justify-items: center;
+  transition: box-shadow .2s, border-color .2s, transform .2s;
+}
+.acc-stat:hover { box-shadow: var(--shadow-soft); border-color: var(--line); transform: translateY(-2px); }
+.acc-stat-val { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; }
+.acc-stat-points { display: inline-flex; align-items: center; gap: 6px; color: var(--teal-600); }
+.acc-stat-points svg { color: var(--star); }
+.acc-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+
+/* Polished order cards */
+.acc-order-list { display: grid; gap: 12px; }
+.acc-order-card {
+  background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r); padding: 16px 18px;
+  display: grid; gap: 12px; transition: box-shadow .2s, border-color .2s;
+}
+.acc-order-card:hover { box-shadow: var(--shadow-soft); border-color: var(--line); }
+.acc-order-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.acc-order-id { display: grid; gap: 3px; min-width: 0; }
+.acc-order-id b { font-size: 15px; color: var(--ink); }
+.acc-order-date { font-size: 12px; color: var(--ink-soft); }
+.acc-order-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.acc-order-total { font-family: var(--font-serif); font-size: 19px; font-weight: 700; color: var(--navy); }
+.acc-order-link {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+  color: #fff; background: var(--navy); border-radius: 999px; padding: 8px 16px;
+  transition: background .2s;
+}
+.acc-order-link:hover { background: var(--navy-700); }
+
+@media (max-width: 640px) {
+  .acc-hero { padding: 22px 20px; gap: 14px; }
+  .acc-hero-logout { order: 3; margin-left: auto; }
+  .acc-stats { grid-template-columns: repeat(2, 1fr); }
+  .acc-stat-val { font-size: 24px; }
+}
+@media (max-width: 380px) {
+  .acc-order-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+/* ============================================================================
    ACCOUNT
    ========================================================================== */
 .account-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -1282,6 +1355,9 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Account / misc cards */
 .order-row, .addr-card, .account-nav, .account-content, .settings-single .contact-form, .track-card { border-radius: 6px; border-color: var(--line); }
+.acc-order-card, .acc-stat { border-radius: 6px; border-color: var(--line); }
+.acc-hero { border-radius: 8px; }
+.acc-hero-avatar { border-radius: 6px; }
 .account-nav-btn.active { background: var(--navy); }
 .pill.sign-in, .account-nav-btn { border-radius: 4px; }
 

@@ -26,6 +26,20 @@ const TABS = [
   { label: 'Account details', icon: 'User' },
 ];
 
+function getInitials(name) {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return ''; }
+}
+
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'booked', 'out_for_delivery'];
+
 function Dashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -105,14 +119,36 @@ function Dashboard() {
   const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); toast.success('Default address updated'); } catch { toast.error('Could not update default'); } };
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
+  const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
+  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
-      <div className="account-head">
-        <div className="page-hero">
-          <span className="eyebrow">Account</span>
-          <h1>Hi{user?.username ? `, ${user.username}` : ''}</h1>
-          <p>{user?.email || user?.phone || 'Welcome back to Velquira.'}</p>
+      {/* Hero */}
+      <div className="acc-hero">
+        <div className="acc-hero-avatar">{getInitials(user?.username)}</div>
+        <div className="acc-hero-info">
+          <span className="acc-hero-greeting">Welcome back,</span>
+          <h1 className="acc-hero-name">{user?.username || 'Guest'}</h1>
+          <p className="acc-hero-contact">{user?.email || user?.phone || user?.phone_number || 'Velquira member'}</p>
         </div>
+        <button className="acc-hero-logout" onClick={doLogout}>
+          <Icon name="ArrowUpRight" size={15} /> Sign out
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="acc-stats">
+        <div className="acc-stat"><span className="acc-stat-val">{orders.length}</span><span className="acc-stat-label">Orders</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{addresses.length}</span><span className="acc-stat-label">Addresses</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{deliveredCount}</span><span className="acc-stat-label">Delivered</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{activeCount}</span><span className="acc-stat-label">Active</span></div>
+        {user?.loyalty_points > 0 && (
+          <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
+            <span className="acc-stat-val acc-stat-points"><Icon name="Star" size={18} /> {user.loyalty_points}</span>
+            <span className="acc-stat-label">Points</span>
+          </div>
+        )}
       </div>
 
       <div className="account-layout">
@@ -139,13 +175,24 @@ function Dashboard() {
               ) : orders.length === 0 ? (
                 <div className="empty">No orders yet. <Link href="/products" className="btn btn-primary">Start shopping</Link></div>
               ) : (
-                <div className="order-list">
+                <div className="acc-order-list">
                   {orders.map((o) => (
-                    <Link href={`/account/orders/${o.id}`} className="order-row" key={o.id}>
-                      <div><b>#{o.order_number}</b><span className="muted">{o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></div>
-                      <span className={`order-status ${statusClass(o.status)}`}>{o.status}</span>
-                      <b>₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
-                    </Link>
+                    <div className="acc-order-card" key={o.id}>
+                      <div className="acc-order-top">
+                        <div className="acc-order-id">
+                          <b>#{o.order_number}</b>
+                          <span className="acc-order-date">{formatDate(o.created_at)}</span>
+                        </div>
+                        <span className={`order-status ${statusClass(o.status)}`}>{o.status}</span>
+                      </div>
+                      <div className="acc-order-bottom">
+                        <span className="acc-order-total">₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</span>
+                        <Link href={`/account/orders/${o.id}`} className="acc-order-link">
+                          {['delivered', 'cancelled'].includes((o.status || '').toLowerCase()) ? 'View' : 'Track'}
+                          <Icon name="ArrowRight" size={14} />
+                        </Link>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
