@@ -463,7 +463,12 @@ async function updateTemplate(name, brandId = 1) {
     logger.info(`[WhatsApp] Deleted template "${name}" for brand ${brandId}`);
   } catch (delErr) {
     const msg = metaError(delErr);
-    if (!msg.toLowerCase().includes('not found') && !msg.toLowerCase().includes('does not exist')) {
+    // A "doesn't exist" delete is benign — we then just create it fresh. Meta's
+    // wording varies: "not found", "wasn't found", "does not exist", "no such".
+    const m = msg.toLowerCase();
+    const benignMissing = m.includes('not found') || m.includes("n't found")
+      || m.includes('does not exist') || m.includes('no such') || m.includes('doesn');
+    if (!benignMissing) {
       throw new Error(`Failed to delete template "${name}": ${msg}`);
     }
     logger.info(`[WhatsApp] Template "${name}" did not exist — proceeding to create`);
