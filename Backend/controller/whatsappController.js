@@ -532,6 +532,17 @@ exports.getStats = async (req, res) => {
   try {
     const brandId = parseInt(req.query.brandId) || 1;
     const { Op, fn, col } = require('sequelize');
+    const { sequelize } = require('../config/db.js');
+
+    // whatsapp_messages has no brand_id — it belongs to a conversation, which
+    // does. Scope every message metric to THIS brand's conversations, otherwise
+    // totals / delivery+read rates / the 7-day chart show GLOBAL numbers across
+    // all brands instead of the selected one.
+    const brandMsgWhere = {
+      conversation_id: {
+        [Op.in]: sequelize.literal(`(SELECT id FROM whatsapp_conversations WHERE brand_id = ${Number(brandId)})`),
+      },
+    };
 
     const [
       totalConversations,
@@ -544,11 +555,11 @@ exports.getStats = async (req, res) => {
       WhatsappConversation.count({ where: { brand_id: brandId } }),
       WhatsappConversation.count({ where: { brand_id: brandId, status: 'open' } }),
       WhatsappConversation.count({ where: { brand_id: brandId, status: 'resolved' } }),
-      WhatsappMessage.count(),
+      WhatsappMessage.count({ where: brandMsgWhere }),
       // One grouped scan (uses idx_wa_msg_dir_status) for the whole outbound
       // status breakdown instead of three separate full-table counts.
       WhatsappMessage.findAll({
-        where: { direction: 'outbound' },
+        where: { direction: 'outbound', ...brandMsgWhere },
         attributes: ['status', [fn('COUNT', col('id')), 'count']],
         group: ['status'],
         raw: true,
@@ -558,6 +569,7 @@ exports.getStats = async (req, res) => {
         where: {
           direction: 'outbound',
           sent_at: { [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+          ...brandMsgWhere,
         },
         attributes: [
           [fn('DATE', col('sent_at')), 'day'],
