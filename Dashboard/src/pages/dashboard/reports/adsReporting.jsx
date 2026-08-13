@@ -145,10 +145,19 @@ export default function AdsReporting() {
   };
   const setMetaAccount = (brandId, v) =>
     setMetaConfig((c) => c.map((r) => (r.brand_id === brandId ? { ...r, ad_account_id: v } : r)));
+  const setMetaToken = (brandId, v) =>
+    setMetaConfig((c) => c.map((r) => (r.brand_id === brandId ? { ...r, access_token: v } : r)));
+  // Each brand can have its own account AND token. Token is write-only: only send
+  // it when the user typed a new value, so a blank field never wipes the saved one.
+  const metaPayload = () => metaConfig.map((r) => ({
+    brand_id: r.brand_id,
+    ad_account_id: r.ad_account_id,
+    ...(r.access_token ? { access_token: r.access_token } : {}),
+  }));
   const saveMetaConfig = async () => {
     setMsg('');
     try {
-      await adsReportService.saveMetaConfig(metaConfig.map((r) => ({ brand_id: r.brand_id, ad_account_id: r.ad_account_id })));
+      await adsReportService.saveMetaConfig(metaPayload());
       setMsg('Meta accounts saved.');
       const d = await adsReportService.getMetaConfig(); if (d?.success) setMetaConfig(d.config || []);
     } catch (e) { setMsg(e?.response?.data?.message || 'Save failed'); }
@@ -156,8 +165,8 @@ export default function AdsReporting() {
   const runMetaSync = async () => {
     setMetaSyncing(true); setMetaResults(null); setMsg('');
     try {
-      // Persist any edited account ids first so the sync uses them.
-      await adsReportService.saveMetaConfig(metaConfig.map((r) => ({ brand_id: r.brand_id, ad_account_id: r.ad_account_id })));
+      // Persist any edited account ids + tokens first so the sync uses them.
+      await adsReportService.saveMetaConfig(metaPayload());
       // Manual fetch pulls THROUGH today so the running day's spend is included
       // (whatever Meta reports right now). The report table still counts orders
       // only up to yesterday, but the ad_spends rows are stored up to today.
@@ -429,15 +438,21 @@ export default function AdsReporting() {
             </Button>
           </div>
         )}>
-        <div style={{ ...S.label, marginBottom: 8 }}>Meta ad account per brand (numeric id — the “act_” prefix is optional)</div>
+        <div style={{ ...S.label, marginBottom: 8 }}>Meta ad account &amp; token per brand — each brand can use its own (numeric id, “act_” optional; token needs ads_read)</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {metaConfig.length === 0 && <span style={S.hint}>No brands found.</span>}
           {metaConfig.map((r) => (
             <div key={r.brand_id} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 130, fontSize: 13, color: 'var(--ds-color-text)' }}>{r.brand}</div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <Input placeholder="e.g. 1837181420281602" value={r.ad_account_id || ''}
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <Input placeholder="Ad account id — e.g. 1837181420281602" value={r.ad_account_id || ''}
                   onChange={(e) => setMetaAccount(r.brand_id, e.target.value)} />
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <Input type="password" autoComplete="off"
+                  placeholder={r.hasToken ? 'Token saved — paste to replace' : 'Paste ads_read token'}
+                  value={r.access_token || ''}
+                  onChange={(e) => setMetaToken(r.brand_id, e.target.value)} />
               </div>
               <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20, whiteSpace: 'nowrap',
                 color: r.hasToken ? POS : WARN, background: r.hasToken ? 'var(--ds-color-success-bg, #dcfce7)' : 'var(--ds-color-warn-bg, #fef3c7)' }}>

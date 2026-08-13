@@ -133,7 +133,9 @@ exports.getMetaConfig = async (req, res) => {
     }
 };
 
-// POST /meta/config  { config: [{ brand_id, ad_account_id }] } — upsert per brand.
+// POST /meta/config  { config: [{ brand_id, ad_account_id, access_token? }] }
+// — upsert per brand. Each brand can have its OWN ad account AND its own token.
+const FB_TOKEN_KEY = 'FB_ACCESS_TOKEN';
 exports.saveMetaConfig = async (req, res) => {
     try {
         const entries = Array.isArray(req.body?.config) ? req.body.config : [];
@@ -143,6 +145,13 @@ exports.saveMetaConfig = async (req, res) => {
             // Strip an "act_" prefix if the admin pasted the full account id.
             const val = String(e.ad_account_id ?? '').trim().replace(/^act_/i, '');
             await setBrandSetting(Number(e.brand_id), META_ACCOUNT_KEY, val, false, 'ads', 'Meta ad account id for spend sync', by);
+            // Optional per-brand token (write-only). Only save when a non-empty
+            // value is provided so leaving the field blank never wipes an existing
+            // token. Stored encrypted.
+            const tok = String(e.access_token ?? '').trim();
+            if (tok) {
+                await setBrandSetting(Number(e.brand_id), FB_TOKEN_KEY, tok, true, 'ads', 'Meta/Facebook token (ads_read) for ad-spend sync', by);
+            }
         }
         res.json({ success: true });
     } catch (e) {
