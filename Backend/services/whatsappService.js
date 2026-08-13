@@ -258,6 +258,16 @@ async function deleteTemplate(name, brandId = 1) {
   return res.data;
 }
 
+// Meta locks a DELETED template's name+language for up to 4 weeks ("New English
+// content can't be added while the existing English content is being deleted"),
+// so a re-sync that deleted a template can't recreate it under the same name for
+// weeks. To register a clean set immediately we version every template name with
+// a suffix. Bump TEMPLATE_VERSION (e.g. to '_v3') if names ever get stuck again.
+// The seeder (buildTemplates) AND every sender resolve names through tName() so
+// they can never drift apart.
+const TEMPLATE_VERSION = '_v2';
+const tName = (base) => `${base}${TEMPLATE_VERSION}`;
+
 // ─── Build the canonical template list ────────────────────────────────────────
 // Used by both seedDefaultTemplates and updateTemplate / updateAllTemplates
 function buildTemplates(storeName, storeUrl) {
@@ -270,7 +280,7 @@ function buildTemplates(storeName, storeUrl) {
   return [
     // ── Transactional / Utility ────────────────────────────────────────────────
     {
-      name: 'order_confirmation', category: 'UTILITY', language: 'en',
+      name: tName('order_confirmation'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Confirmed' },
         {
@@ -282,7 +292,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'order_packed', category: 'UTILITY', language: 'en',
+      name: tName('order_packed'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Packed & Ready' },
         {
@@ -294,7 +304,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'order_shipped', category: 'UTILITY', language: 'en',
+      name: tName('order_shipped'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Your Order Is On Its Way!' },
         {
@@ -306,7 +316,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'order_out_for_delivery', category: 'UTILITY', language: 'en',
+      name: tName('order_out_for_delivery'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Out for Delivery Today!' },
         {
@@ -318,7 +328,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'order_delivered', category: 'UTILITY', language: 'en',
+      name: tName('order_delivered'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Delivered!' },
         {
@@ -330,7 +340,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'order_cancelled', category: 'UTILITY', language: 'en',
+      name: tName('order_cancelled'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Cancelled' },
         {
@@ -342,7 +352,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'cod_order_confirmation', category: 'UTILITY', language: 'en',
+      name: tName('cod_order_confirmation'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Confirm Your COD Order' },
         {
@@ -361,7 +371,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'address_request', category: 'UTILITY', language: 'en',
+      name: tName('address_request'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Share Your Correct Address' },
         {
@@ -373,7 +383,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'refund_processed', category: 'UTILITY', language: 'en',
+      name: tName('refund_processed'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Refund Initiated' },
         {
@@ -386,7 +396,7 @@ function buildTemplates(storeName, storeUrl) {
     },
     // ── Marketing ──────────────────────────────────────────────────────────────
     {
-      name: 'review_request', category: 'MARKETING', language: 'en',
+      name: tName('review_request'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Share Your Experience!' },
         {
@@ -398,7 +408,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'popup_coupon', category: 'MARKETING', language: 'en',
+      name: tName('popup_coupon'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Exclusive Offer Just for You!' },
         {
@@ -410,7 +420,7 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
-      name: 'cart_abandoned', category: 'MARKETING', language: 'en',
+      name: tName('cart_abandoned'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Your Cart Is Waiting!' },
         {
@@ -634,7 +644,7 @@ async function testConnection(phone, brandId = 1) {
 // All lifecycle templates lead with {{1}}=customer name, {{2}}=brand. `name`
 // defaults to a friendly "there" so callers that don't have it still work.
 async function sendOrderConfirmation(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_confirmation', [
+  return sendTemplate(phone, tName('order_confirmation'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -643,7 +653,7 @@ async function sendOrderConfirmation(phone, data, brandId = 1) {
 }
 
 async function sendOrderPacked(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_packed', [
+  return sendTemplate(phone, tName('order_packed'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -651,7 +661,7 @@ async function sendOrderPacked(phone, data, brandId = 1) {
 }
 
 async function sendAddressRequest(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'address_request', [
+  return sendTemplate(phone, tName('address_request'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -660,7 +670,7 @@ async function sendAddressRequest(phone, data, brandId = 1) {
 
 async function sendOrderShipped(phone, data, brandId = 1) {
   const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
-  return sendTemplate(phone, 'order_shipped', [
+  return sendTemplate(phone, tName('order_shipped'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -670,7 +680,7 @@ async function sendOrderShipped(phone, data, brandId = 1) {
 }
 
 async function sendOutForDelivery(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_out_for_delivery', [
+  return sendTemplate(phone, tName('order_out_for_delivery'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -679,7 +689,7 @@ async function sendOutForDelivery(phone, data, brandId = 1) {
 }
 
 async function sendOrderDelivered(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_delivered', [
+  return sendTemplate(phone, tName('order_delivered'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -687,7 +697,7 @@ async function sendOrderDelivered(phone, data, brandId = 1) {
 }
 
 async function sendOrderCancelled(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'order_cancelled', [
+  return sendTemplate(phone, tName('order_cancelled'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -715,7 +725,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
       to,
       type: 'template',
       template: {
-        name: 'cod_order_confirmation',
+        name: tName('cod_order_confirmation'),
         language: { code: 'en' },
         components: [
           {
@@ -749,7 +759,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
 }
 
 async function sendRefundProcessed(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'refund_processed', [
+  return sendTemplate(phone, tName('refund_processed'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
@@ -761,7 +771,7 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 // ─── New ecommerce notification helpers ──────────────────────────────────────
 
 async function sendAbandonedCart(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'cart_abandoned', [
+  return sendTemplate(phone, tName('cart_abandoned'), [
     data.customerName || 'there',
     data.productName || 'your items',
     await _brandName(brandId),
@@ -771,7 +781,7 @@ async function sendAbandonedCart(phone, data, brandId = 1) {
 
 async function sendReviewRequest(phone, data, brandId = 1) {
   const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
-  return sendTemplate(phone, 'review_request', [
+  return sendTemplate(phone, tName('review_request'), [
     data.name || data.customerName || 'there',
     await _brandName(brandId),
     data.reviewUrl || `https://${storeUrl}/review`,
@@ -807,7 +817,7 @@ async function sendPostPurchaseUpsell(phone, data, brandId = 1) {
 }
 
 async function sendPopupCoupon(phone, data, brandId = 1) {
-  return sendTemplate(phone, 'popup_coupon', [await _brandName(brandId), data.couponCode || 'PREPAID10'], brandId);
+  return sendTemplate(phone, tName('popup_coupon'), [await _brandName(brandId), data.couponCode || 'PREPAID10'], brandId);
 }
 
 // ─── Broadcast: send template to a list of phones ────────────────────────────
