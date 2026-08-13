@@ -364,8 +364,9 @@ function buildTemplates(storeName, storeUrl) {
         {
           type: 'BUTTONS',
           buttons: [
-            { type: 'QUICK_REPLY', text: '✅ Confirm Address' },
-            { type: 'QUICK_REPLY', text: '✏️ Wrong Address' },
+            // Meta forbids emojis / formatting / newlines in button labels.
+            { type: 'QUICK_REPLY', text: 'Confirm Address' },
+            { type: 'QUICK_REPLY', text: 'Wrong Address' },
           ],
         },
       ],
@@ -401,7 +402,7 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: 'Share Your Experience!' },
         {
           type: 'BODY',
-          text: `Thanks for your order, {{1}}! 🌟\n\nHow did we do? Please take a moment to rate your experience with *{{2}}* or leave a quick review — it means the world to us and helps other shoppers.\n\n👉 Share your feedback: {{3}}`,
+          text: `Thanks for your order, {{1}}! 🌟\n\nHow did we do? Please take a moment to rate your experience with *{{2}}* or leave a quick review — it means the world to us and helps other shoppers.\n\n👉 Share your feedback here: {{3}}\n\nThank you — it only takes a minute!`,
           example: { body_text: [['Rushikesh', storeName, `https://${storeUrl}/review`]] },
         },
         { type: 'FOOTER', text: footer },
