@@ -154,10 +154,34 @@ class IThinkService {
       const response = await this.axiosInstance.post('/api_v3/rate/check.json', payload);
       const raw = response.data;
 
-      // Normalise into a flat array of courier options
+      // Normalise into a flat array of courier options. iThink's rate/check
+      // response comes back in several shapes depending on account/route, and a
+      // shape we didn't handle used to normalise to [] → a FALSE "not serviceable"
+      // even when the pincode is deliverable. Handle them all:
+      const looksCourier = (v) => v && typeof v === 'object' && !Array.isArray(v)
+        && (('cod' in v) || ('prepaid' in v) || ('rate' in v) || ('mode' in v)
+            || ('service_type' in v) || ('logistics_name' in v) || ('logistic_name' in v));
+      const flattenObject = (obj) => {
+        const rows = [];
+        for (const [key, val] of Object.entries(obj)) {
+          if (looksCourier(val)) rows.push({ logistics: key, ...val });
+          else if (val && typeof val === 'object' && !Array.isArray(val)) {
+            // One nested level (e.g. keyed by pincode → { <courier>: {...} }).
+            for (const [k2, v2] of Object.entries(val)) {
+              if (looksCourier(v2)) rows.push({ logistics: k2, ...v2 });
+            }
+          }
+        }
+        return rows;
+      };
+
       let couriers = [];
       if (raw?.data && Array.isArray(raw.data)) {
         couriers = raw.data;
+      } else if (raw?.data && typeof raw.data === 'object') {
+        // { data: { delhivery:{cod,prepaid,rate,…}, bluedart:{…} } } — the shape
+        // that previously slipped through and returned zero couriers.
+        couriers = flattenObject(raw.data);
       } else if (raw?.courier_data && typeof raw.courier_data === 'object') {
         // iThink sometimes returns { courier_data: { delhivery: {...}, bluedart: {...} } }
         couriers = Object.entries(raw.courier_data).map(([key, val]) => ({
@@ -167,9 +191,10 @@ class IThinkService {
       } else if (Array.isArray(raw)) {
         couriers = raw;
       } else if (raw && typeof raw === 'object') {
-        // Try to extract any array-like structure
+        // Try an array-like structure first, then any keyed-object of couriers.
         const firstArrayKey = Object.keys(raw).find(k => Array.isArray(raw[k]));
         if (firstArrayKey) couriers = raw[firstArrayKey];
+        else couriers = flattenObject(raw);
       }
 
       logger.debug(`Found ${couriers.length} courier options`);
