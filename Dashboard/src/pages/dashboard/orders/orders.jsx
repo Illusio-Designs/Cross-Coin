@@ -21,7 +21,7 @@ import {
     ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
     Cancel01Icon, Delete02Icon, Search01Icon, FilterIcon, Download04Icon,
     Package01Icon, UserIcon, PencilEdit02Icon, Calendar01Icon,
-    DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon
+    DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon, WhatsappIcon
 } from '@hugeicons/core-free-icons';
 
 // Compact row overflow menu ("⋯ more"). Rendered through a portal so it isn't
@@ -651,6 +651,12 @@ const Orders = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                     <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>
                     <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>
+                    {label === 'COD' && row.cod_address_confirmed && (
+                      <span title={`Customer confirmed their address on WhatsApp${row.cod_address_confirmed_at ? ' · ' + new Date(row.cod_address_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#0b7a5e', background: 'var(--ds-color-success-bg, #dcfce7)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                        <HugeiconsIcon icon={WhatsappIcon} size={11} strokeWidth={2} /> confirmed
+                      </span>
+                    )}
                 </div>
             );
         }, width: "104px" },
@@ -1124,6 +1130,23 @@ const Orders = () => {
                                     <span className="odm-label">Order Status</span>
                                     <span className={`status-badge status-${getStatusClassName(selectedOrder.status)}`}>{getStatusDisplayText(selectedOrder.status)}</span>
                                 </div>
+                                {selectedOrder.payment_type?.toLowerCase() === 'cod' && (
+                                    <div className="odm-field">
+                                        <span className="odm-label">Address (WhatsApp)</span>
+                                        {selectedOrder.cod_address_confirmed ? (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0b7a5e' }}>
+                                                <HugeiconsIcon icon={WhatsappIcon} size={13} strokeWidth={2} /> Confirmed by customer
+                                                {selectedOrder.cod_address_confirmed_at && (
+                                                    <span style={{ fontWeight: 500, color: 'var(--ds-color-text-muted)' }}>
+                                                        · {new Date(selectedOrder.cod_address_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>Awaiting customer confirmation</span>
+                                        )}
+                                    </div>
+                                )}
                                 {selectedOrder.coupon_code && (
                                     <div className="odm-field">
                                         <span className="odm-label">Coupon</span>
