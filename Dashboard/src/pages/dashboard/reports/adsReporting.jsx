@@ -447,6 +447,30 @@ export default function AdsReporting() {
           ))}
         </div>
 
+        {/* Inline help: how to obtain the ad account ID + token from Meta. */}
+        <details style={{ marginTop: 14, fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--ds-color-text)' }}>
+            Where do I find the ad account ID &amp; token?
+          </summary>
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 9, lineHeight: 1.55 }}>
+            <div>
+              <b>Ad account ID</b> — Meta <b>Business Settings → Accounts → Ad Accounts</b> → open the account →
+              copy the numeric <b>“Ad account ID”</b> (e.g. 1837181420281602). It's also shown in the
+              Ads Manager account selector. Paste just the number here — the “act_” prefix is optional.
+            </div>
+            <div>
+              <b>Token</b> (the “token ✓” badge) — reuses the brand's <code>FB_ACCESS_TOKEN</code> and must carry the
+              <b> ads_read</b> permission. Create a permanent one in <b>Business Settings → Users → System Users</b> →
+              assign the ad account(s) + your app → <b>Generate token</b> → tick <b>ads_read</b>. Save it under the
+              brand's settings as <code>FB_ACCESS_TOKEN</code> (Dashboard → Brands → the brand → settings).
+            </div>
+            <div style={{ color: 'var(--ds-color-text-faint)' }}>
+              Tip: one System-User token can serve every brand — just give that user access to all the ad accounts.
+              A green “token ✓” means the brand already has a token saved.
+            </div>
+          </div>
+        </details>
+
         {metaResults && (
           <div style={{ marginTop: 16 }}>
             <div style={{ ...S.label, marginBottom: 8 }}>
