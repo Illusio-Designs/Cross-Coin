@@ -31,9 +31,18 @@ function OverflowMenu({ items }) {
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState(null);
     const btnRef = useRef(null);
+    const menuRef = useRef(null);
     useEffect(() => {
         if (!open) return;
-        const onDoc = (e) => { if (!btnRef.current || !btnRef.current.contains(e.target)) setOpen(false); };
+        // The menu is rendered in a PORTAL (document.body), so a click on a menu
+        // item is NOT inside btnRef. Treat clicks inside the menu itself as
+        // "inside" too — otherwise mousedown closed/unmounted the menu before the
+        // item's click could fire, so every action silently did nothing.
+        const onDoc = (e) => {
+            const inBtn = btnRef.current && btnRef.current.contains(e.target);
+            const inMenu = menuRef.current && menuRef.current.contains(e.target);
+            if (!inBtn && !inMenu) setOpen(false);
+        };
         const onLeave = () => setOpen(false);
         const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('mousedown', onDoc);
@@ -64,7 +73,7 @@ function OverflowMenu({ items }) {
                 </svg>
             </button>
             {open && pos && createPortal(
-                <div className="ord-menu" role="menu" style={{ top: pos.top, left: pos.left }}>
+                <div className="ord-menu" role="menu" ref={menuRef} style={{ top: pos.top, left: pos.left }}>
                     {items.map((it, i) => (
                         <button key={i} type="button" role="menuitem"
                             className={`ord-menu-item${it.tone === 'danger' ? ' danger' : ''}`}
