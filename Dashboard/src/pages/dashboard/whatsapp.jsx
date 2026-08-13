@@ -990,25 +990,44 @@ export function WhatsAppManager() {
     const optimistic = {
       id: tempId, _optimistic: true, conversation_id: convId,
       direction: 'outbound', type: 'text', body: fullMessage,
-      status: 'sending', sent_at: new Date().toISOString(), _quotedMsg: quoted,
+      status: 'sending', sent_at: new Date().toISOString(),
+      _quotedMsg: quoted, _quotedWaId: quotedWaId, _brandId: activeConv?.brand_id || brandId || 1,
     };
     setMessages(prev => [...prev, optimistic]);
     setReply(''); setReplyTo(null); setShowEmoji(false); isNearBottomRef.current = true;
     setSending(true);
+    await deliverReply(optimistic);
+    setSending(false);
+  };
+
+  // Actual network send + status reconciliation, shared by first-send and Retry.
+  // Marks the bubble 'failed' (never drops it) so it can always be retried —
+  // just like the real WhatsApp app.
+  const deliverReply = async (msg) => {
+    const tempId = msg.id;
     try {
-      const data = await whatsappService.sendReply(convId, fullMessage, activeConv?.brand_id || brandId || 1, quotedWaId);
+      const data = await whatsappService.sendReply(msg.conversation_id, msg.body, msg._brandId || brandId || 1, msg._quotedWaId || null);
       if (data.success) {
-        const savedMsg = { ...data.message, _quotedMsg: quoted };
+        const savedMsg = { ...data.message, _quotedMsg: msg._quotedMsg || null };
         setMessages(prev => prev.map(m => m.id === tempId ? savedMsg : m));
-      } else {
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
-        showError('sendFailed', data.message || 'Failed to send message');
+        return true;
       }
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      showError('sendFailed', data.message || 'Failed to send message');
+      return false;
     } catch (err) {
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
       showError('sendFailed', err?.response?.data?.message || err.message || 'Failed to send message');
+      return false;
     }
-    setSending(false);
+  };
+
+  // Tap a failed bubble's "Retry" to resend it in place (keeps its position).
+  const retryReply = async (msg) => {
+    if (!msg || msg.status !== 'failed') return;
+    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, status: 'sending' } : m));
+    isNearBottomRef.current = true;
+    await deliverReply({ ...msg, status: 'sending' });
   };
 
   const fileInputRef = useRef(null);
@@ -1799,7 +1818,11 @@ export function WhatsAppManager() {
                                     {msg.status === 'sending' ? (
                                       <HugeiconsIcon icon={Clock01Icon} size={11} strokeWidth={2} color="#9ca3af" />
                                     ) : msg.status === 'failed' ? (
-                                      <span title="Failed to send" style={{color:'#0a0a0a', fontWeight:700, fontSize:12}}>!</span>
+                                      <button type="button" onClick={() => retryReply(msg)} title="Not sent — tap to retry"
+                                        style={{ display:'inline-flex', alignItems:'center', gap:3, border:'none', background:'transparent', cursor:'pointer', color:'#dc2626', fontWeight:700, fontSize:11, padding:0 }}>
+                                        <span style={{ display:'inline-flex', width:13, height:13, borderRadius:'50%', background:'#dc2626', color:'#fff', alignItems:'center', justifyContent:'center', fontSize:9, lineHeight:1 }}>!</span>
+                                        Retry
+                                      </button>
                                     ) : msg.status === 'read' ? (
                                       <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
                                         <path d="M1 5.5L4.5 9L10 3" stroke="#8a95a3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>

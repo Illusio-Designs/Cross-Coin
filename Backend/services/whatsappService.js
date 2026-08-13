@@ -17,6 +17,30 @@ const WA_HTTP = axios.create({
   timeout: 20000,
 });
 
+// POST to Meta with a conservative retry. We ONLY retry pre-flight connection
+// failures (DNS / refused / reset-on-connect) where the request provably never
+// reached Meta — never on a timeout or a 5xx, because a WhatsApp send is NOT
+// idempotent and a retry there could deliver the message twice. This soaks up
+// the momentary network blips that were surfacing to the agent as a "failed"
+// send, without any duplicate-message risk.
+async function waPostWithRetry(url, payload, config, attempts = 2) {
+  const RETRYABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET']);
+  let lastErr;
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      return await WA_HTTP.post(url, payload, config);
+    } catch (err) {
+      lastErr = err;
+      // A response (even 5xx) means Meta received the request — do not retry.
+      const preflight = !err.response && RETRYABLE.has(err.code);
+      if (!preflight || i === attempts) throw err;
+      logger.warn(`[WhatsApp] send connection error (${err.code}) — retry ${i + 1}/${attempts}`);
+      await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 // ─── Phone normaliser ─────────────────────────────────────────────────────────
 function formatE164(phone) {
   if (!phone) return null;
@@ -563,7 +587,7 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
     logger.info(`[WhatsApp] Sending reply with context message_id: ${contextMessageId}`);
   }
 
-  const res = await WA_HTTP.post(
+  const res = await waPostWithRetry(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     payload,
     { headers: authHeader(token) }
