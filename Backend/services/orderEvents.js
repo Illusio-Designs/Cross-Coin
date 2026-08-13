@@ -68,10 +68,16 @@ orderEmitter.on('order.confirmed', async (order) => {
 
     // Manual booking mode (default): don't auto-book or enqueue retries — the
     // admin books each order from the dashboard. Set SHIPPING_AUTO_SYNC=on to
-    // restore automatic booking.
-    if (!require('./shippingAutoSync.js').isAutoSyncEnabled()) {
+    // restore automatic booking for ALL confirmations.
+    // EXCEPTION: when the CUSTOMER confirmed their address over WhatsApp
+    // (order._customerConfirmed), that's exactly the signal manual mode waits
+    // for — the address is validated — so book it now even in manual mode.
+    if (!require('./shippingAutoSync.js').isAutoSyncEnabled() && !order._customerConfirmed) {
       logger.info(`[Event] manual shipping mode — ${order.order_number} left for manual booking (no auto-sync, no queue)`);
       return;
+    }
+    if (order._customerConfirmed) {
+      logger.info(`[Event] ${order.order_number}: customer confirmed via WhatsApp — auto-booking courier despite manual mode`);
     }
 
     // Trigger immediate FShip sync for this order (don't wait for 2hr cron)

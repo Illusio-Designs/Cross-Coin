@@ -383,7 +383,7 @@ exports.receiveWebhook = async (req, res) => {
                     // Trigger FShip sync via event (fire-and-forget)
                     const orderEmitter = require('../services/orderEvents.js');
                     setImmediate(() => {
-                      try { orderEmitter.emit('order.confirmed', pendingOrder); }
+                      try { pendingOrder._customerConfirmed = true; orderEmitter.emit('order.confirmed', pendingOrder); }
                       catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
                     });
 
@@ -483,7 +483,7 @@ exports.receiveWebhook = async (req, res) => {
 
                     const orderEmitter = require('../services/orderEvents.js');
                     setImmediate(() => {
-                      try { orderEmitter.emit('order.confirmed', pendingOrder); }
+                      try { pendingOrder._customerConfirmed = true; orderEmitter.emit('order.confirmed', pendingOrder); }
                       catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
                     });
 
@@ -1222,7 +1222,7 @@ async function processCodReply(phone, kind, value, brandId) {
     // processing) template — no separate text here, so the customer gets ONE
     // clean confirmation message per the merged-stage design.
     const orderEmitter = require('../services/orderEvents.js');
-    setImmediate(() => { try { orderEmitter.emit('order.confirmed', pendingOrder); } catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed: ' + e.message); } });
+    setImmediate(() => { try { pendingOrder._customerConfirmed = true; orderEmitter.emit('order.confirmed', pendingOrder); } catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed: ' + e.message); } });
     notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
     logger.info(`[WhatsApp] COD address confirmed → order ${pendingOrder.order_number}`);
   } else {
