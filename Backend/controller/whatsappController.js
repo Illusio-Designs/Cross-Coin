@@ -418,23 +418,43 @@ exports.receiveWebhook = async (req, res) => {
           // ── COD Address Confirmation — Quick Reply button taps ────────────
           // Payload format: "confirm_cod_<orderNumber>" or "reject_cod_<orderNumber>"
           if (msgType === 'button' && msgBody) {
-            const isConfirmBtn = msgBody.startsWith('confirm_cod_');
-            const isRejectBtn  = msgBody.startsWith('reject_cod_');
+            // Approved TEMPLATE quick-reply buttons deliver the LABEL as the
+            // payload (e.g. "Confirm Address") — NOT a custom "confirm_cod_<order>"
+            // payload (only interactive messages can carry that, and those need an
+            // open 24h window). Match BOTH forms so the button actually works.
+            const btnLabel = msgBody.trim().toLowerCase();
+            const isConfirmBtn = msgBody.startsWith('confirm_cod_') || btnLabel === 'confirm address';
+            const isRejectBtn  = msgBody.startsWith('reject_cod_')  || btnLabel === 'wrong address';
 
             if (isConfirmBtn || isRejectBtn) {
               try {
-                const orderNumber = msgBody.replace(/^(confirm|reject)_cod_/, '');
                 const { Order } = require('../model/orderModel.js');
                 const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+                const { ShippingAddress } = require('../model/shippingAddressModel.js');
                 const { sequelize: sq } = require('../config/db.js');
+                const { Op: OpBtn } = require('sequelize');
+
+                // Payload form carries the order number; the template-label form
+                // doesn't — fall back to the customer's latest pending COD order by
+                // phone (same lookup the typed YES/NO path uses).
+                const payloadOrder = /^(confirm|reject)_cod_/.test(msgBody)
+                  ? msgBody.replace(/^(confirm|reject)_cod_/, '') : null;
+                const phoneDigits = phone.replace(/\D/g, '').slice(-10);
 
                 const pendingOrder = await Order.findOne({
                   where: {
-                    order_number: orderNumber,
+                    ...(payloadOrder ? { order_number: payloadOrder } : {}),
                     status: 'awaiting_confirmation',
                     payment_type: 'cod',
                     cod_address_confirmed: false,
                   },
+                  include: payloadOrder ? undefined : [{
+                    model: ShippingAddress,
+                    as: 'ShippingAddress',
+                    where: { phone: { [OpBtn.like]: `%${phoneDigits}` } },
+                    required: true,
+                  }],
+                  order: [['created_at', 'DESC']],
                 });
 
                 if (pendingOrder) {
