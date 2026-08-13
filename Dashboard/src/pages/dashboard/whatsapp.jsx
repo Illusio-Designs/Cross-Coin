@@ -248,11 +248,19 @@ function AudioPlayer({ src }) {
         blobUrlRef.current = url;
         setBlobType(blob.type || '');
         setBlobUrl(url);
-        // Can this browser actually decode the audio? (Safari/iOS can't do opus.)
+        // Decide if we can play inline. canPlayType is finicky: it returns '' for
+        // a generic proxy type (application/octet-stream) or an unquoted codec
+        // string ("codecs=opus") even on Chrome/Edge that CAN play the file —
+        // which is why voice notes were falling straight to "Download". So:
+        //   • only pre-judge when the blob is a real audio/* type,
+        //   • accept the base type ("audio/ogg") if the full string is rejected,
+        //   • otherwise assume playable and let the <audio> onError be the real
+        //     fallback (that's what genuinely traps Safari/iOS + opus).
         let playable = true;
-        if (blob.type && typeof document !== 'undefined') {
+        if (blob.type && /^audio\//i.test(blob.type) && typeof document !== 'undefined') {
           const probe = document.createElement('audio');
-          playable = probe.canPlayType(blob.type) !== '';
+          const baseType = blob.type.split(';')[0].trim();
+          playable = probe.canPlayType(blob.type) !== '' || probe.canPlayType(baseType) !== '';
         }
         setLoadState(playable ? 'ready' : 'unsupported');
       })
