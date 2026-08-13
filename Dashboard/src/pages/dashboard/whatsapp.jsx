@@ -469,10 +469,40 @@ function msgPreview(msg) {
   if (msg.type === 'document') return 'Document';
   if (msg.type === 'reaction') return msg.body || '👍';
   if (msg.body?.startsWith('{')) return 'Media';
+  const cod = codButtonLabel(msg.body);
+  if (cod) return cod.text;
   return msg.body || '';
 }
 
+// COD quick-reply button taps arrive as the raw payload "confirm_cod_<order>" /
+// "reject_cod_<order>". Turn that into a human label for the chat + preview.
+function codButtonLabel(body) {
+  if (typeof body !== 'string') return null;
+  const m = body.trim().match(/^(confirm|reject)_cod_(.+)$/i);
+  if (!m) return null;
+  const isConfirm = m[1].toLowerCase() === 'confirm';
+  return {
+    isConfirm,
+    order: m[2],
+    emoji: isConfirm ? '✅' : '✏️',
+    text: isConfirm ? 'Confirmed delivery address' : 'Reported wrong address',
+  };
+}
+
 function MsgContent({ msg, brandId = 1 }) {
+  // COD confirm/reject button taps come through as the raw payload
+  // ("confirm_cod_<order>") — show a friendly label instead of that string.
+  const cod = codButtonLabel(msg.body);
+  if (cod) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+        <span style={{ fontSize: 14 }}>{cod.emoji}</span>
+        {cod.text}
+        {cod.order && <span style={{ fontWeight: 500, opacity: 0.7 }}>· #{cod.order}</span>}
+      </span>
+    );
+  }
+
   // Try to parse JSON body (media messages store metadata as JSON)
   let media = null;
   let effectiveType = msg.type;
