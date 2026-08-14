@@ -180,6 +180,17 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
   return data;
 }
 
+// Public, brand-scoped list of currently-available coupons the shopper can tap
+// to auto-apply. Same client/base-URL + brand header as validateCoupon.
+// → { success, coupons: [{ id, code, description, type, value, minPurchase, maxDiscount, endDate }] }
+export async function getPublicCoupons() {
+  const res = await fetch(`${API_URL}/api/coupons/listing`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return { success: false, coupons: [] };
+  return res.json();
+}
+
 // Aliases for backward-compat with Knitwink naming.
 export const getOrders = getUserOrders;
 export const updateOrderPayment = verifyPayment;

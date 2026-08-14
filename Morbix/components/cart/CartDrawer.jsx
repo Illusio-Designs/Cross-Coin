@@ -18,6 +18,7 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  getPublicCoupons,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
@@ -127,6 +128,8 @@ export default function CartDrawer() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  // Available public offers the shopper can tap to auto-apply (brand-scoped).
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -161,6 +164,7 @@ export default function CartDrawer() {
     if (!open) {
       setError(''); setRetryState(null); setOrderSuccess(null);
       setCouponInput(''); setAppliedCoupon(null); setCouponDiscount(0); setCouponError('');
+      setAvailableCoupons([]);
     }
   }, [open]);
 
@@ -176,6 +180,21 @@ export default function CartDrawer() {
       setSelectedFee((prev) => prev || list.find((f) => f.orderType === 'prepaid') || list.find((f) => f.isDefault) || list[0]);
     }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); } });
     return () => { alive = false; };
+  }, [open]);
+
+  // Load the tappable "available offers" list once the drawer opens with items.
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    let alive = true;
+    getPublicCoupons()
+      .then((data) => {
+        if (!alive) return;
+        const list = Array.isArray(data) ? data : data?.coupons || [];
+        setAvailableCoupons(list);
+      })
+      .catch(() => { if (alive) setAvailableCoupons([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -214,8 +233,10 @@ export default function CartDrawer() {
   // ── Coupon ──────────────────────────────────────────────────────────────
   // Validate the entered code against the current SUBTOTAL. The coupon applies
   // to both COD and prepaid; it is separate from the prepaid instant discount.
-  const applyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = async (codeArg) => {
+    // Called both from the Apply button (event arg) and from tapping an offer
+    // (string code). Fall back to the typed input when no string is passed.
+    const code = (typeof codeArg === 'string' ? codeArg : couponInput).trim().toUpperCase();
     if (!code || couponLoading) return;
     setCouponError('');
     setCouponLoading(true);
@@ -619,6 +640,36 @@ export default function CartDrawer() {
                     {couponError && <p className="cd-coupon-msg" style={{ color: 'var(--sale)' }}>{couponError}</p>}
                   </>
                 )}
+
+                {/* Available offers — tap a code to auto-apply it. Hides the
+                    already-applied one; renders nothing when the list is empty. */}
+                {(() => {
+                  const offers = availableCoupons.filter((c) => c?.code && c.code !== appliedCoupon?.code);
+                  if (offers.length === 0) return null;
+                  return (
+                    <div className="cd-offers">
+                      <div className="cd-offers-head">Available offers</div>
+                      <div className="cd-offers-list">
+                        {offers.map((c) => (
+                          <button
+                            type="button"
+                            key={c.id || c.code}
+                            className="cd-offer"
+                            onClick={() => applyCoupon(c.code)}
+                            disabled={couponLoading}
+                          >
+                            <span className="cd-offer-main">
+                              <span className="cd-offer-code">{c.code}</span>
+                              {c.description && <span className="cd-offer-desc">{c.description}</span>}
+                              {Number(c.minPurchase) > 0 && <span className="cd-offer-min">Min. spend ₹{Number(c.minPurchase).toFixed(0)}</span>}
+                            </span>
+                            <span className="cd-offer-apply">Apply</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Order summary — right after the items, so pricing is clear up front */}
