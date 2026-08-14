@@ -1136,11 +1136,19 @@ button { font-family: inherit; cursor: pointer; }
 .cd-coupon-applied { display: flex; align-items: center; justify-content: space-between; background: var(--teal-050); border-radius: 10px; padding: 10px 12px; }
 .cd-coupon-applied span { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: var(--teal-600); }
 .cd-coupon-msg { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
-/* Available offers — tappable coupon rows below the coupon input */
-.cd-offers { margin-top: 12px; }
-.cd-offers-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--teal-600); margin-bottom: 8px; }
-.cd-offers-list { display: flex; flex-direction: column; gap: 8px; }
-.cd-offer { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer; background: var(--teal-050); border: 1px dashed var(--gold-lite); border-radius: var(--r); padding: 10px 12px; font-family: inherit; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+/* Available offers — a COLLAPSED select-style dropdown. The menu overlays the
+   content below (absolutely positioned) so the drawer height never grows. */
+.cd-offers-select { position: relative; margin-top: 12px; }
+.cd-offers-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 11px 12px; font-family: inherit; transition: border-color .15s ease, box-shadow .15s ease; }
+.cd-offers-trigger:hover { border-color: var(--teal); }
+.cd-offers-trigger.open { border-color: var(--teal); box-shadow: var(--shadow-soft); }
+.cd-offers-trigger:disabled { opacity: .6; cursor: default; }
+.cd-offers-trigger-label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.cd-offers-trigger-label svg { color: var(--teal-600); flex-shrink: 0; }
+.cd-offers-chevron { display: inline-flex; align-items: center; color: var(--ink-soft); transition: transform .18s ease; flex-shrink: 0; }
+.cd-offers-trigger.open .cd-offers-chevron { transform: rotate(180deg); color: var(--teal-600); }
+.cd-offers-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; width: 100%; z-index: 20; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 14px 40px -12px rgba(42, 33, 24, 0.28); padding: 8px; }
+.cd-offer { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; cursor: pointer; background: var(--teal-050); border: 1px dashed var(--gold-lite); border-radius: 10px; padding: 10px 12px; font-family: inherit; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
 .cd-offer:hover { border-color: var(--teal); background: #f8f0dd; box-shadow: var(--shadow-soft); }
 .cd-offer:disabled { opacity: .6; cursor: default; }
 .cd-offer-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

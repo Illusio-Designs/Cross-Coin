@@ -129,6 +129,10 @@ export default function CartDrawer() {
   const [couponLoading, setCouponLoading] = useState(false);
   // Public "available offers" the customer can tap to auto-apply.
   const [availableCoupons, setAvailableCoupons] = useState([]);
+  // Collapsed "Available offers" dropdown — closed by default so the drawer
+  // stays compact; the menu overlays content below when opened.
+  const [offersOpen, setOffersOpen] = useState(false);
+  const offersRef = useRef(null);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -158,8 +162,18 @@ export default function CartDrawer() {
     return () => document.removeEventListener('keydown', onKey, true);
   }, [addrIssues]);
 
+  // Close the "Available offers" dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!offersOpen) return;
+    const onDown = (e) => { if (offersRef.current && !offersRef.current.contains(e.target)) setOffersOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOffersOpen(false); } };
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => { document.removeEventListener('mousedown', onDown, true); document.removeEventListener('keydown', onKey, true); };
+  }, [offersOpen]);
+
   // Clear transient state whenever the drawer closes
-  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); setCouponInput(''); setAppliedCoupon(null); setCouponError(''); setAvailableCoupons([]); } }, [open]);
+  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); setCouponInput(''); setAppliedCoupon(null); setCouponError(''); setAvailableCoupons([]); setOffersOpen(false); } }, [open]);
 
   // Load the brand's available coupons once when the drawer opens with items —
   // rendered as tappable "Available offers" below the coupon input.
@@ -427,6 +441,7 @@ export default function CartDrawer() {
       if (data.success) {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discountAmount });
         setCouponInput('');
+        setOffersOpen(false);
         toast.success(`"${data.coupon.code}" applied — ₹${(parseFloat(data.discountAmount) || 0).toFixed(0)} off!`);
       } else {
         setCouponError(data.message || 'Invalid coupon code.');
@@ -629,39 +644,55 @@ export default function CartDrawer() {
                   </>
                 )}
 
-                {/* Available offers — tap a row to auto-apply. Hides the applied
-                    one; renders nothing when there are no other offers. */}
+                {/* Available offers — a COLLAPSED dropdown (select-style). The
+                    menu is absolutely positioned so it overlays the content
+                    below and the drawer height never grows. Shown only when
+                    there are offers and no coupon is applied. */}
                 {(() => {
+                  if (appliedCoupon) return null;
                   const offers = availableCoupons.filter(
                     (c) => c && c.code && c.code.toUpperCase() !== (appliedCoupon?.code || '').toUpperCase()
                   );
                   if (offers.length === 0) return null;
                   return (
-                    <div className="cd-offers">
-                      <div className="cd-offers-head">Available offers</div>
-                      <div className="cd-offers-list">
-                        {offers.map((c) => (
-                          <button
-                            type="button"
-                            key={c.id ?? c.code}
-                            className="cd-offer"
-                            onClick={() => applyCoupon(c.code)}
-                            disabled={couponLoading}
-                            aria-label={`Apply coupon ${c.code}`}
-                          >
-                            <span className="cd-offer-info">
-                              <span className="cd-offer-code"><Icon name="Sparkles" size={12} /> {c.code}</span>
-                              {(c.description || Number(c.minPurchase) > 0) && (
-                                <span className="cd-offer-desc">
-                                  {c.description || 'Offer on your order'}
-                                  {Number(c.minPurchase) > 0 ? ` · Min ₹${Number(c.minPurchase).toFixed(0)}` : ''}
-                                </span>
-                              )}
-                            </span>
-                            <span className="cd-offer-apply">{couponLoading ? '…' : 'Apply'}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <div className="cd-offers-select" ref={offersRef}>
+                      <button
+                        type="button"
+                        className={`cd-offers-trigger${offersOpen ? ' open' : ''}`}
+                        onClick={() => setOffersOpen((o) => !o)}
+                        aria-haspopup="listbox"
+                        aria-expanded={offersOpen}
+                        disabled={couponLoading}
+                      >
+                        <span className="cd-offers-trigger-label"><Icon name="Sparkles" size={13} /> Select a coupon</span>
+                        <span className="cd-offers-chevron" aria-hidden="true"><Icon name="ChevronDown" size={16} /></span>
+                      </button>
+                      {offersOpen && (
+                        <div className="cd-offers-menu" role="listbox" aria-label="Available offers">
+                          {offers.map((c) => (
+                            <button
+                              type="button"
+                              key={c.id ?? c.code}
+                              className="cd-offer"
+                              role="option"
+                              onClick={() => { applyCoupon(c.code); setOffersOpen(false); }}
+                              disabled={couponLoading}
+                              aria-label={`Apply coupon ${c.code}`}
+                            >
+                              <span className="cd-offer-info">
+                                <span className="cd-offer-code"><Icon name="Sparkles" size={12} /> {c.code}</span>
+                                {(c.description || Number(c.minPurchase) > 0) && (
+                                  <span className="cd-offer-desc">
+                                    {c.description || 'Offer on your order'}
+                                    {Number(c.minPurchase) > 0 ? ` · Min ₹${Number(c.minPurchase).toFixed(0)}` : ''}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="cd-offer-apply">{couponLoading ? '…' : 'Apply'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
