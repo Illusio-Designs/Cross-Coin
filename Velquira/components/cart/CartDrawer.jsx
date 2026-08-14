@@ -17,6 +17,7 @@ import {
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
+  validateCoupon,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
@@ -120,6 +121,12 @@ export default function CartDrawer() {
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [urgencySeconds, setUrgencySeconds] = useState(600);
 
+  // Coupon — { id, code, discount } once applied, else null.
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
     if (!open) return;
@@ -149,7 +156,7 @@ export default function CartDrawer() {
   }, [addrIssues]);
 
   // Clear transient state whenever the drawer closes
-  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); } }, [open]);
+  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); setCouponInput(''); setAppliedCoupon(null); setCouponError(''); } }, [open]);
 
   // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
   // (this drawer is the full in-drawer checkout).
@@ -202,7 +209,10 @@ export default function CartDrawer() {
   };
 
   const shippingFee = parseFloat(selectedFee?.fee || 0);
-  const couponDiscount = 0;
+  // Coupon discount is derived from the applied coupon (0 when none applied).
+  // Applies to BOTH COD and prepaid; it is separate from the prepaid instant
+  // discount below.
+  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discount) || 0 : 0;
   const total = Math.max(0, subtotal + shippingFee - couponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -321,7 +331,7 @@ export default function CartDrawer() {
     const discountAmount = paymentType === 'razorpay' ? prepaidInstantDiscount + couponDiscount : couponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
-      discount_amount: discountAmount, coupon_id: null, idempotency_key: genIdem(),
+      discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     return { ...guestBlocks(), ...base };
@@ -387,6 +397,35 @@ export default function CartDrawer() {
     const rzp = new window.Razorpay(options);
     rzp.on('payment.failed', (r) => { setError(r.error?.description || 'Payment failed.'); setRetryState({ reservationId, count: 0 }); setProcessing(false); });
     rzp.open();
+  };
+
+  // ── Coupon ────────────────────────────────────────────────────────────────
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError('');
+    setCouponLoading(true);
+    try {
+      const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
+      const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode, cartItems: items });
+      if (data.success) {
+        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discountAmount });
+        setCouponInput('');
+        toast.success(`"${data.coupon.code}" applied — ₹${(parseFloat(data.discountAmount) || 0).toFixed(0)} off!`);
+      } else {
+        setCouponError(data.message || 'Invalid coupon code.');
+      }
+    } catch (e) {
+      setCouponError(e.message || 'Failed to validate coupon.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+    setCouponInput('');
   };
 
   const placeOrder = async () => {
@@ -543,10 +582,43 @@ export default function CartDrawer() {
                 ))}
               </div>
 
+              {/* Coupon — just above the summary so the discount reads clearly */}
+              <div className="cd-co-section">
+                <div className="cd-section-title">Coupon</div>
+                {appliedCoupon ? (
+                  <div className="cd-coupon-applied">
+                    <span><Icon name="Check" size={14} /> {appliedCoupon.code} · −₹{couponDiscount.toFixed(0)}</span>
+                    <button type="button" className="link-more" onClick={removeCoupon} aria-label={`Remove coupon ${appliedCoupon.code}`}>
+                      <Icon name="X" size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cd-coupon-row">
+                      <input
+                        className="cd-input"
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value); if (couponError) setCouponError(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                        placeholder="Coupon code"
+                        autoCapitalize="characters"
+                        aria-label="Coupon code"
+                        disabled={couponLoading}
+                      />
+                      <button type="button" className="btn btn-primary" onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}>
+                        {couponLoading ? 'Applying…' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && <p className="cd-coupon-msg" style={{ color: 'var(--sale)' }} role="alert">{couponError}</p>}
+                  </>
+                )}
+              </div>
+
               {/* Order summary — right after the items, so pricing is clear up front */}
               <div className="cd-co-section cd-co-summary">
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
+                {couponDiscount > 0 && <div className="cd-summary-row"><span>Coupon{appliedCoupon?.code ? ` (${appliedCoupon.code})` : ''}</span><span style={{ color: 'var(--teal-600)' }}>−₹{couponDiscount.toFixed(0)}</span></div>}
                 {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
                 <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>
