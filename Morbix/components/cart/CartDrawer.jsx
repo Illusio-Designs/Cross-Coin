@@ -17,6 +17,7 @@ import {
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
+  validateCoupon,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
@@ -120,6 +121,13 @@ export default function CartDrawer() {
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [urgencySeconds, setUrgencySeconds] = useState(600);
 
+  // Coupon — validated against POST /api/coupons/validate (brand-scoped).
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, id }
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
     if (!open) return;
@@ -149,7 +157,12 @@ export default function CartDrawer() {
   }, [addrIssues]);
 
   // Clear transient state whenever the drawer closes
-  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); } }, [open]);
+  useEffect(() => {
+    if (!open) {
+      setError(''); setRetryState(null); setOrderSuccess(null);
+      setCouponInput(''); setAppliedCoupon(null); setCouponDiscount(0); setCouponError('');
+    }
+  }, [open]);
 
   // Load shipping fees + addresses as soon as the drawer opens (single view)
   useEffect(() => {
@@ -187,14 +200,54 @@ export default function CartDrawer() {
   };
 
   const shippingFee = parseFloat(selectedFee?.fee || 0);
-  const couponDiscount = 0;
-  const total = Math.max(0, subtotal + shippingFee - couponDiscount);
+  // couponDiscount is state (set on a successful validate). Clamp so an over-large
+  // coupon can never make the order total negative.
+  const effectiveCouponDiscount = Math.min(couponDiscount, subtotal + shippingFee);
+  const total = Math.max(0, subtotal + shippingFee - effectiveCouponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
   // Prepaid instant discount (0 unless configured) → the amount actually payable
   // online is the total minus that incentive.
   const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
   const prepaidPayable = Math.max(0, total - prepaidInstantDiscount);
+
+  // ── Coupon ──────────────────────────────────────────────────────────────
+  // Validate the entered code against the current SUBTOTAL. The coupon applies
+  // to both COD and prepaid; it is separate from the prepaid instant discount.
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code || couponLoading) return;
+    setCouponError('');
+    setCouponLoading(true);
+    try {
+      const paymentMode = isCod ? 'cod' : 'prepaid';
+      const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode, cartItems: items });
+      if (data?.success && data?.coupon) {
+        const amount = parseFloat(data.discountAmount) || 0;
+        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code });
+        setCouponDiscount(amount);
+        setCouponInput('');
+        toast.success(`"${data.coupon.code}" applied — ₹${amount.toFixed(0)} off!`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        setCouponError(data?.message || 'Invalid coupon code.');
+      }
+    } catch (e) {
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      setCouponError(e.message || 'Failed to validate coupon.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponError('');
+    setCouponInput('');
+  };
 
   const sortedFees = useMemo(() => {
     const arr = [...fees];
@@ -307,12 +360,15 @@ export default function CartDrawer() {
   };
 
   const buildData = (paymentType) => {
-    // Prepaid orders fold the instant discount into discount_amount (same as the
-    // other brands); COD sends only the coupon discount.
-    const discountAmount = paymentType === 'razorpay' ? prepaidInstantDiscount + couponDiscount : couponDiscount;
+    // Prepaid orders fold the instant discount into discount_amount ON TOP of the
+    // coupon discount; COD sends only the coupon discount. The coupon applies to
+    // both. coupon_id is null when no coupon is applied.
+    const discountAmount = paymentType === 'razorpay'
+      ? prepaidInstantDiscount + effectiveCouponDiscount
+      : effectiveCouponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
-      discount_amount: discountAmount, coupon_id: null, idempotency_key: genIdem(),
+      discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     return { ...guestBlocks(), ...base };
@@ -534,10 +590,42 @@ export default function CartDrawer() {
                 ))}
               </div>
 
+              {/* Coupon — sits just above the order summary. Applies to COD + prepaid. */}
+              <div className="cd-co-section">
+                <div className="cd-section-title">Coupon</div>
+                {appliedCoupon ? (
+                  <div className="cd-coupon-applied">
+                    <span><Icon name="Check" size={14} /> {appliedCoupon.code} · −₹{effectiveCouponDiscount.toFixed(0)}</span>
+                    <button type="button" className="cd-remove" onClick={removeCoupon} aria-label="Remove coupon"><Icon name="X" size={16} /></button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cd-coupon-row">
+                      <input
+                        className="cd-input"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                        placeholder="Coupon code"
+                        autoCapitalize="characters"
+                        autoComplete="off"
+                        disabled={couponLoading}
+                        aria-label="Coupon code"
+                      />
+                      <button type="button" className="btn btn-primary" onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}>
+                        {couponLoading ? 'Applying…' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && <p className="cd-coupon-msg" style={{ color: 'var(--sale)' }}>{couponError}</p>}
+                  </>
+                )}
+              </div>
+
               {/* Order summary — right after the items, so pricing is clear up front */}
               <div className="cd-co-section cd-co-summary">
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
+                {effectiveCouponDiscount > 0 && <div className="cd-summary-row"><span>Coupon ({appliedCoupon?.code})</span><span style={{ color: 'var(--teal-600)' }}>−₹{effectiveCouponDiscount.toFixed(0)}</span></div>}
                 {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
                 <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>

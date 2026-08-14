@@ -15,6 +15,7 @@ import {
   retryCheckout,
   verifyPayment,
   checkPincodeServiceability,
+  validateCoupon,
 } from '../../services/orders';
 import {
   toastOrderPlaced,
@@ -102,6 +103,13 @@ export default function CartDrawer() {
   const [codAllowed, setCodAllowed] = useState(true);
   const [pincodeServiceable, setPincodeServiceable] = useState(true);
 
+  // Coupon
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, id }
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [paymentFailed, setPaymentFailed] = useState(null);
@@ -168,7 +176,7 @@ export default function CartDrawer() {
   const cartTotal = items.reduce((s, i) => s + getPrice(i) * i.qty, 0);
   const totalQty = items.reduce((s, i) => s + (i.qty || 1), 0);
   const shippingFee = Number(selectedFee?.fee || 0);
-  const finalTotal = Math.max(0, cartTotal + shippingFee);
+  const finalTotal = Math.max(0, cartTotal + shippingFee - couponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
 
@@ -290,6 +298,36 @@ export default function CartDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddressForm, addressSaving, isAuthenticated, addressForm, guestInfo, editingAddressId]);
 
+  /* ── coupon ───────────────────────────────────────────────────── */
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError('');
+    setCouponLoading(true);
+    try {
+      const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
+      const data = await validateCoupon({ code, cartTotal, paymentMode, cartItems: items });
+      if (data?.success && data?.coupon) {
+        setAppliedCoupon({ code: data.coupon.code || code, id: data.coupon.id });
+        setCouponDiscount(Number(data.discountAmount) || 0);
+        setCouponInput('');
+      } else {
+        setCouponError(data?.message || 'Invalid coupon code.');
+      }
+    } catch (err) {
+      setCouponError(err?.message || 'Failed to validate coupon. Please try again.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponError('');
+    setCouponInput('');
+  };
+
   /* ── order placement ──────────────────────────────────────────── */
   const itemsPayload = () => items
     .filter((it) => it.id != null && !isNaN(Number(it.id)))
@@ -327,7 +365,7 @@ export default function CartDrawer() {
     try {
       const base = {
         items: itemsPayload(), payment_type: 'cod', notes: '',
-        discount_amount: 0, coupon_id: null, idempotency_key: idemKey(),
+        discount_amount: couponDiscount, coupon_id: appliedCoupon?.id || null, idempotency_key: idemKey(),
       };
       let result;
       if (isAuthenticated) {
@@ -418,7 +456,7 @@ export default function CartDrawer() {
       if (!ok || !window.Razorpay) { showError('Could not load the payment SDK.'); setIsProcessing(false); return; }
       const base = {
         items: itemsPayload(), payment_type: 'razorpay', notes: '',
-        discount_amount: 0, coupon_id: null, idempotency_key: idemKey(),
+        discount_amount: couponDiscount, coupon_id: appliedCoupon?.id || null, idempotency_key: idemKey(),
       };
       let result;
       if (isAuthenticated) {
@@ -590,6 +628,39 @@ export default function CartDrawer() {
                 </div>
               </div>
 
+              {/* Coupon */}
+              <div className="cd-sv-section">
+                <div className="cd-section-title">Coupon</div>
+                {appliedCoupon ? (
+                  <div className="cd-coupon-applied">
+                    <span>{appliedCoupon.code} — −₹{couponDiscount.toFixed(0)}</span>
+                    <button type="button" className="cd-coupon-remove" onClick={handleRemoveCoupon} aria-label="Remove coupon">✕</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cd-coupon-wrap">
+                      <input
+                        className="cd-coupon-input"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCoupon(); } }}
+                        placeholder="Enter coupon code"
+                        aria-label="Coupon code"
+                      />
+                      <button
+                        type="button"
+                        className="cd-coupon-btn"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponInput.trim()}
+                      >
+                        {couponLoading ? '…' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
+                  </>
+                )}
+              </div>
+
               {/* Order Summary */}
               <div className="cd-sv-section">
                 <div className="cd-section-title">Order Summary</div>
@@ -599,6 +670,12 @@ export default function CartDrawer() {
                     <span>Shipping</span>
                     <span style={shippingFee === 0 ? { color: '#16a34a', fontWeight: 700 } : {}}>{shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}</span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="cd-summary-row cd-summary-discount">
+                      <span>Discount{appliedCoupon ? ` (${appliedCoupon.code})` : ''}</span>
+                      <span>−₹{couponDiscount.toFixed(0)}</span>
+                    </div>
+                  )}
                   <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{finalTotal.toFixed(0)}</span></div>
                 </div>
               </div>
