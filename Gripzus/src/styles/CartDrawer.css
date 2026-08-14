@@ -197,6 +197,37 @@
 }
 .cd-coupon-remove:hover { text-decoration: underline; }
 
+/* ── Available offers ─────────────────────────────────────────────────────── */
+.cd-offers { margin-top: 12px; }
+.cd-offers-title {
+  font-size: 11px; font-weight: 700; color: #999;
+  text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;
+}
+.cd-offers-list { display: flex; flex-direction: column; gap: 6px; }
+.cd-offer-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  text-align: left; cursor: pointer;
+  background: #fff; border: 1.5px dashed #121212; border-radius: 0;
+  padding: 9px 12px; color: #121212;
+  transition: background 0.15s, color 0.15s;
+}
+.cd-offer-row:hover:not(:disabled) { background: #121212; color: #F4F2EC; }
+.cd-offer-row:hover:not(:disabled) .cd-offer-apply { color: #F4F2EC; }
+.cd-offer-row:disabled { opacity: 0.5; cursor: not-allowed; }
+.cd-offer-code {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; flex-shrink: 0;
+}
+.cd-offer-sep { color: #bbb; flex-shrink: 0; }
+.cd-offer-desc {
+  font-size: 12px; font-weight: 500; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cd-offer-apply {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: #121212; flex-shrink: 0;
+}
+
 /* ── Forms ────────────────────────────────────────────────────────────────── */
 .cd-form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 480px) {

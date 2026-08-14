@@ -256,7 +256,7 @@ export const searchProducts = async (query, params = {}) => {
 // Get all public coupons
 export const getPublicCoupons = async () => {
   try {
-    const response = await axios.get(`${API_URL}/api/coupons/public`, addBrandHeader());
+    const response = await axios.get(`${API_URL}/api/coupons/listing`, addBrandHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;

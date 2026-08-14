@@ -17,6 +17,7 @@ import {
   checkPincodeServiceability,
   validateCoupon,
 } from '../../services/orders';
+import { getPublicCoupons } from '../../services/publicindex';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -109,6 +110,7 @@ export default function CartDrawer() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]); // [{ id, code, description, type, value, minPurchase, maxDiscount, endDate }]
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -200,6 +202,21 @@ export default function CartDrawer() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  /* Available offers — fetch the brand's public coupons once when the drawer
+     opens with items in the cart, so shoppers can tap one to auto-apply. */
+  useEffect(() => {
+    if (!open || items.length === 0 || availableCoupons.length > 0) return;
+    let alive = true;
+    getPublicCoupons()
+      .then((res) => {
+        if (!alive) return;
+        setAvailableCoupons(res?.success && Array.isArray(res.coupons) ? res.coupons : []);
+      })
+      .catch(() => { if (alive) setAvailableCoupons([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, items.length]);
 
   /* ── address handlers ─────────────────────────────────────────── */
   const handleAddrChange = (e) => {
@@ -299,8 +316,19 @@ export default function CartDrawer() {
   }, [showAddressForm, addressSaving, isAuthenticated, addressForm, guestInfo, editingAddressId]);
 
   /* ── coupon ───────────────────────────────────────────────────── */
-  const handleApplyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+  /* Short one-line blurb for an available offer, e.g. "10% off, min ₹499". */
+  const couponBlurb = (c) => {
+    const value = Number(c.value) || 0;
+    const min = Number(c.minPurchase) || 0;
+    let core;
+    if (c.type === 'percentage') core = `${value}% off`;
+    else if (c.type === 'fixed') core = `₹${value} off`;
+    else core = (c.description && String(c.description).replace(/<[^>]*>/g, '').trim()) || 'Special offer';
+    return min > 0 ? `${core}, min ₹${min}` : core;
+  };
+
+  const handleApplyCoupon = async (codeArg) => {
+    const code = String(codeArg ?? couponInput).trim().toUpperCase();
     if (!code) return;
     setCouponError('');
     setCouponLoading(true);
@@ -650,13 +678,39 @@ export default function CartDrawer() {
                       <button
                         type="button"
                         className="cd-coupon-btn"
-                        onClick={handleApplyCoupon}
+                        onClick={() => handleApplyCoupon()}
                         disabled={couponLoading || !couponInput.trim()}
                       >
                         {couponLoading ? '…' : 'Apply'}
                       </button>
                     </div>
                     {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
+
+                    {/* Available offers — tap a row to auto-apply that code. */}
+                    {availableCoupons.filter((c) => c.code !== appliedCoupon?.code).length > 0 && (
+                      <div className="cd-offers">
+                        <div className="cd-offers-title">Available offers</div>
+                        <div className="cd-offers-list">
+                          {availableCoupons
+                            .filter((c) => c.code !== appliedCoupon?.code)
+                            .map((c) => (
+                              <button
+                                key={c.id || c.code}
+                                type="button"
+                                className="cd-offer-row"
+                                onClick={() => handleApplyCoupon(c.code)}
+                                disabled={couponLoading}
+                                aria-label={`Apply coupon ${c.code}`}
+                              >
+                                <span className="cd-offer-code">{c.code}</span>
+                                <span className="cd-offer-sep" aria-hidden="true">·</span>
+                                <span className="cd-offer-desc">{couponBlurb(c)}</span>
+                                <span className="cd-offer-apply">Apply</span>
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
