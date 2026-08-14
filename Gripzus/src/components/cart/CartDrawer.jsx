@@ -111,6 +111,8 @@ export default function CartDrawer() {
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]); // [{ id, code, description, type, value, minPurchase, maxDiscount, endDate }]
+  const [offersOpen, setOffersOpen] = useState(false); // collapsed "Available offers" dropdown
+  const offersRef = useRef(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -217,6 +219,22 @@ export default function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, items.length]);
+
+  /* Reset the offers dropdown whenever the drawer closes. */
+  useEffect(() => { if (!open) setOffersOpen(false); }, [open]);
+
+  /* Close the offers dropdown on outside click / Escape. */
+  useEffect(() => {
+    if (!offersOpen) return;
+    const onDown = (e) => { if (offersRef.current && !offersRef.current.contains(e.target)) setOffersOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOffersOpen(false); } };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [offersOpen]);
 
   /* ── address handlers ─────────────────────────────────────────── */
   const handleAddrChange = (e) => {
@@ -339,6 +357,7 @@ export default function CartDrawer() {
         setAppliedCoupon({ code: data.coupon.code || code, id: data.coupon.id });
         setCouponDiscount(Number(data.discountAmount) || 0);
         setCouponInput('');
+        setOffersOpen(false);
       } else {
         setCouponError(data?.message || 'Invalid coupon code.');
       }
@@ -686,29 +705,46 @@ export default function CartDrawer() {
                     </div>
                     {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
 
-                    {/* Available offers — tap a row to auto-apply that code. */}
+                    {/* Available offers — collapsed dropdown; tap the trigger to
+                        reveal the list, tap a row to auto-apply that code. The
+                        menu is positioned absolutely so it overlays the content
+                        below without growing the drawer. */}
                     {availableCoupons.filter((c) => c.code !== appliedCoupon?.code).length > 0 && (
-                      <div className="cd-offers">
-                        <div className="cd-offers-title">Available offers</div>
-                        <div className="cd-offers-list">
-                          {availableCoupons
-                            .filter((c) => c.code !== appliedCoupon?.code)
-                            .map((c) => (
-                              <button
-                                key={c.id || c.code}
-                                type="button"
-                                className="cd-offer-row"
-                                onClick={() => handleApplyCoupon(c.code)}
-                                disabled={couponLoading}
-                                aria-label={`Apply coupon ${c.code}`}
-                              >
-                                <span className="cd-offer-code">{c.code}</span>
-                                <span className="cd-offer-sep" aria-hidden="true">·</span>
-                                <span className="cd-offer-desc">{couponBlurb(c)}</span>
-                                <span className="cd-offer-apply">Apply</span>
-                              </button>
-                            ))}
-                        </div>
+                      <div className="cd-offers" ref={offersRef}>
+                        <button
+                          type="button"
+                          className={`cd-offers-select ${offersOpen ? 'cd-offers-select-open' : ''}`}
+                          onClick={() => setOffersOpen((v) => !v)}
+                          aria-haspopup="listbox"
+                          aria-expanded={offersOpen}
+                        >
+                          <span className="cd-offers-select-label">Select a coupon</span>
+                          <span className="cd-offers-chevron" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                          </span>
+                        </button>
+                        {offersOpen && (
+                          <div className="cd-offers-menu" role="listbox" aria-label="Available offers">
+                            {availableCoupons
+                              .filter((c) => c.code !== appliedCoupon?.code)
+                              .map((c) => (
+                                <button
+                                  key={c.id || c.code}
+                                  type="button"
+                                  role="option"
+                                  className="cd-offer-row"
+                                  onClick={() => { handleApplyCoupon(c.code); setOffersOpen(false); }}
+                                  disabled={couponLoading}
+                                  aria-label={`Apply coupon ${c.code}`}
+                                >
+                                  <span className="cd-offer-code">{c.code}</span>
+                                  <span className="cd-offer-sep" aria-hidden="true">·</span>
+                                  <span className="cd-offer-desc">{couponBlurb(c)}</span>
+                                  <span className="cd-offer-apply">Apply</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

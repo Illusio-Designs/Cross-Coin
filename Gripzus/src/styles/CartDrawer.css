@@ -197,13 +197,40 @@
 }
 .cd-coupon-remove:hover { text-decoration: underline; }
 
-/* ── Available offers ─────────────────────────────────────────────────────── */
-.cd-offers { margin-top: 12px; }
-.cd-offers-title {
-  font-size: 11px; font-weight: 700; color: #999;
-  text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;
+/* ── Available offers (collapsed dropdown) ────────────────────────────────── */
+/* Relative container so the menu can overlay content below without growing
+   the drawer height. */
+.cd-offers { margin-top: 12px; position: relative; }
+
+/* Trigger — styled like a <select> field: ink border, off-white ground,
+   sharp corners, chevron on the right that rotates when open. */
+.cd-offers-select {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; height: 42px; padding: 0 12px 0 14px;
+  background: #F4F2EC; border: 1.5px solid #121212; border-radius: 0;
+  color: #121212; cursor: pointer; text-align: left;
+  transition: background 0.15s, color 0.15s;
 }
-.cd-offers-list { display: flex; flex-direction: column; gap: 6px; }
+.cd-offers-select:hover { background: #121212; color: #F4F2EC; }
+.cd-offers-select-label {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cd-offers-chevron { display: flex; flex-shrink: 0; transition: transform 0.18s ease; }
+.cd-offers-chevron svg { width: 16px; height: 16px; }
+.cd-offers-select-open .cd-offers-chevron { transform: rotate(180deg); }
+
+/* Menu — absolutely positioned, full width, floats above the summary and
+   overlays the content below. */
+.cd-offers-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  z-index: 30;
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 260px; overflow-y: auto;
+  padding: 6px;
+  background: #F4F2EC; border: 1.5px solid #121212; border-radius: 0;
+  box-shadow: 0 10px 30px rgba(18,18,18,0.28);
+}
 .cd-offer-row {
   display: flex; align-items: center; gap: 8px; width: 100%;
   text-align: left; cursor: pointer;
