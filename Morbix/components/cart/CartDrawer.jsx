@@ -130,6 +130,9 @@ export default function CartDrawer() {
   const [couponLoading, setCouponLoading] = useState(false);
   // Available public offers the shopper can tap to auto-apply (brand-scoped).
   const [availableCoupons, setAvailableCoupons] = useState([]);
+  // Collapsed offers dropdown — closed by default so the drawer stays compact.
+  const [offersOpen, setOffersOpen] = useState(false);
+  const offersRef = useRef(null);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -159,12 +162,22 @@ export default function CartDrawer() {
     return () => document.removeEventListener('keydown', onKey, true);
   }, [addrIssues]);
 
+  // Close the "available offers" dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!offersOpen) return;
+    const onDown = (e) => { if (offersRef.current && !offersRef.current.contains(e.target)) setOffersOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOffersOpen(false); } };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey, true);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey, true); };
+  }, [offersOpen]);
+
   // Clear transient state whenever the drawer closes
   useEffect(() => {
     if (!open) {
       setError(''); setRetryState(null); setOrderSuccess(null);
       setCouponInput(''); setAppliedCoupon(null); setCouponDiscount(0); setCouponError('');
-      setAvailableCoupons([]);
+      setAvailableCoupons([]); setOffersOpen(false);
     }
   }, [open]);
 
@@ -248,6 +261,7 @@ export default function CartDrawer() {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code });
         setCouponDiscount(amount);
         setCouponInput('');
+        setOffersOpen(false);
         toast.success(`"${data.coupon.code}" applied — ₹${amount.toFixed(0)} off!`);
       } else {
         setAppliedCoupon(null);
@@ -641,32 +655,48 @@ export default function CartDrawer() {
                   </>
                 )}
 
-                {/* Available offers — tap a code to auto-apply it. Hides the
+                {/* Available offers — collapsed into a select-style dropdown so the
+                    drawer stays compact. Shown only when offers exist and no coupon
+                    is applied. The open menu is positioned absolutely and OVERLAYS
+                    the content below (it does not push the summary down). Hides the
                     already-applied one; renders nothing when the list is empty. */}
-                {(() => {
+                {!appliedCoupon && (() => {
                   const offers = availableCoupons.filter((c) => c?.code && c.code !== appliedCoupon?.code);
                   if (offers.length === 0) return null;
                   return (
-                    <div className="cd-offers">
-                      <div className="cd-offers-head">Available offers</div>
-                      <div className="cd-offers-list">
-                        {offers.map((c) => (
-                          <button
-                            type="button"
-                            key={c.id || c.code}
-                            className="cd-offer"
-                            onClick={() => applyCoupon(c.code)}
-                            disabled={couponLoading}
-                          >
-                            <span className="cd-offer-main">
-                              <span className="cd-offer-code">{c.code}</span>
-                              {c.description && <span className="cd-offer-desc">{c.description}</span>}
-                              {Number(c.minPurchase) > 0 && <span className="cd-offer-min">Min. spend ₹{Number(c.minPurchase).toFixed(0)}</span>}
-                            </span>
-                            <span className="cd-offer-apply">Apply</span>
-                          </button>
-                        ))}
-                      </div>
+                    <div className={`cd-offers-select${offersOpen ? ' open' : ''}`} ref={offersRef}>
+                      <button
+                        type="button"
+                        className="cd-offers-trigger"
+                        onClick={() => setOffersOpen((o) => !o)}
+                        aria-haspopup="listbox"
+                        aria-expanded={offersOpen}
+                        disabled={couponLoading}
+                      >
+                        <span className="cd-offers-trigger-text">Select a coupon</span>
+                        <span className="cd-offers-chevron" aria-hidden="true"><Icon name="ChevronDown" size={16} /></span>
+                      </button>
+                      {offersOpen && (
+                        <div className="cd-offers-menu" role="listbox" aria-label="Available offers">
+                          {offers.map((c) => (
+                            <button
+                              type="button"
+                              key={c.id || c.code}
+                              className="cd-offers-item"
+                              role="option"
+                              onClick={() => applyCoupon(c.code)}
+                              disabled={couponLoading}
+                            >
+                              <span className="cd-offer-main">
+                                <span className="cd-offer-code">{c.code}</span>
+                                {c.description && <span className="cd-offer-desc">{c.description}</span>}
+                                {Number(c.minPurchase) > 0 && <span className="cd-offer-min">Min. spend ₹{Number(c.minPurchase).toFixed(0)}</span>}
+                              </span>
+                              <span className="cd-offer-apply">Apply</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

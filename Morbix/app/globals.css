@@ -1097,19 +1097,44 @@ button { font-family: inherit; cursor: pointer; }
 .cd-coupon-applied { display: flex; align-items: center; justify-content: space-between; background: var(--teal-050); border-radius: 10px; padding: 10px 12px; }
 .cd-coupon-applied span { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: var(--teal-600); }
 .cd-coupon-msg { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
-/* Available offers — tappable list of public coupons below the coupon input. */
-.cd-offers { margin-top: 12px; }
-.cd-offers-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--teal-600); margin-bottom: 8px; }
-.cd-offers-list { display: flex; flex-direction: column; gap: 8px; }
-.cd-offer { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px dashed var(--teal); background: var(--teal-050); border-radius: 12px; padding: 10px 12px; cursor: pointer; font-family: inherit; transition: border-color .15s ease, background .15s ease; }
-.cd-offer:hover:not(:disabled) { border-style: solid; border-color: var(--navy); }
-.cd-offer:disabled { opacity: .55; cursor: default; }
+/* Available offers — collapsed into a select-style dropdown so the drawer stays
+   compact. The open menu is positioned absolutely and OVERLAYS the content below
+   (relative wrapper + absolute menu) instead of pushing the summary down. */
+.cd-offers-select { position: relative; margin-top: 12px; }
+/* Trigger — styled like the form's select field (matches .cd-input metrics). */
+.cd-offers-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; font-family: inherit; font-size: 13px; font-weight: 600;
+  color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 11px 12px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.cd-offers-trigger:hover:not(:disabled) { border-color: var(--teal); }
+.cd-offers-select.open .cd-offers-trigger { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(32,44,110,.08); }
+.cd-offers-trigger:disabled { opacity: .55; cursor: default; }
+.cd-offers-trigger-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-offers-chevron { flex-shrink: 0; display: inline-flex; color: var(--teal-600); transition: transform .18s ease; }
+.cd-offers-select.open .cd-offers-chevron { transform: rotate(180deg); }
+/* Menu — absolutely positioned overlay; full width, above the summary, shadowed. */
+.cd-offers-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20;
+  display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 6px;
+  box-shadow: 0 12px 32px rgba(15,20,40,.18);
+}
+.cd-offers-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: 1px dashed var(--teal); background: var(--teal-050); border-radius: 10px;
+  padding: 10px 12px; cursor: pointer; font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.cd-offers-item:hover:not(:disabled) { border-style: solid; border-color: var(--navy); }
+.cd-offers-item:disabled { opacity: .55; cursor: default; }
 .cd-offer-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .cd-offer-code { font-weight: 800; font-size: 13px; letter-spacing: .04em; color: var(--navy); }
 .cd-offer-desc { font-size: 12px; color: var(--ink); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-offer-min { font-size: 11px; color: var(--ink-soft); }
 .cd-offer-apply { flex-shrink: 0; font-size: 12px; font-weight: 800; color: var(--teal-600); text-transform: uppercase; letter-spacing: .04em; }
-.cd-offer:hover:not(:disabled) .cd-offer-apply { color: var(--navy); }
+.cd-offers-item:hover:not(:disabled) .cd-offer-apply { color: var(--navy); }
 .cd-co-summary { display: grid; gap: 8px; }
 .cd-summary-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-soft); }
 .cd-summary-row span:last-child { color: var(--ink); font-weight: 600; }
