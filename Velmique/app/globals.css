@@ -245,6 +245,121 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 }
 .input-gold::placeholder { color: var(--ink-muted); }
 
+/* ------------------------------------------------------------------
+   Cart drawer — "Available offers" collapsed dropdown (select-style).
+   The menu is position:absolute so it overlays the summary below and
+   the drawer height never grows. Tokens: cream / espresso / gold.
+   ------------------------------------------------------------------ */
+.vq-offers {
+  position: relative;
+  margin-top: 8px;
+}
+.vq-offers-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.vq-offers-trigger:hover:not(:disabled) { border-color: var(--gold); }
+.vq-offers-trigger.open {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.15);
+}
+.vq-offers-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+.vq-offers-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--gold-deep);
+  letter-spacing: 0.04em;
+}
+.vq-offers-chevron {
+  color: var(--ink-muted);
+  transition: transform 0.25s ease;
+  flex: 0 0 auto;
+}
+.vq-offers-trigger.open .vq-offers-chevron { transform: rotate(180deg); }
+
+.vq-offers-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(26, 22, 18, 0.18);
+  padding: 4px;
+}
+.vq-offer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.vq-offer:hover:not(:disabled) { background: var(--surface); }
+.vq-offer:disabled { opacity: 0.55; cursor: not-allowed; }
+.vq-offer + .vq-offer { border-top: 1px solid var(--surface); }
+.vq-offer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.vq-offer-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.vq-offer-desc {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vq-offer-apply {
+  flex: 0 0 auto;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+.vq-offer:hover:not(:disabled) .vq-offer-apply { background: var(--gold-deep); }
+
 /* Star rating */
 .star-filled { color: var(--gold); }
 .star-empty { color: var(--border); }

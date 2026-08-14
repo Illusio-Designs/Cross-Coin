@@ -159,6 +159,17 @@ export async function checkPincodeServiceability(pincode) {
 
 /* ────── Coupons ────────────────────────────────────────────────────────── */
 
+export async function getPublicCoupons() {
+  try {
+    const res = await fetch(`${API_URL}/api/coupons/listing`, { headers: publicHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data) ? data : (data?.coupons || []);
+  } catch {
+    return [];
+  }
+}
+
 export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }) {
   const res = await fetch(`${API_URL}/api/coupons/validate`, {
     method: 'POST',

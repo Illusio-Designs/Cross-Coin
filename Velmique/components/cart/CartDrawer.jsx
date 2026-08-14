@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   X, ShoppingBag, Trash2, Plus, Minus, ArrowRight, MapPin,
   CheckCircle2, Wallet, CreditCard, Tag, Loader2, Edit3,
+  Sparkles, ChevronDown,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +14,7 @@ import {
   getAddresses, createAddress, updateAddress,
 } from '@/lib/api/addresses';
 import {
-  getShippingFees, checkPincodeServiceability, validateCoupon,
+  getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
   createOrder, createGuestOrder,
   initiateCheckout, initiateGuestCheckout,
   verifyPayment,
@@ -110,6 +111,11 @@ export default function CartDrawer() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMsg, setCouponMsg] = useState({ type: '', text: '' });
+  // Public "available offers" the customer can tap to auto-apply.
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  // Collapsed "Available offers" dropdown — closed by default so the drawer
+  // stays compact; the menu overlays the content below when opened.
+  const [offersOpen, setOffersOpen] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -118,6 +124,7 @@ export default function CartDrawer() {
   const [addrIssues, setAddrIssues] = useState(null);
 
   const dropdownRef = useRef(null);
+  const offersRef = useRef(null);
   const lastAutoSaveSig = useRef('');
 
   // ── Reset on close ─────────────────────────────────────────────────────
@@ -129,6 +136,8 @@ export default function CartDrawer() {
       setCouponMsg({ type: '', text: '' });
       setAppliedCoupon(null);
       setCouponCode('');
+      setAvailableCoupons([]);
+      setOffersOpen(false);
     }, 300);
     return () => clearTimeout(t);
   }, [cartOpen]);
@@ -167,6 +176,30 @@ export default function CartDrawer() {
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [showAddrDropdown]);
+
+  // ── Close "Available offers" dropdown on outside click / Escape ─────────
+  useEffect(() => {
+    if (!offersOpen) return;
+    const onDown = (e) => { if (offersRef.current && !offersRef.current.contains(e.target)) setOffersOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOffersOpen(false); } };
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [offersOpen]);
+
+  // ── Load brand's public "available offers" once per open (with items) ───
+  useEffect(() => {
+    if (!cartOpen || items.length === 0) return;
+    let alive = true;
+    getPublicCoupons()
+      .then(list => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartOpen]);
 
   // ── Load shipping fees ─────────────────────────────────────────────────
   useEffect(() => {
@@ -364,9 +397,10 @@ export default function CartDrawer() {
   }, [showAddrForm, addrSaving, isAuthenticated, addrForm, guestInfo.fullName, guestInfo.phone, editingAddrId]);
 
   // ── Coupon ────────────────────────────────────────────────────────────
-  const onApplyCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
+  const onApplyCoupon = async (codeArg) => {
+    const code = String(codeArg ?? couponCode).trim().toUpperCase();
     if (!code) return;
+    setOffersOpen(false);
     setCouponMsg({ type: '', text: '' });
     setCouponLoading(true);
     try {
@@ -922,12 +956,57 @@ export default function CartDrawer() {
                     <input value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="Enter code"
                       className="flex-1 input-gold px-3 py-2.5 text-sm font-body rounded-md" />
-                    <button onClick={onApplyCoupon} disabled={couponLoading || !couponCode.trim()}
+                    <button onClick={() => onApplyCoupon()} disabled={couponLoading || !couponCode.trim()}
                       className={`px-4 py-2.5 bg-[#1A1612] text-white text-[10px] tracking-[0.3em] uppercase font-body rounded-md hover:bg-[#8B6914] transition-colors ${couponLoading || !couponCode.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
                     </button>
                   </div>
                 )}
+
+                {/* Available offers — a COLLAPSED dropdown (select-style). The menu
+                    is position:absolute so it OVERLAYS the summary below and the
+                    drawer height never grows. Shown only when offers exist and no
+                    coupon is applied. */}
+                {!appliedCoupon && (() => {
+                  const appliedCode = (appliedCoupon?.code || '').toUpperCase();
+                  const offers = availableCoupons.filter(c => c && c.code && c.code.toUpperCase() !== appliedCode);
+                  if (offers.length === 0) return null;
+                  return (
+                    <div className="vq-offers" ref={offersRef}>
+                      <button type="button"
+                        onClick={() => setOffersOpen(o => !o)}
+                        disabled={couponLoading}
+                        aria-haspopup="listbox" aria-expanded={offersOpen}
+                        className={`vq-offers-trigger${offersOpen ? ' open' : ''}`}>
+                        <span className="vq-offers-label"><Sparkles size={13} /> Select a coupon</span>
+                        <ChevronDown size={16} className="vq-offers-chevron" aria-hidden="true" />
+                      </button>
+                      {offersOpen && (
+                        <div className="vq-offers-menu" role="listbox" aria-label="Available offers">
+                          {offers.map(c => (
+                            <button type="button" key={c.id ?? c.code} role="option"
+                              onClick={() => { onApplyCoupon(c.code); setOffersOpen(false); }}
+                              disabled={couponLoading}
+                              aria-label={`Apply coupon ${c.code}`}
+                              className="vq-offer">
+                              <span className="vq-offer-info">
+                                <span className="vq-offer-code"><Sparkles size={12} /> {c.code}</span>
+                                {(c.description || Number(c.minPurchase) > 0) && (
+                                  <span className="vq-offer-desc">
+                                    {c.description || 'Offer on your order'}
+                                    {Number(c.minPurchase) > 0 ? ` · Min ${fmt(c.minPurchase)}` : ''}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="vq-offer-apply">{couponLoading ? '…' : 'Apply'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {couponMsg.text && (
                   <p className={`text-[11px] font-body ${couponMsg.type === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
                     {couponMsg.text}
