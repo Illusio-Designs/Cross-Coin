@@ -235,6 +235,23 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
   return data
 }
 
+// Public list of active coupons for the current brand — used to surface
+// tap-to-apply offers in the cart drawer. Uses the SAME base URL + brand
+// header as validateCoupon. Returns [] on any failure so the UI can render
+// nothing without extra guarding.
+export async function getPublicCoupons() {
+  try {
+    const res = await fetch(`${API_URL}/api/coupons/listing`, {
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+    })
+    if (!res.ok) return []
+    const data = await res.json().catch(() => ({}))
+    return Array.isArray(data?.coupons) ? data.coupons : []
+  } catch {
+    return []
+  }
+}
+
 // Alias for CartDrawer compatibility
 export { verifyPayment as updateOrderPayment }
 

@@ -18,6 +18,7 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  getPublicCoupons,
 } from '@/lib/api/orders';
 import {
   toastOrderPlaced,
@@ -223,9 +224,13 @@ export function CartDrawer() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
+  // Available offers: public coupon list + the collapsed dropdown's open state.
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [offersOpen, setOffersOpen] = useState(false);
 
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
+  const offersRef = useRef(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
 
   // ── Visibility ─────────────────────────────────────────────────────────
@@ -240,6 +245,7 @@ export function CartDrawer() {
         setAppliedCoupon(null);
         setCouponError('');
         setCouponSuccess('');
+        setOffersOpen(false);
         setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, reservationId: null });
       }, 300);
       return () => clearTimeout(t);
@@ -284,6 +290,34 @@ export function CartDrawer() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawerOpen]);
+
+  // ── Available offers (public coupons) ─────────────────────────────────────
+  // Fetch once when the drawer opens with items so shoppers can tap-to-apply.
+  useEffect(() => {
+    if (!drawerOpen || items.length === 0) return;
+    let alive = true;
+    getPublicCoupons()
+      .then(list => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); })
+      .catch(() => { if (alive) setAvailableCoupons([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerOpen]);
+
+  // Close the "Select a coupon" dropdown on outside click / Escape. Kept local
+  // (capture-phase Escape + stopPropagation) so it doesn't also close the drawer.
+  useEffect(() => {
+    if (!offersOpen) return;
+    const onDown = (e) => { if (offersRef.current && !offersRef.current.contains(e.target)) setOffersOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOffersOpen(false); } };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [offersOpen]);
 
   // ── Shipping fees ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -403,6 +437,24 @@ export function CartDrawer() {
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   const finalTotal = Math.max(0, cartTotal + shippingFeeAmount - couponDiscount);
   const totalQty = items.reduce((s, i) => s + (i.quantity || 1), 0);
+
+  // Compact one-line summary for an available offer, e.g. "10% off, min ₹499".
+  const couponSummary = (c) => {
+    if (c.description) return String(c.description).replace(/<[^>]*>/g, '').trim();
+    const value = parseFloat(c.value) || 0;
+    const min = parseFloat(c.minPurchase) || 0;
+    const maxD = parseFloat(c.maxDiscount) || 0;
+    let head = '';
+    if (c.type === 'percentage') head = `${value % 1 === 0 ? value : value.toFixed(0)}% off${maxD > 0 ? ` up to ₹${maxD.toFixed(0)}` : ''}`;
+    else if (c.type === 'fixed') head = `₹${value.toFixed(0)} off`;
+    else head = 'Special offer';
+    return min > 0 ? `${head}, min ₹${min.toFixed(0)}` : head;
+  };
+
+  // Offers to surface in the dropdown — hide the one already applied.
+  const offersToShow = availableCoupons.filter(
+    (c) => !appliedCoupon || String(c.code).toUpperCase() !== String(appliedCoupon.code).toUpperCase()
+  );
 
   const sortedShippingFees = useMemo(() => {
     const arr = [...shippingFees];
@@ -563,8 +615,8 @@ export function CartDrawer() {
   }, [showAddressForm, addressSaving, addressForm, guestInfo, fieldErrors, pincodeServiceability, editingAddressId, isAuthenticated]);
 
   // ── Coupon ──────────────────────────────────────────────────────────────
-  const handleApplyCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
+  const handleApplyCoupon = async (overrideCode) => {
+    const code = String(overrideCode ?? couponCode).trim().toUpperCase();
     if (!code) return;
     setCouponError('');
     setCouponSuccess('');
@@ -576,6 +628,7 @@ export function CartDrawer() {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
         setCouponSuccess(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(0)} off!`);
         setCouponCode('');
+        setOffersOpen(false);
       } else {
         setCouponError(data.message || 'Invalid coupon code');
       }
@@ -1003,6 +1056,76 @@ export function CartDrawer() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Coupon */}
+              <div className="cd-sv-section">
+                <div className="cd-section-title">Coupon</div>
+                {appliedCoupon ? (
+                  <div className="cd-coupon-applied">
+                    <span>✓ {appliedCoupon.code}{couponDiscount > 0 ? ` · −₹${couponDiscount.toFixed(0)}` : ''}</span>
+                    <button type="button" className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cd-coupon-wrap">
+                      <input
+                        className="cd-coupon-input"
+                        value={couponCode}
+                        onChange={e => { setCouponCode(e.target.value.toUpperCase()); if (couponError) setCouponError(''); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCoupon(); } }}
+                        placeholder="Enter coupon code"
+                        aria-label="Coupon code"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        disabled={couponLoading}
+                      />
+                      <button type="button" className="cd-coupon-btn" onClick={() => handleApplyCoupon()} disabled={couponLoading || !couponCode.trim()}>
+                        {couponLoading ? 'Applying…' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
+                    {couponSuccess && <p className="cd-coupon-success">{couponSuccess}</p>}
+                    {offersToShow.length > 0 && (
+                      <div className="cd-offers-wrap" ref={offersRef}>
+                        <button
+                          type="button"
+                          className={`cd-offers-select${offersOpen ? ' open' : ''}`}
+                          onClick={() => setOffersOpen(o => !o)}
+                          disabled={couponLoading}
+                          aria-haspopup="listbox"
+                          aria-expanded={offersOpen}
+                          aria-label="Available offers"
+                        >
+                          <span className="cd-offers-label">Available offers · Select a coupon</span>
+                          <span className="cd-offers-chev" aria-hidden="true"><IconChevronDown /></span>
+                        </button>
+                        {offersOpen && (
+                          <div className="cd-offers-menu" role="listbox" aria-label="Available offers">
+                            {offersToShow.map(c => (
+                              <button
+                                type="button"
+                                key={c.id ?? c.code}
+                                className="cd-offers-opt"
+                                role="option"
+                                onClick={() => handleApplyCoupon(c.code)}
+                                disabled={couponLoading}
+                                aria-label={`Apply coupon ${c.code}`}
+                              >
+                                <span className="cd-offers-opt-text">
+                                  <b>{c.code}</b>
+                                  <span>{couponSummary(c)}</span>
+                                </span>
+                                <span className="cd-offers-opt-apply">Apply</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Order Summary */}

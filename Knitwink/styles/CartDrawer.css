@@ -192,6 +192,47 @@
 }
 .cd-coupon-remove:hover { text-decoration: underline; }
 
+/* ── Available offers ──────────────────────────────────────────────────────
+   A collapsed select-style trigger that opens an absolutely-positioned menu.
+   The menu overlays the summary below it, so the drawer height never grows. */
+.cd-offers-wrap { position: relative; margin-top: 10px; }
+.cd-offers-select {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: left; background: #fff;
+  border: 1.5px solid #e8e8ec; border-radius: 6px;
+  padding: 0 14px; height: 42px; cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s;
+}
+.cd-offers-select:hover:not(:disabled) { border-color: #0a0a0a; }
+.cd-offers-select.open { border-color: #0a0a0a; }
+.cd-offers-select:disabled { opacity: 0.45; cursor: not-allowed; }
+.cd-offers-label {
+  font-size: 13px; font-weight: 700; color: #0a0a0a;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.cd-offers-chev { display: grid; place-items: center; width: 16px; height: 16px; color: #777; flex-shrink: 0; transition: transform 0.18s ease; }
+.cd-offers-select.open .cd-offers-chev { transform: rotate(180deg); }
+.cd-offers-chev svg { width: 16px; height: 16px; }
+.cd-offers-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+  display: grid; gap: 6px; background: #fff;
+  border: 1.5px solid #e8e8ec; border-radius: 8px; padding: 6px;
+  box-shadow: 0 14px 34px rgba(10, 10, 10, 0.16);
+  max-height: 240px; overflow-y: auto;
+}
+.cd-offers-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: #fafafa; border: 1px dashed #cfcfd4; border-radius: 6px;
+  padding: 9px 11px; cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cd-offers-opt:hover:not(:disabled) { border-color: #0a0a0a; background: #fff; }
+.cd-offers-opt:disabled { opacity: 0.5; cursor: not-allowed; }
+.cd-offers-opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.cd-offers-opt-text b { font-size: 13px; font-weight: 800; color: #0a0a0a; letter-spacing: 0.03em; }
+.cd-offers-opt-text span { font-size: 11.5px; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-offers-opt-apply { font-size: 12px; font-weight: 800; color: #0a0a0a; flex-shrink: 0; }
+
 /* ── Forms ────────────────────────────────────────────────────────────────── */
 .cd-form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 480px) {
