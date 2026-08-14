@@ -169,6 +169,20 @@ export async function checkPincodeServiceability(pincode) {
 }
 
 // ── Coupons ────────────────────────────────────────────────────────────────
+// Public list of coupons the current brand is currently offering — the
+// "available offers" a customer can tap to auto-apply in the cart. Uses the
+// same brand-scoped client/headers as validateCoupon; returns [] on failure.
+export async function getPublicCoupons() {
+  try {
+    const res = await fetch(`${API_URL}/api/coupons/listing`, { headers: authHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data) ? data : data?.coupons || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }) {
   const res = await fetch(`${API_URL}/api/coupons/validate`, {
     method: 'POST',

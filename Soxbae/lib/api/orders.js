@@ -180,6 +180,23 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
   return data;
 }
 
+// Public list of active coupons for the current brand — used to surface
+// tap-to-apply offers in the cart drawer. Uses the same base URL + brand
+// header (via authHeaders) as validateCoupon. Returns [] on any failure so
+// the UI can simply render nothing.
+export async function getPublicCoupons() {
+  try {
+    const res = await fetch(`${API_URL}/api/coupons/listing`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data?.coupons) ? data.coupons : [];
+  } catch {
+    return [];
+  }
+}
+
 // Aliases for backward-compat with Knitwink naming.
 export const getOrders = getUserOrders;
 export const updateOrderPayment = verifyPayment;

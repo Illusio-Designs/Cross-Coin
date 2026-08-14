@@ -18,6 +18,7 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  getPublicCoupons,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
@@ -126,6 +127,8 @@ export default function CartDrawer() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  // Public "available offers" the customer can tap to auto-apply.
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -156,7 +159,17 @@ export default function CartDrawer() {
   }, [addrIssues]);
 
   // Clear transient state whenever the drawer closes
-  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); setCouponInput(''); setAppliedCoupon(null); setCouponError(''); } }, [open]);
+  useEffect(() => { if (!open) { setError(''); setRetryState(null); setOrderSuccess(null); setCouponInput(''); setAppliedCoupon(null); setCouponError(''); setAvailableCoupons([]); } }, [open]);
+
+  // Load the brand's available coupons once when the drawer opens with items —
+  // rendered as tappable "Available offers" below the coupon input.
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    let alive = true;
+    getPublicCoupons().then((list) => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
   // (this drawer is the full in-drawer checkout).
@@ -400,8 +413,11 @@ export default function CartDrawer() {
   };
 
   // ── Coupon ────────────────────────────────────────────────────────────────
-  const applyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = async (codeArg) => {
+    // Tapping an available offer passes its code; the Apply button passes an
+    // event (ignored) and falls back to the typed input.
+    const raw = typeof codeArg === 'string' ? codeArg : couponInput;
+    const code = raw.trim().toUpperCase();
     if (!code) return;
     setCouponError('');
     setCouponLoading(true);
@@ -612,6 +628,43 @@ export default function CartDrawer() {
                     {couponError && <p className="cd-coupon-msg" style={{ color: 'var(--sale)' }} role="alert">{couponError}</p>}
                   </>
                 )}
+
+                {/* Available offers — tap a row to auto-apply. Hides the applied
+                    one; renders nothing when there are no other offers. */}
+                {(() => {
+                  const offers = availableCoupons.filter(
+                    (c) => c && c.code && c.code.toUpperCase() !== (appliedCoupon?.code || '').toUpperCase()
+                  );
+                  if (offers.length === 0) return null;
+                  return (
+                    <div className="cd-offers">
+                      <div className="cd-offers-head">Available offers</div>
+                      <div className="cd-offers-list">
+                        {offers.map((c) => (
+                          <button
+                            type="button"
+                            key={c.id ?? c.code}
+                            className="cd-offer"
+                            onClick={() => applyCoupon(c.code)}
+                            disabled={couponLoading}
+                            aria-label={`Apply coupon ${c.code}`}
+                          >
+                            <span className="cd-offer-info">
+                              <span className="cd-offer-code"><Icon name="Sparkles" size={12} /> {c.code}</span>
+                              {(c.description || Number(c.minPurchase) > 0) && (
+                                <span className="cd-offer-desc">
+                                  {c.description || 'Offer on your order'}
+                                  {Number(c.minPurchase) > 0 ? ` · Min ₹${Number(c.minPurchase).toFixed(0)}` : ''}
+                                </span>
+                              )}
+                            </span>
+                            <span className="cd-offer-apply">{couponLoading ? '…' : 'Apply'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Order summary — right after the items, so pricing is clear up front */}

@@ -18,6 +18,7 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  getPublicCoupons,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
@@ -127,6 +128,7 @@ export default function CartDrawer() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -161,7 +163,20 @@ export default function CartDrawer() {
     if (!open) {
       setError(''); setRetryState(null); setOrderSuccess(null);
       setCouponInput(''); setAppliedCoupon(null); setCouponDiscount(0); setCouponError('');
+      setAvailableCoupons([]);
     }
+  }, [open]);
+
+  // Fetch the brand's public offers once when the drawer opens with items, so
+  // customers can tap to auto-apply a coupon (validated through the same path).
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    let alive = true;
+    getPublicCoupons()
+      .then((list) => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); })
+      .catch(() => { if (alive) setAvailableCoupons([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Load shipping fees + addresses as soon as the drawer opens (single view)
@@ -321,8 +336,8 @@ export default function CartDrawer() {
 
 
   // ── Coupon ────────────────────────────────────────────────────────────────
-  const applyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = async (codeOverride) => {
+    const code = String(typeof codeOverride === 'string' ? codeOverride : couponInput).trim().toUpperCase();
     if (!code) return;
     setCouponError('');
     setCouponLoading(true);
@@ -350,6 +365,24 @@ export default function CartDrawer() {
     setCouponError('');
     setCouponInput('');
   };
+
+  // Compact one-line summary for an available offer, e.g. "10% off, min ₹499".
+  const couponSummary = (c) => {
+    if (c.description) return String(c.description).replace(/<[^>]*>/g, '').trim();
+    const value = parseFloat(c.value) || 0;
+    const min = parseFloat(c.minPurchase) || 0;
+    const maxD = parseFloat(c.maxDiscount) || 0;
+    let head = '';
+    if (c.type === 'percentage') head = `${value % 1 === 0 ? value : value.toFixed(0)}% off${maxD > 0 ? ` up to ₹${maxD.toFixed(0)}` : ''}`;
+    else if (c.type === 'fixed') head = `₹${value.toFixed(0)} off`;
+    else head = 'Special offer';
+    return min > 0 ? `${head}, min ₹${min.toFixed(0)}` : head;
+  };
+
+  // Offers to show: hide the one already applied.
+  const offersToShow = availableCoupons.filter(
+    (c) => !appliedCoupon || String(c.code).toUpperCase() !== String(appliedCoupon.code).toUpperCase()
+  );
 
   const buildItems = () => items
     .filter((i) => (i.productId ?? i.id) != null && !Number.isNaN(Number(i.productId ?? i.id)))
@@ -629,6 +662,28 @@ export default function CartDrawer() {
                     </div>
                     {couponError && <p className="cd-coupon-msg" role="alert" style={{ color: 'var(--sale)' }}>{couponError}</p>}
                   </>
+                )}
+                {offersToShow.length > 0 && (
+                  <div className="cd-offers">
+                    <div className="cd-offers-title">Available offers</div>
+                    {offersToShow.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id ?? c.code}
+                        className="cd-offer"
+                        onClick={() => applyCoupon(c.code)}
+                        disabled={couponLoading}
+                        aria-label={`Apply coupon ${c.code}`}
+                      >
+                        <span className="cd-offer-tag"><Icon name="Sparkles" size={13} /></span>
+                        <span className="cd-offer-text">
+                          <b>{c.code}</b>
+                          <span>{couponSummary(c)}</span>
+                        </span>
+                        <span className="cd-offer-apply">Apply</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
