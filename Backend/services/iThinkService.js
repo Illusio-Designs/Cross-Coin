@@ -524,10 +524,31 @@ class IThinkService {
     logger.debug(`   Warehouse Resolution: orderData.pick_Address_ID=${orderData.pick_Address_ID}, this.pickupAddressId=${this.pickupAddressId}, final=${pickupId}`);
     logger.debug(`   Final Warehouse IDs: Pickup: ${pickupId || '(EMPTY - will default to 117173)'}, Return: ${returnId || '(EMPTY - will default to 117173)'}`);
 
+    // ── Reconcile the shipment's own arithmetic ──────────────────────────
+    // iThink validates: total_amount === Σ(product_price × qty) − Σ(product_discount)
+    //                   − total_discount + shipping_charges + cod_charges + …
+    // We send each product at its full unitPrice, so the line sum equals the
+    // pre-discount subtotal — but total_amount is the POST-discount final
+    // amount. Any coupon / instant discount therefore made iThink compute a
+    // higher total than we sent and reject with "Invalid order total Amount
+    // (Calculated by System: X, Entered by User: Y)". Bridge the gap on the
+    // shipment itself: if the final is lower, the difference is a discount; if
+    // higher (e.g. a COD shipping fee folded into final_amount), it's a
+    // shipping charge. Everything is rounded to whole rupees to match
+    // total_amount (iThink rejects decimals).
+    const lineSum = orderData.products.reduce(
+      (s, p) => s + Number(p.unitPrice || 0) * Number(p.quantity || 1) - Number(p.productDiscount || 0),
+      0,
+    );
+    const roundedLineSum = Math.round(lineSum);
+    const finalAmount = Math.round(Number(orderData.total_Amount || orderData.order_Amount || 0));
+    const totalDiscount = Math.max(0, roundedLineSum - finalAmount);
+    const shippingCharges = Math.max(0, finalAmount - roundedLineSum);
+
     // Per the iThink add-order doc, pickup_address_id / return_address_id live
     // INSIDE each shipment object (set below), not at the top-level data object.
     // Log the exact value sent per booking so a wrong warehouse is traceable.
-    logger.info(`[iThink] Booking ${orderData.orderId} → pickup_address_id=${pickupId}, return_address_id=${returnId} (this.pickupAddressId=${this.pickupAddressId})`);
+    logger.info(`[iThink] Booking ${orderData.orderId} → pickup_address_id=${pickupId}, return_address_id=${returnId} (this.pickupAddressId=${this.pickupAddressId}); lineSum=${roundedLineSum}, total_amount=${finalAmount}, total_discount=${totalDiscount}, shipping_charges=${shippingCharges}`);
     return {
       data: {
         ...this._authData(),
@@ -541,7 +562,7 @@ class IThinkService {
           order_date: orderDate,
           // Round to a whole rupee — iThink rejects/mis-books decimal amounts
           // (e.g. a coupon leaving 449.10), which was blocking the shipment sync.
-          total_amount: String(Math.round(Number(orderData.total_Amount || orderData.order_Amount || 0))),
+          total_amount: String(finalAmount),
           name: orderData.customer_Name,
           company_name: '',
           add: orderData.customer_Address,
@@ -569,14 +590,14 @@ class IThinkService {
           shipment_width: String(orderData.shipment_Width || 3),
           shipment_height: String(orderData.shipment_Height || 10),
           weight: String(weightKg.toFixed(2)),
-          shipping_charges: '0',
+          shipping_charges: String(shippingCharges),
           giftwrap_charges: '0',
           transaction_charges: '0',
-          total_discount: '0',
+          total_discount: String(totalDiscount),
           first_attemp_discount: '0',
           cod_charges: '0',
           advance_amount: '0',
-          cod_amount: paymentMode === 'COD' ? String(Math.round(Number(orderData.total_Amount || orderData.order_Amount || 0))) : '0',
+          cod_amount: paymentMode === 'COD' ? String(finalAmount) : '0',
           payment_mode: paymentMode,
           reseller_name: '',
           eway_bill_number: '',
