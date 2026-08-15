@@ -516,7 +516,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; }
 /* Gallery: a vertical thumbnail rail beside a large main image. */
 .pdp-gallery { display: flex; gap: 14px; align-items: flex-start; }
-.pdp-main { flex: 1; min-width: 0; aspect-ratio: 1/1; border-radius: var(--r-lg); background: #f2f5f6; display: grid; place-items: center; position: relative; overflow: hidden; }
+.pdp-main { flex: 1; min-width: 0; max-width: 100%; aspect-ratio: 1/1; border-radius: var(--r-lg); background: #f2f5f6; display: grid; place-items: center; position: relative; overflow: hidden; }
 .pdp-main img { width: 100%; height: 100%; object-fit: contain; }
 /* Tap-to-zoom main image + overlays (matches the CrossCoin gallery) */
 .pdp-main-zoom { all: unset; display: block; width: 100%; height: 100%; cursor: zoom-in; position: relative; }
@@ -800,6 +800,10 @@ button { font-family: inherit; cursor: pointer; }
   /* Stack the gallery on phones — big main image on top, horizontal
      scrollable thumbnail strip below (matches the CrossCoin gallery). */
   .pdp-gallery { flex-direction: column-reverse; gap: 10px; }
+  /* Pin the main image full-width here too (this block stacks the gallery
+     from 760px down). Without it, flex:1 + aspect-ratio:1/1 in the column
+     derives the width from the flex-driven height and overflows the viewport. */
+  .pdp-main { width: 100%; flex: 0 0 auto; }
   .pdp-thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 2px; }
   .pdp-thumb { width: 64px; height: 64px; }
   .pdp-highlights { grid-template-columns: 1fr; }
