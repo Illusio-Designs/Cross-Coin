@@ -116,12 +116,9 @@
 }
 
 .pdt-main-img {
-  /* Fill only the space left beside the 72px thumbnail strip instead of
-     demanding 100% of the flex row (which pushed the image past the column
-     edge and overflowed to the right). min-width:0 lets it shrink freely. */
-  flex: 1 1 0;
-  min-width: 0;
-  width: auto;
+  /* Full width of .pdt-main-img-wrap (the actual flex child of .pdt-gallery,
+     which carries flex:1; min-width:0). Sizing lives on the wrap, not here. */
+  width: 100%;
   /* Stable square box so the image never floats in empty space and the
      3s auto-cycle between images of different shapes doesn't jump the height. */
   aspect-ratio: 1 / 1;
@@ -1194,9 +1191,11 @@
   /* Mobile-first gallery: full-width main image on top, thumbnails as a
      horizontal swipe strip below (the vertical side rail cramps phone width). */
   .pdt-gallery { flex-direction: column-reverse; }
-  /* Stacked column uses align-items:flex-start, so restore explicit full
-     width the desktop flex:1 rule dropped. */
-  .pdt-main-img { width: 100%; flex: 0 0 auto; }
+  /* Stacked column keeps align-items:flex-start, so the flex child
+     (.pdt-main-img-wrap) isn't stretched and would size to the image's
+     intrinsic width and overflow. Pin the WRAP — the actual flex child — to
+     full viewport width; the image inside is width:100% of it. */
+  .pdt-main-img-wrap { width: 100%; flex: 0 0 auto; }
   .pdt-thumbs {
     flex-direction: row;
     width: 100%;
