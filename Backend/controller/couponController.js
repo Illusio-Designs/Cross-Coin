@@ -487,6 +487,14 @@ module.exports.validateCoupon = async (req, res) => {
             discountAmount = applicableAmount;
         }
 
+        // Round the discount to a whole rupee so the order total is always a
+        // whole number end-to-end (cart, payment, shipping). A percentage
+        // coupon like 10% of ₹499 = ₹49.90 would otherwise leave ₹449.10, and
+        // iThink rejects decimal totals on courier booking. Rounding the
+        // discount (not the total) keeps subtotal − discount an integer since
+        // product prices are whole.
+        discountAmount = Math.min(applicableAmount, Math.round(discountAmount));
+
         const finalAmount = Math.max(0, applicableAmount - discountAmount);
 
         res.status(200).json({

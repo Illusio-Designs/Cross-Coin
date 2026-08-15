@@ -146,7 +146,10 @@
       const tier = tiers.sort((a, b) => b.minQuantity - a.minQuantity).find(t => totalQty >= t.minQuantity);
       if (tier) discount = parseFloat(tier.discount);
     }
-    return Math.min(discount, subTotal);
+    // Round to a whole rupee so subTotal − discount stays an integer (product
+    // prices are whole). Keeps the order total decimal-free end-to-end and
+    // matches the rounding done in validateCoupon.
+    return Math.min(subTotal, Math.round(discount));
   }
 
   /**

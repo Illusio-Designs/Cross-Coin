@@ -159,7 +159,9 @@ async function computeCouponDiscount(couponId, subTotal, paymentType = null) {
   } else {
     discount = parseFloat(coupon.value);
   }
-  return Math.min(discount, subTotal);
+  // Round to a whole rupee so subTotal − discount stays an integer (matches
+  // validateCoupon), keeping the order total decimal-free for courier booking.
+  return Math.min(subTotal, Math.round(discount));
 }
 
 async function calcShippingFee(paymentType, brandId = 1) {
