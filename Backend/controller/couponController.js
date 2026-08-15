@@ -892,12 +892,19 @@ module.exports.deleteCoupon = async (req, res) => {
 // Get all active public coupons
 module.exports.getPublicCoupons = async (req, res) => {
     try {
+        // Coupons are shared across every storefront: validateCoupon (the apply
+        // path) matches by code only, with no brand filter, so ANY brand can
+        // redeem ANY active coupon. The offers dropdown must show the same set —
+        // previously it filtered by brand_id, so a coupon created under one
+        // brand (creation stamps brand_id = the creating brand, default 1) never
+        // appeared in another brand's dropdown even though it was fully usable
+        // there. Listing all active coupons keeps the dropdown consistent with
+        // what can actually be applied.
         const where = {
             status: 'active',
             startDate: { [Op.lte]: new Date() },
             endDate: { [Op.gte]: new Date() }
         };
-        if (req.brand && req.brand.id) where.brand_id = req.brand.id;
 
         const coupons = await Coupon.findAll({
             where,
