@@ -539,7 +539,9 @@ class IThinkService {
           order: String(orderData.orderId),
           sub_order: '',
           order_date: orderDate,
-          total_amount: String(orderData.total_Amount || orderData.order_Amount || 0),
+          // Round to a whole rupee — iThink rejects/mis-books decimal amounts
+          // (e.g. a coupon leaving 449.10), which was blocking the shipment sync.
+          total_amount: String(Math.round(Number(orderData.total_Amount || orderData.order_Amount || 0))),
           name: orderData.customer_Name,
           company_name: '',
           add: orderData.customer_Address,
@@ -574,7 +576,7 @@ class IThinkService {
           first_attemp_discount: '0',
           cod_charges: '0',
           advance_amount: '0',
-          cod_amount: paymentMode === 'COD' ? String(orderData.total_Amount || orderData.order_Amount || 0) : '0',
+          cod_amount: paymentMode === 'COD' ? String(Math.round(Number(orderData.total_Amount || orderData.order_Amount || 0))) : '0',
           payment_mode: paymentMode,
           reseller_name: '',
           eway_bill_number: '',
