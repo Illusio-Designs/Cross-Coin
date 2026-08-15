@@ -102,7 +102,7 @@
    * Compute server-side discount for a coupon against a subtotal.
    * Returns the discount amount in rupees.
    */
-  async function computeCouponDiscount(couponId, subTotal, items = []) {
+  async function computeCouponDiscount(couponId, subTotal, items = [], paymentType = null) {
     if (!couponId) return 0;
     const { Coupon } = require('../model/associations.js');
     const coupon = await Coupon.findOne({
@@ -114,6 +114,15 @@
       },
     });
     if (!coupon) return 0;
+    // Payment-mode restriction: a prepaid-only coupon must yield NO discount on
+    // a COD order (and vice-versa). This is the authoritative check at order
+    // creation, where paymentType is final — it closes the gap where a coupon
+    // applied under one mode in the cart is carried into an order placed under
+    // the other. paymentType null (legacy callers) skips the guard.
+    if (paymentType && coupon.paymentModeRestriction && coupon.paymentModeRestriction !== 'all') {
+      const mode = paymentType === 'cod' ? 'cod' : 'prepaid';
+      if (coupon.paymentModeRestriction !== mode) return 0;
+    }
     if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
     if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
 
@@ -478,7 +487,20 @@
         return res.status(400).json({ message: "Invalid discount amount." });
       }
       if (coupon_id) {
-        const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, validatedItems);
+        // Reject a payment-mode-restricted coupon used with the wrong mode up
+        // front, with a message the shopper can act on — before the generic
+        // total-mismatch guard below turns it into a confusing refresh prompt.
+        const { Coupon } = require('../model/associations.js');
+        const restrictCoupon = await Coupon.findByPk(coupon_id, { transaction });
+        if (restrictCoupon && restrictCoupon.paymentModeRestriction && restrictCoupon.paymentModeRestriction !== 'all') {
+          const mode = payment_type === 'cod' ? 'cod' : 'prepaid';
+          if (restrictCoupon.paymentModeRestriction !== mode) {
+            await transaction.rollback();
+            const modeText = restrictCoupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+            return res.status(400).json({ message: `This coupon is only valid for ${modeText} orders. Please remove it or change your payment method.` });
+          }
+        }
+        const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, validatedItems, payment_type);
         const expectedTotal = serverDiscount + PREPAID_DISCOUNT;
         if (Math.abs(appliedDiscount - expectedTotal) > 1) {
           await transaction.rollback();

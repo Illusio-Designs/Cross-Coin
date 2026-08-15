@@ -236,6 +236,22 @@ export default function CartDrawer() {
   const total = Math.max(0, subtotal + shippingFee - couponDiscount);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
+
+  // Auto-remove a payment-mode-restricted coupon when the shopper switches modes
+  // after applying it (e.g. a Prepaid-only coupon must drop if they pick COD).
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCod ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      setCouponInput('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponError(`Coupon removed — it's valid only for ${modeText} orders.`);
+    }
+  }, [isCod, appliedCoupon]);
   // Prepaid instant discount (0 unless configured) → the amount actually payable
   // online is the total minus that incentive.
   const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
@@ -363,7 +379,7 @@ export default function CartDrawer() {
       const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
       const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode, cartItems: items });
       if (data?.success) {
-        setAppliedCoupon({ code: data.coupon.code, id: data.coupon.id });
+        setAppliedCoupon({ code: data.coupon.code, id: data.coupon.id, paymentModeRestriction: data.coupon.paymentModeRestriction });
         setCouponDiscount(parseFloat(data.discountAmount) || 0);
         setCouponInput('');
         setOffersOpen(false);

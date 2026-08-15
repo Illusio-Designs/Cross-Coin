@@ -268,6 +268,24 @@ export default function CartDrawer() {
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
   const finalPayable = Math.max(0, baseTotal - prepaidDisc);
 
+  // ── Auto-remove a payment-mode-restricted coupon on mode switch ─────────
+  // A coupon may be restricted to a single payment mode via
+  // paymentModeRestriction ('all' | 'cod' | 'prepaid'). Applying under the
+  // wrong mode is already blocked server-side, but switching the delivery
+  // method AFTER applying would otherwise leave a now-invalid coupon applied.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCod ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponCode('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponMsg({ type: 'err', text: `Coupon removed — it's valid only for ${modeText} orders.` });
+    }
+  }, [isCod, appliedCoupon]);
+
   // ── Address form handlers ──────────────────────────────────────────────
   const onAddrField = (e) => {
     const { name, value, type, checked } = e.target;
@@ -411,7 +429,7 @@ export default function CartDrawer() {
         cartItems: items,
       });
       if (data.success && data.coupon) {
-        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount });
+        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
         setCouponMsg({ type: 'ok', text: `${data.coupon.code} applied — ${fmt(parseFloat(data.discountAmount))} off` });
         setCouponCode('');
         toastCouponApplied(data.coupon.code);

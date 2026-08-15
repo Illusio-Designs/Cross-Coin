@@ -248,6 +248,22 @@ export default function CartDrawer() {
   const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
   const prepaidPayable = Math.max(0, total - prepaidInstantDiscount);
 
+  // Auto-remove a payment-mode-restricted coupon when the shopper switches
+  // payment mode after applying it. Applying under the wrong mode is already
+  // blocked server-side; this guards the switch-after-apply case.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCod ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponInput('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponError(`Coupon removed — it's valid only for ${modeText} orders.`);
+    }
+  }, [isCod, appliedCoupon]);
+
   const sortedFees = useMemo(() => {
     const arr = [...fees];
     arr.sort((a, b) => (a.orderType === 'cod' ? -1 : 1) - (b.orderType === 'cod' ? -1 : 1));
@@ -439,7 +455,7 @@ export default function CartDrawer() {
       const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
       const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode, cartItems: items });
       if (data.success) {
-        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discountAmount });
+        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
         setCouponInput('');
         setOffersOpen(false);
         toast.success(`"${data.coupon.code}" applied — ₹${(parseFloat(data.discountAmount) || 0).toFixed(0)} off!`);

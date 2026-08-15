@@ -184,6 +184,24 @@ export default function CartDrawer() {
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
 
+  /* Auto-remove a payment-mode-restricted coupon when the shopper switches
+     payment mode after applying it (e.g. a Prepaid-only coupon applied while
+     Prepaid was selected, then switched to COD). The apply handler blocks
+     applying under the wrong mode; this guards the switch-after-apply case. */
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCod ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      setCouponInput('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponError(`Coupon removed — it's valid only for ${modeText} orders.`);
+    }
+  }, [isCod, appliedCoupon]);
+
   const sortedFees = useMemo(() => {
     const arr = [...shippingFees];
     arr.sort((a, b) => (a.orderType === 'cod' ? -1 : b.orderType === 'cod' ? 1 : 0));
@@ -354,7 +372,7 @@ export default function CartDrawer() {
       const paymentMode = selectedFee?.orderType === 'cod' ? 'cod' : 'prepaid';
       const data = await validateCoupon({ code, cartTotal, paymentMode, cartItems: items });
       if (data?.success && data?.coupon) {
-        setAppliedCoupon({ code: data.coupon.code || code, id: data.coupon.id });
+        setAppliedCoupon({ code: data.coupon.code || code, id: data.coupon.id, paymentModeRestriction: data.coupon.paymentModeRestriction });
         setCouponDiscount(Number(data.discountAmount) || 0);
         setCouponInput('');
         setOffersOpen(false);

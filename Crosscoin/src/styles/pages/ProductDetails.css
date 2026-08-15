@@ -116,8 +116,12 @@
 }
 
 .pdt-main-img {
-  flex: 0 0 auto;
-  width: 100%;
+  /* Fill only the space left beside the 72px thumbnail strip instead of
+     demanding 100% of the flex row (which pushed the image past the column
+     edge and overflowed to the right). min-width:0 lets it shrink freely. */
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
   /* Stable square box so the image never floats in empty space and the
      3s auto-cycle between images of different shapes doesn't jump the height. */
   aspect-ratio: 1 / 1;
@@ -1190,6 +1194,9 @@
   /* Mobile-first gallery: full-width main image on top, thumbnails as a
      horizontal swipe strip below (the vertical side rail cramps phone width). */
   .pdt-gallery { flex-direction: column-reverse; }
+  /* Stacked column uses align-items:flex-start, so restore explicit full
+     width the desktop flex:1 rule dropped. */
+  .pdt-main-img { width: 100%; flex: 0 0 auto; }
   .pdt-thumbs {
     flex-direction: row;
     width: 100%;

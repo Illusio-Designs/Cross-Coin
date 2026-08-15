@@ -138,11 +138,17 @@ const PHONE_REGEX = /^[6-9]\d{9}$/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-async function computeCouponDiscount(couponId, subTotal) {
+async function computeCouponDiscount(couponId, subTotal, paymentType = null) {
   const { Coupon } = require('../model/couponModel.js');
   if (!couponId) return 0;
   const coupon = await Coupon.findByPk(couponId);
   if (!coupon || coupon.status !== 'active') return 0;
+  // Payment-mode restriction: a prepaid-only coupon yields no discount on a COD
+  // order (and vice-versa). paymentType null (legacy callers) skips the guard.
+  if (paymentType && coupon.paymentModeRestriction && coupon.paymentModeRestriction !== 'all') {
+    const mode = paymentType === 'cod' ? 'cod' : 'prepaid';
+    if (coupon.paymentModeRestriction !== mode) return 0;
+  }
   if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
   if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
 
@@ -322,7 +328,18 @@ exports.initiateCheckout = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid discount amount.' });
     }
     if (coupon_id) {
-      const serverDiscount = await computeCouponDiscount(coupon_id, subTotal);
+      // Reject a payment-mode-restricted coupon used with the wrong mode with a
+      // clear, actionable message before the generic total-mismatch guard.
+      const { Coupon } = require('../model/couponModel.js');
+      const restrictCoupon = await Coupon.findByPk(coupon_id);
+      if (restrictCoupon && restrictCoupon.paymentModeRestriction && restrictCoupon.paymentModeRestriction !== 'all') {
+        const mode = payment_type === 'cod' ? 'cod' : 'prepaid';
+        if (restrictCoupon.paymentModeRestriction !== mode) {
+          const modeText = restrictCoupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+          return res.status(400).json({ success: false, message: `This coupon is only valid for ${modeText} orders. Please remove it or change your payment method.` });
+        }
+      }
+      const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, payment_type);
       if (Math.abs(appliedDiscount - (serverDiscount + PREPAID_DISCOUNT)) > 1) {
         return res.status(400).json({ success: false, message: 'Order total mismatch. Please refresh and try again.' });
       }

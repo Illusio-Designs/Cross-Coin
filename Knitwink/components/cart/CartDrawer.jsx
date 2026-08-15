@@ -472,6 +472,24 @@ export function CartDrawer() {
   const isCodDelivery = selectedFee?.orderType === 'cod';
   const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
 
+  // ── Auto-remove a payment-mode-restricted coupon on mode switch ───────────
+  // Applying under the wrong mode is blocked at apply time, but switching the
+  // delivery/payment mode AFTER applying would otherwise leave a now-invalid
+  // coupon attached. Drop it and tell the shopper why.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCodDelivery ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponSuccess('');
+      setCouponCode('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponError(`Coupon removed — it's valid only for ${modeText} orders.`);
+    }
+  }, [isCodDelivery, appliedCoupon]);
+
   const scrollDrawerTo = (id) => {
     requestAnimationFrame(() => {
       const el = document.getElementById(id);

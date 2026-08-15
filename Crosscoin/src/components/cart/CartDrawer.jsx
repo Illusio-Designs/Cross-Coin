@@ -639,6 +639,25 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const isCodDelivery = selectedFee?.orderType === 'cod';
   const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
 
+  // If the shopper switches payment mode after applying a coupon that is
+  // restricted to the other mode (e.g. a Prepaid-only coupon while now on COD),
+  // drop it automatically so the shown total stays correct and the order isn't
+  // rejected at placement. The apply handler already blocks the wrong mode at
+  // apply time; this covers the switch-after-apply case.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const restriction = appliedCoupon.paymentModeRestriction;
+    if (!restriction || restriction === 'all') return;
+    const mode = isCodDelivery ? 'cod' : 'prepaid';
+    if (restriction !== mode) {
+      setAppliedCoupon(null);
+      setCouponSuccess('');
+      setCouponCode('');
+      const modeText = restriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
+      setCouponError(`Coupon removed — it's valid only for ${modeText} orders.`);
+    }
+  }, [isCodDelivery, appliedCoupon]);
+
   // Reset on delivery/address change
   useEffect(() => {
     setFieldErrors({});
