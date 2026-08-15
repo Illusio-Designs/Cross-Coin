@@ -518,6 +518,10 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Product detail */
 .pdp { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; }
+/* Let both grid tracks shrink to the container so a non-wrapping child (e.g.
+   the SKU meta row) can't expand the column past the viewport and drag the
+   gallery/main image out with it — the phone whole-page overflow. */
+.pdp > * { min-width: 0; }
 /* Gallery: a vertical thumbnail rail beside a large main image. */
 .pdp-gallery { display: flex; gap: 14px; align-items: flex-start; }
 .pdp-main { flex: 1; min-width: 0; aspect-ratio: 1/1; border-radius: var(--r-lg); background: #f4efe3; display: grid; place-items: center; position: relative; overflow: hidden; }
@@ -544,7 +548,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-thumb:hover { border-color: var(--ink-soft); }
 .pdp-thumb.active { border-color: var(--teal); }
 .pdp-info h1 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; margin: 8px 0 12px; }
-.pdp-meta { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; font-size: 13px; }
+.pdp-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 14px; font-size: 13px; }
 .pdp-price { font-size: 28px; font-weight: 900; margin-bottom: 16px; }
 .pdp-price .old { font-size: 17px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; margin-left: 10px; }
 .pdp-desc { color: var(--ink-soft); font-size: 15px; margin-bottom: 24px; }

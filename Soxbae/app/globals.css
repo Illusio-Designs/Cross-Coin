@@ -1304,6 +1304,11 @@ h1, h2, h3 { letter-spacing: -0.015em; }
    PDP — Soxbae editorial layout (.pdx-*)  [replaces the .pdp Morbix structure]
    ════════════════════════════════════════════════════════════════════════ */
 .pdx { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: clamp(28px,4vw,60px); align-items: start; }
+/* Keep tracks shrinkable at every breakpoint. The desktop template already
+   uses minmax(0,…), but the mobile rule collapses to a plain 1fr (=
+   minmax(auto,1fr)); this guard stops a non-wrapping child from expanding the
+   column past the viewport and overflowing the page on phones. */
+.pdx > * { min-width: 0; }
 /* Gallery: big image + horizontal thumbnail strip beneath */
 .pdx-gallery { position: sticky; top: 130px; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
 .pdx-rail { display: flex; flex-direction: column; gap: 10px; width: 82px; flex-shrink: 0; max-height: var(--pdx-rail-h, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; scroll-behavior: smooth; }
@@ -1340,7 +1345,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-buy { min-width: 0; }
 .pdx-cat { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-600); }
 .pdx-title { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.05; font-size: clamp(28px,3.8vw,46px); color: var(--ink); margin: 12px 0 0; }
-.pdx-rating { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
+.pdx-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
 .pdx-stars { display: inline-flex; gap: 2px; color: var(--line); }
 .pdx-stars svg.on { color: var(--accent); }
 .pdx-rating-link { color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; }
