@@ -12,12 +12,21 @@ const router = express.Router();
 // `validate` is hit on every checkout — keep it cheap. We only enforce
 // that a code string came in and (optionally) a positive cart total so
 // downstream math can't crash on missing fields.
+// NOTE: validateBody REPLACES req.body with the parsed object, and Zod strips
+// any key not declared here. So every field the controller reads must be listed
+// — otherwise it silently arrives as undefined. Missing entries previously
+// broke the payment-mode restriction check (paymentMode), quantity-based
+// coupons (cartItems) and the guest per-user limit (email/guest_email).
 const validateCouponSchema = z.object({
   code: z.string().trim().min(1, 'Coupon code is required').max(50),
   cart_total: z.coerce.number().nonnegative().optional(),
   subtotal: z.coerce.number().nonnegative().optional(),
   cartTotal: z.coerce.number().nonnegative().optional(),
   user_id: z.coerce.number().int().positive().optional(),
+  paymentMode: z.enum(['cod', 'prepaid']).optional(),
+  cartItems: z.array(z.object({}).passthrough()).optional(),
+  email: z.string().trim().optional(),
+  guest_email: z.string().trim().optional(),
 });
 
 const applyCouponSchema = z.object({
