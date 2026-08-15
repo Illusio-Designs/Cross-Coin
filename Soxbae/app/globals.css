@@ -1323,6 +1323,10 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 /* Phones: stack gallery — big main image on top, horizontal thumbnail strip below. */
 @media (max-width: 600px) {
   .pdx-gallery { flex-direction: column-reverse; gap: 10px; }
+  /* Stacked column keeps align-items:flex-start, so flex:1 (height-only in a
+     column) no longer constrains the main image's width — pin it full-width so
+     it can't overflow the viewport; aspect-ratio supplies the height. */
+  .pdx-main { width: 100%; flex: 0 0 auto; }
   .pdx-rail { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 2px; }
   .pdx-thumb { width: 62px; height: 62px; flex: 0 0 auto; }
 }

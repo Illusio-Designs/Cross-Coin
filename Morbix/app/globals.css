@@ -538,6 +538,10 @@ button { font-family: inherit; cursor: pointer; }
    horizontal scrollable thumbnail strip below (instead of a cramped side rail). */
 @media (max-width: 600px) {
   .pdp-gallery { flex-direction: column-reverse; gap: 10px; }
+  /* Stacked column keeps align-items:flex-start, so flex:1 (which only drives
+     height in a column) no longer constrains the main image's width and it
+     overflows the viewport. Pin it to full width; aspect-ratio gives height. */
+  .pdp-main { width: 100%; flex: 0 0 auto; }
   .pdp-thumbs { flex-direction: row; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 8px; padding-bottom: 2px; }
   .pdp-thumb { width: 62px; height: 62px; }
   .pdp-zoom-hint { width: 30px; height: 30px; }
