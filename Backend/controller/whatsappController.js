@@ -41,6 +41,25 @@ async function resolveBrandByPhone(phone) {
   return DEFAULT_BRAND;
 }
 
+// When a message references a specific order number (e.g. a COD confirm/reject
+// button whose payload is `confirm_cod_SB-MSVFVW56-232508`, or text that quotes
+// the order id), attribute the thread to THAT order's brand. This is more
+// precise than resolveBrandByPhone, which returns the customer's most-recent
+// order across ALL brands — so a Soxbae address confirmation from a customer
+// whose latest order was CrossCoin would otherwise be mis-tagged CrossCoin.
+async function resolveBrandByOrderRef(text) {
+  try {
+    const m = String(text || '').toUpperCase().match(/\b([A-Z]{2,4}-[A-Z0-9]{5,}-[A-Z0-9]{4,})\b/);
+    if (!m) return null;
+    const { Order } = require('../model/orderModel.js');
+    const order = await Order.findOne({ where: { order_number: m[1] }, attributes: ['brand_id'] });
+    return order?.brand_id || null;
+  } catch (e) {
+    logger.warn('[WhatsApp] brand resolve by order ref failed: ' + e.message);
+    return null;
+  }
+}
+
 // WhatsApp only includes a customer's profile name in the webhook when they've
 // set one and their privacy allows it — so many threads have no name and the
 // inbox falls back to showing the raw phone number. When we have no name, look
@@ -223,7 +242,9 @@ exports.receiveWebhook = async (req, res) => {
         for (const msg of (value.messages || [])) {
           const phone       = msg.from;
           // Shared number → attribute this message to the customer's brand.
-          const brandId     = await resolveBrandByPhone(phone);
+          // Refined below to the referenced order's brand when the message
+          // carries an order number (e.g. a COD confirm/reject button).
+          let brandId       = await resolveBrandByPhone(phone);
           // Prefer the live WhatsApp profile name; fall back to the customer's
           // order/guest name so the inbox shows a real name, not a bare number.
           const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
@@ -279,6 +300,14 @@ exports.receiveWebhook = async (req, res) => {
               ? 'Unsupported message'
               : `${String(msg.type || 'message').replace(/_/g, ' ')} message`;
           }
+
+          // If the message references a specific order (COD confirm/reject
+          // button payload, or the order id in the text), attribute the thread
+          // to that order's brand — more accurate than the phone's most-recent
+          // order. This is what keeps a Soxbae address confirmation tagged
+          // Soxbae instead of defaulting to CrossCoin.
+          const refBrand = await resolveBrandByOrderRef(msgBody || displayText);
+          if (refBrand) brandId = refBrand;
 
           // One thread per customer (shared number): key by phone only, and tag
           // the thread with the resolved brand so the dashboard shows which brand
@@ -1389,13 +1418,19 @@ exports.receiveWebhook = async (req, res) => {
           // badge show the right brand. Only override on an explicit mention so
           // a later "yes" doesn't flip an already-attributed conversation back.
           const namedBrand = msgType === 'text' ? await detectBrandFromText(text) : null;
+          // An order number in the message (COD confirm/reject button payload,
+          // or quoted in text) is the strongest brand signal — it pins the
+          // thread to that exact order's brand (so a Soxbae address confirmation
+          // is tagged Soxbae, not the customer's most-recent brand).
+          const refBrand = await resolveBrandByOrderRef(buttonPayload || text);
+          const resolvedBrand = refBrand || namedBrand;
           const [conv, created] = await WhatsappConversation.findOrCreate({
             where: { customer_phone: phone },
-            defaults: { brand_id: namedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
+            defaults: { brand_id: resolvedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
             const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: waName || conv.customer_name || contactName, status: 'open' };
-            if (namedBrand) upd.brand_id = namedBrand; // only re-attribute when a brand is explicitly named
+            if (resolvedBrand) upd.brand_id = resolvedBrand; // re-attribute on an explicit brand mention OR an order reference
             await conv.update(upd);
           }
 
