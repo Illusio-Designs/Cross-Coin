@@ -1,6 +1,11 @@
 const { sequelize } = require('../config/db.js');
 const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
+const { BOT_SQL_REGEXP } = require('../utils/botDetect');
+
+// Excludes bot/crawler user agents from a utm_tracking scan (belt-and-suspenders
+// for rows recorded before ingestion-time bot filtering existed).
+const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
 
 // Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Returns
 // JS Date bounds covering full days [start 00:00:00, end 23:59:59].
@@ -18,7 +23,7 @@ function parseRange(q) {
 exports.getBrandTraffic = async (req, res) => {
   try {
     const { start, end } = parseRange(req.query);
-    const repl = { start, end };
+    const repl = { start, end, bot: BOT_SQL_REGEXP };
 
     // Brands
     const brands = await sequelize.query(
@@ -30,7 +35,7 @@ exports.getBrandTraffic = async (req, res) => {
     const sessions = await sequelize.query(
       `SELECT brand_id, COUNT(DISTINCT session_id) AS sessions
        FROM utm_tracking
-       WHERE created_at BETWEEN :start AND :end
+       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}
        GROUP BY brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -64,7 +69,7 @@ exports.getBrandTraffic = async (req, res) => {
               COALESCE(utm_medium,'none')   AS medium,
               COUNT(DISTINCT session_id)    AS sessions
        FROM utm_tracking
-       WHERE created_at BETWEEN :start AND :end
+       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}
        GROUP BY brand_id, source, medium
        ORDER BY sessions DESC`,
       { replacements: repl, type: QueryTypes.SELECT }
@@ -98,7 +103,8 @@ exports.getBrandTraffic = async (req, res) => {
       const delivered = Number(o.delivered) || 0;
       const revenue = Number(o.revenue) || 0;
 
-      // Ordered funnel stages with count + conversion from the previous stage.
+      // Ordered funnel stages. step_rate = % of the previous stage;
+      // overall_rate = % of Visits (top of funnel = 100%, purchase the smallest).
       const stages = [
         { key: 'sessions',   label: 'Visits',          count: s },
         { key: 'view_item',  label: 'Product views',   count: views,      of: s },
@@ -106,7 +112,11 @@ exports.getBrandTraffic = async (req, res) => {
         { key: 'begin_checkout', label: 'Checkout',    count: checkouts,  of: carts || views || s },
         { key: 'purchase',   label: 'Orders',          count: ordersN,    of: checkouts || carts || s },
         { key: 'delivered',  label: 'Delivered',       count: delivered,  of: ordersN },
-      ].map((st) => ({ ...st, step_rate: st.of != null ? rate(st.count, st.of) : null }));
+      ].map((st) => ({
+        ...st,
+        step_rate: st.of != null ? rate(st.count, st.of) : null,
+        overall_rate: s > 0 ? rate(st.count, s) : (st.key === 'sessions' ? 100 : 0),
+      }));
 
       return {
         brand_id: b.id,
@@ -143,7 +153,11 @@ exports.getBrandTraffic = async (req, res) => {
       { key: 'begin_checkout', label: 'Checkout', count: totals.checkouts, of: totals.carts || totals.views || totals.sessions },
       { key: 'purchase', label: 'Orders', count: totals.orders, of: totals.checkouts || totals.carts || totals.sessions },
       { key: 'delivered', label: 'Delivered', count: totals.delivered, of: totals.orders },
-    ].map((st) => ({ ...st, step_rate: st.of != null ? rate(st.count, st.of) : null }));
+    ].map((st) => ({
+      ...st,
+      step_rate: st.of != null ? rate(st.count, st.of) : null,
+      overall_rate: totals.sessions > 0 ? rate(st.count, totals.sessions) : (st.key === 'sessions' ? 100 : 0),
+    }));
 
     res.json({
       success: true,

@@ -84,8 +84,6 @@ export default function TrafficReport() {
     { label: 'AOV', value: (r) => r.aov },
   ], brands);
 
-  const funnelMax = t?.stages?.length ? Math.max(...t.stages.map((s) => s.count), 1) : 1;
-
   return (
     <div style={S.wrap}>
       <div style={S.head}>
@@ -118,19 +116,20 @@ export default function TrafficReport() {
           <div style={{ ...S.kLab, marginBottom: 12 }}>Funnel — all brands</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {t.stages.map((st) => (
-              <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 150px', alignItems: 'center', gap: 12 }}>
+              <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 190px', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ds-color-text)', fontWeight: 600 }}>{st.label}</span>
-                <div style={{ background: 'var(--ds-color-border)', borderRadius: 8, height: 26, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(2, (st.count / funnelMax) * 100)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
+                <div style={{ background: 'var(--ds-color-border)', borderRadius: 8, height: 26, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ width: `${Math.max(2, st.overall_rate ?? 0)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
+                  <span style={{ position: 'absolute', left: 8, top: 0, height: '100%', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--ds-color-text)' }}>{pct(st.overall_rate ?? 0)}</span>
                 </div>
                 <span style={{ fontSize: 12.5, textAlign: 'right', color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
                   <b style={{ color: 'var(--ds-color-text)' }}>{num(st.count)}</b>
-                  {st.step_rate != null ? <span> · {pct(st.step_rate)}</span> : null}
+                  {st.step_rate != null ? <span> · {pct(st.step_rate)} from prev</span> : null}
                 </span>
               </div>
             ))}
           </div>
-          <p style={{ ...S.sub, marginTop: 12 }}>Each % is the conversion from the previous step. Visits/views/cart/checkout are first-party events; orders/delivered come from the order records.</p>
+          <p style={{ ...S.sub, marginTop: 12 }}>Bar % = share of Visits (top = 100%); the right shows the count and the step conversion from the previous stage. Bot/crawler traffic is excluded. Visits/views/cart/checkout are first-party events; orders/delivered come from the order records.</p>
         </div>
       ) : null}
 

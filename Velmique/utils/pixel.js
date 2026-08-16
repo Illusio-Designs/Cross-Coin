@@ -47,7 +47,7 @@ function ga4Items(params) {
 // (/api/events/track) so the admin Traffic & Conversion report can build a
 // full funnel independent of Meta/Google (and of ad blockers that drop pixels).
 // Keyed to the session_id cookie (credentials: 'include'); brand via header.
-const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout' };
+const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search' };
 function fpTrack(event, params) {
   if (typeof window === 'undefined') return;
   const name = FP_EVENT[event];

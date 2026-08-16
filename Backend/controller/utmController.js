@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { logger } = require('../config/logging.js');
+const { isBotUserAgent } = require('../utils/botDetect');
 
 // Classify a visit that carries no UTM parameters by its referrer so the
 // traffic report can still bucket organic / social / direct / referral.
@@ -77,6 +78,11 @@ exports.trackUTM = async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
     const brandId = req.brand?.id || null;
+
+    // Drop bot / crawler / monitor traffic so it never enters the funnel counts.
+    if (isBotUserAgent(userAgent)) {
+      return res.status(200).json({ success: true, skipped: 'bot' });
+    }
 
     // Derive a channel when the visit carries no UTM params so organic/direct
     // traffic is still classified in the report (not just paid campaigns).
