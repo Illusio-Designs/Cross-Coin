@@ -133,15 +133,15 @@ export default function TrafficReport() {
         </div>
       ) : null}
 
-      {/* Traffic sources — where visitors come from (all brands) */}
-      {data?.sources?.length ? (
+      {/* Traffic sources — grouped into the 5 headline channels */}
+      {data?.channels?.length ? (
         <div style={S.panel}>
           <div style={{ ...S.kLab, marginBottom: 12 }}>Traffic sources — where visitors come from</div>
           <div style={S.tableWrap}>
             <table style={S.table}>
               <thead>
                 <tr>
-                  <th style={{ ...S.th, ...S.thL }}>Source / medium</th>
+                  <th style={{ ...S.th, ...S.thL }}>Channel</th>
                   <th style={S.th}>Visitors</th>
                   <th style={S.th}>Share</th>
                   <th style={S.th}>Orders</th>
@@ -150,9 +150,9 @@ export default function TrafficReport() {
                 </tr>
               </thead>
               <tbody>
-                {data.sources.map((s, i) => (
+                {data.channels.map((s, i) => (
                   <tr key={i}>
-                    <td style={{ ...S.td, ...S.tdL }}>{s.source}{s.medium && s.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)', fontWeight: 400 }}> / {s.medium}</span> : null}</td>
+                    <td style={{ ...S.td, ...S.tdL }}>{s.channel}</td>
                     <td style={S.td}>{num(s.sessions)}</td>
                     <td style={S.td}>{pct(s.share)}</td>
                     <td style={S.td}>{num(s.orders)}</td>

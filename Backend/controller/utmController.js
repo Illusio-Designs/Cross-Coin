@@ -14,6 +14,14 @@ function hostOf(url) {
 function deriveSource(referrer) {
   const h = hostOf(referrer);
   if (!h) return 'direct';
+  // AI assistants first — some live on google/bing/microsoft subdomains, so
+  // they must be matched before the search-engine checks below.
+  if (/(chatgpt|openai)/.test(h)) return 'chatgpt';
+  if (/perplexity/.test(h)) return 'perplexity';
+  if (/gemini\.google|bard\.google|gemini\./.test(h)) return 'gemini';
+  if (/copilot|(^|\.)bing\.com.*chat/.test(h)) return 'copilot';
+  if (/claude\.ai|anthropic/.test(h)) return 'claude';
+  if (/(poe\.com|phind|deepseek|you\.com|grok|meta\.ai)/.test(h)) return 'ai';
   if (/google\./.test(h)) return 'google';
   if (/bing\./.test(h)) return 'bing';
   if (/duckduckgo\./.test(h)) return 'duckduckgo';

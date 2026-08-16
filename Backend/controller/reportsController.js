@@ -7,6 +7,18 @@ const { BOT_SQL_REGEXP } = require('../utils/botDetect');
 // for rows recorded before ingestion-time bot filtering existed).
 const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
 
+// Roll a raw source/medium up into the 5 headline channels the business tracks.
+function channelOf(source, medium) {
+  const s = String(source || '').toLowerCase().trim();
+  const m = String(medium || '').toLowerCase();
+  if (/facebook|(^|[^a-z])fb([^a-z]|$)|meta$|meta\b/.test(s) || /facebook/.test(m)) return 'Facebook';
+  if (s === 'instagram' || s === 'ig' || /instagram/.test(s)) return 'Instagram';
+  if (/google/.test(s)) return 'Google';
+  if (/chatgpt|openai|perplexity|gemini|bard|copilot|claude|anthropic|poe|phind|deepseek|you\.com|grok|meta\.ai|(^|[^a-z])ai([^a-z]|$)/.test(s)) return 'AI chatbot';
+  return 'Other';
+}
+const CHANNEL_ORDER = ['Facebook', 'Instagram', 'Google', 'AI chatbot', 'Other'];
+
 // Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Returns
 // JS Date bounds covering full days [start 00:00:00, end 23:59:59].
 function parseRange(q) {
@@ -174,15 +186,34 @@ exports.getBrandTraffic = async (req, res) => {
       overall_rate: totals.sessions > 0 ? rate(st.count, totals.sessions) : (st.key === 'sessions' ? 100 : 0),
     }));
 
-    // Traffic sources across all brands, with share of visits + conversion.
+    // Traffic sources rolled up into the 5 headline channels (Facebook,
+    // Instagram, Google, AI chatbot, Other) — visitors, share, orders, conv.
     const totalSrcSessions = sourceRows.reduce((n, r) => n + Number(r.sessions), 0) || 1;
+    const groups = new Map();
+    for (const r of sourceRows) {
+      const name = channelOf(r.source, r.medium);
+      const g = groups.get(name) || { sessions: 0, orders: 0 };
+      g.sessions += Number(r.sessions) || 0;
+      g.orders += Number(r.orders) || 0;
+      groups.set(name, g);
+    }
+    const channelGroups = CHANNEL_ORDER.map((name) => {
+      const g = groups.get(name) || { sessions: 0, orders: 0 };
+      return {
+        channel: name,
+        sessions: g.sessions,
+        share: Number(((g.sessions / totalSrcSessions) * 100).toFixed(2)),
+        orders: g.orders,
+        conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : 0,
+      };
+    });
+
+    // Granular source/medium rows kept for CSV / drill-down.
     const sources = sourceRows.map((r) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
       return {
-        source: r.source,
-        medium: r.medium,
-        sessions: sess,
+        source: r.source, medium: r.medium, sessions: sess,
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
         conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
@@ -194,6 +225,7 @@ exports.getBrandTraffic = async (req, res) => {
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
+      channels: channelGroups,
       sources,
     });
   } catch (error) {
