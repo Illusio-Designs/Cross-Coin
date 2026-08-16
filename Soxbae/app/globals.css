@@ -1976,8 +1976,8 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* ── Journal → image-forward card grid (tag tucked over the image) ───────── */
 .sx-jr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px 26px; }
 .sx-jr-card { display: block; }
-.sx-jr-media { position: relative; border-radius: 14px; overflow: hidden; background: #ece5d7; color: var(--accent-600); }
-.sx-jr-media img { width: 100%; height: auto; display: block; transition: transform .7s cubic-bezier(.16,1,.3,1); }
+.sx-jr-media { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #ece5d7; color: var(--accent-600); }
+.sx-jr-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .7s cubic-bezier(.16,1,.3,1); }
 .sx-jr-media > span { display: grid; place-items: center; padding: 54px 0; }
 .sx-jr-card:hover .sx-jr-media img { transform: scale(1.04); }
 .sx-jr-tag { position: absolute; left: 12px; bottom: 12px; background: var(--card); color: var(--ink); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; box-shadow: 0 8px 20px -12px rgba(28,27,25,.5); }

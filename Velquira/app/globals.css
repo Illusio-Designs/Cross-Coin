@@ -1861,7 +1861,7 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 /* ── BLOG CARD → same overlay language ──────────────────────────────────── */
 .blog-card { display: block; background: transparent; border: 0; border-radius: 0; overflow: visible; }
 .blog-card:hover { transform: none; box-shadow: none; }
-.blog-media { position: relative; height: auto; aspect-ratio: 3 / 4; border-radius: 2px; overflow: hidden;
+.blog-media { position: relative; height: auto; aspect-ratio: 16 / 9; border-radius: 2px; overflow: hidden;
   background: linear-gradient(160deg,#efe4cf,#d8c39a); }
 .blog-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.16,1,.3,1); }
 .blog-card:hover .blog-media img { transform: scale(1.05); }
