@@ -14,3 +14,12 @@ export function ikFull(url, width = 1280) {
   const sep = base.includes('?') ? '&' : '?';
   return `${base}${sep}tr=w-${width},q-85,f-auto`;
 }
+
+/* getBlogImageSrc — pre-crop blog CARD covers server-side to an exact 16:9
+   size so every card is uniform, sharp and light. ImageKit URLs get the
+   transform; non-ImageKit URLs (Unsplash, local assets) pass through. */
+export function getBlogImageSrc(url, { w = 800, h = 450, q = 70 } = {}) {
+  if (!url || typeof url !== 'string') return url || '';
+  if (!url.includes('ik.imagekit.io')) return url;
+  return `${url.split('?')[0]}?tr=w-${w},h-${h},q-${q},f-auto`;
+}

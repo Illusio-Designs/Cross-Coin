@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getBlogImageSrc } from '../../utils/imagekit';
 
 /* BlogCard — editorial gallery. Used by the journal list and the home
    BlogStrip. A clean cover image on white with a tiny caption below:
@@ -7,9 +8,13 @@ import Link from 'next/link';
 export default function BlogCard({ post }) {
   return (
     <Link href={`/journal/${post.slug}`} className="group flex flex-col">
-      {/* Cover — full image, not cropped; rounded for structure */}
-      <div className="media-zoom overflow-hidden rounded-xl border border-line bg-paper-warm">
-        <img src={post.image} alt={post.title} className="w-full h-auto" />
+      {/* Cover — pre-cropped 16:9 server-side for uniform card sizing */}
+      <div className="media-zoom overflow-hidden rounded-xl border border-line bg-paper-warm aspect-[16/9]">
+        <img
+          src={getBlogImageSrc(post.image, { w: 800, h: 450, q: 70 })}
+          alt={post.title}
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Body */}
