@@ -75,6 +75,21 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
+    // Where ALL visitors come from (across brands) + how each source converts.
+    // Orders are matched back to the visit via orders.utm_tracking_id.
+    const sourceRows = await sequelize.query(
+      `SELECT COALESCE(u.utm_source,'direct') AS source,
+              COALESCE(u.utm_medium,'none')   AS medium,
+              COUNT(DISTINCT u.session_id)     AS sessions,
+              COUNT(DISTINCT CASE WHEN o.status IS NULL OR o.status NOT IN ('cancelled','failed','payment_failed') THEN o.id END) AS orders
+       FROM utm_tracking u
+       LEFT JOIN orders o ON o.utm_tracking_id = u.id
+       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       GROUP BY source, medium
+       ORDER BY sessions DESC`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+
     const sessMap = new Map(sessions.map((r) => [r.brand_id, Number(r.sessions)]));
     const ordMap = new Map(orders.map((r) => [r.brand_id, r]));
     const chanByBrand = new Map();
@@ -159,11 +174,27 @@ exports.getBrandTraffic = async (req, res) => {
       overall_rate: totals.sessions > 0 ? rate(st.count, totals.sessions) : (st.key === 'sessions' ? 100 : 0),
     }));
 
+    // Traffic sources across all brands, with share of visits + conversion.
+    const totalSrcSessions = sourceRows.reduce((n, r) => n + Number(r.sessions), 0) || 1;
+    const sources = sourceRows.map((r) => {
+      const sess = Number(r.sessions) || 0;
+      const ord = Number(r.orders) || 0;
+      return {
+        source: r.source,
+        medium: r.medium,
+        sessions: sess,
+        share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
+        orders: ord,
+        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
+      };
+    }).slice(0, 25);
+
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
+      sources,
     });
   } catch (error) {
     logger.error('getBrandTraffic report failed: ' + error.message);

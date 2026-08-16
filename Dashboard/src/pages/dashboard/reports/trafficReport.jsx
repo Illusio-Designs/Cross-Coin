@@ -133,6 +133,43 @@ export default function TrafficReport() {
         </div>
       ) : null}
 
+      {/* Traffic sources — where visitors come from (all brands) */}
+      {data?.sources?.length ? (
+        <div style={S.panel}>
+          <div style={{ ...S.kLab, marginBottom: 12 }}>Traffic sources — where visitors come from</div>
+          <div style={S.tableWrap}>
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={{ ...S.th, ...S.thL }}>Source / medium</th>
+                  <th style={S.th}>Visitors</th>
+                  <th style={S.th}>Share</th>
+                  <th style={S.th}>Orders</th>
+                  <th style={S.th}>Conversion</th>
+                  <th style={{ ...S.th, ...S.thL, width: '30%' }}>Share of visits</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.sources.map((s, i) => (
+                  <tr key={i}>
+                    <td style={{ ...S.td, ...S.tdL }}>{s.source}{s.medium && s.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)', fontWeight: 400 }}> / {s.medium}</span> : null}</td>
+                    <td style={S.td}>{num(s.sessions)}</td>
+                    <td style={S.td}>{pct(s.share)}</td>
+                    <td style={S.td}>{num(s.orders)}</td>
+                    <td style={S.td}>{pct(s.conversion_rate)}</td>
+                    <td style={{ ...S.td, textAlign: 'left' }}>
+                      <div style={{ background: 'var(--ds-color-border)', borderRadius: 6, height: 14, overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.max(2, s.share)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 6 }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
       {/* Per-brand table */}
       <div style={S.panel}>
         <div style={S.tableWrap}>
