@@ -119,19 +119,28 @@ export default function TrafficReport() {
         <div style={S.panel}>
           <div style={{ ...S.kLab, marginBottom: 12 }}>Funnel — all brands</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {t.stages.map((st) => (
+            {t.stages.map((st) => {
+              const w = Math.min(100, Math.max(0, st.overall_rate ?? 0));
+              const inside = w >= 16; // wide enough to hold the label inside the fill
+              return (
               <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 190px', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ds-color-text)', fontWeight: 600 }}>{st.label}</span>
                 <div style={{ background: 'var(--ds-color-border)', borderRadius: 8, height: 26, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ width: `${Math.min(100, Math.max(2, st.overall_rate ?? 0))}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
-                  <span style={{ position: 'absolute', left: 8, top: 0, height: '100%', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--ds-color-text)' }}>{pct(st.overall_rate ?? 0)}</span>
+                  <div style={{ width: `${Math.max(2, w)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
+                  <span style={{
+                    position: 'absolute', top: 0, height: '100%', display: 'flex', alignItems: 'center',
+                    fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+                    left: inside ? 10 : `calc(${w}% + 8px)`,
+                    color: inside ? 'var(--ds-color-surface)' : 'var(--ds-color-text)',
+                  }}>{pct(st.overall_rate ?? 0)}</span>
                 </div>
                 <span style={{ fontSize: 12.5, textAlign: 'right', color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
                   <b style={{ color: 'var(--ds-color-text)' }}>{num(st.count)}</b>
                   {st.step_rate != null ? <span> · {pct(st.step_rate)} from prev</span> : null}
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
           <p style={{ ...S.sub, marginTop: 12 }}>Bar % = share of Visits (top = 100%); the right shows the count and the step conversion from the previous stage. Bot/crawler traffic is excluded. Visits/views/cart/checkout are first-party events; orders/delivered come from the order records.</p>
         </div>
