@@ -222,7 +222,6 @@ export default function AdsReporting() {
             onStartChange={setFrom} onEndChange={setTo} onApply={loadReport}
             minDate={REPORT_START} maxDate={daysAgo(1)} />
           <div className="ads-actions">
-            <Button variant="secondary" onClick={loadReport} loading={loading}>Run</Button>
             <Button variant="secondary" onClick={() => setCostOpen(true)}>Manage costs</Button>
             <Button variant="secondary" onClick={openMeta}>⚡ Sync from Meta</Button>
             <Button variant="primary" onClick={() => setSpendOpen(true)}>+ Add spend</Button>

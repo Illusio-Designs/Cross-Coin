@@ -94,8 +94,7 @@ export default function TrafficReport() {
         <div style={S.controls}>
           <DateRangePicker label="Period" inline startDate={from} endDate={to}
             onStartChange={setFrom} onEndChange={setTo} onApply={load} maxDate={istDate()} />
-          <Button variant="secondary" onClick={load} loading={loading}>Run</Button>
-          <Button variant="ghost" onClick={doExport} disabled={!brands.length}>Export CSV</Button>
+          <Button variant="ghost" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
         </div>
       </div>
 

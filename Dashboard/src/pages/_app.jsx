@@ -182,10 +182,13 @@ function App({ Component, pageProps }) {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </Head>
-      <UTMTracker />
-      <Analytics />
-      {!router.pathname.startsWith('/dashboard') && (
+      {/* Trackers run on the public Obzus site only — never on the admin
+          dashboard or auth pages, so staff activity isn't recorded as
+          customer traffic (visit pings, analytics, pixel). */}
+      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
         <>
+          <UTMTracker />
+          <Analytics />
           <SpeedInsights />
           <VercelAnalytics />
         </>
