@@ -459,6 +459,32 @@ const startServer = async () => {
             logger.error('users.roles column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: utm_tracking.brand_id ────────────────────
+        // Stamps each visit with its storefront brand so the Traffic &
+        // Conversion report can group sessions per brand. Backfills existing
+        // rows from the order they converted into. Guarded by information_schema.
+        try {
+            const [utmCol] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utm_tracking' AND COLUMN_NAME = 'brand_id'`
+            );
+            if (!utmCol.length) {
+                logger.info('Migrating: adding utm_tracking.brand_id column…');
+                await sequelize.query(`ALTER TABLE utm_tracking ADD COLUMN brand_id INT NULL AFTER session_id`);
+                await sequelize.query(`ALTER TABLE utm_tracking ADD INDEX idx_utm_brand_created (brand_id, created_at)`).catch(() => {});
+                // Backfill from the order this session converted into.
+                await sequelize.query(
+                    `UPDATE utm_tracking u
+                     JOIN orders o ON o.utm_tracking_id = u.id
+                     SET u.brand_id = o.brand_id
+                     WHERE u.brand_id IS NULL AND o.brand_id IS NOT NULL`
+                ).catch((e) => logger.warn('utm brand backfill skipped: ' + e.message));
+                logger.info('✓ utm_tracking.brand_id column added + backfilled');
+            }
+        } catch (err) {
+            logger.error('utm_tracking.brand_id migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()

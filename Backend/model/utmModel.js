@@ -27,6 +27,11 @@ const UTMTracking = sequelize.define('UTMTracking', {
     type: DataTypes.STRING(255),
     allowNull: false
   },
+  brand_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'brands', key: 'id' }
+  },
   utm_source: {
     type: DataTypes.STRING(255),
     allowNull: true

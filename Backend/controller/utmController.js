@@ -4,6 +4,34 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { logger } = require('../config/logging.js');
 
+// Classify a visit that carries no UTM parameters by its referrer so the
+// traffic report can still bucket organic / social / direct / referral.
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); }
+  catch { return ''; }
+}
+function deriveSource(referrer) {
+  const h = hostOf(referrer);
+  if (!h) return 'direct';
+  if (/google\./.test(h)) return 'google';
+  if (/bing\./.test(h)) return 'bing';
+  if (/duckduckgo\./.test(h)) return 'duckduckgo';
+  if (/(facebook|fb)\./.test(h) || h === 'l.facebook.com') return 'facebook';
+  if (/instagram\./.test(h)) return 'instagram';
+  if (/(youtube|youtu\.be)/.test(h)) return 'youtube';
+  if (/(twitter|t\.co|x\.com)/.test(h)) return 'twitter';
+  if (/(whatsapp|wa\.me)/.test(h)) return 'whatsapp';
+  if (/linkedin\./.test(h)) return 'linkedin';
+  return h; // any other referring domain
+}
+function deriveMedium(referrer) {
+  const h = hostOf(referrer);
+  if (!h) return 'none'; // direct
+  if (/(google|bing|duckduckgo|yahoo)\./.test(h)) return 'organic';
+  if (/(facebook|fb|instagram|youtube|youtu\.be|twitter|t\.co|x\.com|linkedin|whatsapp|wa\.me)/.test(h)) return 'social';
+  return 'referral';
+}
+
 // Track UTM parameters
 exports.trackUTM = async (req, res) => {
   try {
@@ -48,21 +76,42 @@ exports.trackUTM = async (req, res) => {
     // Get IP and user agent
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
+    const brandId = req.brand?.id || null;
 
-    const utmRecord = await UTMTracking.create({
-      user_id: userId,
-      guest_user_id: guestUserId,
-      session_id: sessionId,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      landing_page,
-      referrer,
-      ip_address: ipAddress,
-      user_agent: userAgent
+    // Derive a channel when the visit carries no UTM params so organic/direct
+    // traffic is still classified in the report (not just paid campaigns).
+    const source = utm_source || deriveSource(referrer);
+    const medium = utm_medium || (utm_source ? null : deriveMedium(referrer));
+
+    // One row per session = one "visit"/session in the traffic report. The FIRST
+    // touch wins (keeps the landing page + original source that brought them in);
+    // repeat pings within the same session don't inflate the count.
+    const [utmRecord] = await UTMTracking.findOrCreate({
+      where: { session_id: sessionId },
+      defaults: {
+        user_id: userId,
+        guest_user_id: guestUserId,
+        session_id: sessionId,
+        brand_id: brandId,
+        utm_source: source,
+        utm_medium: medium,
+        utm_campaign,
+        utm_term,
+        utm_content,
+        landing_page,
+        referrer,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      },
     });
+
+    // Backfill identity/brand on an existing session row if we learn them later
+    // (e.g. a guest logs in, or the first ping missed the brand header).
+    const patch = {};
+    if (brandId && !utmRecord.brand_id) patch.brand_id = brandId;
+    if (userId && !utmRecord.user_id) patch.user_id = userId;
+    if (guestUserId && !utmRecord.guest_user_id) patch.guest_user_id = guestUserId;
+    if (Object.keys(patch).length) await utmRecord.update(patch);
 
     res.status(201).json({
       success: true,
