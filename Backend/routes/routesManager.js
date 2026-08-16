@@ -27,6 +27,7 @@ router.use('/lookbooks',          optionalBrand, require('./lookbookRoutes.js'))
 router.use('/loyalty',            optionalBrand, require('./loyaltyRoutes.js'));
 router.use('/notifications',      require('./notificationRoutes.js'));
 router.use('/utm',                require('./utmRoutes.js'));
+router.use('/events',             require('./eventsRoutes.js'));
 router.use('/leads',              require('./leadRoutes.js'));
 
 // ── Auth (OTP) ────────────────────────────────────────────────────────────

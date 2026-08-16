@@ -43,6 +43,26 @@ function ga4Items(params) {
   return rows;
 }
 
+// First-party funnel relay — records view/cart/checkout into our own DB
+// (/api/events/track) so the admin Traffic & Conversion report can build a full
+// funnel independent of Meta/Google (and of ad blockers). Keyed to the
+// session_id cookie (credentials: 'include'); brand via header.
+const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout' };
+function fpTrack(event, params) {
+  if (typeof window === 'undefined') return;
+  const name = FP_EVENT[event];
+  if (!name) return;
+  try {
+    fetch(`${API_URL}/api/events/track`, {
+      method: 'POST',
+      keepalive: true,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND_NAME },
+      body: JSON.stringify({ event: name, value: Number(params.value || 0) }),
+    }).catch(() => {});
+  } catch (_) { /* never throw */ }
+}
+
 // Mirror a funnel event to GA4. Safe/no-op if gtag isn't present.
 function ga4Track(event, params) {
   if (typeof window === 'undefined' || !window.gtag) return;
@@ -100,6 +120,9 @@ export function fbqTrack(event, params = {}, options = {}) {
 
   // GA4 (Google) mirror — independent of the Meta pixel (either may be absent).
   ga4Track(event, params);
+
+  // First-party funnel event → our own DB (fires regardless of Meta/GA presence).
+  fpTrack(event, params);
 
   if (!window.fbq) return false;
   const eventID = options.eventID || makeEventId(event);

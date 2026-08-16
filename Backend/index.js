@@ -485,6 +485,26 @@ const startServer = async () => {
             logger.error('utm_tracking.brand_id migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: funnel_events table ──────────────────────
+        // First-party view/cart/checkout events for the Traffic & Conversion
+        // funnel. Production doesn't run sequelize sync, so create it here.
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS funnel_events (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    brand_id INT NULL,
+                    session_id VARCHAR(255) NULL,
+                    event VARCHAR(32) NOT NULL,
+                    value DECIMAL(12,2) NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_fe_brand_event_created (brand_id, event, created_at),
+                    INDEX idx_fe_session (session_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+            );
+        } catch (err) {
+            logger.error('funnel_events table migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()

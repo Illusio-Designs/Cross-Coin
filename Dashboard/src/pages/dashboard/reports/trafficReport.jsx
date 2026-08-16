@@ -73,12 +73,18 @@ export default function TrafficReport() {
 
   const doExport = () => exportCsv(`traffic-conversion_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
-    { label: 'Sessions', value: (r) => r.sessions },
+    { label: 'Visits', value: (r) => r.sessions },
+    { label: 'Product views', value: (r) => r.views },
+    { label: 'Add to cart', value: (r) => r.carts },
+    { label: 'Checkout', value: (r) => r.checkouts },
     { label: 'Orders', value: (r) => r.orders },
+    { label: 'Delivered', value: (r) => r.delivered },
     { label: 'Conversion %', value: (r) => r.conversion_rate },
     { label: 'Revenue', value: (r) => r.revenue },
     { label: 'AOV', value: (r) => r.aov },
   ], brands);
+
+  const funnelMax = t?.stages?.length ? Math.max(...t.stages.map((s) => s.count), 1) : 1;
 
   return (
     <div style={S.wrap}>
@@ -99,12 +105,34 @@ export default function TrafficReport() {
 
       {/* Totals */}
       <div style={S.kpis}>
-        <div style={S.kpi}><div style={S.kLab}>Sessions</div><div style={S.kVal}>{num(t?.sessions)}</div></div>
+        <div style={S.kpi}><div style={S.kLab}>Visits</div><div style={S.kVal}>{num(t?.sessions)}</div></div>
         <div style={S.kpi}><div style={S.kLab}>Orders</div><div style={S.kVal}>{num(t?.orders)}</div></div>
         <div style={S.kpi}><div style={S.kLab}>Conversion</div><div style={S.kVal}>{t ? pct(t.conversion_rate) : '—'}</div></div>
         <div style={S.kpi}><div style={S.kLab}>Revenue</div><div style={S.kVal}>{t ? inr(t.revenue) : '—'}</div></div>
         <div style={S.kpi}><div style={S.kLab}>AOV</div><div style={S.kVal}>{t ? inr(t.aov) : '—'}</div></div>
       </div>
+
+      {/* Funnel (all brands combined) */}
+      {t?.stages?.length ? (
+        <div style={S.panel}>
+          <div style={{ ...S.kLab, marginBottom: 12 }}>Funnel — all brands</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {t.stages.map((st) => (
+              <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 150px', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 12.5, color: 'var(--ds-color-text)', fontWeight: 600 }}>{st.label}</span>
+                <div style={{ background: 'var(--ds-color-border)', borderRadius: 8, height: 26, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(2, (st.count / funnelMax) * 100)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
+                </div>
+                <span style={{ fontSize: 12.5, textAlign: 'right', color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  <b style={{ color: 'var(--ds-color-text)' }}>{num(st.count)}</b>
+                  {st.step_rate != null ? <span> · {pct(st.step_rate)}</span> : null}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p style={{ ...S.sub, marginTop: 12 }}>Each % is the conversion from the previous step. Visits/views/cart/checkout are first-party events; orders/delivered come from the order records.</p>
+        </div>
+      ) : null}
 
       {/* Per-brand table */}
       <div style={S.panel}>
@@ -113,9 +141,13 @@ export default function TrafficReport() {
             <thead>
               <tr>
                 <th style={{ ...S.th, ...S.thL }}>Brand</th>
-                <th style={S.th}>Sessions</th>
+                <th style={S.th}>Visits</th>
+                <th style={S.th}>Views</th>
+                <th style={S.th}>Cart</th>
+                <th style={S.th}>Checkout</th>
                 <th style={S.th}>Orders</th>
-                <th style={S.th}>Conversion</th>
+                <th style={S.th}>Delivered</th>
+                <th style={S.th}>Conv.</th>
                 <th style={S.th}>Revenue</th>
                 <th style={S.th}>AOV</th>
                 <th style={{ ...S.th, ...S.thL }}>Top channels</th>
@@ -123,12 +155,16 @@ export default function TrafficReport() {
             </thead>
             <tbody>
               {brands.length === 0 ? (
-                <tr><td colSpan={7} style={S.empty}>{loading ? 'Loading…' : 'No data for this period yet.'}</td></tr>
+                <tr><td colSpan={11} style={S.empty}>{loading ? 'Loading…' : 'No data for this period yet.'}</td></tr>
               ) : brands.map((b) => (
                 <tr key={b.brand_id}>
                   <td style={{ ...S.td, ...S.tdL }}>{b.brand}</td>
                   <td style={S.td}>{num(b.sessions)}</td>
+                  <td style={S.td}>{num(b.views)}</td>
+                  <td style={S.td}>{num(b.carts)}</td>
+                  <td style={S.td}>{num(b.checkouts)}</td>
                   <td style={S.td}>{num(b.orders)}</td>
+                  <td style={S.td}>{num(b.delivered)}</td>
                   <td style={S.td}>{pct(b.conversion_rate)}</td>
                   <td style={S.td}>{inr(b.revenue)}</td>
                   <td style={S.td}>{inr(b.aov)}</td>
