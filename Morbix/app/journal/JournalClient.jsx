@@ -8,6 +8,16 @@ import { getBlogPage } from '@/lib/api';
 
 const LIMIT = 12;
 
+// Pre-crop blog card images to 16:9 (800x450) via ImageKit — sharp, light and
+// uniform, same as the CrossCoin journal cards. Non-ImageKit URLs pass through.
+function blogImg(url) {
+  if (!url || typeof url !== 'string') return url;
+  if (url.includes('ik.imagekit.io')) {
+    return `${url.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`;
+  }
+  return url;
+}
+
 export default function JournalClient() {
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
@@ -45,7 +55,7 @@ export default function JournalClient() {
           <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
             <div className="blog-media">
               {p.image
-                ? <img src={p.image} alt={p.title} loading="lazy" />
+                ? <img src={blogImg(p.image)} alt={p.title} loading="lazy" />
                 : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
             </div>
             <div className="blog-body">
