@@ -9,6 +9,13 @@ import Pagination from '@/components/common/Pagination';
 
 const LIMIT = 12;
 
+// Blog card images: request a pre-cropped 16:9 (800x450) frame from ImageKit for
+// uniform, sharp, lightweight cards. Non-ImageKit sources pass through unchanged.
+const blogCardImg = (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('ik.imagekit.io')) return url;
+  return `${url.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`;
+};
+
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch { return ''; }
@@ -64,7 +71,7 @@ export default function BlogClient() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
-                  <div className="aspect-[4/3] bg-[var(--surface-2)] animate-pulse" />
+                  <div className="aspect-[16/9] bg-[var(--surface-2)] animate-pulse" />
                   <div className="p-6 space-y-3">
                     <div className="h-3 w-24 rounded bg-[var(--surface-2)] animate-pulse" />
                     <div className="h-6 w-3/4 rounded bg-[var(--surface-2)] animate-pulse" />
@@ -114,8 +121,8 @@ export default function BlogClient() {
                 {rest.map(post => (
                   <Link key={post.id} href={`/blog/${post.slug}`}
                     className="group bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:border-[var(--gold)] transition-colors">
-                    <div className="aspect-[4/3] overflow-hidden bg-[var(--surface-2)]">
-                      <img src={post.coverImage} alt={post.title}
+                    <div className="aspect-[16/9] overflow-hidden bg-[var(--surface-2)]">
+                      <img src={blogCardImg(post.coverImage)} alt={post.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                     </div>
                     <div className="p-6">
