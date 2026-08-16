@@ -109,15 +109,14 @@ export default function JournalDetailClient() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(postingLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      {/* Cover image — a fixed-height banner so a tall/portrait source image
-          doesn't blow up to full-viewport height. The full image is shown
-          (object-contain, no zoom/crop) over a soft blurred fill of itself. */}
+      {/* Cover image — a fixed-height banner that fills cleanly with
+          object-cover (a contained + blurred-fill treatment left non-matching
+          covers letterboxed with a messy blurred bleed). Heights scale by
+          breakpoint so it reads as a proper banner on phone and desktop. */}
       {post.coverImage && (
-        <section className="relative h-[40vh] w-full overflow-hidden bg-gray-50 sm:h-[48vh] md:h-[56vh]">
+        <section className="relative h-[38vh] max-h-[520px] min-h-[240px] w-full overflow-hidden bg-gray-50 sm:h-[46vh] md:h-[54vh]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.coverImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover object-center blur-2xl opacity-60" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-contain object-center" />
+          <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center" />
         </section>
       )}
 
