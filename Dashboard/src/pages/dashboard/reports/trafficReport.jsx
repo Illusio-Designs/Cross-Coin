@@ -8,6 +8,11 @@ import { Button, DateRangePicker } from '../../../components/ui';
  * (source/medium) breakdown. Themed via --ds tokens (light/dark).
  */
 
+// Brand colours for the 5 headline channels — categorical identity that reads
+// at a glance against the otherwise-monochrome Obzus chrome.
+const CHANNEL_COLORS = { Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335', 'AI chatbot': '#8b5cf6', Other: '#94a3b8' };
+const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-accent, #2563eb)';
+
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
 const inr = (v) => `₹${num(Math.round(Number(v) || 0))}`;
 const pct = (v) => `${(Number(v) || 0).toFixed(2)}%`;
@@ -89,7 +94,7 @@ export default function TrafficReport() {
       <div style={S.head}>
         <div>
           <h1 style={S.title}>Traffic &amp; Conversion</h1>
-          <p style={S.sub}>Sessions → orders → revenue per brand. Traffic is first-party visit tracking (organic, direct, social &amp; campaign).</p>
+          <p style={S.sub}>Visits → views → cart → checkout → orders per brand. Orders, revenue &amp; conversion count only visits we tracked (first-party); total store sales are on the Overview report.</p>
         </div>
         <div style={S.controls}>
           <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -118,7 +123,7 @@ export default function TrafficReport() {
               <div key={st.key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 190px', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ds-color-text)', fontWeight: 600 }}>{st.label}</span>
                 <div style={{ background: 'var(--ds-color-border)', borderRadius: 8, height: 26, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ width: `${Math.max(2, st.overall_rate ?? 0)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
+                  <div style={{ width: `${Math.min(100, Math.max(2, st.overall_rate ?? 0))}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 8, transition: 'width .3s' }} />
                   <span style={{ position: 'absolute', left: 8, top: 0, height: '100%', display: 'flex', alignItems: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--ds-color-text)' }}>{pct(st.overall_rate ?? 0)}</span>
                 </div>
                 <span style={{ fontSize: 12.5, textAlign: 'right', color: 'var(--ds-color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
@@ -151,14 +156,17 @@ export default function TrafficReport() {
               <tbody>
                 {data.channels.map((s, i) => (
                   <tr key={i}>
-                    <td style={{ ...S.td, ...S.tdL }}>{s.channel}</td>
+                    <td style={{ ...S.td, ...S.tdL }}>
+                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chColor(s.channel), marginRight: 8, verticalAlign: 'middle' }} />
+                      {s.channel}
+                    </td>
                     <td style={S.td}>{num(s.sessions)}</td>
                     <td style={S.td}>{pct(s.share)}</td>
                     <td style={S.td}>{num(s.orders)}</td>
                     <td style={S.td}>{pct(s.conversion_rate)}</td>
                     <td style={{ ...S.td, textAlign: 'left' }}>
                       <div style={{ background: 'var(--ds-color-border)', borderRadius: 6, height: 14, overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.max(2, s.share)}%`, height: '100%', background: 'var(--ds-color-accent, #2563eb)', borderRadius: 6 }} />
+                        <div style={{ width: `${Math.min(100, Math.max(2, s.share))}%`, height: '100%', background: chColor(s.channel), borderRadius: 6 }} />
                       </div>
                     </td>
                   </tr>
@@ -207,7 +215,10 @@ export default function TrafficReport() {
                     <div style={S.chan}>
                       {(b.channels || []).length === 0 ? <span style={S.chip}>—</span>
                         : b.channels.map((c, i) => (
-                          <span key={i} style={S.chip}>{c.source}{c.medium && c.medium !== 'none' ? `/${c.medium}` : ''} · {num(c.sessions)}</span>
+                          <span key={i} style={S.chip}>
+                            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: chColor(c.channel), marginRight: 6, verticalAlign: 'middle' }} />
+                            {c.channel} · {num(c.sessions)}
+                          </span>
                         ))}
                     </div>
                   </td>

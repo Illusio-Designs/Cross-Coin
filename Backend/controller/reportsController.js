@@ -52,16 +52,23 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    // Orders + revenue + delivered per brand (exclude cancelled/failed)
+    // Orders + revenue + delivered per brand — ATTRIBUTED to a tracked visit
+    // (orders.utm_tracking_id → the session's utm_tracking row). This keeps the
+    // funnel consistent: an order always belongs to a visit, so orders can never
+    // exceed sessions and conversion stays <= 100%. (Counting ALL orders here
+    // mixed historical sales with just-started visit tracking and produced
+    // nonsense like 500% conversion / 21000% step rates.) Total store sales
+    // regardless of attribution live on the Overview / Ads reports.
     const orders = await sequelize.query(
-      `SELECT brand_id,
-              COUNT(*) AS orders,
-              COALESCE(SUM(final_amount), 0) AS revenue,
-              SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered
-       FROM orders
-       WHERE created_at BETWEEN :start AND :end
-         AND (status IS NULL OR status NOT IN ('cancelled','failed','payment_failed'))
-       GROUP BY brand_id`,
+      `SELECT u.brand_id AS brand_id,
+              COUNT(DISTINCT o.id) AS orders,
+              COALESCE(SUM(o.final_amount), 0) AS revenue,
+              COUNT(DISTINCT CASE WHEN o.status = 'delivered' THEN o.id END) AS delivered
+       FROM utm_tracking u
+       JOIN orders o ON o.utm_tracking_id = u.id
+       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
+         AND (o.status IS NULL OR o.status NOT IN ('cancelled','failed','payment_failed'))
+       GROUP BY u.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
@@ -104,10 +111,14 @@ exports.getBrandTraffic = async (req, res) => {
 
     const sessMap = new Map(sessions.map((r) => [r.brand_id, Number(r.sessions)]));
     const ordMap = new Map(orders.map((r) => [r.brand_id, r]));
+    // Per-brand top channels, rolled up into the 5 headline buckets (readable
+    // names, not raw utm_source/medium strings).
     const chanByBrand = new Map();
     for (const c of channels) {
-      if (!chanByBrand.has(c.brand_id)) chanByBrand.set(c.brand_id, []);
-      chanByBrand.get(c.brand_id).push({ source: c.source, medium: c.medium, sessions: Number(c.sessions) });
+      if (!chanByBrand.has(c.brand_id)) chanByBrand.set(c.brand_id, new Map());
+      const m = chanByBrand.get(c.brand_id);
+      const name = channelOf(c.source, c.medium);
+      m.set(name, (m.get(name) || 0) + Number(c.sessions));
     }
     // brand_id -> { view_item, add_to_cart, begin_checkout }
     const funnelByBrand = new Map();
@@ -158,7 +169,10 @@ exports.getBrandTraffic = async (req, res) => {
         conversion_rate: s > 0 ? Number(((ordersN / s) * 100).toFixed(2)) : 0, // visit → order
         aov: ordersN > 0 ? Math.round(revenue / ordersN) : 0,
         stages,
-        channels: (chanByBrand.get(b.id) || []).slice(0, 6),
+        channels: [...(chanByBrand.get(b.id) || new Map())]
+          .map(([channel, sess]) => ({ channel, sessions: sess }))
+          .sort((a, z) => z.sessions - a.sessions)
+          .slice(0, 4),
       };
     });
 
