@@ -7,6 +7,14 @@ function formatDate(str) {
   catch { return '' }
 }
 
+// Match the CrossCoin blog card: ask ImageKit for an exact 800x450 (16:9)
+// WebP/AVIF so every card image is pre-cropped to the same size server-side,
+// sharp and light. Non-ImageKit URLs pass through unchanged.
+function blogImg(src) {
+  if (!src || typeof src !== 'string' || !src.includes('ik.imagekit.io')) return src
+  return `${src.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`
+}
+
 export function BlogCard({ post }) {
   return (
     <Link
@@ -16,10 +24,10 @@ export function BlogCard({ post }) {
       {/* Image — fixed aspect so every card in the grid lines up. object-cover
           fills the frame uniformly (a contained + blurred-fill treatment left
           non-16:11 images letterboxed with a messy blurred text bleed). */}
-      <div className="relative aspect-[16/11] overflow-hidden bg-gray-100">
+      <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
         {post.coverImage && (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
+          <img src={blogImg(post.coverImage)} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
         )}
       </div>
 
