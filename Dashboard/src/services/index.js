@@ -310,6 +310,14 @@ export const adsReportService = {
   },
 };
 
+// Brand-wise traffic & conversion funnel (sessions → orders → revenue).
+export const trafficReportService = {
+  getBrandTraffic: async (startDate, endDate) => {
+    const { data } = await adminApi.get('/api/reports/brand-traffic', { params: { startDate, endDate } });
+    return data;
+  },
+};
+
 export const shippingFeeService = {
   getAllShippingFees: async () => {
     try {

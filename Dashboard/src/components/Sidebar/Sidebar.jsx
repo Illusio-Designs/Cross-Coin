@@ -49,6 +49,7 @@ const ALL_MENU = [
     submenu: [
       { label: 'Overview',      view: 'reports' },
       { label: 'Ads Reporting', view: 'ads-reporting', roles: ['admin'] },
+      { label: 'Traffic & Conversion', view: 'traffic-report', roles: ['admin'] },
     ],
   },
   {
