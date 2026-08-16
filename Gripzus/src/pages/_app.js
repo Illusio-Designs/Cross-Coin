@@ -11,6 +11,7 @@ import ToastViewport from '../components/ui/ToastViewport'
 import WhatsAppChat from '../components/ui/WhatsAppChat'
 import BackToTop from '../components/ui/BackToTop'
 import Analytics from '../components/common/Analytics'
+import VisitTracker from '../components/common/VisitTracker'
 import SentryInit from '../components/SentryInit'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -38,6 +39,7 @@ function MyApp({ Component, pageProps }) {
             <WhatsAppChat />
             <BackToTop />
             <Analytics />
+            <VisitTracker />
             <SentryInit />
             <SpeedInsights />
           </WishlistProvider>

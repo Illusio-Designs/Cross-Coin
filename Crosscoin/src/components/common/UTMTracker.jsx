@@ -3,21 +3,18 @@ import { captureUTMParameters, sendUTMToBackend } from '@/utils/utmTracker';
 
 export default function UTMTracker() {
   useEffect(() => {
-    // Add a small delay to ensure DOM is ready
+    // Fire once per browser session — record every visit for the traffic
+    // report, not just campaign links. The backend dedupes per session_id too.
+    try {
+      if (sessionStorage.getItem('visit_tracked')) return;
+    } catch { /* sessionStorage unavailable — fall through and still track */ }
+
     const timer = setTimeout(() => {
-      // Capture UTM parameters on component mount
       const utmData = captureUTMParameters();
-      
-      if (utmData) {
-        // Send to backend immediately
-        sendUTMToBackend(utmData).then(response => {
-          if (response?.success) {
-            } else {
-            }
-        });
-      } else {
-        }
-      }, 100);
+      sendUTMToBackend(utmData).then(() => {
+        try { sessionStorage.setItem('visit_tracked', '1'); } catch { /* ignore */ }
+      });
+    }, 100);
 
     return () => clearTimeout(timer);
   }, []);

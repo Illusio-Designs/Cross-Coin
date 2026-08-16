@@ -13,18 +13,18 @@ export const captureUTMParameters = () => {
     timestamp: new Date().toISOString()
   };
 
-  // Only store if at least one UTM parameter exists
+  // Persist campaign params for conversion attribution only when present.
   const hasUTMParams = Object.entries(utmData)
     .filter(([key]) => key.startsWith('utm_'))
     .some(([, value]) => value !== null);
-
   if (hasUTMParams) {
     localStorage.setItem('utm_data', JSON.stringify(utmData));
-    return utmData;
-  } else {
-    }
-  
-  return null;
+  }
+
+  // Always return the visit data (referrer + landing page) so EVERY visit is
+  // tracked for the traffic report — not just campaign links. The backend
+  // dedupes to one row per session and classifies referrer-only visits.
+  return utmData;
 };
 
 // Retrieve stored UTM data
@@ -48,6 +48,7 @@ export const sendUTMToBackend = async (utmData) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin',
       },
       credentials: 'include',
       body: JSON.stringify(utmData),

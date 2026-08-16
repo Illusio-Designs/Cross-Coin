@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
+import VisitTracker from '@/components/common/VisitTracker';
 import SentryInit from '@/components/SentryInit';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }) {
             <FloatingWidgets />
             <ToastHost />
             <Analytics />
+            <VisitTracker />
           </CartProvider>
         </AuthProvider>
       </body>

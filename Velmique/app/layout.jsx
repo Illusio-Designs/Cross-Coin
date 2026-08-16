@@ -17,6 +17,7 @@ import CookieBanner from '@/components/ui/CookieBanner';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import ScrollProgress from '@/components/ui/ScrollProgress';
 import WhatsAppChat from '@/components/ui/WhatsAppChat';
+import VisitTracker from '@/components/common/VisitTracker';
 
 /* Fonts loaded via next/font — Next inlines them at build time, self-hosts
    them, and emits font-display: optional / swap behaviour so the browser
@@ -146,6 +147,7 @@ export default function RootLayout({ children }) {
               <Suspense fallback={null}>
                 <Analytics />
               </Suspense>
+              <VisitTracker />
               <ToastContainer
                 position="top-right"
                 autoClose={2500}
