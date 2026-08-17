@@ -94,7 +94,7 @@ export default function TrafficReport() {
       <div style={S.head}>
         <div>
           <h1 style={S.title}>Traffic &amp; Conversion</h1>
-          <p style={S.sub}>Visits → views → cart → checkout → orders per brand. Orders, revenue &amp; conversion count only visits we tracked (first-party); total store sales are on the Overview report.</p>
+          <p style={S.sub}>Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders &amp; revenue are the real store sales in this window (they match the Overview report). Per-channel orders below count only orders we can attribute to a tracked visit.</p>
         </div>
         <div style={S.controls}>
           <DateRangePicker label="Period" inline startDate={from} endDate={to}

@@ -52,23 +52,28 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    // Orders + revenue + delivered per brand — ATTRIBUTED to a tracked visit
-    // (orders.utm_tracking_id → the session's utm_tracking row). This keeps the
-    // funnel consistent: an order always belongs to a visit, so orders can never
-    // exceed sessions and conversion stays <= 100%. (Counting ALL orders here
-    // mixed historical sales with just-started visit tracking and produced
-    // nonsense like 500% conversion / 21000% step rates.) Total store sales
-    // regardless of attribution live on the Overview / Ads reports.
+    // Orders + revenue + delivered per brand — the REAL store sales in the
+    // window, straight from the orders table by brand_id + order date. This is
+    // the authoritative count (it matches the Overview "Sales by Brand" report).
+    //
+    // We deliberately do NOT restrict to orders attributed to a tracked visit
+    // (orders.utm_tracking_id): many real orders — direct traffic, untracked
+    // sessions, checkouts that never fired a first-party visit ping — carry no
+    // utm_tracking_id, and attributing-only made the report under-count badly
+    // (e.g. Morbix showing 0 orders while it actually had 5). Scoping orders to
+    // the SAME date window as visits (not counting ALL orders ever) is what
+    // keeps conversion sane — that mismatch, not the lack of attribution, was
+    // the old 500%/21000% bug. Per-source attribution still uses utm_tracking_id
+    // below (a channel can only claim an order it can prove it drove).
     const orders = await sequelize.query(
-      `SELECT u.brand_id AS brand_id,
-              COUNT(DISTINCT o.id) AS orders,
-              COALESCE(SUM(o.final_amount), 0) AS revenue,
-              COUNT(DISTINCT CASE WHEN o.status = 'delivered' THEN o.id END) AS delivered
-       FROM utm_tracking u
-       JOIN orders o ON o.utm_tracking_id = u.id
-       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
-         AND (o.status IS NULL OR o.status NOT IN ('cancelled','failed','payment_failed'))
-       GROUP BY u.brand_id`,
+      `SELECT brand_id,
+              COUNT(*) AS orders,
+              COALESCE(SUM(final_amount), 0) AS revenue,
+              COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS delivered
+       FROM orders
+       WHERE created_at BETWEEN :start AND :end
+         AND (status IS NULL OR status NOT IN ('cancelled','failed','payment_failed'))
+       GROUP BY brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
