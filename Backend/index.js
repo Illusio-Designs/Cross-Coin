@@ -831,6 +831,25 @@ const startServer = async () => {
         // without this index that WHERE … IN (…) was a full product_images scan.
         await ensureIndex('product_images', 'idx_pi_variation_id', 'product_variation_id');
 
+        // ── Storefront catalog listing (GET /api/products/catalog) ──
+        // ProductService.getProductsList() runs:
+        //   SELECT Product.*, Category.* FROM products
+        //     LEFT JOIN categories
+        //     INNER JOIN product_brands + brands   (brand filter: Brands.id = ?)
+        //   WHERE Product.status = 'active'
+        //   ORDER BY Product.createdAt DESC   LIMIT/OFFSET
+        // The single-column indexes (products.status, products.createdAt,
+        // product_brands.brand_id, product_brands.status) each help ONE half of
+        // the query, but MySQL can only use one index per table — so it either
+        // seeks the brand's products then filesorts by createdAt, or walks
+        // createdAt and probes the junction row-by-row. Both degrade to the
+        // 1–1.4s slow queries seen in prod. These composite indexes let the whole
+        // "active products of a brand, newest first" pattern be index-ordered.
+        await ensureIndex('product_brands', 'idx_pb_brand_status_product', 'brand_id, status, product_id');
+        await ensureIndex('products', 'idx_prod_status_created', 'status, createdAt');
+        // Category collection pages add categoryId to the same filter+sort.
+        await ensureIndex('products', 'idx_prod_cat_status_created', 'categoryId, status, createdAt');
+
         // ── One-time backfill: re-attribute existing WhatsApp conversations ──
         // Older chats were all tagged with the shared brand (CrossCoin); tag
         // each with the brand named in its first message. Guarded by a flag row
