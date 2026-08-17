@@ -185,7 +185,7 @@ function App({ Component, pageProps }) {
       {/* Trackers run on the public Obzus site only — never on the admin
           dashboard or auth pages, so staff activity isn't recorded as
           customer traffic (visit pings, analytics, pixel). */}
-      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && (
+      {!router.pathname.startsWith('/dashboard') && !router.pathname.startsWith('/auth') && !router.pathname.startsWith('/login') && (
         <>
           <UTMTracker />
           <Analytics />

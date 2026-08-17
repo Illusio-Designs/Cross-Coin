@@ -129,7 +129,7 @@ export default function Document({ tracking }) {
                 __html:
                   "window.dataLayer = window.dataLayer || [];" +
                   "function gtag(){var _p=window.location.pathname;" +
-                  "if(_p.indexOf('/dashboard')===0||_p.indexOf('/auth')===0)return;" +
+                  "if(_p.indexOf('/dashboard')===0||_p.indexOf('/auth')===0||_p.indexOf('/login')===0)return;" +
                   "dataLayer.push(arguments);}" +
                   "gtag('js', new Date());" +
                   (gaId ? `gtag('config', '${gaId}');` : "") +
@@ -152,7 +152,7 @@ export default function Document({ tracking }) {
           <script
             dangerouslySetInnerHTML={{
               __html:
-                "if(location.pathname.indexOf('/dashboard')!==0&&location.pathname.indexOf('/auth')!==0){" +
+                "if(location.pathname.indexOf('/dashboard')!==0&&location.pathname.indexOf('/auth')!==0&&location.pathname.indexOf('/login')!==0){" +
                 "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?" +
                 "n.callMethod.apply(n,arguments):n.queue.push(arguments)};" +
                 "if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';" +
@@ -299,9 +299,10 @@ Document.getInitialProps = async (ctx) => {
     return { ...initialProps, tracking: null };
   }
 
-  // Never load tracking on the admin dashboard or auth screens.
+  // Never load tracking on the admin dashboard, auth screens, or the admin
+  // login (/login is the staff sign-in, distinct from the public /auth/* flow).
   const path = ctx.pathname || "";
-  if (path.startsWith("/dashboard") || path.startsWith("/auth")) {
+  if (path.startsWith("/dashboard") || path.startsWith("/auth") || path.startsWith("/login")) {
     return { ...initialProps, tracking: null };
   }
   const tracking = await getTrackingConfig();
