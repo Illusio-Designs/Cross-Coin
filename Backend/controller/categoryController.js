@@ -107,15 +107,30 @@ const createCategory = async (req, res) => {
 
                 image = uploadResult.filePath; // Store ImageKit file path
                 logger.info('Created category image path:', image);
-                
+
                 // Delete temporary file
-                await fs.unlink(req.file.path);
+                await fs.unlink(req.file.path).catch(() => {});
             } catch (imageError) {
-                logger.error('Error processing image:', imageError);
-                return res.status(500).json({ 
-                    message: 'Error processing image', 
-                    error: imageError.message 
-                });
+                // ImageKit failed (e.g. "Upload Limit Exceeded" — the account's
+                // media quota is full). Rather than block category creation,
+                // fall back to local disk storage (served statically from
+                // /uploads). Store a FULL backend URL so imagekitService
+                // .getOptimizedUrl uses it as-is instead of rewriting
+                // "/uploads/categories/" to a non-existent ImageKit path.
+                logger.warn('ImageKit upload failed, falling back to local storage:', imageError.message);
+                try {
+                    const localPath = await imageHandler.handleCategoryImage(null, req.file.path, `new-${Date.now()}`);
+                    if (!localPath) throw new Error('Local image processing returned no path');
+                    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+                    image = `${apiBase}${localPath}`;
+                    logger.info('Created category image (local fallback):', image);
+                } catch (localError) {
+                    logger.error('Error processing image (ImageKit + local both failed):', localError);
+                    return res.status(500).json({
+                        message: 'Error processing image',
+                        error: localError.message
+                    });
+                }
             }
         }
 
