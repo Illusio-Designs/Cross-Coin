@@ -103,15 +103,32 @@ const isPublicReadGet = (req) => {
   return PUBLIC_READ_PREFIXES.some((p) => path.startsWith(p));
 };
 
+// The admin dashboard keeps a long-poll open on /api/notifications/poll for
+// near-instant new-order / WhatsApp alerts. It's authenticated + staff-only
+// (not an abuse vector), and a 429 there breaks live notifications and can
+// trigger a client reconnect storm. Exempt it from the general limiter.
+const isNotificationPoll = (req) => {
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return path.startsWith('/api/notifications/poll');
+};
+
 // General: all other API routes (120 req / min), skipping public cached reads.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: isPublicReadGet,
+  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
+
+// CORS middleware — MUST run before the rate limiters. A rate-limited (429)
+// response, or an OPTIONS preflight intercepted by a limiter, would otherwise
+// be sent WITHOUT the Access-Control-Allow-Origin header, and the browser
+// reports that as a CORS failure ("No 'Access-Control-Allow-Origin' header is
+// present") — masking the real 429. Applying CORS first guarantees every
+// response (including preflights and 429s) carries the correct CORS headers.
+app.use(cors(corsOptions));
 
 // Strict routes
 app.use('/api/users/login', strictLimiter);
@@ -130,9 +147,6 @@ app.use('/api/shipping-addresses', mediumLimiter);
 
 // General
 app.use('/api/', generalLimiter);
-
-// CORS middleware - MUST be before other middleware (handles preflight requests)
-app.use(cors(corsOptions));
 
 // Body parsing middleware. Image files never travel as JSON (they go through
 // multipart upload endpoints), so 1mb is normally plenty — but blog posts save
