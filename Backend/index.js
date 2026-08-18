@@ -211,6 +211,16 @@ if (!fs.existsSync(seoUploadsDir)) {
 // Serve static files with Cache-Control and ETag headers (Requirement 4.4)
 app.use('/uploads', (req, res, next) => {
     res.set('Cache-Control', 'public, max-age=86400');
+    // These are PUBLIC images embedded cross-origin — the storefronts
+    // (crosscoin.in, morbixsocks.com, …) load them via <img> from this API host
+    // (api.crosscoin.in). helmet() sets a global "Cross-Origin-Resource-Policy:
+    // same-origin", which makes the browser BLOCK such cross-origin loads
+    // (net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin) even though the file serves
+    // with 200. Override it to cross-origin so uploaded/fallback images display
+    // everywhere, matching how ImageKit's CDN serves them. (ImageKit was never
+    // blocked because its responses already send cross-origin.)
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.set('Access-Control-Allow-Origin', '*');
     next();
 }, express.static(uploadsDir));
 
