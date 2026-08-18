@@ -803,13 +803,15 @@ module.exports.updateProfile = async (req, res) => {
                 fs.unlink(req.file.path, err => {
                     if (err) logger.error('Failed to delete temp file:', err.message);
                 });
-            } catch (error) {
-                logger.error('Error handling profile image update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to process image',
-                    error: error.message 
-                });
+            } catch (imageError) {
+                // ImageKit rejected the upload (e.g. "Upload Limit Exceeded").
+                // Keep the local file (served statically from /uploads) and store
+                // a FULL backend URL so getOptimizedUrl uses it as-is instead of
+                // rewriting it to a non-existent ImageKit path. Don't block the
+                // whole profile save just because the avatar couldn't go to the CDN.
+                logger.warn('ImageKit profile upload failed, using local storage:', imageError.message);
+                const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+                sanitizedData.profileImage = `${apiBase}/uploads/users/${path.basename(req.file.path)}`;
             }
         }
 
