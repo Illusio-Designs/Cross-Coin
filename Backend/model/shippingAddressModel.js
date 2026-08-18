@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-const { encrypt, decrypt, isEncrypted } = require('../utils/encryption.js');
+const { encrypt, decrypt, isEncrypted, phoneHash } = require('../utils/encryption.js');
 const crypto = require('crypto');
 
 function computeAddressHash(instance) {
@@ -100,6 +100,13 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
         type: DataTypes.STRING(64),
         allowNull: true,
         defaultValue: null
+    },
+    // Deterministic keyed hash of `phone` for lookups (phone is encrypted with a
+    // random IV and can't be queried). Auto-maintained by the beforeSave hook.
+    phone_hash: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     tableName: 'shipping_addresses',
@@ -125,6 +132,9 @@ const ShippingAddress = sequelize.define('ShippingAddress', {
                 || !instance.address_hash;
             if (dirty) {
                 instance.address_hash = computeAddressHash(instance);
+            }
+            if (instance.changed('phone') || (!instance.phone_hash && instance.phone)) {
+                instance.phone_hash = phoneHash(instance.phone);
             }
         }
     }

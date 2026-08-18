@@ -217,6 +217,27 @@ module.exports.login = async (req, res) => {
         const { ShippingAddress } = require('../model/shippingAddressModel.js');
         const brandId = req.brandId || (req.brand ? req.brand.id : null);
 
+        // Find any existing GUEST record for this phone (real name/email + past
+        // orders) via the deterministic phone hash — the phone itself is
+        // encrypted with a random IV and can't be queried. This lets a phone-OTP
+        // login adopt the shopper's real details instead of leaving a bare
+        // "User <phone>" placeholder, and relink their guest orders below.
+        const { phoneHash } = require('../utils/encryption.js');
+        const pHash = phoneHash(digits);
+        let guestMatch = null;
+        if (pHash) {
+            guestMatch = await GuestUser.findOne({
+                where: { phoneHashValue: pHash },
+                order: [['updated_at', 'DESC']],
+            });
+        }
+        const guestName = guestMatch
+            ? [guestMatch.firstName, guestMatch.lastName].filter(Boolean).join(' ').trim()
+            : '';
+        const guestEmail = guestMatch && guestMatch.email && !guestMatch.email.endsWith('@phone.crosscoin.in')
+            ? guestMatch.email.toLowerCase()
+            : '';
+
         let user = brandId
             ? await User.findOne({ where: { phone: digits, source_brand_id: brandId } })
             : await User.findOne({ where: { phone: digits } });
@@ -233,12 +254,15 @@ module.exports.login = async (req, res) => {
 
         if (!user) {
             // First login for this phone on this brand → create the consumer.
-            const placeholderEmail = `${digits}@phone.crosscoin.in`;
-            const emailTaken = await User.findOne({ where: { email: placeholderEmail } });
-            const email = emailTaken ? `${digits}.b${brandId || 0}@phone.crosscoin.in` : placeholderEmail;
+            // Prefer the shopper's real name/email from a matched guest record;
+            // fall back to placeholders only when there's nothing to adopt.
+            const desiredEmail = guestEmail || `${digits}@phone.crosscoin.in`;
+            const emailTaken = await User.findOne({ where: { email: desiredEmail } });
+            const email = emailTaken ? `${digits}.b${brandId || 0}@phone.crosscoin.in` : desiredEmail;
+            const username = guestName || `User ${digits} (b${brandId || 0})`;
             try {
                 user = await User.create({
-                    username: `User ${digits} (b${brandId || 0})`,
+                    username,
                     email,
                     phone: digits,
                     role: 'consumer',
@@ -256,6 +280,33 @@ module.exports.login = async (req, res) => {
                 if (!user) throw createErr;
                 if (brandId && !user.source_brand_id) await user.update({ source_brand_id: brandId });
             }
+        }
+
+        // Upgrade a legacy placeholder name/email to the guest's real details.
+        if (user && guestMatch) {
+            const patch = {};
+            if (guestName && /^User \d/.test(user.username || '')) patch.username = guestName;
+            if (guestEmail && user.email && user.email.endsWith('@phone.crosscoin.in')) {
+                const taken = await User.findOne({ where: { email: guestEmail, id: { [Op.ne]: user.id } } });
+                if (!taken) patch.email = guestEmail;
+            }
+            if (Object.keys(patch).length) {
+                try { await user.update(patch); } catch (e) { logger.warn('[Login] profile enrich failed: ' + e.message); }
+            }
+        }
+
+        // Relink THIS matched guest's orders/addresses by guest_user_id — covers
+        // phone-only guests whose email is a placeholder (the email match below
+        // can't find them). Scoped to this brand so cross-brand stays isolated.
+        if (guestMatch) {
+            const ow = { guest_user_id: guestMatch.id, user_id: null };
+            if (brandId) ow.brand_id = brandId;
+            try {
+                await Order.update({ user_id: user.id, guest_user_id: null }, { where: ow });
+                await ShippingAddress.update({ user_id: user.id, guest_user_id: null }, { where: { guest_user_id: guestMatch.id, user_id: null } });
+                const remaining = await Order.count({ where: { guest_user_id: guestMatch.id, user_id: null } });
+                if (remaining === 0) await guestMatch.update({ status: 'converted', convertedAt: new Date() });
+            } catch (e) { logger.warn('[Login] guest relink by phone failed: ' + e.message); }
         }
 
         // Guest-to-member: re-assign this brand's guest orders by email (primary,

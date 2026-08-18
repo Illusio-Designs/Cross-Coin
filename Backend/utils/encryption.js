@@ -55,6 +55,21 @@ function decrypt(ciphertext) {
   }
 }
 
+// Deterministic keyed hash of a phone number, for LOOKUPS only (the real phone
+// stays encrypted with a random IV, so it can't be queried directly). Uses
+// HMAC-SHA256 keyed by DATA_ENCRYPTION_KEY over the normalized last-10-digits,
+// so the same number always yields the same hash but the hash can't be brute-
+// forced into the number without the key. Returns null if the key is missing or
+// the input isn't a 10-digit number.
+function phoneHash(phone) {
+  if (phone === null || phone === undefined) return null;
+  const digits = String(phone).replace(/\D/g, '').slice(-10);
+  if (digits.length !== 10) return null;
+  const KEY = getKey();
+  if (!KEY) return null;
+  return crypto.createHmac('sha256', KEY).update(digits).digest('hex');
+}
+
 function isEncrypted(value) {
   if (!value || typeof value !== 'string') return false;
   const parts = value.split(':');
@@ -67,4 +82,4 @@ function isEncrypted(value) {
   );
 }
 
-module.exports = { encrypt, decrypt, isEncrypted };
+module.exports = { encrypt, decrypt, isEncrypted, phoneHash };

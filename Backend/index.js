@@ -874,6 +874,73 @@ const startServer = async () => {
         // Category collection pages add categoryId to the same filter+sort.
         await ensureIndex('products', 'idx_prod_cat_status_created', 'categoryId, status, createdAt');
 
+        // ── phone_hash columns + backfill (guest_users, shipping_addresses) ──
+        // The phone is encrypted with a random IV, so it can't be queried. A
+        // deterministic keyed hash lets phone-OTP login find a shopper's existing
+        // guest record (real name/email + past orders) instead of leaving them as
+        // a "User <phone>" placeholder. Add the column, backfill it by decrypting
+        // existing rows in JS (SQL can't decrypt AES-GCM), then index it.
+        const ensureColumn = async (table, column, ddl) => {
+            try {
+                const [rows] = await sequelize.query(
+                    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
+                    { replacements: [table, column] }
+                );
+                if (!rows.length) {
+                    logger.info(`Migrating: adding ${table}.${column}…`);
+                    await sequelize.query(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+                    logger.info(`✓ ${table}.${column} added`);
+                }
+            } catch (err) {
+                logger.error(`column ${table}.${column} migration failed: ` + err.message);
+            }
+        };
+        await ensureColumn('guest_users', 'phone_hash', 'phone_hash VARCHAR(64) NULL');
+        await ensureColumn('shipping_addresses', 'phone_hash', 'phone_hash VARCHAR(64) NULL');
+        await ensureIndex('guest_users', 'idx_gu_phone_hash', 'phone_hash');
+        await ensureIndex('shipping_addresses', 'idx_sa_phone_hash', 'phone_hash');
+        try {
+            const { phoneHash } = require('./utils/encryption.js');
+            const { decrypt } = require('./utils/encryption.js');
+            for (const table of ['guest_users', 'shipping_addresses']) {
+                // Only rows still missing the hash — so this is a no-op once caught up.
+                const [rows] = await sequelize.query(
+                    `SELECT id, phone FROM ${table} WHERE phone_hash IS NULL AND phone IS NOT NULL LIMIT 5000`
+                );
+                let filled = 0;
+                for (const r of rows) {
+                    const h = phoneHash(decrypt(r.phone));
+                    if (!h) continue;
+                    await sequelize.query(`UPDATE ${table} SET phone_hash = ? WHERE id = ?`, { replacements: [h, r.id] });
+                    filled++;
+                }
+                if (filled) logger.info(`✓ backfilled phone_hash for ${filled} ${table} rows`);
+            }
+        } catch (err) {
+            logger.error('phone_hash backfill failed: ' + err.message);
+        }
+
+        // ── One-time backfill: upgrade placeholder consumer names/emails ──────
+        // Fill "User <phone>" / "<phone>@phone.crosscoin.in" accounts with the
+        // shopper's real name/email from their guest/address records (matched by
+        // the phone_hash filled just above). Guarded so it runs once per deploy
+        // marker; the script itself is also idempotent and re-runnable manually.
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
+            );
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'user-profile-backfill-v1' LIMIT 1`);
+            if (!done.length) {
+                const { backfillUserProfiles } = require('./scripts/backfillUserProfiles.js');
+                const r = await backfillUserProfiles();
+                logger.info(`✓ user-profile backfill: fixed ${r.fixed}/${r.scanned} placeholder accounts`);
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('user-profile-backfill-v1')`);
+            }
+        } catch (err) {
+            logger.error('user-profile backfill failed: ' + err.message);
+        }
+
         // ── One-time backfill: re-attribute existing WhatsApp conversations ──
         // Older chats were all tagged with the shared brand (CrossCoin); tag
         // each with the brand named in its first message. Guarded by a flag row

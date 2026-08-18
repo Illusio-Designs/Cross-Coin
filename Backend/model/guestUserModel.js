@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
-const { encrypt, decrypt, isEncrypted } = require('../utils/encryption.js');
+const { encrypt, decrypt, isEncrypted, phoneHash } = require('../utils/encryption.js');
 
 const GuestUser = sequelize.define('GuestUser', {
     id: {
@@ -78,12 +78,27 @@ const GuestUser = sequelize.define('GuestUser', {
         type: DataTypes.JSON,
         allowNull: true,
         field: 'guest_data'
+    },
+    // Deterministic keyed hash of `phone` for lookups (the phone itself is
+    // encrypted with a random IV and can't be queried). Auto-maintained by the
+    // beforeSave hook below.
+    phoneHashValue: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        field: 'phone_hash'
     }
 }, {
     tableName: 'guest_users',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    hooks: {
+        beforeSave(instance) {
+            if (instance.changed('phone')) {
+                instance.setDataValue('phoneHashValue', phoneHash(instance.phone));
+            }
+        }
+    },
     indexes: [
         {
             fields: ['email']
@@ -93,6 +108,9 @@ const GuestUser = sequelize.define('GuestUser', {
         },
         {
             fields: ['status']
+        },
+        {
+            fields: ['phone_hash']
         }
     ]
 });
