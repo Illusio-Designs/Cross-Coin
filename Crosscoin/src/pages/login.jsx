@@ -27,10 +27,29 @@ export default function Login() {
   const identifier = digits.length === 10 ? "91" + digits : digits;
 
   // Send OTP via MSG91 — same as CartDrawer
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     setError(""); setHint("");
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
     setOtpSending(true);
+
+    // Only existing consumers of THIS brand can log in. If the phone has no
+    // CrossCoin account, tell them to register instead of silently creating one.
+    try {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+      const check = await fetch(`${API}/api/users/check-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': 'crosscoin' },
+        body: JSON.stringify({ phone: digits }),
+      });
+      if (check.ok) {
+        const data = await check.json().catch(() => ({}));
+        if (!data.exists) {
+          setError('No account found with this number. Please register first.');
+          setOtpSending(false);
+          return;
+        }
+      }
+    } catch { /* network issue — don't block login */ }
 
     let attempts = 0;
     const trySend = () => {

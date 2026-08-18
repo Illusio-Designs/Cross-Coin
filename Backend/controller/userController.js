@@ -356,6 +356,32 @@ module.exports.login = async (req, res) => {
     }
 };
 
+// Check whether a CONSUMER account exists for this phone on the CURRENT brand.
+// Storefront login uses this to show "no account — please register first"
+// instead of silently creating a placeholder for a shopper who has never
+// signed up on this brand. Accounts are brand-scoped, so an account on another
+// storefront does not count; a legacy (unstamped) account does, since login
+// would adopt it into this brand.
+module.exports.checkPhone = async (req, res) => {
+    try {
+        const digits = String(req.body?.phone || '').replace(/\D/g, '').slice(-10);
+        if (digits.length !== 10) {
+            return res.status(400).json({ exists: false, message: 'Invalid phone number' });
+        }
+        const brandId = req.brandId || (req.brand ? req.brand.id : null);
+        let user = brandId
+            ? await User.findOne({ where: { phone: digits, role: 'consumer', source_brand_id: brandId } })
+            : await User.findOne({ where: { phone: digits, role: 'consumer' } });
+        if (!user && brandId) {
+            user = await User.findOne({ where: { phone: digits, role: 'consumer', source_brand_id: null } });
+        }
+        return res.json({ exists: !!user });
+    } catch (error) {
+        logger.error('checkPhone error:', error);
+        return res.status(500).json({ exists: false, message: 'Failed to check phone' });
+    }
+};
+
 // **Admin Login**
 module.exports.adminLogin = async (req, res) => {
     try {

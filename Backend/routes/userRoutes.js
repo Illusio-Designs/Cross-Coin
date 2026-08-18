@@ -4,7 +4,8 @@ const {
     forgotPassword, resetPassword, verifyEmail,
     getCurrentUser, getProfile, updateProfile, updateUser,
     updatePassword, changePassword, deleteUser,
-    getAllUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser
+    getAllUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
+    checkPhone
 } = require('../controller/userController.js');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
@@ -55,6 +56,7 @@ const resetPasswordSchema = z.object({
 // Public
 router.post('/register', validateBody(schemas.register), register);
 router.post('/login', zValidateBody(loginSchema), login);
+router.post('/check-phone', checkPhone);
 router.post('/admin/login', zValidateBody(adminLoginSchema), adminLogin);
 router.post('/logout', logout);
 router.post('/forgot-password', zValidateBody(forgotPasswordSchema), forgotPassword);
