@@ -172,6 +172,7 @@ export default function Login() {
                   </p>
                 )}
                 <button
+                  type="button"
                   className="auth-submit"
                   onClick={handleSendOtp}
                   disabled={otpSending || digits.length !== 10}
@@ -268,6 +269,7 @@ export default function Login() {
 
                 <button
                   id="login-otp-verify-btn"
+                  type="button"
                   className="auth-submit"
                   onClick={handleVerifyOtp}
                   disabled={loading || otpCode.length < 4}
