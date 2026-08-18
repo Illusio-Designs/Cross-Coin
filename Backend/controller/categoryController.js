@@ -373,16 +373,30 @@ const updateCategory = async (req, res) => {
 
                 updateData.image = uploadResult.filePath; // Store ImageKit file path
                 logger.info('Updated category image path:', updateData.image);
-                
+
                 // Delete temporary file
-                await fs.unlink(req.file.path);
-            } catch (error) {
-                logger.error('Error handling category image update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to process image',
-                    error: error.message 
-                });
+                await fs.unlink(req.file.path).catch(() => {});
+            } catch (imageError) {
+                // ImageKit failed (e.g. "Upload Limit Exceeded"). Fall back to
+                // local disk storage so editing a category image isn't blocked.
+                // Store a FULL backend URL so getOptimizedUrl uses it as-is
+                // instead of rewriting "/uploads/categories/" to a dead ImageKit
+                // path.
+                logger.warn('ImageKit upload failed on category update, falling back to local storage:', imageError.message);
+                try {
+                    const localPath = await imageHandler.handleCategoryImage(null, req.file.path, `upd-${Date.now()}`);
+                    if (!localPath) throw new Error('Local image processing returned no path');
+                    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+                    updateData.image = `${apiBase}${localPath}`;
+                    logger.info('Updated category image (local fallback):', updateData.image);
+                } catch (localError) {
+                    logger.error('Error handling category image update (ImageKit + local both failed):', localError);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to process image',
+                        error: localError.message
+                    });
+                }
             }
         }
 
