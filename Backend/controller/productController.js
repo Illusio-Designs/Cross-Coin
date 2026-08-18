@@ -41,9 +41,16 @@ const uploadFileToImageKit = async (file) => {
     fsSync.unlink(file.path, () => {});
     return result.filePath; // e.g. /products/filename.jpg
   } catch (err) {
-    logger.error('ImageKit upload failed for', file.filename, err.message);
-    // Fallback to local path so product save doesn't break
-    return `/uploads/products/${file.filename}`;
+    // ImageKit rejected the upload (e.g. "Upload Limit Exceeded" — the account
+    // media quota is full). The multer temp file already lives in
+    // uploads/products/, which is served statically, so keep it and store a
+    // FULL backend URL. A bare "/uploads/products/..." path would be rewritten
+    // by imagekitService.getOptimizedUrl to "/products/..." (a non-existent
+    // ImageKit URL), which is why the image appeared broken / "not saved". A
+    // full http URL is used as-is by getOptimizedUrl.
+    logger.error('ImageKit upload failed for ' + file.filename + ', keeping local copy: ' + err.message);
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+    return `${apiBase}/uploads/products/${file.filename}`;
   }
 };
 
@@ -2160,10 +2167,23 @@ module.exports.uploadImages = async (req, res) => {
         logger.info(`Uploaded to ImageKit: ${ikResult.filePath}`);
       } catch (error) {
         const { logger: _logger } = require('../config/logging.js');
-        _logger.error(`Failed to upload ${file.originalname} to ImageKit:`, error.message);
-        failedImages.push({
+        // ImageKit rejected the upload (e.g. "Upload Limit Exceeded"). Don't drop
+        // the image — the multer temp file is already in uploads/products/ and
+        // served statically. Keep it and return a FULL backend URL so the editor
+        // can still save the product with a working image. (A bare
+        // "/uploads/products/..." path would be rewritten by getOptimizedUrl to a
+        // non-existent ImageKit URL.)
+        _logger.error(`ImageKit upload failed for ${file.originalname}, keeping local copy: ${error.message}`);
+        const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+        const localUrl = `${apiBase}/uploads/products/${file.filename}`;
+        uploadedImages.push({
           originalName: file.originalname,
-          error: error.message
+          filename: file.filename,
+          path: localUrl,
+          url: localUrl,
+          size: file.size,
+          mimetype: file.mimetype,
+          local: true
         });
       }
     }
