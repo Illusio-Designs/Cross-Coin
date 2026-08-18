@@ -4,7 +4,7 @@ export const metadata = { title: 'Contact' };
 
 const DETAILS = [
   { icon: 'Phone', label: 'Phone', value: '+91 97128 91700' },
-  { icon: 'Mail', label: 'Email', value: 'support@soxbaesocks.com' },
+  { icon: 'Mail', label: 'Email', value: 'obzusindia@gmail.com' },
   { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
 ];
 

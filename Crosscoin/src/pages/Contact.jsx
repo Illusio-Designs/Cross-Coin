@@ -24,9 +24,9 @@ const contactInfo = [
       </svg>
     ),
     label: 'Phone',
-    value: '+91 74348 34000',
+    value: '+91 97128 91700',
     sub: 'Mon – Fri, 24 Hours',
-    href: 'tel:+917434834000',
+    href: 'tel:+919712891700',
   },
   {
     icon: (
@@ -35,9 +35,9 @@ const contactInfo = [
       </svg>
     ),
     label: 'Email',
-    value: 'info@crosscoin.in',
+    value: 'obzusindia@gmail.com',
     sub: 'We reply within 24 hours',
-    href: 'mailto:info@crosscoin.in',
+    href: 'mailto:obzusindia@gmail.com',
   },
   {
     icon: (

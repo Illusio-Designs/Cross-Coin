@@ -112,7 +112,7 @@ class ErrorBoundary extends React.Component {
           </div>
 
           <p style={styles.support}>
-            Still stuck? <a href="mailto:support@knitwink.com" style={styles.link}>support@knitwink.com</a>
+            Still stuck? <a href="mailto:obzusindia@gmail.com" style={styles.link}>obzusindia@gmail.com</a>
           </p>
 
           {process.env.NODE_ENV !== 'production' && (

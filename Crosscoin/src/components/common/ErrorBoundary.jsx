@@ -114,7 +114,7 @@ class ErrorBoundary extends React.Component {
           </div>
 
           <p style={styles.support}>
-            Still stuck? <a href="mailto:support@crosscoin.in" style={styles.link}>support@crosscoin.in</a>
+            Still stuck? <a href="mailto:obzusindia@gmail.com" style={styles.link}>obzusindia@gmail.com</a>
             {' · '}
             <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" style={styles.link}>WhatsApp us</a>
           </p>

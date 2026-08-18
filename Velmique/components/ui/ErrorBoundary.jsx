@@ -76,7 +76,7 @@ class ErrorBoundary extends React.Component {
             <button onClick={() => { window.location.href = '/'; }} style={{ ...styles.button, ...styles.buttonSecondary }}>Go home</button>
             <button onClick={this.handleCopy} style={{ ...styles.button, ...styles.buttonGhost }}>{this.state.copied ? '✓ Copied' : 'Copy details'}</button>
           </div>
-          <p style={styles.support}>Still stuck? <a href="mailto:support@velmique.com" style={styles.link}>support@velmique.com</a></p>
+          <p style={styles.support}>Still stuck? <a href="mailto:obzusindia@gmail.com" style={styles.link}>obzusindia@gmail.com</a></p>
           {process.env.NODE_ENV !== 'production' && (
             <details style={styles.details}>
               <summary style={styles.summary}>Stack trace (dev only)</summary>

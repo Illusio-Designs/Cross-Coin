@@ -110,9 +110,9 @@ export function Footer() {
           {/* Col 5 — Contact (last) */}
           <div className="flex flex-col gap-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Contact</p>
-            <a href="mailto:support@knitwink.com" className="no-touch-min flex items-start gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
+            <a href="mailto:obzusindia@gmail.com" className="no-touch-min flex items-start gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
               <Mail size={13} className="mt-0.5 shrink-0 text-white/30" />
-              support@knitwink.com
+              obzusindia@gmail.com
             </a>
             <a href="tel:+919712891700" className="no-touch-min flex items-center gap-2.5 text-sm text-white/55 transition-colors hover:text-white">
               <Phone size={13} className="shrink-0 text-white/30" />

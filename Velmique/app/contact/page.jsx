@@ -30,7 +30,7 @@ export default function ContactPage() {
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-4">Reach Us</p>
             <div className="space-y-6">
               {[
-                { icon: Mail, label: 'Email', value: 'hello@velmique.in', href: 'mailto:hello@velmique.in' },
+                { icon: Mail, label: 'Email', value: 'obzusindia@gmail.com', href: 'mailto:obzusindia@gmail.com' },
                 { icon: Phone, label: 'Phone / WhatsApp', value: '+91 97128 91700', href: 'tel:+919712891700' },
                 { icon: MapPin, label: 'Address', value: 'Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
               ].map(item => (

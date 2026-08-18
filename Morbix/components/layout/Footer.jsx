@@ -49,7 +49,7 @@ export default function Footer() {
             <h4>Contacts</h4>
             <ul className="footer-contacts">
               <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
-              <li><a href="mailto:support@morbixsocks.com"><Icon name="Mail" size={15} /><span>support@morbixsocks.com</span></a></li>
+              <li><a href="mailto:obzusindia@gmail.com"><Icon name="Mail" size={15} /><span>obzusindia@gmail.com</span></a></li>
               <li><span className="footer-addr"><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India</span></span></li>
             </ul>
           </div>

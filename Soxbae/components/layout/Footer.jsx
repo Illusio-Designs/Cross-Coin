@@ -48,7 +48,7 @@ export default function Footer() {
               <h4>Contact</h4>
               <ul className="sx-footer-contact">
                 <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
-                <li><a href="mailto:support@soxbaesocks.com"><Icon name="Mail" size={15} /><span>support@soxbaesocks.com</span></a></li>
+                <li><a href="mailto:obzusindia@gmail.com"><Icon name="Mail" size={15} /><span>obzusindia@gmail.com</span></a></li>
                 <li><Icon name="MapPin" size={15} /><span>Royal Plaza, Panchasar Road, Morbi 363641, Gujarat, India</span></li>
               </ul>
             </div>

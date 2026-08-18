@@ -77,7 +77,7 @@ export function ContactPageClient() {
             {/* Contact cards */}
             <div className="flex flex-col gap-3">
               <a
-                href="mailto:support@knitwink.com"
+                href="mailto:obzusindia@gmail.com"
                 className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 transition-colors hover:border-brand-black"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-black">
@@ -85,7 +85,7 @@ export function ContactPageClient() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Email</p>
-                  <p className="mt-0.5 text-sm font-medium text-brand-black">support@knitwink.com</p>
+                  <p className="mt-0.5 text-sm font-medium text-brand-black">obzusindia@gmail.com</p>
                 </div>
               </a>
 

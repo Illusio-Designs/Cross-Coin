@@ -130,8 +130,8 @@ export default function Footer() {
                 ))}
               </div>
               <div className="flex flex-col items-end gap-1.5 text-white/40 text-xs font-body">
-                <a href="mailto:hello@velmique.in" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
-                  <Mail size={12} /> hello@velmique.in
+                <a href="mailto:obzusindia@gmail.com" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
+                  <Mail size={12} /> obzusindia@gmail.com
                 </a>
                 <a href="tel:+919712891700" className="flex items-center gap-2 hover:text-[var(--gold-light)] transition-colors">
                   <Phone size={12} /> +91 97128 91700

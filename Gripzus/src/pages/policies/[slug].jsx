@@ -62,7 +62,7 @@ export default function PolicyPage() {
                 <p className="h-display text-2xl text-ink mb-2">Policy unavailable</p>
                 <p className="prose-body text-sm">
                   We couldn&apos;t load this policy right now. Email{' '}
-                  <a href="mailto:support@gripzus.com" className="text-ink underline underline-offset-4">support@gripzus.com</a>.
+                  <a href="mailto:obzusindia@gmail.com" className="text-ink underline underline-offset-4">obzusindia@gmail.com</a>.
                 </p>
               </div>
             )}
@@ -76,8 +76,8 @@ export default function PolicyPage() {
             {!loading && !error && (
               <p className="eyebrow mt-14 pt-8 border-t border-line">
                 Questions?{' '}
-                <a href="mailto:support@gripzus.com" className="text-ink underline underline-offset-4 hover:text-ink-soft">
-                  support@gripzus.com
+                <a href="mailto:obzusindia@gmail.com" className="text-ink underline underline-offset-4 hover:text-ink-soft">
+                  obzusindia@gmail.com
                 </a>
               </p>
             )}

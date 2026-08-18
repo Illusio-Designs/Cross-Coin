@@ -4,7 +4,7 @@ export const metadata = { title: 'Contact' };
 
 const DETAILS = [
   { icon: 'Phone', label: 'Phone', value: '+91 97128 91700', href: 'tel:+919712891700' },
-  { icon: 'Mail', label: 'Email', value: 'support@velquira.in', href: 'mailto:support@velquira.in' },
+  { icon: 'Mail', label: 'Email', value: 'obzusindia@gmail.com', href: 'mailto:obzusindia@gmail.com' },
   { icon: 'MapPin', label: 'Address', value: 'Royal Plaza, Panchasar Road, Morbi - 363641, Gujarat, India' },
 ];
 

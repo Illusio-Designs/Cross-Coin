@@ -122,14 +122,14 @@ const Footer = () => {
               <MdOutlinePhoneInTalk className="contact-icon" />
               <div>
                 <p className="contact-label">Mon–Fri, 24 Hours</p>
-                <a href="tel:+917434834000" className="contact-link">+91 74348 34000</a>
+                <a href="tel:+919712891700" className="contact-link">+91 97128 91700</a>
               </div>
             </div>
             <div className="contact-item">
               <AiOutlineMail className="contact-icon" />
               <div>
                 <p className="contact-label">Email Support</p>
-                <a href="mailto:info@crosscoin.in" className="contact-link">info@crosscoin.in</a>
+                <a href="mailto:obzusindia@gmail.com" className="contact-link">obzusindia@gmail.com</a>
               </div>
             </div>
           </div>

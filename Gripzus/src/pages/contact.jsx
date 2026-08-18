@@ -8,7 +8,7 @@ import { toastMessageSent } from '../utils/toast';
    hairlines on the brand's stark white. */
 
 const CHANNELS = [
-  { eyebrow: 'Email',    title: 'support@gripzus.com', note: 'Orders, returns, partnerships.',              href: 'mailto:support@gripzus.com' },
+  { eyebrow: 'Email',    title: 'obzusindia@gmail.com', note: 'Orders, returns, partnerships.',              href: 'mailto:obzusindia@gmail.com' },
   { eyebrow: 'Phone',    title: '+91 97128 91700',      note: 'Mon–Sat, 10am–7pm IST.',                       href: 'tel:+919712891700' },
   { eyebrow: 'WhatsApp', title: 'Chat with us',          note: 'Fastest for size + order help.',              href: 'https://wa.me/917434834000' },
   { eyebrow: 'Studio',   title: 'Morbi, Gujarat',        note: 'Royal Plaza, Panchasar Road — by appointment.', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },

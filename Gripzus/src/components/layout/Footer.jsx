@@ -112,9 +112,9 @@ export default function Footer() {
             <p className="text-[10px] tracking-[0.16em] uppercase text-paper/45 mb-4">Contact</p>
             <ul className="space-y-3.5 text-[13px]">
               <li>
-                <a href="mailto:support@gripzus.com" className="group inline-flex items-center gap-3 text-paper/75 hover:text-paper transition-colors">
+                <a href="mailto:obzusindia@gmail.com" className="group inline-flex items-center gap-3 text-paper/75 hover:text-paper transition-colors">
                   <span className="w-9 h-9 rounded-full border border-paper/15 flex items-center justify-center text-paper/60 group-hover:border-paper/40 transition-colors"><MailIcon /></span>
-                  <span className="break-all">support@gripzus.com</span>
+                  <span className="break-all">obzusindia@gmail.com</span>
                 </a>
               </li>
               <li>
