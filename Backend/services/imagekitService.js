@@ -39,6 +39,24 @@ class ImageKitService {
       return imagePath;
     }
 
+    // A stored FULL URL (http/https) is authoritative — return it as-is with the
+    // transform appended. This MUST run FIRST — before both the legacy-filename
+    // branch below (which treats anything not starting with "/" as a bare
+    // ImageKit filename and prepends "/categories/…", producing a broken
+    // "ik.imagekit.io/…/categories/https://api.crosscoin.in/…" URL) and the
+    // /uploads→ImageKit rewrite. A full backend URL like
+    // https://api.crosscoin.in/uploads/categories/x.webp must be handed back
+    // untouched so the browser loads it directly. Appending ?tr is harmless for
+    // a backend /uploads URL (Express static ignores the query) and is honoured
+    // for a full ImageKit URL.
+    if (/^https?:\/\//i.test(imagePath)) {
+      const base = imagePath.split('?tr=')[0].split('&tr=')[0];
+      const sep = base.includes('?') ? '&' : '?';
+      const result = `${base}${sep}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+      logger.debug('✅ ImageKit URL (full URL, as-is):', result);
+      return result;
+    }
+
     // Handle legacy local file paths (for backward compatibility during migration)
     if (!imagePath.startsWith('/')) {
       // Legacy filename - convert to ImageKit path format
@@ -48,22 +66,6 @@ class ImageKitService {
       const separator = fullUrl.includes('?') ? '&' : '?';
       const result = `${fullUrl}${separator}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
       logger.debug('✅ ImageKit URL (legacy filename):', result);
-      return result;
-    }
-
-    // A stored FULL URL (http/https) is authoritative — return it as-is with the
-    // transform appended. This MUST run before the /uploads→ImageKit rewrite
-    // below: otherwise a local-fallback URL like
-    // https://api.crosscoin.in/uploads/products/x.jpg would have its
-    // "/uploads/products/" mangled to "/products/" — a path the backend does not
-    // serve (static is mounted at /uploads) — so the image 404s. Appending ?tr
-    // is harmless for a backend /uploads URL (Express static ignores the query)
-    // and is honoured for a full ImageKit URL.
-    if (/^https?:\/\//i.test(imagePath)) {
-      const base = imagePath.split('?tr=')[0].split('&tr=')[0];
-      const sep = base.includes('?') ? '&' : '?';
-      const result = `${base}${sep}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
-      logger.debug('✅ ImageKit URL (full URL, as-is):', result);
       return result;
     }
 
