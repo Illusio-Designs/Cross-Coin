@@ -73,7 +73,7 @@ export default function Profile({ seoData }) {
   const [activeTab, setActiveTab] = useState(0);
   const [hasMounted, setHasMounted] = useState(false);
   const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading, logout: authLogout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout: authLogout, checkAuth } = useAuth();
 
   useEffect(() => { setHasMounted(true); }, []);
 
@@ -213,6 +213,8 @@ export default function Profile({ seoData }) {
       const res = await updateUserProfile(formData);
       showProfileUpdateSuccessToast(res.message || "Profile updated.");
       if (profileImage) setProfileImageUrl(URL.createObjectURL(profileImage));
+      // Refresh the auth context so the hero header shows the new name/email.
+      if (typeof checkAuth === "function") await checkAuth();
     } catch (err) { showProfileUpdateErrorToast(err.message || "Failed to update profile."); }
   };
 
