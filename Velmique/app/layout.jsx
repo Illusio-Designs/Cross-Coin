@@ -104,17 +104,23 @@ export default function RootLayout({ children }) {
                   success: function(data) { window.__msg91OtpSuccess = data; },
                   failure: function(error) { window.__msg91OtpFailure = error; }
                 };
-                function loadMsg91() {
-                  if (window.__msg91Started) return;
-                  window.__msg91Started = true;
+                var urls = ['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js'];
+                function tryLoad(i) {
+                  if (i >= urls.length) { window.__msg91Started = false; return; }
                   var s = document.createElement('script');
                   s.type = 'text/javascript';
                   s.async = true;
-                  s.src = 'https://verify.msg91.com/otp-provider.js';
+                  s.src = urls[i];
                   s.onload = function() {
                     if (typeof initSendOTP === 'function') initSendOTP(configuration);
                   };
+                  s.onerror = function() { tryLoad(i + 1); };
                   document.head.appendChild(s);
+                }
+                function loadMsg91() {
+                  if (window.__msg91Started) return;
+                  window.__msg91Started = true;
+                  tryLoad(0);
                 }
                 var ric = window.requestIdleCallback || function(cb){ return setTimeout(cb, 2500); };
                 ric(loadMsg91);

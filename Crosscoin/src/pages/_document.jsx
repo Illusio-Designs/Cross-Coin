@@ -93,6 +93,7 @@ export default function Document({ tracking }) {
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
         <link rel="dns-prefetch" href="https://verify.msg91.com" />
+        <link rel="dns-prefetch" href="https://verify.phone91.com" />
 
         {/* ── Deferred analytics/pixels bootstrap ─────────────────────────────
             The LCP breakdown showed ~3.3s of "element render delay" — the hero

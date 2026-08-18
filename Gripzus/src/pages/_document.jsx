@@ -24,13 +24,19 @@ export default function Document() {
                   success: function(data) { window.__msg91OtpSuccess = data; },
                   failure: function(error) { window.__msg91OtpFailure = error; }
                 };
-                var s = document.createElement('script');
-                s.type = 'text/javascript';
-                s.src = 'https://verify.msg91.com/otp-provider.js';
-                s.onload = function() {
-                  if (typeof initSendOTP === 'function') initSendOTP(configuration);
-                };
-                document.head.appendChild(s);
+                var urls = ['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js'];
+                function tryLoad(i) {
+                  if (i >= urls.length) return;
+                  var s = document.createElement('script');
+                  s.type = 'text/javascript';
+                  s.src = urls[i];
+                  s.onload = function() {
+                    if (typeof initSendOTP === 'function') initSendOTP(configuration);
+                  };
+                  s.onerror = function() { tryLoad(i + 1); };
+                  document.head.appendChild(s);
+                }
+                tryLoad(0);
               })();
             `,
           }}

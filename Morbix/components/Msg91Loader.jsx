@@ -22,14 +22,19 @@ let started = false;
 function loadMsg91() {
   if (started || typeof window === 'undefined' || window.sendOtp) return;
   started = true;
-  const s = document.createElement('script');
-  s.src = 'https://verify.msg91.com/otp-provider.js';
-  s.async = true;
-  s.onload = () => {
-    if (typeof window.initSendOTP === 'function') window.initSendOTP(CONFIG);
+  const urls = ['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js'];
+  const tryLoad = (i) => {
+    if (i >= urls.length) { started = false; return; }
+    const s = document.createElement('script');
+    s.src = urls[i];
+    s.async = true;
+    s.onload = () => {
+      if (typeof window.initSendOTP === 'function') window.initSendOTP(CONFIG);
+    };
+    s.onerror = () => { tryLoad(i + 1); };
+    document.head.appendChild(s);
   };
-  s.onerror = () => { started = false; };
-  document.head.appendChild(s);
+  tryLoad(0);
 }
 
 export default function Msg91Loader() {
