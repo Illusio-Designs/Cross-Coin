@@ -51,6 +51,22 @@ class ImageKitService {
       return result;
     }
 
+    // A stored FULL URL (http/https) is authoritative — return it as-is with the
+    // transform appended. This MUST run before the /uploads→ImageKit rewrite
+    // below: otherwise a local-fallback URL like
+    // https://api.crosscoin.in/uploads/products/x.jpg would have its
+    // "/uploads/products/" mangled to "/products/" — a path the backend does not
+    // serve (static is mounted at /uploads) — so the image 404s. Appending ?tr
+    // is harmless for a backend /uploads URL (Express static ignores the query)
+    // and is honoured for a full ImageKit URL.
+    if (/^https?:\/\//i.test(imagePath)) {
+      const base = imagePath.split('?tr=')[0].split('&tr=')[0];
+      const sep = base.includes('?') ? '&' : '?';
+      const result = `${base}${sep}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
+      logger.debug('✅ ImageKit URL (full URL, as-is):', result);
+      return result;
+    }
+
     // Fix legacy /uploads/ paths - convert to ImageKit format
     let cleanPath = imagePath;
     if (cleanPath.includes('/uploads/categories/')) {
