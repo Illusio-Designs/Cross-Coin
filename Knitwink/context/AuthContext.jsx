@@ -31,9 +31,14 @@ export function AuthProvider({ children }) {
       if (res.ok) {
         const data = await res.json()
         setUser(data)
-      } else {
-        // Token expired or invalid
+      } else if (res.status === 401 || res.status === 403) {
+        // Genuine auth failure → the token really is invalid/expired.
         localStorage.removeItem('token')
+        setUser(null)
+      } else {
+        // Transient failure (429 rate-limit, 5xx, etc.) — do NOT delete the
+        // token, or a momentary blip right after login logs the user out.
+        // Keep it so the next load/refresh recovers the session.
         setUser(null)
       }
     } catch (err) {
@@ -75,7 +80,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, fetchUser, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, isAuthenticated: !!user, fetchUser, logout }}>
       {children}
     </AuthContext.Provider>
   )

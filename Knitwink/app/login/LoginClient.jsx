@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -15,7 +16,8 @@ export default function LoginClient() {
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { fetchUser } = useAuth()
+  const { fetchUser, setUser } = useAuth()
+  const router = useRouter()
 
   const digits = phone.replace(/\D/g, '').slice(0, 10)
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -118,8 +120,13 @@ export default function LoginClient() {
       if (!data.token) throw new Error('No token received')
 
       localStorage.setItem('token', data.token)
-      await fetchUser()
-      window.location.replace('/account')
+      // The login response already includes the user, so set it directly and
+      // navigate client-side. Avoids a full page reload + a second /api/users/me
+      // round-trip, which — if it blipped — used to log the user straight back
+      // out. Fall back to fetchUser() only if the response somehow lacks user.
+      if (data.user) setUser(data.user)
+      else await fetchUser()
+      router.push('/account')
     } catch (err) {
       setError(err.message || 'Login failed')
       setLoading(false)

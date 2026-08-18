@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -16,6 +17,7 @@ export default function RegisterClient() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { fetchUser } = useAuth()
+  const router = useRouter()
 
   const digits = form.phone.replace(/\D/g, '').slice(0, 10)
   const identifier = '91' + digits
@@ -120,7 +122,7 @@ export default function RegisterClient() {
       }
 
       await fetchUser()
-      window.location.replace('/account')
+      router.push('/account')
     } catch (err) {
       setError(err.message || 'Registration failed')
       setLoading(false)
