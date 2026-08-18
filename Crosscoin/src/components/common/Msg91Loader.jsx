@@ -19,7 +19,6 @@ const CONFIG = {
   tokenAuth: '426738T7QwVqDd1uX69c7fc1dP1',
   exposeMethods: true,
   identifier: '',
-  captchaType: 'invisible',
   success: (data) => { window.__msg91OtpSuccess = data; },
   failure: (error) => { window.__msg91OtpFailure = error; },
 };

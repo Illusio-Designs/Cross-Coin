@@ -75,7 +75,6 @@ export default function RootLayout({ children }) {
                   tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
                   exposeMethods: true,
                   identifier: "",
-                  captchaType: "invisible",
                   success: function(data) { window.__msg91OtpSuccess = data; },
                   failure: function(error) { window.__msg91OtpFailure = error; }
                 };
