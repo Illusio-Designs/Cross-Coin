@@ -53,18 +53,17 @@ exports.getBrandTraffic = async (req, res) => {
     );
 
     // Orders + revenue + delivered per brand — the REAL store sales in the
-    // window, straight from the orders table by brand_id + order date. This is
-    // the authoritative count (it matches the Overview "Sales by Brand" report).
+    // window, straight from the orders table by brand_id + order date, so it
+    // matches the Overview order count.
     //
-    // We deliberately do NOT restrict to orders attributed to a tracked visit
-    // (orders.utm_tracking_id): many real orders — direct traffic, untracked
-    // sessions, checkouts that never fired a first-party visit ping — carry no
-    // utm_tracking_id, and attributing-only made the report under-count badly
-    // (e.g. Morbix showing 0 orders while it actually had 5). Scoping orders to
-    // the SAME date window as visits (not counting ALL orders ever) is what
-    // keeps conversion sane — that mismatch, not the lack of attribution, was
-    // the old 500%/21000% bug. Per-source attribution still uses utm_tracking_id
-    // below (a channel can only claim an order it can prove it drove).
+    // Count every PLACED order, excluding only genuinely cancelled ones. We do
+    // NOT drop 'payment_failed'/'failed' here: a prepaid order that is created
+    // but whose payment is still pending/failed is a real placed order the
+    // merchant counts (that exclusion is exactly why the report showed 3 when
+    // the store had 5). We also do NOT restrict to visit-attributed orders
+    // (orders.utm_tracking_id) — many real orders have none, which under-counted
+    // badly. Per-source attribution below still uses utm_tracking_id (a channel
+    // can only claim an order it can prove it drove).
     const orders = await sequelize.query(
       `SELECT brand_id,
               COUNT(*) AS orders,
@@ -72,7 +71,7 @@ exports.getBrandTraffic = async (req, res) => {
               COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS delivered
        FROM orders
        WHERE created_at BETWEEN :start AND :end
-         AND (status IS NULL OR status NOT IN ('cancelled','failed','payment_failed'))
+         AND (status IS NULL OR LOWER(status) NOT IN ('cancelled','order cancelled'))
        GROUP BY brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -105,7 +104,7 @@ exports.getBrandTraffic = async (req, res) => {
       `SELECT COALESCE(u.utm_source,'direct') AS source,
               COALESCE(u.utm_medium,'none')   AS medium,
               COUNT(DISTINCT u.session_id)     AS sessions,
-              COUNT(DISTINCT CASE WHEN o.status IS NULL OR o.status NOT IN ('cancelled','failed','payment_failed') THEN o.id END) AS orders
+              COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders
        FROM utm_tracking u
        LEFT JOIN orders o ON o.utm_tracking_id = u.id
        WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
