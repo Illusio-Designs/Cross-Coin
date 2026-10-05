@@ -925,9 +925,10 @@
         });
       }
 
-      // Invalidate dashboard cache for the user (non-blocking)
+      // Invalidate dashboard cache for this order's brand (the cache is keyed
+      // per brand; it also clears the cross-brand "all" view). Non-blocking.
       try {
-        await invalidateDashboardCache(userId);
+        await invalidateDashboardCache(createdOrder.brand_id);
       } catch (cacheError) {
         logger.warn("⚠️ Warning: Error invalidating dashboard cache:", cacheError.message);
         // Don't fail the order creation if cache invalidation fails

@@ -2,6 +2,7 @@ const { sequelize } = require('../config/db.js');
 const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
 const { BOT_SQL_REGEXP } = require('../utils/botDetect');
+const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
 
 // Excludes bot/crawler user agents from a utm_tracking scan (belt-and-suspenders
 // for rows recorded before ingestion-time bot filtering existed).
@@ -19,13 +20,28 @@ function channelOf(source, medium) {
 }
 const CHANNEL_ORDER = ['Facebook', 'Instagram', 'Google', 'AI chatbot', 'Other'];
 
-// Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Returns
-// JS Date bounds covering full days [start 00:00:00, end 23:59:59].
+// Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Day
+// boundaries are anchored to the business timezone (IST, +05:30) — the SAME
+// anchoring the dashboard/Overview uses (utils/dateRange.js) — so the report
+// totals line up with the Overview instead of being shifted by 5.5h on a UTC
+// host (which used to drop orders placed between 00:00–05:30 IST).
 function parseRange(q) {
-  const end = q.endDate ? new Date(q.endDate) : new Date();
-  const start = q.startDate ? new Date(q.startDate) : new Date(end.getTime() - 29 * 24 * 60 * 60 * 1000);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
+  // TZ_OFFSET → minutes, to compute "today" as an IST calendar date.
+  const m = /^([+-])(\d{2}):(\d{2})$/.exec(TZ_OFFSET);
+  const offMin = m ? (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10)) : 330;
+  const istTodayYmd = new Date(Date.now() + offMin * 60000).toISOString().slice(0, 10);
+
+  const endYmd = (q.endDate ? String(q.endDate) : istTodayYmd).slice(0, 10);
+  let startYmd;
+  if (q.startDate) {
+    startYmd = String(q.startDate).slice(0, 10);
+  } else {
+    const endMidUtc = new Date(`${endYmd}T00:00:00.000Z`);
+    startYmd = new Date(endMidUtc.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }
+  // Fall back to the old behaviour only if the helpers can't parse the input.
+  const start = dayStartTZ(startYmd) || new Date(new Date(startYmd).setHours(0, 0, 0, 0));
+  const end = dayEndTZ(endYmd) || new Date(new Date(endYmd).setHours(23, 59, 59, 999));
   return { start, end };
 }
 
@@ -133,6 +149,12 @@ exports.getBrandTraffic = async (req, res) => {
 
     // Percent of a stage relative to the previous non-zero anchor.
     const rate = (n, base) => (base > 0 ? Number(((n / base) * 100).toFixed(2)) : 0);
+    // The "Orders" stage counts ALL non-cancelled orders for the brand, not only
+    // those from tracked sessions (direct/untracked orders have no session), so a
+    // brand with few tracked sessions can legitimately have more orders than
+    // sessions. Clamp the FUNNEL BAR rates to 100% so a stage never renders wider
+    // than the one above it; the raw counts and conversion_rate stay exact.
+    const barRate = (n, base) => Math.min(100, rate(n, base));
 
     const rows = brands.map((b) => {
       const s = sessMap.get(b.id) || 0;
@@ -156,8 +178,8 @@ exports.getBrandTraffic = async (req, res) => {
         { key: 'delivered',  label: 'Delivered',       count: delivered,  of: ordersN },
       ].map((st) => ({
         ...st,
-        step_rate: st.of != null ? rate(st.count, st.of) : null,
-        overall_rate: s > 0 ? rate(st.count, s) : (st.key === 'sessions' ? 100 : 0),
+        step_rate: st.of != null ? barRate(st.count, st.of) : null,
+        overall_rate: s > 0 ? barRate(st.count, s) : (st.key === 'sessions' ? 100 : 0),
       }));
 
       return {

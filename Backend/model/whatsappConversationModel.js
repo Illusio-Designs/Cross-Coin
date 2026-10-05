@@ -65,7 +65,12 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   // scans over the whole message history before these indexes.
   indexes: [
     { name: 'idx_wa_msg_conv_id',   fields: ['conversation_id', 'id'] },
-    { name: 'idx_wa_msg_wa_msg_id', fields: ['wa_message_id'] },
+    // UNIQUE so a redelivered Meta webhook (at-least-once) can't create a
+    // duplicate message row. MySQL allows multiple NULLs in a unique index, so
+    // outbound rows that haven't received a wa_message_id yet are unaffected.
+    // (Production applies this via the guarded migration in index.js, which
+    // de-duplicates existing rows first.)
+    { name: 'idx_wa_msg_wa_msg_id', fields: ['wa_message_id'], unique: true },
     // Dashboard getStats groups outbound messages by status and windows the
     // last 7 days by sent_at; both were full scans before. Mirrored in
     // scripts/add-perf-indexes.js.

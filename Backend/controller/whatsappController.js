@@ -224,337 +224,6 @@ exports.verifyWebhook = (req, res) => {
   return res.status(403).json({ error: 'Forbidden' });
 };
 
-// ─── Webhook: receive (POST) ──────────────────────────────────────────────────
-exports.receiveWebhook = async (req, res) => {
-  // Always respond 200 immediately so Meta doesn't retry
-  res.status(200).json({ status: 'ok' });
-
-  try {
-    const body = req.body;
-    if (body.object !== 'whatsapp_business_account') return;
-
-    for (const entry of (body.entry || [])) {
-      for (const change of (entry.changes || [])) {
-        if (change.field !== 'messages') continue;
-        const value = change.value;
-
-        // ── Incoming messages ──
-        for (const msg of (value.messages || [])) {
-          const phone       = msg.from;
-          // Shared number → attribute this message to the customer's brand.
-          // Refined below to the referenced order's brand when the message
-          // carries an order number (e.g. a COD confirm/reject button).
-          let brandId       = await resolveBrandByPhone(phone);
-          // Prefer the live WhatsApp profile name; fall back to the customer's
-          // order/guest name so the inbox shows a real name, not a bare number.
-          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
-          const contactName = waName || await resolveCustomerNameByPhone(phone);
-          const waMessageId = msg.id;
-          const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
-
-          // Determine message type and body
-          let msgType = msg.type;
-          let msgBody = '';
-          let displayText = '';
-
-          if (msg.type === 'text') {
-            msgBody = msg.text?.body || '';
-            displayText = msgBody;
-          } else if (msg.type === 'audio') {
-            const mediaId = msg.audio?.id;
-            msgBody = JSON.stringify({ url: mediaId, mime_type: msg.audio?.mime_type });
-            displayText = 'Voice message';
-          } else if (msg.type === 'image') {
-            const mediaId = msg.image?.id;
-            msgBody = JSON.stringify({ url: mediaId, caption: msg.image?.caption, mime_type: msg.image?.mime_type });
-            displayText = msg.image?.caption || 'Image';
-          } else if (msg.type === 'video') {
-            const mediaId = msg.video?.id;
-            msgBody = JSON.stringify({ url: mediaId, caption: msg.video?.caption, mime_type: msg.video?.mime_type });
-            displayText = msg.video?.caption || 'Video';
-          } else if (msg.type === 'document') {
-            const mediaId = msg.document?.id;
-            msgBody = JSON.stringify({ url: mediaId, caption: msg.document?.filename || msg.document?.caption, mime_type: msg.document?.mime_type });
-            displayText = msg.document?.filename || 'Document';
-          } else if (msg.type === 'sticker') {
-            const mediaId = msg.sticker?.id;
-            msgBody = JSON.stringify({ url: mediaId, mime_type: msg.sticker?.mime_type });
-            displayText = 'Sticker';
-          } else if (msg.type === 'location') {
-            msgBody = JSON.stringify({ lat: msg.location?.latitude, lng: msg.location?.longitude, name: msg.location?.name });
-            displayText = `Location: ${msg.location?.name || `${msg.location?.latitude}, ${msg.location?.longitude}`}`;
-          } else if (msg.type === 'reaction') {
-            msgType = 'reaction';
-            msgBody = msg.reaction?.emoji || '👍';
-            displayText = msg.reaction?.emoji || '👍';
-          } else if (msg.type === 'button') {
-            // Quick Reply button tap from a template message
-            msgBody    = msg.button?.payload || msg.button?.text || '';
-            displayText = msg.button?.text   || 'Button tap';
-          } else {
-            // Format the Cloud API can't deliver (e.g. type "unsupported"): keep a
-            // bracketed marker in the body (the chat bubble renders it nicely) but
-            // show a human label in the inbox preview.
-            msgBody = `[${msg.type}]`;
-            displayText = msg.type === 'unsupported'
-              ? 'Unsupported message'
-              : `${String(msg.type || 'message').replace(/_/g, ' ')} message`;
-          }
-
-          // If the message references a specific order (COD confirm/reject
-          // button payload, or the order id in the text), attribute the thread
-          // to that order's brand — more accurate than the phone's most-recent
-          // order. This is what keeps a Soxbae address confirmation tagged
-          // Soxbae instead of defaulting to CrossCoin.
-          const refBrand = await resolveBrandByOrderRef(msgBody || displayText);
-          if (refBrand) brandId = refBrand;
-
-          // One thread per customer (shared number): key by phone only, and tag
-          // the thread with the resolved brand so the dashboard shows which brand
-          // this customer last dealt with. findOrCreate returns [instance, created]
-          const [conv, created] = await WhatsappConversation.findOrCreate({
-            where: { customer_phone: phone },
-            defaults: {
-              brand_id:        brandId,
-              customer_name:   contactName,
-              wa_contact_id:   phone,
-              last_message:    displayText,
-              last_message_at: sentAt,
-              unread_count:    1,
-              status:          'open',
-            },
-          });
-
-          if (!created) {
-            await conv.update({
-              brand_id:        brandId, // keep the tag on the latest brand context
-              last_message:    displayText,
-              last_message_at: sentAt,
-              unread_count:    conv.unread_count + 1,
-              // Fresh WhatsApp name wins; else keep existing; else the resolved name.
-              customer_name:   waName || conv.customer_name || contactName,
-              status:          'open',
-            });
-          }
-
-          await WhatsappMessage.create({
-            conversation_id: conv.id,
-            wa_message_id:   waMessageId,
-            direction:       'inbound',
-            type:            msgType,
-            body:            msgBody,
-            status:          'received',
-            sent_at:         sentAt,
-          });
-
-          // Emit real-time notification
-          const notificationService = require('../services/notificationService.js');
-          notificationService.emitNewWhatsApp(phone, displayText);
-
-          logger.info(`WhatsApp inbound [${phone}] [${msgType}]: ${displayText}`);
-
-          // ── COD Address Confirmation — auto-detect "YES" / "NO" replies ──
-          if (msgType === 'text' && msgBody) {
-            const normalised = msgBody.trim().toLowerCase();
-            const confirmKeywords  = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
-            const rejectionKeywords = ['no', 'nahi', 'nope', 'wrong', 'incorrect', 'galat', 'change', 'update', 'different'];
-            const isConfirmation = confirmKeywords.includes(normalised);
-            const isRejection    = !isConfirmation && rejectionKeywords.some(k => normalised.includes(k));
-
-            if (isConfirmation || isRejection) {
-              try {
-                const { Order } = require('../model/orderModel.js');
-                const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-                const { ShippingAddress } = require('../model/shippingAddressModel.js');
-                const { sequelize: sq } = require('../config/db.js');
-                const { Op: OpCod } = require('sequelize');
-
-                const phoneDigits = phone.replace(/\D/g, '').slice(-10);
-                const pendingOrder = await Order.findOne({
-                  where: {
-                    status: 'awaiting_confirmation',
-                    payment_type: 'cod',
-                    cod_address_confirmed: false,
-                  },
-                  include: [{
-                    model: ShippingAddress,
-                    as: 'ShippingAddress',
-                    where: { phone: { [OpCod.like]: `%${phoneDigits}` } },
-                    required: true,
-                  }],
-                  order: [['created_at', 'DESC']],
-                });
-
-                if (pendingOrder) {
-                  const whatsappSvc = require('../services/whatsappService.js');
-
-                  if (isConfirmation) {
-                    // ── YES: confirm address, advance order to confirmed, trigger FShip sync ──
-                    const t = await sq.transaction();
-                    try {
-                      await pendingOrder.update({
-                        cod_address_confirmed: true,
-                        cod_address_confirmed_at: new Date(),
-                        status: 'confirmed',
-                      }, { transaction: t });
-                      await OrderStatusHistory.create({
-                        order_id: pendingOrder.id,
-                        status: 'confirmed',
-                        notes: 'Auto-confirmed: customer replied YES via WhatsApp',
-                        updated_by: null,
-                      }, { transaction: t });
-                      await t.commit();
-                    } catch (txErr) {
-                      await t.rollback();
-                      throw txErr;
-                    }
-
-                    // Trigger FShip sync via event (fire-and-forget)
-                    const orderEmitter = require('../services/orderEvents.js');
-                    setImmediate(() => {
-                      try { pendingOrder._customerConfirmed = true; orderEmitter.emit('order.confirmed', pendingOrder); }
-                      catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
-                    });
-
-                    await whatsappSvc.sendTextMessage(
-                      phone,
-                      `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
-                      brandId
-                    );
-                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
-                    logger.info(`[WhatsApp] COD address confirmed + order advanced to confirmed: ${pendingOrder.order_number}`);
-
-                  } else {
-                    // ── NO: flag order for manual review, notify admin, guide customer ──
-                    // Keep cod_address_confirmed: false so the order stays discoverable if customer
-                    // later replies YES or admin resends the confirmation message.
-
-                    await whatsappSvc.sendTextMessage(
-                      phone,
-                      `We're sorry to hear that! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention your order *#${pendingOrder.order_number}*.`,
-                      brandId
-                    );
-                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
-                    logger.warn(`[WhatsApp] COD address rejected for order ${pendingOrder.order_number} by ${phone}`);
-                  }
-                }
-              } catch (confirmErr) {
-                logger.error('[WhatsApp] COD address confirmation error:', confirmErr.message);
-              }
-            }
-          }
-
-          // ── COD Address Confirmation — Quick Reply button taps ────────────
-          // Payload format: "confirm_cod_<orderNumber>" or "reject_cod_<orderNumber>"
-          if (msgType === 'button' && msgBody) {
-            // Approved TEMPLATE quick-reply buttons deliver the LABEL as the
-            // payload (e.g. "Confirm Address") — NOT a custom "confirm_cod_<order>"
-            // payload (only interactive messages can carry that, and those need an
-            // open 24h window). Match BOTH forms so the button actually works.
-            const btnLabel = msgBody.trim().toLowerCase();
-            const isConfirmBtn = msgBody.startsWith('confirm_cod_') || btnLabel === 'confirm address';
-            const isRejectBtn  = msgBody.startsWith('reject_cod_')  || btnLabel === 'wrong address';
-
-            if (isConfirmBtn || isRejectBtn) {
-              try {
-                const { Order } = require('../model/orderModel.js');
-                const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-                const { ShippingAddress } = require('../model/shippingAddressModel.js');
-                const { sequelize: sq } = require('../config/db.js');
-                const { Op: OpBtn } = require('sequelize');
-
-                // Payload form carries the order number; the template-label form
-                // doesn't — fall back to the customer's latest pending COD order by
-                // phone (same lookup the typed YES/NO path uses).
-                const payloadOrder = /^(confirm|reject)_cod_/.test(msgBody)
-                  ? msgBody.replace(/^(confirm|reject)_cod_/, '') : null;
-                const phoneDigits = phone.replace(/\D/g, '').slice(-10);
-
-                const pendingOrder = await Order.findOne({
-                  where: {
-                    ...(payloadOrder ? { order_number: payloadOrder } : {}),
-                    status: 'awaiting_confirmation',
-                    payment_type: 'cod',
-                    cod_address_confirmed: false,
-                  },
-                  include: payloadOrder ? undefined : [{
-                    model: ShippingAddress,
-                    as: 'ShippingAddress',
-                    where: { phone: { [OpBtn.like]: `%${phoneDigits}` } },
-                    required: true,
-                  }],
-                  order: [['created_at', 'DESC']],
-                });
-
-                if (pendingOrder) {
-                  const whatsappSvc = require('../services/whatsappService.js');
-
-                  if (isConfirmBtn) {
-                    // ── Button: Confirm Address ──
-                    const t = await sq.transaction();
-                    try {
-                      await pendingOrder.update({
-                        cod_address_confirmed: true,
-                        cod_address_confirmed_at: new Date(),
-                        status: 'confirmed',
-                      }, { transaction: t });
-                      await OrderStatusHistory.create({
-                        order_id: pendingOrder.id,
-                        status: 'confirmed',
-                        notes: 'Auto-confirmed: customer tapped Confirm Address button via WhatsApp',
-                        updated_by: null,
-                      }, { transaction: t });
-                      await t.commit();
-                    } catch (txErr) {
-                      await t.rollback();
-                      throw txErr;
-                    }
-
-                    const orderEmitter = require('../services/orderEvents.js');
-                    setImmediate(() => {
-                      try { pendingOrder._customerConfirmed = true; orderEmitter.emit('order.confirmed', pendingOrder); }
-                      catch (e) { logger.warn('[WhatsApp] order.confirmed emit failed:', e.message); }
-                    });
-
-                    await whatsappSvc.sendTextMessage(
-                      phone,
-                      `✅ Thank you! Your address for order *#${pendingOrder.order_number}* has been confirmed.\n\nWe'll process and ship it shortly. You'll receive a tracking update once it's on the way!`,
-                      brandId
-                    );
-                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_confirmed' });
-                    logger.info(`[WhatsApp] COD button confirmed: ${pendingOrder.order_number}`);
-
-                  } else {
-                    // ── Button: Wrong Address ──
-                    await whatsappSvc.sendTextMessage(
-                      phone,
-                      `No problem! Please reply with your correct delivery address and we'll update it before shipping.\n\nOr contact our support team and mention order *#${pendingOrder.order_number}*.`,
-                      brandId
-                    );
-                    notificationService.emitNewOrder({ ...pendingOrder.toJSON(), _event: 'cod_address_rejected' });
-                    logger.warn(`[WhatsApp] COD button rejected: ${pendingOrder.order_number}`);
-                  }
-                }
-              } catch (btnErr) {
-                logger.error('[WhatsApp] COD button reply error:', btnErr.message);
-              }
-            }
-          }
-        }
-
-        // ── Status updates (sent → delivered → read) ──
-        for (const status of (value.statuses || [])) {
-          await WhatsappMessage.update(
-            { status: status.status },
-            { where: { wa_message_id: status.id } }
-          );
-        }
-      }
-    }
-  } catch (err) {
-    logger.error('WhatsApp webhook error: ' + err.message);
-  }
-};
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 exports.getStats = async (req, res) => {
@@ -619,7 +288,11 @@ exports.getStats = async (req, res) => {
     const deliveredMessages = statusCounts.delivered || 0;
     const readMessages      = statusCounts.read || 0;
 
-    const deliveryRate = sentMessages > 0 ? ((deliveredMessages / sentMessages) * 100).toFixed(1) : '0.0';
+    // A message that was read is also delivered, but its stored status is only
+    // the LATEST state ('read'), so it drops out of the 'delivered' bucket.
+    // Count delivered-or-beyond for the delivery rate, otherwise every read
+    // message makes the rate look worse than it is.
+    const deliveryRate = sentMessages > 0 ? (((deliveredMessages + readMessages) / sentMessages) * 100).toFixed(1) : '0.0';
     const readRate     = sentMessages > 0 ? ((readMessages     / sentMessages) * 100).toFixed(1) : '0.0';
     const unreadCount  = await WhatsappConversation.sum('unread_count', { where: { brand_id: brandId } }) || 0;
 
@@ -1299,7 +972,9 @@ async function captureNewAddress(phone, addressText, orderNumber, brandId) {
   logger.info(`[WhatsApp] Captured corrected COD address for ${orderNumber} (pincode ${pin})`);
 }
 
-const _origReceiveWebhook = exports.receiveWebhook;
+// ─── Webhook: receive (POST) ──────────────────────────────────────────────────
+// Always responds 200 immediately so Meta doesn't retry, then processes the
+// batch (inbound messages + status updates) asynchronously.
 exports.receiveWebhook = async (req, res) => {
   res.status(200).json({ status: 'ok' });
   try {
@@ -1320,6 +995,20 @@ exports.receiveWebhook = async (req, res) => {
           const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
+
+          // ── De-duplicate (Meta webhooks are at-least-once) ───────────────
+          // The same messages[].id is redelivered on any timeout/retry. Without
+          // this guard a redelivery created a duplicate inbox row, double-bumped
+          // unread_count, and fired the auto-reply / COD handlers twice (so the
+          // customer got the same bot reply twice). Skip the whole message if we
+          // have already stored this wa_message_id.
+          if (waMessageId) {
+            const seen = await WhatsappMessage.findOne({ where: { wa_message_id: waMessageId }, attributes: ['id'] });
+            if (seen) {
+              logger.info(`WhatsApp inbound [${phone}] duplicate ${waMessageId} — skipped`);
+              continue;
+            }
+          }
 
           // ── Resolve message type + body + media_url ──────────────────────
           let msgType = 'text';
@@ -1472,7 +1161,23 @@ exports.receiveWebhook = async (req, res) => {
           // Meta status updates: sent → delivered → read. (first_response_at is
           // stamped when an AGENT sends a reply — see sendReply — not on the
           // delivery of automated notifications, so SLA stays meaningful.)
-          await WhatsappMessage.update({ status: status.status }, { where: { wa_message_id: status.id } });
+          //
+          // Apply monotonically: Meta can deliver `read` and then a delayed
+          // `delivered` for the same message. Only advance the stored status,
+          // never regress it (which would skew the delivered/read stats), while
+          // `failed` always wins (terminal error).
+          const RANK = { received: 0, sent: 1, delivered: 2, read: 3 };
+          const existing = await WhatsappMessage.findOne({ where: { wa_message_id: status.id }, attributes: ['id', 'status'] });
+          if (!existing) continue;
+          const cur = existing.status;
+          const next = status.status;
+          let shouldApply;
+          if (cur === 'failed') shouldApply = false;              // failed is terminal
+          else if (next === 'failed') shouldApply = true;         // a failure always wins
+          else shouldApply = (RANK[next] ?? -1) > (RANK[cur] ?? -1); // otherwise only advance
+          if (shouldApply) {
+            await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
+          }
         }
       }
     }

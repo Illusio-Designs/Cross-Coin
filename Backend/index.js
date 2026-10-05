@@ -851,6 +851,44 @@ const startServer = async () => {
         await ensureIndex('whatsapp_conversations', 'idx_wac_phone', 'customer_phone');
         await ensureIndex('whatsapp_conversations', 'idx_wac_brand_last', 'brand_id, last_message_at');
         await ensureIndex('whatsapp_conversations', 'idx_wac_last', 'last_message_at');
+
+        // ── De-duplicate whatsapp_messages + enforce UNIQUE(wa_message_id) ──
+        // Meta Cloud API webhooks are at-least-once: the same messages[].id is
+        // redelivered on any timeout, which used to create duplicate inbox rows,
+        // double-count unread, and re-fire auto-replies. The controller now skips
+        // already-seen ids, and this unique index is the hard backstop. Delete
+        // existing duplicates first (keep the earliest row per id), then upgrade
+        // the plain index to unique. Guarded → a no-op once already unique.
+        try {
+            const [idxRows] = await sequelize.query(
+                `SELECT NON_UNIQUE FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_messages'
+                   AND INDEX_NAME = 'idx_wa_msg_wa_msg_id' LIMIT 1`
+            );
+            const idxExists = idxRows.length > 0;
+            const alreadyUnique = idxExists && Number(idxRows[0].NON_UNIQUE) === 0;
+            if (!alreadyUnique) {
+                logger.info('Migrating: de-duplicating whatsapp_messages.wa_message_id…');
+                await sequelize.query(
+                    `DELETE m FROM whatsapp_messages m
+                     JOIN (
+                       SELECT wa_message_id, MIN(id) AS keep_id
+                       FROM whatsapp_messages
+                       WHERE wa_message_id IS NOT NULL
+                       GROUP BY wa_message_id
+                       HAVING COUNT(*) > 1
+                     ) d ON m.wa_message_id = d.wa_message_id AND m.id <> d.keep_id`
+                );
+                if (idxExists) {
+                    await sequelize.query(`ALTER TABLE whatsapp_messages DROP INDEX idx_wa_msg_wa_msg_id`);
+                }
+                await sequelize.query(`ALTER TABLE whatsapp_messages ADD UNIQUE INDEX idx_wa_msg_wa_msg_id (wa_message_id)`);
+                logger.info('✓ whatsapp_messages.wa_message_id is now UNIQUE');
+            }
+        } catch (err) {
+            logger.error('wa_message_id unique-index migration failed: ' + err.message);
+        }
+
         // The catalog listing batch-loads variation images by product_variation_id;
         // without this index that WHERE … IN (…) was a full product_images scan.
         await ensureIndex('product_images', 'idx_pi_variation_id', 'product_variation_id');

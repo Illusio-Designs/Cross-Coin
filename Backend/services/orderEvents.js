@@ -193,7 +193,9 @@ const invalidateDashboardOnChange = (order) => {
   setImmediate(async () => {
     try {
       const { invalidateDashboardCache } = require('./dashboardService.js');
-      await invalidateDashboardCache(order?.user_id || 'admin');
+      // Invalidate by the order's BRAND (the cache is keyed per brand) — plus
+      // the cross-brand "all" view, which invalidateDashboardCache always clears.
+      await invalidateDashboardCache(order?.brand_id);
     } catch (e) { logger.warn('[Event] dashboard cache invalidation failed: ' + e.message); }
   });
 };

@@ -56,16 +56,43 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       where: { status: { [Op.in]: ['cancelled', 'order cancelled'] }, ...orderWhere },
     });
 
-    // Get all orders for revenue calculation (optimized with aggregation)
-    const allOrders = await Order.findAll({
-      attributes: ['id', 'status', 'payment_type', 'payment_status', 'final_amount', 'total_amount', 'createdAt', 'brand_id'],
-      where: orderWhere,
-      order: [['createdAt', 'DESC']]
-    });
+    // Revenue + status/payment breakdown.
+    //
+    // This used to `findAll` EVERY matching order into memory (unbounded on the
+    // default no-date-filter view — the whole orders table) and iterate it. It
+    // now GROUPs in SQL by (status, payment_type, payment_status, brand_id) and
+    // iterates the handful of resulting buckets instead, which is bounded and
+    // index-friendly while producing the exact same totals. `month_amt` sums the
+    // current calendar month inside the same pass.
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Day 0 of next month = last day of THIS month, at end of day so the whole
+    // final day counts (the old code used 00:00:00, silently dropping last-day
+    // orders from the monthly figure).
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // Calculate revenue breakdown
-    // totalRevenue = ALL orders (including cancelled, RTO) — full picture
-    // Each bucket shows where the money sits
+    const aggWhere = [];
+    const aggRepl = { monthStart: firstDayOfMonth, monthEnd: lastDayOfMonth };
+    if (brandId) { aggWhere.push('brand_id = :brandId'); aggRepl.brandId = brandId; }
+    if (hasDateFilter && dateFilter.startDate) { aggWhere.push('createdAt >= :startDate'); aggRepl.startDate = dateFilter.startDate; }
+    if (hasDateFilter && dateFilter.endDate) { aggWhere.push('createdAt <= :endDate'); aggRepl.endDate = dateFilter.endDate; }
+    const aggWhereSql = aggWhere.length ? `WHERE ${aggWhere.join(' AND ')}` : '';
+
+    const orderGroups = await sequelize.query(`
+      SELECT
+        LOWER(status)         AS status,
+        LOWER(payment_type)   AS payment_type,
+        LOWER(payment_status) AS payment_status,
+        brand_id,
+        COUNT(*)              AS cnt,
+        SUM(final_amount)     AS amt,
+        SUM(CASE WHEN createdAt BETWEEN :monthStart AND :monthEnd THEN final_amount ELSE 0 END) AS month_amt
+      FROM orders
+      ${aggWhereSql}
+      GROUP BY LOWER(status), LOWER(payment_type), LOWER(payment_status), brand_id
+    `, { type: QueryTypes.SELECT, replacements: aggRepl });
+
+    // totalRevenue = ALL orders (including cancelled, RTO) — full picture.
     let totalRevenue = 0;
     let deliveredRevenue = 0;
     let cancelledRevenue = 0;
@@ -76,48 +103,54 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     let undeliveredRevenue = 0;
     let completedOrdersCount = 0;
     let monthlyRevenue = 0;
-    
+
     const statusCounts = {};
     const paymentTypeCounts = {};
-    
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    allOrders.forEach(order => {
-      const paymentType = order.payment_type?.toLowerCase();
-      const orderStatus = order.status?.toLowerCase();
-      const orderTotal = parseFloat(order.final_amount || 0);
-      
-      statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + 1;
-      paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + 1;
-      
-      // Total revenue includes EVERYTHING
-      totalRevenue += orderTotal;
-      
+    const paymentStatusCounts = { pending: 0, paid: 0, failed: 0, refunded: 0, cancelled: 0, refund_pending: 0 };
+    // COD / prepaid revenue excludes cancelled orders (both 'cancelled' spellings).
+    let codCount = 0, codRevenue = 0, prepaidCount = 0, prepaidRevenue = 0;
+    // Per-brand buckets for the brand-wise sales widget.
+    const brandAgg = new Map(); // brand_id → { orders, revenue, earned, lost }
+
+    const CANCELLED = new Set(['cancelled', 'order cancelled']);
+    const RTO = new Set(['rto', 'rto delivered', 'return_initiated', 'returned_rto']);
+
+    orderGroups.forEach(g => {
+      const orderStatus = g.status || '';
+      const paymentType = g.payment_type || undefined;
+      const paymentStatus = g.payment_status || '';
+      const cnt = parseInt(g.cnt, 10) || 0;
+      const amt = parseFloat(g.amt || 0);
+      const monthAmt = parseFloat(g.month_amt || 0);
+
+      statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + cnt;
+      paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + cnt;
+      totalRevenue += amt;
+      monthlyRevenue += monthAmt;
+
       switch (orderStatus) {
         case 'delivered':
         case 'completed':
-          deliveredRevenue += orderTotal;
-          completedOrdersCount++;
+          deliveredRevenue += amt;
+          completedOrdersCount += cnt;
           break;
         case 'cancelled':
         case 'order cancelled':
-          cancelledRevenue += orderTotal;
+          cancelledRevenue += amt;
           break;
         case 'rto':
         case 'rto delivered':
         case 'return_initiated':
         case 'returned_rto':
-          rtoRevenue += orderTotal;
+          rtoRevenue += amt;
           break;
         case 'pending':
         case 'awaiting_confirmation':
-          pendingRevenue += orderTotal;
+          pendingRevenue += amt;
           break;
         case 'processing':
         case 'confirmed':
-          processingRevenue += orderTotal;
+          processingRevenue += amt;
           break;
         case 'shipped':
         case 'out for delivery':
@@ -125,18 +158,37 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         case 'booked':
         case 'pickup initiated':
         case 'manifested':
-          shippedRevenue += orderTotal;
+          shippedRevenue += amt;
           break;
         case 'undelivered':
         case 'exception':
-          undeliveredRevenue += orderTotal;
+          undeliveredRevenue += amt;
           break;
       }
-      
-      const orderDate = new Date(order.createdAt);
-      if (orderDate >= firstDayOfMonth && orderDate <= lastDayOfMonth) {
-        monthlyRevenue += orderTotal;
+
+      // Payment-status chart buckets.
+      if (Object.prototype.hasOwnProperty.call(paymentStatusCounts, paymentStatus)) {
+        paymentStatusCounts[paymentStatus] += cnt;
       }
+
+      // COD vs prepaid split (revenue excludes cancelled orders).
+      const notCancelled = !CANCELLED.has(orderStatus);
+      if (paymentType === 'cod') {
+        codCount += cnt;
+        if (notCancelled) codRevenue += amt;
+      } else {
+        prepaidCount += cnt;
+        if (notCancelled) prepaidRevenue += amt;
+      }
+
+      // Per-brand buckets.
+      const bid = g.brand_id || null;
+      const b = brandAgg.get(bid) || { orders: 0, revenue: 0, earned: 0, lost: 0 };
+      b.orders += cnt;
+      b.revenue += amt;
+      if (orderStatus === 'delivered' || orderStatus === 'completed') b.earned += amt;
+      else if (CANCELLED.has(orderStatus) || RTO.has(orderStatus)) b.lost += amt;
+      brandAgg.set(bid, b);
     });
 
     // Earned revenue = only delivered orders (actual money collected)
@@ -148,16 +200,21 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
 
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Get total customers
+    // Get total customers — scoped to the brand when the dashboard is. Consumer
+    // accounts are per-brand (users.source_brand_id); guests come from orders
+    // (which carry brand_id), so both honour the brand filter now instead of
+    // leaking platform-wide totals into a single-brand view.
+    const customerBrandWhere = brandId ? { source_brand_id: brandId } : {};
     const totalRegisteredCustomers = await User.count({
-      where: { role: "consumer" },
+      where: { role: "consumer", ...customerBrandWhere },
     });
 
     const totalGuestCustomers = await Order.count({
       where: {
         guest_user_id: {
           [Op.not]: null
-        }
+        },
+        ...brandWhere
       },
       distinct: true,
       col: 'guest_user_id'
@@ -172,6 +229,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     const recentRegisteredCustomers = await User.count({
       where: {
         role: "consumer",
+        ...customerBrandWhere,
         createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
@@ -183,6 +241,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         guest_user_id: {
           [Op.not]: null
         },
+        ...brandWhere,
         createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
@@ -193,24 +252,26 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
 
     const recentCustomers = recentRegisteredCustomers + recentGuestCustomers;
 
-    // Get total reviews count
-    const totalReviews = await Review.count();
+    // Get total reviews count (brand-scoped — reviews carry brandId)
+    const reviewBrandWhere = brandId ? { brandId } : {};
+    const totalReviews = await Review.count({ where: reviewBrandWhere });
 
     // Get approved reviews count
     const approvedReviews = await Review.count({
-      where: { status: "approved" },
+      where: { status: "approved", ...reviewBrandWhere },
     });
 
     // Reviews still awaiting moderation (drives the home "Needs attention"
     // inbox). Kept separate from total-minus-approved so rejected reviews
     // don't inflate the actionable count.
     const pendingReviews = await Review.count({
-      where: { status: "pending" },
+      where: { status: "pending", ...reviewBrandWhere },
     });
 
-    // Get recent orders (last 30 days)
+    // Get recent orders (last 30 days) — brand-scoped like the rest of the view
     const recentOrders = await Order.count({
       where: {
+        ...brandWhere,
         createdAt: {
           [Op.gte]: thirtyDaysAgo,
         },
@@ -237,7 +298,11 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       const amt = parseFloat(o.final_amount || 0);
       const t = new Date(o.createdAt).getTime();
       const ageDays = (nowMs - t) / DAY_MS;
-      const earned = o.status === 'delivered';
+      // Match the headline earnedRevenue definition (delivered OR completed),
+      // case-insensitively — otherwise the revenue-change arrow is computed on a
+      // narrower basis than the number it sits next to.
+      const st = String(o.status || '').toLowerCase();
+      const earned = st === 'delivered' || st === 'completed';
       if (ageDays <= 30) {
         curCnt++; curTotal += amt; if (earned) curEarned += amt;
         const key = new Date(o.createdAt).toISOString().slice(0, 10);
@@ -320,11 +385,12 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.status NOT IN ('cancelled')
+      WHERE LOWER(o.status) NOT IN ('cancelled', 'order cancelled')
+        AND (:brandId IS NULL OR o.brand_id = :brandId)
       GROUP BY p.id, p.name, p.slug
       ORDER BY total_revenue DESC
       LIMIT 10
-    `, { type: QueryTypes.SELECT });
+    `, { type: QueryTypes.SELECT, replacements: { brandId: brandId || null } });
 
     const formattedTopProducts = topProducts.map(product => ({
       id: product.id,
@@ -349,13 +415,21 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       FROM product_variations pv
       JOIN products p ON pv.productId = p.id
       WHERE pv.stock < 10 AND pv.stock > 0
+        AND (:brandId IS NULL OR EXISTS (
+          SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId))
       ORDER BY pv.stock ASC
       LIMIT 20
-    `, { type: QueryTypes.SELECT });
+    `, { type: QueryTypes.SELECT, replacements: { brandId: brandId || null } });
 
-    const outOfStockCount = await ProductVariation.count({
-      where: { stock: 0 }
-    });
+    const [oosRow] = await sequelize.query(`
+      SELECT COUNT(*) AS cnt
+      FROM product_variations pv
+      JOIN products p ON pv.productId = p.id
+      WHERE pv.stock = 0
+        AND (:brandId IS NULL OR EXISTS (
+          SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId))
+    `, { type: QueryTypes.SELECT, replacements: { brandId: brandId || null } });
+    const outOfStockCount = parseInt(oosRow?.cnt || 0);
 
     const formattedLowStock = lowStockProducts.map(product => ({
       id: product.id,
@@ -448,39 +522,11 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       }
     ].filter(item => item.value > 0);
 
-    // Payment distribution
+    // Payment distribution (accumulated above from the grouped rows).
     const paymentDistribution = {
-      cod: {
-        count: paymentTypeCounts['cod'] || 0,
-        revenue: allOrders
-          .filter(o => o.payment_type?.toLowerCase() === 'cod' && o.status?.toLowerCase() !== 'cancelled')
-          .reduce((sum, o) => sum + parseFloat(o.final_amount || 0), 0)
-      },
-      prepaid: {
-        count: Object.keys(paymentTypeCounts)
-          .filter(type => type !== 'cod')
-          .reduce((sum, type) => sum + (paymentTypeCounts[type] || 0), 0),
-        revenue: allOrders
-          .filter(o => o.payment_type?.toLowerCase() !== 'cod' && o.status?.toLowerCase() !== 'cancelled')
-          .reduce((sum, o) => sum + parseFloat(o.final_amount || 0), 0)
-      }
+      cod: { count: codCount, revenue: codRevenue },
+      prepaid: { count: prepaidCount, revenue: prepaidRevenue }
     };
-
-    const paymentStatusCounts = {
-      pending: 0,
-      paid: 0,
-      failed: 0,
-      refunded: 0,
-      cancelled: 0,
-      refund_pending: 0
-    };
-
-    allOrders.forEach(order => {
-      const paymentStatus = order.payment_status?.toLowerCase();
-      if (paymentStatusCounts.hasOwnProperty(paymentStatus)) {
-        paymentStatusCounts[paymentStatus]++;
-      }
-    });
 
     const paymentStatusChart = [
       {
@@ -533,17 +579,13 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     ].filter(item => item.value > 0);
 
     // RTO statistics
-    const rtoOrders = allOrders.filter(o => {
-      const status = o.status?.toLowerCase();
-      return status === 'rto' || status === 'rto delivered' || status === 'return_initiated' || status === 'returned_rto';
-    });
     const totalRtoCount = (statusCounts['rto'] || 0) + (statusCounts['rto delivered'] || 0) + (statusCounts['return_initiated'] || 0) + (statusCounts['returned_rto'] || 0);
     const rtoStats = {
       totalRTO: totalRtoCount,
       rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
       rtoRate: totalOrders > 0 ? parseFloat(((totalRtoCount / totalOrders) * 100).toFixed(2)) : 0,
       rtoPercentageOfRevenue: totalRevenue > 0 ? parseFloat(((rtoRevenue / totalRevenue) * 100).toFixed(2)) : 0,
-      averageRTOValue: rtoOrders.length > 0 ? parseFloat((rtoRevenue / rtoOrders.length).toFixed(2)) : 0
+      averageRTOValue: totalRtoCount > 0 ? parseFloat((rtoRevenue / totalRtoCount).toFixed(2)) : 0
     };
 
     // UTM tracking analytics
@@ -557,10 +599,11 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         COUNT(DISTINCT CASE WHEN guest_user_id IS NOT NULL THEN guest_user_id END) as guest_users
       FROM utm_tracking
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        AND (:brandId IS NULL OR brand_id = :brandId)
       GROUP BY utm_source, utm_medium, utm_campaign
       ORDER BY sessions DESC
       LIMIT 10
-    `, { type: QueryTypes.SELECT });
+    `, { type: QueryTypes.SELECT, replacements: { brandId: brandId || null } });
 
     const utmConversions = await sequelize.query(`
       SELECT 
@@ -568,14 +611,15 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         utm.utm_medium,
         COUNT(DISTINCT utm.session_id) as total_sessions,
         COUNT(DISTINCT o.id) as orders,
-        SUM(CASE WHEN o.status NOT IN ('cancelled') THEN o.final_amount ELSE 0 END) as revenue
+        SUM(CASE WHEN LOWER(o.status) NOT IN ('cancelled', 'order cancelled') THEN o.final_amount ELSE 0 END) as revenue
       FROM utm_tracking utm
       LEFT JOIN orders o ON utm.id = o.utm_tracking_id
       WHERE utm.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        AND (:brandId IS NULL OR utm.brand_id = :brandId)
       GROUP BY utm.utm_source, utm.utm_medium
       ORDER BY revenue DESC
       LIMIT 10
-    `, { type: QueryTypes.SELECT });
+    `, { type: QueryTypes.SELECT, replacements: { brandId: brandId || null } });
 
     const formattedUTMStats = utmStats.map(stat => ({
       source: stat.utm_source || 'Direct',
@@ -610,8 +654,8 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     // The admin runs several storefronts (Crosscoin, Gripzus, Morbix …).
     // When the dashboard is NOT scoped to a single brand, break the sales
     // down per brand so the admin can see how each storefront performs.
-    // Built from the already-scoped `allOrders` set (respects the date
-    // filter and, if present, the single-brand scope).
+    // Built from the per-brand buckets accumulated from the grouped order query
+    // (respects the date filter and, if present, the single-brand scope).
     let brandSales = [];
     try {
       const brandRows = await Brand.findAll({
@@ -642,16 +686,13 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         return brandMap.get(id);
       };
 
-      allOrders.forEach((order) => {
-        const b = bucketFor(order.brand_id || null);
-        const amt = parseFloat(order.final_amount || 0);
-        const st = order.status?.toLowerCase();
-        b.orders += 1;
-        b.revenue += amt;
-        if (st === 'delivered' || st === 'completed') b.earned += amt;
-        else if (st === 'cancelled' || st === 'order cancelled' ||
-                 st === 'rto' || st === 'rto delivered' ||
-                 st === 'return_initiated' || st === 'returned_rto') b.lost += amt;
+      // Fold the per-brand buckets accumulated from the grouped query.
+      brandAgg.forEach((agg, id) => {
+        const b = bucketFor(id || null);
+        b.orders += agg.orders;
+        b.revenue += agg.revenue;
+        b.earned += agg.earned;
+        b.lost += agg.lost;
       });
 
       const palette = ['#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#2563eb', '#db2777', '#65a30d'];
@@ -834,12 +875,19 @@ const getDashboardDataWithCache = async (userId, brandId) => {
  * Called when relevant user actions occur (order creation, badge updates, profile changes)
  * Requirements: 1.4
  */
-const invalidateDashboardCache = async (userId) => {
-  const cacheKey = DASHBOARD_CACHE_KEY(userId);
-  
+const invalidateDashboardCache = async (brandId) => {
+  // Cache keys are per-BRAND (`dashboard:brand:<id>:stats`), not per-user. An
+  // order event must clear BOTH the affected brand's cache AND the cross-brand
+  // "all" view, otherwise a brand-scoped dashboard kept serving stale numbers
+  // until the 60s TTL. (This arg used to be a userId, which never matched any
+  // key, so only the "all" key — by accident — was ever cleared.)
+  const keys = new Set([DASHBOARD_CACHE_KEY(null, 'all')]);
+  if (brandId !== undefined && brandId !== null && brandId !== 'all' && brandId !== 'admin') {
+    keys.add(DASHBOARD_CACHE_KEY(null, brandId));
+  }
   try {
-    await cacheManager.delete(cacheKey);
-    console.log(`✅ Dashboard cache invalidated for user ${userId}`);
+    await Promise.all([...keys].map(k => cacheManager.delete(k)));
+    console.log(`✅ Dashboard cache invalidated: ${[...keys].join(', ')}`);
   } catch (error) {
     console.error("Error invalidating dashboard cache:", error);
   }
