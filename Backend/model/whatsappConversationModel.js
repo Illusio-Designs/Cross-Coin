@@ -25,6 +25,9 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
   // NEW delivery address (after they tapped "Wrong Address"). Their next text
   // message is then captured as the corrected address for that order.
   awaiting_address_for: { type: DataTypes.STRING(50), allowNull: true },
+  // Private internal note an agent keeps on a conversation (shown in the Notes
+  // tab). Never sent to the customer.
+  agent_notes: { type: DataTypes.TEXT, allowNull: true },
 }, {
   tableName: 'whatsapp_conversations',
   timestamps: true,

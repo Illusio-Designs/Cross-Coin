@@ -2403,6 +2403,11 @@ export const whatsappService = {
     return response.data;
   },
 
+  updateConversationNote: async (conversationId, note) => {
+    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/note`, { note });
+    return response.data;
+  },
+
   setOptOut: async (conversationId, opted_out) => {
     const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/optout`, { opted_out });
     return response.data;

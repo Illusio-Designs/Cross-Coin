@@ -1300,6 +1300,19 @@ exports.setConversationBrand = async (req, res) => {
   }
 };
 
+// ─── Private agent note on a conversation ─────────────────────────────────────
+exports.setConversationNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const note = typeof req.body.note === 'string' ? req.body.note.slice(0, 5000) : '';
+    const [updated] = await WhatsappConversation.update({ agent_notes: note }, { where: { id } });
+    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, agent_notes: note });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── Opt-out management ───────────────────────────────────────────────────────
 exports.setOptOut = async (req, res) => {
   try {

@@ -973,6 +973,7 @@ const startServer = async () => {
                 logger.error(`column ${table}.${column} migration failed: ` + err.message);
             }
         };
+        await ensureColumn('whatsapp_conversations', 'agent_notes', 'agent_notes TEXT NULL');
         await ensureColumn('guest_users', 'phone_hash', 'phone_hash VARCHAR(64) NULL');
         await ensureColumn('shipping_addresses', 'phone_hash', 'phone_hash VARCHAR(64) NULL');
         await ensureIndex('guest_users', 'idx_gu_phone_hash', 'phone_hash');

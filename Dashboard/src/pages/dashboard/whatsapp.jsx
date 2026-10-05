@@ -189,18 +189,37 @@ function PhonePreview({ tpl }) {
 // ─── Message Content Renderer ─────────────────────────────────────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
-// Module-level cache: proxyUrl → blobUrl
-// Persists across re-renders and polling so media never disappears
+// Module-level cache: proxyUrl → blobUrl. Bounded LRU so a long support shift
+// (hundreds of chats with photos/voice notes) can't grow object URLs + decoded
+// media without limit; evicted entries have their blob URL revoked to free memory.
+const MEDIA_BLOB_MAX = 60;
 const mediaBlobCache = new Map();
 
 async function fetchMediaBlob(src) {
-  if (mediaBlobCache.has(src)) return mediaBlobCache.get(src);
+  if (mediaBlobCache.has(src)) {
+    const v = mediaBlobCache.get(src);
+    mediaBlobCache.delete(src); mediaBlobCache.set(src, v); // mark most-recently-used
+    return v;
+  }
   const res = await fetch(src);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   mediaBlobCache.set(src, url);
+  while (mediaBlobCache.size > MEDIA_BLOB_MAX) {
+    const oldest = mediaBlobCache.keys().next().value;
+    const oldUrl = mediaBlobCache.get(oldest);
+    mediaBlobCache.delete(oldest);
+    try { URL.revokeObjectURL(oldUrl); } catch (_) {}
+  }
   return url;
+}
+
+// Auth token, read once and refreshed on change — avoids a synchronous
+// localStorage read on every media-message render.
+let _waToken = typeof localStorage !== 'undefined' ? (localStorage.getItem('token') || '') : '';
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => { if (e.key === 'token') _waToken = e.newValue || ''; });
 }
 
 function getProxyUrl(mediaId, brandId = 1) {
@@ -208,7 +227,7 @@ function getProxyUrl(mediaId, brandId = 1) {
   // brandId 0 = "All Brands" filter — media auth needs a real brand; the backend
   // falls back to the shared account, so send 1 rather than 0.
   if (!brandId) brandId = 1;
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '';
+  const token = _waToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : '');
   // Always proxy through backend — whether it's a media ID or a full Facebook URL
   // The backend media proxy handles both cases
   const encoded = encodeURIComponent(mediaId);
@@ -725,9 +744,22 @@ export function WhatsAppManager() {
   // without restarting the loop on every conversation switch.
   const activeConvRef = useRef(null);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
+  // The conversation the user most recently asked to open — a synchronous guard
+  // so a slow response for a chat they've navigated away from can't overwrite
+  // the chat now on screen.
+  const openReqRef = useRef(null);
   // Per-conversation message cache — reopening a chat shows instantly while we
   // refresh in the background, so the spinner only appears on a true first load.
+  // Bounded (LRU) so a long shift opening hundreds of chats doesn't keep every
+  // message array (with media JSON) in memory forever.
+  const MSG_CACHE_MAX = 40;
   const messagesCacheRef = useRef(new Map());
+  const touchMsgCache = (id, msgs) => {
+    const m = messagesCacheRef.current;
+    if (m.has(id)) m.delete(id);
+    m.set(id, msgs);
+    while (m.size > MSG_CACHE_MAX) m.delete(m.keys().next().value);
+  };
 
   // Merge messages by id (keeps optimistic + server copies from duplicating,
   // avoids the wholesale-replace flicker), sorted chronologically.
@@ -956,13 +988,21 @@ export function WhatsAppManager() {
     if (!conv || messagesCacheRef.current.has(conv.id) || prefetchingRef.current.has(conv.id)) return;
     prefetchingRef.current.add(conv.id);
     whatsappService.getMessages(conv.id)
-      .then(data => { if (data?.success) messagesCacheRef.current.set(conv.id, data.messages || []); })
+      .then(data => { if (data?.success) touchMsgCache(conv.id, data.messages || []); })
       .catch(() => {})
       .finally(() => prefetchingRef.current.delete(conv.id));
   };
 
   const fetchMessages = async (conv) => {
+    // Record which chat the user just asked to open. If they click another chat
+    // before this request resolves, the stale response is ignored instead of
+    // overwriting the newer chat's thread (the "wrong chat shows A's messages" bug).
+    openReqRef.current = conv.id;
     setActiveConv(conv);
+    // Switching chats: clear the draft, the reply-quote and the notes box so they
+    // never carry over to a different conversation; seed the saved note for this one.
+    setReply(''); setReplyTo(null); setShowEmoji(false);
+    setConvNote(conv.agent_notes || '');
     // Show cached messages instantly if we've opened this chat before; only
     // show the spinner on a genuine first load.
     const cached = messagesCacheRef.current.get(conv.id);
@@ -976,9 +1016,10 @@ export function WhatsAppManager() {
     }
     try {
       const data = await whatsappService.getMessages(conv.id);
+      if (openReqRef.current !== conv.id) return; // user switched away — drop stale response
       if (data.success) {
         const msgs = data.messages || [];
-        messagesCacheRef.current.set(conv.id, msgs);
+        touchMsgCache(conv.id, msgs);
         setMessages(msgs);
         setHasMoreMsgs(!!data.hasMore);
         isNearBottomRef.current = true; // jump to newest on open
@@ -988,26 +1029,39 @@ export function WhatsAppManager() {
         showError('loadingFailed', 'Failed to load messages');
       }
     } catch (err) {
+      if (openReqRef.current !== conv.id) return;
       if (!cached) {
         setMessages([]); setHasMoreMsgs(false);
         showError('loadingFailed', 'Failed to load messages');
       }
     }
-    setMsgLoading(false);
+    if (openReqRef.current === conv.id) setMsgLoading(false);
   };
 
   // "Load older messages" — fetches the page before the oldest loaded message
   // and prepends it (WhatsApp-style history), without disturbing the scroll.
   const loadOlderMessages = async () => {
     if (!activeConv || loadingOlder || !messages.length) return;
+    const convId = activeConv.id;
     setLoadingOlder(true);
     const oldestId = messages[0]?.id;
+    // Capture the scroll anchor so prepending older history doesn't make the
+    // view jump — we restore the same visual position after the prepend.
+    const el = messagesContainerRef.current;
+    const prevH = el ? el.scrollHeight : 0;
+    const prevTop = el ? el.scrollTop : 0;
     try {
-      const data = await whatsappService.getMessages(activeConv.id, oldestId);
-      if (data.success) {
+      const data = await whatsappService.getMessages(convId, oldestId);
+      // Ignore if the user switched chats while this was in flight (don't merge
+      // chat A's history into chat B).
+      if (openReqRef.current === convId && data.success) {
         isNearBottomRef.current = false; // keep position when prepending
         setMessages(prev => mergeMessages(data.messages || [], prev));
         setHasMoreMsgs(!!data.hasMore);
+        requestAnimationFrame(() => {
+          const el2 = messagesContainerRef.current;
+          if (el2) el2.scrollTop = prevTop + (el2.scrollHeight - prevH);
+        });
       }
     } catch (_) { /* ignore */ }
     setLoadingOlder(false);
@@ -1141,10 +1195,16 @@ export function WhatsAppManager() {
   };
 
   const saveConvNote = async () => {
-    if (!activeConv || !convNote.trim()) return;
+    if (!activeConv) return;
+    const note = convNote.trim();
     setSavingNote(true);
     try {
-      await whatsappService.updateConversationNote(activeConv.id, convNote.trim(), activeConv?.brand_id || brandId || 1);
+      await whatsappService.updateConversationNote(activeConv.id, note);
+      // Keep local copies in sync so reopening the chat shows the saved note
+      // (and the stream's conversation refresh won't wipe it).
+      const id = activeConv.id;
+      setActiveConv(prev => prev && prev.id === id ? { ...prev, agent_notes: note } : prev);
+      setConversations(prev => prev.map(c => c.id === id ? { ...c, agent_notes: note } : c));
       showSuccess('saved', 'Note saved successfully');
     } catch (err) { showError('saveFailed', err.message); }
     setSavingNote(false);
@@ -1182,7 +1242,11 @@ export function WhatsAppManager() {
   const refreshActiveMessages = async (conv) => {
     try {
       const data = await whatsappService.getMessages(conv.id);
-      if (data.success) setMessages(prev => mergeMessages(prev, data.messages || []));
+      // Only apply if this is still the open chat — otherwise a refresh fired for
+      // chat A (before the user switched to B) would merge A's messages into B.
+      if (data.success && openReqRef.current === conv.id) {
+        setMessages(prev => mergeMessages(prev, data.messages || []));
+      }
     } catch { }
   };
 
@@ -1236,7 +1300,18 @@ export function WhatsAppManager() {
               activeConvRef.current = { ...open, last_message_at: updated.last_message_at };
             }
           }
-          setConversations(convs);
+          // Merge the fresh list but keep the OPEN chat's unread cleared — a raw
+          // replace re-flagged it unread until the read-status synced — and keep
+          // a just-saved private note until the server copy carries it.
+          setConversations(prev => {
+            const prevById = new Map(prev.map(c => [c.id, c]));
+            const activeId = activeConvRef.current?.id;
+            return convs.map(c => {
+              const old = prevById.get(c.id);
+              if (c.id === activeId) return { ...c, unread_count: 0, agent_notes: (c.agent_notes ?? old?.agent_notes) };
+              return c;
+            });
+          });
         }
         reconnect(); // wait out the floor (if any) before reconnecting
       } catch (e) {
@@ -1718,7 +1793,7 @@ export function WhatsAppManager() {
                 ) : filteredConvs.map(conv => {
                   const col = avatarColor(conv.customer_name||conv.customer_phone);
                   return (
-                    <div key={conv.id} className={`was-thread-item${activeConv?.id===conv.id?' active':''}`} onClick={() => fetchMessages(conv)} onMouseEnter={() => prefetchMessages(conv)}>
+                    <div key={conv.id} className={`was-thread-item${activeConv?.id===conv.id?' active':''}`} onClick={() => fetchMessages(conv)} onMouseEnter={() => prefetchMessages(conv)} onPointerDown={() => prefetchMessages(conv)}>
                       <div className="was-thread-av" style={{background:col}}>{initials(conv.customer_name||conv.customer_phone)}</div>
                       <div className="was-thread-body">
                         <div className="was-thread-row">
@@ -1752,7 +1827,7 @@ export function WhatsAppManager() {
               ) : (
                 <>
                   <div className="was-chat-hd">
-                    <button className="was-chat-back" onClick={() => { setActiveConv(null); setMessages([]); setShowInfo(false); }} aria-label="Back to conversations" type="button">
+                    <button className="was-chat-back" onClick={() => { openReqRef.current = null; setActiveConv(null); setMessages([]); setShowInfo(false); setReply(''); setReplyTo(null); setConvNote(''); setShowEmoji(false); }} aria-label="Back to conversations" type="button">
                       <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2.4} />
                     </button>
                     <div className="was-chat-av" style={{background:avatarColor(activeConv.customer_name||activeConv.customer_phone)}}>
@@ -2091,7 +2166,7 @@ export function WhatsAppManager() {
                       />
                       <button className="was-btn-primary" style={{width:'100%',marginTop:8,justifyContent:'center',fontSize:12}}
                         onClick={saveConvNote}
-                        disabled={savingNote || !convNote.trim()}>
+                        disabled={savingNote}>
                         {savingNote ? 'Saving...' : 'Save Note'}
                       </button>
                     </div>
