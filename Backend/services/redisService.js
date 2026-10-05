@@ -62,6 +62,13 @@ class RedisService {
         enableOfflineQueue: false, // don't queue commands when disconnected
         lazyConnect: true,        // don't connect until .ping() is called
         reconnectOnError: () => false,
+        // Bound every command so a half-open / slow socket can NEVER stall a
+        // caller. The auth middleware runs a blacklist GET on every request, so
+        // without this a flaky Redis added seconds of latency to every API call
+        // (incl. opening a WhatsApp chat). On timeout the command rejects, the
+        // caller's try/catch treats it as "not cached", and the request proceeds.
+        commandTimeout: 1500,
+        connectTimeout: 3000,
       });
 
       // Handle connection events
