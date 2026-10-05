@@ -40,7 +40,12 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
     { name: 'idx_wa_conv_brand_status_lastmsg', fields: ['brand_id', 'status', 'last_message_at'] },
     { name: 'idx_wa_conv_status_lastmsg',       fields: ['status', 'last_message_at'] },
     { name: 'idx_wa_conv_lastmsg',              fields: ['last_message_at'] },
-    { name: 'idx_wa_conv_phone_brand',          fields: ['customer_phone', 'brand_id'] },
+    // UNIQUE on customer_phone enforces the "one thread per customer" invariant
+    // the findOrCreate({ where:{ customer_phone } }) calls rely on — otherwise
+    // two near-simultaneous first-ever messages create two rows for one number
+    // and split the thread. (Production applies this via the guarded migration
+    // in index.js, which merges existing duplicates first.)
+    { name: 'uniq_wa_conv_phone',               fields: ['customer_phone'], unique: true },
   ],
 });
 

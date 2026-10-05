@@ -675,8 +675,35 @@ exports.customerContact = async (req, res) => {
     if (!phone?.trim()) return res.status(400).json({ success: false, message: 'Phone number is required' });
     if (!message?.trim()) return res.status(400).json({ success: false, message: 'Message is required' });
 
-    // Send the message to the customer via WhatsApp
-    const result = await whatsappService.sendTextMessage(phone.trim(), message.trim(), brandId);
+    // This endpoint is PUBLIC (storefront "chat with us" widget), so it must not
+    // become an open relay. Two protections:
+    //  1) Per-IP rate limit (the per-target 10/hour cap in sendTextMessage only
+    //     throttles spam to ONE victim, not a blast across rotating numbers).
+    //  2) We send only a FIXED brand acknowledgement — never the caller-supplied
+    //     text — so the verified business number can't be used to deliver
+    //     attacker-chosen phishing to arbitrary people. The customer's own
+    //     message is still stored as inbound so staff see it in the inbox.
+    try {
+      const redisService = require('../services/redisService.js');
+      const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || req.socket?.remoteAddress || 'unknown';
+      const key = `wa:contact:ip:${ip}`;
+      const n = await redisService.incr(key);
+      if (typeof n === 'number') {
+        if (n === 1) await redisService.expire(key, 3600);
+        if (n > 5) return res.status(429).json({ success: false, message: 'Too many requests. Please try again later.' });
+      }
+    } catch (_) { /* Redis down — fall through, per-target cap still applies */ }
+
+    const customerText = String(message).trim().slice(0, 1000); // cap stored length
+
+    // FIXED acknowledgement — no caller content echoed to the recipient.
+    let storeName = 'our team';
+    try { const b = await Brand.findByPk(brandId); storeName = b?.display_name || b?.name || storeName; } catch (_) {}
+    const ackText = `Hi${name && String(name).trim() ? ' ' + String(name).trim().slice(0, 40) : ''}! 👋 Thanks for reaching out to ${storeName}. We've received your message and our team will reply here shortly.`;
+    const result = await whatsappService.sendTextMessage(phone.trim(), ackText, brandId);
+    if (result?.rate_limited) {
+      return res.status(429).json({ success: false, message: 'Please try again in a little while.' });
+    }
 
     const normalizedPhone = whatsappService.formatE164(phone.trim()).replace('+', '');
 
@@ -691,7 +718,7 @@ exports.customerContact = async (req, res) => {
         brand_id:        brandId,
         customer_name:   widgetName,
         wa_contact_id:   normalizedPhone,
-        last_message:    message.trim(),
+        last_message:    customerText,
         last_message_at: new Date(),
         unread_count:    1,
         status:          'open',
@@ -700,21 +727,22 @@ exports.customerContact = async (req, res) => {
 
     if (!created) {
       await conv.update({
-        last_message:    message.trim(),
+        last_message:    customerText,
         last_message_at: new Date(),
-        unread_count:    conv.unread_count + 1,
+        unread_count:    WhatsappConversation.sequelize.literal('unread_count + 1'),
         customer_name:   conv.customer_name || widgetName,
         status:          'open',
       });
     }
 
-    // Save as inbound so it shows in inbox as a customer message
+    // Save the CUSTOMER's own message as inbound so staff see it in the inbox
+    // (the outbound ack above is a fixed brand greeting, not stored here).
     await WhatsappMessage.create({
       conversation_id: conv.id,
       wa_message_id:   result?.messages?.[0]?.id || null,
       direction:       'inbound',
       type:            'text',
-      body:            message.trim(),
+      body:            customerText,
       status:          'received',
       sent_at:         new Date(),
     });
@@ -892,11 +920,15 @@ async function processCodReply(phone, kind, value, brandId) {
       where: { order_number: orderNumber, status: 'awaiting_confirmation', payment_type: 'cod', cod_address_confirmed: false },
     });
   } else {
-    const normalised = String(value || '').trim().toLowerCase();
-    const confirmKeywords  = ['yes', 'confirm', 'confirmed', 'haan', 'ha', 'ok', 'correct', 'sahi hai', 'theek hai', 'right'];
-    const rejectionKeywords = ['no', 'nahi', 'nope', 'wrong', 'incorrect', 'galat', 'change', 'update', 'different'];
+    const normalised = String(value || '').trim().toLowerCase().replace(/[.!]+$/, '');
+    const confirmKeywords  = ['yes', 'y', 'confirm', 'confirmed', 'haan', 'haan ji', 'ha', 'ok', 'okay', 'correct', 'sahi hai', 'theek hai', 'right', 'yes confirm', 'confirm order'];
+    // EXACT whole-message match for BOTH intents. The old reject rule used
+    // includes(), so an innocent "can I change the color?" matched "change" and
+    // dropped the order into the wrong-address capture flow (next message stored
+    // as a shipping address). Exact match removes those false positives.
+    const rejectionKeywords = ['no', 'n', 'nahi', 'nahi ji', 'nope', 'wrong', 'incorrect', 'galat', 'wrong address', 'galat address', 'change address', 'update address', 'different address', 'change', 'update'];
     if (confirmKeywords.includes(normalised)) intent = 'confirm';
-    else if (rejectionKeywords.some(k => normalised.includes(k))) intent = 'reject';
+    else if (rejectionKeywords.includes(normalised)) intent = 'reject';
     if (!intent) return;
     const phoneDigits = phone.replace(/\D/g, '').slice(-10);
     pendingOrder = await Order.findOne({
@@ -911,7 +943,16 @@ async function processCodReply(phone, kind, value, brandId) {
   if (intent === 'confirm') {
     const t = await sq.transaction();
     try {
-      await pendingOrder.update({ cod_address_confirmed: true, cod_address_confirmed_at: new Date(), status: 'confirmed' }, { transaction: t });
+      // Conditional atomic update: only the FIRST confirmation wins. Two inbound
+      // confirmations racing (button tap + "yes", or a Meta double-delivery
+      // across parallel requests) both read status='awaiting_confirmation'
+      // before either commits; without this guard both would emit order.confirmed
+      // → duplicate confirmation message + shipping sync run twice (double ship).
+      const [affected] = await Order.update(
+        { cod_address_confirmed: true, cod_address_confirmed_at: new Date(), status: 'confirmed' },
+        { where: { id: pendingOrder.id, status: 'awaiting_confirmation', cod_address_confirmed: false }, transaction: t }
+      );
+      if (!affected) { await t.rollback(); return; } // already confirmed by a concurrent reply
       await OrderStatusHistory.create({
         order_id: pendingOrder.id, status: 'confirmed',
         notes: `Auto-confirmed: customer ${kind === 'button' ? 'tapped Confirm Address' : 'replied YES'} via WhatsApp`,
@@ -980,28 +1021,30 @@ exports.receiveWebhook = async (req, res) => {
   try {
     const body = req.body;
     if (body.object !== 'whatsapp_business_account') return;
+    // Only a signature-VERIFIED webhook may trigger automated outbound messages
+    // or mutate orders. When WHATSAPP_WEBHOOK_SECRET is unset the signature
+    // middleware lets the request through (so inbound messages still record
+    // during setup) but marks it unverified — we then record the message but do
+    // NOT run the COD confirm/cancel/restock flow or the auto-reply bot, closing
+    // the forged-COD / spoofed-inbound attack. Set the secret to re-enable them.
+    const trusted = req.webhookVerified !== false;
+    if (!trusted) logger.warn('[WhatsApp] unverified webhook — recording message only, skipping COD/auto-reply. Set WHATSAPP_WEBHOOK_SECRET to enable.');
     for (const entry of (body.entry || [])) {
       for (const change of (entry.changes || [])) {
         if (change.field !== 'messages') continue;
         const value = change.value;
         for (const msg of (value.messages || [])) {
           const phone       = msg.from;
-          // Shared number → attribute this message to the customer's brand
-          // (by their most recent order); tags the one-per-customer thread.
-          const brandId     = await resolveBrandByPhone(phone);
-          // Prefer the live WhatsApp profile name; fall back to the customer's
-          // order/guest name so the inbox shows a real name, not a bare number.
-          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
-          const contactName = waName || await resolveCustomerNameByPhone(phone);
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
 
-          // ── De-duplicate (Meta webhooks are at-least-once) ───────────────
-          // The same messages[].id is redelivered on any timeout/retry. Without
-          // this guard a redelivery created a duplicate inbox row, double-bumped
-          // unread_count, and fired the auto-reply / COD handlers twice (so the
-          // customer got the same bot reply twice). Skip the whole message if we
-          // have already stored this wa_message_id.
+          // ── De-duplicate FIRST (Meta webhooks are at-least-once) ─────────
+          // The same messages[].id is redelivered on any timeout/retry. Doing
+          // this before the brand/name resolvers below (which run un-indexable
+          // LIKE scans over shipping_addresses + guest_users) means a retry
+          // storm doesn't re-run those scans just to discard the row. Without
+          // the guard a redelivery also double-bumped unread and re-fired the
+          // auto-reply / COD handlers.
           if (waMessageId) {
             const seen = await WhatsappMessage.findOne({ where: { wa_message_id: waMessageId }, attributes: ['id'] });
             if (seen) {
@@ -1009,6 +1052,14 @@ exports.receiveWebhook = async (req, res) => {
               continue;
             }
           }
+
+          // Shared number → attribute this message to the customer's brand
+          // (by their most recent order); tags the one-per-customer thread.
+          const brandId     = await resolveBrandByPhone(phone);
+          // Prefer the live WhatsApp profile name; fall back to the customer's
+          // order/guest name so the inbox shows a real name, not a bare number.
+          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
+          const contactName = waName || await resolveCustomerNameByPhone(phone);
 
           // ── Resolve message type + body + media_url ──────────────────────
           let msgType = 'text';
@@ -1118,8 +1169,21 @@ exports.receiveWebhook = async (req, res) => {
             defaults: { brand_id: resolvedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
           });
           if (!created) {
-            const upd = { last_message: lastMsgPreview, last_message_at: sentAt, unread_count: conv.unread_count + 1, customer_name: waName || conv.customer_name || contactName, status: 'open' };
+            const upd = { customer_name: waName || conv.customer_name || contactName, status: 'open' };
             if (resolvedBrand) upd.brand_id = resolvedBrand; // re-attribute on an explicit brand mention OR an order reference
+            // A reaction (👍) is not a "message": it must not become the inbox
+            // preview nor mark the thread unread.
+            if (msgType !== 'reaction') {
+              upd.last_message = lastMsgPreview;
+              // Never move the inbox timestamp backwards on an out-of-order
+              // delivery (Meta can deliver an older message after a newer one),
+              // which would misorder the DESC inbox and confuse the stream `since`.
+              const prevAt = conv.last_message_at ? new Date(conv.last_message_at) : null;
+              upd.last_message_at = (prevAt && sentAt < prevAt) ? prevAt : sentAt;
+              // Atomic increment so two concurrent inbound webhooks can't both
+              // read the same base value and lose a count.
+              upd.unread_count = WhatsappConversation.sequelize.literal('unread_count + 1');
+            }
             await conv.update(upd);
           }
 
@@ -1142,18 +1206,20 @@ exports.receiveWebhook = async (req, res) => {
           //    next text IS the new address → capture it and re-confirm;
           //  • otherwise a text YES/NO or "Confirm Address" button advances the
           //    pending COD order to `confirmed`.
-          if (msgType === 'text' && text && conv.awaiting_address_for) {
+          if (trusted && msgType === 'text' && text && conv.awaiting_address_for) {
             const _orderNo = conv.awaiting_address_for;
             setImmediate(() => captureNewAddress(phone, text, _orderNo, brandId).catch(e => logger.error('[WhatsApp] capture address error: ' + e.message)));
-          } else if (msgType === 'text' && text) {
+          } else if (trusted && msgType === 'text' && text) {
             setImmediate(() => processCodReply(phone, 'text', text, brandId).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
-          } else if (msgType === 'button' && buttonPayload) {
+          } else if (trusted && msgType === 'button' && buttonPayload) {
             setImmediate(() => processCodReply(phone, 'button', buttonPayload, brandId).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
           }
 
           // Auto-reply bot — only for plain text messages that aren't a captured
-          // address (so the address text doesn't trip keyword auto-replies).
-          if (msg.type === 'text' && !conv.awaiting_address_for) {
+          // address (so the address text doesn't trip keyword auto-replies), and
+          // only on a verified webhook (never let a spoofed inbound make our
+          // number send to an attacker-chosen recipient).
+          if (trusted && msg.type === 'text' && !conv.awaiting_address_for) {
             setImmediate(() => handleAutoReply(phone, text, brandId).catch(() => {}));
           }
         }
@@ -1176,6 +1242,12 @@ exports.receiveWebhook = async (req, res) => {
           else if (next === 'failed') shouldApply = true;         // a failure always wins
           else shouldApply = (RANK[next] ?? -1) > (RANK[cur] ?? -1); // otherwise only advance
           if (shouldApply) {
+            // Log WHY a send failed so it's diagnosable (kept out of `body` so
+            // the agent's original text is never clobbered).
+            if (next === 'failed' && Array.isArray(status.errors) && status.errors.length) {
+              const e = status.errors[0];
+              logger.warn(`[WhatsApp] message ${status.id} failed: ${(e.title || e.message || 'error')}${e.code ? ' (code ' + e.code + ')' : ''}`);
+            }
             await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
           }
         }
@@ -1737,6 +1809,24 @@ function waMediaCachePaths(key) {
   return { bin: base, ct: base + '.ct', tmp };
 }
 
+// Only ever fetch media (with the Meta bearer token attached) from Meta/Facebook
+// hosts. Without this, a caller-supplied full URL (the no-`mid` branch below)
+// let the proxy send our WhatsApp access token to ANY host (token exfiltration)
+// and reach internal/link-local addresses (SSRF).
+function isAllowedMediaHost(urlStr) {
+  let h;
+  try { h = new URL(urlStr).hostname.toLowerCase(); } catch { return false; }
+  // Reject raw IPs outright (blocks 169.254.x, 127.x, 10.x, 192.168.x, etc.).
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h.includes(':')) return false;
+  return (
+    h === 'graph.facebook.com' ||
+    h === 'lookaside.fbsbx.com' ||
+    h.endsWith('.fbcdn.net') ||
+    h.endsWith('.facebook.com') ||
+    h.endsWith('.fbsbx.com')
+  );
+}
+
 exports.proxyMedia = async (req, res) => {
   maybePruneMediaCache(); // bound the cache size; runs off-thread, at most 1/hour
   try {
@@ -1802,6 +1892,11 @@ exports.proxyMedia = async (req, res) => {
     }
 
     // Stream the bytes back to the browser
+    // Never attach the Meta token to a non-Meta host (SSRF / token exfiltration).
+    if (!isAllowedMediaHost(downloadUrl)) {
+      logger.warn('[MediaProxy] blocked non-Meta media host: ' + String(downloadUrl).slice(0, 120));
+      return res.status(400).json({ success: false, message: 'Invalid media URL' });
+    }
     const { stream, contentType, contentLength } = await whatsappService.downloadMedia(downloadUrl, brandId);
     const finalType = contentType || mimeType || 'application/octet-stream';
 

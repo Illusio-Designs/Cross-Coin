@@ -82,7 +82,10 @@ function verifyWebhookSignature(source) {
         logger.error(`[webhookSignature:${source}] ${cfg.envKey} not set and WEBHOOK_REQUIRE_SIGNATURE=true — rejecting request.`);
         return res.status(401).json({ success: false, message: 'Webhook signature required' });
       }
-      logger.warn(`[webhookSignature:${source}] ${cfg.envKey} not set — accepting unsigned request.`);
+      logger.warn(`[webhookSignature:${source}] ${cfg.envKey} not set — accepting unsigned request (marked UNVERIFIED).`);
+      // Let the request through so inbound still records during setup, but mark
+      // it unverified so the handler skips any order-mutating / outbound action.
+      req.webhookVerified = false;
       return next();
     }
 
@@ -104,6 +107,7 @@ function verifyWebhookSignature(source) {
       logger.warn(`[webhookSignature:${source}] HMAC mismatch — rejecting.`);
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
+    req.webhookVerified = true;
     return next();
   };
 }

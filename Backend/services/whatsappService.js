@@ -835,12 +835,16 @@ async function sendPopupCoupon(phone, data, brandId = 1) {
 // ─── Broadcast: send template to a list of phones ────────────────────────────
 // Returns { sent, failed } counts
 async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, delayMs = 200) {
-  let sent = 0; let failed = 0;
+  let sent = 0; let failed = 0; let throttled = 0;
   for (let i = 0; i < phones.length; i++) {
     try {
       const params = Array.isArray(paramsArray[i]) ? paramsArray[i] : paramsArray[0] || [];
-      await sendTemplate(phones[i], templateName, params, brandId);
-      sent++;
+      const r = await sendTemplate(phones[i], templateName, params, brandId);
+      // checkRateLimit RETURNS { rate_limited:true } instead of throwing, so a
+      // throttled recipient was previously counted as "sent" and silently never
+      // delivered. Count it as failed/throttled so the report is truthful.
+      if (r && r.rate_limited) { throttled++; failed++; }
+      else sent++;
     } catch (err) {
       logger.warn(`Broadcast failed for ${phones[i]}: ${metaError(err)}`);
       failed++;
@@ -850,7 +854,7 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
       await new Promise(r => setTimeout(r, delayMs));
     }
   }
-  return { sent, failed };
+  return { sent, failed, throttled };
 }
 
 // ─── Send single product card (interactive product message) ──────────────────

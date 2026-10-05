@@ -889,6 +889,45 @@ const startServer = async () => {
             logger.error('wa_message_id unique-index migration failed: ' + err.message);
         }
 
+        // ── Merge duplicate WhatsApp conversations + UNIQUE(customer_phone) ──
+        // "One thread per customer" is relied on by findOrCreate({where:{customer_phone}}).
+        // Merge any existing duplicate rows for a phone (repoint their messages to
+        // the earliest conversation, then delete the extras) and enforce the
+        // invariant with a unique index. Guarded → no-op once already unique.
+        try {
+            const [cidx] = await sequelize.query(
+                `SELECT NON_UNIQUE FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_conversations'
+                   AND INDEX_NAME = 'uniq_wa_conv_phone' LIMIT 1`
+            );
+            if (!(cidx.length && Number(cidx[0].NON_UNIQUE) === 0)) {
+                logger.info('Migrating: merging duplicate whatsapp_conversations by phone…');
+                // Repoint messages from duplicate conversations onto the keeper
+                // (earliest id per phone).
+                await sequelize.query(
+                    `UPDATE whatsapp_messages m
+                     JOIN whatsapp_conversations c ON m.conversation_id = c.id
+                     JOIN (SELECT customer_phone, MIN(id) AS keep_id
+                           FROM whatsapp_conversations GROUP BY customer_phone HAVING COUNT(*) > 1) d
+                       ON c.customer_phone = d.customer_phone
+                     SET m.conversation_id = d.keep_id
+                     WHERE m.conversation_id <> d.keep_id`
+                );
+                // Delete the now-redundant duplicate conversations.
+                await sequelize.query(
+                    `DELETE c FROM whatsapp_conversations c
+                     JOIN (SELECT customer_phone, MIN(id) AS keep_id
+                           FROM whatsapp_conversations GROUP BY customer_phone HAVING COUNT(*) > 1) d
+                       ON c.customer_phone = d.customer_phone
+                     WHERE c.id <> d.keep_id`
+                );
+                await sequelize.query(`ALTER TABLE whatsapp_conversations ADD UNIQUE INDEX uniq_wa_conv_phone (customer_phone)`);
+                logger.info('✓ whatsapp_conversations.customer_phone is now UNIQUE');
+            }
+        } catch (err) {
+            logger.error('whatsapp_conversations unique-phone migration failed: ' + err.message);
+        }
+
         // The catalog listing batch-loads variation images by product_variation_id;
         // without this index that WHERE … IN (…) was a full product_images scan.
         await ensureIndex('product_images', 'idx_pi_variation_id', 'product_variation_id');
