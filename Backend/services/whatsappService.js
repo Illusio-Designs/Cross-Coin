@@ -569,10 +569,21 @@ async function checkRateLimit(to) {
   try {
     const redisService = require('./redisService.js');
     const count = await redisService.incr(rateLimitKey);
-    if (count === 1) await redisService.expire(rateLimitKey, 3600); // TTL on first only
-    if (count > 10) {
-      logger.warn(`[WhatsApp] Rate limit exceeded for ${to}`);
-      return { rate_limited: true };
+    if (typeof count === 'number') {
+      // Guarantee the window always carries a TTL. INCR creates a missing key
+      // with NO expiry; if the first expire() ever failed, or Redis was
+      // persisted/restored without the TTL, the key would otherwise block this
+      // number forever. Re-arm the hour whenever the TTL is missing (ttl < 0 =
+      // no expiry / no key), not only on the first message — so a stuck key
+      // self-heals within the hour instead of wedging permanently.
+      const ttl = await redisService.ttl(rateLimitKey);
+      if (count === 1 || ttl === null || ttl < 0) {
+        await redisService.expire(rateLimitKey, 3600);
+      }
+      if (count > 10) {
+        logger.warn(`[WhatsApp] Rate limit exceeded for ${to}`);
+        return { rate_limited: true };
+      }
     }
   } catch (e) { /* Redis down — allow message */ }
   return null;

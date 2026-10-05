@@ -9,7 +9,14 @@ function isBotUserAgent(ua) {
 }
 
 // SQL fragment (MySQL REGEXP) to exclude bot user agents from an existing
-// utm_tracking scan. Keep in sync with BOT_RE above (lowercased, no flags).
-const BOT_SQL_REGEXP = 'bot|crawl|spider|slurp|mediapartners|bingpreview|facebookexternalhit|facebot|telegrambot|embedly|pinterest|redditbot|slackbot|twitterbot|linkedinbot|discordbot|headless|phantomjs|puppeteer|playwright|python-requests|python-urllib|go-http-client|node-fetch|okhttp|libwww|scrapy|apache-httpclient|monitor|uptime|pingdom|lighthouse|gtmetrix|pagespeed|semrush|ahrefs|mj12bot|dotbot|petalbot|dataforseo|censys|masscan|zgrab';
+// utm_tracking scan. DERIVED from BOT_RE so the two can never drift apart (the
+// hand-maintained copy had silently lost whatsapp, quora link preview, axios/,
+// java/, curl/ and wget/). Strip the wrapping group, unescape `\/` → `/` (MySQL
+// REGEXP treats `/` literally), and lowercase (it's matched against
+// LOWER(user_agent)).
+const BOT_SQL_REGEXP = BOT_RE.source
+  .replace(/^\(|\)$/g, '')
+  .replace(/\\\//g, '/')
+  .toLowerCase();
 
 module.exports = { isBotUserAgent, BOT_SQL_REGEXP };
