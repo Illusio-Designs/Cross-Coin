@@ -318,6 +318,23 @@ export const trafficReportService = {
   },
 };
 
+// Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve
+// the brand from the X-Brand-Name header, so pass the brand's slug per call.
+export const facebookCapiService = {
+  getStatus: async (brandSlug) => {
+    const { data } = await adminApi.get('/api/facebook-pixel/status', {
+      headers: brandSlug ? { 'X-Brand-Name': brandSlug } : {},
+    });
+    return data;
+  },
+  runTest: async (brandSlug) => {
+    const { data } = await adminApi.post('/api/facebook-pixel/test', {}, {
+      headers: brandSlug ? { 'X-Brand-Name': brandSlug } : {},
+    });
+    return data;
+  },
+};
+
 export const shippingFeeService = {
   getAllShippingFees: async () => {
     try {

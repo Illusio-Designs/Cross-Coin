@@ -3,7 +3,7 @@ export { default } from './index';
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { brandService, brandSettingsService } from '../../services';
+import { brandService, brandSettingsService, facebookCapiService } from '../../services';
 import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
@@ -46,6 +46,33 @@ export function BrandManager() {
   const [draft, setDraft] = useState({});           // `${brandId}:${key}` -> value being edited
   const [savingKey, setSavingKey] = useState(null);
   const [addRowFor, setAddRowFor] = useState(null); // brand id showing the add-setting row
+  const [capi, setCapi] = useState({});             // brandId -> { loading, testing, status, result, error }
+
+  const brandSlug = (brand) => (brand.slug || brand.name || '').toLowerCase();
+
+  const loadCapiStatus = async (brand) => {
+    setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: true, error: null } }));
+    try {
+      const status = await facebookCapiService.getStatus(brandSlug(brand));
+      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: false, status } }));
+    } catch (e) {
+      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: false, error: e?.response?.data?.message || e.message } }));
+    }
+  };
+
+  const runCapiTest = async (brand) => {
+    setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: true, result: null, error: null } }));
+    try {
+      const result = await facebookCapiService.runTest(brandSlug(brand));
+      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: false, result } }));
+      const got = result?.result?.events_received;
+      if (got) showSuccess(`Meta received ${got} event — Conversions API works.`);
+      else showError('Meta did not confirm the event — see the report below.');
+    } catch (e) {
+      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: false, error: e?.response?.data?.error || e?.response?.data?.message || e.message } }));
+      showError('Test failed — see the report below.');
+    }
+  };
   const [newSetting, setNewSetting] = useState({ key: '', value: '', category: 'analytics' });
 
   const { data: brands = [], isLoading: loading } = useQuery({
@@ -398,6 +425,50 @@ export function BrandManager() {
                                 ) : (
                                   <Button type="button" variant="secondary" onClick={() => { setAddRowFor(brand.id); setNewSetting({ key: '', value: '', category: 'analytics' }); }}>+ Add setting</Button>
                                 )}
+                              </div>
+
+                              {/* Conversions API (Meta) — check config + send a test event */}
+                              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--ds-color-border)' }}>
+                                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 13, fontWeight: 700 }}>Conversions API (Meta)</span>
+                                  <Button type="button" variant="secondary" disabled={capi[brand.id]?.loading} onClick={() => loadCapiStatus(brand)}>
+                                    {capi[brand.id]?.loading ? 'Checking…' : 'Check status'}
+                                  </Button>
+                                  <Button type="button" variant="primary" disabled={capi[brand.id]?.testing} onClick={() => runCapiTest(brand)}>
+                                    {capi[brand.id]?.testing ? 'Sending…' : 'Send test event'}
+                                  </Button>
+                                </div>
+
+                                {capi[brand.id]?.status && (
+                                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginTop: 8 }}>
+                                    Pixel: <b>{capi[brand.id].status.pixel_id || '—'}</b> · Token:{' '}
+                                    <b style={{ color: capi[brand.id].status.access_token_set ? '#16a34a' : '#dc2626' }}>
+                                      {capi[brand.id].status.access_token_set ? 'set ✓' : 'NOT set ✗'}
+                                    </b>
+                                    {capi[brand.id].status.test_event_code ? <> · Test code: <b>{capi[brand.id].status.test_event_code}</b></> : null}
+                                  </div>
+                                )}
+
+                                {capi[brand.id]?.result && (
+                                  <div style={{ marginTop: 8, fontSize: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 10 }}>
+                                    {capi[brand.id].result?.result?.events_received ? (
+                                      <div style={{ color: '#16a34a', fontWeight: 700 }}>✓ Meta received {capi[brand.id].result.result.events_received} event — Conversions API is working.</div>
+                                    ) : (
+                                      <div style={{ color: '#dc2626', fontWeight: 700 }}>✗ Meta did not confirm the event — check the token / details below.</div>
+                                    )}
+                                    <pre style={{ marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 11, color: 'var(--ds-color-text-muted)', maxHeight: 180, overflow: 'auto', margin: '6px 0 0' }}>
+                                      {JSON.stringify(capi[brand.id].result.result || capi[brand.id].result, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                {capi[brand.id]?.error && (
+                                  <div style={{ marginTop: 8, fontSize: 12, color: '#dc2626' }}>{String(capi[brand.id].error)}</div>
+                                )}
+
+                                <div style={{ fontSize: 11, color: 'var(--ds-color-text-faint, #9ca3af)', marginTop: 6 }}>
+                                  Set <b>FB_ACCESS_TOKEN</b> (and <b>FB_PIXEL_ID</b>) above, then “Send test event”. Add <b>FB_TEST_EVENT_CODE</b> to also see it live in Meta → Events Manager → Test Events.
+                                </div>
                               </div>
                             </div>
                           </td>
