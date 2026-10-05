@@ -3,6 +3,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const settingsHelper = require("../services/settingsHelper");
 const Brand = require("../model/brandModel.js");
+const { isAuthenticated, isAdmin } = require("../middleware/authMiddleware.js");
 
 /**
  * SHA256 hash a string (lowercase trimmed) — required by Facebook for PII fields
@@ -43,10 +44,13 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
 
   const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1313610943804396');
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  // When set (temporarily, during testing), events appear live in Meta's
+  // Events Manager → Test Events tab. Leave it unset in production.
+  const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
 
   if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === 'YOUR_ACCESS_TOKEN') {
     console.log(`Facebook Pixel: Skipping ${eventName} — no valid access token`);
-    return;
+    return { skipped: true, reason: 'no access token' };
   }
 
   // Normalize items — support both { product_id, quantity } and { id, quantity }
@@ -103,11 +107,13 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
   try {
     const response = await axios.post(
       `https://graph.facebook.com/v22.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`,
-      { data: [eventData] }
+      { data: [eventData], ...(FB_TEST_EVENT_CODE ? { test_event_code: FB_TEST_EVENT_CODE } : {}) }
     );
     console.log(`✅ Facebook Pixel: ${eventName} sent — events_received: ${response.data?.events_received}`);
+    return { events_received: response.data?.events_received, fbtrace_id: response.data?.fbtrace_id, messages: response.data?.messages };
   } catch (error) {
     console.error(`❌ Facebook Pixel ${eventName} error:`, error.response?.data || error.message);
+    return { error: error.response?.data || error.message };
   }
 }
 
@@ -126,6 +132,7 @@ async function sendBrowserPixelEvent(req, body = {}) {
   const brandId = await resolveBrandId(req);
   const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1313610943804396');
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
 
   if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === 'YOUR_ACCESS_TOKEN') {
     return { skipped: true, reason: 'no access token' };
@@ -163,7 +170,7 @@ async function sendBrowserPixelEvent(req, body = {}) {
 
   const response = await axios.post(
     `https://graph.facebook.com/v22.0/${FB_PIXEL_ID}/events?access_token=${FB_ACCESS_TOKEN}`,
-    { data: [eventData] }
+    { data: [eventData], ...(FB_TEST_EVENT_CODE ? { test_event_code: FB_TEST_EVENT_CODE } : {}) }
   );
   return { events_received: response.data?.events_received };
 }
@@ -189,6 +196,52 @@ router.post('/track', async (req, res) => {
   } catch (error) {
     console.error('❌ Facebook Pixel relay error:', error.response?.data || error.message);
     res.json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/facebook-pixel/status — is the Conversions API configured for this
+// brand? (admin only). Reports the pixel id + whether a token/test code is set,
+// without ever exposing the secret token itself.
+router.get('/status', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const brandId = await resolveBrandId(req);
+    const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID');
+    const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+    const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
+    res.json({
+      brandId,
+      pixel_id: FB_PIXEL_ID || null,
+      access_token_set: !!(FB_ACCESS_TOKEN && FB_ACCESS_TOKEN !== 'YOUR_ACCESS_TOKEN'),
+      test_event_code: FB_TEST_EVENT_CODE || null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/facebook-pixel/test — fire a sample Purchase to the Conversions API
+// and return Meta's raw response (events_received / messages / errors), so you
+// can confirm the token works without placing a real order. With a
+// FB_TEST_EVENT_CODE set for the brand it also shows live in Events Manager →
+// Test Events. Admin only.
+router.post('/test', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const brandId = await resolveBrandId(req);
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || null;
+    const sampleOrder = {
+      brand_id: brandId,
+      order_number: 'CAPITEST-' + Date.now(),
+      total_amount: 1, currency: 'INR',
+      email: 'capitest@example.com', phone: '9999999999',
+      first_name: 'Capi', last_name: 'Test',
+      city: 'Surat', state: 'GJ', zip_code: '395006', country: 'in',
+      ip_address: ip, user_agent: req.headers['user-agent'] || null,
+      items: [{ id: 'TEST-SKU', quantity: 1 }],
+    };
+    const result = await sendFacebookEvent('Purchase', sampleOrder, { event_source_url: 'https://crosscoin.in/ThankYou' });
+    res.json({ ok: !!(result && result.events_received) , result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.response?.data || error.message });
   }
 });
 
