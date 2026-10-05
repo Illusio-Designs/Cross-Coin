@@ -13,6 +13,7 @@ const imagekitService = require('../services/imagekitService.js');
 const cacheManager = require('../services/cacheManager.js');
 const redisService = require('../services/redisService.js');
 const { logger } = require('../config/logging.js');
+const XLSX = require('xlsx');
 
 // Helper to update product review statistics
 const updateProductReviewStats = async (productIdToUpdate, transaction) => {
@@ -1019,5 +1020,223 @@ module.exports.getAllPublicReviews = async (req, res) => {
     } catch (error) {
         logger.error('Error fetching all public reviews:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch reviews', error: error.message });
+    }
+};
+
+
+// ---------------------------------------------------------------------------
+// Bulk-upload reviews from an Excel / CSV file (admin only).
+//
+// The admin picks a brand in the dashboard (sent as X-Brand-Name → req.brandId)
+// and uploads a spreadsheet. Column headers are matched case / space / under-
+// score-insensitively, so "Product ID", "product_id" and "productid" are the
+// same column. Each row becomes one review. A per-row report is returned so the
+// admin can see exactly which rows were imported and why any were skipped.
+//
+// Recognised columns (all flexible aliases):
+//   product_id | product | sku                → numeric product id (preferred)
+//   product_slug | slug | handle              → product slug (fallback lookup)
+//   product_name | name of product            → product name (last-resort lookup)
+//   rating | stars                            → 1–5 (required)
+//   review | comment | review_text | body     → the review text
+//   name | reviewer | reviewer_name | customer→ display name (guestName)
+//   email | reviewer_email                    → guestEmail (optional)
+//   status | state                            → pending | approved | rejected
+//   date | review_date | created_at           → back-dates the review (optional)
+//   verified | verified_purchase              → yes/true/1 → verified badge
+//   featured | is_featured                    → yes/true/1 → featured review
+//   brand | brand_slug                        → per-row brand override (optional)
+// ---------------------------------------------------------------------------
+module.exports.bulkUploadReviews = async (req, res) => {
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ success: false, message: 'No file uploaded. Attach an .xlsx, .xls or .csv file.' });
+        }
+
+        // Parse the workbook (xlsx reads .xlsx/.xls/.csv the same way).
+        let rows;
+        try {
+            const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) throw new Error('empty workbook');
+            rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', raw: false });
+        } catch (parseErr) {
+            logger.error('Review bulk-upload parse error:', parseErr.message);
+            return res.status(400).json({ success: false, message: 'Could not read the file. Make sure it is a valid Excel (.xlsx/.xls) or CSV file.' });
+        }
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'The file has no data rows.' });
+        }
+
+        const MAX_ROWS = 2000;
+        if (rows.length > MAX_ROWS) {
+            return res.status(400).json({ success: false, message: `Too many rows (${rows.length}). Please upload at most ${MAX_ROWS} rows at a time.` });
+        }
+
+        // Normalise a row's keys → lowercase, strip spaces/underscores/hyphens.
+        const norm = (obj) => {
+            const out = {};
+            Object.keys(obj).forEach(k => {
+                const nk = String(k).toLowerCase().replace(/[\s_\-]+/g, '');
+                out[nk] = obj[k];
+            });
+            return out;
+        };
+        const pick = (r, ...keys) => {
+            for (const k of keys) {
+                const v = r[k];
+                if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+            }
+            return '';
+        };
+        const toBool = (v) => ['1', 'true', 'yes', 'y', 'verified', 'featured'].includes(String(v).toLowerCase().trim());
+        const toStatus = (v, fallback) => {
+            const s = String(v || '').toLowerCase().trim();
+            return ['pending', 'approved', 'rejected'].includes(s) ? s : fallback;
+        };
+
+        const defaultStatus = toStatus(req.body?.defaultStatus, 'approved');
+        const headerBrandId = req.brandId || (req.body?.brandId ? parseInt(req.body.brandId) : null) || null;
+
+        // Cache brand-slug → id lookups for per-row brand overrides.
+        const brandCache = new Map();
+        const resolveBrand = async (slug) => {
+            if (!slug) return null;
+            const key = slug.toLowerCase();
+            if (brandCache.has(key)) return brandCache.get(key);
+            const b = await Brand.findOne({ where: { slug: key } }).catch(() => null);
+            const id = b ? b.id : null;
+            brandCache.set(key, id);
+            return id;
+        };
+
+        const created = [];
+        const errors = [];
+        const affectedApproved = new Set();
+        const toCreate = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const rowNo = i + 2; // +1 for 0-index, +1 for header row (what the user sees in Excel)
+            const r = norm(rows[i]);
+
+            const rating = parseInt(pick(r, 'rating', 'stars', 'star', 'ratings'), 10);
+            if (isNaN(rating) || rating < 1 || rating > 5) {
+                errors.push({ row: rowNo, reason: `Invalid rating "${pick(r, 'rating', 'stars')}" (must be 1–5)` });
+                continue;
+            }
+
+            // Resolve the target brand for this row (per-row override → header brand).
+            const rowBrandSlug = pick(r, 'brand', 'brandslug', 'brandname');
+            const rowBrandId = (await resolveBrand(rowBrandSlug)) || headerBrandId;
+
+            // Resolve the product: id → slug → name.
+            let product = null;
+            const pid = parseInt(pick(r, 'productid', 'product', 'sku', 'id'), 10);
+            if (!isNaN(pid)) {
+                product = await Product.findByPk(pid).catch(() => null);
+            }
+            if (!product) {
+                const slug = pick(r, 'productslug', 'slug', 'handle');
+                if (slug) {
+                    const where = { slug };
+                    if (rowBrandId) where.brand_id = rowBrandId;
+                    product = await Product.findOne({ where }).catch(() => null);
+                }
+            }
+            if (!product) {
+                const pname = pick(r, 'productname', 'nameofproduct', 'product');
+                if (pname) {
+                    const where = { name: pname };
+                    if (rowBrandId) where.brand_id = rowBrandId;
+                    product = await Product.findOne({ where }).catch(() => null)
+                        || await Product.findOne({ where: { ...where, name: { [Op.like]: `%${pname}%` } } }).catch(() => null);
+                }
+            }
+            if (!product) {
+                errors.push({ row: rowNo, reason: `Product not found (id/slug/name: "${pick(r, 'productid', 'productslug', 'slug', 'productname', 'product') || '—'}")` });
+                continue;
+            }
+
+            const reviewText = pick(r, 'review', 'comment', 'reviewtext', 'body', 'text', 'description')
+                .replace(/<[^>]*>/g, '').trim();
+            const guestName = pick(r, 'name', 'reviewer', 'reviewername', 'customer', 'customername', 'username') || 'Anonymous';
+            const guestEmail = pick(r, 'email', 'revieweremail', 'guestemail') || null;
+            const status = toStatus(pick(r, 'status', 'state'), defaultStatus);
+
+            // Optional back-dating.
+            let createdAt = null;
+            const dateRaw = pick(r, 'date', 'reviewdate', 'createdat', 'created');
+            if (dateRaw) {
+                const d = new Date(dateRaw);
+                if (!isNaN(d.getTime())) createdAt = d;
+            }
+
+            // Skip obvious duplicates on re-upload (same product + same email).
+            if (guestEmail) {
+                const dup = await Review.findOne({ where: { productId: product.id, guestEmail } }).catch(() => null);
+                if (dup) {
+                    errors.push({ row: rowNo, reason: `Duplicate — a review by ${guestEmail} already exists for "${product.name}"` });
+                    continue;
+                }
+            }
+
+            const record = {
+                productId: product.id,
+                userId: null,
+                rating,
+                review: reviewText || null,
+                guestName,
+                guestEmail,
+                brandId: rowBrandId || product.brand_id || null,
+                status,
+                verified_purchase: toBool(pick(r, 'verified', 'verifiedpurchase', 'isverified')),
+                is_featured: toBool(pick(r, 'featured', 'isfeatured')),
+            };
+            if (createdAt) { record.createdAt = createdAt; record.updatedAt = createdAt; }
+
+            toCreate.push(record);
+            if (status === 'approved') affectedApproved.add(product.id);
+            created.push({ row: rowNo, product: product.name, rating, name: guestName, status });
+        }
+
+        if (toCreate.length === 0) {
+            return res.status(200).json({
+                success: false,
+                message: 'No reviews were imported. See the per-row errors.',
+                total: rows.length, created: 0, skipped: errors.length, errors,
+            });
+        }
+
+        // Insert in one shot. individualHooks:false keeps it fast; timestamps we
+        // supplied (back-dated rows) are honoured, the rest default to now.
+        await Review.bulkCreate(toCreate);
+
+        // Recompute product stats for every product that gained an approved review,
+        // and invalidate its public-reviews cache.
+        for (const productId of affectedApproved) {
+            const t = await sequelize.transaction();
+            try {
+                await updateProductReviewStats(productId, t);
+                await t.commit();
+            } catch (e) {
+                await t.rollback();
+                logger.error('Bulk-upload stat recompute failed for product', productId, e.message);
+            }
+            await cacheManager.invalidate(`reviews:${productId}:*`).catch(() => {});
+        }
+
+        res.json({
+            success: true,
+            message: `Imported ${toCreate.length} review${toCreate.length !== 1 ? 's' : ''}` + (errors.length ? `, skipped ${errors.length}` : ''),
+            total: rows.length,
+            created: toCreate.length,
+            skipped: errors.length,
+            errors,
+            createdRows: created,
+        });
+    } catch (error) {
+        logger.error('Error in bulk review upload:', error);
+        res.status(500).json({ success: false, message: 'Failed to import reviews', error: error.message });
     }
 };

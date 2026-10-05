@@ -1637,6 +1637,24 @@ export const reviewService = {
       throw handleApiError(error);
     }
   },
+
+  // Bulk-import reviews from an Excel / CSV file. The selected brand is sent as
+  // the X-Brand-Name header so every imported review is scoped to that brand
+  // (rows may still override it with a `brand` column). Returns the per-row
+  // import report { created, skipped, errors[] }.
+  bulkUpload: async (file, { brandSlug, defaultStatus = 'approved' } = {}) => {
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      if (defaultStatus) form.append('defaultStatus', defaultStatus);
+      const headers = { 'Content-Type': 'multipart/form-data' };
+      if (brandSlug) headers['X-Brand-Name'] = brandSlug;
+      const response = await adminApi.post('/api/reviews/admin/bulk-upload', form, { headers });
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
 };
 
 // SEO Services — adminApi by default sends NO brand header, but the backend

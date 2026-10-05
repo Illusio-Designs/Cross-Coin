@@ -5,12 +5,14 @@ import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { reviewService, brandService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, CheckmarkCircle02Icon, Delete02Icon, Message01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, CheckmarkCircle02Icon, Delete02Icon, Message01Icon, Upload04Icon, Download04Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
   moderate: <HugeiconsIcon icon={CheckmarkCircle02Icon} size={15} strokeWidth={2} />,
   trash: <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />,
+  upload: <HugeiconsIcon icon={Upload04Icon} size={15} strokeWidth={2} />,
+  download: <HugeiconsIcon icon={Download04Icon} size={15} strokeWidth={2} />,
   // filled star kept inline for the rating (Hugeicons free set has no solid star)
   star: <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   reviews: <HugeiconsIcon icon={Message01Icon} size={48} strokeWidth={1.5} />,
@@ -51,6 +53,14 @@ export default function Reviews() {
   const [statusFilter, setStatusFilter] = useState("");
   const [brands, setBrands] = useState([]);
   const [brandFilter, setBrandFilter] = useState("");
+  // Bulk Excel/CSV import
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importBrand, setImportBrand] = useState("");
+  const [importStatus, setImportStatus] = useState("approved");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState(null);
 
   useEffect(() => {
     brandService.getAllBrands().then(res => {
@@ -170,6 +180,62 @@ export default function Reviews() {
     finally { setLoading(false); }
   };
 
+  // ---- Bulk Excel/CSV import -------------------------------------------------
+  const openImport = () => {
+    setImportResult(null);
+    setImportError(null);
+    setImportFile(null);
+    setImportStatus("approved");
+    // Pre-select whatever brand is currently filtered, if any.
+    setImportBrand(brandFilter || "");
+    setImportOpen(true);
+  };
+
+  const closeImport = () => {
+    if (importing) return;
+    setImportOpen(false);
+  };
+
+  const downloadTemplate = () => {
+    const header = 'product_id,rating,review,name,email,status,date,verified,featured';
+    const sample = [
+      '101,5,"Lovely fabric, true to size.",Aarav Shah,aarav@example.com,approved,2025-09-14,yes,no',
+      '101,4,"Good value for money.",Priya Nair,,approved,2025-09-20,no,no',
+      '102,5,"My daughter loves it!",Meera Iyer,meera@example.com,pending,,no,yes',
+    ];
+    const csv = header + '\n' + sample.join('\n') + '\n';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'review-import-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async () => {
+    if (!importFile) { setImportError('Choose an Excel or CSV file first.'); return; }
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const selected = (Array.isArray(brands) ? brands : []).find(b => String(b.id) === importBrand);
+      const result = await reviewService.bulkUpload(importFile, {
+        brandSlug: selected?.slug || undefined,
+        defaultStatus: importStatus,
+      });
+      setImportResult(result);
+      // Refresh the table so the imported reviews show immediately.
+      await Promise.all([fetchReviews(), fetchStatusCounts()]);
+    } catch (err) {
+      setImportError(err.message || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const brandOptions = [
     { value: '', label: 'All Brands' },
     ...(Array.isArray(brands) ? brands : []).map(b => ({ value: String(b.id), label: b.display_name || b.name })),
@@ -214,6 +280,11 @@ export default function Reviews() {
         <PageHeader
           title={`Reviews${selectedBrandName ? ` — ${selectedBrandName}` : ''}`}
           subtitle={`${totalReviews} review${totalReviews !== 1 ? 's' : ''}${brandFilter ? ' for this brand' : ' total'}`}
+          actions={
+            <Button variant="secondary" size="medium" onClick={openImport}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{IC.upload} Upload Excel</span>
+            </Button>
+          }
         />
 
         <StatGrid>
@@ -265,6 +336,109 @@ export default function Reviews() {
           )}
         </Panel>
       </div>
+
+      <Modal isOpen={importOpen} onClose={closeImport} title="Import reviews from Excel / CSV" closeOnOverlayClick={false}>
+        <div className="modal-body">
+          {!importResult ? (
+            <>
+              <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
+                Upload an <strong>.xlsx</strong>, <strong>.xls</strong> or <strong>.csv</strong> file. The first row must be
+                column headers. Columns are matched by name, in any order:
+                <br />
+                <code style={{ fontSize: 12 }}>product_id</code> (or product_slug / product_name),{' '}
+                <code style={{ fontSize: 12 }}>rating</code> (1–5),{' '}
+                <code style={{ fontSize: 12 }}>review</code>, <code style={{ fontSize: 12 }}>name</code>,{' '}
+                <code style={{ fontSize: 12 }}>email</code>, <code style={{ fontSize: 12 }}>status</code>,{' '}
+                <code style={{ fontSize: 12 }}>date</code>, <code style={{ fontSize: 12 }}>verified</code>,{' '}
+                <code style={{ fontSize: 12 }}>featured</code>.
+              </p>
+
+              <button type="button" className="sl-btn-edit" onClick={downloadTemplate}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, padding: '6px 10px' }}>
+                {IC.download} Download template (.csv)
+              </button>
+
+              <div className="dm-field">
+                <label className="dm-label">Brand <span className="dm-required">*</span></label>
+                <Select
+                  options={(Array.isArray(brands) ? brands : []).map(b => ({ value: String(b.id), label: b.display_name || b.name }))}
+                  value={importBrand}
+                  onChange={setImportBrand}
+                  placeholder="Select a brand"
+                />
+                <small style={{ color: 'var(--ds-color-text-muted)', fontSize: 12 }}>
+                  Imported reviews are attached to this brand (a <code>brand</code> column can override per row).
+                </small>
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-label">Default status</label>
+                <Select
+                  options={[
+                    { value: 'approved', label: 'Approved (show immediately)' },
+                    { value: 'pending', label: 'Pending (moderate later)' },
+                    { value: 'rejected', label: 'Rejected' },
+                  ]}
+                  value={importStatus}
+                  onChange={setImportStatus}
+                />
+                <small style={{ color: 'var(--ds-color-text-muted)', fontSize: 12 }}>
+                  Used for rows without their own <code>status</code> value.
+                </small>
+              </div>
+
+              <div className="dm-field">
+                <label className="dm-label">File <span className="dm-required">*</span></label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                  onChange={e => { setImportFile(e.target.files?.[0] || null); setImportError(null); }}
+                  className="dm-input"
+                />
+                {importFile && <small style={{ color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{importFile.name}</small>}
+              </div>
+
+              {importError && (
+                <div style={{ color: 'var(--ds-color-danger, #c0392b)', fontSize: 13, marginTop: 8 }}>{importError}</div>
+              )}
+            </>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                <span className="sl-status-badge sl-status-approved">Imported: {importResult.created || 0}</span>
+                {!!importResult.skipped && <span className="sl-status-badge sl-status-rejected">Skipped: {importResult.skipped}</span>}
+                <span className="sl-status-badge sl-status-pending">Rows read: {importResult.total || 0}</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--ds-color-text)', marginBottom: 12 }}>{importResult.message}</p>
+              {Array.isArray(importResult.errors) && importResult.errors.length > 0 && (
+                <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 10 }}>
+                  <strong style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>Skipped rows</strong>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, lineHeight: 1.6 }}>
+                    {importResult.errors.slice(0, 100).map((e, idx) => (
+                      <li key={idx}><strong>Row {e.row}:</strong> {e.reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          {!importResult ? (
+            <>
+              <Button variant="secondary" size="medium" onClick={closeImport} disabled={importing} type="button">Cancel</Button>
+              <Button variant="primary" size="medium" onClick={handleImport} disabled={importing || !importFile || !importBrand} type="button">
+                {importing ? 'Importing…' : 'Import reviews'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" size="medium" onClick={() => { setImportResult(null); setImportFile(null); }} type="button">Import another</Button>
+              <Button variant="primary" size="medium" onClick={closeImport} type="button">Done</Button>
+            </>
+          )}
+        </div>
+      </Modal>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Moderate Review" closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
