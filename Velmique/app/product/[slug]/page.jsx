@@ -1,7 +1,7 @@
 import ClientPage from './ClientPage';
 import { getProductReviews } from '@/lib/api/reviews';
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.com';
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.co.in';
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velmique';
 

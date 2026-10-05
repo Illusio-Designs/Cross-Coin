@@ -1,4 +1,4 @@
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.com';
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.co.in';
 
 const DISALLOW = ['/account', '/cart', '/checkout', '/order-confirmation', '/api/', '/_next/'];
 // AI crawlers we explicitly allow. Each needs its own rule repeating the

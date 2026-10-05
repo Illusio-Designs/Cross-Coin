@@ -20,8 +20,6 @@ export default function CartPage() {
     </div>
   );
 
-  const shipping = cartTotal >= 2500 ? 0 : 150;
-  const total = cartTotal + shipping;
   const fmt = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
   return (
@@ -80,11 +78,6 @@ export default function CartPage() {
               <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Summary</p>
               <h2 className="font-display text-[var(--ink)] text-2xl uppercase tracking-tight mb-6">Order Total</h2>
 
-              <div className="flex gap-2 mb-6">
-                <input type="text" placeholder="Promo code" className="flex-1 input-gold px-4 py-3 text-sm font-body rounded-full" />
-                <button className="bg-[var(--ink)] text-white px-5 py-3 text-[10px] tracking-[0.25em] uppercase font-body rounded-full hover:bg-[var(--gold-deep)] transition-colors">Apply</button>
-              </div>
-
               <div className="space-y-3 text-sm font-body">
                 <div className="flex justify-between text-[var(--ink-soft)]">
                   <span>Subtotal</span>
@@ -92,16 +85,13 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-[var(--ink-soft)]">
                   <span>Shipping</span>
-                  <span className={shipping === 0 ? 'text-[var(--gold-deep)]' : ''}>{shipping === 0 ? 'Free' : fmt(shipping)}</span>
+                  <span className="text-[var(--ink-muted)]">Calculated at checkout</span>
                 </div>
-                {shipping > 0 && (
-                  <p className="text-[var(--gold-deep)] text-xs">Add {fmt(2500 - cartTotal)} more for free shipping</p>
-                )}
-                <p className="text-[var(--ink-muted)] text-xs">Inclusive of 18% GST · Pay via UPI / Card / NetBanking</p>
+                <p className="text-[var(--ink-muted)] text-xs">Promo codes, shipping &amp; GST are applied at checkout.</p>
                 <div className="h-px bg-[var(--border)] my-2" />
                 <div className="flex justify-between items-baseline">
-                  <span className="font-display text-[var(--ink)] text-xl uppercase">Total</span>
-                  <span className="font-serif italic text-[var(--ink)] text-2xl">{fmt(total)}</span>
+                  <span className="font-display text-[var(--ink)] text-xl uppercase">Subtotal</span>
+                  <span className="font-serif italic text-[var(--ink)] text-2xl">{fmt(cartTotal)}</span>
                 </div>
               </div>
 

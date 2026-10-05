@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ClubBand({ perks = [] }) {
   return (
     <section className="section container">
@@ -13,7 +15,7 @@ export default function ClubBand({ perks = [] }) {
           </div>
         </div>
         <div className="club-cta">
-          <a href="#" className="btn btn-primary">Become a member</a>
+          <Link href="/register" className="btn btn-primary">Become a member</Link>
           <small>Free membership</small>
         </div>
       </div>

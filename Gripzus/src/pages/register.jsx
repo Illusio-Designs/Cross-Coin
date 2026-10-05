@@ -19,9 +19,10 @@ export default function RegisterPage() {
 
   const digits     = form.phone.replace(/\D/g, '').slice(0, 10);
   const identifier = '91' + digits;
-  // OTP subscription is paused — accept the test OTP 1111 everywhere until it's
-  // restored. Set to false to switch back to real MSG91 OTP.
-  const OTP_TEST_MODE = true;
+  // Real MSG91 OTP is live. Keep this false in production — setting it true
+  // accepts the test OTP 1111 as ANY phone number, which lets anyone register/
+  // sign in as any customer. The localhost check below still allows 1111 locally.
+  const OTP_TEST_MODE = false;
   const isLocal = OTP_TEST_MODE || (typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 

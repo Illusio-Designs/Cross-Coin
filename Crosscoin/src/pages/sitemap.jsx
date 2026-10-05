@@ -46,7 +46,7 @@ const Sitemap = ({ seoData }) => {
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Shop by Category</a>
+                <Link href="/Products" className="cat-heading">Shop by Category</Link>
                 <ul className="cat-links">
                   <li><Link href="/Products">Apparel</Link></li>
                   <li><Link href="/Products">Innerwear</Link></li>
@@ -56,30 +56,30 @@ const Sitemap = ({ seoData }) => {
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Shop by Price</a>
+                <Link href="/Products" className="cat-heading">Shop by Price</Link>
                 <ul className="cat-links">
-                  <li><a href="#">Under ₹500</a></li>
-                  <li><a href="#">₹500 - ₹1000</a></li>
-                  <li><a href="#">₹1000 - ₹2000</a></li>
-                  <li><a href="#">Above ₹2000</a></li>
+                  <li><Link href="/Products">Under ₹500</Link></li>
+                  <li><Link href="/Products">₹500 - ₹1000</Link></li>
+                  <li><Link href="/Products">₹1000 - ₹2000</Link></li>
+                  <li><Link href="/Products">Above ₹2000</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">New Arrivals</a>
+                <Link href="/Products" className="cat-heading">New Arrivals</Link>
                 <ul className="cat-links">
-                  <li><a href="#">This Week</a></li>
-                  <li><a href="#">This Month</a></li>
-                  <li><a href="#">Trending Now</a></li>
+                  <li><Link href="/Products">This Week</Link></li>
+                  <li><Link href="/Products">This Month</Link></li>
+                  <li><Link href="/Products">Trending Now</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <a href="#" className="cat-heading">Special Offers</a>
+                <Link href="/Collections" className="cat-heading">Special Offers</Link>
                 <ul className="cat-links">
-                  <li><a href="#">Sale Items</a></li>
-                  <li><a href="#">Clearance</a></li>
-                  <li><a href="#">Bundle Deals</a></li>
+                  <li><Link href="/Collections">Sale Items</Link></li>
+                  <li><Link href="/Collections">Clearance</Link></li>
+                  <li><Link href="/Collections">Bundle Deals</Link></li>
                 </ul>
               </div>
             </div>

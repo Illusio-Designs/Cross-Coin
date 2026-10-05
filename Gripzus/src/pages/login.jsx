@@ -18,10 +18,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const digits  = phone.replace(/\D/g, '').slice(0, 10);
-  // OTP subscription is paused, so real MSG91 OTP can't send yet — accept the
-  // test OTP 1111 everywhere until the subscription is restored. Set to false
-  // to switch back to real OTP.
-  const OTP_TEST_MODE = true;
+  // Real MSG91 OTP is live. Keep this false in production — setting it true
+  // accepts the test OTP 1111 as ANY phone number, which lets anyone sign in as
+  // any customer. The localhost check below still allows 1111 for local dev.
+  const OTP_TEST_MODE = false;
   const isLocal = OTP_TEST_MODE || (typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 
