@@ -74,8 +74,8 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     const aggWhere = [];
     const aggRepl = { monthStart: firstDayOfMonth, monthEnd: lastDayOfMonth };
     if (brandId) { aggWhere.push('brand_id = :brandId'); aggRepl.brandId = brandId; }
-    if (hasDateFilter && dateFilter.startDate) { aggWhere.push('createdAt >= :startDate'); aggRepl.startDate = dateFilter.startDate; }
-    if (hasDateFilter && dateFilter.endDate) { aggWhere.push('createdAt <= :endDate'); aggRepl.endDate = dateFilter.endDate; }
+    if (hasDateFilter && dateFilter.startDate) { aggWhere.push('created_at >= :startDate'); aggRepl.startDate = dateFilter.startDate; }
+    if (hasDateFilter && dateFilter.endDate) { aggWhere.push('created_at <= :endDate'); aggRepl.endDate = dateFilter.endDate; }
     const aggWhereSql = aggWhere.length ? `WHERE ${aggWhere.join(' AND ')}` : '';
 
     const orderGroups = await sequelize.query(`
@@ -86,7 +86,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         brand_id,
         COUNT(*)              AS cnt,
         SUM(final_amount)     AS amt,
-        SUM(CASE WHEN createdAt BETWEEN :monthStart AND :monthEnd THEN final_amount ELSE 0 END) AS month_amt
+        SUM(CASE WHEN created_at BETWEEN :monthStart AND :monthEnd THEN final_amount ELSE 0 END) AS month_amt
       FROM orders
       ${aggWhereSql}
       GROUP BY LOWER(status), LOWER(payment_type), LOWER(payment_status), brand_id
