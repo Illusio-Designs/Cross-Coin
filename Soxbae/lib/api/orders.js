@@ -200,3 +200,23 @@ export async function getPublicCoupons() {
 // Aliases for backward-compat with Knitwink naming.
 export const getOrders = getUserOrders;
 export const updateOrderPayment = verifyPayment;
+
+// ── Returns & refunds ──────────────────────────────────────────────────────
+// createReturn takes a FormData (order_id, reason, note, resolution, upi_id,
+// items JSON, images[]) — do NOT set Content-Type so the browser adds the
+// multipart boundary; we still attach the bearer token + brand header.
+export async function createReturn(formData) {
+  const headers = { 'X-Brand-Name': BRAND };
+  const t = getToken();
+  if (t) headers.Authorization = `Bearer ${t}`;
+  const res = await fetch(`${API_URL}/api/returns`, { method: 'POST', headers, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Return request failed');
+  return data;
+}
+
+export async function getMyReturns() {
+  const res = await fetch(`${API_URL}/api/returns/my`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch returns');
+  return res.json();
+}
