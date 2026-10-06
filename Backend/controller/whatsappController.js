@@ -768,9 +768,20 @@ exports.testConnection = async (req, res) => {
 
 // ─── Auto-reply bot ───────────────────────────────────────────────────────────
 // Called from receiveWebhook when an inbound message matches a keyword
+// Resolve the correct brand's name + bare domain for auto-reply copy, so a
+// shared WhatsApp number never shows "Cross Coin" to a Soxbae/Morbix/etc shopper.
+async function brandCopy(brandId) {
+  const settingsHelper = require('../services/settingsHelper.js');
+  const name = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'our store';
+  let url = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  url = String(url).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return { name, url };
+}
+
 async function handleAutoReply(phone, text, brandId) {
   const lower = (text || '').toLowerCase().trim();
   try {
+    const { name: storeName, url: storeUrl } = await brandCopy(brandId);
     if (lower === 'track' || lower.startsWith('track ') || lower.includes('track my order') || lower.includes('where is my order')) {
       const { Order } = require('../model/orderModel.js');
       const { User } = require('../model/userModel.js');
@@ -781,7 +792,7 @@ async function handleAutoReply(phone, text, brandId) {
       if (addr) {
         const order = await Order.findOne({ where: { shipping_address_id: addr.id }, order: [['createdAt', 'DESC']] });
         if (order) {
-          const trackUrl = order.tracking_url || `https://crosscoin.in/OrderTracking?order=${order.order_number}`;
+          const trackUrl = order.tracking_url || `https://${storeUrl}/OrderTracking?order=${order.order_number}`;
           const reply = `📦 Your latest order *#${order.order_number}*\nStatus: *${order.status}*\nAWB: ${order.tracking_number || 'Not assigned yet'}\n\nTrack here: ${trackUrl}`;
           await whatsappService.sendTextMessage(phone, reply, brandId);
           return;
@@ -792,24 +803,24 @@ async function handleAutoReply(phone, text, brandId) {
     }
 
     if (lower === 'hi' || lower === 'hello' || lower === 'hey') {
-      await whatsappService.sendTextMessage(phone, `👋 Hi! Welcome to *Cross Coin*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Return/exchange info\n• *help* — Talk to our team`, brandId);
+      await whatsappService.sendTextMessage(phone, `👋 Hi! Welcome to *${storeName}*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Return/exchange info\n• *help* — Talk to our team`, brandId);
       return;
     }
 
     if (lower === 'return' || lower.includes('return') || lower.includes('exchange')) {
-      await whatsappService.sendTextMessage(phone, `↩️ *Returns & Exchanges*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://crosscoin.in/policy`, brandId);
+      await whatsappService.sendTextMessage(phone, `↩️ *Returns & Exchanges*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://${storeUrl}/policy`, brandId);
       return;
     }
 
     if (lower === 'stop' || lower === 'unsubscribe' || lower === 'opt out') {
       await WhatsappConversation.update({ opted_out: true }, { where: { customer_phone: phone, brand_id: brandId } });
-      await whatsappService.sendTextMessage(phone, `You've been unsubscribed from Cross Coin WhatsApp notifications. Reply *START* to re-subscribe.`, brandId);
+      await whatsappService.sendTextMessage(phone, `You've been unsubscribed from ${storeName} WhatsApp notifications. Reply *START* to re-subscribe.`, brandId);
       return;
     }
 
     if (lower === 'start' || lower === 'subscribe') {
       await WhatsappConversation.update({ opted_out: false }, { where: { customer_phone: phone, brand_id: brandId } });
-      await whatsappService.sendTextMessage(phone, `✅ You're now subscribed to Cross Coin WhatsApp updates. You'll receive order notifications and offers.`, brandId);
+      await whatsappService.sendTextMessage(phone, `✅ You're now subscribed to ${storeName} WhatsApp updates. You'll receive order notifications and offers.`, brandId);
       return;
     }
 
@@ -921,7 +932,12 @@ async function processCodReply(phone, kind, value, brandId) {
     });
   } else {
     const normalised = String(value || '').trim().toLowerCase().replace(/[.!]+$/, '');
-    const confirmKeywords  = ['yes', 'y', 'confirm', 'confirmed', 'haan', 'haan ji', 'ha', 'ok', 'okay', 'correct', 'sahi hai', 'theek hai', 'right', 'yes confirm', 'confirm order'];
+    // Only clear, intentional affirmations — ambiguous one-word fillers ('ok',
+    // 'okay', 'ha', 'right', 'correct', 'y') were removed because a customer with
+    // a pending COD order typing them in casual chat would silently auto-confirm
+    // (and dispatch) the order. The quick-reply Confirm button (handled above) is
+    // the primary, unambiguous path.
+    const confirmKeywords  = ['yes', 'confirm', 'confirmed', 'haan', 'haan ji', 'sahi hai', 'theek hai', 'yes confirm', 'confirm order'];
     // EXACT whole-message match for BOTH intents. The old reject rule used
     // includes(), so an innocent "can I change the color?" matched "change" and
     // dropped the order into the wrong-address capture flow (next message stored
