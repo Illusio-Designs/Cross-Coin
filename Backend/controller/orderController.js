@@ -997,7 +997,7 @@
         const fullName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
         try {
           user = await User.create({
-            username: `${fullName} (${digits}·b${brandId || 0})`,
+            username: fullName,
             email: email.toLowerCase(),
             phone: digits,
             password: tempPassword,

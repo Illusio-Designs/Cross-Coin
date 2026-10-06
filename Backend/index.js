@@ -813,8 +813,42 @@ const startServer = async () => {
             };
             await dropSingleColUniques('phone');
             await dropSingleColUniques('email');
+            // 4. Drop the legacy global unique on `username`. It is only a display
+            //    name — keeping it unique forced consumer names to be mangled with a
+            //    "(phone·bN)" suffix. Identity is the composite phone/email+brand.
+            await dropSingleColUniques('username');
         } catch (err) {
             logger.error('brand-scoped consumer migration failed: ' + err.message);
+        }
+
+        // ── One-time backfill: clean mangled consumer display names ───────────
+        // Historic rows stored username as "Name (9830133884·b11)" or the placeholder
+        // "User 8919904740 (b10)" to dodge the old global username unique. Strip those
+        // so shoppers (after login) and the admin see a real name. Idempotent: once
+        // cleaned the patterns no longer match, so later boots touch 0 rows.
+        try {
+            const { Op } = require('sequelize');
+            const { User } = require('./model/userModel.js');
+            const suspects = await User.findAll({
+                where: { [Op.or]: [
+                    { username: { [Op.like]: '%·b%' } },
+                    { username: { [Op.like]: 'User %(b%' } }
+                ] },
+                attributes: ['id', 'username', 'phone']
+            });
+            let fixed = 0;
+            for (const u of suspects) {
+                const original = u.username || '';
+                let name = original
+                    .replace(/\s*\(\d{6,}·b\d+\)\s*$/, '')        // "Name (9830133884·b11)"
+                    .replace(/^User\s+\d{4,}\s*\(b\d+\)\s*$/, '')  // "User 8919904740 (b10)"
+                    .trim();
+                if (!name) name = u.phone ? `Customer ${String(u.phone).slice(-4)}` : 'Customer';
+                if (name !== original) { await u.update({ username: name }); fixed++; }
+            }
+            if (fixed) logger.info(`✓ cleaned ${fixed} mangled consumer display name(s)`);
+        } catch (err) {
+            logger.warn('consumer name backfill skipped: ' + err.message);
         }
 
         // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────

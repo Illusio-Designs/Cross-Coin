@@ -85,11 +85,11 @@ const User = sequelize.define('User', {
             unique: true,
             name: 'uniq_users_phone_brand',
             fields: ['phone', 'source_brand_id']
-        },
-        {
-            unique: true,
-            fields: ['username']
         }
+        // NOTE: `username` is a display name, NOT an identifier — it is deliberately
+        // NOT unique. Identity is enforced by the composite (email|phone, source_brand_id)
+        // uniques above. A legacy global unique on `username` is dropped in index.js;
+        // keeping a unique here would force ugly "(phone·bN)" name suffixes.
     ]
 });
 

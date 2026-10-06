@@ -531,10 +531,9 @@ exports.initiateGuestCheckout = async (req, res) => {
     });
     if (!user) {
       const baseName = `${firstName} ${lastName || ''}`.trim() || 'Guest';
-      const uniqueUsername = `${baseName} (${normalizedPhone}·b${brandId})`;
       try {
         user = await User.create({
-          username: uniqueUsername,
+          username: baseName,
           email,
           phone: normalizedPhone,
           role: 'consumer',

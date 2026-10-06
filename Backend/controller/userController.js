@@ -259,7 +259,7 @@ module.exports.login = async (req, res) => {
             const desiredEmail = guestEmail || `${digits}@phone.crosscoin.in`;
             const emailTaken = await User.findOne({ where: { email: desiredEmail } });
             const email = emailTaken ? `${digits}.b${brandId || 0}@phone.crosscoin.in` : desiredEmail;
-            const username = guestName || `User ${digits} (b${brandId || 0})`;
+            const username = guestName || `Customer ${digits.slice(-4)}`;
             try {
                 user = await User.create({
                     username,
@@ -285,7 +285,7 @@ module.exports.login = async (req, res) => {
         // Upgrade a legacy placeholder name/email to the guest's real details.
         if (user && guestMatch) {
             const patch = {};
-            if (guestName && /^User \d/.test(user.username || '')) patch.username = guestName;
+            if (guestName && /^(User|Customer)\s\d/.test(user.username || '')) patch.username = guestName;
             if (guestEmail && user.email && user.email.endsWith('@phone.crosscoin.in')) {
                 const taken = await User.findOne({ where: { email: guestEmail, id: { [Op.ne]: user.id } } });
                 if (!taken) patch.email = guestEmail;
