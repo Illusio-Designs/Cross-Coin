@@ -135,7 +135,7 @@ export function BestSellers({ initialItems = null }) {
         </div>
 
         <div className="mt-14 flex justify-center">
-          <Link href="/shop" className="pill-cta-light inline-flex items-center gap-2 px-7 py-3.5 text-[10px] tracking-[0.2em] uppercase font-body">
+          <Link href="/shop" className="pill-cta pill-cta-light">
             View the full collection
           </Link>
         </div>

@@ -414,7 +414,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
                   aria-label="Pincode"
-                  className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-white px-4 h-11 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)]"
+                  className="min-w-0 flex-1 border border-[var(--border)] bg-white px-4 h-11 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)]"
                 />
                 <button
                   type="button"
@@ -445,7 +445,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map(c => (
                     <button key={c} onClick={() => setSelectedColor(c)}
-                      className={`px-4 h-10 text-xs font-body border rounded-full transition-all ${
+                      className={`px-5 h-11 text-xs font-body border rounded-none transition-all ${
                         selectedColor === c
                           ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                           : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -464,7 +464,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map(s => (
                     <button key={s} onClick={() => setSelectedSize(s)}
-                      className={`px-5 h-11 text-xs font-body border rounded-full transition-all ${
+                      className={`px-5 h-11 text-xs font-body border rounded-none transition-all ${
                         selectedSize === s
                           ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                           : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -476,7 +476,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
 
             {/* Quantity + Add to Bag + Buy Now — all in one row */}
             <div className="flex flex-wrap items-stretch gap-3">
-              <div className="flex items-center border border-[var(--border)] rounded-full bg-white shrink-0">
+              <div className="flex items-center border border-[var(--border)] bg-white shrink-0">
                 <button onClick={() => setQty(Math.max(1, qty - 1))}
                   className="px-4 py-3 text-[var(--ink-soft)] hover:text-[var(--gold-deep)] transition-colors">
                   <Minus size={14} />
