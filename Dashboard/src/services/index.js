@@ -2490,3 +2490,52 @@ export const whatsappService = {
     return response.data;
   },
 };
+
+// ── Returns & Refunds (admin) ──────────────────────────────────────────────
+export const returnService = {
+  getReturns: async (params = {}) => {
+    try {
+      const res = await adminApi.get('/api/returns', { params });
+      return res.data; // { success, returns, pagination }
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  getReturn: async (id) => {
+    try {
+      const res = await adminApi.get(`/api/returns/${id}`);
+      return res.data.return;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  approve: async (id, payload) => {
+    try {
+      const res = await adminApi.post(`/api/returns/${id}/approve`, payload);
+      return res.data;
+    } catch (error) {
+      const d = error.response?.data;
+      const e = new Error(getErrorMessage(d || error.message));
+      e.code = d?.code;
+      throw e;
+    }
+  },
+  reject: async (id, reason) => {
+    try {
+      const res = await adminApi.post(`/api/returns/${id}/reject`, { reason });
+      return res.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  uploadProof: async (id, file) => {
+    try {
+      const fd = new FormData();
+      fd.append('proof', file);
+      const res = await adminApi.post(`/api/returns/${id}/proof`, fd);
+      return res.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+};

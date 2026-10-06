@@ -13,6 +13,7 @@ import Attributes from "./products/attributes";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
+import Returns from "./returns/returns";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
 import WebhookEvents from "./shipping/webhookEvents";
@@ -233,6 +234,7 @@ function Dashboard() {
       case 'attributes':      return <Attributes />;
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
+      case 'returns':         return <Returns />;
       case 'shippingFees':    return <ShippingFees />;
       case 'webhook-events':  return <WebhookEvents />;
       case 'coupons':         return <Coupons />;

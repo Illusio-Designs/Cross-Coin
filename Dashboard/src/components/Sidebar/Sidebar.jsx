@@ -44,6 +44,7 @@ const IC = {
 const ALL_MENU = [
   { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
   { label: 'Orders',       icon: IC.orders,    view: 'orders',    roles: ['admin','order_manager'] },
+  { label: 'Returns',      icon: IC.shipping,  view: 'returns',   roles: ['admin','order_manager'] },
   {
     label: 'Reports', icon: IC.reports, roles: ['admin','order_manager'],
     submenu: [
