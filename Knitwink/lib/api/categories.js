@@ -57,3 +57,20 @@ export async function getCategoryByName(name) {
     return null
   }
 }
+
+// Resolve a category by its slug (clean-URL route /collections/<slug>). Same
+// shape as getCategoryByName. The detail page tries this first, then falls back
+// to by-name so older /collections/<name> links keep working.
+export async function getCategoryBySlug(slug) {
+  if (!slug) return null
+  try {
+    const res = await fetch(
+      `${API_URL}/api/categories/by-slug/${encodeURIComponent(slug)}`,
+      { headers: { 'X-Brand-Name': BRAND_NAME } }
+    )
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}

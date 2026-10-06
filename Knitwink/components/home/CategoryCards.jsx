@@ -29,7 +29,7 @@ export function CategoryCards({ categories = [] }) {
     <div className="grid grid-cols-2 gap-3 px-3 py-3 md:grid-cols-4">
       {categories.slice(0, 4).map((c) => {
         const img = cleanImg(c.image)
-        const href = `/products?category=${encodeURIComponent(c.name.trim())}`
+        const href = `/collections/${c.slug || c.name.trim().toLowerCase().replace(/\s+/g, '-')}`
         return (
           <Link
             key={c.id}

@@ -31,7 +31,7 @@ function CollectionCard({ c, img }) {
   }
   return (
     <Link
-      href={`/products?category=${encodeURIComponent(c.name.trim())}`}
+      href={`/collections/${c.slug || c.name.trim().toLowerCase().replace(/\s+/g, '-')}`}
       className="group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[300px] lg:min-h-[380px] bg-gray-200"
     >
       {img && !loaded && (

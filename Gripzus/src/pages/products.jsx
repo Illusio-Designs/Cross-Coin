@@ -67,7 +67,9 @@ const EMPTY_DRAFT = { priceMin: '', priceMax: '', sizes: [], colors: [] };
 
 export default function ProductsPage() {
   const router = useRouter();
-  const collectionParam = router.query.collection || '';
+  // Collection slug comes from ?collection= on /products, or the [slug] param
+  // on the clean /collections/<slug> route (this same page renders both).
+  const collectionParam = router.query.collection || router.query.slug || '';
 
   const [categories, setCategories] = useState([]);   // [{id,name,slug}]
   const [activeCat, setActiveCat]   = useState('all'); // 'all' or category slug
@@ -126,8 +128,8 @@ export default function ProductsPage() {
 
   const selectChip = (slug) => {
     setActiveCat(slug);
-    const url = slug === 'all' ? '/products' : `/products?collection=${encodeURIComponent(slug)}`;
-    router.push(url, undefined, { shallow: true });
+    const url = slug === 'all' ? '/products' : `/collections/${encodeURIComponent(slug)}`;
+    router.push(url, undefined, { shallow: slug === 'all' });
   };
 
   // Filter option lists — dynamic, derived from the products on the page.

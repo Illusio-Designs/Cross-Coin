@@ -16,6 +16,24 @@ const nextConfig = {
       { source: '/uploads/:path*', destination: `${API_TARGET}/uploads/:path*` },
     ];
   },
+  async redirects() {
+    return [
+      // Legacy collection/category queries → clean path (301). Plain /products
+      // still serves the full catalogue.
+      {
+        source: '/products',
+        has: [{ type: 'query', key: 'collection', value: '(?<col>[^&]+)' }],
+        destination: '/collections/:col',
+        permanent: true,
+      },
+      {
+        source: '/products',
+        has: [{ type: 'query', key: 'category', value: '(?<cat>[^&]+)' }],
+        destination: '/collections/:cat',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

@@ -50,6 +50,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // Legacy category query → clean path (301). The detail route resolves by
+      // slug first then name, so /collections/<name> still works for old links.
+      {
+        source: '/products',
+        has: [{ type: 'query', key: 'category', value: '(?<cat>[^&]+)' }],
+        destination: '/collections/:cat',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default withBundleAnalyzer(nextConfig)

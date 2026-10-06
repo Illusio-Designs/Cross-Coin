@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export default function CollectionCard({ collection = {}, index = 0, ratio = 'aspect-[3/4]', className = '' }) {
   const { name = 'Collection', slug, image, count } = collection;
-  const href = `/products?collection=${encodeURIComponent(slug || (name || '').trim())}`;
+  const href = `/collections/${encodeURIComponent(slug || (name || '').trim())}`;
 
   return (
     <Link href={href} className={`group block ${className}`}>

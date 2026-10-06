@@ -31,7 +31,7 @@ export async function getPublicSliders() {
         description: s.description || s.subtitle || '',
         buttonText:  s.buttonText || 'Shop the collection',
         buttonLink:  s.categorySlug
-          ? `/products?category=${s.categorySlug}`
+          ? `/collections/${s.categorySlug}`
           : (s.buttonLink || '/products'),
       }))
       .filter((s) => s.image);

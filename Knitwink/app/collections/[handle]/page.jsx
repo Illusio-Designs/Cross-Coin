@@ -12,7 +12,7 @@
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCategoryByName, getPublicCategories } from '@/lib/api/categories';
+import { getCategoryByName, getCategoryBySlug, getPublicCategories } from '@/lib/api/categories';
 import { mapProduct } from '@/lib/api/products';
 import { ProductCard } from '@/components/collection/ProductCard';
 import { ShimmerImg } from '@/components/ui/ShimmerImg';
@@ -25,7 +25,9 @@ export const revalidate = 300;
 
 export async function generateMetadata({ params }) {
   const { handle } = await params;
-  const category = await getCategoryByName(handle);
+  // Try the slug first (what generateStaticParams + the cards emit), then fall
+  // back to the category name so older /collections/<name> links still resolve.
+  const category = await getCategoryBySlug(handle) || await getCategoryByName(handle);
 
   const name = category?.name || handle;
   const description = category?.description
@@ -61,7 +63,9 @@ export async function generateStaticParams() {
 
 export default async function CollectionPage({ params }) {
   const { handle } = await params;
-  const category = await getCategoryByName(handle);
+  // Try the slug first (what generateStaticParams + the cards emit), then fall
+  // back to the category name so older /collections/<name> links still resolve.
+  const category = await getCategoryBySlug(handle) || await getCategoryByName(handle);
 
   if (!category) return notFound();
 
