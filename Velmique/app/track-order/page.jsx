@@ -47,10 +47,10 @@ function statusBadge(status) {
   if (s === 'delivered')                 return { bg: '#16a34a',  fg: '#fff', label: 'Delivered' };
   if (s === 'cancelled')                 return { bg: '#dc2626',  fg: '#fff', label: 'Cancelled' };
   if (s === 'out_for_delivery')          return { bg: '#0ea5e9',  fg: '#fff', label: 'Out for Delivery' };
-  if (s === 'shipped' || s === 'dispatched' || s === 'in_transit') return { bg: '#8B6914', fg: '#fff', label: 'Shipped' };
-  if (s === 'confirmed')                 return { bg: '#C9A84C',  fg: '#1A1612', label: 'Confirmed' };
-  if (s === 'processing')                return { bg: '#EAE0C7',  fg: '#4A3F33', label: 'Processing' };
-  return { bg: '#F5EFE0', fg: '#8A7E6C', label: status || 'Pending' };
+  if (s === 'shipped' || s === 'dispatched' || s === 'in_transit') return { bg: '#8F7548', fg: '#fff', label: 'Shipped' };
+  if (s === 'confirmed')                 return { bg: '#B89A63',  fg: '#11100E', label: 'Confirmed' };
+  if (s === 'processing')                return { bg: '#E6DED0',  fg: '#49423A', label: 'Processing' };
+  return { bg: '#EFEAE2', fg: '#777168', label: status || 'Pending' };
 }
 
 function getTimeline(orderData) {

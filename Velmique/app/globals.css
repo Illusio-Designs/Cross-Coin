@@ -16,13 +16,13 @@
   top: 0;
   z-index: 9999;
   padding: 12px 18px;
-  background: #1A1612;
+  background: #11100E;
   color: #fff;
   font-weight: 600;
   border-radius: 0 0 8px 0;
   text-decoration: none;
 }
-.skip-to-main:focus { left: 0; outline: 3px solid #C9A84C; outline-offset: 2px; }
+.skip-to-main:focus { left: 0; outline: 3px solid #B89A63; outline-offset: 2px; }
 
 .sr-only {
   position: absolute !important;
@@ -59,7 +59,7 @@
   --champagne: #C3AF77;       /* hero panel champagne */
   --olive: #9C8A54;           /* olive-gold pill */
   --border: rgba(20, 18, 15, 0.12); /* subtle dark dividers */
-  --dark: #14110E;            /* dark contrast (footer) */
+  --dark: #11100E;            /* dark contrast (footer) */
   --dark-soft: #1F1B16;
 
   /* Legacy aliases for any older components */
@@ -663,7 +663,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   padding: 26px 30px;
   margin-bottom: 20px;
   border-radius: 10px;
-  background: linear-gradient(120deg, #C9A84C, #8B6914);
+  background: linear-gradient(120deg, #B89A63, #8F7548);
   color: #fffdf5;
   box-shadow: 0 12px 30px rgba(139, 105, 20, 0.18);
 }

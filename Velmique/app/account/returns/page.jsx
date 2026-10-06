@@ -80,9 +80,9 @@ export default function ReturnsPage() {
   const resolutions = isCod ? [['upi', 'Refund to UPI / bank'], ['exchange', 'Exchange']] : [['original', 'Refund to original payment'], ['upi', 'Refund to UPI / bank'], ['exchange', 'Exchange']];
 
   return (
-    <div style={{ background: 'var(--bg, #FBF7EC)', minHeight: '70vh', color: 'var(--ink, #1A1612)', fontFamily: "'Jost', system-ui, sans-serif" }}>
+    <div style={{ background: 'var(--bg, #F7F4EF)', minHeight: '70vh', color: 'var(--ink, #11100E)', fontFamily: "'Jost', system-ui, sans-serif" }}>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '40px 20px 70px' }}>
-        <div style={{ fontSize: '.66rem', letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--gold-deep, #8B6914)' }}>Account</div>
+        <div style={{ fontSize: '.66rem', letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--gold-deep, #8F7548)' }}>Account</div>
         <h1 style={{ margin: '8px 0 22px', fontFamily: "'Playfair Display', Cormorant, serif", fontSize: '2.2rem' }}>Returns &amp; refunds</h1>
 
         {msg && <div style={{ margin: '0 0 16px', padding: '11px 14px', borderRadius: 12, fontSize: '.9rem', background: msg.t === 'ok' ? '#edf6ef' : '#fbeaea', color: msg.t === 'ok' ? '#2f7d4f' : '#a3382f', border: '1px solid ' + (msg.t === 'ok' ? '#cfe6d4' : '#eecac6') }}>{msg.m}</div>}
@@ -107,13 +107,13 @@ export default function ReturnsPage() {
                 {form.photos.map((f, i) => (
                   <div key={i} style={{ position: 'relative' }}>
                     <img src={URL.createObjectURL(f)} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }} />
-                    <button type="button" onClick={() => set('photos', form.photos.filter((_, k) => k !== i))} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, border: 0, background: '#1A1612', color: '#fff', cursor: 'pointer' }}>×</button>
+                    <button type="button" onClick={() => set('photos', form.photos.filter((_, k) => k !== i))} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, border: 0, background: '#11100E', color: '#fff', cursor: 'pointer' }}>×</button>
                   </div>
                 ))}
               </div>
             )}
             <label style={lbl}>How would you like your refund?</label>
-            {isCod && <p style={{ fontSize: '.8rem', color: 'var(--gold-deep, #8B6914)', margin: '0 0 6px' }}>This was a COD order, so there’s no online payment to reverse — choose a UPI/bank payout or an exchange.</p>}
+            {isCod && <p style={{ fontSize: '.8rem', color: 'var(--gold-deep, #8F7548)', margin: '0 0 6px' }}>This was a COD order, so there’s no online payment to reverse — choose a UPI/bank payout or an exchange.</p>}
             <select value={form.resolution} onChange={(e) => set('resolution', e.target.value)} style={inp}>
               {resolutions.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
             </select>
@@ -122,7 +122,7 @@ export default function ReturnsPage() {
           </form>
         )}
 
-        {loading ? <p style={{ color: 'var(--gold-deep, #8B6914)' }}>Loading…</p> : (
+        {loading ? <p style={{ color: 'var(--gold-deep, #8F7548)' }}>Loading…</p> : (
           <>
             {returns.length > 0 && (
               <>
@@ -172,13 +172,13 @@ export default function ReturnsPage() {
   );
 }
 
-const card = { background: '#fff', border: '1px solid var(--border, #E0D4B8)', borderRadius: 16, padding: 18 };
+const card = { background: '#fff', border: '1px solid var(--border, #D8D3C9)', borderRadius: 16, padding: 18 };
 const lbl = { display: 'block', fontWeight: 600, fontSize: '.85rem', margin: '14px 0 6px' };
-const inp = { width: '100%', border: '1px solid var(--border, #E0D4B8)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.92rem', boxSizing: 'border-box', background: '#fff' };
-const btnPrimary = { background: 'var(--ink, #1A1612)', color: '#fff', border: 0, borderRadius: 999, padding: '11px 22px', fontWeight: 600, fontSize: '.8rem', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
-const btnGhost = { background: 'transparent', color: 'var(--ink, #1A1612)', border: '1px solid var(--border, #E0D4B8)', borderRadius: 999, padding: '9px 18px', fontWeight: 600, fontSize: '.78rem', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
+const inp = { width: '100%', border: '1px solid var(--border, #D8D3C9)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.92rem', boxSizing: 'border-box', background: '#fff' };
+const btnPrimary = { background: 'var(--ink, #11100E)', color: '#fff', border: 0, borderRadius: 999, padding: '11px 22px', fontWeight: 600, fontSize: '.8rem', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
+const btnGhost = { background: 'transparent', color: 'var(--ink, #11100E)', border: '1px solid var(--border, #D8D3C9)', borderRadius: 999, padding: '9px 18px', fontWeight: 600, fontSize: '.78rem', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' };
 function badge(s) {
   const ok = s === 'refunded' || s === 'approved' || s === 'received';
   const bad = s === 'rejected';
-  return { background: ok ? '#edf6ef' : bad ? '#fbeaea' : '#f3ecda', color: ok ? '#2f7d4f' : bad ? '#a3382f' : '#8B6914', padding: '3px 10px', borderRadius: 999, fontSize: '.72rem', fontWeight: 600 };
+  return { background: ok ? '#edf6ef' : bad ? '#fbeaea' : '#f3ecda', color: ok ? '#2f7d4f' : bad ? '#a3382f' : '#8F7548', padding: '3px 10px', borderRadius: 999, fontSize: '.72rem', fontWeight: 600 };
 }

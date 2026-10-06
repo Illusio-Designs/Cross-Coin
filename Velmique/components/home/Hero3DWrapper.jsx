@@ -35,7 +35,7 @@ function HeroSkeleton() {
   return (
     <section
       aria-hidden
-      className="relative w-full overflow-hidden bg-gradient-to-br from-[#C9A84C] via-[#BFAB5E] to-[#A89548] h-[92vh] md:h-[96vh]"
+      className="relative w-full overflow-hidden bg-gradient-to-br from-[#B89A63] via-[#C3AF77] to-[#9C8A54] h-[92vh] md:h-[96vh]"
     >
       {/* Same paper grain as the real hero so the transition is seamless */}
       <div

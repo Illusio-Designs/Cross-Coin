@@ -72,7 +72,7 @@ export default function AddressFormRHF({
 
   const disabled = busy || isSubmitting;
   const inputBase = (hasError) => ({
-    border: hasError ? '1px solid #dc2626' : '1px solid #E0D4B8',
+    border: hasError ? '1px solid #dc2626' : '1px solid #D8D3C9',
     borderRadius: 6, padding: '8px 10px', fontSize: 14, background: '#fff',
   });
 
@@ -81,7 +81,7 @@ export default function AddressFormRHF({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
         {FIELDS.map((f) => (
           <div key={f.name} style={{ display: 'flex', flexDirection: 'column' }}>
-            <label htmlFor={`addr-${f.name}`} style={{ fontSize: 12, color: '#4A3F33', marginBottom: 4 }}>{f.label}</label>
+            <label htmlFor={`addr-${f.name}`} style={{ fontSize: 12, color: '#49423A', marginBottom: 4 }}>{f.label}</label>
             {f.textarea ? (
               <textarea id={`addr-${f.name}`} rows={2} placeholder={f.placeholder}
                 {...register(f.name)} aria-invalid={errors[f.name] ? 'true' : 'false'}
@@ -123,12 +123,12 @@ export default function AddressFormRHF({
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={disabled}
-            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #E0D4B8', background: '#fff', cursor: 'pointer' }}>
+            style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #D8D3C9', background: '#fff', cursor: 'pointer' }}>
             Cancel
           </button>
         )}
         <button type="submit" disabled={disabled}
-          style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#1A1612', color: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1 }}>
+          style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#11100E', color: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1 }}>
           {disabled ? 'Saving…' : submitLabel}
         </button>
       </div>

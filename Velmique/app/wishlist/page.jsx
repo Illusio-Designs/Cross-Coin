@@ -81,11 +81,11 @@ export default function WishlistPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
-                <div className="aspect-[3/4] bg-[#EAE0C7] animate-pulse" />
+                <div className="aspect-[3/4] bg-[#E6DED0] animate-pulse" />
                 <div className="p-5 space-y-2">
-                  <div className="h-3 w-1/3 rounded bg-[#EAE0C7] animate-pulse" />
-                  <div className="h-4 w-3/4 rounded bg-[#EAE0C7] animate-pulse" />
-                  <div className="h-9 w-full rounded-full bg-[#EAE0C7] animate-pulse mt-3" />
+                  <div className="h-3 w-1/3 rounded bg-[#E6DED0] animate-pulse" />
+                  <div className="h-4 w-3/4 rounded bg-[#E6DED0] animate-pulse" />
+                  <div className="h-9 w-full rounded-full bg-[#E6DED0] animate-pulse mt-3" />
                 </div>
               </div>
             ))}
@@ -125,7 +125,7 @@ export default function WishlistPage() {
                   transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {/* ── Image — natural aspect, full picture visible ───────── */}
-                  <Link href={`/product/${item.slug}`} className="relative block bg-[#EAE0C7] aspect-[4/5]">
+                  <Link href={`/product/${item.slug}`} className="relative block bg-[#E6DED0] aspect-[4/5]">
                     <img
                       src={safeSrc}
                       alt={item.name}
@@ -140,7 +140,7 @@ export default function WishlistPage() {
                     {/* Remove (X) — top-right */}
                     <button
                       onClick={(e) => { e.preventDefault(); toggleWishlist(item); }}
-                      className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-[#C9A84C] text-[#1A1612] hover:bg-[#b8983e] transition-colors rounded-full"
+                      className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-[#B89A63] text-[#11100E] hover:bg-[#b8983e] transition-colors rounded-full"
                       aria-label="Remove from wishlist"
                     >
                       <X size={12} />
@@ -162,17 +162,17 @@ export default function WishlistPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         {product?.collection && (
-                          <p className="text-[#8A7E6C] text-[8px] tracking-[0.3em] uppercase font-body mb-1 truncate">
+                          <p className="text-[#777168] text-[8px] tracking-[0.3em] uppercase font-body mb-1 truncate">
                             {product.collection}
                           </p>
                         )}
                         <Link href={`/product/${item.slug}`}>
-                          <h3 className="font-serif text-[#1A1612] text-sm md:text-base leading-tight hover:italic hover:text-[#8B6914] transition-all line-clamp-2">
+                          <h3 className="font-serif text-[#11100E] text-sm md:text-base leading-tight hover:italic hover:text-[#8F7548] transition-all line-clamp-2">
                             {item.name}
                           </h3>
                         </Link>
                       </div>
-                      <span className="font-serif text-[#1A1612] text-base italic shrink-0">
+                      <span className="font-serif text-[#11100E] text-base italic shrink-0">
                         ₹{Number(item.price).toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -183,8 +183,8 @@ export default function WishlistPage() {
                       <div className="space-y-2">
                         {colors.length > 0 && (
                           <div>
-                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#8A7E6C] font-body mb-1 truncate">
-                              Colour: <span className="text-[#1A1612]">{item.color || '—'}</span>
+                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#777168] font-body mb-1 truncate">
+                              Colour: <span className="text-[#11100E]">{item.color || '—'}</span>
                             </p>
                             <div className="flex flex-wrap gap-1">
                               {colors.map(c => (
@@ -193,8 +193,8 @@ export default function WishlistPage() {
                                   onClick={() => onPickColor(item, c)}
                                   className={`px-2 h-6 text-[9px] font-body border rounded-full transition-all ${
                                     item.color === c
-                                      ? 'border-[#1A1612] bg-[#1A1612] text-white'
-                                      : 'border-[#E0D4B8] text-[#4A3F33] hover:border-[#C9A84C]'
+                                      ? 'border-[#11100E] bg-[#11100E] text-white'
+                                      : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'
                                   }`}
                                 >
                                   {c}
@@ -206,8 +206,8 @@ export default function WishlistPage() {
 
                         {sizes.length > 0 && (
                           <div>
-                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#8A7E6C] font-body mb-1 truncate">
-                              Size: <span className="text-[#1A1612]">{item.size || '—'}</span>
+                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#777168] font-body mb-1 truncate">
+                              Size: <span className="text-[#11100E]">{item.size || '—'}</span>
                             </p>
                             <div className="flex flex-wrap gap-1">
                               {sizes.map(s => (
@@ -216,8 +216,8 @@ export default function WishlistPage() {
                                   onClick={() => onPickSize(item, s)}
                                   className={`px-2 h-6 text-[9px] font-body border rounded-full transition-all ${
                                     item.size === s
-                                      ? 'border-[#1A1612] bg-[#1A1612] text-white'
-                                      : 'border-[#E0D4B8] text-[#4A3F33] hover:border-[#C9A84C]'
+                                      ? 'border-[#11100E] bg-[#11100E] text-white'
+                                      : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'
                                   }`}
                                 >
                                   {s}

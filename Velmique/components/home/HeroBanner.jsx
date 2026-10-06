@@ -28,7 +28,7 @@ export default function HeroBanner({ slides = [] }) {
   const titleBottom = words.slice(mid).join(' ');
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#C9A84C] via-[#BFAB5E] to-[#A89548] h-[76vh] md:h-[96vh]">
+    <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#B89A63] via-[#C3AF77] to-[#9C8A54] h-[76vh] md:h-[96vh]">
 
       {/* Subtle paper grain */}
       <div
@@ -56,7 +56,7 @@ export default function HeroBanner({ slides = [] }) {
             >
               {/* Headline — backend title auto-split into solid + outlined lines */}
               <motion.h1
-                className="font-display text-[#FBF7EC] text-center leading-[0.82] tracking-[-0.02em] uppercase"
+                className="font-display text-[#F7F4EF] text-center leading-[0.82] tracking-[-0.02em] uppercase"
                 style={{ fontSize: 'clamp(2.6rem, 11vw, 10.5rem)' }}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -134,14 +134,14 @@ export default function HeroBanner({ slides = [] }) {
               onClick={() => setCurrent(i)}
               aria-label={`Go to slide ${i + 1}`}
               className={`relative h-[3px] overflow-hidden transition-all duration-300 ${
-                i === current ? 'bg-[#1A1612]/25' : 'bg-white/50 hover:bg-white/70'
+                i === current ? 'bg-[#11100E]/25' : 'bg-white/50 hover:bg-white/70'
               }`}
               style={{ width: i === current ? 36 : 16 }}
             >
               {i === current && (
                 <motion.div
                   key={current}
-                  className="absolute inset-0 bg-[#1A1612]"
+                  className="absolute inset-0 bg-[#11100E]"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 6.5, ease: 'linear' }}
