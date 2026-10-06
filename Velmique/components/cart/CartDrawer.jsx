@@ -836,7 +836,7 @@ export default function CartDrawer() {
                         Change
                       </button>
                       {showAddrDropdown && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#D8D3C9] rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#D8D3C9] shadow-lg z-10 max-h-64 overflow-y-auto">
                           {addresses.map(a => (
                             <button key={a.id} onClick={() => { setSelectedAddress(a); setShowAddrDropdown(false); }}
                               className={`w-full text-left px-3 py-2.5 text-xs font-body border-b border-[#EFEAE2] last:border-0 hover:bg-[#EFEAE2] ${selectedAddress?.id === a.id ? 'bg-[#EFEAE2]' : ''}`}>
@@ -855,7 +855,7 @@ export default function CartDrawer() {
                 </div>
 
                 {selectedAddress && !showAddrForm && (
-                  <div className="bg-white border border-[#D8D3C9] rounded-xl p-3.5 flex items-start gap-2.5">
+                  <div className="bg-white border border-[#D8D3C9] p-3.5 flex items-start gap-2.5">
                     <MapPin size={14} className="text-[#8F7548] mt-1 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="font-serif italic text-[#11100E] text-sm">{selectedAddress.full_name || selectedAddress.fullName}</p>
@@ -930,7 +930,7 @@ export default function CartDrawer() {
                     return (
                       <button key={f.id} onClick={() => !disabled && setSelectedFee(f)}
                         disabled={disabled}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                        className={`w-full flex items-center gap-3 p-3 border text-left transition-all ${
                           active ? 'border-[#B89A63] bg-[#B89A63]/10' : 'border-[#D8D3C9] bg-white hover:border-[#B89A63]'
                         } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >

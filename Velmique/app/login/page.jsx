@@ -166,14 +166,14 @@ export default function LoginPage() {
 
       {/* Form card */}
       <section className="px-6 md:px-12 py-16 md:py-20">
-        <div className="max-w-md mx-auto bg-white border border-[var(--border)] rounded-2xl p-8 md:p-10">
+        <div className="max-w-md mx-auto bg-white border border-[var(--border)] p-8 md:p-10">
           {step === 'phone' ? (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] tracking-[0.35em] uppercase font-body text-[var(--ink-muted)]">
                   Phone Number
                 </label>
-                <div className="flex items-center gap-2 rounded-full border border-[var(--border)] px-5 py-3.5 focus-within:border-[var(--gold)] transition-colors">
+                <div className="flex items-center gap-2 border border-[var(--border)] px-5 py-3.5 focus-within:border-[var(--gold)] transition-colors">
                   <span className="text-sm text-[var(--ink-muted)] font-body">+91</span>
                   <input
                     type="tel"
@@ -198,7 +198,7 @@ export default function LoginPage() {
               <button
                 onClick={handleSendOtp}
                 disabled={digits.length !== 10 || loading}
-                className="flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3.5 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3.5 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Checking…' : 'Send OTP'}
                 {!loading && <ArrowRight size={14} strokeWidth={1.6} />}
@@ -228,7 +228,7 @@ export default function LoginPage() {
                     value={d}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
-                    className="h-14 w-14 rounded-xl border border-[var(--border)] text-center text-xl font-display text-[var(--ink)] outline-none focus:border-[var(--gold)] transition-colors"
+                    className="h-14 w-14 border border-[var(--border)] text-center text-xl font-display text-[var(--ink)] outline-none focus:border-[var(--gold)] transition-colors"
                   />
                 ))}
               </div>
@@ -238,7 +238,7 @@ export default function LoginPage() {
               <button
                 onClick={handleVerify}
                 disabled={loading}
-                className="rounded-full bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3.5 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50"
+                className="bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3.5 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50"
               >
                 {loading ? 'Verifying…' : 'Verify & Login'}
               </button>

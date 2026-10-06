@@ -89,7 +89,7 @@ function ConfirmDialog({ dialog, onClose }) {
   if (!dialog) return null;
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-[2px] px-4" onClick={onClose}>
-      <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <h3 className="font-serif italic text-xl text-[var(--ink)] mb-2">{dialog.title}</h3>
           <p className="text-sm text-[var(--ink-muted)] leading-relaxed font-body">{dialog.message}</p>
@@ -99,7 +99,7 @@ function ConfirmDialog({ dialog, onClose }) {
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Tell us why (optional)…"
-              className="mt-4 w-full bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--gold)] outline-none rounded-xl px-4 py-3 text-sm text-[var(--ink)] font-body transition-colors resize-none"
+              className="mt-4 w-full bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--gold)] outline-none px-4 py-3 text-sm text-[var(--ink)] font-body transition-colors resize-none"
             />
           )}
           <div className="flex gap-3 pt-6">
@@ -308,7 +308,7 @@ function OrdersTab({ showToast }) {
         const orderRef = order.order_number || order.orderNumber || `#${order.id}`;
 
         return (
-          <article key={order.id} className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden flex flex-col">
+          <article key={order.id} className="bg-white border border-[var(--border)] overflow-hidden flex flex-col">
             {/* Header strip */}
             <header className="px-5 py-4 border-b border-[var(--border)] flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -550,7 +550,7 @@ function AddressesTab({ showToast }) {
       {editing !== 'new' && (
         <button
           onClick={startNew}
-          className="w-full bg-white border border-dashed border-[var(--border)] hover:border-[var(--gold)] rounded-2xl p-5 flex items-center justify-center gap-2 text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors text-[11px] tracking-[0.3em] uppercase font-body"
+          className="w-full bg-white border border-dashed border-[var(--border)] hover:border-[var(--gold)] p-5 flex items-center justify-center gap-2 text-[var(--ink-soft)] hover:text-[var(--ink)] transition-colors text-[11px] tracking-[0.3em] uppercase font-body"
         >
           <Plus size={14} /> Add New Address
         </button>
@@ -568,7 +568,7 @@ function AddressesTab({ showToast }) {
       {visibleAddrs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {visibleAddrs.map(a => (
-            <div key={a.id} className="bg-white border border-[var(--border)] rounded-2xl p-6 flex flex-col">
+            <div key={a.id} className="bg-white border border-[var(--border)] p-6 flex flex-col">
               {/* Top: name + default badge */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 flex-wrap min-w-0">
@@ -634,7 +634,7 @@ function AddressForm({ form, setForm, onSave, onCancel, saving, isNew }) {
   const toggle = (k) => () => setForm(p => ({ ...p, [k]: !p[k] }));
 
   return (
-    <div className="bg-white border border-[var(--gold)] rounded-2xl p-6 md:p-7">
+    <div className="bg-white border border-[var(--gold)] p-6 md:p-7">
       <div className="flex items-center justify-between mb-5">
         <h3 className="font-display text-[var(--ink)] text-xl uppercase tracking-tight">
           {isNew ? 'New Address' : 'Edit Address'}
@@ -702,7 +702,7 @@ function DetailsTab({ user, fetchUser, showToast }) {
   };
 
   return (
-    <div className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+    <div className="bg-white border border-[var(--border)] p-6 md:p-7">
       <div className="flex items-center justify-between mb-5">
         <h3 className="font-display text-[var(--ink)] text-2xl uppercase tracking-tight">Account Details</h3>
         <button
@@ -763,7 +763,7 @@ function DetailRow({ label, value, editable, onChange }) {
 
 function CardLoader({ text }) {
   return (
-    <div className="bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
+    <div className="bg-white border border-[var(--border)] p-12 text-center">
       <p className="text-[var(--ink-muted)] text-xs tracking-[0.3em] uppercase font-body">{text}</p>
     </div>
   );
@@ -771,7 +771,7 @@ function CardLoader({ text }) {
 
 function EmptyCard({ icon: Icon, title, subtitle, cta }) {
   return (
-    <div className="bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
+    <div className="bg-white border border-[var(--border)] p-12 text-center">
       <Icon size={28} className="mx-auto mb-3 text-[var(--ink-muted)]" />
       <p className="font-serif italic text-[var(--ink)] text-lg">{title}</p>
       {subtitle && <p className="text-[var(--ink-muted)] text-sm font-body mt-1">{subtitle}</p>}

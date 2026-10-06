@@ -36,9 +36,9 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {cart.map((item, i) => (
               <div key={`${item.id}-${item.size}-${i}`}
-                className="bg-white border border-[var(--border)] rounded-2xl p-5 flex gap-5">
+                className="bg-white border border-[var(--border)] p-5 flex gap-5">
                 <Link href={`/product/${item.slug}`}>
-                  <img src={item.image} alt={item.name} className="w-24 h-32 object-cover rounded-xl bg-[var(--surface-2)]" />
+                  <img src={item.image} alt={item.name} className="w-24 h-32 object-cover bg-[var(--surface-2)]" />
                 </Link>
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-3">
@@ -74,7 +74,7 @@ export default function CartPage() {
 
           {/* Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-[var(--border)] rounded-2xl p-7 sticky top-28">
+            <div className="bg-white border border-[var(--border)] p-7 sticky top-28">
               <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Summary</p>
               <h2 className="font-display text-[var(--ink)] text-2xl uppercase tracking-tight mb-6">Order Total</h2>
 

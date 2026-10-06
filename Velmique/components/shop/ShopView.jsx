@@ -224,7 +224,7 @@ export default function ShopView({ collectionSlug = '' }) {
           {/* Desktop sidebar (hidden on mobile — mobile uses the drawer above) */}
           {filtersOpen && (
             <aside className="hidden md:block w-60 flex-shrink-0">
-              <div className="bg-white border border-[var(--border)] rounded-2xl p-6 space-y-7 sticky top-28">
+              <div className="bg-white border border-[var(--border)] p-6 space-y-7 sticky top-28">
                 <FilterPanel
                   priceRange={priceRange}
                   setPriceRange={setPriceRange}
@@ -248,7 +248,7 @@ export default function ShopView({ collectionSlug = '' }) {
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="aspect-[3/4] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+                  <div key={i} className="aspect-[3/4] bg-[var(--surface-2)] animate-pulse" />
                 ))}
               </div>
             ) : filtered.length > 0 ? (
@@ -312,7 +312,7 @@ function SortDropdown({ value, onChange, options }) {
       {open && (
         <ul
           role="listbox"
-          className="absolute left-0 sm:left-auto sm:right-0 top-[calc(100%+8px)] z-30 w-[min(14rem,calc(100vw-2rem))] bg-white border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden py-1.5"
+          className="absolute left-0 sm:left-auto sm:right-0 top-[calc(100%+8px)] z-30 w-[min(14rem,calc(100vw-2rem))] bg-white border border-[var(--border)] shadow-xl overflow-hidden py-1.5"
         >
           {options.map(o => {
             const active = o.value === value;

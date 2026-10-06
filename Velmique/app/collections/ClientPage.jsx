@@ -35,13 +35,13 @@ export default function CollectionsPage({ initialCollections = [] }) {
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className={`rounded-2xl bg-[var(--surface-2)] animate-pulse ${i === 0 ? 'md:col-span-2 aspect-[16/7]' : 'aspect-[4/3]'}`} />
+              <div key={i} className={`bg-[var(--surface-2)] animate-pulse ${i === 0 ? 'md:col-span-2 aspect-[16/7]' : 'aspect-[4/3]'}`} />
             ))}
           </div>
         )}
 
         {!loading && collections.length === 0 && (
-          <div className="text-center py-24 bg-white border border-[var(--border)] rounded-2xl">
+          <div className="text-center py-24 bg-white border border-[var(--border)]">
             <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight mb-3">No collections yet</p>
             <p className="text-[var(--ink-soft)] text-sm font-body">Collections will appear here once they're published.</p>
           </div>
@@ -50,7 +50,7 @@ export default function CollectionsPage({ initialCollections = [] }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {collections.map((col, i) => (
             <Link key={col.id || col.slug || i} href={`/collections/${col.slug}`}
-              className={`relative group overflow-hidden rounded-2xl bg-[var(--surface-2)] ${i === 0 ? 'md:col-span-2' : ''}`}>
+              className={`relative group overflow-hidden bg-[var(--surface-2)] ${i === 0 ? 'md:col-span-2' : ''}`}>
               <div className={`${i === 0 ? 'aspect-[16/7]' : 'aspect-[4/3]'} overflow-hidden`}>
                 {col.image && (
                   <img src={col.image} alt={col.name}

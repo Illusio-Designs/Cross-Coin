@@ -258,13 +258,13 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 <div className="hidden md:flex flex-col gap-3 w-20 max-h-[80vh] overflow-y-auto">
                   {gallery.map((img, i) => (
                     <button key={`${img}-${i}`} onClick={() => setActiveImg(i)}
-                      className={`shrink-0 aspect-square overflow-hidden rounded-xl border-2 transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                      className={`shrink-0 aspect-square overflow-hidden rounded-none border transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-[var(--border)] opacity-60 hover:opacity-100'}`}>
                       <img src={ik(img, 160)} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
-              <div className="flex-1 overflow-hidden rounded-2xl bg-[var(--surface-2)] relative">
+              <div className="flex-1 overflow-hidden bg-[var(--surface-2)] relative">
                 <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block w-full cursor-zoom-in relative">
                   <img
                     key={gallery[activeImg]}
@@ -284,13 +284,13 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   </span>
                 </button>
                 {product.badge && (
-                  <span className="absolute top-5 left-5 text-[10px] tracking-[0.3em] uppercase px-4 py-1.5 font-body rounded-full bg-white text-[var(--ink)] z-10">
+                  <span className="absolute top-5 left-5 text-[9px] tracking-[0.22em] uppercase px-4 py-2 font-body bg-white text-[var(--ink)] z-10">
                     {product.badge}
                   </span>
                 )}
                 {!displayInStock && (
                   <div className="absolute inset-0 bg-[var(--bg)]/70 backdrop-blur-[1px] flex items-center justify-center">
-                    <span className="text-[var(--ink)] text-[10px] tracking-[0.4em] uppercase border border-[var(--border)] bg-white px-5 py-1.5 rounded-full">Sold Out</span>
+                    <span className="text-[var(--ink)] text-[10px] tracking-[0.4em] uppercase border border-[var(--border)] bg-white px-5 py-2">Sold Out</span>
                   </div>
                 )}
               </div>
@@ -301,7 +301,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
               <div className="md:hidden mt-3 flex gap-2 overflow-x-auto pb-2">
                 {gallery.map((img, i) => (
                   <button key={`m-${img}-${i}`} onClick={() => setActiveImg(i)}
-                    className={`shrink-0 w-16 aspect-square overflow-hidden rounded-lg border-2 transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-transparent opacity-60'}`}>
+                    className={`shrink-0 w-16 aspect-square overflow-hidden rounded-none border transition-all ${activeImg === i ? 'border-[var(--gold)]' : 'border-[var(--border)] opacity-60'}`}>
                     <img src={ik(img, 160)} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -394,7 +394,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 <Truck size={13} className="text-[var(--gold-deep)]" /> Delivered by {eta.day}{eta.suffix} {eta.month}
               </p>
               {Number.isFinite(Number(displayStock)) && Number(displayStock) > 0 && Number(displayStock) <= 5 && (
-                <p className="inline-flex items-center gap-1.5 mt-3 rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs font-body font-medium text-[var(--gold-deep)]">
+                <p className="inline-flex items-center gap-1.5 mt-3 bg-[var(--surface-2)] px-3 py-1.5 text-xs font-body font-medium text-[var(--gold-deep)]">
                   <AlertTriangle size={12} /> Only {Number(displayStock)} left
                 </p>
               )}
@@ -524,7 +524,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
               </h2>
 
               {variationDetails.length > 0 ? (
-                <dl className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)] overflow-hidden">
+                <dl className="bg-white border border-[var(--border)] divide-y divide-[var(--border)] overflow-hidden">
                   {variationDetails.map(([label, value]) => (
                     <div key={label} className="grid grid-cols-3 gap-4 px-5 py-3.5">
                       <dt className="text-[10px] tracking-[0.25em] uppercase text-[var(--ink-muted)] font-body self-center">
@@ -556,7 +556,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   { icon: ShieldCheck, label: '100% Authentic',  sub: 'Bandra atelier' },
                   { icon: Sparkles,    label: 'GST Included',    sub: 'No surprises' },
                 ].map(t => (
-                  <div key={t.label} className="flex items-start gap-3 bg-white border border-[var(--border)] rounded-xl p-4">
+                  <div key={t.label} className="flex items-start gap-3 bg-white border border-[var(--border)] p-4">
                     <t.icon size={18} className="text-[var(--gold-deep)] mt-0.5 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[var(--ink)] text-xs font-body font-medium">{t.label}</p>
