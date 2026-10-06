@@ -47,6 +47,18 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Legacy collection query → clean path (301). Plain /shop still serves the
+      // full catalogue; only /shop?collection=<slug> is redirected.
+      {
+        source: '/shop',
+        has: [{ type: 'query', key: 'collection', value: '(?<col>[^&]+)' }],
+        destination: '/collections/:col',
+        permanent: true,
+      },
+    ];
+  },
 }
 
 // Bundle analyzer — run `npm run analyze` to inspect output.

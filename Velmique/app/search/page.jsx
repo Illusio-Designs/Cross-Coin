@@ -89,7 +89,7 @@ function SearchResults() {
             {suggestions.length > 0 && (
               <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto mb-6">
                 {suggestions.map(s => (
-                  <Link key={s.slug} href={`/shop?collection=${encodeURIComponent(s.slug)}`}
+                  <Link key={s.slug} href={`/collections/${encodeURIComponent(s.slug)}`}
                     className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] text-xs font-body tracking-[0.05em] transition-colors">
                     {s.name}
                   </Link>

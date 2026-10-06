@@ -256,7 +256,7 @@ export function BestSellers({ initialItems = null }) {
 
 /* ─────────────────────────────────────
    4b. COLLECTIONS — live categories from the dashboard.
-   Each card links to /shop?collection=<slug>. Hides itself if there
+   Each card links to /collections/<slug>. Hides itself if there
    are no categories yet so the homepage stays clean.
    ───────────────────────────────────── */
 export function CollectionsBand({ initialCategories = null }) {
@@ -308,7 +308,7 @@ export function CollectionsBand({ initialCategories = null }) {
               transition={{ duration: 0.6, delay: i * 0.08 }}
             >
               <Link
-                href={`/shop?collection=${c.slug}`}
+                href={`/collections/${c.slug}`}
                 className="group relative block overflow-hidden rounded-2xl bg-[var(--surface-2)]"
               >
                 <div className="aspect-[4/5] overflow-hidden">

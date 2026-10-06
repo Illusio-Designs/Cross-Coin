@@ -49,7 +49,7 @@ export default function CollectionsPage({ initialCollections = [] }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {collections.map((col, i) => (
-            <Link key={col.id || col.slug || i} href={`/shop?collection=${col.slug}`}
+            <Link key={col.id || col.slug || i} href={`/collections/${col.slug}`}
               className={`relative group overflow-hidden rounded-2xl bg-[var(--surface-2)] ${i === 0 ? 'md:col-span-2' : ''}`}>
               <div className={`${i === 0 ? 'aspect-[16/7]' : 'aspect-[4/3]'} overflow-hidden`}>
                 {col.image && (
