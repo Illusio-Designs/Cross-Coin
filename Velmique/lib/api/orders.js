@@ -183,3 +183,20 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
 
 /* Aliases for compatibility with the CartDrawer port */
 export { verifyPayment as updateOrderPayment };
+
+/* ────── Returns & refunds ──────────────────────────────────────────────── */
+export async function createReturn(formData) {
+  const token = getToken();
+  const headers = { 'X-Brand-Name': BRAND, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const res = await fetch(`${API_URL}/api/returns`, { method: 'POST', headers, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Return request failed');
+  return data;
+}
+
+export async function getMyReturns() {
+  const res = await fetch(`${API_URL}/api/returns/my`, { headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to load returns');
+  return data;
+}

@@ -179,6 +179,9 @@ export default function AccountPage() {
               </button>
             );
           })}
+          <Link href="/account/returns" className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] tracking-[0.25em] uppercase font-body border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-all">
+            Returns
+          </Link>
         </div>
 
         {/* Tab content */}
