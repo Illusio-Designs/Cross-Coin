@@ -7,6 +7,7 @@ router.use('/users',              optionalBrand, require('./userRoutes.js'));
 router.use('/products',           optionalBrand, require('./productRoutes.js'));
 router.use('/categories',         optionalBrand, require('./categoryRoutes.js'));
 router.use('/orders',             optionalBrand, require('./orderRoutes.js'));
+router.use('/returns',            optionalBrand, require('./returnRoutes.js'));
 router.use('/payments',           optionalBrand, require('./paymentRoutes.js'));
 router.use('/cart',               optionalBrand, require('./cartRoutes.js'));
 router.use('/wishlist',           optionalBrand, require('./wishlistRoutes.js'));
