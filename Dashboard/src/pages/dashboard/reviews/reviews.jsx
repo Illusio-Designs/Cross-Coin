@@ -215,6 +215,30 @@ export default function Reviews() {
     URL.revokeObjectURL(url);
   };
 
+  // A real Excel-openable sample (.xls via an HTML table — no library needed).
+  // Opens as a proper spreadsheet with a header row + example rows to fill in.
+  const downloadExcelSample = () => {
+    const cols = ['product_id', 'rating', 'review', 'name', 'email', 'status', 'date', 'verified', 'featured'];
+    const rows = [
+      ['101', '5', 'Lovely fabric, true to size.', 'Aarav Shah', 'aarav@example.com', 'approved', '2025-09-14', 'yes', 'no'],
+      ['101', '4', 'Good value for money.', 'Priya Nair', '', 'approved', '2025-09-20', 'no', 'no'],
+      ['102', '5', 'My daughter loves it!', 'Meera Iyer', 'meera@example.com', 'pending', '', 'no', 'yes'],
+    ];
+    const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const thead = '<tr>' + cols.map(c => `<th style="background:#1f2937;color:#fff;border:1px solid #d1d5db;padding:6px 10px;text-align:left">${c}</th>`).join('') + '</tr>';
+    const tbody = rows.map(r => '<tr>' + r.map(c => `<td style="border:1px solid #d1d5db;padding:6px 10px">${esc(c)}</td>`).join('') + '</tr>').join('');
+    const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table>${thead}${tbody}</table></body></html>`;
+    const blob = new Blob(['﻿', html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'review-import-sample.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleImport = async () => {
     if (!importFile) { setImportError('Choose an Excel or CSV file first.'); return; }
     setImporting(true);
@@ -353,10 +377,16 @@ export default function Reviews() {
                 <code style={{ fontSize: 12 }}>featured</code>.
               </p>
 
-              <button type="button" className="sl-btn-edit" onClick={downloadTemplate}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, padding: '6px 10px' }}>
-                {IC.download} Download template (.csv)
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                <button type="button" className="sl-btn-edit" onClick={downloadExcelSample}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px' }}>
+                  {IC.download} Download sample (Excel)
+                </button>
+                <button type="button" className="sl-btn-edit" onClick={downloadTemplate}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px' }}>
+                  {IC.download} Download template (.csv)
+                </button>
+              </div>
 
               <div className="dm-field">
                 <label className="dm-label">Brand <span className="dm-required">*</span></label>
