@@ -724,6 +724,74 @@ const startServer = async () => {
             logger.error('contact_messages table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: returns table (Returns & Refunds) ───────────
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS returns (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    return_number VARCHAR(32) NOT NULL UNIQUE,
+                    order_id INT NOT NULL,
+                    user_id INT NULL,
+                    brand_id INT NULL,
+                    items JSON NULL,
+                    reason VARCHAR(40) NOT NULL,
+                    note TEXT NULL,
+                    photos JSON NULL,
+                    resolution ENUM('original','upi','exchange') NOT NULL DEFAULT 'original',
+                    upi_id VARCHAR(80) NULL,
+                    status ENUM('requested','under_review','approved','rejected','pickup_scheduled','picked_up','received','refunded') NOT NULL DEFAULT 'requested',
+                    is_cod TINYINT(1) NOT NULL DEFAULT 0,
+                    requested_amount DECIMAL(10,2) NULL,
+                    refund_amount DECIMAL(10,2) NULL,
+                    charges_deducted DECIMAL(10,2) NULL,
+                    payment_id INT NULL,
+                    payout_proof VARCHAR(255) NULL,
+                    pickup_provider VARCHAR(32) NULL,
+                    pickup_awb VARCHAR(64) NULL,
+                    pickup_status VARCHAR(40) NULL,
+                    admin_note TEXT NULL,
+                    reviewed_by INT NULL,
+                    reviewed_at DATETIME NULL,
+                    refunded_at DATETIME NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    INDEX idx_returns_order (order_id),
+                    INDEX idx_returns_user (user_id),
+                    INDEX idx_returns_brand (brand_id),
+                    INDEX idx_returns_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+            );
+        } catch (err) {
+            logger.error('returns table migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: add 'partial_refund' to payment status enums ─
+        // refundService writes 'partial_refund' on a part refund, but the ENUMs
+        // never listed it. Extend them without dropping existing values/defaults:
+        // read the live column definition and only add the value if it is missing.
+        const ensureEnumValue = async (table, column, value) => {
+            try {
+                const [rows] = await sequelize.query(
+                    `SELECT COLUMN_TYPE AS t, IS_NULLABLE AS n, COLUMN_DEFAULT AS d
+                     FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
+                    { replacements: [table, column] }
+                );
+                if (!rows.length) return;
+                const colType = rows[0].t;
+                if (!/^enum\(/i.test(colType) || colType.indexOf(`'${value}'`) !== -1) return;
+                const newType = colType.replace(/\)$/, `,'${value}')`);
+                const nullSql = rows[0].n === 'NO' ? 'NOT NULL' : 'NULL';
+                const defSql = rows[0].d != null ? ` DEFAULT '${String(rows[0].d).replace(/'/g, "''")}'` : '';
+                await sequelize.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${newType} ${nullSql}${defSql}`);
+                logger.info(`✓ added '${value}' to ${table}.${column}`);
+            } catch (err) {
+                logger.warn(`ensureEnumValue ${table}.${column} skipped: ${err.message}`);
+            }
+        };
+        await ensureEnumValue('orders', 'payment_status', 'partial_refund');
+        await ensureEnumValue('payments', 'status', 'partial_refund');
+
         // ── Idempotent migration: shipment_webhook_events (raw + dedup) ───────
         // Stores every inbound shipping webhook verbatim for audit, and its
         // unique event_key deduplicates repeat deliveries so the same courier

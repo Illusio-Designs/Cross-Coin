@@ -45,6 +45,7 @@ const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversatio
 const { OrderShipment } = require("./orderShipmentModel.js");
 const { Faq } = require("./faqModel.js");
 const { AddressQualityScore } = require("./addressQualityScoreModel.js");
+const { Return } = require("./returnModel.js");
 
 // Export all models
 module.exports = {
@@ -67,6 +68,7 @@ module.exports = {
   ShippingFee,
   OrderStatusHistory,
   Payment,
+  Return,
   Review,
   ReviewImage,
   SeoMetadata,
@@ -592,3 +594,10 @@ LookbookHotspot.belongsTo(Product, {
   onDelete: "CASCADE",
 });
 
+
+// ── Returns ──────────────────────────────────────────────────────────────
+Order.hasMany(Return, { foreignKey: "order_id", as: "Returns", onDelete: "CASCADE" });
+Return.belongsTo(Order, { foreignKey: "order_id", as: "Order" });
+User.hasMany(Return, { foreignKey: "user_id", as: "Returns" });
+Return.belongsTo(User, { foreignKey: "user_id", as: "User" });
+Return.belongsTo(Brand, { foreignKey: "brand_id", as: "Brand" });
