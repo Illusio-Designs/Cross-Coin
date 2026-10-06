@@ -246,6 +246,7 @@ export default function AccountPage() {
                     {n.label}
                   </button>
                 ))}
+                <Link href="/returns" className="acc-nav-btn">Returns</Link>
                 <button className="acc-nav-btn danger" onClick={handleLogout}>
                   <IconLogout />
                   Log out

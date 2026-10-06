@@ -206,3 +206,20 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
   if (!res.ok) throw new Error(data.message || 'Invalid coupon');
   return data;
 }
+
+// ── Returns & refunds ──────────────────────────────────────────────────────
+export async function createReturn(formData) {
+  const token = getToken();
+  const h = { 'X-Brand-Name': BRAND };
+  if (token) h.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}/api/returns`, { method: 'POST', headers: h, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Return request failed');
+  return data;
+}
+
+export async function getMyReturns() {
+  const res = await fetch(`${API_URL}/api/returns/my`, { headers: headers(getToken()) });
+  if (!res.ok) throw new Error('Failed to fetch returns');
+  return res.json();
+}
