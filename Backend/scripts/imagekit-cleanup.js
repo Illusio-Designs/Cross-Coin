@@ -29,6 +29,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') }); // load creds regardless of cwd
 const { sequelize } = require('../config/db.js');
 require('../model/associations.js'); // load every model + association onto sequelize
 const imagekitService = require('../services/imagekitService.js');
