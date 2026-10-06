@@ -58,51 +58,62 @@ const createSlider = async (req, res) => {
             return res.status(400).json({ message: 'Image is required' });
         }
 
-        // Upload to ImageKit
+        // Upload to ImageKit, with a local-disk fallback when ImageKit rejects
+        // the upload (e.g. "Upload Limit Exceeded" — the account's media /
+        // bandwidth quota is full), so the slider can still be created. Mirrors
+        // the category / product upload handlers.
+        let image;
         try {
             const fileBuffer = await fs.readFile(req.file.path);
-            
             const uploadResult = await imagekitService.uploadImage(
                 fileBuffer,
                 `slider-${Date.now()}.webp`,
                 '/sliders'
             );
-
             if (!uploadResult.success) {
                 throw new Error('Failed to upload image to ImageKit');
             }
-
-            const image = uploadResult.filePath; // Store ImageKit file path
+            image = uploadResult.filePath; // Store ImageKit file path
             logger.info('Created slider image path:', image);
-            
-            // Delete temporary file
-            await fs.unlink(req.file.path);
-
-            // Use brand_id from request body if provided, otherwise use req.brand or default to 1
-            const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
-
-            const slider = await Slider.create({
-                title,
-                description,
-                image,
-                brand_id: brandIdToUse,
-            });
-
-            await invalidateSliderCache();
-
-            res.status(201).json({
-                success: true, 
-                message: 'Slider created successfully', 
-                data: slider 
-            });
+            await fs.unlink(req.file.path).catch(() => {});
         } catch (imageError) {
-            logger.error('Error processing image:', imageError);
-            return res.status(500).json({ 
-                success: false,
-                message: 'Error processing image', 
-                error: imageError.message 
-            });
+            logger.warn('ImageKit slider upload failed, falling back to local storage:', imageError.message);
+            try {
+                const localPath = await imageHandler.handleImageUpdate(null, req.file.path, {
+                    width: 1920, height: 1080, quality: 85, format: 'webp',
+                    filename: `slider-${Date.now()}`, type: 'slider',
+                });
+                if (!localPath) throw new Error('Local image processing returned no path');
+                const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+                image = `${apiBase}${localPath}`;
+                logger.info('Created slider image (local fallback):', image);
+            } catch (localError) {
+                logger.error('Error processing image (ImageKit + local both failed):', localError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error processing image',
+                    error: localError.message,
+                });
+            }
         }
+
+        // Use brand_id from request body if provided, otherwise use req.brand or default to 1
+        const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
+
+        const slider = await Slider.create({
+            title,
+            description,
+            image,
+            brand_id: brandIdToUse,
+        });
+
+        await invalidateSliderCache();
+
+        res.status(201).json({
+            success: true,
+            message: 'Slider created successfully',
+            data: slider,
+        });
     } catch (error) {
         logger.error('Error creating slider:', error);
         res.status(500).json({ 
@@ -238,29 +249,38 @@ const updateSlider = async (req, res) => {
         if (req.file) {
             try {
                 const fileBuffer = await fs.readFile(req.file.path);
-                
                 const uploadResult = await imagekitService.uploadImage(
                     fileBuffer,
                     `slider-${Date.now()}.webp`,
                     '/sliders'
                 );
-
                 if (!uploadResult.success) {
                     throw new Error('Failed to upload image to ImageKit');
                 }
-
                 image = uploadResult.filePath; // Store ImageKit file path
                 logger.info('Updated slider image path:', image);
-                
-                // Delete temporary file
-                await fs.unlink(req.file.path);
-            } catch (error) {
-                logger.error('Error handling image update:', error);
-                return res.status(500).json({ 
-                    success: false,
-                    message: 'Failed to update image',
-                    error: error.message 
-                });
+                await fs.unlink(req.file.path).catch(() => {});
+            } catch (imageError) {
+                // ImageKit failed (e.g. "Upload Limit Exceeded"). Fall back to
+                // local disk so the slider image can still be updated.
+                logger.warn('ImageKit slider upload failed, falling back to local storage:', imageError.message);
+                try {
+                    const localPath = await imageHandler.handleImageUpdate(null, req.file.path, {
+                        width: 1920, height: 1080, quality: 85, format: 'webp',
+                        filename: `slider-${Date.now()}`, type: 'slider',
+                    });
+                    if (!localPath) throw new Error('Local image processing returned no path');
+                    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+                    image = `${apiBase}${localPath}`;
+                    logger.info('Updated slider image (local fallback):', image);
+                } catch (localError) {
+                    logger.error('Error updating image (ImageKit + local both failed):', localError);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to update image',
+                        error: localError.message,
+                    });
+                }
             }
         }
 
