@@ -46,6 +46,16 @@ async function createOrder(brandId, orderData) {
     : provider.createForwardOrder(orderData);
 }
 
+// Book a reverse (return) pickup. Only providers that implement createReverseOrder
+// (iThink) support it; others throw a clear error the caller can fail-soft on.
+async function createReversePickup(brandId, orderData) {
+  const provider = await getProvider(brandId);
+  if (typeof provider.createReverseOrder !== 'function') {
+    throw new Error('Active shipping provider does not support reverse pickup');
+  }
+  return provider.createReverseOrder(orderData);
+}
+
 async function trackByAwb(brandId, awb) {
   const provider = await getProvider(brandId);
   return provider.getTrackingHistory(awb);
@@ -103,6 +113,7 @@ module.exports = {
   clearProviderCache,
   // Unified surface
   createOrder,
+  createReversePickup,
   trackByAwb,
   getStatus,
   cancelShipment,

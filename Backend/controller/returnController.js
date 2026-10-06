@@ -77,15 +77,43 @@ async function bookReversePickup(ret, order, brandId) {
     if (ret.resolution === 'exchange') return;
     const flag = String(await settingsHelper.getSetting(brandId, 'RETURN_AUTO_PICKUP', 'true')).toLowerCase();
     if (flag === 'false' || flag === '0' || flag === 'no') return;
+    if (ret.pickup_awb) return; // already booked
+
+    // Which courier handles reverse pickups for this brand. Explicit by design:
+    // if unset, we never guess a courier — the admin arranges pickup manually.
+    const reverseLogistics = await settingsHelper.getSetting(brandId, 'ITHINK_REVERSE_LOGISTICS', null);
+    if (!reverseLogistics) {
+      logger.info(`reverse pickup skipped for ${ret.return_number}: set ITHINK_REVERSE_LOGISTICS to enable auto pickup`);
+      return;
+    }
+
+    // Reload the order with the associations prepareFShipOrderData needs.
+    const fullOrder = await Order.findByPk(order.id, {
+      include: [
+        { association: 'User' },
+        { association: 'GuestUser' },
+        { association: 'ShippingAddress' },
+        { association: 'OrderItems', include: [{ association: 'Product' }, { association: 'ProductVariation' }] },
+      ],
+    });
+    if (!fullOrder || !fullOrder.ShippingAddress) {
+      logger.warn(`reverse pickup skipped for ${ret.return_number}: order/address not available`);
+      return;
+    }
+
+    // Reuse the exact forward-order assembler; createReverseOrder flips it to a
+    // reverse (Prepaid) pickup from the customer back to the warehouse.
+    const { prepareFShipOrderData } = require('./orderShippingController.js');
+    const orderData = await prepareFShipOrderData(fullOrder, 'ithink', reverseLogistics, 'surface');
+
     const shippingService = require('../services/shippingService.js');
-    if (typeof shippingService.createReversePickup !== 'function') return;
-    const result = await shippingService.createReversePickup(order, ret, brandId);
-    if (result && result.awb) {
-      await ret.update({
-        pickup_provider: result.provider || 'ithink',
-        pickup_awb: result.awb,
-        pickup_status: 'scheduled',
-      });
+    const result = await shippingService.createReversePickup(brandId, orderData);
+    const awb = result && (result.waybill || result.awb);
+    if (awb) {
+      await ret.update({ pickup_provider: 'ithink', pickup_awb: String(awb), pickup_status: 'scheduled' });
+      logger.info(`reverse pickup booked for ${ret.return_number}: AWB ${awb}`);
+    } else {
+      logger.warn(`reverse pickup for ${ret.return_number} returned no AWB: ${result && result.message}`);
     }
   } catch (e) {
     logger.warn(`reverse pickup booking skipped for ${ret.return_number}: ${e.message}`);
