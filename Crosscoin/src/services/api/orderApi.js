@@ -77,3 +77,26 @@ export const initiateReturn = async (orderId, reason = '') => {
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }
 };
+
+// ── Returns & refunds ───────────────────────────────────────────────────────
+// createReturn posts a FormData (order_id, reason, note, resolution, upi_id,
+// items JSON, images[]); axios sets the multipart boundary when body is FormData.
+export const createReturn = async (formData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(`${API_URL}/api/returns`, formData, {
+      headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": BRAND_NAME },
+    });
+    return response.data;
+  } catch (error) { throw error.response?.data || error.message; }
+};
+
+export const getMyReturns = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${API_URL}/api/returns/my`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": BRAND_NAME },
+    });
+    return response.data;
+  } catch (error) { throw error.response?.data || error.message; }
+};

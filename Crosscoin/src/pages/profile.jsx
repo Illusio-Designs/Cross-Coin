@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import SafeImage from "../components/common/SafeImage";
 import Skeleton from "../components/common/Skeleton";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import SeoWrapper from "../console/SeoWrapper";
 import { fetchPageSeo } from "../utils/fetchPageSeo";
 
@@ -292,6 +293,10 @@ export default function Profile({ seoData }) {
                   {tab}
                 </button>
               ))}
+              <Link href="/returns" className="pf-nav-btn" style={{ textDecoration: "none" }}>
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3 7h18M5 7l1.5 13h11L19 7M9 11v6M15 11v6"/></svg>
+                Returns
+              </Link>
             </nav>
           </aside>
 

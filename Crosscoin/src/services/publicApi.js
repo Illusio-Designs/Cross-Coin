@@ -27,7 +27,7 @@ export { registerUser, loginUser, forgotPassword, resetPassword, getCurrentUser,
 export { getCart, addToCart, updateCartItem, removeFromCart, clearCart, getWishlist, addToWishlist, removeFromWishlist, clearWishlist } from './api/cartApi';
 
 // ── Orders ────────────────────────────────────────────────────────────────
-export { getUserOrders, createOrder, createGuestOrder, trackOrderByOrderNumber, trackOrderByAWB, cancelOrder, initiateReturn } from './api/orderApi';
+export { getUserOrders, createOrder, createGuestOrder, trackOrderByOrderNumber, trackOrderByAWB, cancelOrder, initiateReturn, createReturn, getMyReturns } from './api/orderApi';
 
 // ── Payments & Checkout ───────────────────────────────────────────────────
 export { createRazorpayOrder, updateOrderPayment, initiateCheckout, initiateGuestCheckout, retryCheckout, sendCheckoutPhoneOtp, verifyCheckoutPhoneOtp, getShippingFees, checkPincodeServiceability } from './api/paymentApi';
