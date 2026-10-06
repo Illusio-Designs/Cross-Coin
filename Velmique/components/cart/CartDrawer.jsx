@@ -263,10 +263,11 @@ export default function CartDrawer() {
   const couponOff    = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   const isCod        = selectedFee?.orderType === 'cod';
   const isPrepaid    = selectedFee?.orderType === 'prepaid';
-  const baseTotal    = Math.max(0, subtotal + shippingFee - couponOff);
-  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0
+  const baseTotal    = Math.round(Math.max(0, subtotal + shippingFee - couponOff));
+  // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
+  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
-  const finalPayable = Math.max(0, baseTotal - prepaidDisc);
+  const finalPayable = Math.round(Math.max(0, baseTotal - prepaidDisc));
 
   // ── Auto-remove a payment-mode-restricted coupon on mode switch ─────────
   // A coupon may be restricted to a single payment mode via
@@ -944,7 +945,7 @@ export default function CartDrawer() {
                           <p className="text-[#8A7E6C] text-[10px] font-body mt-0.5">
                             {f.orderType === 'cod'
                               ? (disabled ? 'Not available for this PIN' : 'Pay when your order arrives')
-                              : `Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 ? ` · ${fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}
+                              : `Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ${fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}
                           </p>
                         </div>
                         <span className="text-[10px] font-body text-[#8B6914]">
@@ -1044,7 +1045,7 @@ export default function CartDrawer() {
                   <span className="text-[#1A1612] font-body uppercase tracking-[0.2em] text-xs">Total</span>
                   <span className="font-serif italic text-[#1A1612] text-2xl">{fmt(finalPayable)}</span>
                 </div>
-                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && (
+                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && (
                   <p className="text-[10px] font-body text-[#8B6914] mt-1">
                     {fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant discount applied automatically when you pay online.
                   </p>

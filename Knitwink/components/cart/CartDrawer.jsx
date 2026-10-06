@@ -435,7 +435,7 @@ export function CartDrawer() {
   const cartTotal = items.reduce((s, i) => s + getPrice(i) * i.quantity, 0);
   const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
-  const finalTotal = Math.max(0, cartTotal + shippingFeeAmount - couponDiscount);
+  const finalTotal = Math.round(Math.max(0, cartTotal + shippingFeeAmount - couponDiscount));
   const totalQty = items.reduce((s, i) => s + (i.quantity || 1), 0);
 
   // Compact one-line summary for an available offer, e.g. "10% off, min ₹499".
@@ -466,9 +466,10 @@ export function CartDrawer() {
     return arr;
   }, [shippingFees]);
 
-  const prepaidInstantDiscount = selectedFee?.orderType === 'prepaid' && PREPAID_INSTANT_DISCOUNT_INR > 0
+  // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
+  const prepaidInstantDiscount = selectedFee?.orderType === 'prepaid' && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal) : 0;
-  const prepaidPayable = Math.max(0, finalTotal - prepaidInstantDiscount);
+  const prepaidPayable = Math.round(Math.max(0, finalTotal - prepaidInstantDiscount));
   const isCodDelivery = selectedFee?.orderType === 'cod';
   const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
 

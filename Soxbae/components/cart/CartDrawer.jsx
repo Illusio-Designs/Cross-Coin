@@ -233,7 +233,7 @@ export default function CartDrawer() {
   };
 
   const shippingFee = parseFloat(selectedFee?.fee || 0);
-  const total = Math.max(0, subtotal + shippingFee - couponDiscount);
+  const total = Math.round(Math.max(0, subtotal + shippingFee - couponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
 
@@ -254,8 +254,9 @@ export default function CartDrawer() {
   }, [isCod, appliedCoupon]);
   // Prepaid instant discount (0 unless configured) → the amount actually payable
   // online is the total minus that incentive.
-  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
-  const prepaidPayable = Math.max(0, total - prepaidInstantDiscount);
+  // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
+  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
+  const prepaidPayable = Math.round(Math.max(0, total - prepaidInstantDiscount));
 
   const sortedFees = useMemo(() => {
     const arr = [...fees];
@@ -830,7 +831,7 @@ export default function CartDrawer() {
                         <span className="cd-pay-icon"><Icon name={isCodOpt ? 'ShieldCheck' : 'ShoppingBag'} size={18} /></span>
                         <div className="cd-pay-info">
                           <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}</b>
-                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : `Secure payment via Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 ? ` · ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}</span>
+                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : `Secure payment via Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}</span>
                           <span className="cd-pay-date"><Icon name="Truck" size={12} /> Delivery by {deliveryDateStr()}</span>
                         </div>
                         <span className={`cd-pay-fee${parseFloat(fee.fee || 0) === 0 ? ' free' : ''}`}>{parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee).toFixed(0)}`}</span>

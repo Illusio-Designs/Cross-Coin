@@ -322,7 +322,7 @@ exports.initiateCheckout = async (req, res) => {
     const subTotal = Number(totalAmount);
     const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
     const shippingFee = Number(await calcShippingFee(payment_type, brandId));
-    const finalAmount = subTotal - appliedDiscount + shippingFee;
+    const finalAmount = Math.round(subTotal - appliedDiscount + shippingFee);
 
     // Server-side discount verification
     const PREPAID_DISCOUNT = parseFloat(await settingsHelper.getSetting(brandId, 'PREPAID_INSTANT_DISCOUNT', '50'));
@@ -342,7 +342,10 @@ exports.initiateCheckout = async (req, res) => {
         }
       }
       const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, payment_type);
-      if (Math.abs(appliedDiscount - (serverDiscount + PREPAID_DISCOUNT)) > 1) {
+      // Coupon and the ₹50 prepaid instant discount DON'T stack: when a coupon is
+      // applied, the coupon is the only discount (the storefront suppresses the
+      // instant discount), so validate against the coupon's value alone.
+      if (Math.abs(appliedDiscount - serverDiscount) > 1) {
         return res.status(400).json({ success: false, message: 'Order total mismatch. Please refresh and try again.' });
       }
     }

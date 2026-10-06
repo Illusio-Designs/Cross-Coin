@@ -618,7 +618,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const offerCoupons = availableCoupons.filter(
     (c) => !appliedCoupon || String(c.code).toUpperCase() !== String(appliedCoupon.code).toUpperCase()
   );
-  const finalTotal = Math.max(0, activeTotal + shippingFeeAmount - couponDiscount);
+  const finalTotal = Math.round(Math.max(0, activeTotal + shippingFeeAmount - couponDiscount));
   const totalQty = activeItems.reduce((s, i) => s + (i.quantity || 1), 0);
 
   const sortedShippingFees = useMemo(() => {
@@ -631,11 +631,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return arr;
   }, [shippingFees]);
 
+  // Coupon and the ₹50 instant discount DON'T stack: when a coupon is applied,
+  // the coupon is the only discount (so PREPAID10 on ₹499 = ₹449, not ₹399).
   const prepaidInstantDiscount =
-    selectedFee?.orderType === 'prepaid' && PREPAID_INSTANT_DISCOUNT_INR > 0
+    selectedFee?.orderType === 'prepaid' && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
       ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal)
       : 0;
-  const prepaidPayable = Math.max(0, finalTotal - prepaidInstantDiscount);
+  const prepaidPayable = Math.round(Math.max(0, finalTotal - prepaidInstantDiscount));
   const isCodDelivery = selectedFee?.orderType === 'cod';
   const isPrepaidDelivery = selectedFee?.orderType === 'prepaid';
 
@@ -1759,7 +1761,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             )}
                             <p className="cd-delivery-desc">
                               {fee.orderType === 'prepaid'
-                                ? `₹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less · Delivery by ${getDeliveryDateStr()}`
+                                ? `${!appliedCoupon ? `₹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less · ` : ''}Delivery by ${getDeliveryDateStr()}`
                                 : `Delivery by ${getDeliveryDateStr()}`}
                             </p>
                           </div>
@@ -1827,9 +1829,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
               {isProcessing
                 ? 'Processing...'
                 : isPrepaidDelivery
-                  ? `Place Order – ₹${prepaidPayable.toFixed(2)}`
+                  ? `Place Order – ₹${prepaidPayable.toFixed(0)}`
                   : isCodDelivery
-                    ? `Place Order – ₹${finalTotal.toFixed(2)}`
+                    ? `Place Order – ₹${finalTotal.toFixed(0)}`
                     : 'Place Order'}
             </button>
 

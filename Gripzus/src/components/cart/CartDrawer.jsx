@@ -180,7 +180,7 @@ export default function CartDrawer() {
   const cartTotal = items.reduce((s, i) => s + getPrice(i) * i.qty, 0);
   const totalQty = items.reduce((s, i) => s + (i.qty || 1), 0);
   const shippingFee = Number(selectedFee?.fee || 0);
-  const finalTotal = Math.max(0, cartTotal + shippingFee - couponDiscount);
+  const finalTotal = Math.round(Math.max(0, cartTotal + shippingFee - couponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
 
