@@ -212,13 +212,24 @@ class IThinkService {
    *   orderData.logistics  - courier name: 'delhivery', 'bluedart', 'xpressbees', 'ecom', 'ekart', 'fedex'
    *   orderData.s_type     - service type: 'air', 'surface', 'ground', 'standard', 'priority' (optional)
    */
-  async createForwardOrder(orderData) {
+  async createForwardOrder(orderData, options = {}) {
     await this.initialize();
     try {
-      logger.debug('=== iThink Create Forward Order ===');
+      logger.debug(`=== iThink Create ${options.reverse ? 'Reverse (Return)' : 'Forward'} Order ===`);
       this.validateOrderData(orderData);
 
       const payload = this.formatOrderDataForIThink(orderData);
+      // Reverse (return) pickup: same endpoint, order_type=reverse, always Prepaid.
+      // iThink picks the goods up from the consignee (the customer) and returns
+      // them to the warehouse (pickup_address_id / return_address_id).
+      if (options.reverse) {
+        payload.data.order_type = 'reverse';
+        (payload.data.shipments || []).forEach((s) => {
+          s.payment_mode = 'Prepaid';
+          s.cod_amount = '0';
+          s.cod_charges = '0';
+        });
+      }
       // PII-safe payload preview for diagnosing iThink rejections.
       logger.debug('iThink order payload (preview):', JSON.stringify({
         logistics: payload.data?.logistics,
@@ -489,6 +500,14 @@ class IThinkService {
       if (blank(payload?.data?.logistics)) issues.push('no courier (logistics) selected');
     } catch (_) { /* diagnostics must never throw */ }
     return issues;
+  }
+
+  // Book a reverse (return) pickup. Takes the same CrossCoin-normalised orderData
+  // shape as createForwardOrder (customer_* = the pickup point, products = items
+  // to collect, logistics = courier). Returns the same parsed result as a forward
+  // booking (waybill/AWB on success).
+  async createReverseOrder(orderData) {
+    return this.createForwardOrder(orderData, { reverse: true });
   }
 
   formatOrderDataForIThink(orderData) {
