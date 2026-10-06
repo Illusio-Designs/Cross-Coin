@@ -31,7 +31,7 @@ export default function HeroMaison({ image = '/perfumehero.webp' }) {
         </p>
 
         <h1 className="font-serif text-[var(--ink)] max-w-[750px]"
-          style={{ fontWeight: 500, fontSize: 'clamp(4rem, 8vw, 7.8rem)', lineHeight: 0.83, letterSpacing: '-0.03em' }}>
+          style={{ fontWeight: 500, fontSize: 'clamp(3.4rem, 9vw, 7.8rem)', lineHeight: 0.85, letterSpacing: '-0.03em' }}>
           Wear your <em className="italic font-normal">presence.</em>
         </h1>
 

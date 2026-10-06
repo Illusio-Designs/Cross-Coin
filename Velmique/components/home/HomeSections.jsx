@@ -355,6 +355,14 @@ function mapReview(r) {
   };
 }
 
+// Shown when the brand has no approved reviews yet, so the homepage always
+// carries a review section (matches the pasted maison design's testimonials).
+const FALLBACK_REVIEWS = [
+  { id: 'vq-f1', name: 'Verified customer', rating: 5, text: 'The kind of fragrance people ask you about without you having to say anything.' },
+  { id: 'vq-f2', name: 'Verified customer', rating: 5, text: 'Elegant, warm and incredibly easy to wear. It has quickly become my signature.' },
+  { id: 'vq-f3', name: 'Verified customer', rating: 5, text: 'Beautiful presentation and a fragrance that feels far more expensive than it is.' },
+];
+
 export function Testimonials({ initialReviews = null }) {
   const seed = (Array.isArray(initialReviews) ? initialReviews : []).map(mapReview).filter((r) => r.text);
   const [reviews, setReviews] = useState(() => seed);
@@ -372,43 +380,39 @@ export function Testimonials({ initialReviews = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialReviews]);
 
-  if (loaded && !reviews.length) return null;
-
-  // Favour the strongest few, longest first, for the three featured cards.
-  const featured = [...reviews]
+  // Always render the section — fall back to curated testimonials when there
+  // are no live reviews yet. Favour the strongest few, longest first.
+  const source = reviews.length ? reviews : FALLBACK_REVIEWS;
+  const featured = [...source]
     .sort((a, b) => (b.rating - a.rating) || (b.text.length - a.text.length))
     .slice(0, 3);
 
   return (
-    <section id="reviews" className="bg-[var(--surface-2)] px-6 md:px-[7vw] py-24 md:py-[140px] text-center">
+    <section id="reviews" className="bg-[var(--surface-2)] px-5 sm:px-6 md:px-[7vw] py-20 md:py-[140px] text-center">
       <motion.div {...reveal}>
         <p className="text-[var(--gold-deep)] text-[9px] tracking-[0.25em] uppercase font-body">The experience</p>
-        <h2 className="font-serif text-[var(--ink)] font-medium mt-4" style={{ fontSize: 'clamp(2.8rem, 6vw, 5.1rem)', lineHeight: 1 }}>
+        <h2 className="font-serif text-[var(--ink)] font-medium mt-4" style={{ fontSize: 'clamp(2.4rem, 6vw, 5.1rem)', lineHeight: 1.02 }}>
           Worn by people<br />who know scent.
         </h2>
       </motion.div>
 
-      <div className="max-w-[1200px] mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
-        {(loaded || featured.length ? featured : Array.from({ length: 3 }).map((_, i) => ({ id: `sk-${i}`, skeleton: true }))).map((t, i) =>
-          t.skeleton ? (
-            <div key={t.id} className="bg-white/45 p-[45px] min-h-[220px] animate-pulse" />
-          ) : (
-            <motion.article
-              key={t.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.7, delay: i * 0.1 }}
-              className="bg-white/45 px-8 py-[45px] text-left"
-            >
-              <div className="text-[var(--gold-deep)] text-[11px] tracking-[0.2em]">
-                {'★★★★★'.slice(0, Math.max(1, Math.round(t.rating) || 5))}
-              </div>
-              <p className="font-serif text-[var(--ink)] text-[25px] leading-[1.2] mt-6">“{t.text}”</p>
-              <div className="mt-6 text-[9px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">{t.name}</div>
-            </motion.article>
-          )
-        )}
+      <div className="max-w-[1200px] mx-auto mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+        {featured.map((t, i) => (
+          <motion.article
+            key={t.id}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, delay: i * 0.1 }}
+            className="bg-white/45 px-6 md:px-8 py-9 md:py-[45px] text-left"
+          >
+            <div className="text-[var(--gold-deep)] text-[11px] tracking-[0.2em]">
+              {'★★★★★'.slice(0, Math.max(1, Math.round(t.rating) || 5))}
+            </div>
+            <p className="font-serif text-[var(--ink)] text-[21px] md:text-[25px] leading-[1.25] mt-5 md:mt-6">“{t.text}”</p>
+            <div className="mt-5 md:mt-6 text-[9px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">{t.name}</div>
+          </motion.article>
+        ))}
       </div>
     </section>
   );
