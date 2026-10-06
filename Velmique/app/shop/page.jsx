@@ -18,9 +18,11 @@ const sortOptions = [
   { label: 'Best Rated',         value: 'rating'     },
 ];
 
-function ShopPageInner() {
+export function ShopPageInner({ collectionSlug = '' }) {
   const searchParams = useSearchParams();
-  const collectionParam = searchParams?.get('collection') || '';
+  // Collection can come from a clean path (/collections/<slug>) via the prop, or
+  // the legacy query string (/shop?collection=<slug>) — the prop wins.
+  const collectionParam = collectionSlug || searchParams?.get('collection') || '';
 
   const [products, setProducts]       = useState([]);
   const [rawCategories, setRawCategories] = useState([]);
