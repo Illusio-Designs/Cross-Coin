@@ -210,6 +210,10 @@ export default function AccountClient() {
                 {tab}
               </button>
             ))}
+            <Link href="/account/returns" className="pf-nav-btn">
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3 7h18M5 7l1.5 13h11L19 7M9 11v6M15 11v6"/></svg>
+              Returns
+            </Link>
             <button className="pf-nav-btn acc-nav-logout" onClick={handleLogout}>
               <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               Log out
