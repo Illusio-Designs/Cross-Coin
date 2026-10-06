@@ -79,6 +79,51 @@ function statusBadge(status) {
   return map[s] || { bg: '#f3f4f6', fg: '#374151', label: status || 'Unknown' };
 }
 
+// On-brand replacement for window.confirm / window.prompt. Pass a `dialog`
+// descriptor { title, message, confirmLabel, cancelLabel?, withReason?,
+// onConfirm(reason) } to open; null to close. Used by OrdersTab (cancel, with
+// an optional reason) and AddressesTab (delete).
+function ConfirmDialog({ dialog, onClose }) {
+  const [reason, setReason] = useState('');
+  useEffect(() => { setReason(''); }, [dialog]);
+  if (!dialog) return null;
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-[2px] px-4" onClick={onClose}>
+      <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6">
+          <h3 className="font-serif italic text-xl text-[var(--ink)] mb-2">{dialog.title}</h3>
+          <p className="text-sm text-[var(--ink-muted)] leading-relaxed font-body">{dialog.message}</p>
+          {dialog.withReason && (
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Tell us why (optional)…"
+              className="mt-4 w-full bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--gold)] outline-none rounded-xl px-4 py-3 text-sm text-[var(--ink)] font-body transition-colors resize-none"
+            />
+          )}
+          <div className="flex gap-3 pt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-[var(--border)] hover:border-[var(--ink)] rounded-full py-3 text-[11px] tracking-[0.3em] uppercase font-body text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
+            >
+              {dialog.cancelLabel || 'Keep'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { const fn = dialog.onConfirm; onClose(); fn?.(reason); }}
+              className="flex-1 bg-[var(--ink)] text-white rounded-full py-3 text-[11px] tracking-[0.3em] uppercase font-body hover:bg-[var(--gold-deep)] transition-colors"
+            >
+              {dialog.confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const { user, loading, isAuthenticated, logout, fetchUser } = useAuth();
@@ -208,6 +253,7 @@ function OrdersTab({ showToast }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState(null);
+  const [dialog, setDialog] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -219,18 +265,26 @@ function OrdersTab({ showToast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleCancel = async (id) => {
-    const reason = window.prompt('Reason for cancellation (optional):') ?? '';
-    setCancellingId(id);
-    try {
-      await cancelOrder(id, reason);
-      toastOrderCancelled();
-      load();
-    } catch (err) {
-      toastOrderError(err.message || 'Failed to cancel order');
-    } finally {
-      setCancellingId(null);
-    }
+  const handleCancel = (id) => {
+    setDialog({
+      title: 'Cancel Order',
+      message: 'Are you sure you want to cancel this order? Tell us why if you like — it helps us improve.',
+      confirmLabel: 'Cancel order',
+      cancelLabel: 'Keep order',
+      withReason: true,
+      onConfirm: async (reason) => {
+        setCancellingId(id);
+        try {
+          await cancelOrder(id, reason);
+          toastOrderCancelled();
+          load();
+        } catch (err) {
+          toastOrderError(err.message || 'Failed to cancel order');
+        } finally {
+          setCancellingId(null);
+        }
+      },
+    });
   };
 
   if (loading) return <CardLoader text="Loading your orders…" />;
@@ -350,6 +404,7 @@ function OrdersTab({ showToast }) {
           </article>
         );
       })}
+      <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
     </div>
   );
 }
@@ -394,6 +449,7 @@ function AddressesTab({ showToast }) {
   const [form, setForm] = useState(EMPTY_ADDR);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [dialog, setDialog] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -451,18 +507,24 @@ function AddressesTab({ showToast }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this address?')) return;
-    setBusyId(id);
-    try {
-      await deleteAddress(id);
-      toastAddressDeleted();
-      load();
-    } catch (err) {
-      toastAddressError(err.message || 'Delete failed');
-    } finally {
-      setBusyId(null);
-    }
+  const handleDelete = (id) => {
+    setDialog({
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this address? This can’t be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setBusyId(id);
+        try {
+          await deleteAddress(id);
+          toastAddressDeleted();
+          load();
+        } catch (err) {
+          toastAddressError(err.message || 'Delete failed');
+        } finally {
+          setBusyId(null);
+        }
+      },
+    });
   };
 
   const handleSetDefault = async (id) => {
@@ -562,6 +624,7 @@ function AddressesTab({ showToast }) {
           ))}
         </div>
       )}
+      <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
     </div>
   );
 }

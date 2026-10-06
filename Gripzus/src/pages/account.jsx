@@ -74,6 +74,8 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddrModal, setShowAddrModal] = useState(false);
+  // On-brand replacement for window.confirm — { title, message, confirmLabel, onConfirm }
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [editingAddr, setEditingAddr] = useState(null);
   const [addrForm, setAddrForm] = useState(EMPTY_ADDR);
 
@@ -121,10 +123,16 @@ export default function AccountPage() {
       setShowAddrModal(false);
     } catch (err) { showError(err.message || 'Could not save address.'); }
   };
-  const handleDeleteAddr = async (id) => {
-    if (!confirm('Delete this address?')) return;
-    try { await deleteAddress(id); toastAddressDeleted(); } catch { /* ignore */ }
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
+  const handleDeleteAddr = (id) => {
+    setConfirmDialog({
+      title: 'Delete address',
+      message: 'Are you sure you want to delete this address? This can’t be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try { await deleteAddress(id); toastAddressDeleted(); } catch { /* ignore */ }
+        setAddresses((prev) => prev.filter((a) => a.id !== id));
+      },
+    });
   };
   const handleSetDefault = async (id) => {
     await setDefaultAddress(id).catch(() => {});
@@ -144,15 +152,21 @@ export default function AccountPage() {
   };
 
   // ── Order cancel ──────────────────────────────────────────────────
-  const handleCancelOrder = async (id) => {
-    if (!confirm('Cancel this order?')) return;
-    setCancellingId(id);
-    try {
-      await cancelOrder(id, 'Cancelled by customer');
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' } : o)));
-      toastOrderCancelled();
-    } catch (err) { showError(err.message || 'Could not cancel order.'); }
-    finally { setCancellingId(null); }
+  const handleCancelOrder = (id) => {
+    setConfirmDialog({
+      title: 'Cancel order',
+      message: 'Are you sure you want to cancel this order? This can’t be undone.',
+      confirmLabel: 'Yes, cancel order',
+      onConfirm: async () => {
+        setCancellingId(id);
+        try {
+          await cancelOrder(id, 'Cancelled by customer');
+          setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' } : o)));
+          toastOrderCancelled();
+        } catch (err) { showError(err.message || 'Could not cancel order.'); }
+        finally { setCancellingId(null); }
+      },
+    });
   };
 
   const handleLogout = async () => { await logout(); window.location.replace('/'); };
@@ -387,6 +401,28 @@ export default function AccountPage() {
             </div>
           </div>
         </div>
+
+        {/* Confirm dialog — on-brand replacement for window.confirm */}
+        {confirmDialog && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-[2px] px-4" onClick={() => setConfirmDialog(null)}>
+            <div className="bg-paper w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+              <div className="px-6 py-6">
+                <h3 className="h-display text-xl text-ink mb-2">{confirmDialog.title}</h3>
+                <p className="text-sm text-ink-soft leading-relaxed">{confirmDialog.message}</p>
+                <div className="flex gap-3 pt-6">
+                  <button type="button" onClick={() => setConfirmDialog(null)} className="btn-outline flex-1 justify-center">Keep</button>
+                  <button
+                    type="button"
+                    onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn?.(); }}
+                    className="cta flex-1 justify-center"
+                  >
+                    {confirmDialog.confirmLabel}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Address modal */}
         {showAddrModal && (

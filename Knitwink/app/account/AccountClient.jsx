@@ -10,7 +10,7 @@ import { updateProfile } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { queryKeys } from '@/lib/queryClient'
-import { toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
+import { showError, toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
 const TABS = ['My Orders', 'Addresses', 'Account Details']
 
@@ -82,6 +82,8 @@ export default function AccountClient() {
     staleTime: 60 * 1000,
   })
   const [showAddrModal, setShowAddrModal] = useState(false)
+  // On-brand replacement for window.confirm — { title, message, confirmLabel, onConfirm }
+  const [confirmDialog, setConfirmDialog] = useState(null)
   const [editingAddr, setEditingAddr] = useState(null)
   const [addrForm, setAddrForm] = useState({ full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false })
 
@@ -124,12 +126,19 @@ export default function AccountClient() {
       else              await createAddress(addrForm)
       refetchAddresses()
       setShowAddrModal(false)
-    } catch (err) { alert(err.message) }
+    } catch (err) { showError(err.message || 'Could not save address.', 'addr-err') }
   }
-  const handleDeleteAddr = async (id) => {
-    if (!confirm('Delete this address?')) return
-    await deleteAddress(id).catch(() => {})
-    refetchAddresses()
+  const handleDeleteAddr = (id) => {
+    setConfirmDialog({
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this address? This can’t be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        await deleteAddress(id).catch(() => {})
+        refetchAddresses()
+        toastAddressDeleted()
+      },
+    })
   }
   const handleSetDefault = async (id) => {
     await setDefaultAddress(id).catch(() => {})
@@ -270,15 +279,19 @@ export default function AccountClient() {
                           {['pending', 'confirmed', 'processing'].includes(order.status) && (
                             <button className="pf-btn-ghost" style={{ color: '#c62828', borderColor: '#c62828' }}
                               disabled={orderActionId === order.id}
-                              onClick={async () => {
-                                if (!confirm('Cancel this order?')) return
-                                setOrderActionId(order.id)
-                                try {
-                                  await cancelOrder(order.id, 'Cancelled by customer')
-                                  queryClient.invalidateQueries({ queryKey: queryKeys.orders })
-                                } catch (e) { alert(e.message) }
-                                finally { setOrderActionId(null) }
-                              }}>
+                              onClick={() => setConfirmDialog({
+                                title: 'Cancel Order',
+                                message: 'Are you sure you want to cancel this order? This can’t be undone.',
+                                confirmLabel: 'Yes, cancel order',
+                                onConfirm: async () => {
+                                  setOrderActionId(order.id)
+                                  try {
+                                    await cancelOrder(order.id, 'Cancelled by customer')
+                                    queryClient.invalidateQueries({ queryKey: queryKeys.orders })
+                                  } catch (e) { showError(e.message || 'Could not cancel order.', 'cancel-err') }
+                                  finally { setOrderActionId(null) }
+                                },
+                              })}>
                               {orderActionId === order.id ? 'Cancelling...' : 'Cancel'}
                             </button>
                           )}
@@ -354,6 +367,31 @@ export default function AccountClient() {
           )}
         </main>
       </div>
+
+      {/* Confirm dialog — on-brand replacement for window.confirm */}
+      {confirmDialog && (
+        <div className="pf-modal-overlay" onClick={() => setConfirmDialog(null)}>
+          <div className="pf-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="pf-modal-header">
+              <div className="pf-modal-title">{confirmDialog.title}</div>
+              <button type="button" className="pf-modal-close" onClick={() => setConfirmDialog(null)}>×</button>
+            </div>
+            <div className="pf-form">
+              <p style={{ margin: '0 0 4px', fontSize: 14, lineHeight: 1.6, color: '#555' }}>{confirmDialog.message}</p>
+              <div className="pf-modal-btns">
+                <button
+                  type="button"
+                  className="pf-btn-primary"
+                  onClick={() => { const fn = confirmDialog.onConfirm; setConfirmDialog(null); fn?.() }}
+                >
+                  {confirmDialog.confirmLabel}
+                </button>
+                <button type="button" className="pf-btn-cancel" onClick={() => setConfirmDialog(null)}>Keep</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Address Modal */}
       {showAddrModal && (
