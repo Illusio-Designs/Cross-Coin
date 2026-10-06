@@ -244,6 +244,15 @@ app.get('/robots.txt', (req, res) => {
 // ── Health check endpoints ────────────────────────────────────────────────────
 
 // Main health check
+// Ultra-cheap keep-warm ping — NO database, NO Redis, returns instantly.
+// Point a free uptime monitor (UptimeRobot / cron-job.org) or a cPanel cron at
+// https://<host>/api/ping every 3-4 minutes so Passenger never idles the Node
+// app out. That removes the multi-second cold-start the inbox hits on first
+// open after a quiet spell. (Do NOT use /api/health for this — it hits the DB.)
+const pong = (req, res) => res.type('text/plain').set('Cache-Control', 'no-store').send('pong');
+app.get('/api/ping', pong);
+app.get('/api/v1/ping', pong);
+
 app.get('/api/health', async (req, res) => {
     const mem = process.memoryUsage();
     const dbOk = await sequelize.authenticate().then(() => true).catch(() => false);
