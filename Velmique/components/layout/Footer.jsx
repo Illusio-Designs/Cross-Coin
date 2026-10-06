@@ -105,7 +105,7 @@ export default function Footer() {
             <div className="flex-1 flex items-center justify-end">
               <h2
                 className="font-display text-right leading-[0.82] tracking-[-0.02em]"
-                style={{ fontSize: 'clamp(6rem, 9vw, 8.5rem)' }}
+                style={{ fontSize: 'clamp(3.1rem, 13vw, 8.5rem)' }}
               >
                 <span className="block text-white/90">ETERNAL</span>
                 <span

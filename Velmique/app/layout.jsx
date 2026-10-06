@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Playfair_Display, Cormorant_Garamond, Jost, Anton, DM_Sans } from 'next/font/google';
+import { Bodoni_Moda, Manrope } from 'next/font/google';
 import './globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -22,50 +22,22 @@ import VisitTracker from '@/components/common/VisitTracker';
 /* Fonts loaded via next/font — Next inlines them at build time, self-hosts
    them, and emits font-display: optional / swap behaviour so the browser
    shows the real face on first paint instead of flashing a system font. */
-const playfair = Playfair_Display({
+// Display face — Bodoni Moda, a high-contrast modern serif for headings.
+const bodoni = Bodoni_Moda({
   subsets: ['latin'],
-  weight: ['400', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700', '800'],
   style: ['normal', 'italic'],
-  variable: '--font-playfair',
+  variable: '--font-bodoni',
   display: 'swap',
   preload: true,
-  fallback: ['Georgia', 'serif'],
+  fallback: ['Didot', 'Georgia', 'serif'],
 });
 
-const cormorant = Cormorant_Garamond({
+// Body face — Manrope, a clean geometric humanist sans.
+const manrope = Manrope({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-cormorant',
-  display: 'swap',
-  preload: true,
-  fallback: ['Georgia', 'serif'],
-});
-
-const jost = Jost({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-jost',
-  display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'sans-serif'],
-});
-
-const anton = Anton({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-anton',
-  display: 'swap',
-  preload: true,
-  fallback: ['Impact', 'sans-serif'],
-});
-
-// Body face for the refreshed theme — a clean, modern humanist sans that pairs
-// with the Cormorant Garamond serif headings.
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-dm-sans',
+  weight: ['300', '400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
   display: 'swap',
   preload: true,
   fallback: ['system-ui', 'sans-serif'],
@@ -90,7 +62,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${cormorant.variable} ${jost.variable} ${anton.variable} ${dmSans.variable}`}
+      className={`${bodoni.variable} ${manrope.variable}`}
     >
       <head>
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
@@ -139,7 +111,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className={jost.className}>
+      <body className={manrope.className}>
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />

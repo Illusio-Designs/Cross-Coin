@@ -34,10 +34,10 @@ module.exports = {
         },
       },
       fontFamily: {
-        serif:   ['var(--font-cormorant)', 'Cormorant Garamond', 'Georgia', 'serif'],
-        sans:    ['var(--font-cormorant)', 'Cormorant Garamond', 'serif'],
-        body:    ['var(--font-dm-sans)',   'DM Sans', 'system-ui', 'sans-serif'],
-        display: ['var(--font-cormorant)', 'Cormorant Garamond', 'Playfair Display', 'serif'],
+        serif:   ['var(--font-bodoni)', 'Bodoni Moda', 'Didot', 'Georgia', 'serif'],
+        sans:    ['var(--font-bodoni)', 'Bodoni Moda', 'serif'],
+        body:    ['var(--font-manrope)', 'Manrope', 'system-ui', 'sans-serif'],
+        display: ['var(--font-bodoni)', 'Bodoni Moda', 'Didot', 'serif'],
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',
