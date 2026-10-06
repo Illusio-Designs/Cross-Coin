@@ -92,7 +92,7 @@ html {
 body {
   background-color: var(--bg);
   color: var(--ink);
-  font-family: var(--font-manrope), 'Manrope', system-ui, sans-serif;
+  font-family: 'Manrope', 'Manrope', system-ui, sans-serif;
   overflow-x: hidden;
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
@@ -107,7 +107,7 @@ body.splash-locked { overflow: hidden; }
    the `uppercase` utility on every display heading site-wide. (This rule sits
    after @tailwind utilities, so it wins on source order without !important.) */
 .font-display {
-  font-family: var(--font-bodoni), 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  font-family: 'Bodoni Moda', 'Bodoni Moda', 'Playfair Display', Georgia, serif;
   letter-spacing: -0.015em;
   text-transform: none;
 }
@@ -398,7 +398,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 .prose-velmique h2,
 .prose-velmique h3,
 .prose-velmique h4 {
-  font-family: var(--font-bodoni), 'Bodoni Moda', sans-serif;
+  font-family: 'Bodoni Moda', 'Bodoni Moda', sans-serif;
   color: var(--ink);
   font-weight: 700;
   text-transform: uppercase;
@@ -460,7 +460,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   border-left: 3px solid var(--gold);
   padding: 0.5rem 0 0.5rem 1.5rem;
   margin: 1.75rem 0;
-  font-family: var(--font-bodoni), 'Bodoni Moda', serif;
+  font-family: 'Bodoni Moda', 'Bodoni Moda', serif;
   font-style: italic;
   font-size: 1.35rem;
   color: var(--ink);
@@ -521,7 +521,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   }
 }
 .Toastify__toast {
-  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-family: 'Manrope', system-ui, sans-serif;
   background: var(--bg);
   color: var(--ink);
   border: 1px solid var(--border);
@@ -539,7 +539,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   align-items: center;
 }
 .Toastify__toast-body > div:last-child {
-  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-family: 'Manrope', system-ui, sans-serif;
   color: var(--ink);
 }
 .Toastify__close-button {

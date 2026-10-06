@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { Bodoni_Moda, Manrope } from 'next/font/google';
 import './globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -19,30 +18,11 @@ import ScrollProgress from '@/components/ui/ScrollProgress';
 import WhatsAppChat from '@/components/ui/WhatsAppChat';
 import VisitTracker from '@/components/common/VisitTracker';
 
-/* Fonts loaded via next/font — Next inlines them at build time, self-hosts
-   them, and emits font-display: optional / swap behaviour so the browser
-   shows the real face on first paint instead of flashing a system font. */
-// Display face — Bodoni Moda, a high-contrast modern serif for headings.
-const bodoni = Bodoni_Moda({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  style: ['normal', 'italic'],
-  variable: '--font-bodoni',
-  display: 'swap',
-  preload: true,
-  fallback: ['Didot', 'Georgia', 'serif'],
-});
-
-// Body face — Manrope, a clean geometric humanist sans.
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
-  display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'sans-serif'],
-});
-
+/* Fonts are loaded via a standard Google Fonts <link> in <head> (below) using
+   their real family names — Bodoni Moda (display serif) + Manrope (body). We
+   deliberately avoid next/font here: its hashed CSS-variable approach was
+   collapsing to the body sans on the deployed site when the variable failed to
+   resolve. Plain family names can never collapse that way. */
 export const metadata = {
   title: 'Velmique — Luxury Perfume',
   description: 'Discover Velmique — where luxury meets artistry. Explore our curated fragrance collections crafted from the world\'s rarest ingredients.',
@@ -60,11 +40,16 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      className={`${bodoni.variable} ${manrope.variable}`}
-    >
+    <html lang="en">
       <head>
+        {/* Type system — Bodoni Moda (display serif) + Manrope (body) via a
+            standard Google Fonts link with real family names. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=Manrope:wght@300;400;500;600;700;800&display=swap"
+        />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
         <link rel="dns-prefetch" href="https://api.crosscoin.in" />
@@ -111,7 +96,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className={manrope.className}>
+      <body>
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />

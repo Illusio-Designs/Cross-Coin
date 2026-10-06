@@ -34,10 +34,10 @@ module.exports = {
         },
       },
       fontFamily: {
-        serif:   ['var(--font-bodoni)', 'Bodoni Moda', 'Didot', 'Georgia', 'serif'],
-        sans:    ['var(--font-bodoni)', 'Bodoni Moda', 'serif'],
-        body:    ['var(--font-manrope)', 'Manrope', 'system-ui', 'sans-serif'],
-        display: ['var(--font-bodoni)', 'Bodoni Moda', 'Didot', 'serif'],
+        serif:   ['Bodoni Moda', 'Didot', 'Georgia', 'serif'],
+        sans:    ['Bodoni Moda', 'Georgia', 'serif'],
+        body:    ['Manrope', 'system-ui', 'sans-serif'],
+        display: ['Bodoni Moda', 'Didot', 'Georgia', 'serif'],
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',
