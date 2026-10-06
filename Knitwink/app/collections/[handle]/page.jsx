@@ -13,7 +13,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategoryByName, getCategoryBySlug, getPublicCategories } from '@/lib/api/categories';
-import { mapProduct } from '@/lib/api/products';
+import { mapProduct, getPublicProducts } from '@/lib/api/products';
 import { ProductCard } from '@/components/collection/ProductCard';
 import { ShimmerImg } from '@/components/ui/ShimmerImg';
 
@@ -69,7 +69,19 @@ export default async function CollectionPage({ params }) {
 
   if (!category) return notFound();
 
-  const products = (category.products || []).map(mapProduct);
+  // Fetch FULL product rows via the catalog endpoint (filtered by this
+  // category) — the category endpoint only returns thin products (no images /
+  // variants / reliable slug), which rendered blank cards and broke the link
+  // to the product page. Fall back to the embedded thin products if the catalog
+  // call returns nothing.
+  let products = [];
+  try {
+    const res = await getPublicProducts({ category: category.id, limit: 100 });
+    products = res.products || [];
+  } catch { /* fall back below */ }
+  if (!products.length && Array.isArray(category.products)) {
+    products = category.products.map(mapProduct);
+  }
 
   const collectionLd = {
     '@context': 'https://schema.org',
