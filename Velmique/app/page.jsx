@@ -2,6 +2,7 @@ import Hero3DWrapper from '@/components/home/Hero3DWrapper';
 import SeoWrapper from '@/components/SeoWrapper';
 import {
   Marquee,
+  Intro,
   CollectionsBand,
   StoryBand,
   CollectionBanner,
@@ -18,16 +19,16 @@ import { getAllReviews } from '@/lib/api/reviews';
 // fresh without re-fetching on every request.
 export const revalidate = 300;
 
-/* Homepage flow:
-   1. Hero slider               — backend-driven banner
-   2. Press strip               — "As Featured In" marquee
-   3. Collections                — shop-by-collection cards (API)
-   4. About / Story              — the maison story
-   5. Editorial typography band  — "RARE ABSOLUTES, UNFORGETTABLE SILLAGE,
-                                    BOTTLED BY HAND"
-   6. Best sellers               — product grid (API)
-   7. Fragrance formula          — numbered ingredient layers
-   8. Real customer stories      — testimonial grid
+/* Homepage flow (maison de parfum layout):
+   1. Hero slider        — backend-driven banner (dynamic slider kept)
+   2. Marquee            — italic serif strip on near-black
+   3. Intro              — "A fragrance should become part of you."
+   4. Signature Collection — live best-seller product grid (API)
+   5. Shop by Collection — live categories (API)
+   6. Story              — split image + dark "slow perfume" panel
+   7. Composition        — four acts / notes grid
+   8. Statement          — parallax "Rare ingredients. Quiet confidence."
+   9. Reviews            — real customer stories, 3-up grid (API)
 */
 export default async function HomePage() {
   // Fetch the above/below-the-fold data on the server, in parallel, so the
@@ -44,11 +45,12 @@ export default async function HomePage() {
     <SeoWrapper pageName="home">
       <Hero3DWrapper initialSlides={slides} />
       <Marquee />
+      <Intro />
+      <BestSellers initialItems={bestsellers} />
       <CollectionsBand initialCategories={categories} />
       <StoryBand />
-      <CollectionBanner />
-      <BestSellers initialItems={bestsellers} />
       <NotesBand />
+      <CollectionBanner />
       <Testimonials initialReviews={reviewsData?.reviews || []} />
     </SeoWrapper>
   );
