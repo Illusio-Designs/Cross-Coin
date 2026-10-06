@@ -83,6 +83,33 @@ export default function Profile({ seoData }) {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [orderActionLoading, setOrderActionLoading] = useState(null); // orderId being actioned
+  // On-brand replacement for the native window.confirm / window.prompt dialogs.
+  // { type: 'cancel' | 'return', order } — drives the pf-modal below.
+  const [orderAction, setOrderAction] = useState(null);
+  const [returnReason, setReturnReason] = useState('');
+
+  // Runs the cancel/return once the customer confirms in the pf-modal.
+  const confirmOrderAction = async () => {
+    if (!orderAction) return;
+    const { type, order } = orderAction;
+    setOrderActionLoading(order.id);
+    try {
+      if (type === 'cancel') {
+        await cancelOrder(order.id, 'Cancelled by customer');
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
+      } else {
+        await initiateReturn(order.id, returnReason.trim());
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'return_initiated' } : o));
+      }
+      setOrderAction(null);
+    } catch (e) {
+      showValidationErrorToast(
+        e?.message || (type === 'cancel'
+          ? 'Could not cancel order. Please try again.'
+          : 'Could not initiate return. Please try again.')
+      );
+    } finally { setOrderActionLoading(null); }
+  };
 
   // Addresses
   const [addresses, setAddresses] = useState([]);
@@ -349,16 +376,7 @@ export default function Profile({ seoData }) {
                                 className="pf-btn-ghost"
                                 style={{ color: '#c62828', borderColor: '#c62828' }}
                                 disabled={orderActionLoading === order.id}
-                                onClick={async () => {
-                                  if (!window.confirm('Cancel this order?')) return;
-                                  setOrderActionLoading(order.id);
-                                  try {
-                                    await cancelOrder(order.id, 'Cancelled by customer');
-                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
-                                  } catch (e) {
-                                    showValidationErrorToast(e?.message || 'Could not cancel order. Please try again.');
-                                  } finally { setOrderActionLoading(null); }
-                                }}
+                                onClick={() => setOrderAction({ type: 'cancel', order })}
                               >
                                 {orderActionLoading === order.id ? 'Cancelling...' : 'Cancel'}
                               </button>
@@ -367,16 +385,7 @@ export default function Profile({ seoData }) {
                               <button
                                 className="pf-btn-ghost"
                                 disabled={orderActionLoading === order.id}
-                                onClick={async () => {
-                                  const reason = window.prompt('Reason for return (optional):') ?? '';
-                                  setOrderActionLoading(order.id);
-                                  try {
-                                    await initiateReturn(order.id, reason);
-                                    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'return_initiated' } : o));
-                                  } catch (e) {
-                                    showValidationErrorToast(e?.message || 'Could not initiate return. Please try again.');
-                                  } finally { setOrderActionLoading(null); }
-                                }}
+                                onClick={() => { setReturnReason(''); setOrderAction({ type: 'return', order }); }}
                               >
                                 {orderActionLoading === order.id ? 'Processing...' : 'Return'}
                               </button>
@@ -508,6 +517,47 @@ export default function Profile({ seoData }) {
             )}
           </main>
         </div>
+
+        {/* Order action (cancel / return) — on-brand replacement for window.confirm/prompt */}
+        {orderAction && (
+          <div className="pf-modal-overlay" onClick={() => { if (orderActionLoading == null) setOrderAction(null); }}>
+            <div className="pf-modal" onClick={e => e.stopPropagation()}>
+              <div className="pf-modal-header">
+                <div className="pf-modal-title">{orderAction.type === 'cancel' ? 'Cancel Order' : 'Request a Return'}</div>
+                <button type="button" className="pf-modal-close" onClick={() => setOrderAction(null)} aria-label="Close" disabled={orderActionLoading != null}>×</button>
+              </div>
+              <div className="pf-form">
+                <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.6, color: '#555' }}>
+                  {orderAction.type === 'cancel'
+                    ? <>Are you sure you want to cancel order <strong>#{orderAction.order.order_number}</strong>? This can’t be undone.</>
+                    : <>Start a return for order <strong>#{orderAction.order.order_number}</strong>. Tell us why if you like — we’ll review it within 24–48 hours.</>}
+                </p>
+                {orderAction.type === 'return' && (
+                  <div className="pf-form-group">
+                    <label>Reason for return (optional)</label>
+                    <textarea
+                      className="pf-delete-reason"
+                      placeholder="e.g. Received damaged, wrong item, didn’t fit…"
+                      value={returnReason}
+                      onChange={e => setReturnReason(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                )}
+                <div className="pf-modal-btns">
+                  <button type="button" className="pf-btn-primary" onClick={confirmOrderAction} disabled={orderActionLoading != null}>
+                    {orderActionLoading != null
+                      ? 'Please wait…'
+                      : (orderAction.type === 'cancel' ? 'Yes, cancel order' : 'Submit return request')}
+                  </button>
+                  <button type="button" className="pf-btn-cancel" onClick={() => setOrderAction(null)} disabled={orderActionLoading != null}>
+                    {orderAction.type === 'cancel' ? 'Keep order' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Address Modal */}
         {showAddressModal && (
