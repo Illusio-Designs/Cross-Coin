@@ -395,6 +395,30 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'FOOTER', text: footer },
       ],
     },
+    {
+      name: tName('return_requested'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Return Requested' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, we've received your return request *{{2}}* for your *{{3}}* order *#{{4}}*.\n\nOur team will review it within 24–48 hours and keep you updated here. If a pickup is needed, we'll arrange it for you.`,
+          example: { body_text: [['Rushikesh', 'RET-ABC123', storeName, 'CC-20240101-0001']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      name: tName('return_update'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Return Update' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, there's an update on your return *{{2}}*.\n\n📦 *Status:* {{3}}\n📝 {{4}}\n\nReply here if you have any questions — we're happy to help.`,
+          example: { body_text: [['Rushikesh', 'RET-ABC123', 'Approved', 'Pickup arranged for tomorrow']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
     // ── Marketing ──────────────────────────────────────────────────────────────
     {
       name: tName('review_request'), category: 'MARKETING', language: 'en',
@@ -714,6 +738,25 @@ async function sendOrderCancelled(phone, data, brandId = 1) {
     await _brandName(brandId),
     data.orderNumber,
     data.refundInfo || 'Refund will be processed in 5-7 business days',
+  ], brandId);
+}
+
+async function sendReturnRequested(phone, data, brandId = 1) {
+  return sendTemplate(phone, tName('return_requested'), [
+    data.name || 'there',
+    data.returnNumber || '',
+    await _brandName(brandId),
+    data.orderNumber || '',
+  ], brandId);
+}
+
+async function sendReturnUpdate(phone, data, brandId = 1) {
+  const labelMap = { approved: 'Approved', rejected: 'Not approved', picked_up: 'Picked up', received: 'Received', refunded: 'Refunded' };
+  return sendTemplate(phone, tName('return_update'), [
+    data.name || 'there',
+    data.returnNumber || '',
+    labelMap[data.status] || data.status || 'Updated',
+    data.detail || '',
   ], brandId);
 }
 
@@ -1050,6 +1093,8 @@ module.exports = {
   sendOrderCancelled,
   sendCodConfirmation,
   sendRefundProcessed,
+  sendReturnRequested,
+  sendReturnUpdate,
   // New ecommerce features
   sendAbandonedCart,
   sendReviewRequest,
