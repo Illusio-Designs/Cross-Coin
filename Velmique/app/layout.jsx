@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Playfair_Display, Cormorant_Garamond, Jost, Anton } from 'next/font/google';
+import { Playfair_Display, Cormorant_Garamond, Jost, Anton, DM_Sans } from 'next/font/google';
 import './globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
@@ -60,6 +60,17 @@ const anton = Anton({
   fallback: ['Impact', 'sans-serif'],
 });
 
+// Body face for the refreshed theme — a clean, modern humanist sans that pairs
+// with the Cormorant Garamond serif headings.
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'sans-serif'],
+});
+
 export const metadata = {
   title: 'Velmique — Luxury Perfume',
   description: 'Discover Velmique — where luxury meets artistry. Explore our curated fragrance collections crafted from the world\'s rarest ingredients.',
@@ -79,7 +90,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${cormorant.variable} ${jost.variable} ${anton.variable}`}
+      className={`${playfair.variable} ${cormorant.variable} ${jost.variable} ${anton.variable} ${dmSans.variable}`}
     >
       <head>
         <link rel="dns-prefetch" href="https://images.unsplash.com" />

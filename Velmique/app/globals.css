@@ -45,20 +45,20 @@
 }
 
 :root {
-  /* Cream + Gold palette — Velmique editorial */
-  --bg: #FBF7EC;              /* main bg — warm cream */
-  --surface: #F5EFE0;         /* secondary cream */
-  --surface-2: #EAE0C7;       /* panel cream */
+  /* Cream + muted-bronze palette — refined Velmique editorial */
+  --bg: #F7F4EF;              /* main bg — soft cream */
+  --surface: #EFEAE2;         /* secondary cream */
+  --surface-2: #E6DED0;       /* panel cream */
   --paper: #FFFFFF;           /* pure white panels */
-  --ink: #1A1612;             /* deep espresso brown */
-  --ink-soft: #4A3F33;        /* secondary text */
-  --ink-muted: #8A7E6C;       /* tertiary / captions */
-  --gold: #C9A84C;            /* signature golden */
-  --gold-deep: #8B6914;       /* deep gold */
-  --gold-light: #E5CD8A;      /* pale gold */
-  --champagne: #BFAB5E;       /* hero panel champagne */
-  --olive: #A89548;           /* olive-gold pill */
-  --border: #E0D4B8;          /* subtle dividers */
+  --ink: #11100E;             /* near-black ink */
+  --ink-soft: #49423A;        /* secondary text */
+  --ink-muted: #777168;       /* tertiary / captions */
+  --gold: #B89A63;            /* signature muted bronze-gold */
+  --gold-deep: #8F7548;       /* deep bronze-gold */
+  --gold-light: #D9C190;      /* pale gold */
+  --champagne: #C3AF77;       /* hero panel champagne */
+  --olive: #9C8A54;           /* olive-gold pill */
+  --border: rgba(20, 18, 15, 0.12); /* subtle dark dividers */
   --dark: #14110E;            /* dark contrast (footer) */
   --dark-soft: #1F1B16;
 
@@ -92,7 +92,7 @@ html {
 body {
   background-color: var(--bg);
   color: var(--ink);
-  font-family: var(--font-jost), 'Jost', system-ui, sans-serif;
+  font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
   overflow-x: hidden;
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
@@ -101,10 +101,10 @@ body {
 
 body.splash-locked { overflow: hidden; }
 
-/* Editorial display class — Anton + tight tracking */
+/* Editorial display class — Cormorant Garamond serif, elegant tracking */
 .font-display {
-  font-family: var(--font-anton), 'Anton', 'Playfair Display', Impact, sans-serif;
-  letter-spacing: -0.01em;
+  font-family: var(--font-cormorant), 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.015em;
 }
 
 /* Vertical text helpers */
@@ -118,14 +118,14 @@ body.splash-locked { overflow: hidden; }
 
 /* Gold gradient text */
 .gold-text {
-  background: linear-gradient(135deg, #8B6914 0%, #C9A84C 40%, #E5CD8A 60%, #8B6914 100%);
+  background: linear-gradient(135deg, #8F7548 0%, #B89A63 40%, #D9C190 60%, #8F7548 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gold-shimmer {
-  background: linear-gradient(90deg, #8B6914 0%, #C9A84C 25%, #E5CD8A 50%, #C9A84C 75%, #8B6914 100%);
+  background: linear-gradient(90deg, #8F7548 0%, #B89A63 25%, #D9C190 50%, #B89A63 75%, #8F7548 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
