@@ -20,6 +20,36 @@ export const CONSENT_EVENT = 'vlm-consent-change';
 export const OPEN_SETTINGS_EVENT = 'vlm-open-cookie-settings';
 const POLICY_VERSION = 1;
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
+
+// Fire-and-forget: record each consent decision on the server (DPDP S6). Never
+// throws; a logging failure must not affect the storefront. credentials:'include'
+// sends the shared session_id cookie so the record ties to the same session.
+function postConsent(val, action, source) {
+  if (typeof window === 'undefined') return;
+  try {
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/api/consent`, {
+      method: 'POST',
+      credentials: 'include',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(BRAND ? { 'X-Brand-Name': BRAND } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        analytics: !!val.analytics,
+        marketing: !!val.marketing,
+        action: action || 'update',
+        source: source || 'banner',
+        notice_version: String(POLICY_VERSION),
+      }),
+    }).catch(() => {});
+  } catch {}
+}
+
 const DENIED = { essential: true, analytics: false, marketing: false, set: false };
 
 export function getConsent() {
@@ -34,7 +64,7 @@ export function getConsent() {
   }
 }
 
-export function setConsent({ analytics, marketing }) {
+export function setConsent({ analytics, marketing }, meta = {}) {
   const val = {
     essential: true,
     analytics: !!analytics,
@@ -44,11 +74,12 @@ export function setConsent({ analytics, marketing }) {
   };
   try { localStorage.setItem(CONSENT_KEY, JSON.stringify(val)); } catch {}
   try { window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: val })); } catch {}
+  postConsent(val, meta.action || 'custom', meta.source || 'banner');
   return val;
 }
 
-export const acceptAll = () => setConsent({ analytics: true, marketing: true });
-export const rejectAll = () => setConsent({ analytics: false, marketing: false });
+export const acceptAll = () => setConsent({ analytics: true, marketing: true }, { action: 'accept_all' });
+export const rejectAll = () => setConsent({ analytics: false, marketing: false }, { action: 'reject' });
 
 // Re-open the cookie preferences panel (e.g. from a footer "Cookie settings" link).
 export function openCookieSettings() {

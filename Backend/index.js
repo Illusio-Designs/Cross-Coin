@@ -538,6 +538,34 @@ const startServer = async () => {
             logger.error('funnel_events table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: consent_logs table (DPDP S6) ─────────────
+        // Append-only record of every cookie-consent decision. Production
+        // doesn't run sequelize sync, so create it here.
+        try {
+            await sequelize.query(
+                `CREATE TABLE IF NOT EXISTS consent_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    session_id VARCHAR(255) NULL,
+                    brand_id INT NULL,
+                    essential TINYINT(1) NOT NULL DEFAULT 1,
+                    analytics TINYINT(1) NOT NULL DEFAULT 0,
+                    marketing TINYINT(1) NOT NULL DEFAULT 0,
+                    action VARCHAR(24) NULL,
+                    source VARCHAR(24) NULL,
+                    notice_version VARCHAR(40) NULL,
+                    ip_address VARCHAR(45) NULL,
+                    user_agent TEXT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_consent_user (user_id),
+                    INDEX idx_consent_session (session_id),
+                    INDEX idx_consent_brand_created (brand_id, created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+            );
+        } catch (err) {
+            logger.error('consent_logs table migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()
