@@ -624,6 +624,33 @@ const startServer = async () => {
             logger.error('DPDP global policy seed failed: ' + err.message);
         }
 
+        // ── One-time cleanup: drop old per-brand policy duplicates ────────
+        // Now that the global policies exist, remove the per-brand rows for the
+        // SAME slugs (a global replaces them). Flag-gated so it runs ONCE —
+        // this way a future intentional per-brand override is never deleted on
+        // a later reboot. Only a per-brand row whose slug matches an existing
+        // global is removed, so unrelated per-brand policies are left alone.
+        try {
+            const settingsSvc = require('./services/brandSettingsService.js');
+            const alreadyDone = await settingsSvc.getBrandSetting(1, 'dpdp_policy_cleanup_done', false);
+            if (!alreadyDone) {
+                const { Policy } = require('./model/policyModel.js');
+                const slugify = (s) => String(s || '').toLowerCase()
+                    .replace(/&/g, ' and ').trim().replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                const all = await Policy.findAll();
+                const globalSlugs = new Set(all.filter((p) => p.brand_id == null).map((p) => slugify(p.title)));
+                let removed = 0;
+                for (const p of all) {
+                    if (p.brand_id != null && globalSlugs.has(slugify(p.title))) { await p.destroy(); removed += 1; }
+                }
+                await settingsSvc.setBrandSetting(1, 'dpdp_policy_cleanup_done', '1', false, 'legal', 'One-time removal of old per-brand policy duplicates', null);
+                logger.info('DPDP policy cleanup: removed ' + removed + ' old per-brand duplicate(s)');
+            }
+        } catch (err) {
+            logger.error('DPDP policy cleanup failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()
