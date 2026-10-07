@@ -605,6 +605,24 @@ const startServer = async () => {
             logger.error('contact_messages triage column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: policies.brand_id must be NULLABLE ──────
+        // Global (shared) policies use brand_id = NULL. If the production table
+        // was created with brand_id NOT NULL, inserting a global fails silently
+        // (both the seed below and the Dashboard "Global" option). Relax it.
+        try {
+            const [col] = await sequelize.query(
+                `SELECT IS_NULLABLE FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'policies' AND COLUMN_NAME = 'brand_id'`
+            );
+            if (col.length && col[0].IS_NULLABLE === 'NO') {
+                logger.info('Migrating: making policies.brand_id nullable…');
+                await sequelize.query(`ALTER TABLE policies MODIFY COLUMN brand_id INT NULL`);
+                logger.info('✓ policies.brand_id is now nullable');
+            }
+        } catch (err) {
+            logger.error('policies.brand_id nullable migration failed: ' + err.message);
+        }
+
         // ── Idempotent seed: DPDP global policies (brand_id NULL) ─────────
         // Four shared policies served to every store (policyController fills a
         // global row for all brands and substitutes {{BRAND}} / {{GSTIN}}).
