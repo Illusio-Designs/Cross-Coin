@@ -5,6 +5,7 @@ import SeoWrapper from '../components/SeoWrapper';
 import { getUserOrders, cancelOrder } from '../services/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { updateProfile } from '../services/auth';
+import DeleteAccountSection from '../components/account/DeleteAccountSection';
 import {
   toastProfileUpdated, toastProfileError,
   toastAddressAdded, toastAddressUpdated, toastAddressDeleted,
@@ -395,6 +396,7 @@ export default function AccountPage() {
                       {savingProfile ? 'Saving…' : 'Update Profile'}
                     </button>
                   </form>
+                  <DeleteAccountSection />
                 </div>
               )}
 

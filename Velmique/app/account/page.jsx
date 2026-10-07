@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import PageHeader from '@/components/layout/PageHeader';
 import SeoWrapper from '@/components/SeoWrapper';
+import DeleteAccountSection from '@/components/account/DeleteAccountSection';
 import { updateProfile } from '@/lib/api/auth';
 import { getUserOrders, cancelOrder } from '@/lib/api/orders';
 import {
@@ -724,6 +725,7 @@ function DetailsTab({ user, fetchUser, showToast }) {
           </p>
         )}
       </div>
+      <DeleteAccountSection />
     </div>
   );
 }

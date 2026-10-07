@@ -179,7 +179,8 @@ export default function Profile({ seoData }) {
       await deleteAccount(deleteReason);
       await authLogout();
       localStorage.clear();
-      router.push('/');
+      showProfileUpdateSuccessToast("Your account and personal data have been permanently deleted.");
+      setTimeout(() => router.push('/'), 1400);
     } catch (e) {
       showProfileUpdateErrorToast(e.message || "Failed to delete account.");
     } finally {

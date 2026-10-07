@@ -74,7 +74,7 @@ export const deleteAccount = async (reason = '') => {
     const token = localStorage.getItem("token");
     const response = await axios.delete(`${API_URL}/api/users/delete`, {
       headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
-      data: { reason },
+      data: { reason, confirm: true },
     });
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }

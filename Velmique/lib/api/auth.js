@@ -81,3 +81,16 @@ export async function logout() {
 }
 
 export const login = loginWithOtp
+
+// ── Delete account (DPDP erasure) ────────────────────────────────────────────
+// Backend runs the full cross-table erasure; the UI calls logout() after.
+export async function deleteAccount() {
+  const res = await fetch(`${API_URL}/api/users/delete`, {
+    method: 'DELETE',
+    headers: headers(getToken()),
+    body: JSON.stringify({ confirm: true }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.message || 'Failed to delete account')
+  return data
+}

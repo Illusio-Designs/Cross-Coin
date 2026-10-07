@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
+import DeleteAccountSection from '@/components/account/DeleteAccountSection';
 import { useAuth } from '@/context/AuthContext';
 import { updateProfile } from '@/lib/api/auth';
 import { toast } from '@/lib/toast';
@@ -64,6 +65,8 @@ function Settings() {
           {profileMsg && <p className="auth-error">{profileMsg}</p>}
           <button type="submit" className="btn btn-primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : <>Save changes <Icon name="ArrowRight" size={15} /></>}</button>
         </form>
+
+        <DeleteAccountSection />
       </div>
     </div>
   );

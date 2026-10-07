@@ -178,3 +178,16 @@ export async function resetPassword({ token, password }) {
 // Aliases for convenience / backward-compat with Knitwink naming.
 export const login = loginWithOtp;
 export { BRAND };
+
+// ── Delete account (DPDP erasure) ────────────────────────────────────────────
+// Backend runs the full cross-table erasure; the UI calls logout() after.
+export async function deleteAccount() {
+  const res = await fetch(`${API_URL}/api/users/delete`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify({ confirm: true }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Failed to delete account');
+  return data;
+}

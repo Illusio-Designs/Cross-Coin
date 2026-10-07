@@ -532,8 +532,8 @@ module.exports.getCurrentUser = async (req, res) => {
         const user = await User.findByPk(req.user.id, {
             attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] }
         });
-        
-        if (!user) {
+
+        if (!user || user.deleted_at) {
             return res.status(404).json({ message: 'User not found' });
         }
 
@@ -659,33 +659,40 @@ module.exports.updatePassword = async (req, res) => {
     }
 };
 
-// **Delete Account (soft delete — consumer self-service)**
+// **Delete Account (DPDP erasure — consumer self-service)**
+// The storefront takes explicit consent on a confirm step, then POSTs
+// `confirm: true`. We run the full cross-table erasure (see
+// services/userErasureService.js), which anonymises the records tax law makes
+// us keep (orders / payments / returns / reviews) and hard-deletes the rest.
 module.exports.deleteUser = async (req, res) => {
     try {
         const userId = req.user?.id;
         if (!userId) {
             return res.status(401).json({ message: 'Authentication required' });
         }
-        const { reason } = req.body;
 
-        const user = await User.findByPk(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        // Require the explicit confirmation the account page collects, so a
+        // stray call can never erase an account without consent.
+        if (req.body?.confirm !== true) {
+            return res.status(400).json({
+                success: false,
+                message: 'Account deletion must be confirmed. Please confirm on the account page.',
+            });
+        }
 
-        // Soft delete — anonymise PII and mark deleted_at
-        const timestamp = Date.now();
-        await user.update({
-            deleted_at: new Date(),
-            email: `deleted_${timestamp}@deleted.crosscoin.in`,
-            phone: null,
-            username: `deleted_${timestamp}`,
-            password: null,
-            refreshToken: null,
-            profileImage: null,
+        const { eraseUser } = require('../services/userErasureService.js');
+        const { summary } = await eraseUser(userId);
+
+        res.json({
+            success: true,
+            message: 'Your account and personal data have been permanently deleted.',
+            summary,
         });
-
-        res.json({ success: true, message: 'Account deleted successfully' });
     } catch (error) {
-        logger.error('Error deleting user:', error);
+        if (error.status === 404) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        logger.error('Error deleting user (DPDP erasure):', error);
         res.status(500).json({ success: false, message: 'Failed to delete account', error: error.message });
     }
 };
@@ -693,12 +700,16 @@ module.exports.deleteUser = async (req, res) => {
 // **Get All Users**
 module.exports.getAllUsers = async (req, res) => {
     try {
-        const { page = 1, limit = 20 } = req.query;
+        const { page = 1, limit = 20, includeDeleted } = req.query;
         const cappedLimit = Math.min(parseInt(limit) || 20, 1000);
         const offset = (parseInt(page) - 1) * cappedLimit;
 
+        // Erased (DPDP) accounts are hidden unless explicitly requested.
+        const where = includeDeleted === 'true' ? {} : { deleted_at: null };
+
         const Brand = require('../model/brandModel.js');
         const { count, rows } = await User.findAndCountAll({
+            where,
             attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] },
             include: [{ model: Brand, as: 'SourceBrand', attributes: ['id', 'name', 'display_name', 'slug'] }],
             limit: cappedLimit,
@@ -750,7 +761,7 @@ module.exports.getProfile = async (req, res) => {
             attributes: { exclude: ['password'] }
         });
 
-        if (!user) {
+        if (!user || user.deleted_at) {
             return res.status(404).json({ message: 'User not found' });
         }
 

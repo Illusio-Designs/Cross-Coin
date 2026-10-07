@@ -8,6 +8,7 @@ import { getUserOrders, cancelOrder } from '@/lib/api/orders'
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses'
 import { updateProfile } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
+import DeleteAccountSection from '@/components/account/DeleteAccountSection'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { queryKeys } from '@/lib/queryClient'
 import { showError, toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
@@ -363,6 +364,7 @@ export default function AccountClient() {
                 {profileMsg && <p style={{ fontSize: '0.85rem', color: profileMsg.includes('success') ? '#2e7d32' : '#c62828' }}>{profileMsg}</p>}
                 <button type="submit" className="pf-btn-primary pf-btn-full">Update Profile</button>
               </form>
+              <DeleteAccountSection />
             </div>
           )}
         </main>
