@@ -12,6 +12,12 @@ const ContactMessage = sequelize.define('ContactMessage', {
     email: { type: DataTypes.STRING(160), allowNull: true },
     phone: { type: DataTypes.STRING(20), allowNull: true },
     message: { type: DataTypes.TEXT, allowNull: true },
+    // DPDP grievance / data-request triage (S13). A submission flagged
+    // type='grievance' is a privacy request to be tracked to resolution.
+    type: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'general' },
+    status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'open' },
+    resolved_at: { type: DataTypes.DATE, allowNull: true },
+    admin_note: { type: DataTypes.TEXT, allowNull: true },
 }, {
     tableName: 'contact_messages',
     timestamps: true,

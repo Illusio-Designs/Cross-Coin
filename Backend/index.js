@@ -585,6 +585,26 @@ const startServer = async () => {
             logger.error('consent_logs table migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: contact_messages DPDP triage columns ────
+        // type / status / resolved_at / admin_note so grievances (S13) can be
+        // tracked to resolution. Production doesn't run sequelize sync.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'contact_messages' AND COLUMN_NAME = 'status'`
+            );
+            if (!cols.length) {
+                logger.info('Migrating: adding contact_messages DPDP triage columns…');
+                await sequelize.query(`ALTER TABLE contact_messages ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'general'`);
+                await sequelize.query(`ALTER TABLE contact_messages ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'open'`).catch(() => {});
+                await sequelize.query(`ALTER TABLE contact_messages ADD COLUMN resolved_at DATETIME NULL`).catch(() => {});
+                await sequelize.query(`ALTER TABLE contact_messages ADD COLUMN admin_note TEXT NULL`).catch(() => {});
+                logger.info('✓ contact_messages triage columns added');
+            }
+        } catch (err) {
+            logger.error('contact_messages triage column migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()

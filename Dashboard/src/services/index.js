@@ -254,6 +254,11 @@ export const leadService = {
     const { data } = await adminApi.get('/api/leads');
     return data;
   },
+  // DPDP grievance triage — update a contact message's status / note.
+  updateContactStatus: async (contactId, { status, admin_note } = {}) => {
+    const { data } = await adminApi.patch(`/api/leads/contact/${contactId}/status`, { status, admin_note });
+    return data;
+  },
 };
 
 export const loyaltyService = {

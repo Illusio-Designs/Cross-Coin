@@ -10,16 +10,20 @@ const COUPON_CODE = process.env.POPUP_COUPON_CODE || 'PREPAID10';
 // Public: contact-form submission (name, email, phone + message).
 exports.submitContact = async (req, res) => {
   try {
-    const { name, email, phone, message, brandId } = req.body || {};
+    const { name, email, phone, message, brandId, type } = req.body || {};
     if (!message?.trim() && !email?.trim() && !phone?.trim()) {
       return res.status(400).json({ success: false, message: 'Please add a message and how to reach you.' });
     }
+    // A submission can self-declare as a DPDP grievance / privacy request.
+    const msgType = type === 'grievance' ? 'grievance' : 'general';
     await ContactMessage.create({
       brand_id: brandId ? Number(brandId) : null,
       name: name?.trim() || null,
       email: email?.trim() || null,
       phone: phone ? String(phone).replace(/\s+/g, '') : null,
       message: message?.trim() || null,
+      type: msgType,
+      status: 'open',
     });
     return res.json({ success: true, message: 'Thanks — we\'ll get back to you soon.' });
   } catch (err) {
@@ -50,12 +54,39 @@ exports.getLeads = async (req, res) => {
       ...contacts.map((c) => ({
         id: `c${c.id}`, type: 'contact', name: c.name, phone: c.phone, email: c.email,
         message: c.message, brand: brandName(c.brand_id), wa_sent: null, createdAt: c.createdAt,
+        // DPDP triage fields (contact rows only).
+        contactId: c.id, kind: c.type || 'general', status: c.status || 'open',
+        resolvedAt: c.resolved_at || null, adminNote: c.admin_note || null,
       })),
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({ success: true, count: rows.length, leads: rows });
   } catch (err) {
     logger.error('getLeads error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Admin: update a contact message's DPDP triage status (grievance handling).
+exports.updateContactStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, admin_note } = req.body || {};
+    const row = await ContactMessage.findByPk(id);
+    if (!row) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const allowed = ['open', 'in_progress', 'resolved'];
+    const patch = {};
+    if (status && allowed.includes(status)) {
+      patch.status = status;
+      patch.resolved_at = status === 'resolved' ? new Date() : null;
+    }
+    if (admin_note !== undefined) patch.admin_note = admin_note ? String(admin_note).slice(0, 2000) : null;
+
+    await row.update(patch);
+    res.json({ success: true, id: row.id, status: row.status, resolved_at: row.resolved_at });
+  } catch (err) {
+    logger.error('updateContactStatus error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
