@@ -651,6 +651,16 @@ const startServer = async () => {
             logger.error('DPDP policy cleanup failed: ' + err.message);
         }
 
+        // Startup visibility: how many policies exist, and how many are global.
+        try {
+            const { Policy } = require('./model/policyModel.js');
+            const total = await Policy.count();
+            const globals = await Policy.count({ where: { brand_id: null } });
+            logger.info(`DPDP policies after startup: ${total} total, ${globals} global`);
+        } catch (err) {
+            logger.error('DPDP policy count log failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()
