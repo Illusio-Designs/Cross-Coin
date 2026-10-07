@@ -98,18 +98,6 @@ export function Policies() {
     finally { setEditLoading(false); }
   };
 
-  const handleDelete = (id) => {
-    setConfirmState({ message: "Delete this policy?", onConfirm: async () => {
-      setConfirmState(null);
-      try {
-        setLoading(true);
-        await policyService.deletePolicy(id);
-        await fetchPolicies();
-      } catch (err) { setError(err.message); }
-      finally { setLoading(false); }
-    }});
-  };
-
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); };
   const handleInputChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
 
@@ -142,7 +130,6 @@ export function Policies() {
       cell: ({ id }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id)}>{IC.edit}</button>
-          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
         </div>
       )
     }
