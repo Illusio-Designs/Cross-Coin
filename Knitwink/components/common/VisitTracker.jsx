@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { getConsent, CONSENT_EVENT } from '@/lib/consent';
 
 /**
  * First-party VISIT tracker — fires once per browser session.
@@ -20,6 +21,8 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'knitwink';
 
 export default function VisitTracker() {
   useEffect(() => {
+    const fire = () => {
+      if (!getConsent().analytics) return;
     if (typeof window === 'undefined') return;
 
     try {
@@ -49,6 +52,10 @@ export default function VisitTracker() {
         try { sessionStorage.setItem('visit_tracked', '1'); } catch (_) { /* ignore */ }
       })
       .catch(() => { /* never break the storefront */ });
+    };
+    fire();
+    window.addEventListener(CONSENT_EVENT, fire);
+    return () => window.removeEventListener(CONSENT_EVENT, fire);
   }, []);
 
   return null;

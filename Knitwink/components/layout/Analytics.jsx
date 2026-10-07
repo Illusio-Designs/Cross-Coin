@@ -3,6 +3,7 @@
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { prefersReducedData } from '@/lib/netinfo';
+import { useConsent } from '@/lib/consent';
 
 /**
  * Storefront analytics + ad tracking — runtime configuration.
@@ -29,6 +30,7 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'knitwink';
 
 export default function Analytics() {
   const [cfg, setCfg] = useState(null);
+  const consent = useConsent();
 
   useEffect(() => {
     // Respect the user's bandwidth budget: skip third-party analytics
@@ -59,7 +61,7 @@ export default function Analytics() {
 
   return (
     <>
-      {ga4Id && (
+      {ga4Id && consent.analytics && (
         <>
           <Script
             id="ga4-loader"
@@ -81,7 +83,7 @@ export default function Analytics() {
         </>
       )}
 
-      {fbPixelId && (
+      {fbPixelId && consent.marketing && (
         <Script
           id="fb-pixel-init"
           strategy="lazyOnload"
@@ -102,7 +104,7 @@ export default function Analytics() {
         />
       )}
 
-      {clarityId && (
+      {clarityId && consent.analytics && (
         <Script
           id="clarity-init"
           strategy="lazyOnload"

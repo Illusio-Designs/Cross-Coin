@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { getConsent, CONSENT_EVENT } from '@/lib/consent';
 import { API_URL, BRAND } from '@/lib/api/client';
 
 /**
@@ -11,6 +12,8 @@ import { API_URL, BRAND } from '@/lib/api/client';
  */
 export default function VisitTracker() {
   useEffect(() => {
+    const fire = () => {
+      if (!getConsent().analytics) return;
     try {
       if (sessionStorage.getItem('visit_tracked')) return;
     } catch {
@@ -48,6 +51,10 @@ export default function VisitTracker() {
       .catch(() => {
         /* swallow — tracking must never surface to the user */
       });
+    };
+    fire();
+    window.addEventListener(CONSENT_EVENT, fire);
+    return () => window.removeEventListener(CONSENT_EVENT, fire);
   }, []);
 
   return null;

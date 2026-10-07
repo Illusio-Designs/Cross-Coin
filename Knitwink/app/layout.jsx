@@ -17,7 +17,8 @@ import { CartProvider } from '@/context/CartContext';
 import ClientProviders from '@/components/layout/ClientProviders';
 import SentryInit from '@/components/SentryInit';
 import VisitTracker from '@/components/common/VisitTracker';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
+import CookieBanner from '@/components/ui/CookieBanner';
 import Analytics from '@/components/layout/Analytics';
 import { SITE_NAME } from '@/lib/constants';
 
@@ -111,7 +112,8 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
-        <SpeedInsights />
+            <CookieBanner />
+        <ConsentSpeedInsights />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
           <AuthProvider>

@@ -12,7 +12,8 @@ import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
 import SentryInit from '@/components/SentryInit';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
+import CookieBanner from '@/components/ui/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['400', '500', '600'], style: ['normal', 'italic'] });
@@ -51,7 +52,8 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
-        <SpeedInsights />
+            <CookieBanner />
+        <ConsentSpeedInsights />
         <Msg91Loader />
         <AuthProvider>
           <CartProvider>

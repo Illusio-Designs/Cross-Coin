@@ -3,6 +3,7 @@
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useConsent } from '@/lib/consent';
 
 /**
  * Analytics — GA4 + Meta Pixel + Microsoft Clarity, driven by the platform
@@ -19,6 +20,7 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
 export default function Analytics() {
   const [cfg, setCfg] = useState(null);
   const pathname = usePathname();
+  const consent = useConsent();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return;
@@ -40,16 +42,16 @@ export default function Analytics() {
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
     if (!cfg || typeof window === 'undefined') return;
-    if (cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
-    if (cfg.fbId && window.fbq) window.fbq('track', 'PageView');
-  }, [pathname, cfg]);
+    if (consent.analytics && cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
+    if (consent.marketing && cfg.fbId && window.fbq) window.fbq('track', 'PageView');
+  }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   if (!cfg) return null;
   const { gaId, fbId, clarityId } = cfg;
 
   return (
     <>
-      {fbId && (
+      {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="lazyOnload"
             dangerouslySetInnerHTML={{ __html: `
@@ -73,7 +75,7 @@ export default function Analytics() {
         </>
       )}
 
-      {gaId && (
+      {gaId && consent.analytics && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
           <Script id="ga4-init" strategy="lazyOnload"
@@ -88,7 +90,7 @@ export default function Analytics() {
         </>
       )}
 
-      {clarityId && (
+      {clarityId && consent.analytics && (
         <Script id="ms-clarity" strategy="lazyOnload"
           dangerouslySetInnerHTML={{ __html: `
             (function(c,l,a,r,i,t,y){

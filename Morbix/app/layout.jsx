@@ -12,7 +12,8 @@ import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
 import SentryInit from '@/components/SentryInit';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
+import CookieBanner from '@/components/ui/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
@@ -50,7 +51,7 @@ export default function RootLayout({ children }) {
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
-        <SpeedInsights />
+        <ConsentSpeedInsights />
         <Msg91Loader />
         <AuthProvider>
           <CartProvider>
@@ -64,6 +65,7 @@ export default function RootLayout({ children }) {
             <ToastHost />
             <Analytics />
             <VisitTracker />
+            <CookieBanner />
           </CartProvider>
         </AuthProvider>
       </body>
