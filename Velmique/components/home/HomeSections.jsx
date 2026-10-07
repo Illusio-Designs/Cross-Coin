@@ -381,39 +381,53 @@ export function Testimonials({ initialReviews = null }) {
   }, [initialReviews]);
 
   // Always render the section — fall back to curated testimonials when there
-  // are no live reviews yet. Favour the strongest few, longest first.
+  // are no live reviews yet. Repeat a short list so the marquee fills its row.
   const source = reviews.length ? reviews : FALLBACK_REVIEWS;
-  const featured = [...source]
-    .sort((a, b) => (b.rating - a.rating) || (b.text.length - a.text.length))
-    .slice(0, 3);
+  const marqueeList = source.length >= 6
+    ? source
+    : Array.from({ length: Math.ceil(6 / source.length) }).flatMap(() => source);
 
   return (
-    <section id="reviews" className="bg-[var(--surface-2)] px-5 sm:px-6 md:px-[7vw] py-20 md:py-[140px] text-center">
-      <motion.div {...reveal}>
+    <section id="reviews" className="bg-[var(--surface-2)] py-20 md:py-[140px] text-center overflow-hidden">
+      <motion.div {...reveal} className="px-5 sm:px-6 md:px-[7vw]">
         <p className="text-[var(--gold-deep)] text-[9px] tracking-[0.25em] uppercase font-body">The experience</p>
         <h2 className="font-serif text-[var(--ink)] font-medium mt-4" style={{ fontSize: 'clamp(2.4rem, 6vw, 5.1rem)', lineHeight: 1.02 }}>
           Worn by people<br />who know scent.
         </h2>
       </motion.div>
 
-      <div className="max-w-[1200px] mx-auto mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-        {featured.map((t, i) => (
-          <motion.article
-            key={t.id}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, delay: i * 0.1 }}
-            className="bg-white/45 px-6 md:px-8 py-9 md:py-[45px] text-left"
-          >
-            <div className="text-[var(--gold-deep)] text-[11px] tracking-[0.2em]">
-              {'★★★★★'.slice(0, Math.max(1, Math.round(t.rating) || 5))}
-            </div>
-            <p className="font-serif text-[var(--ink)] text-[21px] md:text-[25px] leading-[1.25] mt-5 md:mt-6">“{t.text}”</p>
-            <div className="mt-5 md:mt-6 text-[9px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">{t.name}</div>
-          </motion.article>
-        ))}
+      {/* Continuous auto-scrolling marquee of reviews (pauses on hover). */}
+      <div className="vq-rev-marquee mt-12 md:mt-16">
+        <div className="vq-rev-track">
+          {[...marqueeList, ...marqueeList].map((t, i) => (
+            <article key={`${t.id}-${i}`} className="vq-rev-card bg-white/55 px-7 py-9 text-left shrink-0">
+              <div className="text-[var(--gold-deep)] text-[11px] tracking-[0.2em]">
+                {'★★★★★'.slice(0, Math.max(1, Math.round(t.rating) || 5))}
+              </div>
+              <p className="font-serif text-[var(--ink)] leading-[1.3] mt-5 line-clamp-5"
+                style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.4rem)' }}>“{t.text}”</p>
+              <div className="mt-5 text-[9px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">{t.name}</div>
+            </article>
+          ))}
+        </div>
       </div>
+
+      <style jsx>{`
+        .vq-rev-marquee {
+          overflow: hidden; position: relative;
+          -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+          mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+        }
+        .vq-rev-track { display: flex; gap: 20px; width: max-content; padding-inline: 10px;
+          animation: vq-rev 48s linear infinite; }
+        .vq-rev-marquee:hover .vq-rev-track { animation-play-state: paused; }
+        .vq-rev-card { width: 300px; max-width: 82vw; }
+        @media (min-width: 768px) { .vq-rev-card { width: 360px; } }
+        @keyframes vq-rev { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @media (prefers-reduced-motion: reduce) {
+          .vq-rev-track { animation: none; overflow-x: auto; }
+        }
+      `}</style>
     </section>
   );
 }
