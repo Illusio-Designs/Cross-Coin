@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { getConsent, CONSENT_EVENT } from '../../lib/consent'
 
 /* First-party VISIT tracker — pings the UTM endpoint once per browser
    session so the backend can build a brand-wise traffic report. Backend
@@ -10,6 +11,8 @@ const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus'
 
 export default function VisitTracker() {
   useEffect(() => {
+    const fire = () => {
+      if (!getConsent().analytics) return;
     try {
       if (sessionStorage.getItem('visit_tracked')) return
 
@@ -37,6 +40,10 @@ export default function VisitTracker() {
     } catch {
       /* sessionStorage unavailable or other error — swallow */
     }
+    };
+    fire();
+    window.addEventListener(CONSENT_EVENT, fire);
+    return () => window.removeEventListener(CONSENT_EVENT, fire);
   }, [])
 
   return null

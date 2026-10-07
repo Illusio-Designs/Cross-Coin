@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import { getConsent } from "@/lib/consent";
 
 // The tracking scripts (gtag / fbq / Clarity) are now rendered server-side in
 // _document.jsx, reading the IDs from Brand Settings via
@@ -22,12 +23,13 @@ function useRouteTracking() {
     const handleRouteChange = (url) => {
       if (isLocalhost || isExcluded(url)) return;
 
-      // Facebook Pixel — PageView on navigation
-      if (typeof window !== "undefined" && window.fbq) {
+      const consent = getConsent();
+      // Facebook Pixel — PageView on navigation (marketing consent)
+      if (consent.marketing && typeof window !== "undefined" && window.fbq) {
         window.fbq("track", "PageView");
       }
-      // Google Analytics — page_view on navigation
-      if (typeof window !== "undefined" && window.gtag) {
+      // Google Analytics — page_view on navigation (analytics consent)
+      if (consent.analytics && typeof window !== "undefined" && window.gtag) {
         window.gtag("event", "page_view", { page_path: url });
       }
     };

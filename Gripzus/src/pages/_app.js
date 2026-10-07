@@ -13,7 +13,8 @@ import BackToTop from '../components/ui/BackToTop'
 import Analytics from '../components/common/Analytics'
 import VisitTracker from '../components/common/VisitTracker'
 import SentryInit from '../components/SentryInit'
-import { SpeedInsights } from '@vercel/speed-insights/next'
+import ConsentSpeedInsights from '../components/common/ConsentSpeedInsights'
+import CookieBanner from '../components/ui/CookieBanner'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
@@ -40,8 +41,9 @@ function MyApp({ Component, pageProps }) {
             <BackToTop />
             <Analytics />
             <VisitTracker />
+            <CookieBanner />
             <SentryInit />
-            <SpeedInsights />
+            <ConsentSpeedInsights />
           </WishlistProvider>
         </CartProvider>
       </CurrencyProvider>

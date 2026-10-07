@@ -101,7 +101,8 @@ import UTMTracker from "../components/common/UTMTracker";
 import WhatsAppChat from "../components/common/WhatsAppChat";
 import PhonePopupModal from "../components/common/PhonePopupModal";
 import "../styles/components/PhonePopupModal.css";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import ConsentSpeedInsights from "../components/common/ConsentSpeedInsights";
+import CookieBanner from "../components/ui/CookieBanner";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 
@@ -273,7 +274,8 @@ function App({ Component, pageProps }) {
       <Analytics />
       {/* Msg91Loader moved to the login page — the 351 KiB OTP widget is only
           used for phone login, so it no longer loads on every other page. */}
-      <SpeedInsights />
+      <ConsentSpeedInsights />
+      <CookieBanner />
       <VercelAnalytics />
       <ErrorBoundary>
         <AppWrapper

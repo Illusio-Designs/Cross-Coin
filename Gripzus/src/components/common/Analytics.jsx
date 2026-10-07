@@ -1,6 +1,7 @@
 import Script from 'next/script';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { useConsent } from '../../lib/consent';
 
 /**
  * Analytics — GA4 + Meta Pixel + Microsoft Clarity, driven by the platform
@@ -17,6 +18,7 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
 export default function Analytics() {
   const router = useRouter();
   const [cfg, setCfg] = useState(null);
+  const consent = useConsent();
 
   // Fetch the tracking IDs once (skip on localhost).
   useEffect(() => {
@@ -40,19 +42,19 @@ export default function Analytics() {
   useEffect(() => {
     const onRouteChange = (url) => {
       if (typeof window === 'undefined') return;
-      if (window.gtag) window.gtag('event', 'page_view', { page_path: url });
-      if (window.fbq) window.fbq('track', 'PageView');
+      if (consent.analytics && window.gtag) window.gtag('event', 'page_view', { page_path: url });
+      if (consent.marketing && window.fbq) window.fbq('track', 'PageView');
     };
     router.events.on('routeChangeComplete', onRouteChange);
     return () => router.events.off('routeChangeComplete', onRouteChange);
-  }, [router.events]);
+  }, [router.events, consent.analytics, consent.marketing]);
 
   if (!cfg) return null;
   const { gaId, fbId, clarityId } = cfg;
 
   return (
     <>
-      {fbId && (
+      {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="lazyOnload"
             dangerouslySetInnerHTML={{ __html: `
@@ -76,7 +78,7 @@ export default function Analytics() {
         </>
       )}
 
-      {gaId && (
+      {gaId && consent.analytics && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
           <Script id="ga4-init" strategy="lazyOnload"
@@ -91,7 +93,7 @@ export default function Analytics() {
         </>
       )}
 
-      {clarityId && (
+      {clarityId && consent.analytics && (
         <Script id="ms-clarity" strategy="lazyOnload"
           dangerouslySetInnerHTML={{ __html: `
             (function(c,l,a,r,i,t,y){

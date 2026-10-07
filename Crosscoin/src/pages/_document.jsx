@@ -112,9 +112,11 @@ export default function Document({ tracking }) {
             dangerouslySetInnerHTML={{
               __html:
                 "(function(){var P=location.pathname,BLOCK=(P.indexOf('/dashboard')===0||P.indexOf('/auth')===0);" +
-                // dataLayer + gtag stub (queues into dataLayer)
+                // DPDP consent — read the visitor's stored choice. AN=analytics, MK=marketing.
+                "var AN=false,MK=false;try{var _C=JSON.parse(localStorage.getItem('vlm-consent-v1')||'{}');AN=!!_C.analytics;MK=!!_C.marketing;}catch(e){}" +
+                // dataLayer + gtag stub (queues into dataLayer) — gated on analytics consent
                 "window.dataLayer=window.dataLayer||[];" +
-                "window.gtag=function(){if(BLOCK)return;dataLayer.push(arguments);};" +
+                "window.gtag=function(){if(BLOCK||!AN)return;dataLayer.push(arguments);};" +
                 (gtmId ? "dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});" : "") +
                 ((gaId || adsId) ? "gtag('js',new Date());" : "") +
                 (gaId ? `gtag('config','${gaId}');` : "") +
@@ -124,19 +126,21 @@ export default function Document({ tracking }) {
                 (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : "") +
                 // Facebook pixel stub (queues) + PageView
                 (fbId ? "!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);" : "") +
-                (fbId ? `window._fbqId='${fbId}';fbq('init','${fbId}');fbq('track','PageView');` : "") +
+                (fbId ? `if(MK){window._fbqId='${fbId}';fbq('init','${fbId}');fbq('track','PageView');}` : "") +
                 // Clarity stub (queues)
                 (clarityId ? "window.clarity=window.clarity||function(){(clarity.q=clarity.q||[]).push(arguments)};" : "") +
                 // Deferred loader for the heavy external scripts
                 "var done=false;function inj(u){var s=document.createElement('script');s.async=true;s.src=u;document.head.appendChild(s);}" +
                 "function boot(){if(done)return;done=true;" +
-                (gtmId ? `inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
-                ((gaId || adsId) ? `inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
-                (fbId ? "inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
-                (clarityId ? `if(!BLOCK)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
+                (gtmId ? `if(AN)inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
+                ((gaId || adsId) ? `if(AN)inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
+                (fbId ? "if(MK)inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
+                (clarityId ? `if(!BLOCK&&AN)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
                 "}" +
                 "['pointerdown','keydown','touchstart','scroll'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
                 "if('requestIdleCallback'in window){requestIdleCallback(boot,{timeout:4000});}else{setTimeout(boot,3500);}" +
+                // Re-evaluate tags when the visitor changes cookie consent.
+                "window.addEventListener('vlm-consent-change',function(){location.reload();});" +
                 "})();",
             }}
           />
