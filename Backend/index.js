@@ -650,7 +650,7 @@ const startServer = async () => {
         // global is removed, so unrelated per-brand policies are left alone.
         try {
             const settingsSvc = require('./services/brandSettingsService.js');
-            const alreadyDone = await settingsSvc.getBrandSetting(1, 'dpdp_policy_cleanup_done', false);
+            const alreadyDone = await settingsSvc.getBrandSetting(1, 'dpdp_policy_cleanup_done_v2', false);
             if (!alreadyDone) {
                 const { Policy } = require('./model/policyModel.js');
                 const slugify = (s) => String(s || '').toLowerCase()
@@ -662,7 +662,7 @@ const startServer = async () => {
                 for (const p of all) {
                     if (p.brand_id != null && globalSlugs.has(slugify(p.title))) { await p.destroy(); removed += 1; }
                 }
-                await settingsSvc.setBrandSetting(1, 'dpdp_policy_cleanup_done', '1', false, 'legal', 'One-time removal of old per-brand policy duplicates', null);
+                await settingsSvc.setBrandSetting(1, 'dpdp_policy_cleanup_done_v2', '1', false, 'legal', 'One-time removal of old per-brand policy duplicates', null);
                 logger.info('DPDP policy cleanup: removed ' + removed + ' old per-brand duplicate(s)');
             }
         } catch (err) {
