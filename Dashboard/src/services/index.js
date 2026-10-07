@@ -438,6 +438,18 @@ export const shippingAddressService = {
 };
 
 // Order Services
+// Shared pickup schedule (weekly offs + blocked date ranges).
+export const pickupScheduleService = {
+  get: async () => {
+    const { data } = await adminApi.get('/api/pickup-schedule');
+    return data;
+  },
+  save: async (schedule) => {
+    const { data } = await adminApi.put('/api/pickup-schedule', schedule);
+    return data;
+  },
+};
+
 export const orderService = {
   getAllOrders: async (params = {}, signal = null, forceRefresh = false) => {
     const cacheKey = JSON.stringify(params);

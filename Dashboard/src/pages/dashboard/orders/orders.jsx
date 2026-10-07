@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { orderService, dashboardService, brandService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
+import PickupScheduleModal from "../../../components/orders/PickupScheduleModal";
 import Tooltip from "../../../components/ui/Tooltip";
 import OrderStatusBadge from "../../../components/ui/OrderStatusBadge";
 import ShipmentStatusBadge from "../../../components/ui/ShipmentStatusBadge";
@@ -19,7 +20,7 @@ import { PageHeader, StatGrid, StatTile } from '../../../components/Dashboard/pr
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
     ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
-    Cancel01Icon, Delete02Icon, Search01Icon, FilterIcon, Download04Icon,
+    Cancel01Icon, Delete02Icon, Search01Icon, FilterIcon, Download04Icon, Calendar03Icon,
     Package01Icon, UserIcon, PencilEdit02Icon, Calendar01Icon,
     DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon, WhatsappIcon
 } from '@hugeicons/core-free-icons';
@@ -113,6 +114,7 @@ const Orders = () => {
     });
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [refreshingStatus, setRefreshingStatus] = useState(false);
+    const [pickupOpen, setPickupOpen] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
     const [awbNumber, setAwbNumber] = useState('');
@@ -833,6 +835,12 @@ const Orders = () => {
                                     <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} className={refreshingStatus ? 'animate-spin' : ''} />
                                     {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
                                 </button>
+                                <button className="order-sync-main-btn" type="button"
+                                    title="Set no-pickup days and blocked date ranges (shared across all stores)"
+                                    onClick={() => setPickupOpen(true)}>
+                                    <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />
+                                    Pickup Schedule
+                                </button>
                                 <DateRangePicker
                                     label=""
                                     startDate={statsStartDate}
@@ -845,6 +853,8 @@ const Orders = () => {
                             </>
                         }
                     />
+
+                    <PickupScheduleModal open={pickupOpen} onClose={() => setPickupOpen(false)} />
 
                     {/* ── KPI Strip — one clean row (prototype style) ── */}
                     <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}>

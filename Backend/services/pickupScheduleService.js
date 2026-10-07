@@ -19,9 +19,13 @@ const { logger } = require('../config/logging.js');
 const BRAND = 1; // shared company schedule
 const KEY = 'PICKUP_SCHEDULE';
 const IST_OFFSET_MIN = 330; // UTC+5:30
-const DEFAULTS = { weeklyOffDays: [0], blockedDates: [], cutoffHour: 15, leadDays: 0 };
+const DEFAULTS = { weeklyOffDays: [0], blockedDates: [], blockedRanges: [], cutoffHour: 15, leadDays: 0 };
 
 const isYmd = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+// A valid {from,to} range (both YYYY-MM-DD, from <= to; a single day has from===to).
+const cleanRanges = (arr) => (Array.isArray(arr) ? arr : [])
+  .filter((r) => r && isYmd(r.from) && isYmd(r.to))
+  .map((r) => (r.from <= r.to ? { from: r.from, to: r.to } : { from: r.to, to: r.from }));
 
 async function getSchedule() {
   try {
@@ -33,6 +37,7 @@ async function getSchedule() {
         ? [...new Set(p.weeklyOffDays.map(Number).filter((n) => n >= 0 && n <= 6))]
         : [...DEFAULTS.weeklyOffDays],
       blockedDates: Array.isArray(p.blockedDates) ? p.blockedDates.filter(isYmd) : [],
+      blockedRanges: cleanRanges(p.blockedRanges),
       cutoffHour: Number.isFinite(Number(p.cutoffHour)) ? Math.max(0, Math.min(23, Number(p.cutoffHour))) : DEFAULTS.cutoffHour,
       leadDays: Number.isFinite(Number(p.leadDays)) ? Math.max(0, Math.min(30, Number(p.leadDays))) : 0,
     };
@@ -48,10 +53,11 @@ async function setSchedule(obj = {}) {
       ? [...new Set(obj.weeklyOffDays.map(Number).filter((n) => n >= 0 && n <= 6))].sort((a, b) => a - b)
       : [...DEFAULTS.weeklyOffDays],
     blockedDates: Array.isArray(obj.blockedDates) ? [...new Set(obj.blockedDates.filter(isYmd))].sort() : [],
+    blockedRanges: cleanRanges(obj.blockedRanges).sort((a, b) => (a.from < b.from ? -1 : 1)),
     cutoffHour: Number.isFinite(Number(obj.cutoffHour)) ? Math.max(0, Math.min(23, Number(obj.cutoffHour))) : DEFAULTS.cutoffHour,
     leadDays: Number.isFinite(Number(obj.leadDays)) ? Math.max(0, Math.min(30, Number(obj.leadDays))) : 0,
   };
-  await settingsSvc.setBrandSetting(BRAND, KEY, JSON.stringify(clean), false, 'shipping', 'Shared pickup schedule (weekly offs + blocked dates)', null);
+  await settingsSvc.setBrandSetting(BRAND, KEY, JSON.stringify(clean), false, 'shipping', 'Shared pickup schedule (weekly offs + blocked dates/ranges)', null);
   return clean;
 }
 
@@ -62,7 +68,10 @@ function ymd(d) { return d.toISOString().slice(0, 10); }
 function isAllowed(dateStr, sched) {
   if (!isYmd(dateStr)) return false;
   const dow = new Date(dateStr + 'T00:00:00Z').getUTCDay();
-  return !sched.weeklyOffDays.includes(dow) && !sched.blockedDates.includes(dateStr);
+  if (sched.weeklyOffDays.includes(dow)) return false;
+  if (sched.blockedDates.includes(dateStr)) return false;
+  if ((sched.blockedRanges || []).some((r) => dateStr >= r.from && dateStr <= r.to)) return false;
+  return true;
 }
 
 // Next allowed pickup date (YYYY-MM-DD) on/after `from`, honouring cutoff + lead.
