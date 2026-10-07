@@ -87,6 +87,20 @@ function initializeCronJobs() {
     }
   });
 
+  // DPDP data retention sweep — daily at 4 AM. Drops stale analytics / leads /
+  // contact / abandoned-guest rows per the configured windows. Order & invoice
+  // data is never touched. Runs inline; it is a handful of bounded DELETEs.
+  cron.schedule('0 4 * * *', async () => {
+    console.log('\n⏰ [CRON] DPDP retention sweep started at:', new Date().toISOString());
+    try {
+      const { runRetention } = require('../services/dataRetentionService.js');
+      const summary = await runRetention();
+      console.log('✅ [CRON] DPDP retention sweep completed:', summary);
+    } catch (error) {
+      console.error('❌ [CRON] DPDP retention sweep error:', error.message);
+    }
+  });
+
   // (Instagram feed refresh cron removed — feature retired.)
 
   // ── Abandoned Cart Recovery — every hour at :15 ──────────────────────────
