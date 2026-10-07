@@ -101,7 +101,7 @@ export function Policies() {
     try {
       setLoading(true);
       if (formData.id) await policyService.updatePolicy(formData.id, { title: formData.title, content: formData.content });
-      else await policyService.createPolicy({ title: formData.title, content: formData.content, brand_id: brandId || 1 });
+      else await policyService.createPolicy({ title: formData.title, content: formData.content, ...(brandId === 'global' ? { scope: 'global' } : { brand_id: brandId || 1 }) });
       await fetchPolicies();
       handleModalClose();
     } catch (err) { setError(err.message); }
@@ -118,6 +118,7 @@ export function Policies() {
   const columns = [
     { header: "Sr. No", accessor: "serial_number" },
     { header: "Title", accessor: "title", cell: ({ title }) => <span className="cat-name-cell">{title}</span> },
+    { header: "Scope", accessor: "brand_id", cell: ({ brand_id }) => <span className="cat-desc-cell">{brand_id == null ? 'Global (all brands)' : (brands.find(b => b.id === brand_id)?.display_name || brands.find(b => b.id === brand_id)?.name || `Brand #${brand_id}`)}</span> },
     { header: "Content Preview", accessor: "content", cell: ({ content }) => <span className="cat-desc-cell">{getPlainText(content).slice(0, 80)}{getPlainText(content).length > 80 ? '...' : ''}</span> },
     {
       header: "Actions", accessor: "actions",
@@ -143,14 +144,12 @@ export function Policies() {
             </div>
           </div>
           <div className="sl-header-right">
-            {brands.length > 1 && (
-              <Dropdown
-                value={brandId || ''}
-                onChange={val => setBrandId(Number(val))}
-                options={brands.map(b => ({ value: b.id, label: b.display_name || b.name }))}
-                className="bset-brand-select"
-              />
-            )}
+            <Dropdown
+              value={brandId ?? ''}
+              onChange={val => setBrandId(val === 'global' ? 'global' : Number(val))}
+              options={[{ value: 'global', label: 'Global (all brands)' }, ...brands.map(b => ({ value: b.id, label: b.display_name || b.name }))]}
+              className="bset-brand-select"
+            />
             <div className="sl-search-wrap">
               <span className="sl-search-icon">{IC.search}</span>
               <input type="text" className="sl-search-input" placeholder="Search policies..." value={search} onChange={e => setSearch(e.target.value)} />

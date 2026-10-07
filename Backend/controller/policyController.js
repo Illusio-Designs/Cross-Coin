@@ -4,9 +4,12 @@ const { logger } = require('../config/logging.js');
 
 exports.createPolicy = async (req, res) => {
   try {
-    const { title, content, brand_id: bodyBrandId } = req.body;
-    // Use brand from middleware, body, or default to 1
-    const brand_id = (req.brand && req.brand.id) ? req.brand.id : (bodyBrandId || 1);
+    const { title, content, brand_id: bodyBrandId, scope } = req.body;
+    // scope 'global' (or an explicit null brand_id) creates a shared policy
+    // that serves every store; otherwise use brand from middleware/body/default.
+    let brand_id;
+    if (scope === 'global' || bodyBrandId === null) brand_id = null;
+    else brand_id = (req.brand && req.brand.id) ? req.brand.id : (bodyBrandId || 1);
     const policy = await Policy.create({ title, content, brand_id });
     res.status(201).json(policy);
   } catch (err) {
@@ -77,26 +80,34 @@ const slugifyTitle = (s) => String(s || '')
 exports.getPublicPolicyByName = async (req, res) => {
   try {
     const reqSlug = String(req.params.name || '').toLowerCase().trim();
+    const brandId = req.brand && req.brand.id ? req.brand.id : null;
 
-    const where = {};
-    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+    // Pull this brand's rows AND the global (brand_id IS NULL) rows. A single
+    // global policy can serve every store (DPDP "one template"): the storefront
+    // name is filled from the {{BRAND}} token at serve time, and everything
+    // else is identical across brands.
+    const where = brandId ? { [Op.or]: [{ brand_id: brandId }, { brand_id: null }] } : {};
     const policies = await Policy.findAll({ where });
 
-    // Prefer an EXACT slug match. The old behaviour matched titles with a
-    // LIKE '%...%' substring, so /policy/privacy-policy and
-    // /policy/terms-and-conditions could resolve to the wrong policy (or the
-    // same one) — that's what made the two pages show each other's content.
-    let policy = policies.find((p) => slugifyTitle(p.title) === reqSlug);
-
-    // Forgiving fallback only when nothing matched exactly, so genuinely odd
-    // titles/legacy links still resolve instead of 404-ing.
+    const exact = (p) => slugifyTitle(p.title) === reqSlug;
+    // Global WINS when present (edit the global → every store updates), then a
+    // brand-specific override, then a forgiving substring fallback.
+    let policy = policies.find((p) => p.brand_id === null && exact(p))
+             || policies.find((p) => p.brand_id === brandId && exact(p));
     if (!policy) {
       const searchTitle = reqSlug.replace(/-/g, ' ');
       policy = policies.find((p) => String(p.title || '').toLowerCase().includes(searchTitle));
     }
 
     if (!policy) return res.status(404).json({ error: 'Policy not found' });
-    res.json(policy);
+
+    // Fill the per-store token so one template reads correctly on each brand.
+    const brandName = (req.brand && (req.brand.display_name || req.brand.name)) || '';
+    const out = policy.toJSON();
+    const sub = (s) => (s == null ? s : String(s).replace(/\{\{\s*BRAND\s*\}\}/g, brandName));
+    out.title = sub(out.title);
+    out.content = sub(out.content);
+    res.json(out);
   } catch (err) {
     logger.error('Get public policy by name error:', err);
     res.status(500).json({ error: err.message });
