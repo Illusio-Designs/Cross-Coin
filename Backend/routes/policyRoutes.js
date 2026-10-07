@@ -6,6 +6,10 @@ const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 // Public routes
 router.get('/', policyController.getPolicies);
 router.get('/name/:name', policyController.getPublicPolicyByName);
+// Shared company legal details (GSTIN) substituted into every policy. Declared
+// before '/:id' so the literal path is not captured as an id.
+router.get('/company-info', policyController.getCompanyInfo);
+router.put('/company-info', authenticate, isAdmin, policyController.setCompanyInfo);
 router.get('/:id', policyController.getPolicyById);
 
 // Admin-only routes (site policies are sensitive config)

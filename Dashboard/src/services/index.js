@@ -1850,6 +1850,23 @@ export const policyService = {
       throw error.response?.data || error.message;
     }
   },
+  // Shared company GSTIN — set once, substituted into every policy's {{GSTIN}}.
+  getCompanyInfo: async () => {
+    try {
+      const response = await adminApi.get("/api/policies/company-info");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  setCompanyInfo: async (gstin) => {
+    try {
+      const response = await adminApi.put("/api/policies/company-info", { gstin });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
   getPolicyById: async (id) => {
     try {
       const response = await adminApi.get(`/api/policies/${id}`);

@@ -227,6 +227,7 @@ export async function getPolicy(name) {
   const resolved = POLICY_ALIAS[name] || name;
   try {
     const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(resolved)}`, {
+      headers: { 'X-Brand-Name': BRAND },
       next: { revalidate: 300 },
     });
     if (!res.ok) throw new Error(`Failed to fetch policy ${name}`);

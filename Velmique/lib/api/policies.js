@@ -12,11 +12,14 @@
 */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
 
 export async function getPolicyByName(name) {
   if (!name) return null;
   try {
-    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(name)}`);
+    // Send the brand so the backend can fill the {{BRAND}} token in the shared
+    // global policy; the policy itself is still global (same content for all).
+    const res = await fetch(`${API_URL}/api/policies/name/${encodeURIComponent(name)}`, { headers: { 'X-Brand-Name': BRAND } });
     if (!res.ok) return null;
     const data = await res.json();
     // Backend may wrap as { policy: {...} } or return the policy directly.

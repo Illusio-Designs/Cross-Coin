@@ -65,6 +65,32 @@ exports.deletePolicy = async (req, res) => {
   }
 };
 
+// Shared company legal details. One GSTIN value (stored once, under the primary
+// brand record) is substituted into the {{GSTIN}} token of every policy, so it
+// can be updated later in a single field without editing any policy HTML.
+const COMPANY_BRAND_ID = 1;
+exports.getCompanyInfo = async (req, res) => {
+  try {
+    const gstin = (await require('../services/brandSettingsService.js').getBrandSetting(COMPANY_BRAND_ID, 'company_gstin')) || '';
+    res.json({ gstin });
+  } catch (err) {
+    logger.error('getCompanyInfo error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+exports.setCompanyInfo = async (req, res) => {
+  try {
+    const gstin = String(req.body?.gstin ?? '').trim().slice(0, 32);
+    await require('../services/brandSettingsService.js').setBrandSetting(
+      COMPANY_BRAND_ID, 'company_gstin', gstin, false, 'legal', 'Company GSTIN shown on policies', req.user?.id || null,
+    );
+    res.json({ success: true, gstin });
+  } catch (err) {
+    logger.error('setCompanyInfo error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Turn a title into a URL slug the same way the storefront does
 // (e.g. "Privacy Policy" -> "privacy-policy"). Kept in sync with the
 // frontend slug rule so an exact match is reliable.
@@ -101,10 +127,16 @@ exports.getPublicPolicyByName = async (req, res) => {
 
     if (!policy) return res.status(404).json({ error: 'Policy not found' });
 
-    // Fill the per-store token so one template reads correctly on each brand.
+    // Fill the shared tokens so one template reads correctly everywhere:
+    // {{BRAND}} = the store name (when a brand is resolved), {{GSTIN}} = the one
+    // company GSTIN field (set once in the Dashboard; see get/setCompanyInfo).
     const brandName = (req.brand && (req.brand.display_name || req.brand.name)) || '';
+    let gstin = '';
+    try { gstin = (await require('../services/brandSettingsService.js').getBrandSetting(1, 'company_gstin')) || ''; } catch (e) { /* ignore */ }
     const out = policy.toJSON();
-    const sub = (s) => (s == null ? s : String(s).replace(/\{\{\s*BRAND\s*\}\}/g, brandName));
+    const sub = (s) => (s == null ? s : String(s)
+      .replace(/\{\{\s*BRAND\s*\}\}/g, brandName)
+      .replace(/\{\{\s*GSTIN\s*\}\}/g, gstin || 'to be updated'));
     out.title = sub(out.title);
     out.content = sub(out.content);
     res.json(out);

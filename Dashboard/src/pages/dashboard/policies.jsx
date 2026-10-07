@@ -35,6 +35,9 @@ export function Policies() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [brands, setBrands] = useState([]);
   const [brandId, setBrandId] = useState(null);
+  const [gstin, setGstin] = useState('');
+  const [gstinSaving, setGstinSaving] = useState(false);
+  const [gstinMsg, setGstinMsg] = useState('');
 
   useEffect(() => {
     brandService.getAllBrands(true).then(r => {
@@ -44,6 +47,20 @@ export function Policies() {
       }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    policyService.getCompanyInfo().then(r => setGstin(r?.gstin || '')).catch(() => {});
+  }, []);
+
+  const saveGstin = async () => {
+    setGstinSaving(true); setGstinMsg('');
+    try {
+      await policyService.setCompanyInfo(gstin.trim());
+      setGstinMsg('Saved — it now shows on every policy.');
+    } catch (e) {
+      setGstinMsg(e.message || 'Save failed');
+    } finally { setGstinSaving(false); }
+  };
 
   const fetchPolicies = async () => {
     try {
@@ -158,6 +175,18 @@ export function Policies() {
               <span className="sl-add-btn-icon">{IC.add}</span>Add Policy
             </button>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 14px', padding: '12px 14px', border: '1px solid var(--ds-color-border)', borderRadius: 12 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ds-color-text)' }}>Company GSTIN</span>
+          <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{"One value for all stores — fills the {{GSTIN}} token in every policy."}</span>
+          <input value={gstin} onChange={e => setGstin(e.target.value)} placeholder="e.g. 24ABCDE1234F1Z5"
+            style={{ flex: '1 1 220px', minWidth: 180, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface, #fff)', color: 'var(--ds-color-text)', fontFamily: 'var(--ds-font-mono, monospace)' }} />
+          <button type="button" onClick={saveGstin} disabled={gstinSaving}
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--ds-color-primary, #111)', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: gstinSaving ? 'not-allowed' : 'pointer', opacity: gstinSaving ? 0.6 : 1 }}>
+            {gstinSaving ? 'Saving…' : 'Save GSTIN'}
+          </button>
+          {gstinMsg && <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{gstinMsg}</span>}
         </div>
 
         <div className="sl-table-wrap">
