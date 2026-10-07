@@ -60,13 +60,18 @@ module.exports.register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // DPDP S9 — persist the 18+ affirmation the storefront age gate collects.
+        const ageConfirmed = req.body.age_confirmed === true;
+
         const user = await User.create({
             username,
             email,
             password: hashedPassword,
             phone: phone ? String(phone).replace(/\D/g, '').slice(-10) : null,
             role,
-            source_brand_id: brandId
+            source_brand_id: brandId,
+            age_confirmed: ageConfirmed,
+            age_confirmed_at: ageConfirmed ? new Date() : null,
         });
 
         // Guest-to-member conversion: link guest orders by email and phone

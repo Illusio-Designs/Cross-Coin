@@ -63,6 +63,17 @@ const User = sequelize.define('User', {
         allowNull: true,
         defaultValue: null
     },
+    // DPDP S9 — the 18+ self-declaration captured by the registration age gate.
+    age_confirmed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    age_confirmed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
     source_brand_id: {
         type: DataTypes.INTEGER,
         allowNull: true,

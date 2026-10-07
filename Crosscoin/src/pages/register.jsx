@@ -113,6 +113,7 @@ export default function Register() {
           username: name.trim(),
           email: email.trim() || `${digits}@phone.crosscoin.in`,
           phone: digits,
+          age_confirmed: ageOk,
           password: Math.random().toString(36).slice(-12) + "Cc1!",
         }),
       }).catch(() => {});

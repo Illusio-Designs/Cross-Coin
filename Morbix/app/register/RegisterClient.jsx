@@ -103,6 +103,7 @@ export default function RegisterClient() {
           username: form.name.trim(),
           email: form.email.trim() || `${digits}@phone.morbixsocks.com`,
           phone: digits,
+          age_confirmed: ageOk,
           password: Math.random().toString(36).slice(-12) + 'Mx1!',
           role: 'consumer',
         }),

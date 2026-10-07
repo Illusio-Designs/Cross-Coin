@@ -492,6 +492,25 @@ const startServer = async () => {
             logger.error('users.roles column migration failed: ' + err.message);
         }
 
+        // ── Idempotent migration: users.age_confirmed (DPDP S9 age gate) ───
+        // The 18+ self-declaration from registration. Production doesn't run
+        // sequelize sync, so ensure the columns exist here before the User
+        // model references them.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'age_confirmed'`
+            );
+            if (!cols.length) {
+                logger.info('Migrating: adding users.age_confirmed columns…');
+                await sequelize.query(`ALTER TABLE users ADD COLUMN age_confirmed TINYINT(1) NOT NULL DEFAULT 0`);
+                await sequelize.query(`ALTER TABLE users ADD COLUMN age_confirmed_at DATETIME NULL`).catch(() => {});
+                logger.info('✓ users.age_confirmed columns added');
+            }
+        } catch (err) {
+            logger.error('users.age_confirmed column migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: utm_tracking.brand_id ────────────────────
         // Stamps each visit with its storefront brand so the Traffic &
         // Conversion report can group sessions per brand. Backfills existing

@@ -99,6 +99,7 @@ export default function RegisterPage() {
           username: form.name.trim(),
           email: form.email.trim() || `${digits}@phone.gripzus.in`,
           phone: digits,
+          age_confirmed: ageOk,
           password: Math.random().toString(36).slice(-12) + 'Gz1!',
         }),
       }).catch(() => {});

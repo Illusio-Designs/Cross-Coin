@@ -110,6 +110,7 @@ export default function RegisterPage() {
           username: form.username.trim(),
           email: form.email.trim() || `${digits}@phone.velmique.in`,
           phone: digits,
+          age_confirmed: ageOk,
           password: Math.random().toString(36).slice(-12) + 'Vm1!',
         }),
       }).catch(() => {})

@@ -96,6 +96,7 @@ export default function RegisterClient() {
           username: form.username.trim(),
           email: form.email.trim() || `${digits}@phone.knitwink.in`,
           phone: digits,
+          age_confirmed: ageOk,
           password: Math.random().toString(36).slice(-12) + 'Kw1!', // random strong password
         }),
       })
