@@ -605,6 +605,25 @@ const startServer = async () => {
             logger.error('contact_messages triage column migration failed: ' + err.message);
         }
 
+        // ── Idempotent seed: DPDP global policies (brand_id NULL) ─────────
+        // Four shared policies served to every store (policyController fills a
+        // global row for all brands and substitutes {{BRAND}} / {{GSTIN}}).
+        // Each is inserted only if a global row with that title is absent, so
+        // later admin edits are never overwritten on reboot.
+        try {
+            const { Policy } = require('./model/policyModel.js');
+            const seeds = require('./config/dpdpPolicySeeds.js');
+            for (const seed of seeds) {
+                const existing = await Policy.findOne({ where: { brand_id: null, title: seed.title } });
+                if (!existing) {
+                    await Policy.create({ title: seed.title, content: seed.content, brand_id: null });
+                    logger.info('Seeded global DPDP policy: ' + seed.title);
+                }
+            }
+        } catch (err) {
+            logger.error('DPDP global policy seed failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()
