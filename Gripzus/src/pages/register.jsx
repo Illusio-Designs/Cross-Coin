@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [otp, setOtp]   = useState(['', '', '', '']);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const [error, setError]     = useState('');
+  const [ageOk, setAgeOk]     = useState(false);
   const [loading, setLoading] = useState(false);
 
   const digits     = form.phone.replace(/\D/g, '').slice(0, 10);
@@ -34,6 +35,8 @@ export default function RegisterPage() {
     setError('');
     if (!form.name.trim())    { setError('Please enter your name.'); return; }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number.'); return; }
+    if (!ageOk) { setError('Please confirm you are 18 years or older'); return; }
+    try { localStorage.setItem('vlm-age-ok','1'); } catch (e) {}
 
     if (isLocal) { setStep('otp'); return; }
 
@@ -161,7 +164,11 @@ export default function RegisterPage() {
                 </div>
                 <Field label="Email (optional)" type="email" value={form.email} onChange={(v) => set('email', v)} placeholder="you@example.com" optional />
                 {error && <p className="text-sm text-red-600">{error}</p>}
-                <button type="submit" disabled={!form.name.trim() || digits.length !== 10} className="cta w-full justify-center !py-4 disabled:opacity-50">
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.5, margin: '8px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={ageOk} onChange={(e) => setAgeOk(e.target.checked)} style={{ marginTop: 3 }} />
+                  <span>I confirm I am 18 years of age or older and agree to the Privacy Policy.</span>
+                </label>
+                <button type="submit" disabled={!form.name.trim() || digits.length !== 10 || !ageOk} className="cta w-full justify-center !py-4 disabled:opacity-50">
                   Send OTP
                 </button>
                 <p className="text-center eyebrow">

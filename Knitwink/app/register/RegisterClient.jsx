@@ -15,6 +15,7 @@ export default function RegisterClient() {
   const [otp, setOtp] = useState(['', '', '', ''])
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const [error, setError] = useState('')
+  const [ageOk, setAgeOk] = useState(false);
   const [loading, setLoading] = useState(false)
   const { fetchUser } = useAuth()
   const router = useRouter()
@@ -30,6 +31,8 @@ export default function RegisterClient() {
     setError('')
     if (!form.username.trim()) { setError('Please enter your name'); return }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
+    if (!ageOk) { setError('Please confirm you are 18 years or older'); return; }
+    try { localStorage.setItem('vlm-age-ok','1'); } catch (e) {}
 
     if (isLocal) { setStep('otp'); return }
 
@@ -159,7 +162,11 @@ export default function RegisterClient() {
               className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-brand-black placeholder:text-gray-300 focus:border-brand-black focus:outline-none" />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <button onClick={handleSendOtp} disabled={!form.username.trim() || digits.length !== 10}
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.5, margin: '4px 0', cursor: 'pointer' }}>
+            <input type="checkbox" checked={ageOk} onChange={(e) => setAgeOk(e.target.checked)} style={{ marginTop: 3 }} />
+            <span>I confirm I am 18 years of age or older and agree to the Privacy Policy.</span>
+          </label>
+          <button onClick={handleSendOtp} disabled={!form.username.trim() || digits.length !== 10 || !ageOk}
             className="flex items-center justify-center gap-2 rounded-full bg-brand-black py-3.5 text-sm font-semibold uppercase tracking-wider text-white disabled:opacity-50">
             Send OTP <ArrowRight size={15} />
           </button>

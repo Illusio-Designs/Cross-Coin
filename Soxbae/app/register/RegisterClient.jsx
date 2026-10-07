@@ -17,6 +17,7 @@ export default function RegisterClient() {
   const [otp, setOtp] = useState(['', '', '', '']);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const [error, setError] = useState('');
+  const [ageOk, setAgeOk] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const digits = form.phone.replace(/\D/g, '').slice(0, 10);
@@ -35,6 +36,8 @@ export default function RegisterClient() {
     setError('');
     if (!form.name.trim()) { setError('Please enter your name.'); return; }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number.'); return; }
+    if (!ageOk) { setError('Please confirm you are 18 years or older'); return; }
+    try { localStorage.setItem('vlm-age-ok','1'); } catch (e) {}
     if (isLocal) { setStep('otp'); toast.info('Enter OTP 1111 to continue'); return; }
 
     let attempts = 0;
@@ -142,7 +145,11 @@ export default function RegisterClient() {
                 <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@email.com" autoComplete="email" />
               </label>
               {error && <p className="auth-error">{error}</p>}
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={!form.name.trim() || digits.length !== 10}>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.5, margin: '8px 0', cursor: 'pointer' }}>
+                <input type="checkbox" checked={ageOk} onChange={(e) => setAgeOk(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>I confirm I am 18 years of age or older and agree to the Privacy Policy.</span>
+              </label>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={!form.name.trim() || digits.length !== 10 || !ageOk}>
                 Send OTP <Icon name="ArrowRight" size={16} />
               </button>
               <p className="muted" style={{ textAlign: 'center', fontSize: 13 }}>

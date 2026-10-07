@@ -261,6 +261,25 @@ export default function Contact({ seoData, pageFaqs = [], globalFaqs = [] }) {
           </div>
         </section>
 
+        <section className="ct-faq-section" id="grievance" style={{ scrollMarginTop: 110 }}>
+          <div className="ct-container">
+            <div style={{ maxWidth: 760, margin: '0 auto', border: '1px solid rgba(0,0,0,.14)', padding: '28px 24px' }}>
+              <h3 style={{ fontSize: 20, margin: '0 0 12px', fontWeight: 700 }}>Grievance Officer</h3>
+              <p style={{ fontSize: 14, lineHeight: 1.6, margin: '0 0 16px', opacity: 0.75 }}>
+                For privacy requests — access, correction, deletion, or withdrawing consent — or any grievance
+                about how your personal data is handled, contact our Grievance Officer. We respond within the
+                timelines required under the DPDP Act, 2023.
+              </p>
+              <div style={{ fontSize: 14, lineHeight: 1.9 }}>
+                <div><span style={{ opacity: 0.6 }}>Name:</span> [Grievance Officer — to be confirmed]</div>
+                <div><span style={{ opacity: 0.6 }}>Entity:</span> Obzus India Private Limited</div>
+                <div><span style={{ opacity: 0.6 }}>Email:</span> <a href="mailto:obzusindia@gmail.com">obzusindia@gmail.com</a></div>
+                <div><span style={{ opacity: 0.6 }}>Phone:</span> <a href="tel:+919712891700">+91 97128 91700</a></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </SeoWrapper>
   );

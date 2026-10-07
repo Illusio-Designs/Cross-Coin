@@ -23,6 +23,7 @@ export default function Register() {
   const otpCode = otpDigits.join("");
   const [hint, setHint] = useState("");
   const [error, setError] = useState("");
+  const [ageOk, setAgeOk] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -41,6 +42,8 @@ export default function Register() {
     setError(""); setHint("");
     if (!name.trim()) { setError("Please enter your name."); return; }
     if (digits.length !== 10) { setError("Enter a valid 10-digit number"); return; }
+    if (!ageOk) { setError('Please confirm you are 18 years or older'); return; }
+    try { localStorage.setItem('vlm-age-ok','1'); } catch (e) {}
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Enter a valid email, or leave it blank."); return; }
     setOtpSending(true);
 
@@ -221,12 +224,17 @@ export default function Register() {
                   />
                 </div>
 
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.5, margin: '8px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={ageOk} onChange={(e) => setAgeOk(e.target.checked)} style={{ marginTop: 3 }} />
+                  <span>I confirm I am 18 years of age or older and agree to the Privacy Policy.</span>
+                </label>
+
                 {error && <p className="auth-error" role="alert">{error}</p>}
 
                 <button
                   type="submit"
                   className="auth-submit"
-                  disabled={otpSending || !name.trim() || digits.length !== 10}
+                  disabled={otpSending || !name.trim() || digits.length !== 10 || !ageOk}
                   aria-busy={otpSending}
                 >
                   {otpSending ? "Sending OTP..." : "Send OTP"}

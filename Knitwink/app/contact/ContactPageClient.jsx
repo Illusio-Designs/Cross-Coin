@@ -203,6 +203,24 @@ export function ContactPageClient() {
           </div>
         </div>
       </section>
+
+      {/* Grievance Officer — DPDP Act, 2023 */}
+      <section id="grievance" className="scroll-mt-28 bg-white px-4 py-10 sm:px-6 md:py-14">
+        <div className="mx-auto max-w-2xl border border-gray-200 p-7">
+          <h3 className="mb-3 text-lg font-bold uppercase tracking-wide text-brand-black">Grievance Officer</h3>
+          <p className="mb-4 text-sm leading-relaxed text-gray-500">
+            For privacy requests — access, correction, deletion, or withdrawing consent — or any grievance
+            about how your personal data is handled, contact our Grievance Officer. We respond within the
+            timelines required under the DPDP Act, 2023.
+          </p>
+          <div className="space-y-1.5 text-sm text-brand-black">
+            <p><span className="text-gray-400">Name:</span> [Grievance Officer — to be confirmed]</p>
+            <p><span className="text-gray-400">Entity:</span> Obzus India Private Limited</p>
+            <p><span className="text-gray-400">Email:</span> <a href="mailto:obzusindia@gmail.com" className="underline underline-offset-2">obzusindia@gmail.com</a></p>
+            <p><span className="text-gray-400">Phone:</span> <a href="tel:+919712891700" className="underline underline-offset-2">+91 97128 91700</a></p>
+          </div>
+        </div>
+      </section>
     </>
   )
 }

@@ -13,6 +13,7 @@ const COLS = [
     { label: 'Shipping & delivery', href: '/policies/shipping-policy' },
     { label: 'Cancellation & refund', href: '/policies/cancellation-and-refund' },
     { label: 'Privacy policy', href: '/policies/privacy-policy' },
+    { label: 'Grievance', href: '/contact#grievance' },
     { label: 'Terms of service', href: '/policies/terms-and-conditions' },
   ] },
   { title: 'Company', links: [

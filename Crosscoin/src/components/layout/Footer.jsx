@@ -108,6 +108,7 @@ const Footer = () => {
           <h4>Policies</h4>
           <ul>
             <li><Link href="/policy/privacy-policy">Privacy Policy</Link></li>
+            <li><Link href="/Contact#grievance">Grievance</Link></li>
             <li><Link href="/policy/terms-and-conditions">Terms & Conditions</Link></li>
             <li><Link href="/policy/shipping-policy">Shipping Policy</Link></li>
             <li><Link href="/policy/cancellation-and-refund">Cancellation & Refund</Link></li>

@@ -6,6 +6,7 @@ import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
 const CARE_LINKS = [
   { label: 'Privacy Policy',        href: '/policies/privacy-policy' },
+  { label: 'Grievance',             href: '/contact#grievance' },
   { label: 'Terms & Conditions',    href: '/policies/terms-and-conditions' },
   { label: 'Shipping Policy',       href: '/policies/shipping-policy' },
   { label: 'Cancellation & Refund', href: '/policies/cancellation-and-refund' },
