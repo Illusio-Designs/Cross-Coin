@@ -659,6 +659,30 @@ module.exports.updatePassword = async (req, res) => {
     }
 };
 
+// **Export my data (DPDP Right to Access, S11)**
+// Returns the authenticated shopper's personal data as a downloadable JSON file.
+module.exports.exportMyData = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+        const { buildExport } = require('../services/userExportService.js');
+        const data = await buildExport(userId);
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="my-data-${stamp}.json"`);
+        res.status(200).send(JSON.stringify(data, null, 2));
+    } catch (error) {
+        if (error.status === 404) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        logger.error('Error exporting user data (DPDP):', error);
+        res.status(500).json({ success: false, message: 'Failed to export your data', error: error.message });
+    }
+};
+
 // **Delete Account (DPDP erasure — consumer self-service)**
 // The storefront takes explicit consent on a confirm step, then POSTs
 // `confirm: true`. We run the full cross-table erasure (see

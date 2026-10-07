@@ -3,7 +3,7 @@ const {
     register, login, adminLogin, logout,
     forgotPassword, resetPassword, verifyEmail,
     getCurrentUser, getProfile, updateProfile, updateUser,
-    updatePassword, changePassword, deleteUser,
+    updatePassword, changePassword, deleteUser, exportMyData,
     getAllUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
     checkPhone
 } = require('../controller/userController.js');
@@ -69,6 +69,7 @@ router.get('/profile', isAuthenticated, getProfile);
 router.put('/profile', isAuthenticated, updateProfile);
 router.put('/update', isAuthenticated, upload.single('profilePic'), updateUser);
 router.put('/update-password', isAuthenticated, updatePassword);
+router.get('/export', isAuthenticated, exportMyData);
 router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin

@@ -69,6 +69,18 @@ export const logout = async () => {
   } catch (error) { throw error.response?.data || error.message; }
 };
 
+// DPDP data export (Right to Access, S11) — returns a Blob to download.
+export const exportMyData = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${API_URL}/api/users/export`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
+      responseType: 'blob',
+    });
+    return response.data;
+  } catch (error) { throw error.response?.data || error.message; }
+};
+
 export const deleteAccount = async (reason = '') => {
   try {
     const token = localStorage.getItem("token");

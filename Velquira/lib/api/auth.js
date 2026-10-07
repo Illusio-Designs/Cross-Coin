@@ -191,3 +191,13 @@ export async function deleteAccount() {
   if (!res.ok) throw new Error(data.message || 'Failed to delete account');
   return data;
 }
+
+// ── Export my data (DPDP Right to Access) ────────────────────────────────────
+export async function exportMyData() {
+  const res = await fetch(`${API_URL}/api/users/export`, { headers: authHeaders() });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.message || 'Failed to export your data');
+  }
+  return res.blob();
+}

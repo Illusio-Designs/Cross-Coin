@@ -21,7 +21,7 @@
 export { API_URL, API_BASE_URL, BRAND_NAME, createPublicApiClient, addBrandHeader, offerAPI } from './api/config';
 
 // ── User & Auth ───────────────────────────────────────────────────────────
-export { registerUser, loginUser, forgotPassword, resetPassword, getCurrentUser, updateUserProfile, updateUserPassword, logout, deleteAccount } from './api/userApi';
+export { registerUser, loginUser, forgotPassword, resetPassword, getCurrentUser, updateUserProfile, updateUserPassword, logout, deleteAccount, exportMyData } from './api/userApi';
 
 // ── Cart & Wishlist ───────────────────────────────────────────────────────
 export { getCart, addToCart, updateCartItem, removeFromCart, clearCart, getWishlist, addToWishlist, removeFromWishlist, clearWishlist } from './api/cartApi';

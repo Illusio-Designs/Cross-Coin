@@ -1,37 +1,64 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus';
 
-// DPDP self-service erasure (Right to Erasure, S12). A danger-zone card opens a
-// confirm step that collects explicit consent; on confirm the backend runs the
-// full cross-table erasure, the session is cleared, the user is logged out, and
-// a success message shows before redirecting home.
+function authHeaders() {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  return {
+    'Content-Type': 'application/json',
+    'X-Brand-Name': BRAND,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+// DPDP data rights (S11 access + S12 erasure). Download a copy of the personal
+// data held about the account, or permanently delete it with explicit consent.
 export default function DeleteAccountSection() {
-  const router = useRouter();
   const { logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [dlBusy, setDlBusy] = useState(false);
+  const [dlError, setDlError] = useState('');
 
   const RED = '#b42318';
+
+  const download = async () => {
+    setDlError('');
+    setDlBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/export`, { headers: authHeaders() });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed to export your data');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setDlError(e.message || 'Could not prepare your data. Please try again.');
+    } finally {
+      setDlBusy(false);
+    }
+  };
 
   const run = async () => {
     setError('');
     setBusy(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const res = await fetch(`${API_BASE}/api/users/delete`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Brand-Name': BRAND,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: authHeaders(),
         body: JSON.stringify({ confirm: true }),
       });
       const data = await res.json().catch(() => ({}));
@@ -46,20 +73,32 @@ export default function DeleteAccountSection() {
   };
 
   return (
-    <section style={{ marginTop: 40, border: `1px solid ${RED}33`, padding: '22px 20px', background: `${RED}08` }}>
-      <h3 style={{ margin: '0 0 6px', fontSize: 16, color: RED }}>Delete account</h3>
+    <section style={{ marginTop: 40, border: '1px solid rgba(0,0,0,.14)', padding: '22px 20px' }}>
+      <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>Your data &amp; privacy</h3>
       <p style={{ margin: '0 0 16px', fontSize: 13.5, lineHeight: 1.6, opacity: 0.8 }}>
-        Permanently delete your account and personal data under the DPDP Act, 2023. Your order and
-        invoice records are kept in anonymised form as tax law requires; everything else is erased.
-        This cannot be undone.
+        Download a copy of the personal data we hold about your account, or permanently delete your
+        account under the DPDP Act, 2023. Your order and invoice records are kept in anonymised form as
+        tax law requires; everything else is erased. Deletion cannot be undone.
       </p>
-      <button
-        type="button"
-        onClick={() => { setOpen(true); setConsent(false); setError(''); }}
-        style={{ border: `1px solid ${RED}`, color: RED, background: 'transparent', padding: '10px 18px', fontSize: 12, letterSpacing: '.04em', textTransform: 'uppercase', cursor: 'pointer' }}
-      >
-        Delete account
-      </button>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={download}
+          disabled={dlBusy}
+          style={{ border: '1px solid rgba(0,0,0,.4)', color: 'inherit', background: 'transparent', padding: '10px 18px', fontSize: 12, letterSpacing: '.04em', textTransform: 'uppercase', cursor: dlBusy ? 'not-allowed' : 'pointer', opacity: dlBusy ? 0.6 : 1 }}
+        >
+          {dlBusy ? 'Preparing…' : 'Download my data'}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(true); setConsent(false); setError(''); }}
+          style={{ border: `1px solid ${RED}`, color: RED, background: 'transparent', padding: '10px 18px', fontSize: 12, letterSpacing: '.04em', textTransform: 'uppercase', cursor: 'pointer' }}
+        >
+          Delete account
+        </button>
+      </div>
+      {dlError && <p style={{ color: RED, fontSize: 13, margin: '12px 0 0' }}>{dlError}</p>}
 
       {open && (
         <div

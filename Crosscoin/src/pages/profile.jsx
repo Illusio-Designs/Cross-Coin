@@ -21,6 +21,7 @@ import {
   cancelOrder,
   initiateReturn,
   deleteAccount,
+  exportMyData,
 } from "../services/publicApi";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -171,6 +172,26 @@ export default function Profile({ seoData }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportMyData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      showProfileUpdateErrorToast(e.message || "Could not prepare your data.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (!deleteReason.trim()) { showValidationErrorToast("Please provide a reason."); return; }
@@ -462,6 +483,17 @@ export default function Profile({ seoData }) {
                   </div>
                   <button type="submit" className="pf-btn-primary pf-btn-full">Update Profile</button>
                 </form>
+
+                {/* Download my data (DPDP Right to Access) */}
+                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #eee' }}>
+                  <div className="pf-section-title">Your data</div>
+                  <p style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.6, color: '#555' }}>
+                    Download a copy of the personal data we hold about your account under the DPDP Act, 2023.
+                  </p>
+                  <button type="button" className="pf-btn-ghost" onClick={handleExportData} disabled={exporting}>
+                    {exporting ? 'Preparing…' : 'Download my data'}
+                  </button>
+                </div>
 
                 {/* Delete Account */}
                 <div className="pf-danger-zone">
