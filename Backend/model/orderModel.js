@@ -149,6 +149,12 @@ const Order = sequelize.define('Order', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    // Scheduled pickup date (YYYY-MM-DD) chosen by the shared pickup schedule
+    // (weekly off-days + blocked dates) at booking time.
+    scheduled_pickup_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     shipping_address_id: {
         type: DataTypes.INTEGER,
         allowNull: true,

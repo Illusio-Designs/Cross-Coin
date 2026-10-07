@@ -1120,6 +1120,15 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         }
       }
 
+      // Next allowed pickup date from the shared pickup schedule (weekly offs +
+      // blocked dates). Fail-soft: never block a booking if this errors.
+      let scheduledPickupDate = null;
+      try {
+        scheduledPickupDate = await require('../services/pickupScheduleService.js').getNextPickupDate();
+      } catch (e) {
+        logger.warn(`pickup schedule: could not compute pickup date for ${order.order_number}: ${e.message}`);
+      }
+
       // Update order with provider details (fship_* columns used for both FShip and iThink)
       await order.update({
         fship_order_id: result.orderId || null,
@@ -1130,7 +1139,8 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         courier_name: result.courierName || null,
         tracking_number: result.waybill || null,
         status: 'processing', // Update status to processing when synced
-        fship_last_synced_at: new Date() // Track last sync time
+        fship_last_synced_at: new Date(), // Track last sync time
+        ...(scheduledPickupDate ? { scheduled_pickup_date: scheduledPickupDate } : {}),
       }, { transaction });
 
       // Dual-write to order_shipments table — record the provider that was used

@@ -679,6 +679,21 @@ const startServer = async () => {
             logger.error('DPDP policy count log failed: ' + err.message);
         }
 
+        // ── Idempotent migration: orders.scheduled_pickup_date ────────────
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'scheduled_pickup_date'`
+            );
+            if (!cols.length) {
+                logger.info('Migrating: adding orders.scheduled_pickup_date…');
+                await sequelize.query(`ALTER TABLE orders ADD COLUMN scheduled_pickup_date DATE NULL`);
+                logger.info('✓ orders.scheduled_pickup_date added');
+            }
+        } catch (err) {
+            logger.error('orders.scheduled_pickup_date migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
         // are otherwise added only inside the version-gated setupDatabase()
