@@ -67,7 +67,7 @@ export default function ContactPage() {
                 respond within the timelines required under the DPDP Act, 2023.
               </p>
               <div className="space-y-1.5 text-sm font-body text-[var(--ink)]">
-                <p><span className="text-[var(--ink-muted)]">Name:</span> [Grievance Officer — to be confirmed]</p>
+                <p><span className="text-[var(--ink-muted)]">Name:</span> Divyesh Kotadiya</p>
                 <p><span className="text-[var(--ink-muted)]">Entity:</span> Obzus India Private Limited</p>
                 <p><span className="text-[var(--ink-muted)]">Email:</span>{' '}
                   <a href="mailto:obzusindia@gmail.com" className="hover:text-[var(--gold-deep)]">obzusindia@gmail.com</a></p>

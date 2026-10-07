@@ -214,7 +214,7 @@ export function ContactPageClient() {
             timelines required under the DPDP Act, 2023.
           </p>
           <div className="space-y-1.5 text-sm text-brand-black">
-            <p><span className="text-gray-400">Name:</span> [Grievance Officer — to be confirmed]</p>
+            <p><span className="text-gray-400">Name:</span> Divyesh Kotadiya</p>
             <p><span className="text-gray-400">Entity:</span> Obzus India Private Limited</p>
             <p><span className="text-gray-400">Email:</span> <a href="mailto:obzusindia@gmail.com" className="underline underline-offset-2">obzusindia@gmail.com</a></p>
             <p><span className="text-gray-400">Phone:</span> <a href="tel:+919712891700" className="underline underline-offset-2">+91 97128 91700</a></p>
