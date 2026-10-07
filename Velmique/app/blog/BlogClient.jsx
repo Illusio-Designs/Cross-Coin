@@ -120,27 +120,27 @@ export default function BlogClient() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {rest.map(post => (
                   <Link key={post.id} href={`/blog/${post.slug}`}
-                    className="group bg-white border border-[var(--border)] overflow-hidden hover:border-[var(--gold)] transition-colors">
-                    <div className="aspect-[16/9] overflow-hidden bg-[var(--surface-2)]">
+                    className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
+                    <div className="absolute inset-0 bg-[var(--surface-2)]">
                       <img src={blogCardImg(post.coverImage)} alt={post.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                     </div>
-                    <div className="p-6">
-                      {post.category && (
-                        <span className="text-[var(--gold-deep)] text-[10px] tracking-[0.3em] uppercase font-body">{post.category}</span>
-                      )}
-                      <h3 className="font-serif italic text-[var(--ink)] text-2xl mt-2 mb-3 group-hover:text-[var(--gold-deep)] transition-colors leading-snug">
+                    {post.category && (
+                      <span className="absolute top-4 left-4 z-20 bg-white text-[var(--ink)] px-3 py-2 text-[8px] tracking-[0.2em] uppercase font-body">{post.category}</span>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(17,16,14,0.82)] via-[rgba(17,16,14,0.12)] to-transparent z-10" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
+                      <div className="flex items-center gap-2 text-white/70 text-[11px] font-body">
+                        <span>{post.author?.name}</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><Clock size={10} /> {post.readTime} min</span>
+                      </div>
+                      <h3 className="font-serif text-white leading-[1.12] mt-2 mb-4" style={{ fontSize: 'clamp(1.3rem, 2vw, 1.6rem)' }}>
                         {post.title}
                       </h3>
-                      <p className="text-[var(--ink-soft)] text-sm font-body leading-relaxed mb-4 line-clamp-3">{post.excerpt}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-[var(--ink-muted)] text-xs font-body">
-                          <span>{post.author?.name}</span>
-                          <span>·</span>
-                          <span className="flex items-center gap-1"><Clock size={10} /> {post.readTime} min</span>
-                        </div>
-                        <ArrowUpRight size={16} className="text-[var(--ink-muted)] group-hover:text-[var(--gold-deep)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
-                      </div>
+                      <span className="inline-flex items-center gap-2 text-white text-[9px] tracking-[0.2em] uppercase font-body border-b border-white/60 pb-1 transition-colors group-hover:border-[var(--gold-light)] group-hover:text-[var(--gold-light)]">
+                        Read article <ArrowUpRight size={12} />
+                      </span>
                     </div>
                   </Link>
                 ))}
