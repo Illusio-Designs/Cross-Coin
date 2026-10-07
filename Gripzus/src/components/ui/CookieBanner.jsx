@@ -9,8 +9,8 @@ import {
    Marketing are opt-in and stay off until accepted — the Analytics component
    and VisitTracker read this choice before loading any tag. Reopen any time
    from the footer "Cookie settings" link. */
-const BAR = { background: '#16140f', borderTop: '1px solid rgba(255,255,255,.14)' };
-const GOLD = '#D9C190';
+const BAR = { background: 'var(--ink, #16140f)', borderTop: '1px solid rgba(255,255,255,.14)' };
+const GOLD = 'var(--gold, var(--accent, #D9C190))';
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
