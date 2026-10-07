@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)]
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [ageOk, setAgeOk] = useState(false)
   const { fetchUser } = useAuth()
 
   const digits = form.phone.replace(/\D/g, '').slice(0, 10)
@@ -29,6 +30,10 @@ export default function RegisterPage() {
     setError('')
     if (!form.username.trim()) { setError('Please enter your name'); return }
     if (digits.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
+    if (!ageOk) { setError('Please confirm you are 18 years or older'); return }
+    // Record the age affirmation so marketing/analytics tags can suppress
+    // tracking for anyone who did not confirm they are an adult (DPDP).
+    try { localStorage.setItem('vlm-age-ok', '1'); } catch {}
 
     if (isLocal) {
       setStep('otp')
@@ -202,11 +207,23 @@ export default function RegisterPage() {
                 />
               </div>
 
+              <label className="flex items-start gap-2.5 text-xs font-body text-[var(--ink-soft)] leading-relaxed cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={ageOk}
+                  onChange={e => setAgeOk(e.target.checked)}
+                  className="mt-0.5 accent-[var(--gold-deep)] shrink-0"
+                />
+                <span>I confirm I am 18 years of age or older and agree to the{' '}
+                  <Link href="/privacy-policy" className="text-[var(--gold-deep)] underline underline-offset-2">Privacy Policy</Link>.
+                </span>
+              </label>
+
               {error && <p className="text-xs text-red-500 font-body">{error}</p>}
 
               <button
                 onClick={handleSendOtp}
-                disabled={!form.username.trim() || digits.length !== 10}
+                disabled={!form.username.trim() || digits.length !== 10 || !ageOk}
                 className="flex items-center justify-center gap-2 bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3.5 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send OTP <ArrowRight size={14} strokeWidth={1.6} />

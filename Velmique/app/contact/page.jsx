@@ -56,6 +56,25 @@ export default function ContactPage() {
                 <div className="flex justify-between"><span>Sunday</span><span className="text-[var(--ink-muted)]">Closed</span></div>
               </div>
             </div>
+
+            {/* Grievance Officer — required by the DPDP Act 2023 and the
+                Consumer Protection (E-Commerce) Rules 2020. */}
+            <div id="grievance" className="mt-6 bg-[var(--surface-2)] p-7 scroll-mt-28">
+              <h3 className="font-display text-[var(--ink)] text-xl uppercase mb-3">Grievance Officer</h3>
+              <p className="text-[var(--ink-soft)] text-sm font-body leading-relaxed mb-4">
+                For privacy requests — access, correction, deletion, or withdrawing consent — or any
+                grievance about how your personal data is handled, contact our Grievance Officer. We
+                respond within the timelines required under the DPDP Act, 2023.
+              </p>
+              <div className="space-y-1.5 text-sm font-body text-[var(--ink)]">
+                <p><span className="text-[var(--ink-muted)]">Name:</span> [Grievance Officer — to be confirmed]</p>
+                <p><span className="text-[var(--ink-muted)]">Entity:</span> Obzus India Private Limited</p>
+                <p><span className="text-[var(--ink-muted)]">Email:</span>{' '}
+                  <a href="mailto:obzusindia@gmail.com" className="hover:text-[var(--gold-deep)]">obzusindia@gmail.com</a></p>
+                <p><span className="text-[var(--ink-muted)]">Phone:</span>{' '}
+                  <a href="tel:+919712891700" className="hover:text-[var(--gold-deep)]">+91 97128 91700</a></p>
+              </div>
+            </div>
           </div>
 
           {/* Form */}

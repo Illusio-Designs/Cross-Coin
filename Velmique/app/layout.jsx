@@ -6,7 +6,7 @@ import { StoreProvider } from '@/lib/store';
 import { AuthProvider } from '@/context/AuthContext';
 import ClientProviders from '@/components/layout/ClientProviders';
 import SentryInit from '@/components/SentryInit';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import Analytics from '@/components/layout/Analytics';
 import HeaderShell from '@/components/layout/HeaderShell';
 import Footer from '@/components/layout/Footer';
@@ -100,7 +100,7 @@ export default function RootLayout({ children }) {
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
-        <SpeedInsights />
+        <ConsentSpeedInsights />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
           <AuthProvider>

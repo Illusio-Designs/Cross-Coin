@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Instagram, Facebook, Mail, Phone, ArrowUpRight } from 'lucide-react';
+import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
 
 // WhatsApp SVG icon (lucide doesn't include one)
 function WhatsAppIcon({ size = 14 }) {
@@ -147,9 +148,11 @@ export default function Footer() {
           <p className="text-white/40 text-xs font-body tracking-wider">
             © 2026 Velmique. All rights reserved.
           </p>
-          <div className="flex items-center gap-5 text-white/50 text-xs font-body tracking-wider">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-white/50 text-xs font-body tracking-wider">
             <Link href="/privacy-policy" className="hover:text-[var(--gold-light)] transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-[var(--gold-light)] transition-colors">Terms Of Use</Link>
+            <Link href="/contact#grievance" className="hover:text-[var(--gold-light)] transition-colors">Grievance</Link>
+            <CookieSettingsButton className="hover:text-[var(--gold-light)] transition-colors" />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-body tracking-wider text-white/40">
             <span>Made with</span>
