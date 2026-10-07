@@ -230,24 +230,22 @@ export default function BlogPostPage({ initialPost = null }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map(r => (
                 <Link key={r.id} href={`/blog/${r.slug}`}
-                  className="group bg-white border border-[var(--border)] overflow-hidden hover:border-[var(--gold)] transition-colors flex flex-col">
-                  <div className="aspect-[4/5] overflow-hidden bg-[var(--surface-2)] relative">
+                  className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
+                  <div className="absolute inset-0 bg-[var(--surface-2)]">
                     {r.coverImage && (
                       <img src={r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     )}
-                    {r.category && (
-                      <span className="absolute top-4 left-4 inline-block bg-white text-[var(--ink)] text-[9px] tracking-[0.3em] uppercase px-3 py-1 font-body ">
-                        {r.category}
-                      </span>
-                    )}
                   </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <h3 className="font-serif italic text-[var(--ink)] text-xl group-hover:text-[var(--gold-deep)] transition-colors leading-snug line-clamp-2">{r.title}</h3>
-                    <p className="text-[var(--ink-soft)] text-xs font-body mt-2 line-clamp-2 leading-relaxed flex-1">{r.excerpt}</p>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border)]">
-                      <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.2em] uppercase font-body">{formatDate(r.publishedAt)}</p>
-                      <ArrowUpRight size={14} className="text-[var(--ink-muted)] group-hover:text-[var(--gold-deep)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
-                    </div>
+                  {r.category && (
+                    <span className="absolute top-4 left-4 z-20 bg-white text-[var(--ink)] px-3 py-2 text-[8px] tracking-[0.2em] uppercase font-body">{r.category}</span>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[rgba(17,16,14,0.82)] via-[rgba(17,16,14,0.12)] to-transparent z-10" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5 z-20">
+                    <p className="text-white/70 text-[10px] tracking-[0.18em] uppercase font-body">{formatDate(r.publishedAt)}</p>
+                    <h3 className="font-serif text-white leading-[1.12] mt-2 mb-3" style={{ fontSize: 'clamp(1.15rem, 1.6vw, 1.4rem)' }}>{r.title}</h3>
+                    <span className="inline-flex items-center gap-2 text-white text-[9px] tracking-[0.2em] uppercase font-body border-b border-white/60 pb-1">
+                      Read article <ArrowUpRight size={12} />
+                    </span>
                   </div>
                 </Link>
               ))}

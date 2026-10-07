@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
-import { getProductBySlug } from '@/lib/api/products';
+import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import ProductCard from '@/components/shop/ProductCard';
 import { fbTrack } from '@/utils/pixel';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -32,6 +33,8 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
 
   const [product, setProduct] = useState(initialProduct);
   const [loading, setLoading] = useState(!initialProduct);
+  const [related, setRelated] = useState([]);
+  const [showBuyBar, setShowBuyBar] = useState(false);
 
   const [selectedSize,  setSelectedSize]  = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -81,6 +84,25 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
     });
     return () => { alive = false; };
   }, [slug]);
+
+  // Related products — "You may also like" rail from the best-sellers.
+  useEffect(() => {
+    let alive = true;
+    getBestsellers(8).then(list => {
+      if (!alive) return;
+      const items = (Array.isArray(list) ? list : []).filter(p => p && p.id !== product?.id).slice(0, 4);
+      setRelated(items);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [product?.id]);
+
+  // Reveal the sticky mobile buy bar once the main buy buttons scroll away.
+  useEffect(() => {
+    const onScroll = () => setShowBuyBar(window.scrollY > 620);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const activeVariation = useMemo(() => {
     if (!product || !product.variations?.length) return null;
@@ -501,6 +523,24 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
               </button>
             </div>
 
+            {/* Trust & delivery — right under the buy buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--border)] border border-[var(--border)]">
+              {[
+                { icon: Truck,       label: 'Free shipping', sub: 'Over ₹2,500' },
+                { icon: RotateCcw,   label: '14-day returns', sub: 'Sealed bottles' },
+                { icon: ShieldCheck, label: '100% authentic', sub: 'Bandra atelier' },
+                { icon: Sparkles,    label: 'GST included',  sub: 'No surprises' },
+              ].map(t => (
+                <div key={t.label} className="flex items-center gap-2.5 bg-white px-3.5 py-3">
+                  <t.icon size={15} className="text-[var(--gold-deep)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[var(--ink)] text-[11px] font-body font-medium leading-tight">{t.label}</p>
+                    <p className="text-[var(--ink-muted)] text-[10px] font-body leading-tight">{t.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="h-px bg-[var(--border)] mt-2" />
 
             {/* ── Description ─────────────────────────────────── */}
@@ -543,25 +583,22 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
 
             <div className="h-px bg-[var(--border)]" />
 
-            {/* ── Trust strip — 4 promise boxes ──────────────── */}
+            {/* ── Fragrance notes pyramid ────────────────────── */}
             <div>
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Our Promise</p>
+              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Composition</p>
               <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-                Why <em className="not-italic gold-text">Velmique</em>
+                How it <em className="not-italic gold-text">unfolds</em>
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-[var(--border)]">
                 {[
-                  { icon: Truck,       label: 'Free Shipping',   sub: 'Orders over ₹2,500' },
-                  { icon: RotateCcw,   label: '14-Day Returns',  sub: 'Sealed bottles only' },
-                  { icon: ShieldCheck, label: '100% Authentic',  sub: 'Bandra atelier' },
-                  { icon: Sparkles,    label: 'GST Included',    sub: 'No surprises' },
-                ].map(t => (
-                  <div key={t.label} className="flex items-start gap-3 bg-white border border-[var(--border)] p-4">
-                    <t.icon size={18} className="text-[var(--gold-deep)] mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[var(--ink)] text-xs font-body font-medium">{t.label}</p>
-                      <p className="text-[var(--ink-muted)] text-[10px] font-body mt-0.5">{t.sub}</p>
-                    </div>
+                  { stage: 'Top · First minutes',   title: product.topNotes   || 'Bergamot & Saffron' },
+                  { stage: 'Heart · 30 min – 2 h',  title: product.heartNotes || 'Rose & Jasmine' },
+                  { stage: 'Base · 2 h and beyond', title: product.baseNotes  || 'Oud & Sandalwood' },
+                ].map((n, i) => (
+                  <div key={n.stage} className="border-b sm:border-b-0 sm:border-r last:border-r-0 border-[var(--border)] px-5 py-6">
+                    <div className="font-serif text-[var(--gold-deep)] text-sm">0{i + 1}</div>
+                    <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--ink-muted)] font-body mt-1.5">{n.stage}</div>
+                    <h3 className="font-serif text-[var(--ink)] text-xl md:text-2xl mt-3 leading-tight">{n.title}</h3>
                   </div>
                 ))}
               </div>
@@ -580,7 +617,41 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
           </section>
         </div>
 
+        {/* ── You may also like — related products rail ──────── */}
+        {related.length > 0 && (
+          <div className="mt-20 md:mt-28 pt-12 border-t border-[var(--border)]">
+            <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
+              <div>
+                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Complete your ritual</p>
+                <h2 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight" style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>
+                  You may also <em className="not-italic gold-text">like</em>
+                </h2>
+              </div>
+              <Link href="/shop" className="pill-cta pill-cta-light">View all</Link>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+              {related.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            </div>
+          </div>
+        )}
+
       </div>
+
+      {/* ── Sticky mobile buy bar — appears once the buy buttons scroll away ── */}
+      {displayInStock && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-[var(--border)] px-4 pt-3 flex items-center gap-3 transition-transform duration-300 ${showBuyBar ? 'translate-y-0' : 'translate-y-full'}`}
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="min-w-0 pr-1">
+            <p className="font-serif text-[var(--ink)] text-base leading-none truncate">{product.name}</p>
+            <p className="text-[var(--ink)] text-sm font-body font-medium mt-1">{fmt(displayPrice)}</p>
+          </div>
+          <button onClick={handleAddToCart} className="pill-cta ml-auto flex-1 max-w-[180px] justify-center !py-3.5 mr-14">
+            <ShoppingBag size={14} /> {added ? 'Added ✓' : 'Add to Bag'}
+          </button>
+        </div>
+      )}
     </div>
     </SeoWrapper>
   );
