@@ -63,7 +63,7 @@ export default function CookieBanner() {
     fontWeight: 600, cursor: 'pointer', transition: 'all .2s', lineHeight: 1.2,
   };
   const outline = { ...btnBase, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.55)' };
-  const filled = { ...btnBase, background: '#fff', color: '#16140f', border: '1px solid #fff' };
+  const filled = { ...btnBase, background: '#E5C890', color: '#2a2118', border: '1px solid #E5C890' };
 
   return (
     <div role="dialog" aria-label="Cookie preferences"
