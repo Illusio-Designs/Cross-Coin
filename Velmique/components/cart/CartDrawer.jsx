@@ -742,7 +742,7 @@ export default function CartDrawer() {
               {orderSuccess ? 'Order Confirmed' : 'Your Bag'}
             </span>
             {!orderSuccess && cartCount > 0 && (
-              <span className="bg-[#B89A63]/20 text-[#8F7548] text-[10px] font-body px-2 py-0.5 rounded-full tracking-wider uppercase">
+              <span className="bg-[#B89A63]/20 text-[#8F7548] text-[10px] font-body px-2 py-0.5  tracking-wider uppercase">
                 {cartCount} {cartCount === 1 ? 'item' : 'items'}
               </span>
             )}
@@ -793,7 +793,7 @@ export default function CartDrawer() {
                 {items.map((item, i) => (
                   <div key={`${item.id}-${i}`} className="flex gap-3 pb-4 border-b border-[#D8D3C9] last:border-0 last:pb-0">
                     <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} className="shrink-0">
-                      <img src={item.image} alt={item.name} className="w-20 h-24 object-cover rounded-md" />
+                      <img src={item.image} alt={item.name} className="w-20 h-24 object-cover" />
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)}>
@@ -805,7 +805,7 @@ export default function CartDrawer() {
                         </p>
                       )}
                       <div className="flex items-center justify-between mt-2.5">
-                        <div className="flex items-center border border-[#D8D3C9] rounded-full bg-white">
+                        <div className="flex items-center border border-[#D8D3C9]  bg-white">
                           <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
                             className="px-2.5 py-1 text-[#49423A] hover:text-[#8F7548]"><Minus size={12} /></button>
                           <span className="px-2 text-[#11100E] text-sm font-body">{item.quantity}</span>
@@ -880,30 +880,30 @@ export default function CartDrawer() {
                         onAddrField(e);
                         if (!isAuthenticated) setGuestInfo(p => ({ ...p, fullName: e.target.value }));
                       }}
-                      placeholder="Full name" className="w-full input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                      placeholder="Full name" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
                     <input name="phoneNumber" value={addrForm.phoneNumber}
                       onChange={(e) => {
                         onAddrField(e);
                         if (!isAuthenticated) setGuestInfo(p => ({ ...p, phone: String(e.target.value).replace(/\D/g, '').slice(0, 10) }));
                       }}
                       placeholder="10-digit mobile" inputMode="numeric"
-                      className="w-full input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                      className="w-full input-gold px-3 py-2.5 text-sm font-body" />
                     {!isAuthenticated && (
                       <input value={guestInfo.email}
                         onChange={(e) => setGuestInfo(p => ({ ...p, email: e.target.value }))}
                         placeholder="Email (for order confirmation)" type="email"
-                        className="w-full input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                        className="w-full input-gold px-3 py-2.5 text-sm font-body" />
                     )}
                     <input name="address" value={addrForm.address} onChange={onAddrField}
-                      placeholder="Street address" className="w-full input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                      placeholder="Street address" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
                     <div className="grid grid-cols-3 gap-2">
                       <input name="postalCode" value={addrForm.postalCode} onChange={onAddrField} onBlur={onPincodeBlur}
                         placeholder="PIN" inputMode="numeric"
-                        className="input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                        className="input-gold px-3 py-2.5 text-sm font-body" />
                       <input name="city" value={addrForm.city} onChange={onAddrField}
-                        placeholder="City" className="input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                        placeholder="City" className="input-gold px-3 py-2.5 text-sm font-body" />
                       <input name="state" value={addrForm.state} onChange={onAddrField}
-                        placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                        placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body" />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <p className="text-xs text-neutral-500 flex-1">
@@ -961,7 +961,7 @@ export default function CartDrawer() {
               <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Promo Code</p>
                 {appliedCoupon ? (
-                  <div className="flex items-center gap-2 bg-[#B89A63]/10 border border-[#B89A63]/40 rounded-md px-3 py-2.5">
+                  <div className="flex items-center gap-2 bg-[#B89A63]/10 border border-[#B89A63]/40 px-3 py-2.5">
                     <Tag size={13} className="text-[#8F7548]" />
                     <span className="text-sm font-body text-[#11100E] flex-1">
                       <span className="font-serif italic">{appliedCoupon.code}</span> · {fmt(appliedCoupon.discountAmount)} off
@@ -974,9 +974,9 @@ export default function CartDrawer() {
                   <div className="flex gap-2">
                     <input value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="Enter code"
-                      className="flex-1 input-gold px-3 py-2.5 text-sm font-body rounded-md" />
+                      className="flex-1 input-gold px-3 py-2.5 text-sm font-body" />
                     <button onClick={() => onApplyCoupon()} disabled={couponLoading || !couponCode.trim()}
-                      className={`px-4 py-2.5 bg-[#11100E] text-white text-[10px] tracking-[0.3em] uppercase font-body rounded-md hover:bg-[#8F7548] transition-colors ${couponLoading || !couponCode.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      className={`px-4 py-2.5 bg-[#11100E] text-white text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[#8F7548] transition-colors ${couponLoading || !couponCode.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
                     </button>
                   </div>
@@ -1059,7 +1059,7 @@ export default function CartDrawer() {
         {!orderSuccess && items.length > 0 && (
           <div className="border-t border-[#D8D3C9] px-5 py-4 bg-white space-y-2">
             {errorMsg && (
-              <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
                 {errorMsg}
               </div>
             )}

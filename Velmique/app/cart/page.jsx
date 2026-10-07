@@ -54,7 +54,7 @@ export default function CartPage() {
                     </button>
                   </div>
                   <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center border border-[var(--border)] rounded-full">
+                    <div className="flex items-center border border-[var(--border)] ">
                       <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
                         className="px-3 py-2 text-[var(--ink-soft)] hover:text-[var(--gold-deep)]">
                         <Minus size={12} />

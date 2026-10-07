@@ -67,7 +67,7 @@ function SearchResults() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i}>
-                <div className="aspect-[3/4] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+                <div className="aspect-[3/4] bg-[var(--surface-2)] animate-pulse" />
                 <div className="mt-4 space-y-2">
                   <div className="h-2.5 w-1/3 rounded bg-[var(--surface-2)] animate-pulse" />
                   <div className="h-3.5 w-2/3 rounded bg-[var(--surface-2)] animate-pulse" />
@@ -80,7 +80,7 @@ function SearchResults() {
             {results.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         ) : query ? (
-          <div className="text-center py-20 bg-white border border-[var(--border)] rounded-2xl">
+          <div className="text-center py-20 bg-white border border-[var(--border)]">
             <Search size={40} className="text-[var(--ink-muted)] mx-auto mb-5" />
             <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight mb-3">No results found</p>
             <p className="text-[var(--ink-soft)] text-sm font-body mb-6">
@@ -90,7 +90,7 @@ function SearchResults() {
               <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto mb-6">
                 {suggestions.map(s => (
                   <Link key={s.slug} href={`/collections/${encodeURIComponent(s.slug)}`}
-                    className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] text-xs font-body tracking-[0.05em] transition-colors">
+                    className="px-4 py-2  border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] text-xs font-body tracking-[0.05em] transition-colors">
                     {s.name}
                   </Link>
                 ))}
@@ -101,7 +101,7 @@ function SearchResults() {
             </Link>
           </div>
         ) : (
-          <div className="text-center py-20 bg-white border border-[var(--border)] rounded-2xl">
+          <div className="text-center py-20 bg-white border border-[var(--border)]">
             <Search size={40} className="text-[var(--ink-muted)] mx-auto mb-5" />
             <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight mb-3">Start exploring</p>
             <p className="text-[var(--ink-soft)] text-sm font-body mb-6">
@@ -113,7 +113,7 @@ function SearchResults() {
                 <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto">
                   {suggestions.map(s => (
                     <Link key={s} href={`/search?q=${encodeURIComponent(s)}`}
-                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] text-xs font-body tracking-[0.05em] transition-colors">
+                      className="px-4 py-2  border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] text-xs font-body tracking-[0.05em] transition-colors">
                       {s}
                     </Link>
                   ))}

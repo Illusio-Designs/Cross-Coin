@@ -52,8 +52,8 @@ function HeroSkeleton() {
           <div className="relative w-full flex flex-col items-center justify-end">
             {/* Headline placeholder — two stacked bars matching titleTop / titleBottom */}
             <div className="w-full flex flex-col items-center gap-3 md:gap-5">
-              <div className="h-[clamp(2.6rem,8.5vw,8rem)] w-[78%] md:w-[62%] rounded-md bg-white/25 animate-pulse" />
-              <div className="h-[clamp(2.6rem,8.5vw,8rem)] w-[60%] md:w-[48%] rounded-md border border-white/30 bg-white/5 animate-pulse" />
+              <div className="h-[clamp(2.6rem,8.5vw,8rem)] w-[78%] md:w-[62%] bg-white/25 animate-pulse" />
+              <div className="h-[clamp(2.6rem,8.5vw,8rem)] w-[60%] md:w-[48%] border border-white/30 bg-white/5 animate-pulse" />
             </div>
 
             {/* Flacon image placeholder */}
@@ -75,7 +75,7 @@ function HeroSkeleton() {
       <div className="absolute bottom-4 left-5 md:bottom-8 md:left-16 z-20 flex flex-col items-start gap-3 max-w-[260px] md:max-w-[320px] w-[60%]">
         <div className="h-2.5 w-full rounded bg-[var(--ink)]/15 animate-pulse" />
         <div className="h-2.5 w-3/4 rounded bg-[var(--ink)]/15 animate-pulse" />
-        <div className="h-9 w-32 rounded-full bg-white/30 animate-pulse mt-1" />
+        <div className="h-9 w-32  bg-white/30 animate-pulse mt-1" />
       </div>
 
       {/* Slide indicators placeholder */}

@@ -176,9 +176,9 @@ function TrackOrderInner() {
         {/* Search bar */}
         <form
           onSubmit={(e) => { e.preventDefault(); handleTrack(); }}
-          className="bg-white border border-[var(--border)] rounded-2xl p-5 md:p-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center mb-8"
+          className="bg-white border border-[var(--border)] p-5 md:p-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center mb-8"
         >
-          <div className="flex-1 flex items-center gap-3 px-4 py-3 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+          <div className="flex-1 flex items-center gap-3 px-4 py-3  bg-[var(--surface)] border border-[var(--border)]">
             <Search size={16} className="text-[var(--ink-muted)] shrink-0" />
             <input
               type="text"
@@ -198,7 +198,7 @@ function TrackOrderInner() {
         </form>
 
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-body rounded-2xl px-5 py-4 mb-8">
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-body px-5 py-4 mb-8">
             {error}
           </div>
         )}
@@ -207,7 +207,7 @@ function TrackOrderInner() {
           <div className="space-y-6">
 
             {/* Order header card */}
-            <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+            <section className="bg-white border border-[var(--border)] p-6 md:p-7">
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div className="min-w-0">
                   <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1.5">Order</p>
@@ -218,7 +218,7 @@ function TrackOrderInner() {
                     <span className="flex items-center gap-1.5">{fmt(data.order.final_amount)}</span>
                   </div>
                 </div>
-                <span className="inline-flex items-center text-[10px] tracking-[0.3em] uppercase font-body rounded-full px-3.5 py-1.5 shrink-0"
+                <span className="inline-flex items-center text-[10px] tracking-[0.3em] uppercase font-body  px-3.5 py-1.5 shrink-0"
                   style={{ background: status.bg, color: status.fg }}>
                   {status.label}
                 </span>
@@ -226,7 +226,7 @@ function TrackOrderInner() {
             </section>
 
             {/* Stepper */}
-            <section className="bg-white border border-[var(--border)] rounded-2xl p-5 md:p-8">
+            <section className="bg-white border border-[var(--border)] p-5 md:p-8">
               <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Shipment</p>
               <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-7">Progress</h3>
 
@@ -277,7 +277,7 @@ function TrackOrderInner() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Timeline */}
-              <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+              <section className="bg-white border border-[var(--border)] p-6 md:p-7">
                 <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Tracking</p>
                 <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-5">Timeline</h3>
 
@@ -302,7 +302,7 @@ function TrackOrderInner() {
               </section>
 
               {/* Items */}
-              <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+              <section className="bg-white border border-[var(--border)] p-6 md:p-7">
                 <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Order</p>
                 <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-5">Items</h3>
 
@@ -312,7 +312,7 @@ function TrackOrderInner() {
                     const attrs = fmtAttrs(it.variation?.attributes || it.ProductVariation?.attributes);
                     return (
                       <div key={i} className="flex gap-4 pb-4 border-b border-[var(--border)] last:border-0 last:pb-0">
-                        <div className="w-20 h-24 rounded-md overflow-hidden bg-[var(--surface-2)] shrink-0">
+                        <div className="w-20 h-24 overflow-hidden bg-[var(--surface-2)] shrink-0">
                           {img
                             ? <img src={img} alt={it.product?.name || it.Product?.name || ''}
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -326,14 +326,14 @@ function TrackOrderInner() {
                           </p>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {it.variation?.sku && (
-                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">
+                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 ">
                                 SKU · {String(it.variation.sku).replace(/^\s*SKU\s*[:·-]\s*/i, '')}
                               </span>
                             )}
                             {attrs && (
-                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">{attrs}</span>
+                              <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 ">{attrs}</span>
                             )}
-                            <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 rounded-full">Qty · {it.quantity}</span>
+                            <span className="text-[9px] tracking-[0.2em] uppercase font-body bg-[var(--surface)] text-[var(--ink-soft)] px-2 py-1 ">Qty · {it.quantity}</span>
                           </div>
                           <p className="font-serif italic text-[var(--ink)] mt-2">
                             {fmt(it.total_price || (parseFloat(it.price) * (it.quantity || 1)))}
@@ -348,7 +348,7 @@ function TrackOrderInner() {
 
             {/* Address + Payment */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+              <section className="bg-white border border-[var(--border)] p-6 md:p-7">
                 <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Deliver To</p>
                 <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-5">Address</h3>
 
@@ -368,7 +368,7 @@ function TrackOrderInner() {
                 )}
               </section>
 
-              <section className="bg-white border border-[var(--border)] rounded-2xl p-6 md:p-7">
+              <section className="bg-white border border-[var(--border)] p-6 md:p-7">
                 <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-1">Payment</p>
                 <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-5">Summary</h3>
 
@@ -409,7 +409,7 @@ function TrackOrderInner() {
         )}
 
         {!data && !loading && !error && (
-          <div className="bg-white border border-[var(--border)] rounded-2xl py-16 text-center">
+          <div className="bg-white border border-[var(--border)] py-16 text-center">
             <Package size={40} className="text-[var(--ink-muted)] mx-auto mb-4" />
             <p className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-2">Your shipment, in real time</p>
             <p className="text-[var(--ink-muted)] text-sm font-body max-w-md mx-auto">

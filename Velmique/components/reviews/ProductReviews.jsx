@@ -80,9 +80,9 @@ export default function ProductReviews({ productId, productName, initialReviewsP
     <div className="space-y-6">
       {/* Stats summary + Add Review button */}
       {loading ? (
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-7 h-[180px] animate-pulse" />
+        <div className="bg-white border border-[var(--border)] p-7 h-[180px] animate-pulse" />
       ) : data.total > 0 ? (
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-7">
+        <div className="bg-white border border-[var(--border)] p-7">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
             <div className="md:col-span-4 text-center md:border-r md:border-[var(--border)] md:pr-6">
               <p className="font-serif italic text-[var(--ink)] text-5xl leading-none">{avg ? avg.toFixed(1) : '—'}</p>
@@ -99,7 +99,7 @@ export default function ProductReviews({ productId, productName, initialReviewsP
                   <div key={n} className="flex items-center gap-3 text-xs font-body">
                     <span className="text-[var(--ink-soft)] w-3">{n}</span>
                     <Star size={11} className="fill-[var(--gold)] text-[var(--gold)] shrink-0" />
-                    <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                    <div className="flex-1 h-1.5  bg-[var(--surface-2)] overflow-hidden">
                       <div className="h-full bg-[var(--gold)]" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="text-[var(--ink-muted)] w-7 text-right">{count}</span>
@@ -116,7 +116,7 @@ export default function ProductReviews({ productId, productName, initialReviewsP
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-7 text-center">
+        <div className="bg-white border border-[var(--border)] p-7 text-center">
           <p className="text-[var(--ink)] text-sm font-body font-medium mb-1">No reviews yet</p>
           <p className="text-[var(--ink-muted)] text-xs font-body mb-5">
             Be the first to share your experience with {productName || 'this fragrance'}.
@@ -138,7 +138,7 @@ export default function ProductReviews({ productId, productName, initialReviewsP
             {looped.map((r, i) => (
               <article
                 key={`${r.id}-${i}`}
-                className="pdp-review-card bg-white border border-[var(--border)] rounded-2xl p-5 md:p-6 flex flex-col"
+                className="pdp-review-card bg-white border border-[var(--border)] p-5 md:p-6 flex flex-col"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
@@ -266,7 +266,7 @@ function ReviewModal({ productId, productName, onClose }) {
         aria-modal="true"
         aria-labelledby="review-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white rounded-2xl border border-[var(--border)] shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+        className="relative bg-white border border-[var(--border)] shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
         <button
           onClick={onClose}
@@ -306,23 +306,23 @@ function ReviewModal({ productId, productName, onClose }) {
                   <div>
                     <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Name</label>
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                      className="w-full input-gold px-4 py-3 text-sm font-body" />
                   </div>
                   <div>
                     <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Email</label>
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                      className="w-full input-gold px-4 py-3 text-sm font-body" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Your review</label>
                   <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} placeholder="What did you think?"
-                    className="w-full input-gold px-4 py-3 text-sm font-body rounded-md resize-none" />
+                    className="w-full input-gold px-4 py-3 text-sm font-body resize-none" />
                 </div>
 
                 {submitMsg.text && (
-                  <div className="flex items-center gap-2 text-xs font-body p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
+                  <div className="flex items-center gap-2 text-xs font-body p-3 bg-red-50 text-red-700 border border-red-200">
                     {submitMsg.text}
                   </div>
                 )}

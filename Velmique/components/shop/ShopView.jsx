@@ -163,7 +163,7 @@ export default function ShopView({ collectionSlug = '' }) {
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 text-[10px] tracking-[0.2em] uppercase font-body rounded-full border transition-all ${
+                className={`px-4 py-2 text-[10px] tracking-[0.2em] uppercase font-body border transition-all ${
                   activeCategory === cat
                     ? 'bg-[var(--ink)] text-white border-[var(--ink)]'
                     : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)]'
@@ -179,7 +179,7 @@ export default function ShopView({ collectionSlug = '' }) {
             </span>
             <SortDropdown value={sortBy} onChange={setSortBy} options={sortOptions} />
             <button onClick={() => setFiltersOpen(!filtersOpen)}
-              className="flex items-center gap-2 bg-white border border-[var(--border)] px-4 py-2 text-[10px] tracking-[0.2em] uppercase font-body rounded-full text-[var(--ink)] hover:border-[var(--gold)] transition-colors">
+              className="flex items-center gap-2 bg-white border border-[var(--border)] px-4 py-2 text-[10px] tracking-[0.2em] uppercase font-body text-[var(--ink)] hover:border-[var(--gold)] transition-colors">
               <SlidersHorizontal size={12} /> Filters
             </button>
           </div>
@@ -297,7 +297,7 @@ function SortDropdown({ value, onChange, options }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-2 bg-white border pl-4 pr-3 py-2 text-[10px] tracking-[0.2em] uppercase font-body rounded-full transition-colors ${
+        className={`flex items-center gap-2 bg-white border pl-4 pr-3 py-2 text-[10px] tracking-[0.2em] uppercase font-body transition-colors ${
           open ? 'border-[var(--gold)] text-[var(--ink)]' : 'border-[var(--border)] text-[var(--ink)] hover:border-[var(--gold)]'
         }`}
         aria-haspopup="listbox"
@@ -352,7 +352,7 @@ function FilterPanel({
       <div className="flex items-center justify-between">
         <h3 className="text-[11px] tracking-[0.35em] uppercase text-[var(--ink)] font-body">Filters</h3>
         <button onClick={onClose} aria-label="Close filters"
-          className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)] transition-colors">
+          className="w-8 h-8 flex items-center justify-center text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)] transition-colors">
           <X size={16} />
         </button>
       </div>
@@ -393,7 +393,7 @@ function FilterPanel({
               const active = selectedGenders.includes(g);
               return (
                 <button key={g} onClick={() => onToggleGender(g)}
-                  className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                  className={`px-3 py-1.5 text-[11px] font-body border transition-all ${
                     active
                       ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                       : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -414,7 +414,7 @@ function FilterPanel({
               const active = selectedSeasons.includes(s);
               return (
                 <button key={s} onClick={() => onToggleSeason(s)}
-                  className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                  className={`px-3 py-1.5 text-[11px] font-body border transition-all ${
                     active
                       ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                       : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -440,7 +440,7 @@ function FilterPanel({
         <div className="px-6 pt-6 pb-5 border-b border-[var(--border)] flex items-center justify-between">
           <h3 className="text-[11px] tracking-[0.35em] uppercase text-[var(--ink)] font-body">Filters</h3>
           <button onClick={onClose} aria-label="Close filters"
-            className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center text-[var(--ink-muted)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-colors">
+            className="w-9 h-9 border border-[var(--border)] flex items-center justify-center text-[var(--ink-muted)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -481,7 +481,7 @@ function FilterPanel({
                   const active = selectedGenders.includes(g);
                   return (
                     <button key={g} onClick={() => onToggleGender(g)}
-                      className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                      className={`px-3 py-1.5 text-[11px] font-body border transition-all ${
                         active
                           ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                           : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -502,7 +502,7 @@ function FilterPanel({
                   const active = selectedSeasons.includes(s);
                   return (
                     <button key={s} onClick={() => onToggleSeason(s)}
-                      className={`px-3 py-1.5 text-[11px] font-body border rounded-full transition-all ${
+                      className={`px-3 py-1.5 text-[11px] font-body border transition-all ${
                         active
                           ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                           : 'border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -517,11 +517,11 @@ function FilterPanel({
         </div>
         <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3">
           <button onClick={onClearAll}
-            className="flex-1 text-[var(--ink-soft)] text-[10px] uppercase tracking-[0.3em] font-body py-3 border border-[var(--border)] rounded-full hover:border-[var(--gold)] hover:text-[var(--ink)] transition-colors">
+            className="flex-1 text-[var(--ink-soft)] text-[10px] uppercase tracking-[0.3em] font-body py-3 border border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-colors">
             Clear All
           </button>
           <button onClick={onClose}
-            className="flex-1 bg-[var(--ink)] text-white text-[10px] uppercase tracking-[0.3em] font-body py-3 rounded-full hover:bg-[var(--gold-deep)] transition-colors">
+            className="flex-1 bg-[var(--ink)] text-white text-[10px] uppercase tracking-[0.3em] font-body py-3 hover:bg-[var(--gold-deep)] transition-colors">
             View Results
           </button>
         </div>

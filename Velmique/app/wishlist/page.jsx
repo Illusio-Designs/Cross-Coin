@@ -80,18 +80,18 @@ export default function WishlistPage() {
         {wishlistLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
+              <div key={i} className="bg-white border border-[var(--border)] overflow-hidden">
                 <div className="aspect-[3/4] bg-[#E6DED0] animate-pulse" />
                 <div className="p-5 space-y-2">
                   <div className="h-3 w-1/3 rounded bg-[#E6DED0] animate-pulse" />
                   <div className="h-4 w-3/4 rounded bg-[#E6DED0] animate-pulse" />
-                  <div className="h-9 w-full rounded-full bg-[#E6DED0] animate-pulse mt-3" />
+                  <div className="h-9 w-full  bg-[#E6DED0] animate-pulse mt-3" />
                 </div>
               </div>
             ))}
           </div>
         ) : wishlist.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-5 bg-white border border-[var(--border)] rounded-2xl">
+          <div className="flex flex-col items-center justify-center py-24 gap-5 bg-white border border-[var(--border)]">
             <Heart size={52} className="text-[var(--ink-muted)]" />
             <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight">Your wishlist is empty</p>
             <p className="text-[var(--ink-soft)] text-sm font-body">Save fragrances you love to revisit them later.</p>
@@ -118,7 +118,7 @@ export default function WishlistPage() {
               return (
                 <motion.div
                   key={item.id}
-                  className="group bg-white border border-[var(--border)] rounded-2xl overflow-hidden flex flex-col"
+                  className="group bg-white border border-[var(--border)] overflow-hidden flex flex-col"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
@@ -140,7 +140,7 @@ export default function WishlistPage() {
                     {/* Remove (X) — top-right */}
                     <button
                       onClick={(e) => { e.preventDefault(); toggleWishlist(item); }}
-                      className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-[#B89A63] text-[#11100E] hover:bg-[#b8983e] transition-colors rounded-full"
+                      className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-[#B89A63] text-[#11100E] hover:bg-[#b8983e] transition-colors "
                       aria-label="Remove from wishlist"
                     >
                       <X size={12} />
@@ -191,7 +191,7 @@ export default function WishlistPage() {
                                 <button
                                   key={c}
                                   onClick={() => onPickColor(item, c)}
-                                  className={`px-2 h-6 text-[9px] font-body border rounded-full transition-all ${
+                                  className={`px-2 h-6 text-[9px] font-body border  transition-all ${
                                     item.color === c
                                       ? 'border-[#11100E] bg-[#11100E] text-white'
                                       : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'
@@ -214,7 +214,7 @@ export default function WishlistPage() {
                                 <button
                                   key={s}
                                   onClick={() => onPickSize(item, s)}
-                                  className={`px-2 h-6 text-[9px] font-body border rounded-full transition-all ${
+                                  className={`px-2 h-6 text-[9px] font-body border  transition-all ${
                                     item.size === s
                                       ? 'border-[#11100E] bg-[#11100E] text-white'
                                       : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'

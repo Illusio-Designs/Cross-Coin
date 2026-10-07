@@ -275,7 +275,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                     className="w-full h-auto object-contain transition-opacity duration-500"
                   />
                   {(activeVariation?.sku || product.sku) && (
-                    <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 rounded-md text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>
+                    <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>
                       Style: #{activeVariation?.sku || product.sku}
                     </span>
                   )}
@@ -318,7 +318,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   <button type="button" aria-label="Previous" onClick={() => setActiveImg((a) => (a - 1 + gallery.length) % gallery.length)}
                     className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">‹</button>
                 )}
-                <img src={ik(gallery[activeImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl" />
+                <img src={ik(gallery[activeImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain" />
                 {gallery.length > 1 && (
                   <button type="button" aria-label="Next" onClick={() => setActiveImg((a) => (a + 1) % gallery.length)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">›</button>
@@ -356,7 +356,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                     color: selectedColor || '',
                   })}
                   aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                  className={`shrink-0 w-12 h-12 flex items-center justify-center border rounded-full transition-all ${
+                  className={`shrink-0 w-12 h-12 flex items-center justify-center border  transition-all ${
                     wishlisted
                       ? 'border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold-deep)]'
                       : 'border-[var(--border)] bg-white text-[var(--ink-soft)] hover:border-[var(--gold)]'
@@ -403,7 +403,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             <div className="h-px bg-[var(--border)]" />
 
             {/* Delivery / pincode serviceability */}
-            <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
+            <div className="border border-[var(--border)] bg-white p-4">
               <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Delivery Details</p>
               <div className="flex gap-2">
                 <input
@@ -430,7 +430,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   {serviceability.error ? (
                     <span>{serviceability.error}</span>
                   ) : (
-                    <><Check size={14} /> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+                    <><Check size={14} /> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1  bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
                   )}
                 </div>
               )}
@@ -600,10 +600,10 @@ function ProductPageSkeleton() {
           <div className="lg:col-span-7 flex gap-4">
             <div className="hidden md:flex flex-col gap-3 w-20">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="aspect-square rounded-xl bg-[var(--surface-2)] animate-pulse" />
+                <div key={i} className="aspect-square bg-[var(--surface-2)] animate-pulse" />
               ))}
             </div>
-            <div className="flex-1 aspect-[4/5] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+            <div className="flex-1 aspect-[4/5] bg-[var(--surface-2)] animate-pulse" />
           </div>
 
           <div className="lg:col-span-5 flex flex-col gap-6">
@@ -621,13 +621,13 @@ function ProductPageSkeleton() {
             </div>
             <div className="flex gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-11 w-20 rounded-full bg-[var(--surface-2)] animate-pulse" />
+                <div key={i} className="h-11 w-20  bg-[var(--surface-2)] animate-pulse" />
               ))}
             </div>
             <div className="flex gap-3">
-              <div className="h-12 flex-1 rounded-full bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-12 w-12 rounded-full bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-12 w-12 rounded-full bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-12 flex-1  bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-12 w-12  bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-12 w-12  bg-[var(--surface-2)] animate-pulse" />
             </div>
           </div>
         </div>

@@ -106,14 +106,14 @@ function ConfirmDialog({ dialog, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-[var(--border)] hover:border-[var(--ink)] rounded-full py-3 text-[11px] tracking-[0.3em] uppercase font-body text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
+              className="flex-1 border border-[var(--border)] hover:border-[var(--ink)]  py-3 text-[11px] tracking-[0.3em] uppercase font-body text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
             >
               {dialog.cancelLabel || 'Keep'}
             </button>
             <button
               type="button"
               onClick={() => { const fn = dialog.onConfirm; onClose(); fn?.(reason); }}
-              className="flex-1 bg-[var(--ink)] text-white rounded-full py-3 text-[11px] tracking-[0.3em] uppercase font-body hover:bg-[var(--gold-deep)] transition-colors"
+              className="flex-1 bg-[var(--ink)] text-white  py-3 text-[11px] tracking-[0.3em] uppercase font-body hover:bg-[var(--gold-deep)] transition-colors"
             >
               {dialog.confirmLabel}
             </button>
@@ -213,7 +213,7 @@ export default function AccountPage() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] tracking-[0.25em] uppercase font-body transition-all ${
+                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5  text-[10px] tracking-[0.25em] uppercase font-body transition-all ${
                   active
                     ? 'bg-[var(--ink)] text-white border-[var(--ink)]'
                     : 'border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)]'
@@ -224,7 +224,7 @@ export default function AccountPage() {
               </button>
             );
           })}
-          <Link href="/account/returns" className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] tracking-[0.25em] uppercase font-body border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-all">
+          <Link href="/account/returns" className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5  text-[10px] tracking-[0.25em] uppercase font-body border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] transition-all">
             Returns
           </Link>
         </div>
@@ -237,7 +237,7 @@ export default function AccountPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full text-xs font-body tracking-wider shadow-lg ${
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3  text-xs font-body tracking-wider shadow-lg ${
           toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-[var(--ink)] text-white'
         }`}>
           {toast.msg}
@@ -318,7 +318,7 @@ function OrdersTab({ showToast }) {
                   {fmtDate(order.createdAt || order.created_at)}
                 </p>
               </div>
-              <span className="shrink-0 inline-block text-[9px] tracking-[0.25em] uppercase font-body rounded-full px-2.5 py-1"
+              <span className="shrink-0 inline-block text-[9px] tracking-[0.25em] uppercase font-body  px-2.5 py-1"
                 style={{ background: statusInfo.bg, color: statusInfo.fg }}>
                 {statusInfo.label}
               </span>
@@ -331,7 +331,7 @@ function OrdersTab({ showToast }) {
                   const img = pickItemImage(it);
                   return (
                     <div key={it.id || idx}
-                      className="w-16 h-20 rounded-md overflow-hidden border-2 border-white bg-[var(--surface-2)] shrink-0 shadow-sm">
+                      className="w-16 h-20 overflow-hidden border-2 border-white bg-[var(--surface-2)] shrink-0 shadow-sm">
                       {img
                         ? <img src={img} alt={it.Product?.name || it.name || ''} className="w-full h-full object-cover"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -341,7 +341,7 @@ function OrdersTab({ showToast }) {
                   );
                 })}
                 {items.length > 3 && (
-                  <div className="w-16 h-20 rounded-md border-2 border-white bg-[var(--surface)] shrink-0 flex items-center justify-center font-serif italic text-[var(--ink)] text-base shadow-sm">
+                  <div className="w-16 h-20 border-2 border-white bg-[var(--surface)] shrink-0 flex items-center justify-center font-serif italic text-[var(--ink)] text-base shadow-sm">
                     +{items.length - 3}
                   </div>
                 )}
@@ -395,7 +395,7 @@ function OrdersTab({ showToast }) {
                 )}
                 <Link
                   href={`/track-order?order=${encodeURIComponent(orderRef)}`}
-                  className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase font-body bg-[var(--ink)] text-white rounded-full px-4 py-2 hover:bg-[var(--gold-deep)] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase font-body bg-[var(--ink)] text-white  px-4 py-2 hover:bg-[var(--gold-deep)] transition-colors"
                 >
                   Track <ChevronRight size={12} />
                 </Link>
@@ -574,7 +574,7 @@ function AddressesTab({ showToast }) {
                 <div className="flex items-center gap-3 flex-wrap min-w-0">
                   <p className="font-serif italic text-[var(--ink)] text-lg truncate">{a.full_name}</p>
                   {a.is_default && (
-                    <span className="inline-block text-[9px] tracking-[0.25em] uppercase font-body bg-[var(--gold)] text-[var(--ink)] rounded-full px-2.5 py-0.5 shrink-0">
+                    <span className="inline-block text-[9px] tracking-[0.25em] uppercase font-body bg-[var(--gold)] text-[var(--ink)]  px-2.5 py-0.5 shrink-0">
                       Default
                     </span>
                   )}
@@ -663,13 +663,13 @@ function AddressForm({ form, setForm, onSave, onCancel, saving, isNew }) {
         <button
           onClick={onSave}
           disabled={saving}
-          className="flex-1 rounded-full bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50"
+          className="flex-1  bg-[var(--ink)] hover:bg-[var(--gold)] hover:text-[var(--ink)] text-white py-3 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving…' : isNew ? 'Save Address' : 'Update Address'}
         </button>
         <button
           onClick={onCancel}
-          className="px-6 py-3 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:text-[var(--ink)] text-[11px] tracking-[0.3em] uppercase font-body transition-colors"
+          className="px-6 py-3  border border-[var(--border)] text-[var(--ink-soft)] hover:text-[var(--ink)] text-[11px] tracking-[0.3em] uppercase font-body transition-colors"
         >
           Cancel
         </button>
@@ -738,7 +738,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', className =
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="rounded-full border border-[var(--border)] bg-transparent px-4 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--gold)] transition-colors font-body"
+        className=" border border-[var(--border)] bg-transparent px-4 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--gold)] transition-colors font-body"
       />
     </div>
   );
@@ -752,7 +752,7 @@ function DetailRow({ label, value, editable, onChange }) {
         <input
           value={value}
           onChange={onChange}
-          className="w-full rounded-md border border-[var(--border)] bg-transparent px-3 py-2 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)] transition-colors"
+          className="w-full border border-[var(--border)] bg-transparent px-3 py-2 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)] transition-colors"
         />
       ) : (
         <p className="text-[var(--ink)] font-body text-sm">{value || '—'}</p>

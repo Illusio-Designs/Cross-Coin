@@ -36,7 +36,7 @@ export default function Footer() {
               Header already covers Shop / Collections / About / Blog
               — footer only carries the things that DON'T live in the header. */}
           <div className="col-span-12 flex items-start justify-between flex-wrap gap-6 mb-6">
-            <Link href="/contact" className="bg-white/95 text-[var(--ink)] rounded-full px-5 py-2 text-[10px] tracking-[0.25em] uppercase font-body font-medium hover:bg-[var(--gold)] hover:text-[var(--ink)] transition-colors">
+            <Link href="/contact" className="bg-white/95 text-[var(--ink)] px-5 py-2 text-[10px] tracking-[0.25em] uppercase font-body font-medium hover:bg-[var(--gold)] hover:text-[var(--ink)] transition-colors">
               Contact
             </Link>
 
@@ -57,7 +57,7 @@ export default function Footer() {
 
           {/* LEFT — brand image */}
           <div className="col-span-12 md:col-span-3">
-            <div className="aspect-[3/4] rounded-2xl overflow-hidden">
+            <div className="aspect-[3/4] overflow-hidden">
               <img
                 src="/footer.webp"
                 alt="Velmique"
@@ -68,13 +68,13 @@ export default function Footer() {
 
           <div className="col-span-12 md:col-span-3 flex flex-col justify-between gap-6">
             {/* Email signup pill */}
-            <div className="bg-white/5 border border-white/15 rounded-full flex items-center pl-5 pr-1 py-1 backdrop-blur-sm">
+            <div className="bg-white/5 border border-white/15 flex items-center pl-5 pr-1 py-1 backdrop-blur-sm">
               <input
                 type="email"
                 placeholder="Enter Your Email"
                 className="bg-transparent flex-1 text-white placeholder:text-white/40 text-sm font-body outline-none py-2"
               />
-              <button className="bg-[var(--gold)] hover:bg-white text-[var(--ink)] rounded-full w-9 h-9 flex items-center justify-center transition-colors shrink-0">
+              <button className="bg-[var(--gold)] hover:bg-white text-[var(--ink)] w-9 h-9 flex items-center justify-center transition-colors shrink-0">
                 <ArrowUpRight size={16} strokeWidth={2} />
               </button>
             </div>
@@ -124,7 +124,7 @@ export default function Footer() {
               <div className="flex gap-3">
                 {SOCIAL_LINKS.map(({ Icon, href, label }) => (
                   <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-                    className="w-9 h-9 rounded-full border border-white/20 hover:border-[var(--gold)] flex items-center justify-center text-white/60 hover:text-[var(--gold-light)] transition-all">
+                    className="w-9 h-9 border border-white/20 hover:border-[var(--gold)] flex items-center justify-center text-white/60 hover:text-[var(--gold-light)] transition-all">
                     <Icon size={14} />
                   </a>
                 ))}

@@ -145,7 +145,7 @@ export default function SearchOverlay() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search for fragrances, notes, collections…"
-            className="w-full bg-white border-2 border-[var(--border)] focus:border-[var(--gold)] outline-none pl-12 pr-4 py-4 rounded-full text-base md:text-lg font-body font-medium text-black placeholder:text-[var(--ink-muted)] placeholder:font-normal transition-colors"
+            className="w-full bg-white border-2 border-[var(--border)] focus:border-[var(--gold)] outline-none pl-12 pr-4 py-4  text-base md:text-lg font-body font-medium text-black placeholder:text-[var(--ink-muted)] placeholder:font-normal transition-colors"
           />
         </div>
 
@@ -168,7 +168,7 @@ export default function SearchOverlay() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i}>
-                  <div className="aspect-[3/4] rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+                  <div className="aspect-[3/4] bg-[var(--surface-2)] animate-pulse" />
                   <div className="mt-4 space-y-2">
                     <div className="h-2.5 w-1/3 rounded bg-[var(--surface-2)] animate-pulse" />
                     <div className="h-3.5 w-2/3 rounded bg-[var(--surface-2)] animate-pulse" />
@@ -193,7 +193,7 @@ export default function SearchOverlay() {
 
           {/* No results */}
           {!searching && query.length > 1 && results.length === 0 && (
-            <div className="text-center py-16 bg-white border border-[var(--border)] rounded-2xl max-w-xl mx-auto mt-4">
+            <div className="text-center py-16 bg-white border border-[var(--border)] max-w-xl mx-auto mt-4">
               <Search size={36} className="text-[var(--ink-muted)] mx-auto mb-4" />
               <p className="font-display text-2xl text-[var(--ink)] uppercase tracking-tight mb-2">No results found</p>
               <p className="text-[var(--ink-soft)] text-sm font-body">
@@ -206,7 +206,7 @@ export default function SearchOverlay() {
                       key={c.slug}
                       type="button"
                       onClick={() => setQuery(c.name)}
-                      className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] hover:bg-[var(--surface)] text-xs font-body tracking-[0.05em] transition-colors"
+                      className="px-4 py-2  border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] hover:bg-[var(--surface)] text-xs font-body tracking-[0.05em] transition-colors"
                     >
                       {c.name}
                     </button>
@@ -228,7 +228,7 @@ export default function SearchOverlay() {
                     key={c.slug}
                     type="button"
                     onClick={() => setQuery(c.name)}
-                    className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] hover:bg-white text-xs font-body tracking-[0.05em] transition-colors"
+                    className="px-4 py-2  border border-[var(--border)] text-[var(--ink-soft)] hover:border-[var(--gold)] hover:text-[var(--ink)] hover:bg-white text-xs font-body tracking-[0.05em] transition-colors"
                   >
                     {c.name}
                   </button>

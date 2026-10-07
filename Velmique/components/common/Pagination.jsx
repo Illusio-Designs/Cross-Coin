@@ -15,7 +15,7 @@ export default function Pagination({ page = 1, totalPages = 1, onChange, disable
   const items = pageList(page, totalPages);
 
   const base =
-    'inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-full border text-sm font-body transition-colors';
+    'inline-flex items-center justify-center min-w-[40px] h-10 px-3  border text-sm font-body transition-colors';
   const cell = (active) =>
     active
       ? `${base} border-[var(--ink)] bg-[var(--ink)] text-white font-medium`

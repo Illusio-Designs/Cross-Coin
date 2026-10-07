@@ -42,8 +42,8 @@ export default function BlogPostPage({ initialPost = null }) {
             ))}
           </div>
           <div className="lg:col-span-4 space-y-4">
-            <div className="h-32 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
-            <div className="h-24 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
+            <div className="h-32 bg-[var(--surface-2)] animate-pulse" />
+            <div className="h-24 bg-[var(--surface-2)] animate-pulse" />
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function BlogPostPage({ initialPost = null }) {
             <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20">
               <div className="max-w-4xl">
                 {post.category && (
-                  <span className="inline-block bg-[var(--gold)] text-[var(--ink)] text-[10px] tracking-[0.4em] uppercase px-4 py-2 font-body rounded-full mb-6">
+                  <span className="inline-block bg-[var(--gold)] text-[var(--ink)] text-[10px] tracking-[0.4em] uppercase px-4 py-2 font-body  mb-6">
                     {post.category}
                   </span>
                 )}
@@ -157,7 +157,7 @@ export default function BlogPostPage({ initialPost = null }) {
 
               {/* Author card */}
               {post.author?.name && (
-                <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+                <div className="bg-white border border-[var(--border)] p-6">
                   <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">The Author</p>
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-[var(--surface-2)] flex items-center justify-center font-serif italic text-[var(--gold-deep)] text-xl shrink-0">
@@ -172,7 +172,7 @@ export default function BlogPostPage({ initialPost = null }) {
               )}
 
               {/* Meta card */}
-              <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+              <div className="bg-white border border-[var(--border)] p-6">
                 <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">Article Notes</p>
                 <div className="space-y-3.5">
                   <div className="flex items-center gap-3 text-[var(--ink-soft)] text-sm font-body">
@@ -194,11 +194,11 @@ export default function BlogPostPage({ initialPost = null }) {
 
               {/* Tags (sidebar) */}
               {post.tags?.length > 0 && (
-                <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
+                <div className="bg-white border border-[var(--border)] p-6">
                   <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.4em] uppercase font-body mb-4">Tags</p>
                   <div className="flex flex-wrap gap-1.5">
                     {post.tags.map(tag => (
-                      <span key={tag} className="px-3 py-1.5 rounded-full bg-[var(--surface-2)] text-[var(--ink-soft)] text-[10px] tracking-[0.2em] uppercase font-body">
+                      <span key={tag} className="px-3 py-1.5  bg-[var(--surface-2)] text-[var(--ink-soft)] text-[10px] tracking-[0.2em] uppercase font-body">
                         {tag}
                       </span>
                     ))}
@@ -230,13 +230,13 @@ export default function BlogPostPage({ initialPost = null }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map(r => (
                 <Link key={r.id} href={`/blog/${r.slug}`}
-                  className="group bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:border-[var(--gold)] transition-colors flex flex-col">
+                  className="group bg-white border border-[var(--border)] overflow-hidden hover:border-[var(--gold)] transition-colors flex flex-col">
                   <div className="aspect-[4/5] overflow-hidden bg-[var(--surface-2)] relative">
                     {r.coverImage && (
                       <img src={r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     )}
                     {r.category && (
-                      <span className="absolute top-4 left-4 inline-block bg-white text-[var(--ink)] text-[9px] tracking-[0.3em] uppercase px-3 py-1 font-body rounded-full">
+                      <span className="absolute top-4 left-4 inline-block bg-white text-[var(--ink)] text-[9px] tracking-[0.3em] uppercase px-3 py-1 font-body ">
                         {r.category}
                       </span>
                     )}

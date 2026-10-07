@@ -48,7 +48,7 @@ export default function ContactPage() {
               ))}
             </div>
 
-            <div className="mt-12 bg-[var(--surface-2)] rounded-2xl p-7">
+            <div className="mt-12 bg-[var(--surface-2)] p-7">
               <h3 className="font-display text-[var(--ink)] text-xl uppercase mb-4">Hours</h3>
               <div className="space-y-2 text-sm font-body text-[var(--ink-soft)]">
                 <div className="flex justify-between"><span>Monday – Friday</span><span>9:00 AM – 6:00 PM IST</span></div>
@@ -60,7 +60,7 @@ export default function ContactPage() {
 
           {/* Form */}
           <div className="md:col-span-7">
-            <div className="bg-white border border-[var(--border)] rounded-2xl p-7 md:p-10">
+            <div className="bg-white border border-[var(--border)] p-7 md:p-10">
               {sent ? (
                 <div className="flex flex-col items-center justify-center text-center gap-4 py-16">
                   <CheckCircle size={48} className="text-[var(--gold-deep)]" />
@@ -79,23 +79,23 @@ export default function ContactPage() {
                     <div>
                       <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Name</label>
                       <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required
-                        className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                        className="w-full input-gold px-4 py-3 text-sm font-body" />
                     </div>
                     <div>
                       <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Email</label>
                       <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required
-                        className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                        className="w-full input-gold px-4 py-3 text-sm font-body" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Subject</label>
                     <input value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md" />
+                      className="w-full input-gold px-4 py-3 text-sm font-body" />
                   </div>
                   <div>
                     <label className="block text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-1.5">Message</label>
                     <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} required rows={6}
-                      className="w-full input-gold px-4 py-3 text-sm font-body rounded-md resize-none" />
+                      className="w-full input-gold px-4 py-3 text-sm font-body resize-none" />
                   </div>
                   <button type="submit" className="pill-cta w-full justify-center !py-4">
                     Send Message <Send size={13} />

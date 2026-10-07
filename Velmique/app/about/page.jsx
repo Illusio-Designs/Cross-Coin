@@ -79,7 +79,7 @@ export default function AboutPage() {
 
             <Link
               href="/shop"
-              className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-white text-[var(--ink)] rounded-full px-7 py-3 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors"
+              className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-white text-[var(--ink)]  px-7 py-3 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors"
             >
               Discover the Collection
               <ArrowUpRight size={14} strokeWidth={1.6} />
@@ -121,7 +121,7 @@ export default function AboutPage() {
 
           {/* Right — image */}
           <div className="md:col-span-5">
-            <div className="relative overflow-hidden rounded-2xl bg-[var(--surface-2)]">
+            <div className="relative overflow-hidden bg-[var(--surface-2)]">
               <img src="/Aboutpage.webp" alt="Velmique atelier"
                 className="w-full h-auto object-contain" />
             </div>
@@ -151,7 +151,7 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {values.map(v => (
-              <div key={v.title} className="bg-white border border-[var(--border)] rounded-2xl p-8 flex flex-col">
+              <div key={v.title} className="bg-white border border-[var(--border)] p-8 flex flex-col">
                 <p className="font-display text-[var(--gold)] text-5xl md:text-6xl leading-none mb-5">{v.n}</p>
                 <h3 className="font-serif italic text-[var(--ink)] text-xl md:text-2xl mb-4 leading-tight">{v.title}</h3>
                 <p className="text-[var(--ink-soft)] font-body text-sm md:text-base leading-[1.7] text-justify hyphens-auto">{v.desc}</p>
@@ -237,7 +237,7 @@ export default function AboutPage() {
 
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-white text-[var(--ink)] rounded-full px-7 py-3 mt-10 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors"
+            className="inline-flex items-center gap-2 bg-[var(--gold)] hover:bg-white text-[var(--ink)]  px-7 py-3 mt-10 text-[11px] tracking-[0.3em] uppercase font-body font-medium transition-colors"
           >
             Discover the Collection <ArrowUpRight size={14} strokeWidth={1.6} />
           </Link>

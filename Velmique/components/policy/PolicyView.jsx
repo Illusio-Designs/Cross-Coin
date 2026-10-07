@@ -51,7 +51,7 @@ export default function PolicyView({
       />
 
       <article className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
-        <div className="bg-white border border-[var(--border)] rounded-2xl px-6 md:px-12 lg:px-16 py-10 md:py-14">
+        <div className="bg-white border border-[var(--border)] px-6 md:px-12 lg:px-16 py-10 md:py-14">
           {status === 'loading' && (
             <div className="space-y-3 animate-pulse">
               {[88, 72, 95, 60, 90, 78, 92, 65, 85].map((w, i) => (

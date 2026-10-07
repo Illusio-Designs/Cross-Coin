@@ -63,21 +63,21 @@ export default function CollectionsPage({ initialCollections = [] }) {
                   <p className="text-white/80 text-[10px] tracking-[0.4em] uppercase font-body">{col.tagline}</p>
                 </div>
               )}
-              <div className="absolute bottom-0 left-0 right-0 p-7 md:p-9">
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
                 <div className="flex items-end justify-between gap-6 flex-wrap">
-                  <div>
-                    <h2 className={`font-display text-white uppercase leading-none tracking-tight ${i === 0 ? 'text-5xl md:text-7xl' : 'text-3xl md:text-5xl'}`}>
+                  <div className="min-w-0">
+                    <h2 className={`font-display text-white leading-[1.03] tracking-[-0.01em] ${i === 0 ? 'text-2xl md:text-4xl' : 'text-xl md:text-3xl'}`}>
                       {col.name}
                     </h2>
                     {col.description && (
-                      <p className="text-white/75 font-body text-sm md:text-base mt-3 max-w-md leading-relaxed line-clamp-2">{col.description}</p>
+                      <p className="text-white/70 font-body text-[13px] md:text-sm mt-2.5 max-w-md leading-relaxed line-clamp-2">{col.description}</p>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-3">
+                  <div className="flex flex-col items-end gap-3 shrink-0">
                     {col.productCount > 0 && (
                       <span className="text-white/70 text-xs font-body tracking-wider">{col.productCount} pieces</span>
                     )}
-                    <span className="pill-cta pill-cta-light">
+                    <span className="inline-flex items-center gap-2 border border-white/70 text-white px-6 py-3 text-[10px] tracking-[0.2em] uppercase font-body transition-colors group-hover:bg-white group-hover:text-[var(--ink)]">
                       Explore <ArrowUpRight size={13} strokeWidth={1.6} />
                     </span>
                   </div>
