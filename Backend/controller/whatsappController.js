@@ -1069,13 +1069,10 @@ exports.receiveWebhook = async (req, res) => {
             }
           }
 
-          // Shared number → attribute this message to the customer's brand
-          // (by their most recent order); tags the one-per-customer thread.
-          const brandId     = await resolveBrandByPhone(phone);
-          // Prefer the live WhatsApp profile name; fall back to the customer's
-          // order/guest name so the inbox shows a real name, not a bare number.
-          const waName      = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
-          const contactName = waName || await resolveCustomerNameByPhone(phone);
+          // Live WhatsApp profile name (cheap — it's already in the webhook
+          // payload). The expensive brand/name lookups from the customer's orders
+          // are deferred below and run only for a genuinely NEW conversation.
+          const waName = value.contacts?.find(c => c.wa_id === phone)?.profile?.name || null;
 
           // ── Resolve message type + body + media_url ──────────────────────
           let msgType = 'text';
@@ -1180,12 +1177,36 @@ exports.receiveWebhook = async (req, res) => {
           // is tagged Soxbae, not the customer's most-recent brand).
           const refBrand = await resolveBrandByOrderRef(buttonPayload || text);
           const resolvedBrand = refBrand || namedBrand;
-          const [conv, created] = await WhatsappConversation.findOrCreate({
-            where: { customer_phone: phone },
-            defaults: { brand_id: resolvedBrand || brandId, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
-          });
+
+          // ── Hot path: find the existing thread by its INDEXED phone FIRST ──
+          // A shared number across 7 brands takes a high inbound volume, and the
+          // resolveBrandByPhone / resolveCustomerNameByPhone helpers run
+          // un-indexable `LIKE '%digits'` scans over orders⋈shipping_addresses
+          // and orders⋈guest_users that grow with total order count. For a thread
+          // we've already seen we already know the brand + name, so skip those
+          // scans entirely and pay for them only when a brand-new customer first
+          // writes. This was the main source of WhatsApp DB load.
+          let conv = await WhatsappConversation.findOne({ where: { customer_phone: phone } });
+          let created = false;
+          if (!conv) {
+            // New customer → now (and only now) resolve brand + name from orders.
+            const phoneBrand  = resolvedBrand || await resolveBrandByPhone(phone);
+            const contactName = waName || await resolveCustomerNameByPhone(phone);
+            const fc = await WhatsappConversation.findOrCreate({
+              where: { customer_phone: phone },
+              defaults: { brand_id: phoneBrand, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
+            });
+            conv = fc[0]; created = fc[1]; // created=false only if a concurrent inbound won the race
+          }
           if (!created) {
-            const upd = { customer_name: waName || conv.customer_name || contactName, status: 'open' };
+            const upd = { status: 'open' };
+            // Fill the name only when we actually have a better one; never run an
+            // extra order scan for a thread that already has a name.
+            if (waName && waName !== conv.customer_name) upd.customer_name = waName;
+            else if (!conv.customer_name) {
+              const nm = await resolveCustomerNameByPhone(phone);
+              if (nm) upd.customer_name = nm;
+            }
             if (resolvedBrand) upd.brand_id = resolvedBrand; // re-attribute on an explicit brand mention OR an order reference
             // A reaction (👍) is not a "message": it must not become the inbox
             // preview nor mark the thread unread.
@@ -1202,6 +1223,10 @@ exports.receiveWebhook = async (req, res) => {
             }
             await conv.update(upd);
           }
+
+          // The brand for COD confirmations and the auto-reply bot is the thread's
+          // attributed brand — no re-resolving by phone on every message.
+          const effectiveBrand = conv.brand_id || resolvedBrand || 1;
 
           await WhatsappMessage.create({
             conversation_id: conv.id,
@@ -1224,11 +1249,11 @@ exports.receiveWebhook = async (req, res) => {
           //    pending COD order to `confirmed`.
           if (trusted && msgType === 'text' && text && conv.awaiting_address_for) {
             const _orderNo = conv.awaiting_address_for;
-            setImmediate(() => captureNewAddress(phone, text, _orderNo, brandId).catch(e => logger.error('[WhatsApp] capture address error: ' + e.message)));
+            setImmediate(() => captureNewAddress(phone, text, _orderNo, effectiveBrand).catch(e => logger.error('[WhatsApp] capture address error: ' + e.message)));
           } else if (trusted && msgType === 'text' && text) {
-            setImmediate(() => processCodReply(phone, 'text', text, brandId).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
+            setImmediate(() => processCodReply(phone, 'text', text, effectiveBrand).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
           } else if (trusted && msgType === 'button' && buttonPayload) {
-            setImmediate(() => processCodReply(phone, 'button', buttonPayload, brandId).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
+            setImmediate(() => processCodReply(phone, 'button', buttonPayload, effectiveBrand).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
           }
 
           // Auto-reply bot — only for plain text messages that aren't a captured
@@ -1236,7 +1261,7 @@ exports.receiveWebhook = async (req, res) => {
           // only on a verified webhook (never let a spoofed inbound make our
           // number send to an attacker-chosen recipient).
           if (trusted && msg.type === 'text' && !conv.awaiting_address_for) {
-            setImmediate(() => handleAutoReply(phone, text, brandId).catch(() => {}));
+            setImmediate(() => handleAutoReply(phone, text, effectiveBrand).catch(() => {}));
           }
         }
         for (const status of (value.statuses || [])) {

@@ -157,6 +157,28 @@ const truthyFlag = (v) => v === true || v === 1 || ['yes', '1', 'true', 'y'].inc
 // book the cheapest that succeeds. If none serve the route → a clean, permanent
 // "not serviceable" failure (never a scary generic "sync failed").
 async function autoSelectCourierWithFallback(order, provider, transaction = null) {
+  // Ensure the associations this function relies on are present. The manual
+  // Sync button and the queue worker load the order WITH includes, but the
+  // post-payment auto-sync path (orderService.syncOrderToFShip → bare
+  // Order.findByPk) does not — so ShippingAddress / OrderItems were undefined,
+  // the destination pincode came through EMPTY, iThink returned zero couriers,
+  // and every prepaid order failed with "No serviceable courier could book"
+  // (then booked fine on a manual resume, which loads the associations). Reload
+  // the missing pieces here so courier selection works no matter how the order
+  // was loaded. This is a no-op when the caller already eager-loaded them.
+  if (!order.ShippingAddress || !order.OrderItems) {
+    const reloaded = await Order.findByPk(order.id, {
+      include: [
+        { model: ShippingAddress, as: 'ShippingAddress' },
+        { model: OrderItem, as: 'OrderItems' },
+      ],
+    });
+    if (reloaded) {
+      if (!order.ShippingAddress) order.ShippingAddress = reloaded.ShippingAddress;
+      if (!order.OrderItems) order.OrderItems = reloaded.OrderItems;
+    }
+  }
+
   const destPin = order.ShippingAddress?.pincode || '';
   const brandId = order.brand_id || 1;
   const isCOD = String(order.payment_type || '').toLowerCase() === 'cod';

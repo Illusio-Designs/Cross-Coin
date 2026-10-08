@@ -266,7 +266,22 @@ async function syncOrderToFShip(order) {
     const providerNameEarly = await shippingProviderFactory.getProviderName(order.brand_id || 1);
     if (providerNameEarly === 'ithink') {
       const orderShippingController = require('../controller/orderShippingController.js');
-      const fresh = await Order.findByPk(order.id);
+      const { GuestUser } = require('../model/guestUserModel.js');
+      // Load the order WITH the associations the booking flow relies on
+      // (ShippingAddress → destination pincode, OrderItems → weight). The COD
+      // path (orderEvents.js) already does this; the prepaid payment path used a
+      // bare findByPk, so ShippingAddress/OrderItems were undefined, the
+      // destination pincode came through empty, iThink returned zero couriers,
+      // and every prepaid order failed with "No serviceable courier could book"
+      // until a manual resume (which loads the associations) re-ran it.
+      const fresh = await Order.findByPk(order.id, {
+        include: [
+          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
+          { model: ShippingAddress, as: 'ShippingAddress' },
+          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
+          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
+        ],
+      });
       if (!fresh) return;
       if (fresh.fship_order_id && fresh.fship_waybill) {
         logger.info(`[Shipping] Skipping ${order.order_number} — already booked (iThink)`);
