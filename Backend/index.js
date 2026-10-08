@@ -472,6 +472,28 @@ const startServer = async () => {
         await sequelize.authenticate();
         logger.info('✓ Database connection successful');
 
+        // ── Startup-migration gate (perf) ──────────────────────────────────
+        // The idempotent schema migrations + backfills below run dozens of
+        // sequential information_schema checks on every boot. Because
+        // app.listen() comes AFTER them, that delays the first request on each
+        // restart and shows as "Request took too long" during a cold start.
+        // Once they have all applied we set a flag and skip the whole block on
+        // future restarts → fast cold starts. IMPORTANT: bump
+        // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
+        // runs once more to apply the new one.
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v1';
+        let startupMigrationsApplied = false;
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = ? LIMIT 1`, { replacements: [STARTUP_MIGRATIONS_VERSION] });
+            startupMigrationsApplied = done.length > 0;
+        } catch (e) { startupMigrationsApplied = false; }
+
+        if (startupMigrationsApplied) {
+            logger.info('✓ Startup migrations already applied — skipping (fast cold start)');
+        } else {
+            logger.info('Running one-time startup migrations…');
+
         // ── Idempotent migration: users.roles (multi-role support) ─────────
         // Production doesn't run sequelize sync, so ensure the column exists
         // here. Guarded by information_schema → a no-op once applied and safe
@@ -1320,6 +1342,16 @@ const startServer = async () => {
         } catch (err) {
             logger.error('WhatsApp name backfill failed: ' + err.message);
         }
+
+            // All idempotent startup migrations have run — flag it so future
+            // restarts skip this whole block and cold-start fast.
+            try {
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [STARTUP_MIGRATIONS_VERSION] });
+                logger.info('✓ Startup migrations complete — future restarts will skip them');
+            } catch (e) {
+                logger.error('Could not set startup-migrations flag: ' + e.message);
+            }
+        } // end startup-migration gate
 
         // Create all tables — only runs when schema version changes
         const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
