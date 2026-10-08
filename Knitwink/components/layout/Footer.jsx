@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Mail, Phone, MapPin, Instagram, Facebook } from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
+import CookieSettingsButton from '@/components/ui/CookieSettingsButton'
 
 // WhatsApp SVG icon (lucide doesn't have one)
 function WhatsAppIcon({ size = 14 }) {
@@ -105,6 +106,9 @@ export function Footer() {
                   <Link href={l.href} className="text-sm text-white/55 transition-colors hover:text-white">{l.label}</Link>
                 </li>
               ))}
+              <li>
+                <CookieSettingsButton className="text-sm text-white/55 transition-colors hover:text-white" />
+              </li>
             </ul>
           </div>
 

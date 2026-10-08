@@ -1,0 +1,108 @@
+/* Cookie consent — matches the Knitwink storefront (monochrome, pill buttons,
+   Playfair heading, Inter body, wide-tracked uppercase labels). */
+.kw-cookie {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 70;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 1px solid #e5e5e5;
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+  padding: 24px;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  animation: kw-cookie-in 0.3s ease-out;
+}
+@keyframes kw-cookie-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.kw-cookie__eyebrow {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #737373;
+}
+.kw-cookie__title {
+  margin: 0 0 10px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #0a0a0a;
+}
+.kw-cookie__text {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #525252;
+}
+.kw-cookie__text a { color: #0a0a0a; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+.kw-cookie__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.kw-cookie__btn {
+  flex: 1 1 auto;
+  padding: 12px 18px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #0a0a0a;
+  background: #fff;
+  color: #0a0a0a;
+}
+.kw-cookie__btn:hover { background: #f5f5f5; }
+.kw-cookie__btn--primary { background: #0a0a0a; color: #fff; }
+.kw-cookie__btn--primary:hover { background: #262626; }
+.kw-cookie__btn:focus-visible,
+.kw-cookie__link:focus-visible,
+.kw-cookie__switch input:focus-visible + span { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.kw-cookie__link {
+  flex-basis: 100%;
+  background: none; border: 0; padding: 4px 0 0;
+  font: inherit; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: #525252; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: center;
+}
+.kw-cookie__link:hover { color: #0a0a0a; }
+
+.kw-cookie__cats { margin: 0 0 18px; border-top: 1px solid #e5e5e5; }
+.kw-cookie__cat {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid #e5e5e5;
+}
+.kw-cookie__cat strong { display: block; font-size: 13px; color: #0a0a0a; }
+.kw-cookie__cat small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.5; color: #737373; }
+
+.kw-cookie__switch { position: relative; flex: none; width: 42px; height: 24px; cursor: pointer; }
+.kw-cookie__switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: inherit; }
+.kw-cookie__switch span { position: absolute; inset: 0; border-radius: 24px; background: #d4d4d4; transition: background 0.2s; }
+.kw-cookie__switch span::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.kw-cookie__switch input:checked + span { background: #0a0a0a; }
+.kw-cookie__switch input:checked + span::after { transform: translateX(18px); }
+.kw-cookie__switch input:disabled { cursor: not-allowed; }
+.kw-cookie__switch input:disabled + span { opacity: 0.45; }
+
+@media (max-width: 560px) {
+  .kw-cookie {
+    left: 0; right: 0; bottom: 0; width: auto; max-width: none;
+    border-radius: 20px 20px 0 0; border-left: 0; border-right: 0; border-bottom: 0;
+    padding: 20px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 85vh; overflow-y: auto;
+  }
+  .kw-cookie__actions { flex-direction: column; }
+  .kw-cookie__btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .kw-cookie { animation: none; } }
