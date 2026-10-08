@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Icon from '@/components/Icon';
 
 // Floating helpers pinned bottom-right, same as the other brands:
@@ -11,6 +12,8 @@ const WA_URL = `https://wa.me/917434834000?text=${encodeURIComponent('Hi! I need
 export default function FloatingWidgets() {
   const [scrolled, setScrolled] = useState(false);
   const [greetVisible, setGreetVisible] = useState(true);
+  // On a product page the "Need help?" bubble would sit on top of the Add to cart button.
+  const onProduct = (usePathname() || '').startsWith('/products/');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 400);
@@ -21,7 +24,7 @@ export default function FloatingWidgets() {
 
   return (
     <>
-      {greetVisible && !scrolled && (
+      {greetVisible && !scrolled && !onProduct && (
         <div className="gzwa-greet">
           <a href={WA_URL} target="_blank" rel="noopener noreferrer" style={{ flex: 1, whiteSpace: 'nowrap', color: 'inherit', textDecoration: 'none' }}>👋 Hi! Need help? Chat with us</a>
           <button className="gzwa-greet-close" onClick={() => setGreetVisible(false)} aria-label="Close">×</button>

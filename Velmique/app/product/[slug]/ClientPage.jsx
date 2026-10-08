@@ -646,6 +646,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
       {/* ── Sticky mobile buy bar — appears once the buy buttons scroll away ── */}
       {displayInStock && (
         <div
+          data-sticky-atc={showBuyBar ? 'true' : undefined}
           className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-[var(--border)] px-4 pt-3 flex items-center gap-3 transition-transform duration-300 ${showBuyBar ? 'translate-y-0' : 'translate-y-full'}`}
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
         >

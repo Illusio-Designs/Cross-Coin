@@ -795,3 +795,10 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   .acc-stats { grid-template-columns: repeat(2, 1fr); }
   .acc-stat-val { font-size: 26px; }
 }
+
+/* Lift floating widgets above the sticky mobile buy bar so they never cover Add to Bag / Buy Now */
+@media (max-width: 767px) {
+  body:has([data-sticky-atc]) .gzwa-fab { bottom: 96px; }
+  body:has([data-sticky-atc]) .gzwa-greet { bottom: 164px; }
+  body:has([data-sticky-atc]) [data-scrolltop] { bottom: 164px; right: 16px; }
+}

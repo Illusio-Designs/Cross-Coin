@@ -153,7 +153,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
             {/* Text */}
             <div className="flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-4 lg:py-24">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-500">Why We Love This</p>
-              <p className="mt-5 text-sm leading-[1.85] text-gray-800 text-justify">{product.description}</p>
+              <p className="mt-5 whitespace-pre-line text-sm leading-[1.85] text-gray-800 text-justify">{product.description}</p>
 
               {/* Best For */}
               <div className="mt-6">

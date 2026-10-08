@@ -364,7 +364,7 @@ export default function ProductShowcase({ product }) {
           <span className="eyebrow">Details</span>
           <h2>About this product</h2>
           {product.description
-            ? <p>{product.description}</p>
+            ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
             : <p className="muted">No description available for this product yet.</p>}
 
           {product.features?.length > 0 && (

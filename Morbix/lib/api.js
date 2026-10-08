@@ -8,6 +8,7 @@
  */
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
+import { plainText } from './plainText';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
@@ -476,7 +477,7 @@ function mapProduct(p) {
     // `badgeKey` = raw key for styling.
     badgeKey: typeof p.badge === 'string' ? p.badge : null,
     badge: (typeof p.badge === 'string' && BADGE_LABELS[p.badge]) || null,
-    description: str(p.description),
+    description: plainText(str(p.description)),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,

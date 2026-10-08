@@ -3,6 +3,7 @@
    the Gripzus ProductCard / detail page expects (images as string URLs,
    greyscale colour swatches, price + compareAtPrice). */
 
+import { plainText } from '../utils/plainText';
 import { getColorHex } from '../utils/colorMap';
 import { ikFull } from '../utils/imagekit';
 
@@ -144,7 +145,7 @@ export function mapProduct(p) {
     // Total real stock across variations (null when unknown) — powers the
     // honest low-stock indicator on the product page.
     stock:         variations.length ? totalStock : null,
-    description:   p.description || '',
+    description:   plainText(p.description),
     rating:        Number(p.avg_rating) || 0,
     reviewCount:   Number(p.review_count) || 0,
     care:          p.care || '',

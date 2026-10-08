@@ -1326,3 +1326,13 @@ body.cd-drawer-open-body .wachat-greet {
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+
+
+/* Product page: while the sticky Add to Bag bar (100px tall) is showing, lift the floating
+   WhatsApp and back-to-top buttons above it so they never sit on top of Add to Bag. */
+body:has([data-sticky-atc]) .gzwa-fab { bottom: 116px; }
+body:has([data-sticky-atc]) .gzwa-greet { bottom: 184px; }
+body:has([data-sticky-atc]) .back-to-top { bottom: 184px; }
+@media (max-width: 640px) {
+  body:has([data-sticky-atc]) .gzwa-fab { bottom: 112px; }
+}

@@ -1269,3 +1269,25 @@ button { font-family: inherit; cursor: pointer; }
   .review-grid .review:hover { transform: none; box-shadow: none; }
   .reviews-list .empty { flex: 1 1 100%; }
 }
+
+
+/* Reviews auto-scroll (Morbix): a seamless sideways loop that pauses on hover, touch and focus. */
+.rv-marquee { overflow: hidden; position: relative; min-width: 0; outline: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent); }
+.rv-track { display: flex; gap: 16px; width: max-content; padding: 4px 0 14px; animation: rv-scroll var(--rv-dur, 60s) linear infinite; }
+.rv-marquee:hover .rv-track, .rv-marquee:focus-within .rv-track, .rv-marquee:active .rv-track { animation-play-state: paused; }
+.rv-track > .review, .rv-track > .rv-dup { flex: 0 0 340px; width: 340px; }
+.rv-track { align-items: stretch; }
+.rv-dup { display: flex; }
+.rv-dup > .review { flex: 1 1 auto; min-width: 0; }
+@keyframes rv-scroll { to { transform: translateX(calc(-50% - 8px)); } }
+@media (max-width: 760px) {
+  .rv-track > .review, .rv-track > .rv-dup { flex-basis: 84vw; width: 84vw; max-width: 320px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; scroll-snap-type: x mandatory; }
+  .rv-track { animation: none; }
+  .rv-track > .review { scroll-snap-align: start; }
+  .rv-dup { display: none; }
+}

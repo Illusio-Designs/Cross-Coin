@@ -542,3 +542,10 @@ img, picture, video, canvas { max-width: 100%; display: block; }
   .acc-stats, .acc-stats.has-points { grid-template-columns: repeat(2, 1fr); }
   .acc-order-actions { gap: 12px; }
 }
+
+/* Lift floating widgets above the sticky add-to-bag bar */
+body:has([data-sticky-atc]) .gzwa-fab { bottom: 100px; }
+body:has([data-sticky-atc]) [data-scrolltop] { bottom: 172px; }
+@media (max-width: 640px) {
+  body:has([data-sticky-atc]) .gzwa-fab { bottom: 96px; }
+}

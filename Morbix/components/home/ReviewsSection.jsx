@@ -1,4 +1,5 @@
 import Icon from '@/components/Icon';
+import ReviewRow from '@/components/ui/ReviewRow';
 
 export default function ReviewsSection({ reviews = [], total: totalProp }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
@@ -28,8 +29,11 @@ export default function ReviewsSection({ reviews = [], total: totalProp }) {
         <div className="empty" style={{ marginTop: 8 }}>No reviews yet — your feedback will appear here.</div>
       )}
 
-      <div className="review-grid">
-        {reviews.slice(0, 6).map((r, i) => (
+      <ReviewRow
+        items={reviews.slice(0, 12)}
+        staticClassName="review-grid"
+        min={4}
+        render={(r, i) => (
           <div className="review" key={i}>
             <div className="review-stars" style={{ marginBottom: 10 }}>
               {[0, 1, 2, 3, 4].map((n) => (
@@ -43,8 +47,8 @@ export default function ReviewsSection({ reviews = [], total: totalProp }) {
               <div className="review-who"><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
             </div>
           </div>
-        ))}
-      </div>
+        )}
+      />
     </section>
   );
 }
