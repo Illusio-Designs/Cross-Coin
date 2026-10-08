@@ -294,7 +294,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                     alt={product.name}
                     fetchPriority="high"
                     decoding="async"
-                    className="w-full h-auto object-contain transition-opacity duration-500"
+                    className="w-full h-auto object-contain transition-opacity duration-500 lg:max-h-[calc(100vh-9rem)]"
                   />
                   {(activeVariation?.sku || product.sku) && (
                     <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>

@@ -20,6 +20,15 @@
   max-width: 100%;
   overflow-x: hidden;
 }
+/* `clip` (not `hidden`) so .pdt-page is not a scroll container: the desktop
+   gallery column below is position: sticky and `hidden` here would disable it. */
+@supports (overflow: clip) { .pdt-page { overflow-x: clip; } }
+
+/* Desktop: the gallery column is pinned while the details scroll past, so keep the
+   image (plus the feature boxes under it) within the visible screen height. */
+@media (min-width: 901px) {
+  .pdt-main-img { max-height: calc(100vh - 270px); }
+}
 
 /* Safety net: every element inside the PDP sizes with padding included, and no
    media (image/video/infographic) can be wider than its column. Together with
@@ -64,6 +73,7 @@
   gap: 16px;
   align-self: start;
   position: sticky;
+  top: 120px;
   min-width: 0;
 }
 

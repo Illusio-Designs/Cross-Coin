@@ -38,6 +38,10 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; } /* Lenis handles smoothing */
 html, body { margin: 0; padding: 0; overflow-x: hidden; max-width: 100%; }
+/* `overflow-x: hidden` on body makes it a scroll container, which silently breaks
+   every `position: sticky` below it (e.g. the product gallery). `clip` stops
+   sideways overflow the same way without creating a scroll container. */
+@supports (overflow: clip) { body { overflow-x: clip; } }
 body {
   background: var(--bg);
   color: var(--ink);
@@ -1238,3 +1242,12 @@ button { font-family: inherit; cursor: pointer; }
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+
+
+/* Desktop product page: keep the gallery pinned while the details scroll past,
+   capped to the screen height so it never runs off the bottom on short laptops. */
+@media (min-width: 901px) {
+  .pdp { align-items: start; }
+  .pdp-gallery { position: sticky; top: 120px; align-self: start; }
+  .pdp-main { max-height: calc(100vh - 170px); }
+}
