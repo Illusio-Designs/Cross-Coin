@@ -5,6 +5,7 @@ import { FaFacebookF, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { MdOutlinePhoneInTalk } from "react-icons/md";
 import SafeImage from "../common/SafeImage";
 import { getPublicCategories } from "../../services/publicApi";
+import CookieSettingsButton from "../ui/CookieSettingsButton";
 import { collectionUrl } from "../../utils/collectionUrl";
 
 const Footer = () => {
@@ -112,6 +113,7 @@ const Footer = () => {
             <li><Link href="/policy/terms-and-conditions">Terms & Conditions</Link></li>
             <li><Link href="/policy/shipping-policy">Shipping Policy</Link></li>
             <li><Link href="/policy/cancellation-and-refund">Cancellation & Refund</Link></li>
+            <li><CookieSettingsButton className="footer__cookie-btn" /></li>
           </ul>
         </div>
 
