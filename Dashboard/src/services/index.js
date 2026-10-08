@@ -275,46 +275,6 @@ export const loyaltyService = {
   },
 };
 
-export const adsReportService = {
-  getReport: async (from, to) => {
-    const { data } = await adminApi.get('/api/ads-report/report', { params: { from, to } });
-    return data;
-  },
-  getSettings: async () => {
-    const { data } = await adminApi.get('/api/ads-report/settings');
-    return data;
-  },
-  saveSettings: async (payload) => {
-    const { data } = await adminApi.post('/api/ads-report/settings', payload);
-    return data;
-  },
-  getSpend: async (brand_id, from, to) => {
-    const { data } = await adminApi.get('/api/ads-report/spend', { params: { brand_id, from, to } });
-    return data;
-  },
-  saveSpend: async (entries) => {
-    const { data } = await adminApi.post('/api/ads-report/spend', { entries });
-    return data;
-  },
-  deleteSpend: async (id) => {
-    const { data } = await adminApi.delete(`/api/ads-report/spend/${id}`);
-    return data;
-  },
-  // ── Meta (Facebook) spend sync ──
-  getMetaConfig: async () => {
-    const { data } = await adminApi.get('/api/ads-report/meta/config');
-    return data;
-  },
-  saveMetaConfig: async (config) => {
-    const { data } = await adminApi.post('/api/ads-report/meta/config', { config });
-    return data;
-  },
-  syncMeta: async ({ from, to, brand_id } = {}) => {
-    const { data } = await adminApi.post('/api/ads-report/meta/sync', { from, to, brand_id });
-    return data;
-  },
-};
-
 // Brand-wise traffic & conversion funnel (sessions → orders → revenue).
 export const trafficReportService = {
   getBrandTraffic: async (startDate, endDate) => {
