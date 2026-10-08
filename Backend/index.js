@@ -939,23 +939,6 @@ const startServer = async () => {
             logger.error('push_subscriptions table migration failed: ' + err.message);
         }
 
-        // ── Idempotent migration: ad_spends table (Ads Reporting) ─────────────
-        try {
-            await sequelize.query(
-                `CREATE TABLE IF NOT EXISTS ad_spends (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    brand_id INT NOT NULL,
-                    date DATE NOT NULL,
-                    amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-                    createdAt DATETIME NOT NULL,
-                    updatedAt DATETIME NOT NULL,
-                    UNIQUE KEY uniq_ad_spend_brand_date (brand_id, date)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-            );
-        } catch (err) {
-            logger.error('ad_spends table migration failed: ' + err.message);
-        }
-
         // ── Idempotent migration: contact_messages table (contact form leads) ──
         try {
             await sequelize.query(

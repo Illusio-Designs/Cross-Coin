@@ -35,7 +35,6 @@ import AdminLookbooks from "./social/lookbooks";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
-import AdsReporting from "./reports/adsReporting";
 import TrafficReport from "./reports/trafficReport";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
@@ -260,7 +259,6 @@ function Dashboard() {
       case 'media-gallery':   return <MediaGallery />;
       case 'utm-analytics':   return <UTMAnalytics />;
       case 'reports':         return <Reports />;
-      case 'ads-reporting':   return <AdsReporting />;
       case 'traffic-report':  return <TrafficReport />;
       case 'leads':           return <Leads />;
       case 'loyalty':         return <Loyalty />;

@@ -52,7 +52,6 @@ router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.
 router.use('/admin',              require('./brandRoutes.js'));
 router.use('/admin',              require('./brandAssignmentRoutes.js'));
 router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));
-router.use('/ads-report',         require('./adsReportRoutes.js'));
 router.use('/reports',            require('./reportsRoutes.js'));
 router.use('/order-status-history', optionalBrand, require('./orderStatusHistoryRoutes.js'));
 

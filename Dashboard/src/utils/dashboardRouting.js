@@ -27,7 +27,6 @@ export const getPageTitle = (view) => {
     'media-gallery': 'Media Gallery',
     'utm-analytics': 'UTM Analytics',
     'reports': 'Reports',
-    'ads-reporting': 'Ads Reporting',
     'traffic-report': 'Traffic & Conversion',
     'leads': 'Leads',
     'loyalty': 'Loyalty',
