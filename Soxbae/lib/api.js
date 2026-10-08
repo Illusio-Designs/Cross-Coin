@@ -175,6 +175,31 @@ export async function getProductReviews(productId, revalidate) {
   } catch { return []; }
 }
 
+// Same fetch as getProductReviews, but also returns the EXACT total from the
+// backend (pagination.total) so counts are not capped at the number of reviews
+// fetched (60 on the home feed, 100 per product).
+function reviewsPayload(data) {
+  const list = data?.data?.reviews || data?.reviews || data?.data || (Array.isArray(data) ? data : []);
+  const reviews = Array.isArray(list) ? list.map(mapReview) : [];
+  const total = Number(data?.pagination?.total ?? data?.data?.pagination?.total ?? data?.stats?.total) || 0;
+  return { reviews, total: Math.max(total, reviews.length) };
+}
+
+// Brand-wide reviews for the home page.
+export async function getStoreReviews(revalidate) {
+  try {
+    return reviewsPayload(await brandFetch('/api/reviews/all', revalidate ?? 300));
+  } catch { return { reviews: [], total: 0 }; }
+}
+
+// One product's reviews plus its exact total.
+export async function getProductReviewsWithTotal(productId) {
+  if (!productId) return { reviews: [], total: 0 };
+  try {
+    return reviewsPayload(await brandFetch(`/api/reviews/product/${productId}`));
+  } catch { return { reviews: [], total: 0 }; }
+}
+
 // ---- FAQs -----------------------------------------------------------------
 
 // Product-specific FAQs first, then the store-wide ones (same order as the

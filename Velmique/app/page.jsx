@@ -49,7 +49,7 @@ export default async function HomePage() {
       <StoryBand />
       <NotesBand />
       <CollectionBanner />
-      <Testimonials initialReviews={reviewsData?.reviews || []} />
+      <Testimonials initialReviews={reviewsData?.reviews || []} initialTotal={reviewsData?.pagination?.total || 0} />
     </SeoWrapper>
   );
 }

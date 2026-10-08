@@ -19,6 +19,21 @@ function Stars({ n = 5 }) {
   );
 }
 
+/* "★ 4.8 · 1,284 reviews" — the exact total comes from the API, the average from
+   the reviews shown. Renders nothing until there are real reviews. */
+export function ReviewCount({ reviews = [], total = 0 }) {
+  const rated = reviews.filter((r) => Number(r.rating) > 0);
+  const n = Math.max(Number(total) || 0, reviews.length);
+  if (!n) return null;
+  const avg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0;
+  return (
+    <p className="spec mt-4 text-ink-muted">
+      {avg > 0 && <><span className="text-ink">★ {avg.toFixed(1)}</span> · </>}
+      {n.toLocaleString('en-IN')} review{n === 1 ? '' : 's'}
+    </p>
+  );
+}
+
 function Card({ r }) {
   return (
     <figure className="h-full border border-line bg-paper p-6 md:p-7">

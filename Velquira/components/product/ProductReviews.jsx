@@ -10,7 +10,7 @@ import { toast } from '@/lib/toast';
 // reviews, the review list, and a working "write a review" form that POSTs to
 // /api/reviews/submit (same endpoint the other brands use). New reviews show
 // immediately (pending moderation is normal on the backend).
-export default function ProductReviews({ productId, initialReviews = [], fallbackRating = 0, fallbackCount = 0 }) {
+export default function ProductReviews({ productId, initialReviews = [], fallbackRating = 0, fallbackCount = 0, totalCount = 0 }) {
   const [reviews, setReviews] = useState(Array.isArray(initialReviews) ? initialReviews : []);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
@@ -29,6 +29,9 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
     });
     return { avg, total, dist };
   }, [reviews]);
+
+  // Exact total from the API (the list above is only the first page of reviews).
+  const displayTotal = Math.max(Number(totalCount) || 0, total);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -74,7 +77,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
                 <Icon key={i} name="Star" size={14} color={i < Math.round(avg) ? 'var(--star)' : '#e2d3b4'} />
               ))}
             </span>
-            <span className="muted">{total ? `${total} review${total === 1 ? '' : 's'}` : 'No reviews yet'}</span>
+            <span className="muted">{displayTotal ? `${displayTotal.toLocaleString('en-IN')} review${displayTotal === 1 ? '' : 's'}` : 'No reviews yet'}</span>
           </div>
         </div>
         <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>

@@ -34,20 +34,39 @@ export async function getAllReviews() {
   }
 }
 
-/* One product's approved reviews — used by the product detail page. */
-export async function getProductReviews(productId) {
-  if (!productId) return { reviews: [], stats: null };
+/* Same as getAllReviews, plus the EXACT store-wide total (pagination.total) so the
+   count isn't capped at the number of reviews returned. */
+export async function getAllReviewsWithTotal() {
   try {
-    const res = await fetch(`${API_URL}/api/reviews/product/${productId}`, { headers });
-    if (!res.ok) return { reviews: [], stats: null };
+    const res = await fetch(`${API_URL}/api/reviews/all`, { headers });
+    if (!res.ok) return { reviews: [], total: 0 };
     const data = await res.json();
     const list = data?.reviews ?? data?.data ?? data ?? [];
+    const reviews = Array.isArray(list) ? list.map(mapReview).filter((r) => r.quote) : [];
+    const total = Number(data?.pagination?.total) || 0;
+    return { reviews, total: Math.max(total, reviews.length) };
+  } catch {
+    return { reviews: [], total: 0 };
+  }
+}
+
+/* One product's approved reviews — used by the product detail page. */
+export async function getProductReviews(productId) {
+  if (!productId) return { reviews: [], stats: null, total: 0 };
+  try {
+    const res = await fetch(`${API_URL}/api/reviews/product/${productId}`, { headers });
+    if (!res.ok) return { reviews: [], stats: null, total: 0 };
+    const data = await res.json();
+    const list = data?.reviews ?? data?.data ?? data ?? [];
+    const reviews = Array.isArray(list) ? list.map(mapReview).filter((r) => r.quote) : [];
+    const total = Number(data?.pagination?.total ?? data?.stats?.total) || 0;
     return {
-      reviews: Array.isArray(list) ? list.map(mapReview).filter((r) => r.quote) : [],
+      reviews,
       stats: data?.stats ?? null,
+      total: Math.max(total, reviews.length),
     };
   } catch {
-    return { reviews: [], stats: null };
+    return { reviews: [], stats: null, total: 0 };
   }
 }
 

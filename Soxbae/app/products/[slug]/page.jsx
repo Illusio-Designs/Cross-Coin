@@ -4,7 +4,7 @@ import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductStory from '@/components/product/ProductStory';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviews, getProductFaqs } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs } from '@/lib/api';
 
 // Render on-demand with fresh data (never a stale/empty server cache), and so
 // a surprising single product can never fail a static build.
@@ -22,7 +22,8 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviews, faqs] = await Promise.all([getAllProducts(), getProductReviews(product.id), getProductFaqs(product.id)]);
+  const [all, reviewsData, faqs] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id), getProductFaqs(product.id)]);
+  const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
   const related = all
@@ -45,7 +46,7 @@ export default async function ProductPage({ params, searchParams }) {
       <ProductStory product={product} faqs={faqs} />
 
       {/* ── Reviews (same component as the home page + a Write-a-review button) ── */}
-      <Reviews reviews={reviews} title="Customer reviews" productId={product.id} showWrite limit={8} />
+      <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite limit={8} />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>

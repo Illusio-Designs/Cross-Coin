@@ -55,7 +55,9 @@ function buildCols(reviews) {
 
 export function ReviewsSection({ productId = null, productName = null, fetchFn = null }) {
   const [reviews, setReviews] = useState([])
-  const [stats, setStats] = useState({ average: 4.8, total: 50000 })
+  // Real numbers only: the exact total comes from the API (pagination.total /
+  // stats.total); the list itself is just one page of reviews.
+  const [stats, setStats] = useState({ average: 0, total: 0 })
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
@@ -64,7 +66,13 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
       const list = data?.reviews ?? data ?? []
       if (list.length > 0) {
         setReviews(list)
-        if (data?.stats) setStats(data.stats)
+        const rated = list.filter((r) => Number(r.rating) > 0)
+        const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
+        const exact = Number(data?.pagination?.total ?? data?.stats?.total) || 0
+        setStats({
+          average: Number(data?.stats?.average) || sampleAvg,
+          total: Math.max(exact, list.length),
+        })
       }
     }).catch(() => {})
   }, [fetchFn])
@@ -92,7 +100,7 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
             <span className="text-5xl font-bold leading-none text-brand-black sm:text-6xl">{avg.toFixed(1)}</span>
             <div className="flex flex-col gap-1.5">
               <Stars rating={Math.round(avg)} />
-              <p className="text-xs text-gray-400">Based on {total >= 1000 ? `${(total / 1000).toFixed(0)}K+` : `${total}+`} reviews</p>
+              <p className="text-xs text-gray-400">Based on {total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</p>
               <p className="text-xs font-semibold text-brand-black">98% would recommend</p>
             </div>
           </div>

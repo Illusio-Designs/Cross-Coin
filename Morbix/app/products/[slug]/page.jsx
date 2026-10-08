@@ -4,7 +4,7 @@ import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getProductReviewsWithTotal } from '@/lib/api';
 
 // Render on-demand with fresh data (never a stale/empty server cache), and so
 // a surprising single product can never fail a static build.
@@ -22,7 +22,8 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviews] = await Promise.all([getAllProducts(), getProductReviews(product.id)]);
+  const [all, reviewsData] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id)]);
+  const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
   const related = all
@@ -50,6 +51,7 @@ export default async function ProductPage({ params, searchParams }) {
       <ProductReviews
         productId={product.id}
         initialReviews={reviews}
+        totalCount={reviewsData.total}
         fallbackRating={product.rating}
         fallbackCount={product.reviews}
       />
