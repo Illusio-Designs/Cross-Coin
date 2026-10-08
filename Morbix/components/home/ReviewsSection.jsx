@@ -39,7 +39,7 @@ export default function ReviewsSection({ reviews = [] }) {
             <p>{r.text}</p>
             <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
               <div className="review-av">{(r.author || '?').charAt(0)}</div>
-              <div><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
+              <div className="review-who"><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
             </div>
           </div>
         ))}
