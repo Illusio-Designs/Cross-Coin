@@ -1,6 +1,7 @@
 
 import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
 import '@/styles/globals.css';
+import '@/styles/cookie-banner.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
