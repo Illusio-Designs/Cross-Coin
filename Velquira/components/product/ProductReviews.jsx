@@ -124,7 +124,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
         <div className="empty" style={{ margin: 0 }}>No reviews yet — be the first to review this product.</div>
       ) : (
         <div className="review-grid">
-          {reviews.map((r, i) => <ReviewCard review={r} key={i} />)}
+          {reviews.slice(0, 8).map((r, i) => <ReviewCard review={r} key={i} />)}
         </div>
       )}
     </section>

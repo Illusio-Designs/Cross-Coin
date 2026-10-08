@@ -70,10 +70,10 @@ export default function ReviewMarquee({ reviews = [], max = 12 }) {
         </div>
       </div>
       <style jsx>{`
-        .gz-rev-track { width: max-content; will-change: transform; animation: gz-rev 42s linear infinite; }
+        .gz-rev-track { width: max-content; will-change: transform; animation: gz-rev 80s linear infinite; }
         .gz-rev-vp:hover .gz-rev-track { animation-play-state: paused; }
         @keyframes gz-rev { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @media (max-width: 640px) { .gz-rev-track { animation-duration: 26s; } }
+        @media (max-width: 640px) { .gz-rev-track { animation-duration: 52s; } }
         @media (prefers-reduced-motion: reduce) { .gz-rev-track { animation: none; } }
       `}</style>
     </div>

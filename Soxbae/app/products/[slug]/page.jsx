@@ -41,7 +41,7 @@ export default async function ProductPage({ params, searchParams }) {
       <ProductShowcase product={product} initialColor={sp.color} />
 
       {/* ── Reviews (same component as the home page + a Write-a-review button) ── */}
-      <Reviews reviews={reviews} title="Customer reviews" productId={product.id} showWrite />
+      <Reviews reviews={reviews} title="Customer reviews" productId={product.id} showWrite limit={8} />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
