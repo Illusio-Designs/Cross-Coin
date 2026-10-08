@@ -197,11 +197,13 @@ export default function Reviews() {
   };
 
   const downloadTemplate = () => {
-    const header = 'product_id,rating,review,name,email,status,date,verified,featured';
+    // The "product" column accepts a product NAME/TITLE (or an id, or a slug) —
+    // whichever is easiest. Names are matched within the brand you pick above.
+    const header = 'product,rating,review,name,email,status,date,verified,featured';
     const sample = [
-      '101,5,"Lovely fabric, true to size.",Aarav Shah,aarav@example.com,approved,2025-09-14,yes,no',
-      '101,4,"Good value for money.",Priya Nair,,approved,2025-09-20,no,no',
-      '102,5,"My daughter loves it!",Meera Iyer,meera@example.com,pending,,no,yes',
+      '"Classic Crew Socks",5,"Lovely fabric, true to size.",Aarav Shah,aarav@example.com,approved,2025-09-14,yes,no',
+      '"Classic Crew Socks",4,"Good value for money.",Priya Nair,,approved,2025-09-20,no,no',
+      '"Ankle Socks Pack of 3",5,"My daughter loves it!",Meera Iyer,meera@example.com,approved,,no,yes',
     ];
     const csv = header + '\n' + sample.join('\n') + '\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -218,11 +220,11 @@ export default function Reviews() {
   // A real Excel-openable sample (.xls via an HTML table — no library needed).
   // Opens as a proper spreadsheet with a header row + example rows to fill in.
   const downloadExcelSample = () => {
-    const cols = ['product_id', 'rating', 'review', 'name', 'email', 'status', 'date', 'verified', 'featured'];
+    const cols = ['product', 'rating', 'review', 'name', 'email', 'status', 'date', 'verified', 'featured'];
     const rows = [
-      ['101', '5', 'Lovely fabric, true to size.', 'Aarav Shah', 'aarav@example.com', 'approved', '2025-09-14', 'yes', 'no'],
-      ['101', '4', 'Good value for money.', 'Priya Nair', '', 'approved', '2025-09-20', 'no', 'no'],
-      ['102', '5', 'My daughter loves it!', 'Meera Iyer', 'meera@example.com', 'pending', '', 'no', 'yes'],
+      ['Classic Crew Socks', '5', 'Lovely fabric, true to size.', 'Aarav Shah', 'aarav@example.com', 'approved', '2025-09-14', 'yes', 'no'],
+      ['Classic Crew Socks', '4', 'Good value for money.', 'Priya Nair', '', 'approved', '2025-09-20', 'no', 'no'],
+      ['Ankle Socks Pack of 3', '5', 'My daughter loves it!', 'Meera Iyer', 'meera@example.com', 'approved', '', 'no', 'yes'],
     ];
     const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const thead = '<tr>' + cols.map(c => `<th style="background:#1f2937;color:#fff;border:1px solid #d1d5db;padding:6px 10px;text-align:left">${c}</th>`).join('') + '</tr>';
@@ -369,12 +371,15 @@ export default function Reviews() {
                 Upload an <strong>.xlsx</strong>, <strong>.xls</strong> or <strong>.csv</strong> file. The first row must be
                 column headers. Columns are matched by name, in any order:
                 <br />
-                <code style={{ fontSize: 12 }}>product_id</code> (or product_slug / product_name),{' '}
+                <code style={{ fontSize: 12 }}>product</code> — the product’s <strong>name/title</strong> (or its id or slug),{' '}
                 <code style={{ fontSize: 12 }}>rating</code> (1–5),{' '}
                 <code style={{ fontSize: 12 }}>review</code>, <code style={{ fontSize: 12 }}>name</code>,{' '}
                 <code style={{ fontSize: 12 }}>email</code>, <code style={{ fontSize: 12 }}>status</code>,{' '}
                 <code style={{ fontSize: 12 }}>date</code>, <code style={{ fontSize: 12 }}>verified</code>,{' '}
                 <code style={{ fontSize: 12 }}>featured</code>.
+                <br />
+                Product names are matched within the brand you pick below. Leave <code style={{ fontSize: 12 }}>status</code> blank
+                and rows use the default below (<strong>Approved</strong>), so they show on the storefront straight away.
               </p>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
