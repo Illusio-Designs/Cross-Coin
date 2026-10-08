@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/hooks/useCart';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { toastAddedToCart } from '@/lib/toast';
+import ReviewBadge from '@/components/product/ReviewBadge';
 
 
 const MAX_DOTS = 5;
@@ -136,6 +137,8 @@ export function ProductCard({ product }) {
             </span>
           </div>
         }
+
+        <ReviewBadge rating={product.rating} count={product.reviewCount} />
 
         {/* Wishlist heart — top-right of the image */}
         <button

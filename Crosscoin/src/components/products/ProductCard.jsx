@@ -77,10 +77,15 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
       getPublicProductReviews(product.id, { limit: 100 })
         .then(data => {
           const reviews = data?.reviews || data || [];
-          const count = Array.isArray(reviews) ? reviews.length : 0;
-          const avg = count > 0
-            ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / count).toFixed(1))
-            : null;
+          const listCount = Array.isArray(reviews) ? reviews.length : 0;
+          // Real total from the API (the list above is capped at 100 reviews).
+          const count = Math.max(Number(data?.pagination?.total ?? data?.stats?.total) || 0, listCount);
+          const statAvg = Number(data?.stats?.average) || 0;
+          const avg = statAvg > 0
+            ? parseFloat(statAvg.toFixed(1))
+            : (listCount > 0
+              ? parseFloat((reviews.reduce((s, r) => s + (r.rating || 0), 0) / listCount).toFixed(1))
+              : null);
           setReviewCount(count);
           setAvgRating(avg);
         })
@@ -135,7 +140,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
           <div className="rating-pill">
             <span className="rating-pill__star">★</span>
             <span className="rating-pill__score">{avgRating}/5</span>
-            <span className="rating-pill__count">{reviewCount}</span>
+            <span className="rating-pill__count" title={`${Number(reviewCount).toLocaleString('en-IN')} reviews`}>
+              {reviewCount >= 1000 ? `${(Math.floor(reviewCount / 100) / 10).toFixed(1).replace(/\.0$/, '')}K` : reviewCount}
+            </span>
           </div>
         ) : null}
 

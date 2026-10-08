@@ -3,13 +3,14 @@ import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
+import ReviewBadge from '@/components/product/ReviewBadge';
 
 // Velquira product card — "lookbook overlay": one full-bleed portrait image
 // with the category kicker, name and price laid directly OVER the photo on a
 // soft gradient. No card box, no grid-tile look. A tap anywhere on the image
 // opens the product; wishlist + add-to-bag float above it.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image } = product;
+  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, rating, reviews } = product;
   const href = `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
@@ -26,6 +27,7 @@ export default function ProductCard({ product }) {
         <div className="vqp-tags">
           {badge && <span className={`vqp-badge b-${badgeKey || 'default'}`}>{badge}</span>}
           {oldPrice && <span className="vqp-badge sale">-{off}%</span>}
+          <ReviewBadge rating={rating} count={reviews} />
         </div>
         <WishlistButton productId={id} className="vqp-fav" />
 

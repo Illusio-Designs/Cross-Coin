@@ -146,6 +146,8 @@ export function mapProduct(p) {
     materials: Array.from(materials),
     features: [],
     description: p.description || '',
+    rating: Number(p.avg_rating) || 0,
+    reviewCount: Number(p.review_count) || 0,
     care: p.care || '',
     origin: p.origin || '',
     carbonFootprint: 0,

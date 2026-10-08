@@ -1,3 +1,4 @@
+import ReviewBadge from '@/components/product/ReviewBadge';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
@@ -17,6 +18,7 @@ export default function ProductCard({ product }) {
           {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
         </div>
         <WishlistButton productId={id} />
+        <ReviewBadge rating={rating} count={reviews} />
 
         <Link href={href} className="pcard-imglink" aria-label={name}>
           {image
@@ -43,9 +45,6 @@ export default function ProductCard({ product }) {
           <div className="pcard-price">
             ₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </div>
-          {rating > 0 && (
-            <span className="pcard-rate"><Icon name="Star" size={12} color="var(--star)" /> {Number(rating).toFixed(1)}</span>
-          )}
         </div>
 
         {colors?.length > 0 && (
