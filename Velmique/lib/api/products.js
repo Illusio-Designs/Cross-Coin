@@ -147,6 +147,8 @@ export function mapProduct(p) {
     slug:           p.slug,
     name:           p.name,
     description:    p.description || '',
+    care:           p.care || '',
+    origin:         p.origin || '',
     price,
     originalPrice,
     images:         all.length ? all : ['/perfumehero.webp'],

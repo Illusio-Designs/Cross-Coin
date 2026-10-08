@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductReviews from '@/components/product/ProductReviews';
+import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getProductReviews } from '@/lib/api';
 
@@ -33,6 +34,11 @@ export default async function ProductPage({ params }) {
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} />
+
+      {/* ── Ideal for, care and manufacturing ── */}
+      <div className="pdd-wrap">
+        <ProductDetailBlocks product={product} />
+      </div>
 
       {/* ── Reviews (real stats + write-a-review) ── */}
       <ProductReviews

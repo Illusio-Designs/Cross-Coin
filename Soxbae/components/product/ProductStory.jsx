@@ -1,14 +1,13 @@
 import Icon from '@/components/Icon';
-import { textBlocks, careSteps } from '@/lib/text';
+import { textBlocks } from '@/lib/text';
+import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 
-// Full-width sections under the buy panel: the complete description, care steps
-// and FAQs. Everything comes from the product record / FAQ API — a section with
+// Full-width sections under the buy panel: the complete description, the
+// Ideal for / care / manufacturing blocks and FAQs. Everything comes from the product record / FAQ API — a section with
 // no data is simply not rendered. Admin rich text is shown as plain text.
 export default function ProductStory({ product, faqs = [] }) {
   const blocks = textBlocks(product.description);
-  const steps = careSteps(product.care);
   const items = faqs.slice(0, 6);
-  if (!blocks.length && !steps.length && !items.length) return null;
 
   return (
     <div className="pdx-story">
@@ -24,17 +23,9 @@ export default function ProductStory({ product, faqs = [] }) {
         </section>
       )}
 
-      {steps.length > 0 && (
-        <section className="pdx-story-sec" aria-labelledby="pdx-care-h">
-          <span className="eyebrow">Look after them</span>
-          <h2 id="pdx-care-h">Washing and care</h2>
-          <ul className="pdx-care">
-            {steps.map((s) => (
-              <li key={s}><span className="pdx-care-ic"><Icon name="Check" size={16} /></span>{s}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="pdx-story-sec" aria-label="Details">
+        <ProductDetailBlocks product={product} />
+      </section>
 
       {items.length > 0 && (
         <section className="pdx-story-sec" aria-labelledby="pdx-faq-h">
