@@ -146,6 +146,8 @@ export function mapProduct(p) {
     materials: Array.from(materials),
     features: [],
     description: p.description || '',
+    care: p.care || '',
+    origin: p.origin || '',
     carbonFootprint: 0,
     badge: badgeMap[p.badge],
   };

@@ -1,0 +1,32 @@
+/* Product page: Ideal for, care and manufacturing blocks (.pdd). */
+.pdd { --ink: #2a2118; --mut: #8a7a63; --line: #e8ddc9; --card: #fffdf8; --acc: #bf8b2e; --acc2: #8f6620; --soft: #f4ead4;
+  display: flex; flex-direction: column; gap: 30px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.pdd, .pdd * { box-sizing: border-box; }
+.pdd-blk { min-width: 0; }
+.pdd-h { margin: 0 0 14px; font-family: var(--font-display, 'Cormorant Garamond', Georgia, serif); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: 0; text-transform: none; }
+.pdd-eyebrow { display: block; margin-bottom: 8px; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; color: var(--mut); }
+.pdd-ic { display: inline-block; flex: none; }
+.pdd-ic svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.pdd-lab { font-size: 12.5px; line-height: 1.4; color: var(--mut); white-space: pre-line; }
+.pdd-addr { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink); max-width: 62ch; }
+.pdd-flag { display: inline-block; width: 22px; height: 15px; border-radius: 2px; background: linear-gradient(#ff9933 33%, #fff 33% 66%, #138808 66%); box-shadow: 0 0 0 1px rgba(0,0,0,.12); flex: none; }
+.pdd-origin { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.pdd-chips { display: flex; flex-wrap: wrap; }
+.pdd-care { display: grid; }
+@media (prefers-reduced-motion: reduce) { .pdd * { transition: none !important; } }
+
+.pdd-vq .pdd-chips { gap: 10px; }
+.pdd-vq .pdd-chip { padding: 9px 20px; border: 1px solid var(--acc); color: var(--ink); border-radius: 2px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; }
+.pdd-vq .pdd-chip .pdd-ic { display: none; }
+.pdd-vq .pdd-box { position: relative; background: var(--card); border: 1px solid var(--acc); border-radius: 3px; padding: 26px 18px; }
+.pdd-vq .pdd-box::after { content: ''; position: absolute; inset: 5px; border: 1px solid rgba(229,200,144,.9); border-radius: 2px; pointer-events: none; }
+.pdd-vq .pdd-care { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 18px 8px; text-align: center; }
+.pdd-vq .pdd-care > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pdd-vq .pdd-care .pdd-ic { width: 50px; height: 50px; padding: 12px; border-radius: 50%; background: var(--soft); color: var(--acc2); }
+.pdd-vq .pdd-lab { font-size: 12.5px; letter-spacing: .04em; }
+.pdd-vq .pdd-mfg { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.pdd-vq .pdd-addr { margin: 0 auto; }
+.pdd-vq .pdd-origin-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.pdd-vq .pdd-origin-row small { font-size: 13px; color: var(--mut); }
+
+.pdd-wrap { margin-top: clamp(32px, 4vw, 56px); padding-top: clamp(28px, 3.5vw, 44px); border-top: 1px solid #e8ddc9; max-width: 940px; }

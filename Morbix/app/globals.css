@@ -1251,3 +1251,21 @@ button { font-family: inherit; cursor: pointer; }
   .pdp-gallery { position: sticky; top: 120px; align-self: start; }
   .pdp-main { max-height: calc(100vh - 170px); }
 }
+
+
+/* Reviews: name and date stack instead of running together */
+.review-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* Phones: reviews become a swipeable row (next card peeks in) instead of a long
+   stack. Desktop and tablet layouts are unchanged. */
+@media (max-width: 760px) {
+  .review-grid, .reviews-list {
+    display: flex; gap: 14px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scroll-padding-inline: 2px; -webkit-overflow-scrolling: touch;
+    padding: 2px 2px 14px; margin-inline: -2px; scrollbar-width: none;
+  }
+  .review-grid::-webkit-scrollbar, .reviews-list::-webkit-scrollbar { display: none; }
+  .review-grid .review, .reviews-list .review { flex: 0 0 84%; max-width: 340px; scroll-snap-align: start; }
+  .review-grid .review:hover { transform: none; box-shadow: none; }
+  .reviews-list .empty { flex: 1 1 100%; }
+}

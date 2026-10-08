@@ -1,10 +1,11 @@
 import Icon from '@/components/Icon';
 import ReviewCard from '@/components/product/ReviewCard';
 
-export default function ReviewsSection({ reviews = [] }) {
+export default function ReviewsSection({ reviews = [], total: totalProp }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
   const avg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) : 0;
-  const total = reviews.length;
+  // Exact store-wide total from the API; the list is only the latest page of reviews.
+  const total = Math.max(Number(totalProp) || 0, reviews.length);
 
   return (
     <section className="section container">
@@ -20,7 +21,7 @@ export default function ReviewsSection({ reviews = [] }) {
               <Icon key={i} name="Star" size={13} color={i < Math.round(avg) ? 'var(--star)' : '#dce2e6'} />
             ))}
           </span>
-          <small>{total} review{total === 1 ? '' : 's'}</small>
+          <small>{total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</small>
         </div>
       </div>
 

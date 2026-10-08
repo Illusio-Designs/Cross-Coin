@@ -1,0 +1,31 @@
+/* Product page: Ideal for, care and manufacturing blocks (.pdd). */
+.pdd { --ink: #0a0a0a; --mut: #737373; --line: #d9d9d9; --card: #ffffff; --acc: #0a0a0a; --acc2: #0a0a0a; --soft: #f5f5f5;
+  display: flex; flex-direction: column; gap: 30px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.pdd, .pdd * { box-sizing: border-box; }
+.pdd-blk { min-width: 0; }
+.pdd-h { margin: 0 0 14px; font-family: var(--font-display, 'Playfair Display', Georgia, serif); font-weight: 500; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: 0; text-transform: none; }
+.pdd-eyebrow { display: block; margin-bottom: 8px; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; color: var(--mut); }
+.pdd-ic { display: inline-block; flex: none; }
+.pdd-ic svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.pdd-lab { font-size: 12.5px; line-height: 1.4; color: var(--mut); white-space: pre-line; }
+.pdd-addr { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink); max-width: 62ch; }
+.pdd-flag { display: inline-block; width: 22px; height: 15px; border-radius: 2px; background: linear-gradient(#ff9933 33%, #fff 33% 66%, #138808 66%); box-shadow: 0 0 0 1px rgba(0,0,0,.12); flex: none; }
+.pdd-origin { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.pdd-chips { display: flex; flex-wrap: wrap; }
+.pdd-care { display: grid; }
+@media (prefers-reduced-motion: reduce) { .pdd * { transition: none !important; } }
+
+.pdd-kw .pdd-chips { gap: 8px; }
+.pdd-kw .pdd-chip { display: inline-flex; padding: 9px 20px; border: 1px solid var(--ink); border-radius: 999px; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; font-weight: 700; }
+.pdd-kw .pdd-chip .pdd-ic { display: none; }
+.pdd-kw .pdd-care { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.pdd-kw .pdd-care > div { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 8px; border-right: 1px solid var(--line); }
+.pdd-kw .pdd-care > div:last-child { border-right: 0; }
+.pdd-kw .pdd-care .pdd-ic { width: 34px; height: 34px; }
+.pdd-kw .pdd-care .pdd-ic svg { stroke-width: 1; }
+.pdd-kw .pdd-lab { text-align: center; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.pdd-kw .pdd-dl { margin: 0; border-top: 1px solid var(--ink); }
+.pdd-kw .pdd-dl > div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.pdd-kw .pdd-dl dt { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--mut); padding-top: 3px; }
+.pdd-kw .pdd-dl dd { margin: 0; }
+@media (max-width: 560px) { .pdd-kw .pdd-dl > div { grid-template-columns: 1fr; gap: 4px; } .pdd-kw .pdd-care > div:nth-child(2n) { border-right: 0; } }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { toastReviewSubmitted, toastReviewError, toastValidationError } from '../../utils/toast';
 import { getProductReviews, submitReview } from '../../services/reviews';
-import ReviewMarquee from '../common/ReviewMarquee';
+import ReviewMarquee, { ReviewCount } from '../common/ReviewMarquee';
 
 /* Product reviews — uses the SHARED minimal ReviewMarquee so the design matches
    the home page exactly. Shows only THIS product's reviews; the "Write a Review"
@@ -28,6 +28,7 @@ function RatingStars({ n = 0, onSelect }) {
 export default function ProductTestimonials({ productId, productName }) {
   const [reviews, setReviews] = useState([]);
   const [loaded, setLoaded]   = useState(false);
+  const [total, setTotal]     = useState(0);
   const [open, setOpen]       = useState(false);
   const [mounted, setMounted] = useState(false);
   const [form, setForm]       = useState({ name: '', email: '', rating: 0, text: '' });
@@ -39,7 +40,7 @@ export default function ProductTestimonials({ productId, productName }) {
     if (!productId) return;
     let active = true;
     getProductReviews(productId)
-      .then(({ reviews: list }) => { if (active) { setReviews(list || []); setLoaded(true); } })
+      .then(({ reviews: list, total: exact }) => { if (active) { setReviews(list || []); setTotal(exact || 0); setLoaded(true); } })
       .catch(() => { if (active) setLoaded(true); });
     return () => { active = false; };
   }, [productId]);
@@ -70,6 +71,7 @@ export default function ProductTestimonials({ productId, productName }) {
         <div>
           <p className="eyebrow text-ink-muted mb-3">Worn &amp; reviewed</p>
           <h2 className="h-display text-2xl md:text-4xl">What buyers say.</h2>
+          <ReviewCount reviews={reviews} total={total} />
         </div>
         <button onClick={() => setOpen(true)} className="btn">Write a Review</button>
       </div>

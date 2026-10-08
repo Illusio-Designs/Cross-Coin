@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
 import ProductTestimonials from '../../components/products/ProductTestimonials';
+import ProductDetailBlocks from '../../components/product/ProductDetailBlocks';
 import SeoWrapper from '../../components/SeoWrapper';
 import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
 import { useCart } from '../../context/CartContext';
@@ -553,6 +554,12 @@ export default function ProductDetail() {
             </div>
             <p className="spec block pt-4">Hand-finished and inspected pair-by-pair · 7-day returns.</p>
           </div>
+        </section>
+
+        {/* ── Ideal for, care and manufacturing ────────────────────────── */}
+        <div className="wrap"><div className="hairline" /></div>
+        <section className="wrap py-10 md:py-14">
+          <ProductDetailBlocks product={product} />
         </section>
 
         {/* ── Editorial band 3 — Reviews ───────────────────────────────── */}

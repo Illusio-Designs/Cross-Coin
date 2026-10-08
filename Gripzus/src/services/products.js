@@ -145,6 +145,8 @@ export function mapProduct(p) {
     // honest low-stock indicator on the product page.
     stock:         variations.length ? totalStock : null,
     description:   p.description || '',
+    care:          p.care || '',
+    origin:        p.origin || '',
     sku:           firstVar?.sku || p.sku || '',
     variations,
   };

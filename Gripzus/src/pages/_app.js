@@ -1,5 +1,6 @@
 import '../styles/globals.css'
 import '../styles/CartDrawer.css'
+import '../styles/product-details.css'
 import '../styles/cookie-banner.css'
 import { AuthProvider } from '../context/AuthContext'
 import { CurrencyProvider } from '../context/CurrencyContext'

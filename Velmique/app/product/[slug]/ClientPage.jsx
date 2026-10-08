@@ -11,6 +11,7 @@ import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
 import { fbTrack } from '@/utils/pixel';
 
@@ -603,6 +604,11 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 ))}
               </div>
             </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* ── Ideal for, storage and use, manufacturing ──── */}
+            <ProductDetailBlocks product={product} />
 
             <div className="h-px bg-[var(--border)]" />
 

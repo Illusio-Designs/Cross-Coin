@@ -27,6 +27,7 @@ const CrossSell = dynamic(() => import('@/components/product/CrossSell').then(m 
   ssr: false,
 })
 import SeoWrapper from '@/components/SeoWrapper'
+import ProductDetailBlocks from '@/components/product/ProductDetailBlocks'
 
 function ProductSkeleton() {
   return (
@@ -204,6 +205,13 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
           </div>
         </section>
       )}
+
+      {/* Care and manufacturing */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-site px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+          <ProductDetailBlocks product={product} />
+        </div>
+      </section>
 
       {/* Feature Highlight — last image of first variation in center circle */}
       {(() => {

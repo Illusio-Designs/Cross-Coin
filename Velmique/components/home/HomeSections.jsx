@@ -363,22 +363,28 @@ const FALLBACK_REVIEWS = [
   { id: 'vq-f3', name: 'Verified customer', rating: 5, text: 'Beautiful presentation and a fragrance that feels far more expensive than it is.' },
 ];
 
-export function Testimonials({ initialReviews = null }) {
+export function Testimonials({ initialReviews = null, initialTotal = 0 }) {
   const seed = (Array.isArray(initialReviews) ? initialReviews : []).map(mapReview).filter((r) => r.text);
   const [reviews, setReviews] = useState(() => seed);
   const [loaded, setLoaded] = useState(() => seed.length > 0);
+  // Exact store-wide review count from the API (the list is only the latest few).
+  const [total, setTotal] = useState(() => Number(initialTotal) || 0);
 
   useEffect(() => {
     if (seed.length) return;
     let alive = true;
-    getAllReviews({ limit: 12 }).then(({ reviews: rs }) => {
+    getAllReviews({ limit: 12 }).then(({ reviews: rs, pagination }) => {
       if (!alive) return;
+      setTotal(Number(pagination?.total) || 0);
       setReviews((rs || []).map(mapReview).filter((r) => r.text));
       setLoaded(true);
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialReviews]);
+
+  const rated = reviews.filter((r) => r.rating > 0);
+  const avgRating = rated.length ? rated.reduce((a, r) => a + r.rating, 0) / rated.length : 0;
 
   // Always render the section — fall back to curated testimonials when there
   // are no live reviews yet. Repeat a short list so the marquee fills its row.
@@ -394,6 +400,14 @@ export function Testimonials({ initialReviews = null }) {
         <h2 className="font-serif text-[var(--ink)] font-medium mt-4" style={{ fontSize: 'clamp(2.4rem, 6vw, 5.1rem)', lineHeight: 1.02 }}>
           Worn by people<br />who know scent.
         </h2>
+        {reviews.length > 0 && (
+          <p className="mt-6 text-[11px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">
+            <span className="text-[var(--gold-deep)]" aria-hidden="true">★</span>{' '}
+            {(avgRating || 0).toFixed(1)}
+            <span className="mx-2 text-[var(--gold)]" aria-hidden="true">·</span>
+            {Math.max(total, reviews.length).toLocaleString('en-IN')} review{Math.max(total, reviews.length) === 1 ? '' : 's'}
+          </p>
+        )}
       </motion.div>
 
       {/* Continuous auto-scrolling marquee of reviews (pauses on hover). */}

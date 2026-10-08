@@ -47,6 +47,7 @@ const Home = ({ initialData = {} }) => {
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
   const [exclusiveProductsLoading, setExclusiveProductsLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
+  const [reviewsTotal, setReviewsTotal] = useState(0);
   
   const categorySliderRef = useRef(null);
   const latestSliderRef = useRef(null);
@@ -175,7 +176,10 @@ const Home = ({ initialData = {} }) => {
     reviewsLoadedRef.current = true;
     try {
       const r = await getAllPublicReviews({ limit: 30, sort: 'highest' });
-      setReviews(Array.isArray(r) ? r : (r?.reviews || r?.data || []));
+      const list = Array.isArray(r) ? r : (r?.reviews || r?.data || []);
+      setReviews(list);
+      // Exact store-wide count from the API (the slider only loads the top 30).
+      setReviewsTotal(Math.max(Number(r?.pagination?.total) || 0, list.length));
     } catch {
       setReviews([]);
     }
@@ -389,6 +393,11 @@ const Home = ({ initialData = {} }) => {
           <div className="home-reviews-header">
             <h2 className="section-header-h2">Customer <strong>Reviews</strong></h2>
             <p className="section-header-sub">What our customers are saying</p>
+            {reviewsTotal > 0 && (
+              <p className="section-header-sub" style={{ marginTop: 6, fontWeight: 700 }}>
+                {reviewsTotal.toLocaleString('en-IN')} review{reviewsTotal === 1 ? '' : 's'}
+              </p>
+            )}
           </div>
           <InfiniteReviewsSlider reviews={reviews} />
         </section>

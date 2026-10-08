@@ -10,6 +10,7 @@ import { toast } from '@/lib/toast';
 // passes `showWrite` (+ productId) to add the "Write a review" button + modal.
 export default function Reviews({
   reviews = [],
+  total: totalProp,
   title = 'What our customers say',
   productId,
   showWrite = false,
@@ -22,10 +23,11 @@ export default function Reviews({
 
   const { avg, total } = useMemo(() => {
     const rated = list.filter((r) => Number(r.rating) > 0);
-    const total = list.length;
+    // Exact total from the API when supplied (the list itself is only a page of them).
+    const total = Math.max(Number(totalProp) || 0, list.length);
     const avg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0;
     return { avg, total };
-  }, [list]);
+  }, [list, totalProp]);
 
   const shown = limit ? list.slice(0, limit) : list;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -99,7 +101,7 @@ export default function Reviews({
                 <Icon key={i} name="Star" size={14} color={i < Math.round(avg) ? 'var(--accent)' : 'var(--line)'} />
               ))}
             </span>
-            <small>{total} review{total === 1 ? '' : 's'}</small>
+            <small>{total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</small>
           </div>
           {showWrite && (
             <button type="button" className="sx-reviews-write" onClick={() => setOpen(true)}>

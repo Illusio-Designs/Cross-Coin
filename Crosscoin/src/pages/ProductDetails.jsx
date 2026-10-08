@@ -755,7 +755,14 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
         {/* Reviews */}
         <div className="pdt-reviews">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 className="pdt-section-title" style={{ margin: 0 }}>Customer Reviews</h2>
+            <h2 className="pdt-section-title" style={{ margin: 0 }}>
+              Customer Reviews
+              {productData.reviewCount > 0 && (
+                <span style={{ marginLeft: 10, fontSize: 14, fontWeight: 500, color: '#777' }}>
+                  ({Number(productData.reviewCount).toLocaleString('en-IN')})
+                </span>
+              )}
+            </h2>
             {rawProduct?.id && <ReviewForm productId={rawProduct.id} productName={productData?.title} />}
           </div>
           {allReviews.length > 0 ? (
