@@ -1034,14 +1034,16 @@ module.exports.getAllPublicReviews = async (req, res) => {
 // admin can see exactly which rows were imported and why any were skipped.
 //
 // Recognised columns (all flexible aliases):
-//   product_id | product | sku                → numeric product id (preferred)
-//   product_slug | slug | handle              → product slug (fallback lookup)
-//   product_name | name of product            → product name (last-resort lookup)
+//   product_id | product | sku | title        → product id, NAME/TITLE, or slug
+//                                                (one column, any of the three)
+//   product_slug | slug | handle              → product slug (optional extra column)
+//   product_name | name of product            → product name (optional extra column)
 //   rating | stars                            → 1–5 (required)
 //   review | comment | review_text | body     → the review text
 //   name | reviewer | reviewer_name | customer→ display name (guestName)
 //   email | reviewer_email                    → guestEmail (optional)
 //   status | state                            → pending | approved | rejected
+//                                                (omit → defaults to APPROVED)
 //   date | review_date | created_at           → back-dates the review (optional)
 //   verified | verified_purchase              → yes/true/1 → verified badge
 //   featured | is_featured                    → yes/true/1 → featured review
@@ -1130,31 +1132,40 @@ module.exports.bulkUploadReviews = async (req, res) => {
             const rowBrandSlug = pick(r, 'brand', 'brandslug', 'brandname');
             const rowBrandId = (await resolveBrand(rowBrandSlug)) || headerBrandId;
 
-            // Resolve the product: id → slug → name.
+            // Resolve the product. The MAIN product column may hold a numeric id,
+            // a product name/title, OR a slug — whichever the admin has in the
+            // sheet — so we try all three against it. Dedicated product_slug /
+            // product_name / title columns are still honoured when present.
             let product = null;
-            const pid = parseInt(pick(r, 'productid', 'product', 'sku', 'id'), 10);
-            if (!isNaN(pid)) {
-                product = await Product.findByPk(pid).catch(() => null);
+            const prodCol = pick(r, 'productid', 'product', 'sku', 'id', 'producttitle', 'title'); // main column: id OR name/title OR slug
+            const slugCol = pick(r, 'productslug', 'slug', 'handle');
+            const nameCol = pick(r, 'productname', 'nameofproduct');
+            const brandWhere = rowBrandId ? { brand_id: rowBrandId } : {};
+
+            // 1) Numeric id — only when the whole value is digits.
+            if (/^\d+$/.test(prodCol)) {
+                product = await Product.findByPk(parseInt(prodCol, 10)).catch(() => null);
             }
+            // 2) Slug — a dedicated slug column, or the main column used as a slug.
             if (!product) {
-                const slug = pick(r, 'productslug', 'slug', 'handle');
-                if (slug) {
-                    const where = { slug };
-                    if (rowBrandId) where.brand_id = rowBrandId;
-                    product = await Product.findOne({ where }).catch(() => null);
+                for (const slug of [slugCol, prodCol].filter(Boolean)) {
+                    product = await Product.findOne({ where: { slug, ...brandWhere } }).catch(() => null);
+                    if (product) break;
+                }
+            }
+            // 3) Name / title — a dedicated name column, or the main column used as
+            //    a name. Exact match first, then a partial (LIKE) match. All lookups
+            //    are scoped to the row's brand so the same product name in two brands
+            //    resolves to the right one.
+            if (!product) {
+                for (const nm of [nameCol, prodCol].filter(Boolean)) {
+                    product = await Product.findOne({ where: { name: nm, ...brandWhere } }).catch(() => null)
+                        || await Product.findOne({ where: { name: { [Op.like]: `%${nm}%` }, ...brandWhere } }).catch(() => null);
+                    if (product) break;
                 }
             }
             if (!product) {
-                const pname = pick(r, 'productname', 'nameofproduct', 'product');
-                if (pname) {
-                    const where = { name: pname };
-                    if (rowBrandId) where.brand_id = rowBrandId;
-                    product = await Product.findOne({ where }).catch(() => null)
-                        || await Product.findOne({ where: { ...where, name: { [Op.like]: `%${pname}%` } } }).catch(() => null);
-                }
-            }
-            if (!product) {
-                errors.push({ row: rowNo, reason: `Product not found (id/slug/name: "${pick(r, 'productid', 'productslug', 'slug', 'productname', 'product') || '—'}")` });
+                errors.push({ row: rowNo, reason: `Product not found (id/name/title/slug: "${prodCol || slugCol || nameCol || '—'}")` });
                 continue;
             }
 
