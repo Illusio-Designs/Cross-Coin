@@ -13,6 +13,7 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
 
   return createPortal(
     <div
+      data-sticky-atc="true"
       style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1050 }}
       className="border-t border-gray-200 bg-white/95 backdrop-blur-md shadow-[0_-2px_16px_rgba(0,0,0,0.06)]"
     >

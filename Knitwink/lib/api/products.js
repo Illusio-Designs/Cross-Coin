@@ -1,5 +1,6 @@
 
-import { getColorHex } from '@/lib/colorMap';
+import { getColorHex } from '@/lib/colorMap'
+import { plainText } from '@/lib/plainText';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'knitwink';
@@ -145,7 +146,7 @@ export function mapProduct(p) {
     genders: Array.from(genders),
     materials: Array.from(materials),
     features: [],
-    description: p.description || '',
+    description: plainText(p.description),
     rating: Number(p.avg_rating) || 0,
     reviewCount: Number(p.review_count) || 0,
     care: p.care || '',

@@ -10,6 +10,7 @@
  *   { id, name, slug, description?, image?, products: [...] }
  */
 
+import { plainText } from '@/lib/plainText';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategoryByName, getCategoryBySlug, getPublicCategories } from '@/lib/api/categories';
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }) {
   const category = await getCategoryBySlug(handle) || await getCategoryByName(handle);
 
   const name = category?.name || handle;
-  const description = category?.description
+  const description = plainText(category?.description)
     || `Shop ${name} at Knitwink. ${category?.products?.length || 0} pieces of natural-fibre knitwear, made to last.`;
   const url = `${SITE_URL}/collections/${handle}`;
   const ogImage = category?.image || `${SITE_URL}/knitwinklogo.webp`;
@@ -87,7 +88,7 @@ export default async function CollectionPage({ params }) {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: category.name,
-    description: category.description || `${category.name} from Knitwink`,
+    description: plainText(category.description) || `${category.name} from Knitwink`,
     url: `${SITE_URL}/collections/${handle}`,
     mainEntity: {
       '@type': 'ItemList',
@@ -139,7 +140,7 @@ export default async function CollectionPage({ params }) {
           </nav>
           <h1 className="text-3xl font-bold text-white lg:text-4xl">{category.name}</h1>
           {category.description && (
-            <p className="mt-2 max-w-2xl text-sm text-white/70">{category.description}</p>
+            <p className="mt-2 max-w-2xl text-sm text-white/70">{plainText(category.description)}</p>
           )}
           <p className="mt-3 text-xs uppercase tracking-[0.25em] text-white/60">
             {products.length} item{products.length !== 1 ? 's' : ''}

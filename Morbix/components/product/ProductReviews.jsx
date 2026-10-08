@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
+import ReviewRow from '@/components/ui/ReviewRow';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
 
@@ -132,28 +133,35 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
           </div>
         </div>
 
-        <div className="reviews-list">
-          {reviews.length === 0 ? (
+        {reviews.length === 0 ? (
+          <div className="reviews-list">
             <div className="empty" style={{ margin: 0 }}>No reviews yet — be the first to review this product.</div>
-          ) : reviews.slice(0, 8).map((r, i) => (
-            <div className="review" key={i}>
-              <div className="review-head">
-                <div className="review-av">{(r.author || '?').charAt(0)}</div>
-                <div>
-                  <b>{r.author}</b>
-                  <div className="review-stars">
-                    {[0, 1, 2, 3, 4].map((n) => (
-                      <Icon key={n} name="Star" size={12} color={n < r.rating ? 'var(--star)' : '#d7dde2'} />
-                    ))}
-                    {r.date && <span className="muted" style={{ fontSize: 12, marginLeft: 6 }}>{r.date}</span>}
+          </div>
+        ) : (
+          <ReviewRow
+            items={reviews.slice(0, 12)}
+            staticClassName="reviews-list"
+            min={3}
+            render={(r, i) => (
+              <div className="review" key={i}>
+                <div className="review-head">
+                  <div className="review-av">{(r.author || '?').charAt(0)}</div>
+                  <div>
+                    <b>{r.author}</b>
+                    <div className="review-stars">
+                      {[0, 1, 2, 3, 4].map((n) => (
+                        <Icon key={n} name="Star" size={12} color={n < r.rating ? 'var(--star)' : '#d7dde2'} />
+                      ))}
+                      {r.date && <span className="muted" style={{ fontSize: 12, marginLeft: 6 }}>{r.date}</span>}
+                    </div>
                   </div>
                 </div>
+                {r.title && <b className="review-title">{r.title}</b>}
+                <p>{r.text}</p>
               </div>
-              {r.title && <b className="review-title">{r.title}</b>}
-              <p>{r.text}</p>
-            </div>
-          ))}
-        </div>
+            )}
+          />
+        )}
       </div>
     </section>
   );

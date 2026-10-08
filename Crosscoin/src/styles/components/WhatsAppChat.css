@@ -536,3 +536,8 @@ body:has(.pdt-sticky.visible) .wachat-fab {
     bottom: 140px;
   }
 }
+/* Lift above the sticky add-to-bag bar on product pages */
+body:has(.pdt-sticky.visible) .wachat-fab { bottom: 100px; }
+body:has(.pdt-sticky.visible) .wachat-greet { bottom: 168px; }
+body:has(.pdt-sticky.visible) .scroll-top,
+body:has(.pdt-sticky.visible) .back-to-top { bottom: 172px; }

@@ -3,6 +3,9 @@
    Header:   X-Brand-Name: <brand>
 */
 
+import { plainText } from '@/lib/plainText';
+
+
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
 
@@ -22,7 +25,7 @@ function mapCategory(c) {
     name:         c.name,
     slug:         c.slug,
     tagline:      c.tagline || '',
-    description:  c.description || '',
+    description:  plainText(c.description),
     image:        cleanUrl(c.image),
     productCount: c.productCount ?? c.product_count ?? 0,
     parentId:     c.parentId,

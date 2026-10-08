@@ -532,7 +532,7 @@ export default function ProductDetail() {
           {product.description && (
             <div>
               <p className="eyebrow text-ink-muted mb-4">The story</p>
-              <p className="prose-body text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
+              <p className="prose-body whitespace-pre-line text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
             </div>
           )}
 
@@ -589,6 +589,7 @@ export default function ProductDetail() {
 
         {/* Sticky add-to-bag bar — slides in once the action block scrolls away */}
         <div
+          data-sticky-atc={showBar ? 'true' : undefined}
           className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 backdrop-blur-md shadow-[0_-2px_16px_rgba(0,0,0,0.07)] transition-transform duration-300 ${
             showBar ? 'translate-y-0' : 'translate-y-full'
           }`}

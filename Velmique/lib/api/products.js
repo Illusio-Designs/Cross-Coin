@@ -10,6 +10,9 @@
    the active brand's products.
 */
 
+import { plainText } from '@/lib/plainText';
+
+
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
 
@@ -146,7 +149,7 @@ export function mapProduct(p) {
     id:             String(p.id),
     slug:           p.slug,
     name:           p.name,
-    description:    p.description || '',
+    description:    plainText(p.description),
     care:           p.care || '',
     origin:         p.origin || '',
     price,
