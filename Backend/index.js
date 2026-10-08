@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v2';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v3';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -741,15 +741,20 @@ const startServer = async () => {
         // stale (not recomputed), showing inflated counts; (3) bulk-imported
         // reviews landed on the import day or in the FUTURE, so every card showed
         // the same/wrong date. Fix all three in place (safe to re-run).
+        // Each statement runs in its OWN try/catch so one failure never skips the
+        // others (an earlier single-block version let a MySQL 1093 on the grouped
+        // date UPDATE skip the future-date fix).
+        logger.info('Repairing review brand tags + rating stats + dates…');
+        // 1. Every review belongs to its product's brand.
         try {
-            logger.info('Repairing review brand tags + rating stats + dates…');
-            // 1. Every review belongs to its product's brand.
             await sequelize.query(
                 `UPDATE reviews r JOIN products p ON p.id = r.productId
                  SET r.brandId = p.brand_id
                  WHERE r.brandId IS NULL OR r.brandId <> p.brand_id`
             );
-            // 2. Recompute cached product review_count / avg_rating from APPROVED reviews.
+        } catch (err) { logger.error('review repair (brand tags) failed: ' + err.message); }
+        // 2. Recompute cached product review_count / avg_rating from APPROVED reviews.
+        try {
             await sequelize.query(
                 `UPDATE products p
                  LEFT JOIN (SELECT productId, COUNT(*) cnt, AVG(rating) avgr
@@ -758,26 +763,32 @@ const startServer = async () => {
                  SET p.review_count = COALESCE(r.cnt, 0),
                      p.avg_rating   = ROUND(COALESCE(r.avgr, 0), 2)`
             );
-            // 3a. Bulk-import batches (>=5 reviews sharing an identical timestamp) → spread
-            //     each over the last ~180 days (deterministic by id) so dates look natural.
+        } catch (err) { logger.error('review repair (stats) failed: ' + err.message); }
+        // 3a. Bulk-import batches (>=5 reviews sharing an identical timestamp) → spread
+        //     each over the last ~180 days (deterministic by id) so dates look natural.
+        //     The DOUBLE-nested derived table forces MySQL to materialise it, so this
+        //     self-referencing UPDATE can't throw error 1093.
+        try {
             await sequelize.query(
                 `UPDATE reviews r
-                 JOIN (SELECT createdAt FROM reviews GROUP BY createdAt HAVING COUNT(*) >= 5) g
+                 JOIN (SELECT createdAt FROM
+                         (SELECT createdAt FROM reviews GROUP BY createdAt HAVING COUNT(*) >= 5) x
+                      ) g
                    ON r.createdAt = g.createdAt
                  SET r.createdAt = DATE_SUB(NOW(), INTERVAL (r.id % 180) DAY),
                      r.updatedAt = DATE_SUB(NOW(), INTERVAL (r.id % 180) DAY)`
             );
-            // 3b. Any remaining FUTURE-dated reviews → spread into the past.
+        } catch (err) { logger.error('review repair (cluster dates) failed: ' + err.message); }
+        // 3b. Any remaining FUTURE-dated reviews → spread into the past.
+        try {
             await sequelize.query(
                 `UPDATE reviews
                  SET createdAt = DATE_SUB(NOW(), INTERVAL (id % 180) DAY),
                      updatedAt = DATE_SUB(NOW(), INTERVAL (id % 180) DAY)
                  WHERE createdAt > NOW()`
             );
-            logger.info('✓ Review brand tags, rating stats and dates repaired');
-        } catch (err) {
-            logger.error('review repair migration failed: ' + err.message);
-        }
+        } catch (err) { logger.error('review repair (future dates) failed: ' + err.message); }
+        logger.info('✓ Review brand tags, rating stats and dates repair attempted');
 
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
