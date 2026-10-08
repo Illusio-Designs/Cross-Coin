@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CookieSettingsButton from '../ui/CookieSettingsButton';
 import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
 /* Gripzus footer — premium dark panel with a rounded top. Icon socials,
@@ -6,6 +7,7 @@ import { toastSubscribed, toastValidationError } from '../../utils/toast';
 
 const CARE_LINKS = [
   { label: 'Privacy Policy',        href: '/policies/privacy-policy' },
+  { label: 'Cookie Settings',       cookie: true },
   { label: 'Grievance',             href: '/contact#grievance' },
   { label: 'Terms & Conditions',    href: '/policies/terms-and-conditions' },
   { label: 'Shipping Policy',       href: '/policies/shipping-policy' },
@@ -38,10 +40,14 @@ function Column({ title, links }) {
       <ul className="space-y-2.5">
         {links.map((l) => (
           <li key={l.label}>
+            {l.cookie ? (
+              <CookieSettingsButton className="text-[13px] text-paper/70 hover:text-paper transition-colors" />
+            ) : (
             <Link href={l.href} className="group inline-flex items-center gap-2 text-[13px] text-paper/70 hover:text-paper transition-colors">
               <span className="w-0 h-px bg-paper transition-all duration-300 group-hover:w-3" />
               <span className="-ml-2 group-hover:ml-0 transition-all duration-300">{l.label}</span>
             </Link>
+            )}
           </li>
         ))}
       </ul>
