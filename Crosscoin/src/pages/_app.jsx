@@ -52,6 +52,7 @@ import '../styles/pages/NotFound.css';
 // Components - Layout
 import "../styles/components/Header.css";
 import "../styles/components/Footer.css";
+import "../styles/components/CookieBanner.css";
 import "../styles/components/Breadcrumb.css";
 
 // Components - Products
