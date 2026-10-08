@@ -290,6 +290,11 @@ async function syncOrderToFShip(order) {
       const r = await orderShippingController.enhancedSyncSingleOrder(fresh);
       if (r && r.success) {
         logger.info(`[Shipping] iThink auto-synced ${order.order_number} → courier ${r.courier || '?'}`);
+      } else if (r && r.held) {
+        // Not a failure — booking now would pick up on a blocked day. The hold
+        // path already set status 'pending' + pickup_hold_until; the daily
+        // pickup-hold cron will book it a day later. Do NOT mark it failed.
+        logger.info(`[Shipping] iThink booking held for ${order.order_number}: ${r.error}`);
       } else {
         const msg = (r && r.error) || 'iThink auto-sync failed';
         logger.warn(`[Shipping] iThink auto-sync ${order.order_number}: ${msg}`);

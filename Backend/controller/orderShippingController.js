@@ -910,6 +910,39 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
     }
 
     if (!isSynced) {
+      // ── Pickup-schedule HOLD ─────────────────────────────────────────────
+      // iThink auto-collects the next working day after the label is generated,
+      // and its domestic API takes no pickup date — so the only way to honour an
+      // admin-blocked pickup day is to NOT book yet. If booking now would land
+      // the pickup on a blocked day, hold the order (keep it 'pending', stamp
+      // pickup_hold_until) and let the daily pickup-hold cron book it a day
+      // later. Fail-soft: shouldHoldForPickup returns null on any error, so a
+      // schedule problem never stalls a booking.
+      try {
+        const pickupSvc = require('../services/pickupScheduleService.js');
+        const holdUntil = await pickupSvc.shouldHoldForPickup();
+        if (holdUntil) {
+          let nextAllowed = null;
+          try { nextAllowed = await pickupSvc.getNextPickupDate(); } catch (_) {}
+          await order.update({
+            fship_sync_status: 'pending',
+            pickup_hold_until: holdUntil,
+            ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
+          }, { transaction: localTransaction });
+          if (shouldCommit) await localTransaction.commit();
+          logger.info(`[pickup] Holding ${order.order_number} — booking now would pick up on blocked ${holdUntil}; will auto-book after then (pickup ~a day later).`);
+          return {
+            success: false,
+            held: true,
+            action: 'held',
+            holdUntil,
+            error: `Pickup on ${holdUntil} is a no-pickup day — order held and will book automatically after that day.`,
+          };
+        }
+      } catch (e) {
+        logger.warn(`[pickup] hold check failed for ${order.order_number}: ${e.message}`);
+      }
+
       // STEP 2: Order not synced — create at the active provider.
 
       // iThink requires an explicit courier. If the caller didn't pick one,
@@ -1083,9 +1116,24 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
       await order.update({ fship_sync_error: null }, { transaction });
     }
 
+    // Next allowed pickup date from the shared schedule (weekly offs + blocked
+    // dates), computed BEFORE the booking so it can be sent to the courier.
+    // Fail-soft: never block a booking if this errors.
+    let scheduledPickupDate = null;
+    try {
+      scheduledPickupDate = await require('../services/pickupScheduleService.js').getNextPickupDate();
+    } catch (e) {
+      logger.warn(`pickup schedule: could not compute pickup date for ${order.order_number}: ${e.message}`);
+    }
+
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
     const fshipOrderData = await module.exports.prepareFShipOrderData(order, providerName, selectedLogistics, serviceType);
+    // Pass the computed pickup date through to the provider. iThink's domestic
+    // API may ignore it (pickup_date is documented only on their international
+    // endpoint), but the booking is already HELD so the pickup can't land on a
+    // blocked day; this just asks iThink to collect on the exact allowed date.
+    if (scheduledPickupDate) fshipOrderData.pickup_Date = scheduledPickupDate;
 
     // Create order using the resolved provider
     const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
@@ -1142,16 +1190,9 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         }
       }
 
-      // Next allowed pickup date from the shared pickup schedule (weekly offs +
-      // blocked dates). Fail-soft: never block a booking if this errors.
-      let scheduledPickupDate = null;
-      try {
-        scheduledPickupDate = await require('../services/pickupScheduleService.js').getNextPickupDate();
-      } catch (e) {
-        logger.warn(`pickup schedule: could not compute pickup date for ${order.order_number}: ${e.message}`);
-      }
-
-      // Update order with provider details (fship_* columns used for both FShip and iThink)
+      // Update order with provider details (fship_* columns used for both FShip and iThink).
+      // scheduledPickupDate was computed before the booking (and sent to the
+      // provider); stamp it here, and clear any pickup hold now that it's booked.
       await order.update({
         fship_order_id: result.orderId || null,
         fship_waybill: result.waybill || null,
@@ -1162,6 +1203,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         tracking_number: result.waybill || null,
         status: 'processing', // Update status to processing when synced
         fship_last_synced_at: new Date(), // Track last sync time
+        pickup_hold_until: null, // booked — no longer held
         ...(scheduledPickupDate ? { scheduled_pickup_date: scheduledPickupDate } : {}),
       }, { transaction });
 

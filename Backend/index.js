@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v1';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v2';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -714,6 +714,23 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('orders.scheduled_pickup_date migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: orders.pickup_hold_until ─────────────────
+        // Holds an order from courier booking until a no-pickup day passes, so
+        // the pickup lands a day later instead of on an admin-blocked date.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'pickup_hold_until'`
+            );
+            if (!cols.length) {
+                logger.info('Migrating: adding orders.pickup_hold_until…');
+                await sequelize.query(`ALTER TABLE orders ADD COLUMN pickup_hold_until DATE NULL`);
+                logger.info('✓ orders.pickup_hold_until added');
+            }
+        } catch (err) {
+            logger.error('orders.pickup_hold_until migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────

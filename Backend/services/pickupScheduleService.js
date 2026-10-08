@@ -91,4 +91,35 @@ async function getNextPickupDate(from = new Date()) {
   return ymd(cursor);
 }
 
-module.exports = { getSchedule, setSchedule, getNextPickupDate, isAllowed, DEFAULTS };
+// iThink auto-collects the order on the NEXT working day after the label is
+// generated (their domestic API takes no pickup date, and they're closed
+// Sundays — a Saturday label rolls to Monday). This returns the IST date a
+// courier would actually arrive if we booked RIGHT NOW — the day we must check
+// against the no-pickup schedule before booking.
+function prospectivePickupDate(from = new Date()) {
+  const ist = istShift(from);
+  const cursor = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()));
+  cursor.setUTCDate(cursor.getUTCDate() + 1); // iThink collects the next day
+  // iThink is closed Sundays and rolls the pickup forward itself, so don't hold
+  // for a Sunday — only for the admin's own blocked dates / custom weekly offs.
+  while (cursor.getUTCDay() === 0) cursor.setUTCDate(cursor.getUTCDate() + 1);
+  return ymd(cursor);
+}
+
+// If booking NOW would make iThink collect on a day the admin has blocked (a
+// blocked date/range, or a custom weekly off beyond Sunday), return that blocked
+// date — the caller then HOLDS the booking until it passes and dispatches a day
+// later. Returns null when the prospective pickup day is fine. Fail-soft: any
+// error returns null so a schedule problem never blocks a booking.
+async function shouldHoldForPickup(from = new Date()) {
+  try {
+    const sched = await getSchedule();
+    const p = prospectivePickupDate(from);
+    return isAllowed(p, sched) ? null : p;
+  } catch (e) {
+    logger.error('pickupSchedule shouldHoldForPickup: ' + e.message);
+    return null;
+  }
+}
+
+module.exports = { getSchedule, setSchedule, getNextPickupDate, isAllowed, prospectivePickupDate, shouldHoldForPickup, DEFAULTS };

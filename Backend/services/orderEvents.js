@@ -103,6 +103,11 @@ orderEmitter.on('order.confirmed', async (order) => {
         const syncResult = await orderShippingController.enhancedSyncSingleOrder(fullOrder);
         if (syncResult.success) {
           logger.info(`[Event] FShip sync triggered for ${order.order_number}: ${syncResult.action} — AWB: ${syncResult.waybill || 'N/A'}`);
+        } else if (syncResult.held) {
+          // Held by the pickup schedule (booking now would pick up on a blocked
+          // day). Do NOT enqueue a 30s retry — the daily pickup-hold cron books
+          // it a day later; a short retry would just re-hold in a tight loop.
+          logger.info(`[Event] FShip booking held for ${order.order_number}: ${syncResult.error}`);
         } else {
           logger.warn(`[Event] FShip sync failed for ${order.order_number}: ${syncResult.error} — enqueueing retry`);
           try {

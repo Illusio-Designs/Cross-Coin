@@ -579,6 +579,11 @@ class IThinkService {
           order: String(orderData.orderId),
           sub_order: '',
           order_date: orderDate,
+          // Requested pickup date (YYYY-MM-DD) from our shared pickup schedule.
+          // Documented on iThink's international endpoint; domestic may ignore it
+          // (pickup is auto-scheduled next working day). Sent best-effort — the
+          // order is already HELD so the pickup can't land on a blocked day.
+          ...(orderData.pickup_Date ? { pickup_date: orderData.pickup_Date } : {}),
           // Round to a whole rupee — iThink rejects/mis-books decimal amounts
           // (e.g. a coupon leaving 449.10), which was blocking the shipment sync.
           total_amount: String(finalAmount),
