@@ -27,12 +27,12 @@
 
 /* Row 1 scrolls left */
 .irs-track--left {
-  animation: irs-scroll-left 35s linear infinite;
+  animation: irs-scroll-left 65s linear infinite;
 }
 
 /* Row 2 scrolls right — starts at -50% so it begins mid-way */
 .irs-track--right {
-  animation: irs-scroll-right 35s linear infinite;
+  animation: irs-scroll-right 65s linear infinite;
 }
 
 /* Pause on hover */
@@ -123,8 +123,8 @@
     padding: 12px;
   }
 
-  .irs-track--left  { animation-duration: 28s; }
-  .irs-track--right { animation-duration: 28s; }
+  .irs-track--left  { animation-duration: 50s; }
+  .irs-track--right { animation-duration: 50s; }
 }
 
 @media (max-width: 480px) {
@@ -138,8 +138,8 @@
   .irs-card-text  { font-size: 11.5px; min-height: 34px; }
   .irs-stars      { font-size: 13px; }
 
-  .irs-track--left  { animation-duration: 22s; }
-  .irs-track--right { animation-duration: 22s; }
+  .irs-track--left  { animation-duration: 40s; }
+  .irs-track--right { animation-duration: 40s; }
 }
 
 /* Respect reduced motion */

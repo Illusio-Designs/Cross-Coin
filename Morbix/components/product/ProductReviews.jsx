@@ -132,7 +132,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
         <div className="reviews-list">
           {reviews.length === 0 ? (
             <div className="empty" style={{ margin: 0 }}>No reviews yet — be the first to review this product.</div>
-          ) : reviews.map((r, i) => (
+          ) : reviews.slice(0, 8).map((r, i) => (
             <div className="review" key={i}>
               <div className="review-head">
                 <div className="review-av">{(r.author || '?').charAt(0)}</div>

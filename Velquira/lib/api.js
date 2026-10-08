@@ -473,7 +473,7 @@ function mapCategoryChip(c) {
 function fmtDate(value) {
   if (!value) return '';
   try {
-    return new Date(value).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+    return new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   } catch { return ''; }
 }
 

@@ -74,7 +74,7 @@ export default function ProductReviews({ productId, productName, initialReviewsP
   const looped = data.reviews.length ? [...data.reviews, ...data.reviews] : [];
   // Slow the animation down a bit when there are very few cards so they
   // don't fly past at warp speed.
-  const animSeconds = Math.max(28, data.reviews.length * 7);
+  const animSeconds = Math.max(45, data.reviews.length * 11);
 
   return (
     <div className="space-y-6">

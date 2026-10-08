@@ -419,7 +419,7 @@ export function Testimonials({ initialReviews = null }) {
           mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
         }
         .vq-rev-track { display: flex; gap: 20px; width: max-content; padding-inline: 10px;
-          animation: vq-rev 48s linear infinite; }
+          animation: vq-rev 85s linear infinite; }
         .vq-rev-marquee:hover .vq-rev-track { animation-play-state: paused; }
         .vq-rev-card { width: 300px; max-width: 82vw; }
         @media (min-width: 768px) { .vq-rev-card { width: 360px; } }
