@@ -6,6 +6,9 @@ import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
+import { leadFrom } from '@/lib/text';
+import { SIZE_GUIDE } from '@/lib/sizeGuide';
+import SizeChartModal from '@/components/product/SizeChartModal';
 
 // Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
 function ik(src, w) {
@@ -22,7 +25,7 @@ function ik(src, w) {
 // Gallery + colour + size share one selection so price, SKU and stock always
 // reflect the exact variation, and Add to cart sends that variation.
 export default function ProductShowcase({ product, initialColor }) {
-  const { add } = useCart();
+  const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
 
@@ -37,6 +40,9 @@ export default function ProductShowcase({ product, initialColor }) {
   const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [showChart, setShowChart] = useState(false);
+  const [showSticky, setShowSticky] = useState(false);
+  const actionsRef = useRef(null);
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('');
@@ -168,8 +174,7 @@ export default function ProductShowcase({ product, initialColor }) {
 
   const pickColor = (i) => { setColor(i); setActive(0); };
 
-  const onAdd = () => {
-    if (!inStock) return;
+  const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
     add(
       { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
@@ -177,10 +182,37 @@ export default function ProductShowcase({ product, initialColor }) {
       qty,
       activeVariant?.id ?? null
     );
+  };
+
+  const onAdd = () => {
+    if (!inStock) return;
+    addToCart();
     toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   };
+
+  // Soxbae's cart drawer is the checkout, so Buy now adds the selection and
+  // opens it straight away (no "added" toast in between).
+  const onBuyNow = () => {
+    if (!inStock) return;
+    addToCart();
+  };
+
+  // Show the sticky buy bar once the main buy buttons have scrolled out of view.
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShowSticky(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
+  const lead = leadFrom(product.description);
 
   const specs = [
     ['Colour', selectedColorName],
@@ -277,7 +309,7 @@ export default function ProductShowcase({ product, initialColor }) {
             <div className="pdx-low"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Only <strong>{stock}</strong> left</div>
           )}
 
-          {product.description && <p className="pdx-lead">{product.description}</p>}
+          {lead && <p className="pdx-lead">{lead}</p>}
 
           <div className="pdx-rule" />
 
@@ -313,11 +345,14 @@ export default function ProductShowcase({ product, initialColor }) {
           {product.colors?.length > 0 && (
             <div className="pdx-opt">
               <span className="pdx-opt-label">Colour{selectedColorName ? <em> — {selectedColorName}</em> : null}</span>
-              <div className="pdx-swatches">
+              <div className="pdx-colors" role="radiogroup" aria-label="Colour">
                 {product.colors.map((c, i) => (
-                  <button key={i} type="button" className={`pdx-swatch${i === color ? ' active' : ''}`}
-                    style={{ background: c }} onClick={() => pickColor(i)}
-                    aria-label={colorNames[i] || `Colour ${i + 1}`} title={colorNames[i] || ''} />
+                  <button key={i} type="button" role="radio" aria-checked={i === color}
+                    className={`pdx-color${i === color ? ' active' : ''}`}
+                    onClick={() => pickColor(i)} aria-label={colorNames[i] || `Colour ${i + 1}`}>
+                    <span className="pdx-color-dot" style={{ background: c }} />
+                    <span className="pdx-color-name">{colorNames[i] || `Colour ${i + 1}`}</span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -332,10 +367,15 @@ export default function ProductShowcase({ product, initialColor }) {
                     onClick={() => setSize(s)}>{s}</button>
                 ))}
               </div>
+              {hasSizeGuide && (
+                <p className="pdx-sizeguide">Not sure about your size?{' '}
+                  <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
+                </p>
+              )}
             </div>
           )}
 
-          <div className="pdx-actions">
+          <div className="pdx-actions" ref={actionsRef}>
             <div className="pdx-qty">
               <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
               <span>{qty}</span>
@@ -346,6 +386,9 @@ export default function ProductShowcase({ product, initialColor }) {
                 : added ? <>Added to cart <Icon name="ShieldCheck" size={17} /></>
                 : <>Add to cart · ₹{Number(price * qty).toFixed(0)} <Icon name="ShoppingBag" size={17} /></>}
             </button>
+            {inStock && (
+              <button type="button" className="pdx-buy-now" onClick={onBuyNow}>Buy now</button>
+            )}
           </div>
 
           {specs.length > 0 && (
@@ -365,6 +408,25 @@ export default function ProductShowcase({ product, initialColor }) {
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 14-Day Returns</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
           </div>
+        </div>
+      </div>
+
+      {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
+
+      {/* Sticky buy bar — appears when the main buy buttons scroll out of view */}
+      <div className={`pdx-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
+        <div className="pdx-sticky-info">
+          {mainSrc && <img src={ik(mainSrc, 120)} alt="" />}
+          <div>
+            <b>{product.name}</b>
+            <span>₹{Number(price).toFixed(0)}{selectedColorName ? ` · ${selectedColorName}` : ''}{effectiveSize ? ` · ${effectiveSize}` : ''}</span>
+          </div>
+        </div>
+        <div className="pdx-sticky-btns">
+          <button type="button" className="pdx-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
+            {inStock ? 'Add to cart' : 'Out of stock'}
+          </button>
+          {inStock && <button type="button" className="pdx-sticky-buy" onClick={onBuyNow} tabIndex={showSticky ? 0 : -1}>Buy now</button>}
         </div>
       </div>
 

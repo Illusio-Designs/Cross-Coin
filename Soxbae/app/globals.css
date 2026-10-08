@@ -2228,3 +2228,89 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+
+/* ════════════════════════════════════════════════════════════════════════
+   PDP additions — Buy now, named colours, size chart, sticky buy bar,
+   description / care / FAQ sections. Same tokens as the .pdx-* block above.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Buy now sits beside Add to cart as the quiet, outlined action */
+.pdx-actions { flex-wrap: wrap; }
+.pdx-add { flex: 1 1 200px; }
+.pdx-buy-now { flex: 0 1 auto; min-height: 54px; padding: 0 26px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; transition: background .18s ease, color .18s ease; }
+.pdx-buy-now:hover { background: var(--ink); color: #fbfaf6; }
+.pdx-buy-now:focus-visible, .pdx-color:focus-visible, .pdx-sizeguide button:focus-visible, .pdx-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) { .pdx-buy-now { flex: 1 1 100%; } }
+
+/* Colour — named cards instead of bare dots */
+.pdx-colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.pdx-color { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.pdx-color:hover { border-color: var(--ink-soft); }
+.pdx-color.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pdx-color-dot { width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); flex-shrink: 0; }
+
+/* Size chart link */
+.pdx-sizeguide { margin: 12px 0 0; font-size: 13px; color: var(--ink-soft); }
+.pdx-sizeguide button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--accent-600); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Size chart dialog */
+.sc-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(28,27,25,.55); display: grid; place-items: center; padding: 20px; }
+.sc-modal { width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; background: var(--card); color: var(--ink); border-radius: 20px; padding: 24px; box-shadow: 0 24px 60px rgba(28,27,25,.3); }
+.sc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sc-head h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 26px; }
+.sc-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; font-size: 22px; line-height: 1; color: var(--ink); cursor: pointer; }
+.sc-note, .sc-tip { margin: 0 0 14px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+.sc-tip { margin: 14px 0 0; }
+.sc-wrap { overflow-x: auto; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sc-table th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-600); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.sc-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); }
+.sc-size { font-weight: 700; }
+
+/* Sticky buy bar */
+.pdx-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 58; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px max(20px, calc((100vw - 1240px) / 2)) calc(10px + env(safe-area-inset-bottom, 0px)); padding-right: max(84px, calc((100vw - 1240px) / 2 + 64px)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -10px 30px -16px rgba(28,27,25,.25); transform: translateY(110%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
+.pdx-sticky.show { transform: none; visibility: visible; }
+.pdx-sticky-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pdx-sticky-info img { width: 46px; height: 46px; object-fit: contain; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); flex-shrink: 0; }
+.pdx-sticky-info > div { min-width: 0; display: flex; flex-direction: column; }
+.pdx-sticky-info b { font-family: var(--serif); font-weight: 400; font-size: 17px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdx-sticky-info span { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdx-sticky-btns { display: flex; gap: 10px; flex-shrink: 0; }
+.pdx-sticky-add, .pdx-sticky-buy { min-height: 44px; padding: 0 22px; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--accent); transition: background .18s ease, color .18s ease; }
+.pdx-sticky-add { background: var(--accent); color: #fff; }
+.pdx-sticky-add:hover:not(:disabled) { background: var(--accent-600); border-color: var(--accent-600); }
+.pdx-sticky-add:disabled { background: var(--line); border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
+.pdx-sticky-buy { background: transparent; color: var(--ink); border-color: var(--ink); }
+.pdx-sticky-buy:hover { background: var(--ink); color: #fbfaf6; }
+.pdx-sticky-add:focus-visible, .pdx-sticky-buy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .pdx-sticky { padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .pdx-sticky-info img { display: none; }
+  .pdx-sticky-info b { font-size: 15px; }
+  .pdx-sticky-add, .pdx-sticky-buy { padding: 0 16px; font-size: 13px; }
+  .pdx-sticky-buy { display: none; }
+  /* lift the floating WhatsApp / back-to-top buttons above the bar while it shows */
+  body:has(.pdx-sticky.show) .fab-stack { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Description, care and FAQ sections */
+.pdx-story { margin-top: clamp(36px, 5vw, 60px); display: grid; gap: clamp(32px, 4vw, 52px); }
+.pdx-story-sec { padding-top: clamp(28px, 3.5vw, 44px); border-top: 1px solid var(--line); max-width: 860px; }
+.pdx-story-sec > .eyebrow { display: block; color: var(--accent-600); margin-bottom: 10px; }
+.pdx-story-sec h2 { margin: 0 0 18px; font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.1; font-size: clamp(24px, 2.8vw, 34px); color: var(--ink); }
+.pdx-desc p { margin: 0 0 14px; font-size: 15.5px; line-height: 1.75; color: var(--ink-soft); max-width: 66ch; }
+.pdx-desc ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; font-size: 15.5px; line-height: 1.65; color: var(--ink-soft); }
+.pdx-care { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.pdx-care li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); font-size: 14px; color: var(--ink); }
+.pdx-care-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-050); color: var(--accent-600); display: grid; place-items: center; flex-shrink: 0; }
+.pdx-faq { border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
+.pdx-faq details + details { border-top: 1px solid var(--line); }
+.pdx-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; font-weight: 600; font-size: 15px; color: var(--ink); }
+.pdx-faq summary::-webkit-details-marker { display: none; }
+.pdx-faq summary svg { flex-shrink: 0; color: var(--accent-600); transition: transform .2s ease; }
+.pdx-faq details[open] summary svg { transform: rotate(180deg); }
+.pdx-faq-a { padding: 0 20px 18px; }
+.pdx-faq-a p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.7; color: var(--ink-soft); }
+.pdx-faq-a p:last-child { margin-bottom: 0; }
+.pdx-faq-a ul { margin: 0 0 10px; padding-left: 20px; font-size: 14.5px; line-height: 1.7; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) { .pdx-sticky, .pdx-faq summary svg { transition: none; } }

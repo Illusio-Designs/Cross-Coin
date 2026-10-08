@@ -175,6 +175,28 @@ export async function getProductReviews(productId, revalidate) {
   } catch { return []; }
 }
 
+// ---- FAQs -----------------------------------------------------------------
+
+// Product-specific FAQs first, then the store-wide ones (same order as the
+// Crosscoin product page). Cached for 5 minutes; any failure just returns [].
+function mapFaqs(data) {
+  const list = data?.faqs || data?.data?.faqs || data?.data || (Array.isArray(data) ? data : []);
+  return (Array.isArray(list) ? list : [])
+    .map((f) => ({ id: f.id, question: str(f.question), answer: str(f.answer) }))
+    .filter((f) => f.question && f.answer);
+}
+
+export async function getProductFaqs(productId) {
+  if (!productId) return [];
+  try {
+    const [own, global] = await Promise.all([
+      brandFetch(`/api/public/faqs?type=product&id=${encodeURIComponent(productId)}`, 300).catch(() => null),
+      brandFetch('/api/public/faqs?type=global', 300).catch(() => null),
+    ]);
+    return [...mapFaqs(own), ...mapFaqs(global)];
+  } catch { return []; }
+}
+
 // ---- Blog -----------------------------------------------------------------
 
 export async function getBlogPosts() {
