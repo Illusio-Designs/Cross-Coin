@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import './globals.css';
+import './cookie-banner.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { StoreProvider } from '@/lib/store';

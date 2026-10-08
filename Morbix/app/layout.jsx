@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
+import './cookie-banner.css';
 import SmoothScroll from '@/components/SmoothScroll';
 import Msg91Loader from '@/components/Msg91Loader';
 import ToastHost from '@/components/ToastHost';
