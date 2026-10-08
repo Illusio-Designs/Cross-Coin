@@ -145,6 +145,8 @@ export function mapProduct(p) {
     // honest low-stock indicator on the product page.
     stock:         variations.length ? totalStock : null,
     description:   p.description || '',
+    rating:        Number(p.avg_rating) || 0,
+    reviewCount:   Number(p.review_count) || 0,
     care:          p.care || '',
     origin:        p.origin || '',
     sku:           firstVar?.sku || p.sku || '',

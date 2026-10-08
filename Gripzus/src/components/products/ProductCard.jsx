@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { resolveVariationId } from '../../services/products';
+import ReviewBadge from './ReviewBadge';
 
 /* Gripzus ProductCard — "GROUND INDEX" architectural gallery card.
    A 1px-framed image (no shadow, square corners), square black index/discount
@@ -80,6 +81,8 @@ export default function ProductCard({ product }) {
             <span className="bg-paper text-ink text-[9.5px] font-medium tracking-[0.14em] uppercase px-2.5 py-1 border-l border-b border-line">{badge}</span>
           )}
         </div>
+
+        <ReviewBadge rating={product.rating} count={product.reviewCount} />
 
         {/* Wishlist — minimal square hairline mark, top-right */}
         <button

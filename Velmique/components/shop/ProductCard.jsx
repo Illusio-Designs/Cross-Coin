@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
+import ReviewBadge from '@/components/product/ReviewBadge';
 
 // Request a card-sized image from ImageKit (WebP/AVIF via f-auto) instead of
 // loading the full-resolution original. Only rewrites ImageKit URLs.
@@ -72,6 +73,7 @@ export default function ProductCard({ product, index = 0 }) {
     >
       <Link href={`/product/${product.slug}`} className="block">
         <div className="relative overflow-hidden bg-[var(--surface-2)]" style={{ aspectRatio: '0.9' }}>
+          <ReviewBadge rating={product.rating} count={product.reviews} />
           {/* Badge — top-left */}
           {product.badge && (
             <span className="absolute top-3 left-3 z-20 bg-white text-[var(--ink)] px-3 py-2 text-[8px] tracking-[0.18em] uppercase">

@@ -3,12 +3,13 @@ import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
+import ReviewBadge from '@/components/product/ReviewBadge';
 
 // Soxbae product card — "plate": a full framed image with a floating info plate
 // that overlaps its bottom edge (category · name + price on one row · colour
 // swatches + a small add button). Distinctive and premium.
 export default function ProductCard({ product }) {
-  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames, colorParam } = product;
+  const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames, colorParam, rating, reviews } = product;
   const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
   // Colour dot(s): a merged group links each dot to its own page; otherwise show
@@ -33,6 +34,7 @@ export default function ProductCard({ product }) {
           {badge && <span className={`sxp-tag b-${badgeKey || 'default'}`}>{badge}</span>}
           {oldPrice && <span className="sxp-tag sale">-{off}%</span>}
         </div>
+        <ReviewBadge rating={rating} count={reviews} />
         <WishlistButton productId={id} product={product} className="sxp-fav" />
       </div>
 

@@ -1,0 +1,6 @@
+/* Review badge on product cards (.rvb). */
+.rvb { position: absolute; z-index: 4; display: inline-flex; align-items: center; line-height: 1; white-space: nowrap; pointer-events: none; }
+.rvb-st { font-size: 11px; }
+.rvb { left: 10px; bottom: 10px; gap: 6px; padding: 5px 6px 5px 10px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(32,44,110,.16); color: #202c6e; font-size: 12px; font-weight: 700; }
+.rvb-st { color: #f5a623; }
+.rvb-ct { background: #e7f4f2; color: #268b84; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 700; }
