@@ -189,6 +189,11 @@ html, body {
   overflow-y: scroll;
   max-width: 100%;
 }
+/* A non-visible overflow on body makes it a scroll container, which silently
+   breaks every `position: sticky` below it (e.g. the product gallery). `clip`
+   stops sideways overflow the same way without creating a scroll container;
+   the viewport (html) keeps the scrolling. */
+@supports (overflow: clip) { body { overflow-x: clip; overflow-y: visible; } }
 
 /* ── GLOBAL READING PROGRESS BAR (top horizontal) ── */
 .custom-scrollbar-progress {

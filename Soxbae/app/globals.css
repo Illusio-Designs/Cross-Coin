@@ -39,6 +39,13 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; } /* Lenis handles smoothing */
 html, body { margin: 0; padding: 0; overflow-x: hidden; max-width: 100%; }
+/* `overflow-x: hidden` on body turns it into a scroll container, which silently
+   breaks every `position: sticky` below it (e.g. the product gallery). `clip`
+   stops sideways overflow the same way without creating a scroll container. */
+@supports (overflow: clip) { body { overflow-x: clip; } }
+/* Desktop product page: the gallery stays pinned while the buy panel scrolls, so
+   keep the pinned image within the visible screen height on short laptops. */
+@media (min-width: 901px) { .pdx-main { max-height: calc(100vh - 170px); } }
 body {
   background: var(--bg);
   color: var(--ink);

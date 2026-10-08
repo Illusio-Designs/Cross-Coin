@@ -44,6 +44,10 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; } /* Lenis handles smoothing */
 html, body { margin: 0; padding: 0; overflow-x: hidden; max-width: 100%; }
+/* `overflow-x: hidden` on body makes it a scroll container, which silently breaks
+   every `position: sticky` below it (e.g. the product gallery). `clip` stops
+   sideways overflow the same way without creating a scroll container. */
+@supports (overflow: clip) { body { overflow-x: clip; } }
 body {
   background: var(--bg);
   color: var(--ink);
@@ -2204,6 +2208,9 @@ p { text-align: justify; text-justify: inter-word; }
 @media (min-width: 901px) {
   .pdp { align-items: start; }
   .pdp-gallery { position: sticky; top: 180px; align-self: start; }
+  /* keep the pinned image inside the visible screen height on short laptops */
+  .pdp-main, .pdp-main img { max-height: calc(100vh - 220px); }
+  .pdp-main img { object-fit: contain; }
 }
 
 @media (max-width: 900px) {

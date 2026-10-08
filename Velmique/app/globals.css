@@ -100,6 +100,10 @@ body {
 }
 
 body.splash-locked { overflow: hidden; }
+/* `overflow-x: hidden` on body makes it a scroll container, which silently breaks
+   every `position: sticky` below it (e.g. the product gallery). `clip` stops
+   sideways overflow the same way without creating a scroll container. */
+@supports (overflow: clip) { body { overflow-x: clip; } }
 
 /* Editorial display class — Bodoni Moda serif, elegant tracking.
    Headings were uppercased for the old condensed Anton face; Bodoni Moda is an
