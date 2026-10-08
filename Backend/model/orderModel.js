@@ -155,6 +155,14 @@ const Order = sequelize.define('Order', {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
+    // When set, the order is HELD from courier booking because booking now would
+    // make iThink collect on a no-pickup day (an admin-blocked date/range). It is
+    // the date to resume on; a daily cron re-attempts booking on/after it, so the
+    // pickup lands a day later instead of on the blocked day.
+    pickup_hold_until: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     shipping_address_id: {
         type: DataTypes.INTEGER,
         allowNull: true,

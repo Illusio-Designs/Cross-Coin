@@ -63,6 +63,37 @@ function initializeCronJobs() {
     trigger('cron:shipping-status-refresh');
   });
 
+  // Pickup-hold retry — every 4 hours. Orders whose booking was HELD because it
+  // would pick up on a blocked day (pickup_hold_until) are re-queued once that
+  // day has arrived (in IST). The queue worker re-checks the schedule: it books
+  // if the pickup now lands on an allowed day, or re-holds to the next one. Runs
+  // several times a day so it fires after IST midnight regardless of server TZ.
+  cron.schedule('20 */4 * * *', async () => {
+    try {
+      const { Order } = require('../model/orderModel.js');
+      const { Op } = require('sequelize');
+      const todayIst = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
+      const due = await Order.findAll({
+        where: {
+          pickup_hold_until: { [Op.ne]: null, [Op.lte]: todayIst },
+          fship_waybill: null,
+          status: { [Op.notIn]: ['cancelled', 'delivered', 'returned', 'rto', 'refunded'] },
+        },
+        attributes: ['id', 'order_number'],
+        limit: 500,
+      });
+      if (!due.length) return;
+      const { enqueue } = require('../services/integrationQueue.js');
+      let queued = 0;
+      for (const o of due) {
+        try { await enqueue('shipping:sync-order', { orderId: o.id, attempt: 1 }); queued++; } catch (_) {}
+      }
+      console.log(`⏰ [CRON] pickup-hold: re-queued ${queued}/${due.length} held order(s) for booking`);
+    } catch (e) {
+      console.error('❌ [CRON] pickup-hold retry error:', e.message);
+    }
+  });
+
   // Loyalty points expiry — daily at 2 AM
   cron.schedule('0 2 * * *', () => {
     console.log('\n⏰ [CRON] enqueue cron:loyalty-expiry at:', new Date().toISOString());

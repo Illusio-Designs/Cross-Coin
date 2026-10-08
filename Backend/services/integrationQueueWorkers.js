@@ -64,6 +64,30 @@ function registerWorkers() {
     }).catch(() => {});
 
     try {
+      // Pickup-schedule HOLD: the auto path below calls autoSelectCourierWithFallback
+      // directly (bypassing enhancedSyncSingleOrder's own hold gate), so re-check
+      // here. If booking now would make iThink collect on a blocked day, keep the
+      // order 'pending' + stamp pickup_hold_until and return WITHOUT throwing, so
+      // the job doesn't retry in a tight loop — the daily pickup-hold cron books
+      // it a day later. Fail-soft: a schedule error never blocks the booking.
+      try {
+        const pickupSvc = require('./pickupScheduleService.js');
+        const holdUntil = await pickupSvc.shouldHoldForPickup();
+        if (holdUntil) {
+          let nextAllowed = null;
+          try { nextAllowed = await pickupSvc.getNextPickupDate(); } catch (_) {}
+          await fullOrder.update({
+            fship_sync_status: 'pending',
+            pickup_hold_until: holdUntil,
+            ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
+          }).catch(() => {});
+          logger.info(`[queue] shipping:sync-order held — ${fullOrder.order_number}: pickup ${holdUntil} is a no-pickup day; will book after then.`);
+          return { success: false, held: true, holdUntil };
+        }
+      } catch (e) {
+        logger.warn(`[queue] pickup hold check failed for ${fullOrder.order_number}: ${e.message}`);
+      }
+
       // Do the slow external courier call HERE (worker), never inside an HTTP
       // request. Manual courier selection travels on the job payload; without it
       // we auto-select with fallback. enhancedSyncSingleOrder/autoSelect open
