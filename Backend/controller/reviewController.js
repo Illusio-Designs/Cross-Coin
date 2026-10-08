@@ -366,7 +366,11 @@ module.exports.createPublicReview = async (req, res) => {
 module.exports.getPublicProductReviews = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { page = 1, limit = 10, sort = 'recent' } = req.query;
+        // Default limit raised 10 → 100 so storefronts that render the full list
+        // (and derive the "N reviews" label from the array length) show the real
+        // approved count instead of a capped 10. pagination.total still carries
+        // the exact total for clients that read it.
+        const { page = 1, limit = 100, sort = 'recent' } = req.query;
         
         const pId = parseInt(productId);
         if (isNaN(pId)) {
@@ -979,7 +983,9 @@ module.exports.deleteReviewImage = async (req, res) => {
 // Get all public reviews (approved only, for testimonials)
 module.exports.getAllPublicReviews = async (req, res) => {
     try {
-        const { page = 1, limit = 20, sort = 'recent' } = req.query;
+        // Default raised 20 → 60 so the homepage review slider / testimonials
+        // reflect a realistic brand-wide count (pagination.total has the exact).
+        const { page = 1, limit = 60, sort = 'recent' } = req.query;
         let order = [['createdAt', 'DESC']];
         if (sort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
         if (sort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
@@ -1175,12 +1181,22 @@ module.exports.bulkUploadReviews = async (req, res) => {
             const guestEmail = pick(r, 'email', 'revieweremail', 'guestemail') || null;
             const status = toStatus(pick(r, 'status', 'state'), defaultStatus);
 
-            // Optional back-dating.
+            // Review date: accept a sheet date ONLY if it's a sane PAST date
+            // (never in the future, never absurdly old). Otherwise spread the
+            // review deterministically over the last ~180 days, so undated imports
+            // don't all land on today and bad/future dates are never stored.
             let createdAt = null;
             const dateRaw = pick(r, 'date', 'reviewdate', 'createdat', 'created');
             if (dateRaw) {
                 const d = new Date(dateRaw);
-                if (!isNaN(d.getTime())) createdAt = d;
+                const now = Date.now();
+                if (!isNaN(d.getTime()) && d.getTime() <= now && d.getTime() >= now - 6 * 365 * 864e5) createdAt = d;
+            }
+            if (!createdAt) {
+                const key = `${product.id}|${guestName}|${reviewText}|${rowNo}`;
+                let h = 0;
+                for (let k = 0; k < key.length; k++) h = (h * 31 + key.charCodeAt(k)) >>> 0;
+                createdAt = new Date(Date.now() - (h % 180) * 864e5 - ((h >> 8) % 24) * 36e5);
             }
 
             // Skip obvious duplicates on re-upload (same product + same email).
