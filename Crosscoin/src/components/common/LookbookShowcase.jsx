@@ -81,7 +81,7 @@ const LookbookShowcase = () => {
       variations,
       review_count: api.review_count || 0,
       avg_rating: api.avg_rating || null,
-      badge: api.badge || null,
+      badge: api.badge && api.badge !== 'none' ? api.badge : null,
     };
   })() : null;
 

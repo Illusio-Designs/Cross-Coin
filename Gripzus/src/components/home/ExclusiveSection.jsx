@@ -1,3 +1,4 @@
+import ReviewBadge from '../products/ReviewBadge';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
@@ -22,6 +23,8 @@ function normalize(p) {
     price: Number(p.salePrice ?? p.price ?? 0),
     oldPrice: p.compareAtPrice ? Number(p.compareAtPrice) : (p.oldPrice ? Number(p.oldPrice) : null),
     badge: p.badge || '',
+    rating: Number(p.rating) || 0,
+    reviewCount: Number(p.reviewCount) || 0,
     images: imgs.length ? imgs : [p.image || FALLBACK_IMG],
     colors: Array.isArray(p.colors) ? p.colors.filter((c) => c?.name) : [],
     sizes: Array.isArray(p.sizes) ? p.sizes : [],
@@ -172,6 +175,7 @@ export default function ExclusiveSection({ products = [] }) {
               <div className="excl3-frame" ref={frameRef}>
                 <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
                 {product.badge && <span className="excl3-badge">{product.badge}</span>}
+                <ReviewBadge rating={product.rating} count={product.reviewCount} style={{ left: 12, bottom: 12 }} />
               </div>
             </div>
           </div>

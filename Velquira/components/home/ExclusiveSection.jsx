@@ -1,5 +1,6 @@
 'use client';
 
+import ReviewBadge from '@/components/product/ReviewBadge';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
@@ -125,6 +126,7 @@ export default function ExclusiveSection({ products = [] }) {
                 ? <img src={mainSrc} alt={product.name} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Sparkles" size={64} /></span>}
               {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
+              <ReviewBadge rating={product.rating} count={product.reviews} style={{ position: 'absolute', left: 12, bottom: 12 }} />
             </div>
           </div>
 

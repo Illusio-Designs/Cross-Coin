@@ -1,5 +1,6 @@
 'use client'
 
+import ReviewBadge from '@/components/product/ReviewBadge'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Zap, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
@@ -206,6 +207,7 @@ export function ExclusiveSection({ products = [] }) {
                 {product.badge}
               </span>
             )}
+            <ReviewBadge rating={product.rating} count={product.reviewCount} style={{ left: 12, bottom: 12 }} />
           </div>
         </div>
 

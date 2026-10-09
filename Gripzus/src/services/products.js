@@ -140,7 +140,7 @@ export function mapProduct(p) {
     images:        images.length ? images : ['/assets/Gripzus.JPG.jpeg'],
     colors,
     sizes,
-    badge:         BADGE[p.badge] || p.badge || undefined,
+    badge:         BADGE[p.badge] || (p.badge && !['none', 'null', 'undefined'].includes(String(p.badge).toLowerCase()) ? p.badge : undefined),
     inStock,
     // Total real stock across variations (null when unknown) — powers the
     // honest low-stock indicator on the product page.

@@ -165,7 +165,7 @@ export function mapProduct(p) {
     colors,
     rating:         p.avg_rating ? Number(p.avg_rating) : 0,
     reviews:        Number(p.review_count || 0),
-    badge:          BADGE_MAP[p.badge] || (p.badge ? p.badge : null),
+    badge:          BADGE_MAP[p.badge] || (p.badge && !['none', 'null', 'undefined'].includes(String(p.badge).toLowerCase()) ? p.badge : null),
     inStock,
     details,
     variations,                       // full per-variation data for the detail page
