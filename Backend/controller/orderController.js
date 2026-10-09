@@ -2065,6 +2065,21 @@
 
       const orderService = require('../services/orderService.js');
       const orderEmitter = require('../services/orderEvents.js');
+
+      // Cancelling via the status dropdown must do the FULL cancel — restore
+      // stock, refund a prepaid order via Razorpay, and cancel at the courier —
+      // exactly like the dedicated Cancel action, not just flip the status.
+      // (Previously the dropdown only set status='cancelled' + cancelled at the
+      // courier, so a prepaid customer cancelled this way was never refunded.)
+      if (status === 'cancelled' || status === 'order cancelled') {
+        const cancelled = await orderService.cancelOrder(req.params.id, {
+          reason: notes || 'Order cancelled',
+          cancelledBy: req.user.id,
+          isAdmin: true,
+        });
+        return res.json({ success: true, message: 'Order cancelled — prepaid refund initiated if applicable', order: cancelled });
+      }
+
       const order = await Order.findByPk(req.params.id);
       if (!order) return res.status(404).json({ message: 'Order not found' });
 
@@ -2082,12 +2097,8 @@
       // Emit lifecycle events
       if (status === 'shipped') setImmediate(() => { try { orderEmitter.emit('order.shipped', order); } catch (e) { logger.warn('order.shipped emit failed:', e.message); } });
       if (status === 'delivered') setImmediate(() => { try { orderEmitter.emit('order.delivered', order); } catch (e) { logger.warn('order.delivered emit failed:', e.message); } });
-      // Cancelling via the status dropdown must also cancel at the courier
-      // (iThink/FShip), same as the dedicated Cancel action — otherwise the
-      // shipment stays active at the courier while our DB shows cancelled.
-      if (status === 'cancelled' || status === 'order cancelled') {
-        orderService.cancelAtCourier(order, notes || 'Order cancelled');
-      }
+      // (Cancellation is handled earlier by delegating to orderService.cancelOrder,
+      // which restores stock, refunds prepaid, and cancels at the courier.)
 
       res.json({ success: true, message: `Order status updated to ${status}`, order });
     } catch (error) {
