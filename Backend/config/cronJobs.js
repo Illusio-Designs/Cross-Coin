@@ -63,12 +63,14 @@ function initializeCronJobs() {
     trigger('cron:shipping-status-refresh');
   });
 
-  // Pickup-hold retry — every 4 hours. Orders whose booking was HELD because it
-  // would pick up on a blocked day (pickup_hold_until) are re-queued once that
-  // day has arrived (in IST). The queue worker re-checks the schedule: it books
-  // if the pickup now lands on an allowed day, or re-holds to the next one. Runs
-  // several times a day so it fires after IST midnight regardless of server TZ.
-  cron.schedule('20 */4 * * *', async () => {
+  // Pickup-hold release — 11:00 IST (with a 15:00 IST safety retry). Orders whose
+  // booking was HELD because it would pick up on a blocked day (pickup_hold_until)
+  // are released once that day has arrived. Booking at/after 11:00 IST (past the
+  // courier's same-day cut-off) makes iThink schedule the pickup for the NEXT day,
+  // not the same day — so a batch held through a closed 9th books on the 9th at
+  // 11:00 and is picked up on the 10th. The queue worker re-checks the schedule:
+  // it books if the pickup now lands on an allowed day, or re-holds to the next.
+  const releaseHeldPickups = async () => {
     try {
       const { Order } = require('../model/orderModel.js');
       const { Op } = require('sequelize');
@@ -90,9 +92,10 @@ function initializeCronJobs() {
       }
       console.log(`⏰ [CRON] pickup-hold: re-queued ${queued}/${due.length} held order(s) for booking`);
     } catch (e) {
-      console.error('❌ [CRON] pickup-hold retry error:', e.message);
+      console.error('❌ [CRON] pickup-hold release error:', e.message);
     }
-  });
+  };
+  cron.schedule('0 11,15 * * *', releaseHeldPickups, { timezone: 'Asia/Kolkata' });
 
   // Loyalty points expiry — daily at 2 AM
   cron.schedule('0 2 * * *', () => {

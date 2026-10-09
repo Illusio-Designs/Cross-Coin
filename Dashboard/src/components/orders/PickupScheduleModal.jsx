@@ -19,6 +19,8 @@ export default function PickupScheduleModal({ open, onClose }) {
   const [nextDate, setNextDate] = useState(null);
   const [rStart, setRStart] = useState('');
   const [rEnd, setREnd] = useState('');
+  const [affectedWarn, setAffectedWarn] = useState(null); // { count, orders } — already-booked orders a new block can't hold
+  const [checking, setChecking] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,6 +31,7 @@ export default function PickupScheduleModal({ open, onClose }) {
       setBlockedRanges(Array.isArray(s.blockedRanges) ? s.blockedRanges : []);
       setCutoffHour(Number.isFinite(s.cutoffHour) ? s.cutoffHour : 15);
       setNextDate(d?.nextDate || null);
+      setAffectedWarn(null);
     } catch (e) {
       showError(e?.response?.data?.message || 'Failed to load pickup schedule');
     } finally { setLoading(false); }
@@ -37,7 +40,7 @@ export default function PickupScheduleModal({ open, onClose }) {
 
   const toggleSunday = () => setWeeklyOffDays((prev) => (prev.includes(0) ? prev.filter((d) => d !== 0) : [...prev, 0]));
 
-  const addRange = () => {
+  const addRange = async () => {
     const from = rStart;
     const to = rEnd || rStart;
     if (!from) { showError('Pick a start date'); return; }
@@ -45,6 +48,15 @@ export default function PickupScheduleModal({ open, onClose }) {
     const b = from <= to ? to : from;
     setBlockedRanges((prev) => [...prev, { from: a, to: b }]);
     setRStart(''); setREnd('');
+    // Warn about orders ALREADY booked for pickup in this range — a block can't
+    // hold those (they're already with the courier).
+    setChecking(true);
+    setAffectedWarn(null);
+    try {
+      const d = await pickupScheduleService.affected(a, b);
+      if (d?.count > 0) setAffectedWarn({ count: d.count, orders: Array.isArray(d.orders) ? d.orders : [] });
+    } catch (_) { /* non-blocking — the block still saves */ }
+    finally { setChecking(false); }
   };
   const removeRange = (idx) => setBlockedRanges((prev) => prev.filter((_, i) => i !== idx));
 
@@ -66,7 +78,7 @@ export default function PickupScheduleModal({ open, onClose }) {
     <Modal isOpen={open} onClose={onClose} title="Pickup Schedule" closeOnOverlayClick={false}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 320, maxWidth: 440 }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
-          One shared schedule for all stores. Pickups skip Sundays and your blocked ranges; auto-sync books each order's next allowed pickup date (3 PM IST cut-off).
+          One shared schedule for all stores. Pickups skip Sundays and your blocked ranges. Orders held by a blocked day are booked at 11 AM IST so the courier picks them up the next working day.
         </p>
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, cursor: 'pointer' }}>
@@ -81,6 +93,23 @@ export default function PickupScheduleModal({ open, onClose }) {
             <Button variant="secondary" onClick={addRange} disabled={!rStart}>Mark no-pickup</Button>
           </div>
         </div>
+
+        {checking && (
+          <div style={{ fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>Checking already-booked orders…</div>
+        )}
+        {affectedWarn && (
+          <div style={{ background: 'var(--ds-color-warning-bg,#fef3c7)', color: 'var(--ds-color-warning-text,#92400e)', border: '1px solid var(--ds-color-warning,#f59e0b)', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+            <b>⚠ {affectedWarn.count} order{affectedWarn.count === 1 ? '' : 's'} already booked for pickup in this range.</b>
+            <div style={{ marginTop: 3 }}>
+              A block can't hold these — they're already with the courier. The courier will still attempt pickup, and reattempts the next working day if the warehouse is closed.
+            </div>
+            {affectedWarn.orders.length > 0 && (
+              <div style={{ marginTop: 5, fontFamily: 'monospace', fontSize: 11.5, opacity: .9 }}>
+                {affectedWarn.orders.slice(0, 8).map((o) => o.orderNumber).join(', ')}{affectedWarn.count > 8 ? ` +${affectedWarn.count - 8} more` : ''}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <div style={lbl}>Blocked ranges</div>

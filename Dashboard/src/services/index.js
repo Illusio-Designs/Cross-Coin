@@ -408,6 +408,12 @@ export const pickupScheduleService = {
     const { data } = await adminApi.put('/api/pickup-schedule', schedule);
     return data;
   },
+  // Orders already booked whose pickup falls in a date range (a new block can't
+  // hold these). Returns { count, orders: [{ orderNumber, pickupDate }] }.
+  affected: async (from, to) => {
+    const { data } = await adminApi.get('/api/pickup-schedule/affected', { params: { from, to } });
+    return data;
+  },
 };
 
 export const orderService = {
