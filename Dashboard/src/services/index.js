@@ -621,6 +621,17 @@ export const orderService = {
     }
   },
 
+  // Refund a prepaid order's Razorpay payment (full by default). Also retries a
+  // refund stuck at refund_pending.
+  refundOrder: async (orderId, reason) => {
+    try {
+      const response = await adminApi.put(`/api/orders/${orderId}/refund`, { reason });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   confirmOrder: async (orderId) => {
     try {
       const response = await adminApi.put(`/api/orders/${orderId}/confirm`);

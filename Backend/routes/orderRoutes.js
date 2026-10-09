@@ -3,7 +3,7 @@ const {
     getAllOrders, getUserOrders, getOrder, updateOrderStatus,
     createOrder, createGuestOrder,
     trackOrderByAWB, trackOrderByOrderNumber,
-    cancelOrder, adminCancelOrder, adminDeleteOrder, confirmOrder,
+    cancelOrder, adminCancelOrder, adminRefundOrder, adminDeleteOrder, confirmOrder,
     updateAwbNumber, initiateReturn,
     adminCreateManualOrder, updateOrderAddress,
 } = require('../controller/orderController.js');
@@ -77,6 +77,7 @@ router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvail
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
+router.put('/:id/refund',              isAuthenticated, isOrderManager, adminRefundOrder);
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);
 router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
