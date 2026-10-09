@@ -265,44 +265,18 @@ async function syncOrderToFShip(order) {
     // automatically. FShip keeps its existing courier-less flow untouched.
     const providerNameEarly = await shippingProviderFactory.getProviderName(order.brand_id || 1);
     if (providerNameEarly === 'ithink') {
-      const orderShippingController = require('../controller/orderShippingController.js');
-      const { GuestUser } = require('../model/guestUserModel.js');
-      // Load the order WITH the associations the booking flow relies on
-      // (ShippingAddress → destination pincode, OrderItems → weight). The COD
-      // path (orderEvents.js) already does this; the prepaid payment path used a
-      // bare findByPk, so ShippingAddress/OrderItems were undefined, the
-      // destination pincode came through empty, iThink returned zero couriers,
-      // and every prepaid order failed with "No serviceable courier could book"
-      // until a manual resume (which loads the associations) re-ran it.
-      const fresh = await Order.findByPk(order.id, {
-        include: [
-          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
-          { model: ShippingAddress, as: 'ShippingAddress' },
-          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
-          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
-        ],
-      });
-      if (!fresh) return;
-      if (fresh.fship_order_id && fresh.fship_waybill) {
-        logger.info(`[Shipping] Skipping ${order.order_number} — already booked (iThink)`);
-        return;
-      }
-      const r = await orderShippingController.enhancedSyncSingleOrder(fresh);
-      if (r && r.success) {
-        logger.info(`[Shipping] iThink auto-synced ${order.order_number} → courier ${r.courier || '?'}`);
-      } else if (r && r.held) {
-        // Not a failure — booking now would pick up on a blocked day. The hold
-        // path already set status 'pending' + pickup_hold_until; the daily
-        // pickup-hold cron will book it a day later. Do NOT mark it failed.
-        logger.info(`[Shipping] iThink booking held for ${order.order_number}: ${r.error}`);
-      } else {
-        const msg = (r && r.error) || 'iThink auto-sync failed';
-        logger.warn(`[Shipping] iThink auto-sync ${order.order_number}: ${msg}`);
-        await Order.update(
-          { fship_sync_status: 'failed', fship_sync_error: String(msg).slice(0, 1000) },
-          { where: { id: order.id } }
-        ).catch(() => {});
-      }
+      // BATCH BOOKING: iThink orders are NOT booked on payment. Every order is
+      // booked by the 11:00 IST batch cron, so the courier schedules the pickup
+      // for the NEXT day (never same-day) and the pickup schedule can hold a day
+      // cleanly. Queue this order for the next batch; the cron re-checks the
+      // schedule and defers it further if that pickup day is blocked. (The admin
+      // Sync button still books immediately via enhancedSyncSingleOrder.)
+      const batchDate = require('./pickupScheduleService.js').nextBatchDate();
+      await Order.update(
+        { pickup_hold_until: batchDate, fship_sync_status: 'pending' },
+        { where: { id: order.id, fship_waybill: null } }
+      ).catch((e) => logger.warn(`[Shipping] queue-for-batch failed for ${order.order_number}: ${e.message}`));
+      logger.info(`[Shipping] iThink ${order.order_number} queued for the ${batchDate} 11:00 IST booking batch`);
       return;
     }
 
