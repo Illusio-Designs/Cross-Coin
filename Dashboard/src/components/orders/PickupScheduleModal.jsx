@@ -78,7 +78,7 @@ export default function PickupScheduleModal({ open, onClose }) {
     <Modal isOpen={open} onClose={onClose} title="Pickup Schedule" closeOnOverlayClick={false}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 320, maxWidth: 440 }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
-          One shared schedule for all stores. Pickups skip Sundays and your blocked ranges. Orders held by a blocked day are booked at 11 AM IST so the courier picks them up the next working day.
+          One shared schedule for all stores. Orders are booked in a daily 11:00 AM IST batch so the courier picks them up the next working day; pickups skip Sundays and your blocked ranges (an order whose pickup would fall on a blocked day waits for the next allowed day).
         </p>
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, cursor: 'pointer' }}>

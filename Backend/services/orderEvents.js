@@ -80,48 +80,19 @@ orderEmitter.on('order.confirmed', async (order) => {
       logger.info(`[Event] ${order.order_number}: customer confirmed via WhatsApp — auto-booking courier despite manual mode`);
     }
 
-    // Trigger immediate FShip sync for this order (don't wait for 2hr cron)
+    // BATCH BOOKING: don't book on confirm. Queue the order for the 11:00 IST
+    // batch cron (so the courier schedules pickup for the next day). The cron
+    // re-checks the pickup schedule and defers further if that day is blocked.
     try {
       const { Order } = require('../model/orderModel.js');
-      const { OrderItem } = require('../model/orderItemModel.js');
-      const { Product } = require('../model/productModel.js');
-      const { ProductVariation } = require('../model/productVariationModel.js');
-      const { User } = require('../model/userModel.js');
-      const { GuestUser } = require('../model/guestUserModel.js');
-
-      const fullOrder = await Order.findByPk(order.id, {
-        include: [
-          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
-          { model: User, as: 'User', attributes: ['id', 'username', 'email'], required: false },
-          { model: GuestUser, as: 'GuestUser', attributes: ['id', 'email', 'firstName', 'lastName', 'phone'], required: false },
-          { model: ShippingAddress, as: 'ShippingAddress' },
-        ],
-      });
-
-      if (fullOrder && fullOrder.fship_sync_status !== 'synced') {
-        const orderShippingController = require('../controller/orderShippingController.js');
-        const syncResult = await orderShippingController.enhancedSyncSingleOrder(fullOrder);
-        if (syncResult.success) {
-          logger.info(`[Event] FShip sync triggered for ${order.order_number}: ${syncResult.action} — AWB: ${syncResult.waybill || 'N/A'}`);
-        } else if (syncResult.held) {
-          // Held by the pickup schedule (booking now would pick up on a blocked
-          // day). Do NOT enqueue a 30s retry — the daily pickup-hold cron books
-          // it a day later; a short retry would just re-hold in a tight loop.
-          logger.info(`[Event] FShip booking held for ${order.order_number}: ${syncResult.error}`);
-        } else {
-          logger.warn(`[Event] FShip sync failed for ${order.order_number}: ${syncResult.error} — enqueueing retry`);
-          try {
-            const { enqueue } = require('./integrationQueue.js');
-            await enqueue('shipping:sync-order', { orderId: order.id, attempt: 1 }, { delay: 30_000 });
-          } catch (qErr) { logger.warn(`[Event] enqueue shipping retry failed: ${qErr.message}`); }
-        }
-      }
+      const batchDate = require('./pickupScheduleService.js').nextBatchDate();
+      await Order.update(
+        { pickup_hold_until: batchDate, fship_sync_status: 'pending' },
+        { where: { id: order.id, fship_waybill: null } }
+      );
+      logger.info(`[Event] ${order.order_number} queued for the ${batchDate} 11:00 IST booking batch`);
     } catch (syncErr) {
-      logger.warn(`[Event] FShip immediate sync failed for ${order.order_number}: ${syncErr.message} — enqueueing retry`);
-      try {
-        const { enqueue } = require('./integrationQueue.js');
-        await enqueue('shipping:sync-order', { orderId: order.id, attempt: 1 }, { delay: 30_000 });
-      } catch (qErr) { logger.warn(`[Event] enqueue shipping retry failed: ${qErr.message}`); }
+      logger.warn(`[Event] queue-for-batch failed for ${order.order_number}: ${syncErr.message}`);
     }
   } catch (e) { logger.error('[Event] order.confirmed error:', e.message); }
 });

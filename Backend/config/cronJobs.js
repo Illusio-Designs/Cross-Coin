@@ -63,13 +63,14 @@ function initializeCronJobs() {
     trigger('cron:shipping-status-refresh');
   });
 
-  // Pickup-hold release — 11:00 IST (with a 15:00 IST safety retry). Orders whose
-  // booking was HELD because it would pick up on a blocked day (pickup_hold_until)
-  // are released once that day has arrived. Booking at/after 11:00 IST (past the
-  // courier's same-day cut-off) makes iThink schedule the pickup for the NEXT day,
-  // not the same day — so a batch held through a closed 9th books on the 9th at
-  // 11:00 and is picked up on the 10th. The queue worker re-checks the schedule:
-  // it books if the pickup now lands on an allowed day, or re-holds to the next.
+  // Daily booking batch — 11:00 IST (with a 15:00 IST safety retry). iThink
+  // orders are NOT booked on payment; each is queued with pickup_hold_until (the
+  // date of its batch). This run books every order whose batch date has arrived.
+  // Booking at 11:00 IST (past the courier's same-day cut-off) makes iThink
+  // schedule the pickup for the NEXT day, not the same day — so orders placed
+  // before 11:00 book today and are picked up tomorrow; a batch held through a
+  // closed day books once the pickup lands on an allowed day. The queue worker
+  // re-checks the schedule: it books, or re-holds to the next allowed day.
   const releaseHeldPickups = async () => {
     try {
       const { Order } = require('../model/orderModel.js');

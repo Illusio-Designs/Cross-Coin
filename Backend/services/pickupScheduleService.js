@@ -122,4 +122,16 @@ async function shouldHoldForPickup(from = new Date()) {
   }
 }
 
-module.exports = { getSchedule, setSchedule, getNextPickupDate, isAllowed, prospectivePickupDate, shouldHoldForPickup, DEFAULTS };
+// The date (YYYY-MM-DD, IST) of the next 11:00 IST booking batch for an order
+// placed now: today if it's before 11:00 IST, otherwise tomorrow. Stored on the
+// order as pickup_hold_until so the batch cron books it at the right 11:00 run
+// (and the courier then schedules pickup for the following day).
+const BATCH_HOUR_IST = 11;
+function nextBatchDate(from = new Date()) {
+  const ist = istShift(from);
+  const cursor = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()));
+  if (ist.getUTCHours() >= BATCH_HOUR_IST) cursor.setUTCDate(cursor.getUTCDate() + 1);
+  return ymd(cursor);
+}
+
+module.exports = { getSchedule, setSchedule, getNextPickupDate, isAllowed, prospectivePickupDate, shouldHoldForPickup, nextBatchDate, BATCH_HOUR_IST, DEFAULTS };
