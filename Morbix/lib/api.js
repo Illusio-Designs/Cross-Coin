@@ -137,7 +137,7 @@ export async function getSliders() {
     return (Array.isArray(list) ? list : [])
       .map((s) => ({
         image: imgUrl(s.image || s.image_url || s.desktop_image || s.banner || s.large || ''),
-        mobileImage: imgUrl(s.mobile_image || s.image_mobile || s.mobile || ''),
+        mobileImage: imgUrl(s.mobileImage || s.mobile_image || ''),
         title: str(s.title || s.heading || ''),
         description: str(s.description || s.subtitle || s.subheading || s.text || ''),
         buttonText: str(s.buttonText || s.button_text || s.cta || s.button || ''),
@@ -596,6 +596,8 @@ function mapBlog(p) {
   // fall back to other common fields, then to the first image in the body.
   const image = fullImage(imgUrl(p.hero_image || p.image || p.image_url || p.featured_image
     || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections));
+  const thumb = fullImage(imgUrl(p.thumbnail_image || p.hero_image || p.image || p.image_url || p.featured_image
+    || p.cover_image || p.thumbnail || p.banner || '') || firstSectionImage(sections));
   return {
     slug: p.slug,
     category: p.BlogCategory?.name || p.category?.name || p.category || '',
@@ -603,6 +605,7 @@ function mapBlog(p) {
     title: p.title,
     excerpt,
     image,
+    thumb: thumb || image,
     // Full article body: each section's heading + sanitised HTML content.
     sections: sections.map((s) => ({
       heading: s.heading || s.title || '',

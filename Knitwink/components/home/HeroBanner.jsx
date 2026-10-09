@@ -7,6 +7,20 @@ import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 const SLIDE_DURATION = 5000
 
+// True on phone-width screens (matches the 767px breakpoint used for the
+// dedicated mobile slider image).
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return mobile
+}
+
 // Frontend mirror of the backend category-slug rule (same as Crosscoin's
 // collectionUrl) so a slide routes to a clean /collections/<slug> URL instead
 // of a URL-encoded category name.
@@ -31,6 +45,7 @@ function slideHref(slide) {
 }
 
 export function HeroBanner({ slides = [] }) {
+  const isMobile = useIsMobile()
   const [current, setCurrent] = useState(0)
   const [progress, setProgress] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -86,7 +101,7 @@ export function HeroBanner({ slides = [] }) {
             {/* Full-bleed banner — fills the whole (taller) hero at full height
                 and width. */}
             <ShimmerImg
-              src={slide.image}
+              src={(isMobile && slide.mobileImage) || slide.image}
               alt={slide.title || 'Banner'}
               shimmerClassName="bg-gray-800"
               className="absolute inset-0 h-full w-full object-cover object-top sm:object-center"

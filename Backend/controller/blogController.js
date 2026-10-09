@@ -103,6 +103,10 @@ const formatPostImage = async (post) => {
   if (data.hero_image) {
     data.hero_image = imagekitService.getOptimizedUrl(data.hero_image, 'large');
   }
+  // Card/list thumbnail (optional) — storefronts fall back to hero_image when absent.
+  if (data.thumbnail_image) {
+    data.thumbnail_image = imagekitService.getOptimizedUrl(data.thumbnail_image, 'large');
+  }
 
   if (Array.isArray(data.FeaturedProducts) && data.FeaturedProducts.length > 0) {
     const ids = data.FeaturedProducts.map(fp => fp.id);
@@ -729,7 +733,10 @@ const getAllTags = async (req, res) => {
 
 // ─── Hero Image Upload ────────────────────────────────────────────────────────
 
-const uploadHeroImage = async (req, res) => {
+// Upload a blog image into one of the post's image columns.
+//   hero_image      → main image at the top of the article
+//   thumbnail_image → card / list image
+const makeBlogImageUpload = (column, tag) => async (req, res) => {
   try {
     const { id } = req.params;
     const post = await BlogPost.findByPk(id);
@@ -752,7 +759,7 @@ const uploadHeroImage = async (req, res) => {
     // Upload to ImageKit
     const result = await imagekitService.uploadImage(
       fileBuffer,
-      `blog-hero-${Date.now()}.webp`,
+      `blog-${tag}-${Date.now()}.webp`,
       '/blogs'
     );
 
@@ -764,19 +771,22 @@ const uploadHeroImage = async (req, res) => {
     await fs.unlink(req.file.path).catch(() => {});
 
     // Delete old image from ImageKit if exists (best-effort)
-    if (post.hero_image && typeof imagekitService.deleteImage === 'function') {
-      try { await imagekitService.deleteImage(post.hero_image); } catch {}
+    if (post[column] && typeof imagekitService.deleteImage === 'function') {
+      try { await imagekitService.deleteImage(post[column]); } catch {}
     }
 
-    await post.update({ hero_image: result.filePath });
+    await post.update({ [column]: result.filePath });
 
     const updatedPost = await BlogPost.findByPk(id, { include: fullPostInclude() });
     return res.status(200).json({ success: true, data: await formatPostImage(updatedPost) });
   } catch (error) {
-    logger.error('uploadHeroImage error:', error);
+    logger.error(`blog ${tag} image upload error:`, error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 };
+
+const uploadHeroImage = makeBlogImageUpload('hero_image', 'hero');
+const uploadThumbnailImage = makeBlogImageUpload('thumbnail_image', 'thumb');
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
@@ -784,5 +794,5 @@ module.exports = {
   createCategory, getAllCategories, updateCategory, deleteCategory,
   createPost, getAllPostsAdmin, getPostByIdAdmin, updatePost, deletePost,
   getPublicPosts, getPublicPostBySlug, getAllTags,
-  uploadHeroImage
+  uploadHeroImage, uploadThumbnailImage
 };

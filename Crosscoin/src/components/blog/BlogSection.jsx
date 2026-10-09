@@ -46,8 +46,8 @@ const BlogSection = () => {
               onClick={() => router.push(`/journal/${post.slug}`)}
             >
               <div className="bc-img-wrap">
-                {post.hero_image
-                  ? <img src={getBlogImageSrc(post.hero_image, { w: 800, h: 450, q: 70 })} alt={post.title} loading="lazy" />
+                {(post.thumbnail_image || post.hero_image)
+                  ? <img src={getBlogImageSrc(post.thumbnail_image || post.hero_image, { w: 800, h: 450, q: 70 })} alt={post.title} loading="lazy" />
                   : <div style={{ background: '#f3f4f6', width: '100%', height: '100%', minHeight: 180 }} />
                 }
                 <div className="bc-badge">

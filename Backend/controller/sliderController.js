@@ -23,6 +23,29 @@ const invalidateSliderCache = () => cacheManager.invalidate('sliders:public:*');
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
 
+// Upload one slider image (ImageKit first, local disk as fallback). Returns the
+// stored path/URL. `tag` keeps desktop and mobile files apart in the folder.
+const storeSliderImage = async (file, tag, size) => {
+    try {
+        const fileBuffer = await fs.readFile(file.path);
+        const uploadResult = await imagekitService.uploadImage(fileBuffer, `slider-${tag}-${Date.now()}.webp`, '/sliders');
+        if (!uploadResult.success) throw new Error('Failed to upload image to ImageKit');
+        await fs.unlink(file.path).catch(() => {});
+        return uploadResult.filePath;
+    } catch (imageError) {
+        logger.warn(`ImageKit slider ${tag} upload failed, falling back to local storage:`, imageError.message);
+        const localPath = await imageHandler.handleImageUpdate(null, file.path, {
+            width: size.width, height: size.height, quality: 85, format: 'webp',
+            filename: `slider-${tag}-${Date.now()}`, type: 'slider',
+        });
+        if (!localPath) throw new Error('Local image processing returned no path');
+        const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
+        return `${apiBase}${localPath}`;
+    }
+};
+const DESKTOP_SIZE = { width: 1920, height: 1080 };
+const MOBILE_SIZE = { width: 1080, height: 1350 };
+
 // Configure storage for uploaded files
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -45,6 +68,9 @@ const formatSliderResponse = (slider) => {
     if (sliderData.image) {
         sliderData.image = imagekitService.getOptimizedUrl(sliderData.image, 'large');
     }
+    if (sliderData.mobile_image) {
+        sliderData.mobile_image = imagekitService.getOptimizedUrl(sliderData.mobile_image, 'large');
+    }
     
     return sliderData;
 };
@@ -54,47 +80,24 @@ const createSlider = async (req, res) => {
     try {
         const { title, description, brand_id } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ message: 'Image is required' });
+        const desktopFile = req.files && req.files.image && req.files.image[0];
+        const mobileFile = req.files && req.files.mobileImage && req.files.mobileImage[0];
+        if (!desktopFile) {
+            return res.status(400).json({ message: 'Desktop image is required' });
         }
 
-        // Upload to ImageKit, with a local-disk fallback when ImageKit rejects
-        // the upload (e.g. "Upload Limit Exceeded" — the account's media /
-        // bandwidth quota is full), so the slider can still be created. Mirrors
-        // the category / product upload handlers.
         let image;
+        let mobileImage = null;
         try {
-            const fileBuffer = await fs.readFile(req.file.path);
-            const uploadResult = await imagekitService.uploadImage(
-                fileBuffer,
-                `slider-${Date.now()}.webp`,
-                '/sliders'
-            );
-            if (!uploadResult.success) {
-                throw new Error('Failed to upload image to ImageKit');
-            }
-            image = uploadResult.filePath; // Store ImageKit file path
-            logger.info('Created slider image path:', image);
-            await fs.unlink(req.file.path).catch(() => {});
-        } catch (imageError) {
-            logger.warn('ImageKit slider upload failed, falling back to local storage:', imageError.message);
-            try {
-                const localPath = await imageHandler.handleImageUpdate(null, req.file.path, {
-                    width: 1920, height: 1080, quality: 85, format: 'webp',
-                    filename: `slider-${Date.now()}`, type: 'slider',
-                });
-                if (!localPath) throw new Error('Local image processing returned no path');
-                const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
-                image = `${apiBase}${localPath}`;
-                logger.info('Created slider image (local fallback):', image);
-            } catch (localError) {
-                logger.error('Error processing image (ImageKit + local both failed):', localError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Error processing image',
-                    error: localError.message,
-                });
-            }
+            image = await storeSliderImage(desktopFile, 'desktop', DESKTOP_SIZE);
+            if (mobileFile) mobileImage = await storeSliderImage(mobileFile, 'mobile', MOBILE_SIZE);
+        } catch (localError) {
+            logger.error('Error processing slider image:', localError);
+            return res.status(500).json({
+                success: false,
+                message: 'Error processing image',
+                error: localError.message,
+            });
         }
 
         // Use brand_id from request body if provided, otherwise use req.brand or default to 1
@@ -104,6 +107,7 @@ const createSlider = async (req, res) => {
             title,
             description,
             image,
+            mobile_image: mobileImage,
             brand_id: brandIdToUse,
         });
 
@@ -244,49 +248,27 @@ const updateSlider = async (req, res) => {
             }
         }
 
-        // Handle image update
+        // Handle image updates — desktop and mobile are replaced independently
+        const desktopFile = req.files && req.files.image && req.files.image[0];
+        const mobileFile = req.files && req.files.mobileImage && req.files.mobileImage[0];
         let image = slider.image;
-        if (req.file) {
-            try {
-                const fileBuffer = await fs.readFile(req.file.path);
-                const uploadResult = await imagekitService.uploadImage(
-                    fileBuffer,
-                    `slider-${Date.now()}.webp`,
-                    '/sliders'
-                );
-                if (!uploadResult.success) {
-                    throw new Error('Failed to upload image to ImageKit');
-                }
-                image = uploadResult.filePath; // Store ImageKit file path
-                logger.info('Updated slider image path:', image);
-                await fs.unlink(req.file.path).catch(() => {});
-            } catch (imageError) {
-                // ImageKit failed (e.g. "Upload Limit Exceeded"). Fall back to
-                // local disk so the slider image can still be updated.
-                logger.warn('ImageKit slider upload failed, falling back to local storage:', imageError.message);
-                try {
-                    const localPath = await imageHandler.handleImageUpdate(null, req.file.path, {
-                        width: 1920, height: 1080, quality: 85, format: 'webp',
-                        filename: `slider-${Date.now()}`, type: 'slider',
-                    });
-                    if (!localPath) throw new Error('Local image processing returned no path');
-                    const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
-                    image = `${apiBase}${localPath}`;
-                    logger.info('Updated slider image (local fallback):', image);
-                } catch (localError) {
-                    logger.error('Error updating image (ImageKit + local both failed):', localError);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Failed to update image',
-                        error: localError.message,
-                    });
-                }
-            }
+        let mobileImage = slider.mobile_image;
+        try {
+            if (desktopFile) image = await storeSliderImage(desktopFile, 'desktop', DESKTOP_SIZE);
+            if (mobileFile) mobileImage = await storeSliderImage(mobileFile, 'mobile', MOBILE_SIZE);
+        } catch (localError) {
+            logger.error('Error updating slider image:', localError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to update image',
+                error: localError.message,
+            });
         }
+        if (String(req.body.removeMobileImage) === 'true' && !mobileFile) mobileImage = null;
 
         // Only include fields that were actually sent — avoids accidentally
         // wiping fields that weren't in the form payload.
-        const updateData = { image };
+        const updateData = { image, mobile_image: mobileImage };
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (buttonText !== undefined) updateData.buttonText = buttonText;
@@ -358,7 +340,7 @@ const getPublicSliders = async (req, res) => {
             },
             include: includeOptions,
             order: [['createdAt', 'DESC']],
-            attributes: ['id', 'title', 'description', 'buttonText', 'image', 'categoryId']
+            attributes: ['id', 'title', 'description', 'buttonText', 'image', 'mobile_image', 'categoryId']
         });
 
         const slidersResponse = sliders.map(slider => {
@@ -388,6 +370,17 @@ const getPublicSliders = async (req, res) => {
                 sliderData.imageThumbnail = null;
                 sliderData.imageSrcSet = null;
             }
+
+            // Dedicated mobile artwork (optional). Null → storefronts keep the desktop image.
+            const IKM = process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
+            if (sliderData.mobile_image) {
+                const mp = sliderData.mobile_image.startsWith('/') ? sliderData.mobile_image : `/sliders/${sliderData.mobile_image}`;
+                const mbase = mp.startsWith('http') ? mp.split('?tr=')[0].split('&tr=')[0] : `${IKM}${mp.split('?tr=')[0].split('&tr=')[0]}`;
+                sliderData.mobileImage = `${mbase}?tr=w-1080,q-82,f-auto`;
+            } else {
+                sliderData.mobileImage = null;
+            }
+            delete sliderData.mobile_image;
 
             // Add brands info
             sliderData.brands = slider.Brands ? slider.Brands.map(brand => brand.name) : [];

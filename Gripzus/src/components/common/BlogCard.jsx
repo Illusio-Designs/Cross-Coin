@@ -11,7 +11,7 @@ export default function BlogCard({ post }) {
       {/* Cover — pre-cropped 16:9 server-side for uniform card sizing */}
       <div className="media-zoom overflow-hidden rounded-xl border border-line bg-paper-warm aspect-[16/9]">
         <img
-          src={getBlogImageSrc(post.image, { w: 800, h: 450, q: 70 })}
+          src={getBlogImageSrc(post.thumb || post.image, { w: 800, h: 450, q: 70 })}
           alt={post.title}
           className="w-full h-full object-cover"
         />

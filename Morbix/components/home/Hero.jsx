@@ -61,11 +61,14 @@ export default function Hero({ features = [], slides = [] }) {
           {hasSlides ? (
             <div className="hero-slider">
               {slides.map((s, i) => (
-                <img key={i} src={heroSrc(s.image)} alt={s.title || 'Morbix'}
-                  className={`hero-slide-img${i === current ? ' active' : ''}`}
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={i === 0 ? 'high' : 'auto'}
-                  decoding="async" />
+                <picture key={i} style={{ display: 'contents' }}>
+                  {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
+                  <img src={heroSrc(s.image)} alt={s.title || 'Morbix'}
+                    className={`hero-slide-img${i === current ? ' active' : ''}`}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={i === 0 ? 'high' : 'auto'}
+                    decoding="async" />
+                </picture>
               ))}
             </div>
           ) : (

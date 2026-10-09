@@ -7,6 +7,7 @@ const BlogPost = sequelize.define('BlogPost', {
   slug: { type: DataTypes.STRING(500), allowNull: false },
   author_name: { type: DataTypes.STRING(255), allowNull: true },
   hero_image: { type: DataTypes.STRING(1000), allowNull: true },
+  thumbnail_image: { type: DataTypes.STRING(1000), allowNull: true },
   sections: { type: DataTypes.JSON, allowNull: true },
   status: { type: DataTypes.ENUM('draft', 'published', 'archived'), defaultValue: 'draft' },
   published_at: { type: DataTypes.DATE, allowNull: true },

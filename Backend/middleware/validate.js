@@ -45,6 +45,9 @@ function validate(schemas = {}) {
         logger.debug(`[validate] rejected ${req.method} ${req.path}: ${JSON.stringify(details)}`);
         return res.status(400).json({
           success: false,
+          // Top-level message too: storefronts read `body.message`, so without it
+          // customers only saw a generic "Failed to ..." instead of the real reason.
+          message: details[0]?.message || 'Request payload is invalid',
           error: {
             code: 'VALIDATION_ERROR',
             message: details[0]?.message || 'Request payload is invalid',

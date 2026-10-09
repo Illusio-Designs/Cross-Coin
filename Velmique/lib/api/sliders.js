@@ -29,6 +29,7 @@ function normalize(s) {
     description: s.description || '',
     buttonText: s.buttonText || s.cta || 'Shop Now',
     image: cleanUrl(s.image) || s.image || '',
+    mobileImage: cleanUrl(s.mobileImage) || s.mobileImage || '',
     ctaHref,
     categoryName: s.categoryName || null,
   };

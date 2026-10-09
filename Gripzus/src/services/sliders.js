@@ -27,6 +27,7 @@ export async function getPublicSliders() {
       .map((s) => ({
         id:          s.id,
         image:       cleanUrl(s.image) || s.image || '',
+        mobileImage: cleanUrl(s.mobileImage) || s.mobileImage || '',
         title:       s.title || '',
         description: s.description || s.subtitle || '',
         buttonText:  s.buttonText || 'Shop the collection',

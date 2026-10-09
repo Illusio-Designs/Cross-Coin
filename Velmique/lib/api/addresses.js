@@ -49,7 +49,7 @@ export async function createAddress(data) {
   })
   const result = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(result.message || 'Failed to save address')
-  return result
+  return result.shippingAddress || result
 }
 
 /* ── Update ───────────────────────────────────────────────────── */
@@ -60,8 +60,8 @@ export async function updateAddress(id, data) {
     body: JSON.stringify(normalise(data)),
   })
   const result = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(result.message || 'Failed to update address')
-  return result
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to update address')
+  return result.shippingAddress || result
 }
 
 /* ── Delete ───────────────────────────────────────────────────── */

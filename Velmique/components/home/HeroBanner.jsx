@@ -84,11 +84,14 @@ export default function HeroBanner({ slides = [] }) {
                 transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="relative h-[52vh] md:h-[78vh] flex items-end justify-center">
-                  <img
-                    src={slide.image}
-                    alt={slide.title}
-                    className="w-full h-full object-contain"
-                  />
+                  <picture style={{ display: 'contents' }}>
+                    {slide.mobileImage && <source media="(max-width: 767px)" srcSet={slide.mobileImage} />}
+                    <img
+                      src={slide.image}
+                      alt={slide.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </picture>
                 </div>
               </motion.div>
 

@@ -23,6 +23,7 @@ function mapPost(p) {
     category: p.BlogCategory?.name || p.category?.name || '',
     tags: (p.Tags || []).map((t) => t.name),
     coverImage: p.hero_image || '',
+    thumbImage: p.thumbnail_image || p.hero_image || '',
     author: { name: p.author_name || 'Velmique', avatar: '' },
     publishedAt: p.published_at || p.created_at || new Date().toISOString(),
     readTime: Math.max(1, Math.ceil(wordCount / 200)),

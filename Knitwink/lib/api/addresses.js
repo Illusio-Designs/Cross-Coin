@@ -29,15 +29,15 @@ function normalise(data) {
 export async function createAddress(data) {
   const res = await fetch(`${API_URL}/api/shipping-addresses`, { method: 'POST', headers: h(), body: JSON.stringify(normalise(data)) })
   const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to create address')
-  return result
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to create address')
+  return result.shippingAddress || result
 }
 
 export async function updateAddress(id, data) {
   const res = await fetch(`${API_URL}/api/shipping-addresses/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(normalise(data)) })
   const result = await res.json()
-  if (!res.ok) throw new Error(result.message || 'Failed to update address')
-  return result
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to update address')
+  return result.shippingAddress || result
 }
 
 export async function deleteAddress(id) {

@@ -104,6 +104,7 @@ function mapPost(p) {
     body:     body.length ? body : [{ type: 'paragraph', text: p.title || '' }],
     category: p.BlogCategory?.name || p.category?.name || p.category || 'Journal',
     image:    ikFull(p.hero_image || p.coverImage || p.image || '', 1400),
+    thumb:    ikFull(p.thumbnail_image || p.hero_image || p.coverImage || p.image || '', 1400),
     author:   p.author_name || p.author || 'Gripzus',
     date:     formatDate(p.published_at || p.created_at),
     readTime: `${minutes} min read`,

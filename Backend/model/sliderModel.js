@@ -24,6 +24,10 @@ const Slider = sequelize.define('Slider', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    mobile_image: {
+        type: DataTypes.STRING(1000),
+        allowNull: true
+    },
     categoryId: {
         type: DataTypes.INTEGER,
         allowNull: true,
