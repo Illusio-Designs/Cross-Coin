@@ -101,6 +101,7 @@ const Orders = () => {
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
+    const [refundDueFilter, setRefundDueFilter] = useState(false);
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
     const [cancelPrompt, setCancelPrompt] = useState(null);
@@ -186,6 +187,7 @@ const Orders = () => {
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
+                refund_due: refundDueFilter ? 1 : undefined,
                 brand_id: brandFilter !== 'all' ? brandFilter : undefined,
                 search: debouncedSearch || undefined,
                 start_date: statsStartDate || undefined,
@@ -228,7 +230,7 @@ const Orders = () => {
         } finally {
             if (reqId === requestIdRef.current && !silent && !willRetry) setLoading(false);
         }
-    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
+    }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, refundDueFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
@@ -556,7 +558,7 @@ const Orders = () => {
     // so users don't get stuck on an out-of-range page after narrowing results.
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, brandFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
+    }, [statusFilter, paymentTypeFilter, paymentStatusFilter, refundDueFilter, brandFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
 
     // Single source of truth for fetching the orders list.
     // fetchOrders depends on every filter, so this effect re-runs whenever any of them change.
@@ -960,6 +962,7 @@ const Orders = () => {
                         <>
                             <Button variant="secondary" onClick={() => {
                                 setPaymentTypeFilter('all'); setPaymentStatusFilter('all'); setBrandFilter('all');
+                                setRefundDueFilter(false);
                                 setSortBy('createdAt'); setSortOrder('desc');
                             }}>Reset</Button>
                             <Button variant="primary" onClick={() => setFilterOpen(false)}>Done</Button>
@@ -975,6 +978,11 @@ const Orders = () => {
                         <Select value={paymentStatusFilter} onChange={(v) => setPaymentStatusFilter(v || 'all')}
                             options={[{ value: 'all', label: 'All Payment Status' }, { value: 'pending', label: 'Pending' }, { value: 'paid', label: 'Paid' }, { value: 'failed', label: 'Failed' }, { value: 'refunded', label: 'Refunded' }, { value: 'refund_pending', label: 'Refund Pending' }, { value: 'cancelled', label: 'Cancelled' }]}
                             placeholder="All Payment Status" />
+
+                        <label className="ord-filter-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', margin: '4px 0 2px', fontSize: 13 }}>
+                            <input type="checkbox" checked={refundDueFilter} onChange={(e) => { setRefundDueFilter(e.target.checked); setCurrentPage(1); }} style={{ width: 16, height: 16 }} />
+                            Refund due — cancelled/returned prepaid, not yet refunded
+                        </label>
 
                         <label className="ord-filter-label">Brand</label>
                         <Select value={brandFilter} onChange={(v) => setBrandFilter(v || 'all')}

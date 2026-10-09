@@ -1668,6 +1668,16 @@
         }
       }
 
+      // Quick filter: cancelled/returned PREPAID orders that still owe a refund
+      // (payment is paid or refund_pending, not yet refunded). Finds orders that
+      // need to be refunded — including any cancelled before the refund fix.
+      // Overrides the status / payment filters above.
+      if (['1', 'true', 'yes'].includes(String(req.query.refund_due || '').toLowerCase())) {
+        filter.status = { [Op.in]: ['cancelled', 'order cancelled', 'return_initiated', 'returned_rto', 'rto delivered'] };
+        filter.payment_status = { [Op.in]: ['paid', 'refund_pending'] };
+        filter.payment_type = { [Op.notIn]: ['cod', 'COD'] };
+      }
+
       // Date range filter — supports partial ranges (start only, end only, or both).
       // end_date is normalised to 23:59:59.999 of the chosen day so orders placed
       // later that day are included (otherwise Op.between to YYYY-MM-DD 00:00:00
