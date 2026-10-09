@@ -309,7 +309,7 @@ const Home = ({ initialData = {} }) => {
                   name: product.name,
                   slug: product.slug,
                   description: product.description,
-                  badge: product.badge || null,
+                  badge: product.badge && product.badge !== 'none' ? product.badge : null,
                   images: imageData ? [imageData] : [],
                   price: productPrice,
                   comparePrice: productComparePrice,
