@@ -59,17 +59,22 @@ const HeroSlider = ({ slides = [] }) => {
     <div className="hero-slider">
       <div className="hero-slide" key={current}>
         <div className="hero-slide__image">
-          <img
-            src={slides[current].image}
-            srcSet={getHeroSrcSet(slides[current])}
-            sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
-            alt={slides[current].title}
-            width={1920}
-            height={1080}
-            fetchpriority="high"
-            loading="eager"
-            decoding="async"
-          />
+          <picture>
+            {slides[current].mobileImage && (
+              <source media="(max-width: 767px)" srcSet={slides[current].mobileImage} />
+            )}
+            <img
+              src={slides[current].image}
+              srcSet={getHeroSrcSet(slides[current])}
+              sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
+              alt={slides[current].title}
+              width={1920}
+              height={1080}
+              fetchpriority="high"
+              loading="eager"
+              decoding="async"
+            />
+          </picture>
         </div>
         <div className="hero-slide__content">
           <div className="hero-slide__content-text">

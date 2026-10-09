@@ -30,7 +30,7 @@ const getImageUrl = (imagePath) => {
 
 const EMPTY_FORM = {
   title: "", description: "", status: "active",
-  image: null, categoryId: "", buttonText: "",
+  image: null, mobileImage: null, categoryId: "", buttonText: "",
   brand_id: "", brand_ids: [],
 };
 
@@ -108,7 +108,7 @@ export default function Slider() {
       const brandIds = data.brands?.map(b => Number(typeof b === 'object' ? b.id : b)).filter(Boolean) || (data.brand_id ? [Number(data.brand_id)] : []);
       setFormData({ id: data.id, title: data.title || "", description: data.description || "",
         status: data.status || "active", categoryId: data.categoryId || "",
-        image: data.image || null, buttonText: data.buttonText || "",
+        image: data.image || null, mobileImage: data.mobile_image || data.mobileImage || null, buttonText: data.buttonText || "",
         brand_id: data.brand_id || "", brand_ids: brandIds });
       setIsModalOpen(true);
     } catch (err) { showError('loadingFailed', err.message); }
@@ -131,8 +131,7 @@ export default function Slider() {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setFormData(EMPTY_FORM);
-    const fi = document.querySelector('input[type="file"][name="image"]');
-    if (fi) fi.value = "";
+    document.querySelectorAll('input[type="file"][name="image"], input[type="file"][name="mobileImage"]').forEach(fi => { fi.value = ""; });
   };
 
   const handleInputChange = (e) => {
@@ -157,6 +156,8 @@ export default function Slider() {
       if (formData.brand_ids?.length > 0) fd.append("brand_id", formData.brand_ids[0]);
       else if (formData.brand_id) fd.append("brand_id", formData.brand_id);
       if (formData.image instanceof File) fd.append("image", formData.image);
+      if (formData.mobileImage instanceof File) fd.append("mobileImage", formData.mobileImage);
+      if (formData.id && formData.mobileImage === null) fd.append("removeMobileImage", "true");
 
       if (formData.id) {
         await sliderService.updateSlider(formData.id, fd);
@@ -330,18 +331,35 @@ export default function Slider() {
               />
             </div>
             <div className="dm-field">
-              <label className="dm-label">Slider Image {!formData.id && <span className="dm-required">*</span>}</label>
+              <label className="dm-label">Desktop Image {!formData.id && <span className="dm-required">*</span>}</label>
               <div className="dm-file-upload">
                 <div className="dm-file-upload-icon">{IC.image}</div>
                 <div className="dm-file-upload-text">
                   <span className="dm-file-upload-title">{formData.image instanceof File ? formData.image.name : formData.image ? "Current image" : "Choose image"}</span>
-                  <span className="dm-file-upload-sub">PNG, JPG, WEBP — recommended 1920×600</span>
+                  <span className="dm-file-upload-sub">1920 × 1080 px (16:9) · PNG, JPG or WEBP · keep the subject in the centre</span>
                 </div>
-                <input type="file" accept="image/*" name="image" onChange={handleInputChange} required={!formData.id} key={formData.id || 'new'} />
+                <input type="file" accept="image/*" name="image" onChange={handleInputChange} required={!formData.id} key={`d-${formData.id || 'new'}`} />
               </div>
               {formData.image && (
                 <div className="dm-img-preview">
-                  <img src={typeof formData.image === 'string' ? getImageUrl(formData.image) : URL.createObjectURL(formData.image)} alt="Preview" />
+                  <img src={typeof formData.image === 'string' ? getImageUrl(formData.image) : URL.createObjectURL(formData.image)} alt="Desktop preview" />
+                </div>
+              )}
+            </div>
+            <div className="dm-field">
+              <label className="dm-label">Mobile Image <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+              <div className="dm-file-upload">
+                <div className="dm-file-upload-icon">{IC.image}</div>
+                <div className="dm-file-upload-text">
+                  <span className="dm-file-upload-title">{formData.mobileImage instanceof File ? formData.mobileImage.name : formData.mobileImage ? "Current mobile image" : "Choose mobile image"}</span>
+                  <span className="dm-file-upload-sub">1080 × 1350 px (4:5) · shown on phones · if empty, phones use the desktop image</span>
+                </div>
+                <input type="file" accept="image/*" name="mobileImage" onChange={handleInputChange} key={`m-${formData.id || 'new'}`} />
+              </div>
+              {formData.mobileImage && (
+                <div className="dm-img-preview">
+                  <img src={typeof formData.mobileImage === 'string' ? getImageUrl(formData.mobileImage) : URL.createObjectURL(formData.mobileImage)} alt="Mobile preview" style={{ maxWidth: 160 }} />
+                  <button type="button" className="sl-btn-edit" style={{ marginTop: 6 }} onClick={() => setFormData(p => ({ ...p, mobileImage: null }))}>Remove mobile image</button>
                 </div>
               )}
             </div>

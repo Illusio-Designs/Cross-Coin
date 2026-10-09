@@ -25,9 +25,9 @@ export function BlogCard({ post }) {
           fills the frame uniformly (a contained + blurred-fill treatment left
           non-16:11 images letterboxed with a messy blurred text bleed). */}
       <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
-        {post.coverImage && (
+        {(post.thumbImage || post.coverImage) && (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={blogImg(post.coverImage)} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
+          <img src={blogImg(post.thumbImage || post.coverImage)} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
         )}
       </div>
 

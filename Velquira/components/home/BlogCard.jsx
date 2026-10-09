@@ -19,8 +19,8 @@ export default function BlogCard({ post }) {
   return (
     <Link href={`/journal/${p.slug}`} className="blog-card">
       <div className="blog-media">
-        {p.image
-          ? <img src={ik(p.image)} alt={p.title} loading="lazy" />
+        {(p.thumb || p.image)
+          ? <img src={ik(p.thumb || p.image)} alt={p.title} loading="lazy" />
           : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
         <div className="blog-cap">
           <div className="blog-meta">

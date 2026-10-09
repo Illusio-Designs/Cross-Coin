@@ -94,7 +94,7 @@ export default function BlogClient() {
                   <Link key={post.id} href={`/blog/${post.slug}`}
                     className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
                     <div className="absolute inset-0 bg-[var(--surface-2)]">
-                      <img src={blogCardImg(post.coverImage)} alt={post.title}
+                      <img src={blogCardImg(post.thumbImage || post.coverImage)} alt={post.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                     </div>
                     {post.category && (

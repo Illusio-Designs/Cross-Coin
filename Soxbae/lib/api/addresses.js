@@ -33,8 +33,8 @@ export async function createAddress(data) {
     body: JSON.stringify(normaliseAddr(data)),
   });
   const result = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(result.message || 'Failed to create address');
-  return result;
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to create address');
+  return result.shippingAddress || result;
 }
 
 export async function updateAddress(id, data) {
@@ -44,8 +44,8 @@ export async function updateAddress(id, data) {
     body: JSON.stringify(normaliseAddr(data)),
   });
   const result = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(result.message || 'Failed to update address');
-  return result;
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to update address');
+  return result.shippingAddress || result;
 }
 
 export async function deleteAddress(id) {

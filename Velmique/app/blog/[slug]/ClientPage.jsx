@@ -232,8 +232,8 @@ export default function BlogPostPage({ initialPost = null }) {
                 <Link key={r.id} href={`/blog/${r.slug}`}
                   className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
                   <div className="absolute inset-0 bg-[var(--surface-2)]">
-                    {r.coverImage && (
-                      <img src={r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    {(r.thumbImage || r.coverImage) && (
+                      <img src={r.thumbImage || r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     )}
                   </div>
                   {r.category && (

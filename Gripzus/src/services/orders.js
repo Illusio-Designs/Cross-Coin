@@ -166,8 +166,8 @@ export async function createShippingAddress(data) {
     body: JSON.stringify(normaliseAddr(data)),
   });
   const result = await res.json();
-  if (!res.ok) throw new Error(result.message || 'Failed to create address');
-  return result;
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to create address');
+  return result.shippingAddress || result;
 }
 
 export async function updateShippingAddress(id, data) {
@@ -177,8 +177,8 @@ export async function updateShippingAddress(id, data) {
     body: JSON.stringify(normaliseAddr(data)),
   });
   const result = await res.json();
-  if (!res.ok) throw new Error(result.message || 'Failed to update address');
-  return result;
+  if (!res.ok) throw new Error(result.message || result.error?.message || 'Failed to update address');
+  return result.shippingAddress || result;
 }
 
 /* ── Serviceability & coupons ────────────────────────────────────── */

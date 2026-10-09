@@ -59,8 +59,11 @@ export default function HeroBanner({ slides = [] }) {
       <div className="relative h-[82vh] min-h-[540px] max-h-[840px] w-full">
         {/* Crossfading images */}
         {has ? slides.map((sl, i) => (
-          <img key={sl.id ?? i} src={sl.image} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
+          <picture key={sl.id ?? i} style={{ display: 'contents' }}>
+            {sl.mobileImage && <source media="(max-width: 767px)" srcSet={sl.mobileImage} />}
+            <img src={sl.image} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
+          </picture>
         )) : <div className="absolute inset-0 bg-paper-deep animate-pulse" />}
 
         {/* Scrim for legible overlay text */}

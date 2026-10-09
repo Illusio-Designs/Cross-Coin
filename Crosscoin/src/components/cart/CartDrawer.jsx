@@ -777,8 +777,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
       setShowAddressForm(false);
       setEditingAddressId(null);
       setAddressForm(EMPTY_ADDR);
-    } catch {
-      showValidationErrorToast('Failed to save address. Please try again.');
+    } catch (err) {
+      showValidationErrorToast((err && typeof err.message === 'string' && err.message) || 'Failed to save address. Please try again.');
     } finally {
       setAddressSaving(false);
     }

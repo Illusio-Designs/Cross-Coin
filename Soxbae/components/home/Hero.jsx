@@ -28,8 +28,11 @@ export default function Hero({ features = [], slides = [] }) {
         <div className="sxh-stage">
           {hasSlides ? (
             slides.map((s, i) => (
-              <img key={i} src={s.image} alt={s.title || 'Soxbae'}
-                className={`sxh-img${i === current ? ' active' : ''}`} loading={i === 0 ? 'eager' : 'lazy'} />
+              <picture key={i} style={{ display: 'contents' }}>
+                {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
+                <img src={s.image} alt={s.title || 'Soxbae'}
+                  className={`sxh-img${i === current ? ' active' : ''}`} loading={i === 0 ? 'eager' : 'lazy'} />
+              </picture>
             ))
           ) : (
             <div className="sxh-ph" aria-hidden><Icon name="Footprints" size={90} /></div>

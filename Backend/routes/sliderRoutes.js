@@ -14,8 +14,8 @@ router.get('/listing',              etagMiddleware, getPublicSliders);
 // Admin
 router.get('/admin/all',            isAuthenticated, isProductManager, getAllSliders);
 router.get('/:id',                  getSliderById);
-router.post('/',                    isAuthenticated, isProductManager, upload.single('image'), createSlider);
-router.put('/:id',                  isAuthenticated, isProductManager, upload.single('image'), updateSlider);
+router.post('/',                    isAuthenticated, isProductManager, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), createSlider);
+router.put('/:id',                  isAuthenticated, isProductManager, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), updateSlider);
 router.delete('/:id',              isAuthenticated, isProductManager, deleteSlider);
 router.post('/:id/brands',         isAuthenticated, isProductManager, assignSliderToBrands);
 router.delete('/:id/brands/:brandId', isAuthenticated, isProductManager, removeSliderFromBrand);

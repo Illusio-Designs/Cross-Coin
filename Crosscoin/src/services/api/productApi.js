@@ -185,6 +185,7 @@ export const updateShippingAddress = async (id, addressData) => {
   try {
     const token = localStorage.getItem("token");
     const payload = {
+      full_name: addressData.fullName || undefined,
       address: addressData.address, landmark: addressData.landmark || null,
       city: addressData.city, state: addressData.state,
       postal_code: addressData.postalCode, country: addressData.country,
@@ -193,7 +194,8 @@ export const updateShippingAddress = async (id, addressData) => {
     const response = await axios.put(`${API_URL}/api/shipping-addresses/${id}`, payload, {
       headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
     });
-    return response.data;
+    // Unwrap like createShippingAddress so callers get the address itself.
+    return response.data.shippingAddress || response.data;
   } catch (error) { throw error.response?.data || error.message; }
 };
 

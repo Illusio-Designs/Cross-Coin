@@ -82,12 +82,22 @@ export default function MainPage({ seoData, initialData = {} }) {
     <SeoWrapper pageName="home" seoData={seoData}>
       {heroPreloadSrcSet && (
         <Head>
+          {firstSlide.mobileImage && (
+            <link
+              rel="preload"
+              as="image"
+              href={firstSlide.mobileImage}
+              media="(max-width: 767px)"
+              fetchPriority="high"
+            />
+          )}
           <link
             rel="preload"
             as="image"
             href={firstSlide.image}
             imageSrcSet={heroPreloadSrcSet}
             imageSizes="100vw"
+            media={firstSlide.mobileImage ? '(min-width: 768px)' : undefined}
             fetchPriority="high"
           />
         </Head>

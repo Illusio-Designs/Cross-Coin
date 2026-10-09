@@ -2189,6 +2189,18 @@ export const blogService = {
       throw error.response?.data || error.message;
     }
   },
+  uploadThumbnailImage: async (id, file) => {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await adminApi.post(`/api/blogs/admin/posts/${id}/thumbnail-image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 
   // Tags
   getAllTags: async () => {

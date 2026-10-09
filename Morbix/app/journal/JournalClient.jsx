@@ -54,8 +54,8 @@ export default function JournalClient() {
         {posts.map((p) => (
           <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
             <div className="blog-media">
-              {p.image
-                ? <img src={blogImg(p.image)} alt={p.title} loading="lazy" />
+              {(p.thumb || p.image)
+                ? <img src={blogImg(p.thumb || p.image)} alt={p.title} loading="lazy" />
                 : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
             </div>
             <div className="blog-body">

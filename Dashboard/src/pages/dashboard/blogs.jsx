@@ -116,6 +116,8 @@ export function Blogs() {
   const [catForm, setCatForm] = useState(EMPTY_CAT);
   const [heroPostId, setHeroPostId] = useState(null);
   const [heroFile, setHeroFile] = useState(null);
+  const [thumbFile, setThumbFile] = useState(null);
+  const [thumbPreview, setThumbPreview] = useState(null);
   const [heroPreview, setHeroPreview] = useState(null);
   const [tagInput, setTagInput] = useState('');
 
@@ -247,7 +249,13 @@ export function Blogs() {
   };
 
   // ── Hero image ─────────────────────────────────────────────────────────────
-  const openHeroModal = (id) => { setHeroPostId(id); setHeroFile(null); setHeroPreview(null); setHeroModal(true); };
+  const openHeroModal = (id) => { setHeroPostId(id); setHeroFile(null); setHeroPreview(null); setThumbFile(null); setThumbPreview(null); setHeroModal(true); };
+  const handleThumbFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setThumbFile(file);
+    setThumbPreview(URL.createObjectURL(file));
+  };
   const handleHeroFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -255,9 +263,12 @@ export function Blogs() {
     setHeroPreview(URL.createObjectURL(file));
   };
   const handleHeroUpload = async () => {
-    if (!heroFile) return;
+    if (!heroFile && !thumbFile) return;
     setLoading(true);
-    try { await blogService.uploadHeroImage(heroPostId, heroFile); showSuccess('updateSuccess'); setHeroModal(false); fetchAll(); }
+    try {
+      if (heroFile) await blogService.uploadHeroImage(heroPostId, heroFile);
+      if (thumbFile) await blogService.uploadThumbnailImage(heroPostId, thumbFile);
+      showSuccess('updateSuccess'); setHeroModal(false); fetchAll(); }
     catch { showError('saveFailed'); }
     finally { setLoading(false); }
   };
@@ -306,9 +317,9 @@ export function Blogs() {
   // ── Table columns ──────────────────────────────────────────────────────────
   const postColumns = [
     { header: '#', accessor: 'serial_number' },
-    { header: 'Title', accessor: 'title', cell: ({ title, hero_image }) => (
+    { header: 'Title', accessor: 'title', cell: ({ title, hero_image, thumbnail_image }) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {hero_image && <img src={hero_image} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />}
+        {(thumbnail_image || hero_image) && <img src={thumbnail_image || hero_image} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />}
         <span className="cat-name-cell">{title}</span>
       </div>
     )},
@@ -322,7 +333,7 @@ export function Blogs() {
     )},
     { header: 'Actions', accessor: 'actions', cell: ({ id }) => (
       <div className="sl-actions">
-        <button className="sl-btn-edit" title="Hero Image" onClick={() => openHeroModal(id)}>{IC.image}</button>
+        <button className="sl-btn-edit" title="Post Images (thumbnail + main)" onClick={() => openHeroModal(id)}>{IC.image}</button>
         <button className="sl-btn-edit" title="Edit" onClick={() => openEditPost(id)}>{IC.edit}</button>
         <button className="sl-btn-delete" title="Delete" onClick={() => handleDeletePost(id)}>{IC.trash}</button>
       </div>
@@ -570,21 +581,32 @@ export function Blogs() {
       </Modal>
 
       {/* ── Hero Image Modal ───────────────────────────────────────────────── */}
-      <Modal isOpen={heroModal} onClose={() => setHeroModal(false)} title="Upload Hero Image">
+      <Modal isOpen={heroModal} onClose={() => setHeroModal(false)} title="Post Images">
         <div className="modal-body">
           <Input
-            label="Select Image (JPEG, PNG, WebP)"
+            label="Thumbnail — cards and lists · 800 × 450 px (16:9)"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleThumbFileChange}
+          />
+          {thumbPreview && (
+            <img src={thumbPreview} alt="Thumbnail preview" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />
+          )}
+          <div style={{ height: 14 }} />
+          <Input
+            label="Main image — top of the article · 1920 × 1020 px"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleHeroFileChange}
           />
           {heroPreview && (
-            <img src={heroPreview} alt="Preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />
+            <img src={heroPreview} alt="Main image preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />
           )}
+          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>JPEG, PNG or WebP. Upload one or both. If a post has no thumbnail, cards use the main image.</p>
         </div>
         <div className="modal-footer">
           <Button variant="secondary" type="button" onClick={() => setHeroModal(false)}>Cancel</Button>
-          <Button variant="primary" type="button" onClick={handleHeroUpload} disabled={!heroFile || loading}>
+          <Button variant="primary" type="button" onClick={handleHeroUpload} disabled={(!heroFile && !thumbFile) || loading}>
             {loading ? 'Uploading...' : 'Upload'}
           </Button>
         </div>

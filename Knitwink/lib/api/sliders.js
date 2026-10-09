@@ -31,7 +31,7 @@ export async function getPublicSliders() {
     if (!res.ok) return [];
     const data = await res.json();
     const slides = data.sliders || data || [];
-    return slides.map((s) => ({ ...s, image: cleanUrl(s.image) || s.image }));
+    return slides.map((s) => ({ ...s, image: cleanUrl(s.image) || s.image, mobileImage: cleanUrl(s.mobileImage) || s.mobileImage || '' }));
   } catch {
     return [];
   }

@@ -32,14 +32,19 @@ const createAddressSchema = z.object({
   is_default: z.coerce.boolean().optional(),
 });
 
+// Storefront forms send '' for fields the customer didn't touch; treat that as
+// "unchanged" instead of failing the length/format rules.
+const blankToUndefined = (schema) => z.preprocess((v) => (v === '' ? undefined : v), schema);
+
 const updateAddressSchema = z.object({
-  address: z.string().trim().min(10).max(500).optional(),
+  full_name: blankToUndefined(z.string().trim().min(2).max(255).optional()),
+  address: blankToUndefined(z.string().trim().min(10, 'Address is too short (min 10 chars)').max(500).optional()),
   landmark: z.string().trim().max(255).optional().nullable(),
-  city: z.string().trim().min(2).max(100).optional(),
-  state: z.string().trim().min(2).max(100).optional(),
-  postal_code: schemas.indianPincode.optional(),
-  country: z.string().trim().max(100).optional(),
-  phone_number: schemas.indianPhone.optional(),
+  city: blankToUndefined(z.string().trim().min(2).max(100).optional()),
+  state: blankToUndefined(z.string().trim().min(2).max(100).optional()),
+  postal_code: blankToUndefined(schemas.indianPincode.optional()),
+  country: blankToUndefined(z.string().trim().max(100).optional()),
+  phone_number: blankToUndefined(schemas.indianPhone.optional()),
   is_default: z.coerce.boolean().optional(),
 });
 

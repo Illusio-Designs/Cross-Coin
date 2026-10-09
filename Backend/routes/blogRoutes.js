@@ -17,6 +17,7 @@ const {
     getPublicPostBySlug,
     getAllTags,
     uploadHeroImage,
+    uploadThumbnailImage,
 } = require('../controller/blogController.js');
 
 // Public routes (no auth required)
@@ -42,5 +43,7 @@ router.delete('/admin/posts/:id', deletePost);
 
 // Hero image upload
 router.post('/admin/posts/:id/hero-image', upload.single('image'), uploadHeroImage);
+// Thumbnail (cards / lists) upload
+router.post('/admin/posts/:id/thumbnail-image', upload.single('image'), uploadThumbnailImage);
 
 module.exports = router;

@@ -49,7 +49,8 @@ module.exports.createShippingAddress = async (req, res) => {
     if (!addrValidation.valid) {
       await transaction.rollback();
       return res.status(400).json({
-        message: 'Address has issues that will cause delivery failure',
+        // Name the exact problems so the customer knows what to fix.
+        message: addrValidation.errors.join('. '),
         errors: addrValidation.errors,
         warnings: addrValidation.warnings,
       });
@@ -223,6 +224,7 @@ module.exports.updateShippingAddress = async (req, res) => {
     const addressId = req.params.id;
     const userId = req.user.id;
     const {
+      full_name,
       address,
       landmark,
       city,
@@ -250,7 +252,7 @@ module.exports.updateShippingAddress = async (req, res) => {
     // ── Validate the final address values ─────────────────────────────────
     const { validateShippingAddress } = require('../services/shippingValidationService');
     const addrValidation = validateShippingAddress({
-      full_name: shippingAddress.full_name,
+      full_name: full_name || shippingAddress.full_name,
       address: address || shippingAddress.address,
       city: city || shippingAddress.city,
       state: state || shippingAddress.state,
@@ -284,6 +286,7 @@ module.exports.updateShippingAddress = async (req, res) => {
 
     // Update the address
     const updatePayload = {
+      full_name: full_name || shippingAddress.full_name,
       address: address || shippingAddress.address,
       landmark: landmark !== undefined ? landmark : shippingAddress.landmark,
       city: city || shippingAddress.city,
@@ -307,9 +310,30 @@ module.exports.updateShippingAddress = async (req, res) => {
     // Fetch the updated address
     const updatedAddress = await ShippingAddress.findByPk(addressId);
 
+    // Same shape as the create response (postal_code / phone_number aliases),
+    // so storefronts can use the reply directly as the selected address.
+    const responseAddress = {
+      id: updatedAddress.id,
+      user_id: updatedAddress.user_id,
+      full_name: updatedAddress.full_name,
+      address: updatedAddress.address,
+      landmark: updatedAddress.landmark,
+      city: updatedAddress.city,
+      state: updatedAddress.state,
+      postal_code: updatedAddress.pincode,
+      pincode: updatedAddress.pincode,
+      country: updatedAddress.country,
+      phone_number: updatedAddress.phone,
+      phone: updatedAddress.phone,
+      is_default: updatedAddress.is_default,
+      address_hash: updatedAddress.address_hash,
+      createdAt: updatedAddress.createdAt,
+      updatedAt: updatedAddress.updatedAt,
+    };
+
     res.json({
       message: "Shipping address updated successfully",
-      shippingAddress: updatedAddress,
+      shippingAddress: responseAddress,
     });
   } catch (error) {
     await transaction.rollback();
