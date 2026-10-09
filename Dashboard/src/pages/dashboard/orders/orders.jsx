@@ -106,6 +106,7 @@ const Orders = () => {
     const [cancelPrompt, setCancelPrompt] = useState(null);
     const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [deletePrompt, setDeletePrompt] = useState(null);
+    const [refundPrompt, setRefundPrompt] = useState(null);
     const [allOrdersStats, setAllOrdersStats] = useState({
         total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0,
         totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0,
@@ -390,6 +391,25 @@ const Orders = () => {
             }
             else { showError('saveFailed', result.message || 'Failed to cancel order'); }
         } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to cancel order'); }
+    };
+
+    const refundOrder = (orderId, orderNumber, amount) => {
+        setRefundPrompt({ orderId, orderNumber, amount });
+    };
+
+    const handleRefundConfirm = async () => {
+        const { orderId, orderNumber } = refundPrompt;
+        setRefundPrompt(null);
+        try {
+            const result = await orderService.refundOrder(orderId);
+            if (result.success) {
+                showSuccess('orderRefunded', `Refund processed for order ${orderNumber}`);
+                highlightRow(orderId);
+                fetchOrders(currentPage, { silent: true });
+                fetchAllOrdersForStats();
+            }
+            else { showError('saveFailed', result.message || 'Failed to process refund'); }
+        } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to process refund'); }
     };
 
     const deleteOrder = (orderId, orderNumber) => {
@@ -720,6 +740,14 @@ const Orders = () => {
                 // orders (shipped, delivered, cancelled…) never show it.
                 const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
                 const hasWaybill = !!(row.Shipment?.waybill || row.fship_waybill);
+                // Refund: a PREPAID order whose money is still owed to the customer
+                // (paid / refund_pending) and the order is in a refundable state
+                // (cancelled or returned). Covers refunding after a cancel that
+                // didn't auto-refund, and retrying a refund stuck at refund_pending.
+                const pmtStatus = (row.payment_status || '').toLowerCase();
+                const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
+                const refundableStatus = ['cancelled', 'order cancelled', 'return_initiated', 'returned_rto', 'rto delivered'].includes((row.status || '').toLowerCase());
+                const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmtStatus);
                 // Everything that isn't View + the one contextual button moves into
                 // the ⋯ menu, so the Actions column stays narrow.
                 const menu = [
@@ -727,6 +755,7 @@ const Orders = () => {
                     ...(pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
                     ...(hasWaybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Generate label', onClick: () => generateLabelForOrder(row.id) }] : []),
                     ...(canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
+                    ...(canRefund ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: pmtStatus === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
                     { icon: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />, label: 'Delete order', tone: 'danger', onClick: () => deleteOrder(row.id, row.order_number) },
                 ];
                 return (
@@ -796,6 +825,14 @@ const Orders = () => {
                 message={deletePrompt ? `Permanently DELETE order ${deletePrompt.orderNumber}? This removes the order and all its data and cannot be undone.` : null}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeletePrompt(null)}
+            />
+            <ConfirmModal
+                message={refundPrompt ? `Refund the full paid amount for order ${refundPrompt.orderNumber} to the customer via Razorpay? This cannot be undone.` : null}
+                title="Refund order"
+                confirmLabel="Refund customer"
+                tone="primary"
+                onConfirm={handleRefundConfirm}
+                onCancel={() => setRefundPrompt(null)}
             />
             <div className="dashboard-page">
                 {error && (

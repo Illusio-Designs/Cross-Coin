@@ -2364,6 +2364,37 @@
     }
   };
 
+  // Admin manual refund — refund a prepaid order's Razorpay payment (full by
+  // default). Used by the row "Refund" action, including to RETRY a refund that
+  // is stuck at refund_pending. Guards (payment must be paid/refund_pending, the
+  // order must be cancelled/returned) live in refundService.processRefund.
+  module.exports.adminRefundOrder = async (req, res) => {
+    try {
+      const { Payment } = require('../model/paymentModel.js');
+      const payment = await Payment.findOne({
+        where: { order_id: req.params.id, status: ['successful', 'completed', 'refund_pending'] },
+        order: [['createdAt', 'DESC']],
+      });
+      if (!payment) {
+        return res.status(400).json({ success: false, message: 'No refundable payment found for this order.' });
+      }
+      if (!payment.transaction_id || !payment.transaction_id.startsWith('pay_')) {
+        return res.status(400).json({ success: false, message: 'This order has no online (Razorpay) payment to refund.' });
+      }
+      const { processRefund } = require('../services/refundService.js');
+      const result = await processRefund({
+        paymentId: payment.id,
+        amount: req.body && req.body.amount != null ? parseFloat(req.body.amount) : null, // null = full refund
+        reason: (req.body && req.body.reason ? String(req.body.reason) : 'Refund issued by admin'),
+        adminId: req.user.id,
+        brandId: payment.brand_id || 1,
+      });
+      res.json({ success: true, message: 'Refund processed successfully', refund: result });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  };
+
   // Confirm order (admin) — triggers FShip sync
   module.exports.confirmOrder = async (req, res) => {
     try {

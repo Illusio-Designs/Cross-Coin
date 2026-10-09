@@ -44,8 +44,10 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       throw new Error('No Razorpay payment ID found — cannot process refund for COD orders');
     }
 
-    // Check refundable status
-    const REFUNDABLE_PAYMENT = ['paid', 'refund_pending'];
+    // Check refundable status. The payments table uses 'successful' (paid) and
+    // 'completed'; it has NO 'paid' value — the old list silently blocked every
+    // refund, so prepaid customers never got their money back.
+    const REFUNDABLE_PAYMENT = ['successful', 'completed', 'refund_pending'];
     if (!REFUNDABLE_PAYMENT.includes(payment.status)) {
       throw new Error(`Cannot refund payment in "${payment.status}" status`);
     }
@@ -155,8 +157,11 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
 async function autoRefundOnCancel(orderId, reason, adminId) {
   const { Payment } = require('../model/paymentModel.js');
 
+  // The paid payment row uses status 'successful' / 'completed' (NOT 'paid') and
+  // stores the Razorpay payment id (pay_…) in transaction_id. The old query used
+  // 'paid', matched nothing, and skipped every auto-refund.
   const payment = await Payment.findOne({
-    where: { order_id: orderId, status: 'paid' },
+    where: { order_id: orderId, status: ['successful', 'completed'] },
     order: [['createdAt', 'DESC']],
   });
 
