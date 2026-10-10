@@ -465,41 +465,54 @@ exports.sendReply = async (req, res) => {
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
-    const result = await whatsappService.sendTextMessage(conv.customer_phone, message.trim(), brandId, quotedWaMessageId || null);
-    if (result?.rate_limited) {
-      return res.status(429).json({ success: false, message: 'Hourly message limit reached for this customer (10/hour). Please try again later.' });
-    }
+    const text = message.trim();
 
-    // Find the DB id of the quoted message
+    // Resolve the quoted message's DB id (only when the agent is replying to one).
     let quotedMsgDbId = null;
     if (quotedWaMessageId) {
-      const quotedMsg = await WhatsappMessage.findOne({ where: { wa_message_id: quotedWaMessageId } });
+      const quotedMsg = await WhatsappMessage.findOne({ where: { wa_message_id: quotedWaMessageId }, attributes: ['id'] });
       quotedMsgDbId = quotedMsg?.id || null;
     }
 
+    // Save the row and respond BEFORE the Meta round-trip. Previously the response
+    // waited for the full send to Meta (0.5–2s), so the agent's bubble sat on the
+    // "sending" clock the whole time — the "send takes too long" complaint. Now the
+    // Meta send runs in the background and writes its result back to this same row:
+    // wa_message_id (so delivered/read webhooks can match it) on success, status
+    // 'failed' on error (retryable from the chat, like the WhatsApp app).
     const saved = await WhatsappMessage.create({
       conversation_id:   id,
-      wa_message_id:     result?.messages?.[0]?.id || null,
+      wa_message_id:     null,
       direction:         'outbound',
       type:              'text',
-      body:              message.trim(),
+      body:              text,
       quoted_message_id: quotedMsgDbId,
       status:            'sent',
       sent_at:           new Date(),
     });
 
-    // Respond immediately — the composer's optimistic bubble flips to "sent" the
-    // moment this returns. The conversation metadata (last message + the SLA
-    // first-response stamp) is updated in the background so it never delays the
-    // send. first_response_at is only stamped for genuine agent replies.
     res.json({ success: true, message: saved });
 
     setImmediate(async () => {
       try {
-        const convUpdate = { last_message: message.trim(), last_message_at: new Date() };
+        const result = await whatsappService.sendTextMessage(conv.customer_phone, text, brandId, quotedWaMessageId || null);
+        if (result?.rate_limited) {
+          await saved.update({ status: 'failed' }).catch(() => {});
+          logger.warn(`[WhatsApp] reply to ${conv.customer_phone} hit the hourly rate limit (10/hour) — marked failed`);
+          return;
+        }
+        // Store Meta's message id so sent/delivered/read status webhooks match this row.
+        const waId = result?.messages?.[0]?.id || null;
+        if (waId) await saved.update({ wa_message_id: waId }).catch(() => {});
+
+        // Conversation metadata + SLA first-response stamp (genuine agent reply).
+        const convUpdate = { last_message: text, last_message_at: new Date() };
         if (!conv.first_response_at) convUpdate.first_response_at = new Date();
-        await conv.update(convUpdate);
-      } catch (_) { /* best-effort metadata — never blocks the send */ }
+        await conv.update(convUpdate).catch(() => {});
+      } catch (err) {
+        await saved.update({ status: 'failed' }).catch(() => {});
+        logger.error(`[WhatsApp] background reply send failed for ${conv.customer_phone}: ${errMsg(err)}`);
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
