@@ -114,7 +114,9 @@ orderEmitter.on('order.shipped', async (order) => {
       await whatsappService.sendOrderShipped(addr.phone, {
         orderNumber: order.order_number,
         awbNumber: order.tracking_number,
-        trackingUrl: `https://crosscoin.in/OrderTracking?order=${order.order_number}`,
+        // No trackingUrl here: sendOrderShipped builds the brand's own tracking
+        // link from the Brand table. A hard-coded crosscoin.in URL was wrong for
+        // the other 6 brands and was ignored anyway.
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA shipped failed:', e.message));
     }
   } catch (e) { logger.error('[Event] order.shipped error:', e.message); }

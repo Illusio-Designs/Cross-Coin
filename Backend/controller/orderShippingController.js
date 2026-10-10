@@ -673,7 +673,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
             name,
             orderNumber: order.order_number,
             awbNumber: waybill || order.fship_waybill,
-            trackingUrl: order.tracking_url || `https://crosscoin.in/OrderTracking?order=${order.order_number}`
+            // trackingUrl omitted: sendOrderShipped builds the brand's own link.
           }, order.brand_id || 1);
         } else if (orderStatus === 'out for delivery') {
           await whatsappService.sendOutForDelivery(phone, {
@@ -1642,15 +1642,13 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
             const phone = addr?.phone;
             if (!phone) return;
             const name = (addr?.full_name || '').split(' ')[0] || 'there';
-            const trackingUrl = _notifyOrder.tracking_url
-              || `https://crosscoin.in/OrderTracking?order=${_notifyOrder.order_number}`;
 
             if (_notifyStatus === 'shipped' || _notifyStatus === 'in transit') {
               await whatsappSvc.sendOrderShipped(phone, {
                 name,
                 orderNumber: _notifyOrder.order_number,
                 awbNumber: _notifyOrder.fship_waybill || _notifyOrder.tracking_number,
-                trackingUrl,
+                // trackingUrl omitted: sendOrderShipped builds the brand's own link.
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'out for delivery') {
               await whatsappSvc.sendOutForDelivery(phone, {
