@@ -1050,6 +1050,12 @@ exports.receiveWebhook = async (req, res) => {
         if (change.field !== 'messages') continue;
         const value = change.value;
         for (const msg of (value.messages || [])) {
+         // Isolate each message: one bad row (e.g. a duplicate-key race on a Meta
+         // redelivery, or a malformed payload) must NOT abort the rest of the
+         // batch. We already returned 200, so Meta will never retry — an uncaught
+         // throw here would permanently drop every remaining message/status in
+         // this same webhook payload (silent inbound/status loss under load).
+         try {
           const phone       = msg.from;
           const waMessageId = msg.id;
           const sentAt      = new Date(parseInt(msg.timestamp) * 1000);
@@ -1263,8 +1269,14 @@ exports.receiveWebhook = async (req, res) => {
           if (trusted && msg.type === 'text' && !conv.awaiting_address_for) {
             setImmediate(() => handleAutoReply(phone, text, effectiveBrand).catch(() => {}));
           }
+         } catch (msgErr) {
+          logger.error(`[WhatsApp] webhook message handler error (${msg?.id || 'no-id'}): ${msgErr.message}`);
+         }
         }
         for (const status of (value.statuses || [])) {
+         // Isolate each status too — a throw here must not drop the remaining
+         // statuses (or any later entry/change) in this already-200'd payload.
+         try {
           // Meta status updates: sent → delivered → read. (first_response_at is
           // stamped when an AGENT sends a reply — see sendReply — not on the
           // delivery of automated notifications, so SLA stays meaningful.)
@@ -1291,6 +1303,9 @@ exports.receiveWebhook = async (req, res) => {
             }
             await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
           }
+         } catch (statusErr) {
+          logger.error(`[WhatsApp] webhook status handler error (${status?.id || 'no-id'}): ${statusErr.message}`);
+         }
         }
       }
     }

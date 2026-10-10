@@ -822,12 +822,11 @@
               );
               logger.debug(`createOrder: COD address confirmation WhatsApp sent for ${createdOrder.order_number}`);
             } else {
-              // Prepaid: send standard confirmation
-              await whatsappService.sendOrderConfirmation(addr.phone, {
-                name: (addr.full_name || '').split(' ')[0] || 'there',
-                orderNumber: createdOrder.order_number,
-                total: parseFloat(createdOrder.final_amount).toFixed(2),
-              }, createdOrder.brand_id || 1);
+              // Prepaid: do NOT send a confirmation here. At creation the order is
+              // still unpaid (awaiting_confirmation), so "Order Confirmed" would be
+              // premature — and it also DUPLICATED the message the order.confirmed
+              // event sends after payment succeeds. The event is now the single
+              // source of the prepaid confirmation. (See orderEvents.js.)
             }
           }
         } catch (waErr) {
@@ -1353,11 +1352,9 @@
               }, brandId);
               await Order.update({ cod_address_confirmed: false }, { where: { id: order.id } });
             } else {
-              await whatsappService.sendOrderConfirmation(addr.phone, {
-                name: (addr.full_name || '').split(' ')[0] || 'there',
-                orderNumber: createdOrder.order_number,
-                total: parseFloat(createdOrder.final_amount).toFixed(2),
-              }, brandId);
+              // Prepaid: the order.confirmed event (emitted above when the order is
+              // created as 'confirmed') sends the single "Order Confirmed" message.
+              // Sending it inline here too produced two identical confirmations.
             }
           }
         } catch (e) { logger.warn('[AdminManualOrder] WhatsApp failed:', e.message); }
