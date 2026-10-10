@@ -1379,10 +1379,20 @@ const startServer = async () => {
             );
             const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v3' LIMIT 1`);
             if (!done.length) {
-                const { reattributeBrands } = require('./controller/whatsappController.js');
-                const n = await reattributeBrands();
-                logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v3')`);
+                // Run OFF the boot critical path: reattributeBrands does an N+1 over
+                // every conversation plus un-indexable LIKE '%digits' scans that can
+                // take minutes on a large DB. Awaiting it here blocked startup. It is
+                // idempotent and sets its own flag on success, so detaching is safe.
+                setImmediate(async () => {
+                    try {
+                        const { reattributeBrands } = require('./controller/whatsappController.js');
+                        const n = await reattributeBrands();
+                        logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
+                        await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v3')`);
+                    } catch (err) {
+                        logger.error('WhatsApp brand backfill (background) failed: ' + err.message);
+                    }
+                });
             }
         } catch (err) {
             logger.error('WhatsApp brand backfill failed: ' + err.message);
@@ -1394,10 +1404,18 @@ const startServer = async () => {
         try {
             const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-name-backfill-v1' LIMIT 1`);
             if (!done.length) {
-                const { backfillCustomerNames } = require('./controller/whatsappController.js');
-                const n = await backfillCustomerNames();
-                logger.info(`✓ WhatsApp name backfill: named ${n} conversation(s)`);
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-name-backfill-v1')`);
+                // Same as the brand backfill above — detach from boot so the N+1 +
+                // LIKE scans don't delay startup. Idempotent + own flag.
+                setImmediate(async () => {
+                    try {
+                        const { backfillCustomerNames } = require('./controller/whatsappController.js');
+                        const n = await backfillCustomerNames();
+                        logger.info(`✓ WhatsApp name backfill: named ${n} conversation(s)`);
+                        await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-name-backfill-v1')`);
+                    } catch (err) {
+                        logger.error('WhatsApp name backfill (background) failed: ' + err.message);
+                    }
+                });
             }
         } catch (err) {
             logger.error('WhatsApp name backfill failed: ' + err.message);

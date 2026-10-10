@@ -2351,9 +2351,10 @@ export const whatsappService = {
     return response.data;
   },
 
-  getMessages: async (conversationId, before = null) => {
+  getMessages: async (conversationId, before = null, signal = undefined) => {
     const response = await adminApi.get(`/api/whatsapp/conversations/${conversationId}/messages`, {
       params: before ? { before } : {},
+      signal, // lets the caller abort a superseded fetch when the agent switches chats
     });
     return response.data;
   },

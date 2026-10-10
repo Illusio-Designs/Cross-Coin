@@ -919,7 +919,30 @@ async function sendPopupCoupon(phone, data, brandId = 1) {
 
 // ─── Broadcast: send template to a list of phones ────────────────────────────
 // Returns { sent, failed } counts
-async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, delayMs = 200) {
+// Resolve a requested template name to the EXACT name registered on Meta.
+// Broadcasts historically stored a BASE name (e.g. "popup_coupon") while the
+// real approved template is versioned ("popup_coupon_v2"); sending the base
+// name made Meta reject every message in the broadcast. This checks the brand's
+// live template list: it accepts the name as given (covers custom templates an
+// operator created directly on Meta), else the versioned form, and returns the
+// one that exists and is APPROVED — or null if neither is approved.
+async function resolveApprovedTemplateName(name, brandId = 1) {
+  if (!name) return null;
+  let list = [];
+  try {
+    const data = await listTemplates(brandId);
+    list = data?.data || [];
+  } catch (_) { return null; }
+  const approved = new Set(
+    list.filter(t => String(t.status).toUpperCase() === 'APPROVED').map(t => t.name)
+  );
+  if (approved.has(name)) return name;
+  const versioned = tName(name);
+  if (approved.has(versioned)) return versioned;
+  return null;
+}
+
+async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, delayMs = 200, onProgress = null) {
   let sent = 0; let failed = 0; let throttled = 0;
   for (let i = 0; i < phones.length; i++) {
     try {
@@ -934,6 +957,10 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
       logger.warn(`Broadcast failed for ${phones[i]}: ${metaError(err)}`);
       failed++;
     }
+    // Checkpoint progress periodically so a long broadcast's sent/failed counts
+    // are visible in the dashboard as it runs (and survive a mid-run crash as a
+    // partial count rather than showing zero).
+    if (onProgress && (i % 25 === 24)) { try { await onProgress(sent, failed); } catch (_) {} }
     // Throttle to avoid Meta rate limits (5 msg/sec safe limit)
     if (delayMs > 0 && i < phones.length - 1) {
       await new Promise(r => setTimeout(r, delayMs));
@@ -1146,6 +1173,7 @@ module.exports = {
   sendPostPurchaseUpsell,
   sendPopupCoupon,
   sendBroadcast,
+  resolveApprovedTemplateName,
   // Catalogue & product
   sendProductCard,
   sendCatalogueMessage,

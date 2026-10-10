@@ -697,6 +697,10 @@ exports.customerContact = async (req, res) => {
     const customerText = String(message).trim().slice(0, 1000); // cap stored length
 
     // FIXED acknowledgement — no caller content echoed to the recipient.
+    // Brand is required locally here: it is NOT imported at module scope, so the
+    // previous bare `Brand.findByPk` threw ReferenceError (swallowed by the
+    // catch) and every brand's widget reply fell back to the generic "our team".
+    const Brand = require('../model/brandModel.js');
     let storeName = 'our team';
     try { const b = await Brand.findByPk(brandId); storeName = b?.display_name || b?.name || storeName; } catch (_) {}
     const ackText = `Hi${name && String(name).trim() ? ' ' + String(name).trim().slice(0, 40) : ''}! 👋 Thanks for reaching out to ${storeName}. We've received your message and our team will reply here shortly.`;
@@ -1502,8 +1506,16 @@ exports.createBroadcast = async (req, res) => {
   try {
     const { brandId = 1, name, templateName, audienceFilter, scheduledAt } = req.body;
     if (!name || !templateName) return res.status(400).json({ success: false, message: 'name and templateName are required' });
+    // Validate the template against Meta's approved list and store the EXACT name
+    // Meta knows (e.g. "popup_coupon" → "popup_coupon_v2"). sendBroadcast does NOT
+    // apply the version suffix, so storing a base/unapproved name here would make
+    // Meta reject every message in the broadcast.
+    const resolvedTemplate = await whatsappService.resolveApprovedTemplateName(templateName, brandId);
+    if (!resolvedTemplate) {
+      return res.status(400).json({ success: false, message: `"${templateName}" is not an approved WhatsApp template for this brand. Pick one from the Templates list.` });
+    }
     const row = await WhatsappBroadcast.create({
-      brand_id: brandId, name, template_name: templateName,
+      brand_id: brandId, name, template_name: resolvedTemplate,
       audience_filter: audienceFilter ? JSON.stringify(audienceFilter) : null,
       scheduled_at: scheduledAt || null,
       created_by: req.user?.id || null,
@@ -1541,7 +1553,10 @@ exports.runBroadcast = async (req, res) => {
 
         await broadcast.update({ total_recipients: phones.length });
 
-        const { sent, failed } = await whatsappService.sendBroadcast(phones, broadcast.template_name, paramsArray, broadcast.brand_id);
+        // Checkpoint sent/failed as it runs so the dashboard shows live progress
+        // and a mid-run crash leaves a partial count instead of zero.
+        const onProgress = (s, f) => broadcast.update({ sent_count: s, failed_count: f }).catch(() => {});
+        const { sent, failed } = await whatsappService.sendBroadcast(phones, broadcast.template_name, paramsArray, broadcast.brand_id, 200, onProgress);
         await broadcast.update({ status: 'done', sent_count: sent, failed_count: failed, completed_at: new Date() });
         logger.info(`Broadcast ${broadcast.id} done: ${sent} sent, ${failed} failed`);
       } catch (err) {
