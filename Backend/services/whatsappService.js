@@ -113,8 +113,38 @@ async function getCredentials(brandId = 1) {
 }
 
 // Brand display name for the {{brand}} template parameter (shared number).
+// Read the Brand table FIRST (display_name / name). The STORE_NAME setting was
+// not filled in for most brands, and settingsHelper falls back to the GLOBAL
+// env STORE_NAME (CrossCoin's) before its literal default — so every brand
+// without its own row showed "Cross Coin". The Brand table always has the real
+// name. (Same fix the order.created push alert already uses.)
 async function _brandName(brandId) {
+  try {
+    const Brand = require('../model/brandModel.js');
+    const b = await Brand.findByPk(brandId, { attributes: ['display_name', 'name'] });
+    const n = b && (b.display_name || b.name);
+    if (n) return n;
+  } catch (_) { /* fall through to the setting */ }
   return (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+}
+
+// The brand's OWN in-site order-tracking link. The domain comes from the Brand
+// table (then STORE_URL, then crosscoin.in). The path differs by storefront:
+// Crosscoin uses /OrderTracking, every other brand uses /track-order. Both read
+// the order number from ?order=, so the link opens pre-filled. This replaces the
+// old hard-coded crosscoin.in/OrderTracking link that was wrong for every other
+// brand (wrong domain AND wrong path).
+async function _trackingUrl(brandId, orderNumber) {
+  let domain = '';
+  try {
+    const Brand = require('../model/brandModel.js');
+    const b = await Brand.findByPk(brandId, { attributes: ['domain'] });
+    domain = String((b && b.domain) || '').trim();
+  } catch (_) { /* fall through */ }
+  if (!domain) domain = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  domain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const path = /crosscoin/i.test(domain) ? '/OrderTracking' : '/track-order';
+  return `https://${domain}${path}?order=${encodeURIComponent(orderNumber)}`;
 }
 
 // Invalidate the credentials cache so an updated WhatsApp token/phone id takes
@@ -705,13 +735,15 @@ async function sendAddressRequest(phone, data, brandId = 1) {
 }
 
 async function sendOrderShipped(phone, data, brandId = 1) {
-  const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  // Always use the brand's own in-site tracking page (ignore any caller-passed
+  // crosscoin.in link) so a Soxbae customer gets a soxbae.in/track-order link.
+  const trackingUrl = await _trackingUrl(brandId, data.orderNumber);
   return sendTemplate(phone, tName('order_shipped'), [
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
     data.awbNumber || 'N/A',
-    data.trackingUrl || `https://${storeUrl}/OrderTracking?order=${encodeURIComponent(data.orderNumber)}`,
+    trackingUrl,
   ], brandId);
 }
 
