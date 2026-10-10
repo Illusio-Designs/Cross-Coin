@@ -126,9 +126,10 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
         const addr = await ShippingAddress.findByPk(order.shipping_address_id);
         if (addr?.phone) {
           await whatsappService.sendRefundProcessed(addr.phone, {
+            name: (addr.full_name || '').split(' ')[0] || 'there',
             orderNumber: order.order_number,
             amount: refundAmount.toFixed(2),
-            method: 'Original Payment Method',
+            paymentMethod: 'Original Payment Method',
           }, brandId);
         }
       } catch (e) { logger.warn('WhatsApp refund notification failed:', e.message); }
