@@ -1277,39 +1277,57 @@ exports.receiveWebhook = async (req, res) => {
           logger.error(`[WhatsApp] webhook message handler error (${msg?.id || 'no-id'}): ${msgErr.message}`);
          }
         }
-        for (const status of (value.statuses || [])) {
-         // Isolate each status too — a throw here must not drop the remaining
-         // statuses (or any later entry/change) in this already-200'd payload.
-         try {
-          // Meta status updates: sent → delivered → read. (first_response_at is
-          // stamped when an AGENT sends a reply — see sendReply — not on the
-          // delivery of automated notifications, so SLA stays meaningful.)
-          //
-          // Apply monotonically: Meta can deliver `read` and then a delayed
-          // `delivered` for the same message. Only advance the stored status,
-          // never regress it (which would skew the delivered/read stats), while
-          // `failed` always wins (terminal error).
+        // Meta status updates: sent → delivered → read. (first_response_at is
+        // stamped when an AGENT sends a reply — see sendReply — not on the
+        // delivery of automated notifications, so SLA stays meaningful.)
+        //
+        // Apply monotonically: Meta can deliver `read` and then a delayed
+        // `delivered` for the same message. Only advance the stored status,
+        // never regress it (which would skew the delivered/read stats), while
+        // `failed` always wins (terminal error).
+        //
+        // Batch the reads: Meta packs many status updates into one webhook, so
+        // load every referenced message in a single IN(...) query instead of a
+        // findOne per status (was N serial round-trips per webhook under volume).
+        const statuses = value.statuses || [];
+        if (statuses.length) {
           const RANK = { received: 0, sent: 1, delivered: 2, read: 3 };
-          const existing = await WhatsappMessage.findOne({ where: { wa_message_id: status.id }, attributes: ['id', 'status'] });
-          if (!existing) continue;
-          const cur = existing.status;
-          const next = status.status;
-          let shouldApply;
-          if (cur === 'failed') shouldApply = false;              // failed is terminal
-          else if (next === 'failed') shouldApply = true;         // a failure always wins
-          else shouldApply = (RANK[next] ?? -1) > (RANK[cur] ?? -1); // otherwise only advance
-          if (shouldApply) {
-            // Log WHY a send failed so it's diagnosable (kept out of `body` so
-            // the agent's original text is never clobbered).
-            if (next === 'failed' && Array.isArray(status.errors) && status.errors.length) {
-              const e = status.errors[0];
-              logger.warn(`[WhatsApp] message ${status.id} failed: ${(e.title || e.message || 'error')}${e.code ? ' (code ' + e.code + ')' : ''}`);
+          let byWaId = new Map();
+          try {
+            const ids = [...new Set(statuses.map(s => s.id).filter(Boolean))];
+            if (ids.length) {
+              const rows = await WhatsappMessage.findAll({ where: { wa_message_id: ids }, attributes: ['id', 'wa_message_id', 'status'] });
+              byWaId = new Map(rows.map(r => [r.wa_message_id, { id: r.id, status: r.status }]));
             }
-            await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
+          } catch (e) {
+            logger.error(`[WhatsApp] webhook status batch-read error: ${e.message}`);
           }
-         } catch (statusErr) {
-          logger.error(`[WhatsApp] webhook status handler error (${status?.id || 'no-id'}): ${statusErr.message}`);
-         }
+          for (const status of statuses) {
+            // Isolate each status — a throw must not drop the rest of this
+            // already-200'd payload.
+            try {
+              const existing = byWaId.get(status.id);
+              if (!existing) continue;
+              const cur = existing.status;
+              const next = status.status;
+              let shouldApply;
+              if (cur === 'failed') shouldApply = false;              // failed is terminal
+              else if (next === 'failed') shouldApply = true;         // a failure always wins
+              else shouldApply = (RANK[next] ?? -1) > (RANK[cur] ?? -1); // otherwise only advance
+              if (shouldApply) {
+                // Log WHY a send failed so it's diagnosable (kept out of `body`
+                // so the agent's original text is never clobbered).
+                if (next === 'failed' && Array.isArray(status.errors) && status.errors.length) {
+                  const e = status.errors[0];
+                  logger.warn(`[WhatsApp] message ${status.id} failed: ${(e.title || e.message || 'error')}${e.code ? ' (code ' + e.code + ')' : ''}`);
+                }
+                await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
+                existing.status = next; // keep the map current if the same id recurs in this batch
+              }
+            } catch (statusErr) {
+              logger.error(`[WhatsApp] webhook status handler error (${status?.id || 'no-id'}): ${statusErr.message}`);
+            }
+          }
         }
       }
     }
@@ -1924,10 +1942,12 @@ exports.proxyMedia = async (req, res) => {
     const cacheKey = waMediaCacheKey(decoded);
     const paths = waMediaCachePaths(cacheKey);
     try {
-      const stat = _mediaFs.statSync(paths.bin);
+      // Async fs so a cache hit never blocks the event loop on disk I/O under
+      // concurrent media loads (was statSync + readFileSync on the request thread).
+      const stat = await _mediaFs.promises.stat(paths.bin);
       if (stat.size > 0) {
         let ct = 'application/octet-stream';
-        try { ct = _mediaFs.readFileSync(paths.ct, 'utf8') || ct; } catch (_) {}
+        try { ct = (await _mediaFs.promises.readFile(paths.ct, 'utf8')) || ct; } catch (_) {}
         res.setHeader('Content-Type', ct);
         res.setHeader('Cache-Control', 'private, max-age=86400');
         res.setHeader('Access-Control-Allow-Origin', '*');
