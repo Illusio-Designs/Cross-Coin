@@ -58,7 +58,13 @@ orderEmitter.on('order.confirmed', async (order) => {
     const whatsappService = require('./whatsappService.js');
     const { ShippingAddress } = require('../model/shippingAddressModel.js');
     const addr = await ShippingAddress.findByPk(order.shipping_address_id);
-    if (addr?.phone) {
+    // Only PREPAID orders get the generic "Order Confirmed" message here. A COD
+    // order already received its single message — the address-confirmation
+    // template (sendCodConfirmation) — at creation time; sending this prepaid
+    // confirmation on top of it (when the customer taps "Confirm Address" and
+    // order.confirmed fires) was a second, duplicate message.
+    const isCod = String(order.payment_type || '').toLowerCase() === 'cod';
+    if (addr?.phone && !isCod) {
       await whatsappService.sendOrderConfirmation(addr.phone, {
         name: (addr.full_name || '').split(' ')[0] || 'there',
         orderNumber: order.order_number,

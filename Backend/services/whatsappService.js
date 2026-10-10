@@ -17,6 +17,16 @@ const WA_HTTP = axios.create({
   timeout: 20000,
 });
 
+// Separate client for media upload/download: large files legitimately take
+// longer than a text/template send, so it gets a wider (but still finite)
+// timeout. Without this, media calls used the default axios with NO timeout —
+// a stalled Meta/CDN stream would pin the request open forever and tie up a
+// worker. keepAlive is shared so the TLS connection is reused.
+const WA_HTTP_MEDIA = axios.create({
+  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 32 }),
+  timeout: 60000,
+});
+
 // POST to Meta with a conservative retry. We ONLY retry pre-flight connection
 // failures (DNS / refused / reset-on-connect) where the request provably never
 // reached Meta — never on a timeout or a 5xx, because a WhatsApp send is NOT
@@ -163,7 +173,7 @@ function authHeader(token) {
 // Meta webhook gives us a media ID. We need to call the API to get the real URL.
 async function getMediaUrl(mediaId, brandId = 1) {
   const { token } = await getCredentials(brandId);
-  const res = await axios.get(
+  const res = await WA_HTTP.get(
     `${GRAPH_API_URL}/${mediaId}`,
     { headers: authHeader(token) }
   );
@@ -173,7 +183,7 @@ async function getMediaUrl(mediaId, brandId = 1) {
 // ─── Download media bytes from Meta (for proxying to browser) ────────────────
 async function downloadMedia(mediaUrl, brandId = 1) {
   const { token } = await getCredentials(brandId);
-  const res = await axios.get(mediaUrl, {
+  const res = await WA_HTTP_MEDIA.get(mediaUrl, {
     headers: { Authorization: 'Bearer ' + token },
     responseType: 'stream',
   });
@@ -197,7 +207,7 @@ async function uploadMedia(buffer, mimeType, filename, brandId = 1) {
   form.append('messaging_product', 'whatsapp');
   form.append('type', mimeType || 'application/octet-stream');
   form.append('file', buffer, { filename: filename || 'file', contentType: mimeType || 'application/octet-stream' });
-  const res = await axios.post(`${GRAPH_API_URL}/${phoneNumberId}/media`, form, {
+  const res = await WA_HTTP_MEDIA.post(`${GRAPH_API_URL}/${phoneNumberId}/media`, form, {
     headers: { ...form.getHeaders(), Authorization: 'Bearer ' + token },
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
@@ -214,7 +224,7 @@ async function sendImageLink(to, imageLink, caption, brandId = 1) {
   const image = { link: imageLink };
   if (caption) image.caption = caption;
   const payload = { messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type: 'image', image };
-  const res = await axios.post(`${GRAPH_API_URL}/${phoneNumberId}/messages`, payload, { headers: authHeader(token) });
+  const res = await WA_HTTP.post(`${GRAPH_API_URL}/${phoneNumberId}/messages`, payload, { headers: authHeader(token) });
   return res.data;
 }
 
@@ -227,7 +237,7 @@ async function sendMediaMessage(to, { mediaId, kind, caption, filename }, brandI
   if (caption && kind !== 'audio') obj.caption = caption;
   if (kind === 'document' && filename) obj.filename = filename;
   const payload = { messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type: kind, [kind]: obj };
-  const res = await axios.post(`${GRAPH_API_URL}/${phoneNumberId}/messages`, payload, { headers: authHeader(token) });
+  const res = await WA_HTTP.post(`${GRAPH_API_URL}/${phoneNumberId}/messages`, payload, { headers: authHeader(token) });
   return res.data;
 }
 
@@ -253,7 +263,7 @@ async function listTemplates(brandId = 1, { force = false } = {}) {
   if (!force && hit && hit.expires > now) return hit.data;
 
   const { token, businessAccountId } = await getCredentials(brandId);
-  const res = await axios.get(
+  const res = await WA_HTTP.get(
     `${GRAPH_API_URL}/${businessAccountId}/message_templates?limit=100&fields=name,status,category,language,components,rejected_reason,quality_score`,
     { headers: authHeader(token) }
   );
@@ -269,7 +279,7 @@ async function createTemplate(tplData, brandId = 1) {
     language:   tplData.language || 'en',
     components: tplData.components,
   };
-  const res = await axios.post(
+  const res = await WA_HTTP.post(
     `${GRAPH_API_URL}/${businessAccountId}/message_templates`,
     payload,
     { headers: authHeader(token) }
@@ -280,7 +290,7 @@ async function createTemplate(tplData, brandId = 1) {
 
 async function deleteTemplate(name, brandId = 1) {
   const { token, businessAccountId } = await getCredentials(brandId);
-  const res = await axios.delete(
+  const res = await WA_HTTP.delete(
     `${GRAPH_API_URL}/${businessAccountId}/message_templates?name=${encodeURIComponent(name)}`,
     { headers: authHeader(token) }
   );
@@ -687,7 +697,7 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1) {
     ? [{ type: 'body', parameters: bodyParams.map(p => ({ type: 'text', text: String(p) })) }]
     : [];
 
-  const res = await axios.post(
+  const res = await waPostWithRetry(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     {
       messaging_product: 'whatsapp',
@@ -805,7 +815,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
   // Build template with body params + Quick Reply button payloads keyed to the order number.
   // When customer taps "Confirm Address" → webhook receives payload "confirm_cod_<orderNumber>"
   // When customer taps "Wrong Address"   → webhook receives payload "reject_cod_<orderNumber>"
-  const res = await axios.post(
+  const res = await WA_HTTP.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     {
       messaging_product: 'whatsapp',
@@ -943,7 +953,7 @@ async function sendProductCard(phone, retailerId, brandId = 1) {
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const res = await axios.post(
+  const res = await WA_HTTP.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     {
       messaging_product: 'whatsapp',
@@ -987,7 +997,7 @@ async function sendCatalogueMessage(phone, retailerIds, opts = {}, brandId = 1) 
     });
   }
 
-  const res = await axios.post(
+  const res = await WA_HTTP.post(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
     {
       messaging_product: 'whatsapp',
@@ -1075,7 +1085,7 @@ async function syncProductsToCatalog(brandId = 1) {
         };
 
         // Add product to catalog via product feed
-        await axios.post(
+        await WA_HTTP.post(
           `${GRAPH_API_URL}/${catalogId}/products`,
           productData,
           { headers: authHeader(token) }
