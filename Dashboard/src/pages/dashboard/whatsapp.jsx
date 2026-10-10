@@ -748,6 +748,10 @@ export function WhatsAppManager() {
   // so a slow response for a chat they've navigated away from can't overwrite
   // the chat now on screen.
   const openReqRef = useRef(null);
+  // Holds the AbortController for the in-flight open-chat fetch, so switching
+  // chats cancels the previous request instead of leaving it to occupy one of
+  // the browser's ~6 connections until it completes (requests were stacking).
+  const msgAbortRef = useRef(null);
   // Per-conversation message cache — reopening a chat shows instantly while we
   // refresh in the background, so the spinner only appears on a true first load.
   // Bounded (LRU) so a long shift opening hundreds of chats doesn't keep every
@@ -986,6 +990,11 @@ export function WhatsAppManager() {
   const prefetchingRef = useRef(new Set());
   const prefetchMessages = (conv) => {
     if (!conv || messagesCacheRef.current.has(conv.id) || prefetchingRef.current.has(conv.id)) return;
+    // Cap concurrent hover-prefetches: sweeping the mouse down the list used to
+    // fire a full 40-row fetch per row, saturating the browser's connection
+    // budget and starving the real open-chat fetch. Beyond 2 in flight we skip —
+    // the chat still loads on actual click.
+    if (prefetchingRef.current.size >= 2) return;
     prefetchingRef.current.add(conv.id);
     whatsappService.getMessages(conv.id)
       .then(data => { if (data?.success) touchMsgCache(conv.id, data.messages || []); })
@@ -998,6 +1007,11 @@ export function WhatsAppManager() {
     // before this request resolves, the stale response is ignored instead of
     // overwriting the newer chat's thread (the "wrong chat shows A's messages" bug).
     openReqRef.current = conv.id;
+    // Cancel the previous chat's in-flight fetch so it stops occupying a
+    // connection the moment the agent switches away.
+    if (msgAbortRef.current) { try { msgAbortRef.current.abort(); } catch (_) {} }
+    const ac = new AbortController();
+    msgAbortRef.current = ac;
     setActiveConv(conv);
     // Switching chats: clear the draft, the reply-quote and the notes box so they
     // never carry over to a different conversation; seed the saved note for this one.
@@ -1015,7 +1029,7 @@ export function WhatsAppManager() {
       setMsgLoading(true);
     }
     try {
-      const data = await whatsappService.getMessages(conv.id);
+      const data = await whatsappService.getMessages(conv.id, null, ac.signal);
       if (openReqRef.current !== conv.id) return; // user switched away — drop stale response
       if (data.success) {
         const msgs = data.messages || [];
@@ -1029,6 +1043,8 @@ export function WhatsAppManager() {
         showError('loadingFailed', 'Failed to load messages');
       }
     } catch (err) {
+      // A cancel from switching chats is expected — never surface it as an error.
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return;
       if (openReqRef.current !== conv.id) return;
       if (!cached) {
         setMessages([]); setHasMoreMsgs(false);
