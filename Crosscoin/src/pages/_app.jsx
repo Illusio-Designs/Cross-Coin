@@ -101,6 +101,7 @@ import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
 import WhatsAppChat from "../components/common/WhatsAppChat";
 import PhonePopupModal from "../components/common/PhonePopupModal";
+import ExitIntentModal from "../components/common/ExitIntentModal";
 import "../styles/components/PhonePopupModal.css";
 import ConsentSpeedInsights from "../components/common/ConsentSpeedInsights";
 import CookieBanner from "../components/ui/CookieBanner";
@@ -176,6 +177,7 @@ function AppContent({ Component, pageProps, progressRef }) {
         </button>
       )}
       {hasMounted && <WhatsAppChat />}
+      <ExitIntentModal />
     </>
   );
 }

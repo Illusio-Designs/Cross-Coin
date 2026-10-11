@@ -12,6 +12,7 @@ import Analytics from '@/components/layout/Analytics';
 import HeaderShell from '@/components/layout/HeaderShell';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import ExitIntentModal from '@/components/cart/ExitIntentModal';
 import SearchOverlay from '@/components/layout/SearchOverlay';
 import CookieBanner from '@/components/ui/CookieBanner';
 import ScrollToTop from '@/components/ui/ScrollToTop';
@@ -109,6 +110,7 @@ export default function RootLayout({ children }) {
               <main id="main">{children}</main>
               <Footer />
               <CartDrawer />
+              <ExitIntentModal />
               <SearchOverlay />
               <CookieBanner />
               <ScrollToTop />

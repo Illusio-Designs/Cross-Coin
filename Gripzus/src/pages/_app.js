@@ -10,6 +10,7 @@ import { WishlistProvider } from '../context/WishlistContext'
 import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import CartDrawer from '../components/cart/CartDrawer'
+import ExitIntentModal from '../components/cart/ExitIntentModal'
 import ToastViewport from '../components/ui/ToastViewport'
 import WhatsAppChat from '../components/ui/WhatsAppChat'
 import BackToTop from '../components/ui/BackToTop'
@@ -39,6 +40,7 @@ function MyApp({ Component, pageProps }) {
               <Footer />
             </div>
             <CartDrawer />
+            <ExitIntentModal />
             <ToastViewport />
             <WhatsAppChat />
             <BackToTop />

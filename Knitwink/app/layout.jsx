@@ -13,6 +13,7 @@ import { BackToTop } from '@/components/ui/BackToTop';
 import { WhatsAppChat } from '@/components/ui/WhatsAppChat';
 import { WishlistHydrator } from '@/components/ui/WishlistHydrator';
 import CartDrawerMount from '@/components/cart/CartDrawerMount';
+import ExitIntentModal from '@/components/cart/ExitIntentModal';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import ClientProviders from '@/components/layout/ClientProviders';
@@ -125,6 +126,7 @@ export default function RootLayout({ children }) {
               <Breadcrumb />
               <MobileMenu />
               <CartDrawerMount />
+              <ExitIntentModal />
               <main id="main" className="flex-1 pb-1">
                 {children}
               </main>
