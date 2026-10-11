@@ -189,7 +189,9 @@ function reviewsPayload(data) {
 // Brand-wide reviews for the home page.
 export async function getStoreReviews(revalidate) {
   try {
-    return reviewsPayload(await brandFetch('/api/reviews/all', revalidate ?? 300));
+    // Home testimonials marquee only shows a handful; cap at 20 (exact total
+    // still comes from pagination.total inside reviewsPayload).
+    return reviewsPayload(await brandFetch('/api/reviews/all?limit=20', revalidate ?? 300));
   } catch { return { reviews: [], total: 0 }; }
 }
 

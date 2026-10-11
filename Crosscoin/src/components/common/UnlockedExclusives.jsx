@@ -19,6 +19,10 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
   const dragRef = useRef({ dragging: false, startX: 0, startOffset: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
+  // Cache review stats per product id so switching back to a product we've
+  // already looked at doesn't refire the /api/reviews/product request.
+  const reviewStatsCacheRef = useRef(new Map());
+
   const VISIBLE_CARDS = 3;
   const CARD_WIDTH = 100;
   const GAP = 10;
@@ -28,17 +32,33 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
     if (!products || products.length === 0) return;
     const prod = products[currentProduct];
     if (!prod?.id) return;
+
+    // Serve from the per-product cache if we've already fetched this product.
+    const cached = reviewStatsCacheRef.current.get(prod.id);
+    if (cached) {
+      setReviewCount(cached.total);
+      setAvgRating(cached.avg);
+      return;
+    }
+
     setReviewCount(0);
     setAvgRating(null);
-    getPublicProductReviews(prod.id, { limit: 100 })
+    // Only the count + average are displayed, both available as aggregates
+    // (pagination.total / stats.average), so fetch a single row instead of 100.
+    getPublicProductReviews(prod.id, { limit: 1 })
       .then(data => {
         // Handle all possible response shapes
         const reviews = data?.data?.reviews || data?.reviews || (Array.isArray(data) ? data : []);
-        const count = reviews.length;
-        const avg = count > 0
-          ? parseFloat((reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / count).toFixed(1))
-          : null;
-        setReviewCount(count);
+        const listCount = Array.isArray(reviews) ? reviews.length : 0;
+        const total = Math.max(Number(data?.pagination?.total ?? data?.stats?.total) || 0, listCount);
+        const statAvg = Number(data?.stats?.average) || 0;
+        const avg = statAvg > 0
+          ? parseFloat(statAvg.toFixed(1))
+          : (listCount > 0
+            ? parseFloat((reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / listCount).toFixed(1))
+            : null);
+        reviewStatsCacheRef.current.set(prod.id, { avg, total });
+        setReviewCount(total);
         setAvgRating(avg);
       })
       .catch(() => {});

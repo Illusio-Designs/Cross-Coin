@@ -19,10 +19,11 @@ const ITEMS = [
   { title: 'COD available',    note: 'Pay cash on delivery.' },
 ];
 
-export default function TrustStrip() {
-  const [rating, setRating] = useState(null);
+export default function TrustStrip({ rating: ratingProp = null }) {
+  const [rating, setRating] = useState(ratingProp);
 
   useEffect(() => {
+    if (ratingProp) return; // parent supplied the rating — don't refetch
     let active = true;
     getAllReviewsWithTotal()
       .then(({ reviews, total }) => {
@@ -32,7 +33,7 @@ export default function TrustStrip() {
       })
       .catch(() => {});
     return () => { active = false; };
-  }, []);
+  }, [ratingProp]);
 
   return (
     <section className="border-t border-line">

@@ -541,86 +541,88 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 </div>
               ))}
             </div>
+          </section>
+        </div>
 
-            <div className="h-px bg-[var(--border)] mt-2" />
+        {/* ═══════════════ FULL-WIDTH LONG-FORM CONTENT ═══════════════ */}
+        <div className="mt-16 md:mt-24 flex flex-col gap-8">
 
-            {/* ── Description ─────────────────────────────────── */}
-            <div>
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Description</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-4">About this fragrance</h2>
-              <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
-                {product.description || 'No description available for this product.'}
-              </p>
-            </div>
+          {/* ── Description ─────────────────────────────────── */}
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Description</p>
+            <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-4">About this fragrance</h2>
+            <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
+              {product.description || 'No description available for this product.'}
+            </p>
+          </div>
 
-            <div className="h-px bg-[var(--border)]" />
+          <div className="h-px bg-[var(--border)]" />
 
-            {/* ── Details ────────────────────────────────────── */}
-            <div>
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Details</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-                {selectedSize || selectedColor
-                  ? <>The <em className="not-italic gold-text">{[selectedSize, selectedColor].filter(Boolean).join(' · ')}</em> spec</>
-                  : 'Specifications'}
-              </h2>
+          {/* ── Details ────────────────────────────────────── */}
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Details</p>
+            <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
+              {selectedSize || selectedColor
+                ? <>The <em className="not-italic gold-text">{[selectedSize, selectedColor].filter(Boolean).join(' · ')}</em> spec</>
+                : 'Specifications'}
+            </h2>
 
-              {variationDetails.length > 0 ? (
-                <dl className="bg-white border border-[var(--border)] divide-y divide-[var(--border)] overflow-hidden">
-                  {variationDetails.map(([label, value]) => (
-                    <div key={label} className="grid grid-cols-3 gap-4 px-5 py-3.5">
-                      <dt className="text-[10px] tracking-[0.25em] uppercase text-[var(--ink-muted)] font-body self-center">
-                        {label}
-                      </dt>
-                      <dd className="col-span-2 text-[var(--ink)] text-sm font-body self-center">
-                        {value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="text-[var(--ink-muted)] text-sm font-body">No additional details available.</p>
-              )}
-            </div>
-
-            <div className="h-px bg-[var(--border)]" />
-
-            {/* ── Fragrance notes pyramid ────────────────────── */}
-            <div>
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Composition</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-                How it <em className="not-italic gold-text">unfolds</em>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-[var(--border)]">
-                {[
-                  { stage: 'Top · First minutes',   title: product.topNotes   || 'Bergamot & Saffron' },
-                  { stage: 'Heart · 30 min – 2 h',  title: product.heartNotes || 'Rose & Jasmine' },
-                  { stage: 'Base · 2 h and beyond', title: product.baseNotes  || 'Oud & Sandalwood' },
-                ].map((n, i) => (
-                  <div key={n.stage} className="border-b sm:border-b-0 sm:border-r last:border-r-0 border-[var(--border)] px-5 py-6">
-                    <div className="font-serif text-[var(--gold-deep)] text-sm">0{i + 1}</div>
-                    <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--ink-muted)] font-body mt-1.5">{n.stage}</div>
-                    <h3 className="font-serif text-[var(--ink)] text-xl md:text-2xl mt-3 leading-tight">{n.title}</h3>
+            {variationDetails.length > 0 ? (
+              <dl className="bg-white border border-[var(--border)] divide-y divide-[var(--border)] overflow-hidden">
+                {variationDetails.map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-3 gap-4 px-5 py-3.5">
+                    <dt className="text-[10px] tracking-[0.25em] uppercase text-[var(--ink-muted)] font-body self-center">
+                      {label}
+                    </dt>
+                    <dd className="col-span-2 text-[var(--ink)] text-sm font-body self-center">
+                      {value}
+                    </dd>
                   </div>
                 ))}
-              </div>
+              </dl>
+            ) : (
+              <p className="text-[var(--ink-muted)] text-sm font-body">No additional details available.</p>
+            )}
+          </div>
+
+          <div className="h-px bg-[var(--border)]" />
+
+          {/* ── Fragrance notes pyramid ────────────────────── */}
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Composition</p>
+            <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
+              How it <em className="not-italic gold-text">unfolds</em>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-[var(--border)]">
+              {[
+                { stage: 'Top · First minutes',   title: product.topNotes   || 'Bergamot & Saffron' },
+                { stage: 'Heart · 30 min – 2 h',  title: product.heartNotes || 'Rose & Jasmine' },
+                { stage: 'Base · 2 h and beyond', title: product.baseNotes  || 'Oud & Sandalwood' },
+              ].map((n, i) => (
+                <div key={n.stage} className="border-b sm:border-b-0 sm:border-r last:border-r-0 border-[var(--border)] px-5 py-6">
+                  <div className="font-serif text-[var(--gold-deep)] text-sm">0{i + 1}</div>
+                  <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--ink-muted)] font-body mt-1.5">{n.stage}</div>
+                  <h3 className="font-serif text-[var(--ink)] text-xl md:text-2xl mt-3 leading-tight">{n.title}</h3>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="h-px bg-[var(--border)]" />
+          <div className="h-px bg-[var(--border)]" />
 
-            {/* ── Ideal for, storage and use, manufacturing ──── */}
-            <ProductDetailBlocks product={product} />
+          {/* ── Ideal for, storage and use, manufacturing ──── */}
+          <ProductDetailBlocks product={product} />
 
-            <div className="h-px bg-[var(--border)]" />
+          <div className="h-px bg-[var(--border)]" />
 
-            {/* ── Reviews ────────────────────────────────────── */}
-            <div>
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Reviews</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-                What customers say
-              </h2>
-              <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
-            </div>
-          </section>
+          {/* ── Reviews ────────────────────────────────────── */}
+          <div>
+            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Reviews</p>
+            <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
+              What customers say
+            </h2>
+            <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
+          </div>
         </div>
 
         {/* ── You may also like — related products rail ──────── */}

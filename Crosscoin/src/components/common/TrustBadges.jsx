@@ -20,7 +20,7 @@ const TrustBadges = () => {
 
   useEffect(() => {
     let active = true;
-    getAllPublicReviews({ limit: 30, sort: 'highest' })
+    getAllPublicReviews({ limit: 1, sort: 'highest' })
       .then((r) => {
         const list = Array.isArray(r) ? r : (r?.reviews || r?.data || []);
         const rated = list.filter((x) => Number(x.rating) > 0);

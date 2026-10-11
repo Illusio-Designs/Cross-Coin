@@ -294,7 +294,7 @@ export default function ProductShowcase({ product, initialColor }) {
           <div className="pdx-rating">
             <span className="pdx-stars" aria-hidden>
               {[0, 1, 2, 3, 4].map((i) => (
-                <Icon key={i} name="Star" size={15} className={i < Math.round(product.rating || 0) ? 'on' : ''} />
+                <Icon key={i} name="Star" size={15} color={i < Math.round(product.rating || 0) ? 'var(--star)' : 'var(--line)'} />
               ))}
             </span>
             <span>{Number(product.rating || 0).toFixed(1)}</span>

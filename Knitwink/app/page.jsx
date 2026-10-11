@@ -8,6 +8,8 @@ import { BlogStrip } from '@/components/home/BlogStrip'
 import { getBestsellers } from '@/lib/api/products'
 import { getPublicSliders } from '@/lib/api/sliders'
 import { getPublicCategories } from '@/lib/api/categories'
+import { getAllReviews } from '@/lib/api/reviews'
+import { getPosts } from '@/lib/api/blog'
 import SeoWrapper from '@/components/SeoWrapper'
 
 // Regenerate at most every 5 minutes (ISR). Combined with the server-cached
@@ -24,10 +26,15 @@ export const revalidate = 300
 // HTML immediately. The child components stay client components for
 // interactivity; they just receive their data as props instead of fetching it.
 export default async function HomePage() {
-  const [slides, categories, bestsellers] = await Promise.all([
+  // Reviews and posts are fetched once here and shared with the components
+  // below, so the store-wide reviews request (previously fired twice: by
+  // ReviewBand and TrustStrip) and the blog fetch no longer run on the client.
+  const [slides, categories, bestsellers, reviews, posts] = await Promise.all([
     getPublicSliders().catch(() => []),
     getPublicCategories().catch(() => []),
     getBestsellers().catch(() => []),
+    getAllReviews().catch(() => null),
+    getPosts().catch(() => []),
   ])
 
   return (
@@ -40,9 +47,9 @@ export default async function HomePage() {
       <CategoryCards categories={categories} />
       <ExclusiveSection products={bestsellers.slice(0, 3)} />
       <BestsellerRow products={bestsellers} />
-      <ReviewBand />
-      <BlogStrip />
-      <TrustStrip />
+      <ReviewBand reviews={reviews} />
+      <BlogStrip posts={posts} />
+      <TrustStrip reviews={reviews} />
     </SeoWrapper>
   )
 }

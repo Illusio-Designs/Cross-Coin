@@ -53,29 +53,45 @@ function buildCols(reviews) {
   }
 }
 
-export function ReviewsSection({ productId = null, productName = null, fetchFn = null }) {
-  const [reviews, setReviews] = useState([])
+// Turn a raw /api/reviews/all payload into { reviews, stats }, or null when it
+// holds no reviews. Shared by the server-provided `data` prop and the client
+// fetchFn fallback so both paths compute identical real numbers.
+function parseReviewData(data) {
+  const list = data?.reviews ?? data ?? []
+  if (!Array.isArray(list) || list.length === 0) return null
+  const rated = list.filter((r) => Number(r.rating) > 0)
+  const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
+  const exact = Number(data?.pagination?.total ?? data?.stats?.total) || 0
+  return {
+    reviews: list,
+    stats: {
+      average: Number(data?.stats?.average) || sampleAvg,
+      total: Math.max(exact, list.length),
+    },
+  }
+}
+
+export function ReviewsSection({ productId = null, productName = null, fetchFn = null, data = null }) {
+  // Server-provided reviews (from getServerSideProps / the server component) are
+  // used directly; the client fetch runs only when they're absent/empty.
+  const serverData = parseReviewData(data)
+  const [reviews, setReviews] = useState(serverData?.reviews ?? [])
   // Real numbers only: the exact total comes from the API (pagination.total /
   // stats.total); the list itself is just one page of reviews.
-  const [stats, setStats] = useState({ average: 0, total: 0 })
+  const [stats, setStats] = useState(serverData?.stats ?? { average: 0, total: 0 })
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
+    if (parseReviewData(data)) return // server already supplied the reviews — don't refetch
     if (!fetchFn) return
-    fetchFn().then((data) => {
-      const list = data?.reviews ?? data ?? []
-      if (list.length > 0) {
-        setReviews(list)
-        const rated = list.filter((r) => Number(r.rating) > 0)
-        const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
-        const exact = Number(data?.pagination?.total ?? data?.stats?.total) || 0
-        setStats({
-          average: Number(data?.stats?.average) || sampleAvg,
-          total: Math.max(exact, list.length),
-        })
+    fetchFn().then((payload) => {
+      const parsed = parseReviewData(payload)
+      if (parsed) {
+        setReviews(parsed.reviews)
+        setStats(parsed.stats)
       }
     }).catch(() => {})
-  }, [fetchFn])
+  }, [fetchFn, data])
 
   const displayReviews = reviews.length > 0 ? reviews : []
   const hasReviews = displayReviews.length > 0
@@ -101,12 +117,11 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
             <div className="flex flex-col gap-1.5">
               <Stars rating={Math.round(avg)} />
               <p className="text-xs text-gray-400">Based on {total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</p>
-              <p className="text-xs font-semibold text-brand-black">98% would recommend</p>
             </div>
           </div>
 
           <p className="text-xl font-semibold leading-snug text-brand-black sm:text-2xl lg:text-3xl">
-            "Thousands of happy<br />feet can't be wrong."
+            Loved by shoppers<br />across India.
           </p>
 
           {/* Stats grid */}

@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react';
 import { getAllReviewsWithTotal } from '../../services/reviews';
 import ReviewMarquee, { ReviewCount } from '../common/ReviewMarquee';
 
-export default function ReviewBand({ reviews: reviewsProp }) {
+export default function ReviewBand({ reviews: reviewsProp, total: totalProp }) {
   const [reviews, setReviews] = useState(reviewsProp || []);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(totalProp || 0);
 
   useEffect(() => {
     if (reviewsProp) return; // parent supplied reviews — don't override

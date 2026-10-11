@@ -29,6 +29,15 @@ const MAP = {
 
 /** <Icon name="Truck" size={18} /> — renders the matching HugeIcons (rounded). */
 export default function Icon({ name, size = 18, color, className, strokeWidth = 1.8 }) {
+  // Rating stars render as a SOLID glyph (like CrossCoin's ★) rather than the
+  // stroke-only HugeIcons star, which looked hollow. Colour + className pass
+  // through unchanged, so existing rating colours are preserved.
+  if (name === 'Star') {
+    return (
+      <span className={className} aria-hidden="true"
+        style={{ color, fontSize: size, lineHeight: 1, display: 'inline-flex', alignItems: 'center' }}>★</span>
+    );
+  }
   const icon = MAP[name] || SparklesIcon;
   return <HugeiconsIcon icon={icon} size={size} color={color} className={className} strokeWidth={strokeWidth} />;
 }

@@ -15,6 +15,7 @@ export default function SearchOverlay() {
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [popular, setPopular]     = useState([]);
   const fetchedRef = useRef(false);
+  const popularRef = useRef(false);
   const inputRef = useRef(null);
   // Trap focus inside the overlay panel while open; restores focus to
   // the search trigger on close. Esc handler is centralised here too.
@@ -25,6 +26,10 @@ export default function SearchOverlay() {
 
   // Hydrate the "Browse Collections" chips from live categories.
   useEffect(() => {
+    // Only hydrate the category chips once the overlay actually opens — the
+    // chips aren't visible until then, so fetching on every page load was waste.
+    if (!searchOpen || popularRef.current) return;
+    popularRef.current = true;
     let alive = true;
     getPublicCategories().then(cats => {
       if (!alive) return;
@@ -35,7 +40,7 @@ export default function SearchOverlay() {
       setPopular(list);
     }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [searchOpen]);
 
   // Load the full catalog ONCE the first time the overlay opens.
   // Cached for the rest of the session — same shape as shop/home.

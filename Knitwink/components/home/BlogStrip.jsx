@@ -6,12 +6,15 @@ import { ArrowRight } from 'lucide-react'
 import { getPosts } from '@/lib/api/blog'
 import { BlogCard } from './BlogCard'
 
-export function BlogStrip() {
-  const [posts, setPosts] = useState([])
+export function BlogStrip({ posts: postsProp = null }) {
+  // Server-provided posts are used directly; the client fetch runs only as a
+  // fallback when the server didn't supply any.
+  const [posts, setPosts] = useState(postsProp?.length ? postsProp.slice(0, 4) : [])
 
   useEffect(() => {
+    if (postsProp?.length) return // server supplied posts — don't refetch
     getPosts().then((all) => setPosts(all.slice(0, 4))).catch(() => {})
-  }, [])
+  }, [postsProp])
 
   return (
     <div className="px-3 py-6">

@@ -226,7 +226,7 @@ export default function ProductShowcase({ product }) {
       <span className="eyebrow">{product.category}</span>
       <h1>{product.name}</h1>
       <div className="pdp-meta">
-        <span className="rating"><Icon name="Star" size={14} /> {product.rating}</span>
+        <span className="rating"><Icon name="Star" size={14} color="var(--star)" /> {product.rating}</span>
         <a href="#reviews" className="muted">{product.reviews} reviews</a>
         {sku && <span className="muted">SKU: {sku}</span>}
       </div>

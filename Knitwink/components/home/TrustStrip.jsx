@@ -23,26 +23,37 @@ const SIGNALS = [
   { icon: Banknote,   label: 'COD available' },
 ]
 
-export function TrustStrip() {
+// Derive the store-wide rating ({ avg, total }) from a raw /api/reviews/all
+// payload, or null when there's nothing real to show — never a fabricated number.
+function deriveRating(data) {
+  const list = data?.reviews ?? data ?? []
+  if (!Array.isArray(list)) return null
+  const rated = list.filter((r) => Number(r.rating) > 0)
+  const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
+  const avg = Number(data?.stats?.average) || sampleAvg
+  const total = Math.max(Number(data?.pagination?.total ?? data?.stats?.total) || 0, list.length)
+  return avg > 0 && total > 0 ? { avg, total } : null
+}
+
+export function TrustStrip({ reviews: reviewsData = null }) {
   // Reuse the real store-wide review total (same /api/reviews/all source as the
-  // home ReviewBand). Render the rating line only when real reviews exist — no
-  // fabricated numbers.
-  const [rating, setRating] = useState(null)
+  // home ReviewBand). When the server already fetched the reviews, derive the
+  // rating from them and skip the duplicate client fetch; otherwise fall back to
+  // fetching. Render the rating line only when real reviews exist.
+  const serverRating = deriveRating(reviewsData)
+  const [rating, setRating] = useState(serverRating)
 
   useEffect(() => {
+    if (deriveRating(reviewsData)) return // server already supplied the reviews — don't refetch
     let active = true
     getAllReviews()
       .then((data) => {
-        const list = data?.reviews ?? data ?? []
-        const rated = list.filter((r) => Number(r.rating) > 0)
-        const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
-        const avg = Number(data?.stats?.average) || sampleAvg
-        const total = Math.max(Number(data?.pagination?.total ?? data?.stats?.total) || 0, list.length)
-        if (active && avg > 0 && total > 0) setRating({ avg, total })
+        const r = deriveRating(data)
+        if (active && r) setRating(r)
       })
       .catch(() => {})
     return () => { active = false }
-  }, [])
+  }, [reviewsData])
 
   return (
     <div className="px-3 py-6">
