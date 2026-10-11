@@ -4,7 +4,9 @@ import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
 import ProductTestimonials from '../../components/products/ProductTestimonials';
 import ProductDetailBlocks from '../../components/product/ProductDetailBlocks';
+import SizeChartModal from '../../components/product/SizeChartModal';
 import SeoWrapper from '../../components/SeoWrapper';
+import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -34,6 +36,7 @@ export default function ProductDetail() {
 
   const [activeImg, setActiveImg] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const [showSizeChart, setShowSizeChart] = useState(false);
   const [size, setSize]   = useState('');
   const [color, setColor] = useState('');
   const [qty, setQty]     = useState(1);
@@ -440,7 +443,18 @@ export default function ProductDetail() {
               {/* Size */}
               {product.sizes?.length > 0 && (
                 <div className="mb-6">
-                  <p className="eyebrow mb-3">Size — <span className="text-ink">{size}</span></p>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="eyebrow">Size — <span className="text-ink">{size}</span></p>
+                    {SIZE_GUIDE.rows.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSizeChart(true)}
+                        className="shrink-0 text-xs font-semibold text-ink underline underline-offset-4 hover:text-ink-soft"
+                      >
+                        Size chart
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {product.sizes.map((s) => (
                       <button
@@ -620,6 +634,8 @@ export default function ProductDetail() {
             </button>
           </div>
         </div>
+
+        {showSizeChart && <SizeChartModal onClose={() => setShowSizeChart(false)} />}
       </main>
     </SeoWrapper>
   );

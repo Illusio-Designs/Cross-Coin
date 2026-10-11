@@ -9,6 +9,8 @@ import { formatPrice, cn } from '@/lib/utils'
 import { getProductReviews } from '@/lib/api/reviews'
 import { checkServiceability } from '@/lib/api/serviceability'
 import { Minus, Plus, ShoppingBag, Zap, Star, Heart, Truck, AlertTriangle, Check, X, Lock, CreditCard, RotateCcw, ShieldCheck } from 'lucide-react'
+import { SIZE_GUIDE } from '@/lib/sizeGuide'
+import SizeChartModal from './SizeChartModal'
 
 export function ProductInfo({ product, onColorChange }) {
   const [activeColor, setActiveColor] = useState(
@@ -23,6 +25,8 @@ export function ProductInfo({ product, onColorChange }) {
   )
   const [qty, setQty] = useState(1)
   const [addedFeedback, setAddedFeedback] = useState(false)
+  const [showChart, setShowChart] = useState(false)
+  const hasSizeGuide = SIZE_GUIDE.rows.length > 0
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
 
   // Delivery / pincode serviceability check.
@@ -265,7 +269,7 @@ export function ProductInfo({ product, onColorChange }) {
             <>
               <span className="text-sm text-gray-400 line-through">{formatPrice(activeCompareAtPrice)}</span>
               <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-500">
-                {discount}% OFF
+                −{discount}% OFF
               </span>
             </>
           )}
@@ -409,6 +413,18 @@ export function ProductInfo({ product, onColorChange }) {
           <button disabled className="cursor-default rounded-full border-2 border-brand-black bg-brand-black px-6 py-2 text-xs font-semibold uppercase tracking-wider text-white">
             Free Size
           </button>
+          {hasSizeGuide && (
+            <p className="mt-2.5 text-xs text-gray-600">
+              Not sure about your size?{' '}
+              <button
+                type="button"
+                onClick={() => setShowChart(true)}
+                className="font-semibold text-brand-black underline underline-offset-2 hover:text-gray-700"
+              >
+                Size chart
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Divider */}
@@ -476,6 +492,8 @@ export function ProductInfo({ product, onColorChange }) {
         }
         onAddToCart={handleAddToCart}
       />
+
+      {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
     </>
   )
 }

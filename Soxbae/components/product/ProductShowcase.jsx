@@ -294,13 +294,14 @@ export default function ProductShowcase({ product, initialColor }) {
           <div className="pdx-price">
             <span className="pdx-price-now">₹{Number(price).toFixed(0)}</span>
             {oldPrice ? <span className="pdx-price-old">₹{Number(oldPrice).toFixed(0)}</span> : null}
-            {off > 0 && <span className="pdx-price-off">Save {off}%</span>}
+            {off > 0 && <span className="pdx-price-off">−{off}% OFF</span>}
           </div>
+          <p className="pdx-price-tax">MRP incl. of all taxes</p>
 
           {/* Free shipping + delivery ETA */}
           <div className="pdx-ship">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            <span><strong>Free shipping</strong> over ₹999</span>
+            <span><strong>Free shipping</strong> on all orders</span>
             <span className="pdx-ship-eta">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
           </div>
 

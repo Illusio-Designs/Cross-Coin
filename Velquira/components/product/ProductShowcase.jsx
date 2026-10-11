@@ -291,6 +291,7 @@ export default function ProductShowcase({ product }) {
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
           {off > 0 && <span className="pdp-off">−{off}% OFF</span>}
         </div>
+        <p className="pdp-tax">MRP incl. of all taxes</p>
 
         {/* Free shipping + delivery ETA */}
         <div className="pdp-ship">

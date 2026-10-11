@@ -409,13 +409,10 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                     <span className="inline-flex items-center bg-[var(--gold-deep)] text-white text-[11px] font-body font-semibold tracking-wider uppercase px-2 py-0.5">
                       −{Math.round((1 - displayPrice / displayCompare) * 100)}% OFF
                     </span>
-                    <span className="text-[var(--gold-deep)] text-xs font-body tracking-wider uppercase">
-                      Save {fmt(displayCompare - displayPrice)}
-                    </span>
                   </>
                 )}
               </div>
-              <p className="text-[var(--ink-muted)] text-xs font-body mt-2">Inclusive of 18% GST · Free shipping on all orders</p>
+              <p className="text-[var(--ink-muted)] text-xs font-body mt-2">MRP incl. of all taxes</p>
               <p className="flex items-center gap-1.5 text-[var(--ink-soft)] text-xs font-body mt-2">
                 <Truck size={13} className="text-[var(--gold-deep)]" /> Delivered by {eta.day}{eta.suffix} {eta.month}
               </p>
