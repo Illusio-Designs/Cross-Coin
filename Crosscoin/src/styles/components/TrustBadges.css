@@ -52,6 +52,36 @@
   color: #1a1a1a;
 }
 
+/* Factual trust-signal strip (pills) + real rating */
+.trust-badges-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: -24px 0 40px;
+}
+
+.trust-badges-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #180D3E;
+  background: #ffffff;
+  border: 1px solid rgba(24, 13, 62, 0.12);
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.trust-badges-pill--rating {
+  color: #ffffff;
+  background: #CE1E36;
+  border-color: #CE1E36;
+}
+
 .trust-badges-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -224,6 +254,16 @@
 @media (max-width: 480px) {
   .trust-badges-section {
     padding: 40px 12px;
+  }
+
+  .trust-badges-strip {
+    gap: 8px;
+    margin: -16px 0 32px;
+  }
+
+  .trust-badges-pill {
+    font-size: 11px;
+    padding: 6px 12px;
   }
 
   .trust-badges-grid {

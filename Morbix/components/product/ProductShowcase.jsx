@@ -281,7 +281,7 @@ export default function ProductShowcase({ product, initialColor }) {
         <div className="pdp-main" ref={mainRef}>
           {mainSrc ? (
             <button type="button" className="pdp-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-              <img src={ik(mainSrc, 900)} alt={product.name} fetchPriority="high" decoding="async" />
+              <img src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async" />
               {sku && <span className="pdp-style-badge">Style: #{sku}</span>}
               <span className="pdp-zoom-hint" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -459,7 +459,7 @@ export default function ProductShowcase({ product, initialColor }) {
     {/* Sticky buy bar — appears on mobile once the main buy buttons scroll out of view */}
     <div className={`pdp-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
       <div className="pdp-sticky-info">
-        {mainSrc && <img src={ik(mainSrc, 120)} alt="" />}
+        {mainSrc && <img src={ik(mainSrc, 120)} alt="" loading="lazy" />}
         <div>
           <b>{product.name}</b>
           <span>₹{Number(price).toFixed(0)}{selectedColorName ? ` · ${selectedColorName}` : ''}{effectiveSize ? ` · ${effectiveSize}` : ''}</span>

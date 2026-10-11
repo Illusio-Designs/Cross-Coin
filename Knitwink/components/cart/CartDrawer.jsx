@@ -20,6 +20,7 @@ import {
   validateCoupon,
   getPublicCoupons,
 } from '@/lib/api/orders';
+import { getBestsellers } from '@/lib/api/products';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -166,6 +167,7 @@ export function CartDrawer() {
     isDrawerOpen: drawerOpen,
     setIsDrawerOpen,
     clearCart,
+    addToCart,
     removeFromCart: removeItem,
     updateQuantity: updateQty,
   } = useCartContext();
@@ -304,6 +306,58 @@ export function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawerOpen]);
+
+  // ── Cross-sell: "You may also like" ───────────────────────────────────────
+  // Reuse the same bestsellers feed the PDP cross-sell (CrossSell.jsx) and the
+  // homepage use. Fetch a few when the drawer opens with items, excluding
+  // anything already in the cart. Fails quietly — renders nothing on error.
+  const [suggested, setSuggested] = useState([]);
+  useEffect(() => {
+    if (!drawerOpen || items.length === 0) { setSuggested([]); return; }
+    let alive = true;
+    getBestsellers()
+      .then((list) => {
+        if (!alive) return;
+        const inCart = new Set(items.map((i) => String(i.productId)));
+        const seen = new Set();
+        const picks = [];
+        for (const p of Array.isArray(list) ? list : []) {
+          if (!p || p.id == null) continue;
+          const id = String(p.id);
+          if (inCart.has(id) || seen.has(id)) continue;
+          seen.add(id);
+          picks.push(p);
+          if (picks.length >= 4) break;
+        }
+        setSuggested(picks);
+      })
+      .catch(() => { if (alive) setSuggested([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerOpen, items.length]);
+
+  // Add a suggested product — mirrors ProductCard's handleAddToCart, reusing
+  // the cart context's addToCart handler so the item lands in this same drawer.
+  const addSuggested = (product) => {
+    const firstColor = product.colors?.[0]?.name ?? '';
+    const variant = product.variants?.find((v) => v.color === firstColor) || product.variants?.[0];
+    const colorImages = (firstColor && product.colorImages?.[firstColor]) || [];
+    const imageUrl = colorImages[0]?.url || product.images?.[0]?.url || '';
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice || 0,
+        images: product.images || [],
+      },
+      firstColor || null,
+      'Free Size',
+      1,
+      variant?.id ?? null,
+      imageUrl || null
+    );
+  };
 
   // Close the "Select a coupon" dropdown on outside click / Escape. Kept local
   // (capture-phase Escape + stopPropagation) so it doesn't also close the drawer.
@@ -1178,6 +1232,35 @@ export function CartDrawer() {
                   </>
                 )}
               </div>
+
+              {/* You may also like — compact cross-sell strip (bestsellers feed) */}
+              {suggested.length > 0 && (
+                <div className="cd-sv-section">
+                  <div className="cd-section-title">You may also like</div>
+                  <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    {suggested.map((p) => {
+                      const img = p.colorImages?.[p.colors?.[0]?.name]?.[0]?.url || p.images?.[0]?.url || '';
+                      return (
+                        <div key={p.id} className="w-[118px] shrink-0 rounded-lg border border-gray-200 bg-white p-2">
+                          <div className="mb-1.5 aspect-square w-full overflow-hidden rounded-md bg-gray-50">
+                            {img ? <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-cover" /> : null}
+                          </div>
+                          <p className="line-clamp-1 text-xs font-medium text-brand-black">{p.name}</p>
+                          <p className="mt-0.5 text-xs text-gray-600">₹{Number(p.price).toFixed(0)}</p>
+                          <button
+                            type="button"
+                            onClick={() => addSuggested(p)}
+                            aria-label={`Add ${p.name} to cart`}
+                            className="mt-1.5 w-full rounded-md border border-brand-black bg-white py-1 text-[11px] font-semibold text-brand-black transition-colors hover:bg-brand-black hover:text-white"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Order Summary */}
               <div className="cd-sv-section">

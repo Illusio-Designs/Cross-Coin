@@ -1,4 +1,8 @@
-import { ShieldCheck, Lock, Truck, Star } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { ShieldCheck, Lock, Truck, Star, MapPin, RotateCcw, Banknote } from 'lucide-react'
+import { getAllReviews } from '@/lib/api/reviews'
 
 const ITEMS = [
   { icon: ShieldCheck, title: 'Premium Quality',    sub: 'Finest materials, built to last',        badge: 'Since 2020',    dark: false },
@@ -7,12 +11,63 @@ const ITEMS = [
   { icon: Star,        title: 'Authentic Products', sub: '100% genuine Knitwink, guaranteed',      badge: 'Verified',      dark: true  },
 ]
 
+// Only FACTUAL signals: Made in India (Knitwink is based in Morbi, Gujarat,
+// India), secure payments, free shipping (now on all orders), the 7-day returns
+// policy (see /account/returns and the PDP), and Cash on Delivery (offered at
+// checkout).
+const SIGNALS = [
+  { icon: MapPin,     label: 'Made in India' },
+  { icon: Lock,       label: '100% secure payments' },
+  { icon: Truck,      label: 'Free shipping on all orders' },
+  { icon: RotateCcw,  label: 'Easy 7-day returns' },
+  { icon: Banknote,   label: 'COD available' },
+]
+
 export function TrustStrip() {
+  // Reuse the real store-wide review total (same /api/reviews/all source as the
+  // home ReviewBand). Render the rating line only when real reviews exist — no
+  // fabricated numbers.
+  const [rating, setRating] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    getAllReviews()
+      .then((data) => {
+        const list = data?.reviews ?? data ?? []
+        const rated = list.filter((r) => Number(r.rating) > 0)
+        const sampleAvg = rated.length ? rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length : 0
+        const avg = Number(data?.stats?.average) || sampleAvg
+        const total = Math.max(Number(data?.pagination?.total ?? data?.stats?.total) || 0, list.length)
+        if (active && avg > 0 && total > 0) setRating({ avg, total })
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+
   return (
     <div className="px-3 py-6">
       <p className="mb-4 text-center text-sm font-bold uppercase tracking-[0.25em] text-brand-black">
         Why Knitwink
       </p>
+
+      {/* Prominent factual trust-signal strip + real rating */}
+      <div className="mx-auto mb-5 flex max-w-4xl flex-wrap items-center justify-center gap-2 md:gap-3">
+        {rating && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-black px-3 py-1.5 text-[11px] font-semibold text-white md:text-xs">
+            <Star size={14} className="fill-amber-400 text-amber-400" />
+            Rated {rating.avg.toFixed(1)}★ by {rating.total.toLocaleString('en-IN')}+ happy shoppers
+          </span>
+        )}
+        {SIGNALS.map(({ icon: Icon, label }) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand-black/15 bg-[#f0ece6] px-3 py-1.5 text-[11px] font-semibold text-brand-black md:text-xs"
+          >
+            <Icon size={14} className="text-brand-black" />
+            {label}
+          </span>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {ITEMS.map(({ icon: Icon, title, sub, badge, dark }) => (

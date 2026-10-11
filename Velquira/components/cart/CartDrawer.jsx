@@ -21,6 +21,7 @@ import {
   getPublicCoupons,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
+import { getBestsellers } from '@/lib/api';
 import { fbTrack, fbPurchase } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -99,7 +100,7 @@ function getOrCreateGuestSessionId() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, subtotal, count, setQty, remove, clear, open, closeCart } = useCart();
+  const { items, subtotal, count, setQty, remove, clear, open, closeCart, add } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
@@ -135,6 +136,10 @@ export default function CartDrawer() {
   // stays compact; the menu overlays content below when opened.
   const [offersOpen, setOffersOpen] = useState(false);
   const offersRef = useRef(null);
+
+  // Cross-sell "You may also like" — fetched from the bestsellers service when
+  // the drawer opens; excludes items already in the cart.
+  const [suggestions, setSuggestions] = useState([]);
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
@@ -186,6 +191,40 @@ export default function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Load cross-sell suggestions (bestsellers) once when the drawer opens with
+  // items — rendered as a "You may also like" strip above the order summary.
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    let alive = true;
+    getBestsellers().then((list) => { if (alive) setSuggestions(Array.isArray(list) ? list : []); }).catch(() => { if (alive) setSuggestions([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Suggestions not already in the cart (match on product id), capped at 4.
+  const crossSell = useMemo(() => {
+    const inCart = new Set(items.map((i) => String(i.productId ?? i.id)));
+    const seen = new Set();
+    const out = [];
+    for (const p of suggestions) {
+      const id = String(p.id);
+      if (inCart.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [suggestions, items]);
+
+  const addSuggestion = (p) => {
+    add(
+      { ...p, image: p.image || null, color: p.colorNames?.[0] || null, price: p.price, oldPrice: p.oldPrice ?? null },
+      p.sizes?.[0] || 'M',
+      1,
+      p.variants?.[0]?.id ?? null
+    );
+  };
 
   // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
   // (this drawer is the full in-drawer checkout).
@@ -739,6 +778,42 @@ export default function CartDrawer() {
                   );
                 })()}
               </div>
+
+              {/* You may also like — compact cross-sell strip above the summary.
+                  Renders nothing when there's nothing to suggest. */}
+              {crossSell.length > 0 && (
+                <div className="cd-co-section">
+                  <div className="cd-section-title">You may also like</div>
+                  <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+                    {crossSell.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{ flex: '0 0 128px', width: 128, border: '1px solid var(--line-soft, #e6e6ee)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface, #fff)', display: 'flex', flexDirection: 'column' }}
+                      >
+                        <Link href={p.slug ? `/products/${p.slug}` : '/products'} onClick={closeCart} style={{ display: 'block', aspectRatio: '1 / 1', overflow: 'hidden', background: 'var(--line-soft, #f2f2f7)' }}>
+                          {p.image ? <ShimmerImg src={p.image} alt={p.name} /> : <Icon name="Sparkles" size={24} />}
+                        </Link>
+                        <div style={{ padding: '7px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+                          <Link href={p.slug ? `/products/${p.slug}` : '/products'} onClick={closeCart} style={{ fontSize: 12, lineHeight: 1.25, color: 'var(--ink, #1a1a2e)', textDecoration: 'none', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {p.name}
+                          </Link>
+                          <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink, #1a1a2e)' }}>₹{Number(p.price).toFixed(0)}</span>
+                            <button
+                              type="button"
+                              onClick={() => addSuggestion(p)}
+                              aria-label={`Add ${p.name} to cart`}
+                              style={{ border: '1px solid var(--navy, #202c6e)', background: 'transparent', color: 'var(--navy, #202c6e)', borderRadius: 7, fontSize: 11.5, fontWeight: 600, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Order summary — right after the items, so pricing is clear up front */}
               <div className="cd-co-section cd-co-summary">

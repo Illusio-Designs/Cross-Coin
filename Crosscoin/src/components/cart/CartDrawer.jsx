@@ -19,6 +19,7 @@ import {
   retryCheckout,
   verifyCheckoutPhoneOtp,
   getPublicCoupons,
+  getAllPublicProducts,
 } from '../../services/publicApi';
 import {
   showOrderPlacedSuccessToast,
@@ -222,13 +223,15 @@ const IconTruckSmall = () => <svg viewBox="0 0 24 24" fill="none" stroke="curren
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const CartDrawer = ({ isOpen, onClose }) => {
-  const { cartItems, cartTotal, removeFromCart, updateQuantity, clearCart, lastAddedItem, buyNowItem, buyNowTotal, clearBuyNow } = useCart();
+  const { cartItems, cartTotal, addToCart, removeFromCart, updateQuantity, clearCart, lastAddedItem, buyNowItem, buyNowTotal, clearBuyNow } = useCart();
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
   const [isVisible, setIsVisible] = useState(false);
   const [urgencySeconds, setUrgencySeconds] = useState(10 * 60);
   const [reviewStats, setReviewStats] = useState({ total: 0, avg: 4.8 });
+  // Cross-sell "You may also like" — reuses the public catalog feed.
+  const [suggestedProducts, setSuggestedProducts] = useState([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -575,6 +578,76 @@ const CartDrawer = ({ isOpen, onClose }) => {
       .catch(() => setAvailableCoupons([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, buyNowItem, cartItems.length]);
+
+  // ── Cross-sell: "You may also like" ───────────────────────────────────────
+  // Reuse the same public catalog feed the homepage product rail uses. Fetch a
+  // few when the drawer opens with a real cart, excluding items already in it.
+  // Fails quietly — renders nothing on error so the drawer never breaks.
+  useEffect(() => {
+    if (!isOpen || buyNowItem || cartItems.length === 0) { setSuggestedProducts([]); return; }
+    let alive = true;
+    getAllPublicProducts({ limit: 12 })
+      .then((res) => {
+        if (!alive) return;
+        const list = res?.data?.products || res?.products || (Array.isArray(res) ? res : []);
+        const inCart = new Set(cartItems.map((i) => String(i.productId || i.id)));
+        const seen = new Set();
+        const picks = [];
+        for (const p of Array.isArray(list) ? list : []) {
+          if (!p || p.id == null) continue;
+          const id = String(p.id);
+          if (inCart.has(id) || seen.has(id)) continue;
+          seen.add(id);
+          picks.push(p);
+          if (picks.length >= 4) break;
+        }
+        setSuggestedProducts(picks);
+      })
+      .catch(() => { if (alive) setSuggestedProducts([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, buyNowItem, cartItems.length]);
+
+  // Add a suggested product — mirrors the homepage rail's add-to-cart call.
+  const addSuggested = (product) => {
+    const imageData = (product.ProductImages || product.images || [])[0] || product.image || null;
+    const firstVariation = (product.ProductVariations || product.variations || [])[0];
+    const productPrice = firstVariation?.price || product.price || 0;
+    const productComparePrice = firstVariation?.comparePrice || product.comparePrice || 0;
+    const formatted = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      images: imageData ? [imageData] : [],
+      price: productPrice,
+      comparePrice: productComparePrice,
+      variations: (product.ProductVariations || product.variations || []).map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        price: v.price || 0,
+        comparePrice: v.comparePrice || 0,
+        stock: v.stock || 0,
+        attributes: v.attributes,
+        images: v.images || [],
+      })),
+    };
+    addToCart(
+      formatted,
+      null,
+      null,
+      1,
+      firstVariation?.id || null,
+      formatted.images.map((i) => i.image_url || i.url || i)
+    );
+  };
+
+  // First usable image URL for a suggested product's thumbnail.
+  const suggestedImg = (product) => {
+    const d = (product.ProductImages || product.images || [])[0] || product.image || null;
+    if (!d) return null;
+    if (typeof d === 'string') return d;
+    return d.image_url || d.large || d.medium || d.url || null;
+  };
 
   // Collapse the offers menu once a coupon is applied (any path).
   useEffect(() => {
@@ -1459,6 +1532,32 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   );
                 })}
               </div>
+
+              {/* ── You may also like — compact cross-sell strip ── */}
+              {suggestedProducts.length > 0 && (
+                <div className="cd-sv-section" id="cd-section-crosssell">
+                  <div className="cd-section-title">You may also like</div>
+                  <div className="cd-crosssell" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+                    {suggestedProducts.map((p) => {
+                      const img = suggestedImg(p);
+                      const firstVar = (p.ProductVariations || p.variations || [])[0];
+                      const price = parseFloat(firstVar?.price || p.price || 0);
+                      return (
+                        <div key={p.id} style={{ flex: '0 0 auto', width: 118 }}>
+                          <div className="cd-item-img" style={{ width: 118, height: 118 }}>
+                            {img
+                              ? <SafeImage imageData={{ image_url: img }} alt={p.name} width={118} height={118} quality={70} style={{ objectFit: 'cover' }} isProductCard />
+                              : <div className="cd-item-img-placeholder" />}
+                          </div>
+                          <p className="cd-item-name" style={{ marginTop: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</p>
+                          <p className="cd-item-price" style={{ margin: '2px 0 6px' }}>₹{price.toFixed(0)}</p>
+                          <button type="button" className="cd-crosssell-add" style={{ width: '100%', padding: '6px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid currentColor', borderRadius: 8, background: 'transparent' }} onClick={() => addSuggested(p)} aria-label={`Add ${p.name} to cart`}>+ Add</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* ── 2. Coupon (input + collapsed offers picker) ── */}
               <div className="cd-sv-section" id="cd-section-coupon">

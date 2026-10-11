@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getAddresses, createAddress, updateAddress,
 } from '@/lib/api/addresses';
+import { getBestsellers } from '@/lib/api/products';
 import {
   getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
   createOrder, createGuestOrder,
@@ -89,7 +90,7 @@ export default function CartDrawer() {
   const router = useRouter();
   const {
     cart: items, cartOpen, setCartOpen, cartTotal, cartCount,
-    removeFromCart, updateQuantity, clearCart,
+    removeFromCart, updateQuantity, clearCart, addToCart,
   } = useStore();
   const { user, isAuthenticated } = useAuth();
 
@@ -124,6 +125,9 @@ export default function CartDrawer() {
   const [errorMsg, setErrorMsg] = useState('');
   // Address validation popup: { errors:[], warnings:[] } while shown, else null.
   const [addrIssues, setAddrIssues] = useState(null);
+  // Cross-sell "You may also like" — fetched from the bestsellers service when
+  // the drawer opens; excludes items already in the bag.
+  const [suggestions, setSuggestions] = useState([]);
 
   const dropdownRef = useRef(null);
   const offersRef = useRef(null);
@@ -202,6 +206,47 @@ export default function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
+
+  // ── Load cross-sell suggestions (bestsellers) once per open with items ──
+  useEffect(() => {
+    if (!cartOpen || items.length === 0) return;
+    let alive = true;
+    getBestsellers(8)
+      .then(list => { if (alive) setSuggestions(Array.isArray(list) ? list : []); })
+      .catch(() => { if (alive) setSuggestions([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartOpen]);
+
+  // Suggestions not already in the bag (match on product id), capped at 4.
+  const crossSell = useMemo(() => {
+    const inBag = new Set(items.map(i => String(i.productId ?? i.id)));
+    const seen = new Set();
+    const out = [];
+    for (const p of suggestions) {
+      const id = String(p.id);
+      if (inBag.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [suggestions, items]);
+
+  const addSuggestion = (p) => {
+    const v = p.variations?.find(x => x.id === p.defaultVariationId) || p.variations?.[0];
+    addToCart({
+      id: `${p.id}:${v?.id || 'default'}`,
+      productId: p.id,
+      variationId: v?.id || p.defaultVariationId || null,
+      name: p.name,
+      price: p.price,
+      image: p.images?.[0],
+      slug: p.slug,
+      size: v?.size || '',
+      color: v?.colors?.[0] || '',
+    });
+  };
 
   // ── Load shipping fees ─────────────────────────────────────────────────
   useEffect(() => {
@@ -1063,6 +1108,35 @@ export default function CartDrawer() {
                   </p>
                 )}
               </div>
+
+              {/* ── You may also like — cross-sell strip (above the summary) ─ */}
+              {crossSell.length > 0 && (
+                <div className="px-5 py-4 border-b border-[#D8D3C9]">
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body mb-3">You may also like</p>
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    {crossSell.map((p) => (
+                      <div key={p.id} className="shrink-0 w-32 bg-white border border-[#D8D3C9] flex flex-col">
+                        <Link href={`/product/${p.slug}`} onClick={() => setCartOpen(false)} className="block">
+                          <img src={p.images?.[0]} alt={p.name} loading="lazy" className="w-full h-36 object-cover" />
+                        </Link>
+                        <div className="flex flex-col gap-1.5 p-2 flex-1">
+                          <Link href={`/product/${p.slug}`} onClick={() => setCartOpen(false)}
+                            className="font-serif text-xs text-[#11100E] hover:text-[#8F7548] transition-colors line-clamp-2 leading-snug">
+                            {p.name}
+                          </Link>
+                          <div className="mt-auto flex items-center justify-between gap-1.5">
+                            <span className="font-serif italic text-[#11100E] text-xs">{fmt(p.price)}</span>
+                            <button type="button" onClick={() => addSuggestion(p)} aria-label={`Add ${p.name}`}
+                              className="flex items-center gap-0.5 border border-[#B89A63] text-[#8F7548] hover:bg-[#B89A63]/10 transition-colors text-[10px] font-body uppercase tracking-wider px-1.5 py-1">
+                              <Plus size={11} /> Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── Summary ─────────────────────────────────────────────── */}
               <div className="px-5 py-4 space-y-2">

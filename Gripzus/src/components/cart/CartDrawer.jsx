@@ -18,6 +18,7 @@ import {
   validateCoupon,
 } from '../../services/orders';
 import { getPublicCoupons } from '../../services/publicindex';
+import { getBestsellers, resolveVariationId } from '../../services/products';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -86,7 +87,7 @@ const IconMoney = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, open, closeCart, clearCart, removeItem, updateQty, lineKey } = useCart();
+  const { items, open, closeCart, clearCart, removeItem, updateQty, lineKey, addItem } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const [guestInfo, setGuestInfo] = useState({ email: '', fullName: '', phone: '' });
@@ -120,6 +121,10 @@ export default function CartDrawer() {
   const [paymentFailed, setPaymentFailed] = useState(null);
   // Address validation popup: { errors:[], warnings:[] } while shown, else null.
   const [addrIssues, setAddrIssues] = useState(null);
+
+  // Cross-sell "You may also like" — fetched from the homepage bestsellers
+  // service when the drawer opens; excludes items already in the cart.
+  const [suggestions, setSuggestions] = useState([]);
 
   const getPrice = (it) => Number(it.salePrice ?? it.price ?? 0);
   const getMrp = (it) => {
@@ -246,6 +251,53 @@ export default function CartDrawer() {
 
   /* Reset the offers dropdown whenever the drawer closes. */
   useEffect(() => { if (!open) setOffersOpen(false); }, [open]);
+
+  /* Cross-sell suggestions — reuse the bestsellers service (same one the
+     homepage row uses). Fetch once when the drawer opens with items; on
+     failure leave the list empty so the strip simply doesn't render. */
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    let alive = true;
+    getBestsellers(8)
+      .then((list) => { if (alive) setSuggestions(Array.isArray(list) ? list : []); })
+      .catch(() => { if (alive) setSuggestions([]); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  /* Products not already in the cart (match on product id), deduped by id,
+     capped at 4 for a compact strip. */
+  const crossSell = useMemo(() => {
+    const inCart = new Set(items.map((i) => String(i.id)));
+    const seen = new Set();
+    const out = [];
+    for (const p of suggestions) {
+      const id = String(p.id);
+      if (inCart.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [suggestions, items]);
+
+  const handleAddSuggestion = (p) => {
+    const color = p.colorParam || p.colors?.[0]?.name || '';
+    const size = (p.sizes || [])[0] || '';
+    addItem({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      image: (p.images && p.images[0]) || p.image,
+      price: Number(p.price ?? 0),
+      salePrice: p.salePrice != null ? Number(p.salePrice) : undefined,
+      collection: p.collection,
+      size,
+      color,
+      qty: 1,
+      variationId: resolveVariationId(p, color, size),
+    }, { openDrawer: false });
+  };
 
   /* Close the offers dropdown on outside click / Escape. */
   useEffect(() => {
@@ -798,6 +850,46 @@ export default function CartDrawer() {
                   </>
                 )}
               </div>
+
+              {/* You may also like — compact cross-sell strip (above the order
+                  summary). Renders nothing when there's nothing to suggest. */}
+              {crossSell.length > 0 && (
+                <div className="cd-sv-section">
+                  <div className="cd-section-title">You may also like</div>
+                  <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+                    {crossSell.map((p) => {
+                      const img = (p.images && p.images[0]) || p.image;
+                      const price = Number(p.salePrice ?? p.price ?? 0);
+                      return (
+                        <div
+                          key={p.uid ?? p.id}
+                          style={{ flex: '0 0 130px', width: 130, border: '1px solid var(--line, #e5e1d8)', background: 'var(--paper-warm, #fafafa)', display: 'flex', flexDirection: 'column' }}
+                        >
+                          <Link href={`/products/${p.slug}`} onClick={closeCart} style={{ display: 'block', aspectRatio: '4 / 5', overflow: 'hidden', background: '#f3f1ec' }}>
+                            {img ? <img src={img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                          </Link>
+                          <div style={{ padding: '7px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+                            <Link href={`/products/${p.slug}`} onClick={closeCart} style={{ fontSize: 12, lineHeight: 1.25, color: 'var(--ink, #1a1a1a)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none' }}>
+                              {p.name}
+                            </Link>
+                            <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink, #1a1a1a)' }}>₹{price.toFixed(0)}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddSuggestion(p)}
+                                aria-label={`Add ${p.name} to cart`}
+                                style={{ border: '1px solid var(--ink, #1a1a1a)', background: 'transparent', color: 'var(--ink, #1a1a1a)', fontSize: 11.5, fontWeight: 600, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              >
+                                + Add
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Order Summary */}
               <div className="cd-sv-section">
