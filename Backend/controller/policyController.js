@@ -22,7 +22,11 @@ exports.getPolicies = async (req, res) => {
   try {
     const where = {};
     if (req.brand && req.brand.id) where.brand_id = req.brand.id;
-    const policies = await Policy.findAll({ where });
+    // List context (footer links / sitemap): only id + title are consumed, and
+    // the slug is derived from the title client-side. Skip the heavy content TEXT
+    // column — detail endpoints (getPublicPolicyByName / getPolicyById) serve it.
+    // (No dedicated slug column exists on Policy; title is the slug source.)
+    const policies = await Policy.findAll({ where, attributes: ['id', 'title'] });
     res.json(policies);
   } catch (err) {
     logger.error('Get policies error:', err);

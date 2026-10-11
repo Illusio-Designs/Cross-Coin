@@ -96,8 +96,11 @@ const fetchFeaturedProductsData = async (productIds) => {
   return map;
 };
 
-// Format a blog post — hero_image to full ImageKit URL, FeaturedProducts enriched
-const formatPostImage = async (post) => {
+// Format a blog post — hero_image to full ImageKit URL, FeaturedProducts enriched.
+// Accepts an optional pre-fetched product-data map (keyed by product id) so list
+// endpoints can fetch featured-product data ONCE for all posts instead of N+1.
+// When omitted, falls back to fetching per-post (single-post endpoints).
+const formatPostImage = async (post, prefetchedProductData = null) => {
   const data = post.toJSON ? post.toJSON() : { ...post };
 
   if (data.hero_image) {
@@ -110,7 +113,7 @@ const formatPostImage = async (post) => {
 
   if (Array.isArray(data.FeaturedProducts) && data.FeaturedProducts.length > 0) {
     const ids = data.FeaturedProducts.map(fp => fp.id);
-    const productData = await fetchFeaturedProductsData(ids);
+    const productData = prefetchedProductData || await fetchFeaturedProductsData(ids);
     data.FeaturedProducts = data.FeaturedProducts.map(fp => ({
       id: fp.id,
       name: fp.name,
@@ -652,9 +655,17 @@ const getPublicPosts = async (req, res) => {
       order: [['published_at', 'DESC']]
     });
 
+    // Fetch featured-product data ONCE for the union of all posts' featured
+    // product IDs, then distribute by id — avoids the per-post N+1 that
+    // formatPostImage would otherwise trigger.
+    const allFeaturedIds = [...new Set(
+      rows.flatMap(r => (r.FeaturedProducts || []).map(fp => fp.id))
+    )];
+    const featuredProductData = await fetchFeaturedProductsData(allFeaturedIds);
+
     return res.status(200).json({
       success: true,
-      data: await Promise.all(rows.map(formatPostImage)),
+      data: await Promise.all(rows.map(r => formatPostImage(r, featuredProductData))),
       pagination: {
         total: count,
         page: parseInt(page),

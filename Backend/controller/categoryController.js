@@ -500,16 +500,25 @@ const getPublicCategoryByName = async (req, res) => {
                     as: 'products',
                     where: { status: 'active' },
                     required: false,
+                    // List context: drop the heavy description TEXT column from the
+                    // query (the response omits it too, matching the slug variant).
+                    attributes: { exclude: ['description'] },
                     include: [
+                        // separate:true fetches these hasMany rows in their own
+                        // batched query instead of a JOIN, avoiding the
+                        // products × variations × images row explosion. Same
+                        // pattern as services/productService.js. Data is identical.
                         {
                             model: ProductVariation,
                             as: 'ProductVariations',
-                            attributes: ['id', 'price', 'comparePrice', 'stock']
+                            attributes: ['id', 'price', 'comparePrice', 'stock'],
+                            separate: true
                         },
                         {
                             model: ProductImage,
                             as: 'ProductImages',
-                            attributes: ['image_url', 'is_primary']
+                            attributes: ['image_url', 'is_primary'],
+                            separate: true
                         },
                         {
                             model: ProductSEO,
@@ -593,7 +602,6 @@ const getPublicCategoryByName = async (req, res) => {
                 return {
                     id: product.id,
                     name: product.name,
-                    description: product.description,
                     slug: product.slug,
                     status: product.status,
                     badge: product.badge || null,
@@ -640,8 +648,12 @@ const getPublicCategoryBySlug = async (req, res) => {
                     where: { status: 'active' },
                     required: false,
                     include: [
-                        { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price', 'comparePrice', 'stock'] },
-                        { model: ProductImage,     as: 'ProductImages',     attributes: ['image_url', 'is_primary'] },
+                        // separate:true fetches these hasMany rows in their own
+                        // batched query (WHERE productId IN …) instead of a JOIN,
+                        // avoiding the products × variations × images row explosion.
+                        // Same pattern as services/productService.js. Data is identical.
+                        { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price', 'comparePrice', 'stock'], separate: true },
+                        { model: ProductImage,     as: 'ProductImages',     attributes: ['image_url', 'is_primary'], separate: true },
                         { model: ProductSEO,       as: 'ProductSEO',        attributes: ['meta_title', 'meta_description'] },
                         ...(brandFilter ? [{
                             model: Brand,

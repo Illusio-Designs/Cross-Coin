@@ -266,10 +266,17 @@ module.exports.getLookbooks = async (req, res) => {
     const brandId = resolveBrandId(req);
     const lookbooks = await Lookbook.findAll({
       where: { status: 'active', brand_id: brandId },
+      // Sane upper bound for the list endpoint (storefronts render a handful of lookbooks).
+      limit: 50,
       include: [
         {
           model: LookbookImage,
           as: 'Images',
+          // separate:true fetches hasMany rows in their own batched query instead
+          // of a JOIN, avoiding row explosion. Ordering for a separate include must
+          // live on the include itself (not the parent order), so it moves here.
+          separate: true,
+          order: [['display_order', 'ASC']],
           include: [
             {
               model: LookbookHotspot,
@@ -280,8 +287,8 @@ module.exports.getLookbooks = async (req, res) => {
                   as: 'Product',
                   attributes: ['id', 'name', 'slug'],
                   include: [
-                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'] },
-                    { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'] },
+                    { model: ProductImage, as: 'ProductImages', attributes: ['id', 'image_url', 'is_primary'], separate: true },
+                    { model: ProductVariation, as: 'ProductVariations', attributes: ['id', 'price'], separate: true },
                   ],
                 },
               ],
@@ -291,7 +298,6 @@ module.exports.getLookbooks = async (req, res) => {
       ],
       order: [
         ['display_order', 'ASC'],
-        [{ model: LookbookImage, as: 'Images' }, 'display_order', 'ASC'],
       ],
     });
 

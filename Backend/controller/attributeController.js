@@ -331,20 +331,13 @@ module.exports.getMegaMenu = async (req, res) => {
         });
 
         // For each attribute value, count active products that have a variation
-        // with that attribute value in their attributes JSON
-        const result = [];
-
-        for (const attr of attributes) {
-            const values = attr.AttributeValues || [];
-            const valuesWithCount = [];
-
-            for (const val of values) {
-                const attrName = attr.name;
-                const attrValue = val.value.replace(/'/g, "''");
-
-                // Count active products with at least one variation matching this attribute value
-                const [countRows] = await sequelize.query(
-                    `SELECT COUNT(DISTINCT p.id) AS product_count
+        // with that attribute value in their attributes JSON.
+        // Counts are independent, so run every COUNT query in parallel (one round
+        // trip instead of sequential awaits). SQL and results are identical;
+        // original attribute/value ordering is preserved when assembling below.
+        const countProductsFor = (attrName, attrValue) =>
+            sequelize.query(
+                `SELECT COUNT(DISTINCT p.id) AS product_count
                      FROM products p
                      WHERE p.status = 'active'
                        AND EXISTS (
@@ -353,9 +346,30 @@ module.exports.getMegaMenu = async (req, res) => {
                              AND pv.status = 'active'
                              AND JSON_EXTRACT(pv.attributes, '$.${attrName}') = '${attrValue}'
                        )`
-                );
+            ).then(([countRows]) => parseInt(countRows[0]?.product_count || 0, 10));
 
-                const productCount = parseInt(countRows[0]?.product_count || 0, 10);
+        // Build a count promise per attribute value, keeping per-attribute grouping.
+        const attrTasks = attributes.map(attr => {
+            const values = attr.AttributeValues || [];
+            return {
+                attr,
+                values,
+                countPromises: values.map(val =>
+                    countProductsFor(attr.name, val.value.replace(/'/g, "''"))
+                )
+            };
+        });
+
+        // Await all COUNT queries together.
+        await Promise.all(attrTasks.flatMap(t => t.countPromises));
+
+        const result = [];
+        for (const { attr, values, countPromises } of attrTasks) {
+            const counts = await Promise.all(countPromises); // already resolved
+            const valuesWithCount = [];
+
+            values.forEach((val, i) => {
+                const productCount = counts[i];
                 if (productCount > 0) {
                     valuesWithCount.push({
                         id: val.id,
@@ -363,7 +377,7 @@ module.exports.getMegaMenu = async (req, res) => {
                         product_count: productCount
                     });
                 }
-            }
+            });
 
             if (valuesWithCount.length > 0) {
                 result.push({
