@@ -7,6 +7,7 @@ import InfiniteReviewsSlider from '../components/common/InfiniteReviewsSlider';
 import ReviewForm from '../components/common/ReviewForm';
 import colorMap from '../components/products/colorMap';
 import SizeChartModal from '../components/products/SizeChartModal';
+import { SIZE_GUIDE } from '../lib/sizeGuide';
 import { useBreadcrumb } from '../components/common/Breadcrumb';
 import SeoWrapper from '../console/SeoWrapper';
 import ProductFaqSection from '../components/common/ProductFaqSection';
@@ -484,12 +485,14 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
 
           <div className="pdt-price-block">
             <span className="pdt-price">&#8377;{productData.price.toFixed(2)}</span>
-            {productData.comparePrice > 0 && (
-              <span className="pdt-compare">&#8377;{productData.comparePrice.toFixed(2)}</span>
+            {productData.comparePrice > productData.price && (
+              <>
+                <span className="pdt-compare">&#8377;{productData.comparePrice.toFixed(2)}</span>
+                <span className="pdt-discount">&#8722;{discount}% OFF</span>
+              </>
             )}
-            {discount > 0 && <span className="pdt-discount">{discount}% OFF</span>}
           </div>
-          <div className="pdt-price-note">MRP (Incl. of all taxes)</div>
+          <div className="pdt-price-note">MRP incl. of all taxes</div>
 
           {/* Free shipping + delivery reassurance */}
           <div className="pdt-ship-line">
@@ -628,13 +631,15 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
                     </div>
                   </>
                 )}
-                <div className="pdt-size-guide-row">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M3 7h18M3 12h18M3 17h18M7 3v4M12 3v4M17 3v4"/>
-                  </svg>
-                  Not sure about your size?
-                  <button className="pdt-size-chart-btn" type="button" onClick={() => setShowSizeChart(true)}>Size Chart</button>
-                </div>
+                {SIZE_GUIDE.rows.length > 0 && (
+                  <div className="pdt-size-guide-row">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 7h18M3 12h18M3 17h18M7 3v4M12 3v4M17 3v4"/>
+                    </svg>
+                    Not sure about your size?
+                    <button className="pdt-size-chart-btn" type="button" onClick={() => setShowSizeChart(true)}>Size Chart</button>
+                  </div>
+                )}
               </div>
             );
           })()}

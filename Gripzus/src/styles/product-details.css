@@ -29,3 +29,17 @@
 .pdd-gz .pdd-table td { padding: 12px 14px; border-bottom: 1px solid var(--ink); }
 .pdd-gz .pdd-table tr:last-child td { border-bottom: 0; }
 @media (max-width: 560px) { .pdd-gz .pdd-table th { width: 110px; } }
+
+/* Size chart dialog — ported from the Soxbae socks standard, Gripzus palette */
+.sc-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(18,18,18,.55); display: grid; place-items: center; padding: 20px; }
+.sc-modal { width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; background: var(--paper); color: var(--ink); border-radius: 20px; padding: 24px; box-shadow: 0 24px 60px rgba(18,18,18,.3); }
+.sc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sc-head h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 26px; }
+.sc-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; font-size: 22px; line-height: 1; color: var(--ink); cursor: pointer; }
+.sc-note, .sc-tip { margin: 0 0 14px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+.sc-tip { margin: 14px 0 0; }
+.sc-wrap { overflow-x: auto; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sc-table th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.sc-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); }
+.sc-size { font-weight: 700; }
