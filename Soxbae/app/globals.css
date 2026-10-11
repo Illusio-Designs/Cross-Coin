@@ -1361,6 +1361,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-price-now { font-family: var(--serif); font-weight: 400; font-size: clamp(26px,3vw,34px); color: var(--ink); }
 .pdx-price-old { font-size: 17px; color: var(--ink-soft); text-decoration: line-through; }
 .pdx-price-off { font-size: 12px; font-weight: 600; color: var(--accent-600); background: var(--accent-050); padding: 4px 11px; border-radius: 999px; }
+.pdx-price-tax { font-size: 11px; color: var(--ink-soft, #8a8a8a); margin-top: 6px; }
 .pdx-lead { color: var(--ink-soft); font-size: 15px; line-height: 1.7; margin-top: 16px; max-width: 52ch; }
 .pdx-rule { height: 1px; background: var(--line); margin: 26px 0; }
 .pdx-opt { margin-bottom: 22px; }
