@@ -6,9 +6,9 @@ import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs } from '@/lib/api';
 
-// Render on-demand with fresh data (never a stale/empty server cache), and so
-// a surprising single product can never fail a static build.
-export const dynamic = 'force-dynamic';
+// Incrementally static (ISR): cache each product page and revalidate it every
+// 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

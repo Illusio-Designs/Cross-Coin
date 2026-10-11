@@ -130,13 +130,23 @@ export default function ProductShowcase({ product, initialColor }) {
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
 
-  // Preload every gallery image once so switching colour/thumbnail is instant.
+  // Preload the ACTIVE colour's gallery (not every colour's images), and only
+  // when the browser is idle — so thumbnail swaps still feel instant without a
+  // burst of full-size downloads on PDP load competing with the LCP image.
   useEffect(() => {
-    const urls = new Set();
-    (product.images || []).forEach((u) => urls.add(u));
-    (product.colorImages || []).forEach((arr) => (arr || []).forEach((u) => urls.add(u)));
-    urls.forEach((u) => { const im = new Image(); im.src = u; });
-  }, [product]);
+    if (typeof window === 'undefined') return;
+    const perColorImgs = product.colorImages?.[color];
+    const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
+    if (!urls.length) return;
+    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = u; });
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(preload, { timeout: 1500 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(preload, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [color, product?.id]);
 
   // Auto-advance the main image through the strip every 3.5s — paused while the
   // zoom lightbox is open.
@@ -246,7 +256,7 @@ export default function ProductShowcase({ product, initialColor }) {
           <div className="pdx-main" ref={mainRef}>
             {mainSrc ? (
               <button type="button" className="pdx-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-                <img src={ik(mainSrc, 900)} alt={product.name} fetchPriority="high" decoding="async" />
+                <img src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async" />
                 {sku && <span className="pdx-style-badge">Style: #{sku}</span>}
                 <span className="pdx-zoom-hint" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -417,7 +427,7 @@ export default function ProductShowcase({ product, initialColor }) {
       {/* Sticky buy bar — appears when the main buy buttons scroll out of view */}
       <div className={`pdx-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
         <div className="pdx-sticky-info">
-          {mainSrc && <img src={ik(mainSrc, 120)} alt="" />}
+          {mainSrc && <img src={ik(mainSrc, 120)} alt="" loading="lazy" />}
           <div>
             <b>{product.name}</b>
             <span>₹{Number(price).toFixed(0)}{selectedColorName ? ` · ${selectedColorName}` : ''}{effectiveSize ? ` · ${effectiveSize}` : ''}</span>
