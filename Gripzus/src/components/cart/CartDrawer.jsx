@@ -101,6 +101,7 @@ export default function CartDrawer() {
 
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
   const [codAllowed, setCodAllowed] = useState(true);
   const [pincodeServiceable, setPincodeServiceable] = useState(true);
 
@@ -136,9 +137,10 @@ export default function CartDrawer() {
         const raw = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
         const fees = raw.length ? raw : FALLBACK_SHIPPING_FEES;
         setShippingFees(fees);
+        setFreeShipThreshold(Number(data?.freeShippingThreshold) || 0);
         setSelectedFee((prev) => prev || fees.find((f) => f.orderType === 'prepaid') || fees[0] || null);
       })
-      .catch(() => { setShippingFees(FALLBACK_SHIPPING_FEES); setSelectedFee(FALLBACK_SHIPPING_FEES[0]); });
+      .catch(() => { setShippingFees(FALLBACK_SHIPPING_FEES); setSelectedFee(FALLBACK_SHIPPING_FEES[0]); setFreeShipThreshold(0); });
   }, [open]);
 
   /* addresses on open (signed-in) */
@@ -179,10 +181,14 @@ export default function CartDrawer() {
   /* totals */
   const cartTotal = items.reduce((s, i) => s + getPrice(i) * i.qty, 0);
   const totalQty = items.reduce((s, i) => s + (i.qty || 1), 0);
-  const shippingFee = Number(selectedFee?.fee || 0);
-  const finalTotal = Math.round(Math.max(0, cartTotal + shippingFee - couponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
+  const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - cartTotal);
+  /* Waive the COD fee in the displayed total once the free-shipping threshold is
+     met (prepaid is already free). Mirrors the server-side enforcement. */
+  const shippingFee = (isCod && freeShipQualifies) ? 0 : Number(selectedFee?.fee || 0);
+  const finalTotal = Math.round(Math.max(0, cartTotal + shippingFee - couponDiscount));
 
   /* Auto-remove a payment-mode-restricted coupon when the shopper switches
      payment mode after applying it (e.g. a Prepaid-only coupon applied while
@@ -657,6 +663,30 @@ export default function CartDrawer() {
           ) : (
             <div className="cd-single-view">
 
+              {/* Free-shipping progress */}
+              {freeShipThreshold > 0 && (
+                <div className="cd-freeship">
+                  <p className="cd-freeship-label">
+                    {freeShipQualifies
+                      ? "🎉 You've unlocked FREE shipping!"
+                      : `Add ₹${freeShipRemaining} for FREE shipping`}
+                  </p>
+                  <div
+                    className="cd-freeship-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(Math.min(100, (cartTotal / freeShipThreshold) * 100))}
+                    aria-label="Free shipping progress"
+                  >
+                    <div
+                      className="cd-freeship-fill"
+                      style={{ width: `${Math.min(100, (cartTotal / freeShipThreshold) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Items */}
               <div className="cd-sv-section">
                 <div className="cd-section-title">Items</div>
@@ -903,7 +933,7 @@ export default function CartDrawer() {
                     {sortedFees.map((fee) => {
                       const blocked = fee.orderType === 'cod' && !codAllowed;
                       const sel = selectedFee?.id === fee.id;
-                      const free = Number(fee.fee || 0) === 0;
+                      const free = Number(fee.fee || 0) === 0 || (fee.orderType === 'cod' && freeShipQualifies);
                       return (
                         <button
                           key={fee.id}
