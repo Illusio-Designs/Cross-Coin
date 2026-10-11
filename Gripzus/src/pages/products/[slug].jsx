@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
@@ -22,23 +23,72 @@ const ik = (src, w) => {
 };
 import { checkServiceability } from '../../services/serviceability';
 
-export default function ProductDetail() {
+// Public site origin — used for canonical / OpenGraph / JSON-LD URLs. Same
+// default as SeoWrapper so the two agree.
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://gripzus.com';
+
+// Trim a (already-plain) string to a meta-description-friendly length on a word
+// boundary.
+function truncate(s, n) {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  return t.length <= n ? t : t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…';
+}
+
+/**
+ * Server-side render the product page.
+ *
+ * Fetches the product by slug on the server (the same getProductBySlug call the
+ * component used to run in useEffect) so the initial HTML the crawler/browser
+ * receives already carries the full product — no skeleton, better LCP, and the
+ * SEO <Head> below is populated from real data. Returns 404 for a missing slug.
+ */
+export async function getServerSideProps({ params, res }) {
+  const slug = params?.slug;
+  if (!slug) return { notFound: true };
+
+  const product = await getProductBySlug(slug);
+  if (!product) return { notFound: true };
+
+  // CDN caching: product pages change rarely; let the edge serve a stale copy
+  // while it revalidates in the background.
+  res?.setHeader?.(
+    'Cache-Control',
+    'public, s-maxage=300, stale-while-revalidate=86400'
+  );
+
+  return { props: { slug, initialProduct: product } };
+}
+
+export default function ProductDetail({ slug: slugProp, initialProduct = null }) {
   const router = useRouter();
-  const slug = router.query.slug;
+  const slug = slugProp || router.query.slug;
 
   const { addItem, openCart } = useCart();
   const { has, toggle } = useWishlist();
 
-  const [product, setProduct] = useState(null);
+  // Preselect the colour from ?color= (set by the per-colour cards). Computed
+  // the same way on the server (first render) and the client so hydration agrees.
+  const pickInitialColor = (p) => {
+    if (!p) return '';
+    const wanted = Array.isArray(p.colors)
+      ? p.colors.find((c) => c.name === router.query.color)
+      : null;
+    return wanted?.name || p.colors?.[0]?.name || '';
+  };
+
+  // Seed every piece of first-paint state from the server-fetched product so the
+  // page renders fully populated in the initial HTML. Client interactivity below
+  // still mutates these.
+  const [product, setProduct] = useState(initialProduct);
   const [related, setRelated] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [loading] = useState(false);
+  const [notFound, setNotFound] = useState(!initialProduct);
 
   const [activeImg, setActiveImg] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [showSizeChart, setShowSizeChart] = useState(false);
-  const [size, setSize]   = useState('');
-  const [color, setColor] = useState('');
+  const [size, setSize]   = useState(initialProduct?.sizes?.[0] || '');
+  const [color, setColor] = useState(() => pickInitialColor(initialProduct));
   const [qty, setQty]     = useState(1);
   const [added, setAdded] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -83,39 +133,35 @@ export default function ProductDetail() {
     return () => mq.removeEventListener('change', on);
   }, []);
 
-  // Fetch the product by slug.
+  // The product now arrives from getServerSideProps as `initialProduct`, so the
+  // old client-side getProductBySlug fetch is gone. This effect only RE-SEEDS
+  // state when the server props change (client-side navigation between PDPs,
+  // where React keeps this component mounted and useState won't re-init) and
+  // fires the ViewContent pixel, which must run in the browser.
   useEffect(() => {
-    if (!slug) return;
-    let alive = true;
-    setLoading(true);
+    const p = initialProduct;
+    if (!p) { setNotFound(true); return; }
+    setProduct(p);
     setNotFound(false);
-    getProductBySlug(slug)
-      .then((p) => {
-        if (!alive) return;
-        if (!p) { setNotFound(true); return; }
-        setProduct(p);
-        setActiveImg(0);
-        setSize(p.sizes?.[0] || '');
-        // Preselect the colour from ?color= (set by the per-colour cards); fall
-        // back to the first colour when it's absent or doesn't match.
-        const wanted = Array.isArray(p.colors)
-          ? p.colors.find((c) => c.name === router.query.color)
-          : null;
-        setColor(wanted?.name || p.colors?.[0]?.name || '');
-        // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
-        fbTrack('ViewContent', {
-          content_ids: [String(p.id)],
-          content_type: 'product',
-          content_name: p.name || undefined,
-          value: Number(p.price ?? 0),
-          currency: 'INR',
-          contents: [{ id: String(p.id), quantity: 1 }],
-        });
-      })
-      .catch(() => { if (alive) setNotFound(true); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [slug]);
+    setActiveImg(0);
+    setSize(p.sizes?.[0] || '');
+    // Preselect the colour from ?color= (set by the per-colour cards); fall
+    // back to the first colour when it's absent or doesn't match.
+    const wanted = Array.isArray(p.colors)
+      ? p.colors.find((c) => c.name === router.query.color)
+      : null;
+    setColor(wanted?.name || p.colors?.[0]?.name || '');
+    // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).
+    fbTrack('ViewContent', {
+      content_ids: [String(p.id)],
+      content_type: 'product',
+      content_name: p.name || undefined,
+      value: Number(p.price ?? 0),
+      currency: 'INR',
+      contents: [{ id: String(p.id), quantity: 1 }],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, initialProduct]);
 
   // Related products — same collection, fallback to catalogue.
   useEffect(() => {
@@ -260,8 +306,100 @@ export default function ProductDetail() {
     openCart();
   };
 
+  /* ── Server-rendered SEO (mirrors Crosscoin's /products/[slug]) ──────────
+     Built from the already-fetched product so these tags live in the initial
+     HTML that crawlers see — not injected after hydration. */
+  const canonical = `${SITE_URL}/products/${slug}`;
+  const metaTitle = `${product.name} | Gripzus`;
+  const metaDescription = truncate(
+    product.description || `${product.name} — ${product.collection} from Gripzus.`,
+    160
+  );
+  const ogImage = product.images?.[0] || `${SITE_URL}/Gripzusfavicon.jpeg`;
+  const metaKeywords = [product.name, product.collection, 'gripzus'].filter(Boolean).join(', ');
+
+  // Product JSON-LD — rich result for the product itself.
+  const productLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: metaDescription,
+    image: product.images,
+    ...(product.sku ? { sku: product.sku } : {}),
+    brand: { '@type': 'Brand', name: 'Gripzus' },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'INR',
+      price: product.price,
+      availability: product.inStock === false
+        ? 'https://schema.org/OutOfStock'
+        : 'https://schema.org/InStock',
+      url: canonical,
+    },
+    ...(product.rating ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.rating,
+        reviewCount: product.reviewCount || 0,
+      },
+    } : {}),
+  };
+
+  // BreadcrumbList — Home → Catalogue → this product (matches the on-page crumb).
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Catalogue', item: `${SITE_URL}/products` },
+      { '@type': 'ListItem', position: 3, name: product.name, item: canonical },
+    ],
+  };
+
+  // Feed the same values to SeoWrapper so it renders server-side (truthy seoData
+  // short-circuits its client fetch) and never overrides the tags below.
+  const seoData = {
+    meta_title: metaTitle,
+    meta_description: metaDescription,
+    meta_keywords: metaKeywords,
+    canonical_url: canonical,
+    meta_image: ogImage,
+    og_title: metaTitle,
+    og_description: metaDescription,
+  };
+
   return (
-    <SeoWrapper pageName={slug || 'product-details'} seoData={product?.seo || null}>
+    <>
+      <Head>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        <meta name="keywords" content={metaKeywords} />
+        <link rel="canonical" href={canonical} />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Gripzus" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        />
+      </Head>
+
+      <SeoWrapper pageName={slug || 'product-details'} seoData={seoData}>
       <main className="bg-paper">
 
         {/* Breadcrumb */}
@@ -636,6 +774,7 @@ export default function ProductDetail() {
 
         {showSizeChart && <SizeChartModal onClose={() => setShowSizeChart(false)} />}
       </main>
-    </SeoWrapper>
+      </SeoWrapper>
+    </>
   );
 }
