@@ -654,8 +654,8 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             <p className="font-serif text-[var(--ink)] text-base leading-none truncate">{product.name}</p>
             <p className="text-[var(--ink)] text-sm font-body font-medium mt-1">{fmt(displayPrice)}</p>
           </div>
-          <button onClick={handleAddToCart} className="pill-cta ml-auto flex-1 max-w-[180px] justify-center !py-3.5 mr-14">
-            <ShoppingBag size={14} /> {added ? 'Added ✓' : 'Add to Bag'}
+          <button onClick={handleBuyNow} className="pill-cta ml-auto flex-1 max-w-[180px] justify-center !py-3.5 mr-14">
+            <ShoppingBag size={14} /> Buy Now
           </button>
         </div>
       )}

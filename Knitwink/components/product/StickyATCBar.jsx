@@ -33,7 +33,7 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
           className="flex shrink-0 items-center gap-2 rounded-full bg-brand-black px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-80"
         >
           <ShoppingBag size={14} />
-          Add to Bag
+          Buy Now
         </button>
       </div>
     </div>,

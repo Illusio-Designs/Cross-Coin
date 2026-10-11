@@ -788,7 +788,6 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
           </div>
         </div>
         <div className="pdt-sticky-actions">
-          <button className="pdt-btn-atb" onClick={handleAddToBag}>Add to Bag</button>
           <button className="pdt-btn-buy" onClick={handleBuyNow}>Buy Now</button>
         </div>
       </div>

@@ -423,9 +423,7 @@ export default function ProductShowcase({ product }) {
         {off > 0 && <span className="pdp-sticky-off">−{off}%</span>}
       </div>
       <button type="button" className="btn btn-primary pdp-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
-        {!inStock ? 'Out of stock'
-          : added ? <>Added <Icon name="ShieldCheck" size={16} /></>
-          : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}
+        {!inStock ? 'Out of stock' : <>Buy Now <Icon name="ShoppingBag" size={16} /></>}
       </button>
     </div>
     </>

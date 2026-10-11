@@ -490,7 +490,7 @@ export function ProductInfo({ product, onColorChange }) {
           (product.images?.[0]?.url) ||
           ''
         }
-        onAddToCart={handleAddToCart}
+        onAddToCart={handleBuyNow}
       />
 
       {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
