@@ -25,7 +25,7 @@ export default function Header() {
               wider than the viewport — the -50% loop never shows a gap. */}
           {Array.from({ length: 4 }).map((_, r) => (
             <div className="sx-ticker-run" key={r}>
-              <span>Free shipping over ₹499</span><i>✦</i>
+              <span>Free shipping over ₹999</span><i>✦</i>
               <span>Cushioned comfort knit</span><i>✦</i>
               <span>15-day easy returns</span><i>✦</i>
               <span>Happiness in feet</span><i>✦</i>

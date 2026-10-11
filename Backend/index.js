@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v5';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v6';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1430,7 +1430,7 @@ const startServer = async () => {
             if (!done.length) {
                 const Brand = require('./model/brandModel.js');
                 const { BrandSetting } = require('./model/brandSettingModel.js');
-                const seeds = { crosscoin: '499', gripzus: '999', knitwink: '599', morbix: '999', soxbae: '499', velmique: '2500', velquira: '999' };
+                const seeds = { crosscoin: '499', gripzus: '999', knitwink: '599', morbix: '999', soxbae: '999', velmique: '2500', velquira: '999' };
                 for (const [slug, value] of Object.entries(seeds)) {
                     try {
                         const b = await Brand.findOne({ where: { slug } });
@@ -1446,6 +1446,29 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('Free-shipping threshold seed failed: ' + err.message);
+        }
+
+        // ── One-time: reconcile Soxbae's free-shipping threshold 499 → 999 ──────
+        // The first seed set Soxbae to ₹499; its storefront copy (header/hero/
+        // marquee/PDP) is now all ₹999, so force the threshold to match.
+        try {
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'soxbae-freeship-999-v1' LIMIT 1`);
+            if (!done.length) {
+                const Brand = require('./model/brandModel.js');
+                const { BrandSetting } = require('./model/brandSettingModel.js');
+                const b = await Brand.findOne({ where: { slug: 'soxbae' } });
+                if (b) {
+                    const [row, created] = await BrandSetting.findOrCreate({
+                        where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
+                        defaults: { value: '999' },
+                    });
+                    if (!created && String(row.value) !== '999') await row.update({ value: '999' });
+                }
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('soxbae-freeship-999-v1')`);
+                logger.info('✓ Soxbae free-shipping threshold reconciled to ₹999');
+            }
+        } catch (err) {
+            logger.error('Soxbae free-shipping threshold correction failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future
