@@ -628,9 +628,8 @@ export default function ProductDetail() {
               <p className="h-display text-ink text-sm md:text-base leading-tight truncate">{product.name}</p>
               <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{price.toLocaleString('en-IN')}</p>
             </div>
-            <button onClick={handleBuyNow} className="btn-outline hidden sm:inline-flex !py-3 whitespace-nowrap">Buy Now</button>
-            <button onClick={handleAdd} className={`btn justify-center !py-3 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
-              {added ? 'Added ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+            <button onClick={handleBuyNow} className="btn justify-center !py-3 whitespace-nowrap">
+              {product.inStock === false ? 'Sold Out' : 'Buy Now'}
             </button>
           </div>
         </div>

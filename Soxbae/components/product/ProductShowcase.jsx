@@ -424,10 +424,9 @@ export default function ProductShowcase({ product, initialColor }) {
           </div>
         </div>
         <div className="pdx-sticky-btns">
-          <button type="button" className="pdx-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
-            {inStock ? 'Add to cart' : 'Out of stock'}
+          <button type="button" className="pdx-sticky-buy" onClick={onBuyNow} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
+            {inStock ? 'Buy Now' : 'Out of stock'}
           </button>
-          {inStock && <button type="button" className="pdx-sticky-buy" onClick={onBuyNow} tabIndex={showSticky ? 0 : -1}>Buy now</button>}
         </div>
       </div>
 
