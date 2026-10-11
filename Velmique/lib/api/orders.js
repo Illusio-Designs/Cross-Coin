@@ -137,7 +137,14 @@ export async function getShippingFees() {
   });
   if (!res.ok) return [];
   const data = await res.json().catch(() => ([]));
-  return Array.isArray(data) ? data : (data?.fees || data?.shippingFees || []);
+  const fees = Array.isArray(data) ? data : (data?.fees || data?.shippingFees || []);
+  // Preserve the array shape existing callers rely on (.length / .find) while
+  // surfacing the free-shipping threshold from object-shaped responses so the
+  // cart drawer can read it off the returned value.
+  if (!Array.isArray(data) && data && data.freeShippingThreshold != null) {
+    fees.freeShippingThreshold = data.freeShippingThreshold;
+  }
+  return fees;
 }
 
 export async function checkPincodeServiceability(pincode) {

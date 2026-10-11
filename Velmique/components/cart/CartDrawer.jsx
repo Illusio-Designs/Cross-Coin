@@ -106,6 +106,8 @@ export default function CartDrawer() {
 
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
+  // Free-shipping threshold (₹) from the backend; 0 = disabled.
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -208,6 +210,7 @@ export default function CartDrawer() {
       .then(raw => {
         const fees = (raw && raw.length) ? raw : FALLBACK_FEES;
         setShippingFees(fees);
+        setFreeShipThreshold(Number(raw?.freeShippingThreshold) || 0);
         const def = fees.find(f => f.orderType === 'prepaid') || fees.find(f => f.isDefault) || fees[0];
         setSelectedFee(def || null);
       })
@@ -258,11 +261,17 @@ export default function CartDrawer() {
   }, [cartOpen]);
 
   // ── Computed totals ────────────────────────────────────────────────────
-  const subtotal     = cartTotal;
-  const shippingFee  = parseFloat(selectedFee?.fee || 0);
-  const couponOff    = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
-  const isCod        = selectedFee?.orderType === 'cod';
-  const isPrepaid    = selectedFee?.orderType === 'prepaid';
+  const subtotal       = cartTotal;
+  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
+  const couponOff      = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
+  const isCod          = selectedFee?.orderType === 'cod';
+  const isPrepaid      = selectedFee?.orderType === 'prepaid';
+  // Free shipping: qualifies once the subtotal reaches the API threshold.
+  const freeShipQualifies = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - subtotal);
+  // Waive the COD fee in the displayed total once the order qualifies for free
+  // shipping (prepaid is already 0). Checkout enforces the same server-side.
+  const shippingFee  = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
   const baseTotal    = Math.round(Math.max(0, subtotal + shippingFee - couponOff));
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
   const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
@@ -788,6 +797,28 @@ export default function CartDrawer() {
             </div>
           ) : (
             <>
+              {/* ── Free-shipping progress ─────────────────────────────── */}
+              {freeShipThreshold > 0 && (
+                <div className="px-5 py-3 border-b border-[#D8D3C9]">
+                  <p className="text-center text-[11px] font-body text-[#49423A] mb-2">
+                    {freeShipQualifies
+                      ? '🎉 You\'ve unlocked FREE shipping!'
+                      : <>Add <span className="font-medium text-[#8F7548]">{fmt(freeShipRemaining)}</span> for FREE shipping</>}
+                  </p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#B89A63]/20">
+                    <div
+                      className="h-full rounded-full bg-[#8F7548] transition-all duration-300"
+                      style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }}
+                      role="progressbar"
+                      aria-valuenow={freeShipQualifies ? 100 : Math.min(100, Math.round((subtotal / freeShipThreshold) * 100))}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label="Free shipping progress"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* ── Items ──────────────────────────────────────────────── */}
               <div className="px-5 py-4 space-y-4 border-b border-[#D8D3C9]">
                 {items.map((item, i) => (

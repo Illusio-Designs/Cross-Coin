@@ -112,6 +112,8 @@ export default function CartDrawer() {
   const [fees, setFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [serviceability, setServiceability] = useState(null);
+  // Free-shipping threshold (₹) from the backend; 0 = disabled.
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
 
 
   const [processing, setProcessing] = useState(false);
@@ -209,6 +211,7 @@ export default function CartDrawer() {
       const list = raw.length ? raw : FALLBACK_FEES;
       if (!alive) return;
       setFees(list);
+      setFreeShipThreshold(Number(data?.freeShippingThreshold) || 0);
       setSelectedFee((prev) => prev || list.find((f) => f.orderType === 'prepaid') || list.find((f) => f.isDefault) || list[0]);
     }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); } });
     return () => { alive = false; };
@@ -235,14 +238,20 @@ export default function CartDrawer() {
     } catch { setServiceability(null); }
   };
 
-  const shippingFee = parseFloat(selectedFee?.fee || 0);
+  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
+  const isCod = selectedFee?.orderType === 'cod';
+  const isPrepaid = selectedFee?.orderType === 'prepaid';
+  // Free shipping: qualifies once the subtotal reaches the API threshold.
+  const freeShipQualifies = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - subtotal);
+  // Waive the COD fee in the displayed total once the order qualifies for free
+  // shipping (prepaid is already 0). Checkout enforces the same server-side.
+  const shippingFee = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
   // Coupon discount is derived from the applied coupon (0 when none applied).
   // Applies to BOTH COD and prepaid; it is separate from the prepaid instant
   // discount below.
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discount) || 0 : 0;
   const total = Math.round(Math.max(0, subtotal + shippingFee - couponDiscount));
-  const isCod = selectedFee?.orderType === 'cod';
-  const isPrepaid = selectedFee?.orderType === 'prepaid';
   // Prepaid instant discount (0 unless configured) → the amount actually payable
   // online is the total minus that incentive.
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
@@ -599,6 +608,22 @@ export default function CartDrawer() {
           /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
+              {/* Free-shipping progress */}
+              {freeShipThreshold > 0 && (
+                <div className="cd-ship" style={{ borderRadius: 14, border: '1px solid var(--line-soft)', marginBottom: 10 }}>
+                  <span>
+                    {freeShipQualifies
+                      ? <b className="cd-ship-done">🎉 You've unlocked FREE shipping!</b>
+                      : <>Add <b>₹{freeShipRemaining.toFixed(0)}</b> for FREE shipping</>}
+                  </span>
+                  <div className="cd-ship-track" role="progressbar" aria-valuemin={0} aria-valuemax={100}
+                    aria-valuenow={freeShipQualifies ? 100 : Math.min(100, Math.round((subtotal / freeShipThreshold) * 100))}
+                    aria-label="Free shipping progress">
+                    <span className="cd-ship-fill" style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+
               {/* Items */}
               <div className="cd-co-section">
                 <div className="cd-section-title">Items</div>
