@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v6';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v7';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1469,6 +1469,33 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('Soxbae free-shipping threshold correction failed: ' + err.message);
+        }
+
+        // ── Shipping is now FREE on every order (prepaid + COD) ─────────────────
+        // Set every brand's threshold to ₹1 so the storefront's free-shipping bar
+        // shows as a permanent "free shipping" badge (any non-empty cart qualifies),
+        // matching the backend which now charges ₹0 shipping on all orders.
+        try {
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'free-ship-all-v1' LIMIT 1`);
+            if (!done.length) {
+                const Brand = require('./model/brandModel.js');
+                const { BrandSetting } = require('./model/brandSettingModel.js');
+                for (const slug of ['crosscoin', 'gripzus', 'knitwink', 'morbix', 'soxbae', 'velmique', 'velquira']) {
+                    try {
+                        const b = await Brand.findOne({ where: { slug } });
+                        if (!b) continue;
+                        const [row, created] = await BrandSetting.findOrCreate({
+                            where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
+                            defaults: { value: '1' },
+                        });
+                        if (!created && String(row.value) !== '1') await row.update({ value: '1' });
+                    } catch (e) { logger.warn(`free-ship-all for ${slug} failed: ` + e.message); }
+                }
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('free-ship-all-v1')`);
+                logger.info('✓ Free shipping enabled on all orders (thresholds set to ₹1)');
+            }
+        } catch (err) {
+            logger.error('free-ship-all migration failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future
