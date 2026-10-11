@@ -50,7 +50,7 @@ export default function Hero({ features = [], slides = [] }) {
             </div>
           </div>
 
-          <span className="sxh-badge">Free shipping over ₹999</span>
+          <span className="sxh-badge">Free shipping on all orders</span>
 
           {hasSlides && slides.length > 1 && (
             <div className="sxh-dots">

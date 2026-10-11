@@ -415,7 +415,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                   </>
                 )}
               </div>
-              <p className="text-[var(--ink-muted)] text-xs font-body mt-2">Inclusive of 18% GST · Free shipping over ₹2,500</p>
+              <p className="text-[var(--ink-muted)] text-xs font-body mt-2">Inclusive of 18% GST · Free shipping on all orders</p>
               <p className="flex items-center gap-1.5 text-[var(--ink-soft)] text-xs font-body mt-2">
                 <Truck size={13} className="text-[var(--gold-deep)]" /> Delivered by {eta.day}{eta.suffix} {eta.month}
               </p>

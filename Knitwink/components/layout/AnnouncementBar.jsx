@@ -20,7 +20,7 @@ export function AnnouncementBar() {
             the wrapped second line on phones. Slightly smaller + nowrap on
             mobile so the full message fits; shorter separators on small. */}
         <p className="whitespace-nowrap text-center text-[10px] text-white sm:text-xs">
-          Free Shipping over ₹599
+          Free Shipping on all orders
           <span className="mx-1.5 sm:mx-2">·</span>Easy Returns
           <span className="mx-1.5 sm:mx-2">·</span>100% Authentic
         </p>
