@@ -112,6 +112,8 @@ export default function CartDrawer() {
   const [fees, setFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [serviceability, setServiceability] = useState(null);
+  // ₹ subtotal at/above which COD ships free (0 = disabled). From getShippingFees().
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
 
 
   const [processing, setProcessing] = useState(false);
@@ -206,8 +208,9 @@ export default function CartDrawer() {
       const list = raw.length ? raw : FALLBACK_FEES;
       if (!alive) return;
       setFees(list);
+      setFreeShipThreshold(parseFloat(data?.freeShippingThreshold) || 0);
       setSelectedFee((prev) => prev || list.find((f) => f.orderType === 'prepaid') || list.find((f) => f.isDefault) || list[0]);
-    }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); } });
+    }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setFreeShipThreshold(0); setSelectedFee(FALLBACK_FEES[0]); } });
     return () => { alive = false; };
   }, [open]);
 
@@ -232,7 +235,13 @@ export default function CartDrawer() {
     } catch { setServiceability(null); }
   };
 
-  const shippingFee = parseFloat(selectedFee?.fee || 0);
+  // Free-shipping progress (COD ships free at/above the threshold; prepaid is always free).
+  const freeShipQualifies = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - subtotal);
+  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
+  // Waive the COD shipping fee in the displayed total once the threshold is met
+  // (prepaid is already 0). Checkout enforces this server-side.
+  const shippingFee = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
   const total = Math.round(Math.max(0, subtotal + shippingFee - couponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -638,6 +647,20 @@ export default function CartDrawer() {
           /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
+              {/* Free-shipping progress bar — reuses the drawer's cd-ship styling. */}
+              {freeShipThreshold > 0 && (
+                <div className="cd-ship" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                  <span>
+                    {freeShipQualifies
+                      ? <span className="cd-ship-done">🎉 You've unlocked FREE shipping!</span>
+                      : <>Add <b>₹{freeShipRemaining.toFixed(0)}</b> for FREE shipping</>}
+                  </span>
+                  <div className="cd-ship-track">
+                    <span className="cd-ship-fill" style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+
               {/* Items */}
               <div className="cd-co-section">
                 <div className="cd-section-title">Items</div>
