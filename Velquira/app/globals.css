@@ -555,6 +555,17 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 14px; font-size: 13px; }
 .pdp-price { font-size: 28px; font-weight: 900; margin-bottom: 16px; }
 .pdp-price .old { font-size: 17px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; margin-left: 10px; }
+.pdp-off { display: inline-block; vertical-align: middle; margin-left: 10px; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: #fff; background: var(--teal); padding: 4px 10px; border-radius: 999px; }
+
+/* Sticky mobile buy bar — hidden off-screen until the main CTA scrolls away */
+.pdp-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: none; align-items: center; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--card, #fff); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(17,24,69,.10); transform: translateY(110%); transition: transform .28s ease; }
+.pdp-sticky.show { transform: translateY(0); }
+.pdp-sticky-info { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.pdp-sticky-price { font-size: 20px; font-weight: 900; color: var(--ink); }
+.pdp-sticky-old { font-size: 13px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; }
+.pdp-sticky-off { font-size: 11px; font-weight: 800; color: #fff; background: var(--teal); padding: 2px 8px; border-radius: 999px; }
+.pdp-sticky-add { flex: 1; justify-content: center; gap: 6px; }
+@media (max-width: 760px) { .pdp-sticky { display: flex; } }
 .pdp-desc { color: var(--ink-soft); font-size: 15px; margin-bottom: 24px; }
 .pdp-highlights { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pdp-highlights li { display: flex; align-items: center; gap: 10px; font-size: 13px; }

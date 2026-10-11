@@ -369,10 +369,20 @@ export default function ProductDetail() {
 
               <h1 className="h-display text-3xl md:text-4xl leading-tight mb-6">{product.name}</h1>
 
-              <div className="flex items-baseline gap-3 mb-6">
-                <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
+              <div className="mb-6">
+                <div className="flex items-baseline gap-3">
+                  <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
+                  {compare && compare > price && (
+                    <>
+                      <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
+                      <span className="inline-flex items-center rounded-full bg-paper-warm px-2.5 py-1 text-xs font-semibold text-ink">
+                        −{Math.round(((compare - price) / compare) * 100)}% OFF
+                      </span>
+                    </>
+                  )}
+                </div>
                 {compare && compare > price && (
-                  <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
+                  <p className="text-ink-muted text-xs mt-1.5">MRP incl. of all taxes</p>
                 )}
               </div>
 

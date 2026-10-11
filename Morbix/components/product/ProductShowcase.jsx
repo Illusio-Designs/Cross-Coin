@@ -21,7 +21,7 @@ function ik(src, w) {
 // images, price, SKU, stock — reflects the exact variation the customer picked,
 // and Add to cart sends that precise variation to the backend.
 export default function ProductShowcase({ product, initialColor }) {
-  const { add } = useCart();
+  const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
 
@@ -37,6 +37,8 @@ export default function ProductShowcase({ product, initialColor }) {
   const [lightbox, setLightbox] = useState(false); // full-screen zoom overlay
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [showSticky, setShowSticky] = useState(false); // sticky buy bar visibility
+  const actionsRef = useRef(null);                      // the main buy buttons
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('');
@@ -122,6 +124,8 @@ export default function ProductShowcase({ product, initialColor }) {
   const sku = activeVariant?.sku || product.sku;
   const stock = activeVariant?.stock;
   const inStock = stock == null || stock > 0;
+  // Discount %, same calc the product card uses for its "-off%" badge.
+  const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   // Images for the selected colour (fall back to all product images).
   const perColor = product.colorImages?.[color];
@@ -185,10 +189,10 @@ export default function ProductShowcase({ product, initialColor }) {
 
   const pickColor = (i) => { setColor(i); setActive(0); };
 
-  const onAdd = () => {
-    if (!inStock) return;
-    // Use the SELECTED variation's main image (its first photo — stable, not the
-    // auto-rotating one), and pass the colour so the cart line shows it.
+  // Send the selected variation to the cart. Use the SELECTED variation's main
+  // image (its first photo — stable, not the auto-rotating one), and pass the
+  // colour so the cart line shows it. Shared by Add to cart and Buy now.
+  const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
     add(
       { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
@@ -196,10 +200,34 @@ export default function ProductShowcase({ product, initialColor }) {
       qty,
       activeVariant?.id ?? null
     );
+  };
+
+  const onAdd = () => {
+    if (!inStock) return;
+    addToCart();
     toast.cart(`${product.name} added to cart`);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   };
+
+  // Morbix's cart drawer is the checkout (add() opens it), so Buy now adds the
+  // selection and lets the drawer open straight away — no "added" toast between.
+  const onBuyNow = () => {
+    if (!inStock) return;
+    addToCart();
+  };
+
+  // Show the sticky buy bar once the main buy buttons have scrolled out of view.
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShowSticky(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Specification rows reflect the SELECTED variation (colour / size / SKU /
   // material change as you pick), then fall back to product-level details.
@@ -290,7 +318,9 @@ export default function ProductShowcase({ product, initialColor }) {
         <div className="pdp-price">
           ₹{Number(price).toFixed(0)}
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
+          {off > 0 && <span className="pdp-price-off">−{off}% OFF</span>}
         </div>
+        {off > 0 && <p className="pdp-price-tax">MRP incl. of all taxes</p>}
 
         {/* Free shipping + delivery ETA */}
         <div className="pdp-ship">
@@ -361,7 +391,7 @@ export default function ProductShowcase({ product, initialColor }) {
             </div>
           )}
 
-          <div className="buy-row">
+          <div className="buy-row" ref={actionsRef}>
             <div className="qty">
               <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
               <span>{qty}</span>
@@ -373,6 +403,9 @@ export default function ProductShowcase({ product, initialColor }) {
                 : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}
             </button>
           </div>
+          {inStock && (
+            <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>Buy now</button>
+          )}
         </div>
 
         <div className="pdp-trust">
@@ -411,6 +444,23 @@ export default function ProductShowcase({ product, initialColor }) {
         </dl>
       </aside>
     </section>
+
+    {/* Sticky buy bar — appears on mobile once the main buy buttons scroll out of view */}
+    <div className={`pdp-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
+      <div className="pdp-sticky-info">
+        {mainSrc && <img src={ik(mainSrc, 120)} alt="" />}
+        <div>
+          <b>{product.name}</b>
+          <span>₹{Number(price).toFixed(0)}{selectedColorName ? ` · ${selectedColorName}` : ''}{effectiveSize ? ` · ${effectiveSize}` : ''}</span>
+        </div>
+      </div>
+      <div className="pdp-sticky-btns">
+        <button type="button" className="pdp-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
+          {inStock ? 'Add to cart' : 'Out of stock'}
+        </button>
+        {inStock && <button type="button" className="pdp-sticky-buy" onClick={onBuyNow} tabIndex={showSticky ? 0 : -1}>Buy now</button>}
+      </div>
+    </div>
     </>
   );
 }

@@ -42,16 +42,11 @@ async function getCodFee(brandId = 1) {
   }
 }
 
-// The delivery fee for an order. Prepaid = 0. COD = configured fee, waived to 0
-// when subtotal ≥ the brand's free-shipping threshold.
-async function computeShippingFee({ orderType, subtotal = 0, brandId = 1 }) {
-  const type = orderType === 'cod' ? 'cod' : 'prepaid';
-  if (type === 'prepaid') return 0;
-
-  const threshold = await getFreeShippingThreshold(brandId);
-  if (threshold > 0 && Number(subtotal) >= threshold) return 0;
-
-  return getCodFee(brandId);
+// The delivery fee for an order. Shipping is now FREE on every order — prepaid
+// and COD alike (COD carries no fee). The per-brand threshold is retained only to
+// drive the storefront's free-shipping badge; it no longer gates the fee.
+async function computeShippingFee({ orderType, subtotal = 0, brandId = 1 }) { // eslint-disable-line no-unused-vars
+  return 0;
 }
 
 module.exports = { getFreeShippingThreshold, getCodFee, computeShippingFee };

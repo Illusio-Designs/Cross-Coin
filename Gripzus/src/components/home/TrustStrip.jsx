@@ -2,7 +2,7 @@
    labels on hairlines. Sits near the bottom of the home page. */
 
 const ITEMS = [
-  { title: 'Free shipping',    note: 'On orders over ₹999, India-wide.' },
+  { title: 'Free shipping',    note: 'On all orders, India-wide.' },
   { title: '30-day returns',   note: 'Not right? Send it back.' },
   { title: 'Knit small-batch', note: 'Inspected pair-by-pair in Morbi.' },
   { title: 'Secure checkout',  note: '100% secure payments, every time.' },

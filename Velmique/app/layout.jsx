@@ -30,13 +30,11 @@ export const metadata = {
   keywords: 'luxury perfume, niche fragrance, velmique, eau de parfum, extrait de parfum, oud, luxury scent',
 };
 
-// Disable user zoom (pinch + ctrl-scroll). Locks viewport at 1.0 scale.
+// Allow pinch-zoom so shoppers can inspect product photos on mobile. Locking the
+// viewport (userScalable:false) blocked zoom and is an accessibility regression.
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  minimumScale: 1,
-  userScalable: false,
 };
 
 export default function RootLayout({ children }) {

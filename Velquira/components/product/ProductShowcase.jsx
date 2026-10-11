@@ -29,6 +29,8 @@ export default function ProductShowcase({ product }) {
   const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [showSticky, setShowSticky] = useState(false);  // mobile sticky buy bar
+  const actionsRef = useRef(null);                       // main add-to-cart block
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('');
@@ -111,6 +113,7 @@ export default function ProductShowcase({ product }) {
   const sku = activeVariant?.sku || product.sku;
   const stock = activeVariant?.stock;
   const inStock = stock == null || stock > 0;
+  const off = oldPrice && oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   // Images for the selected colour (fall back to all product images).
   const perColor = product.colorImages?.[color];
@@ -161,6 +164,19 @@ export default function ProductShowcase({ product }) {
       rail.scrollBy({ left: delta, behavior: 'smooth' });
     }
   }, [active]);
+
+  // Reveal the mobile sticky buy bar once the main add-to-cart block scrolls
+  // out of view above the viewport (so there's always a persistent CTA).
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShowSticky(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const pickColor = (i) => { setColor(i); setActive(0); };
 
@@ -273,6 +289,7 @@ export default function ProductShowcase({ product }) {
         <div className="pdp-price">
           ₹{Number(price).toFixed(0)}
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
+          {off > 0 && <span className="pdp-off">−{off}% OFF</span>}
         </div>
 
         {/* Free shipping + delivery ETA */}
@@ -344,7 +361,7 @@ export default function ProductShowcase({ product }) {
             </div>
           )}
 
-          <div className="buy-row">
+          <div className="buy-row" ref={actionsRef}>
             <div className="qty">
               <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
               <span>{qty}</span>
@@ -394,6 +411,21 @@ export default function ProductShowcase({ product }) {
         </div>
         </div>
       </div>
+    </div>
+
+    {/* Sticky mobile buy bar — appears once the main add-to-cart block scrolls
+        out of view, so there's always a persistent price + CTA on mobile. */}
+    <div className={`pdp-sticky${showSticky && !lightbox ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox)}>
+      <div className="pdp-sticky-info">
+        <span className="pdp-sticky-price">₹{Number(price).toFixed(0)}</span>
+        {oldPrice ? <span className="pdp-sticky-old">₹{Number(oldPrice).toFixed(0)}</span> : null}
+        {off > 0 && <span className="pdp-sticky-off">−{off}%</span>}
+      </div>
+      <button type="button" className="btn btn-primary pdp-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
+        {!inStock ? 'Out of stock'
+          : added ? <>Added <Icon name="ShieldCheck" size={16} /></>
+          : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}
+      </button>
     </div>
     </>
   );
