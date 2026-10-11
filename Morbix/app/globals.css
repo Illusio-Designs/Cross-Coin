@@ -558,8 +558,10 @@ button { font-family: inherit; cursor: pointer; }
 }
 .pdp-info h1 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; margin: 8px 0 12px; }
 .pdp-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 14px; font-size: 13px; }
-.pdp-price { font-size: 28px; font-weight: 900; margin-bottom: 16px; }
-.pdp-price .old { font-size: 17px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; margin-left: 10px; }
+.pdp-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; font-size: 28px; font-weight: 900; margin-bottom: 16px; }
+.pdp-price .old { font-size: 17px; color: var(--ink-soft); text-decoration: line-through; font-weight: 500; }
+.pdp-price-off { font-size: 12px; font-weight: 800; color: #fff; background: var(--sale); padding: 4px 11px; border-radius: 999px; align-self: center; }
+.pdp-price-tax { font-size: 12px; color: var(--ink-soft); margin: -12px 0 16px; }
 .pdp-desc { color: var(--ink-soft); font-size: 15px; margin-bottom: 24px; }
 .pdp-highlights { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pdp-highlights li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
@@ -683,6 +685,9 @@ button { font-family: inherit; cursor: pointer; }
 .size-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 .buy-row { display: flex; gap: 12px; align-items: stretch; min-width: 0; }
 .buy-row .btn-primary { min-width: 0; }
+/* Buy now — outlined secondary beneath Add to cart */
+.pdp-buy-now { width: 100%; margin-top: 12px; background: #fff; color: var(--navy); border: 1.5px solid var(--navy); }
+.pdp-buy-now:hover { background: var(--navy); color: #fff; box-shadow: var(--shadow-soft); }
 .qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }
 .qty button { width: 44px; height: 46px; border: 0; background: transparent; font-size: 18px; color: var(--ink); }
 .qty button:hover { background: var(--line-soft); }
@@ -1291,3 +1296,27 @@ button { font-family: inherit; cursor: pointer; }
   .rv-track > .review { scroll-snap-align: start; }
   .rv-dup { display: none; }
 }
+
+/* ── Sticky buy bar — appears when the main buy buttons scroll out of view ── */
+.pdp-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 58; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px max(20px, calc((100vw - var(--maxw)) / 2)) calc(10px + env(safe-area-inset-bottom, 0px)); padding-right: max(84px, calc((100vw - var(--maxw)) / 2 + 64px)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -10px 30px -16px rgba(27,35,64,.25); transform: translateY(110%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
+.pdp-sticky.show { transform: none; visibility: visible; }
+.pdp-sticky-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pdp-sticky-info img { width: 46px; height: 46px; object-fit: contain; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); flex-shrink: 0; }
+.pdp-sticky-info > div { min-width: 0; display: flex; flex-direction: column; }
+.pdp-sticky-info b { font-weight: 800; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdp-sticky-info span { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdp-sticky-btns { display: flex; gap: 10px; flex-shrink: 0; }
+.pdp-sticky-add, .pdp-sticky-buy { min-height: 44px; padding: 0 22px; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--navy); transition: background .18s ease, color .18s ease; }
+.pdp-sticky-add { background: var(--navy); color: #fff; }
+.pdp-sticky-add:hover:not(:disabled) { background: var(--navy-700); border-color: var(--navy-700); }
+.pdp-sticky-add:disabled { background: var(--line); border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
+.pdp-sticky-buy { background: #fff; color: var(--navy); }
+.pdp-sticky-buy:hover { background: var(--navy); color: #fff; }
+.pdp-sticky-add:focus-visible, .pdp-sticky-buy:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .pdp-sticky { padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .pdp-sticky-info img { display: none; }
+  .pdp-sticky-add, .pdp-sticky-buy { padding: 0 16px; font-size: 13px; }
+  body:has(.pdp-sticky.show) .fab-stack { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .pdp-sticky { transition: none; } }
