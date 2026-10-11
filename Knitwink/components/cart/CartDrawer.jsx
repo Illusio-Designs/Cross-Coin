@@ -212,6 +212,8 @@ export function CartDrawer() {
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
   const [pincodeServiceability, setPincodeServiceability] = useState(null);
+  // ₹ subtotal at/above which COD ships free (0 = disabled). From getShippingFees().
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
 
   // Order
   const [isProcessing, setIsProcessing] = useState(false);
@@ -326,10 +328,12 @@ export function CartDrawer() {
       const raw = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
       const fees = raw.length > 0 ? raw : FALLBACK_SHIPPING_FEES;
       setShippingFees(fees);
+      setFreeShipThreshold(parseFloat(data?.freeShippingThreshold) || 0);
       const def = fees.find(f => f.orderType === 'prepaid') || fees.find(f => f.isDefault) || fees[0];
       setSelectedFee(def || null);
     }).catch(() => {
       setShippingFees(FALLBACK_SHIPPING_FEES);
+      setFreeShipThreshold(0);
       setSelectedFee(FALLBACK_SHIPPING_FEES[0]);
     });
   }, [drawerOpen]);
@@ -433,7 +437,13 @@ export function CartDrawer() {
 
   // ── Computed totals ─────────────────────────────────────────────────────
   const cartTotal = items.reduce((s, i) => s + getPrice(i) * i.quantity, 0);
-  const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
+  // Free-shipping progress (COD ships free at/above the threshold; prepaid is always free).
+  const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - cartTotal);
+  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
+  // Waive the COD shipping fee in the displayed total once the threshold is met
+  // (prepaid is already 0). Checkout enforces this server-side.
+  const shippingFeeAmount = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   const finalTotal = Math.round(Math.max(0, cartTotal + shippingFeeAmount - couponDiscount));
   const totalQty = items.reduce((s, i) => s + (i.quantity || 1), 0);
@@ -1038,6 +1048,28 @@ export function CartDrawer() {
             </div>
           ) : (
             <div className="cd-single-view">
+
+              {/* Free-shipping progress bar — mirrors FreeShippingBar's style but
+                  driven by the API threshold (freeShippingThreshold). */}
+              {freeShipThreshold > 0 && (
+                <div className="border-b border-gray-200 px-6 py-3">
+                  <p className="mb-2 text-center text-xs text-gray-600">
+                    {freeShipQualifies
+                      ? "🎉 You've unlocked FREE shipping!"
+                      : `Add ₹${freeShipRemaining.toFixed(0)} for FREE shipping`}
+                  </p>
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-sage transition-all duration-300"
+                      style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (cartTotal / freeShipThreshold) * 100)}%` }}
+                      role="progressbar"
+                      aria-valuenow={freeShipQualifies ? 100 : Math.min(100, (cartTotal / freeShipThreshold) * 100)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label="Free shipping progress" />
+                  </div>
+                </div>
+              )}
 
               {/* Items */}
               <div className="cd-section-title">Items</div>

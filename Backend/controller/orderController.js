@@ -175,15 +175,15 @@
   }
 
   // Calculate shipping fee based on payment type
-  const calculateShippingFee = async (paymentType) => {
-    const orderType = paymentType === "cod" ? "cod" : "prepaid";
-    try {
-      const shippingFee = await ShippingFee.findOne({ where: { orderType } });
-      return shippingFee ? Number(shippingFee.fee) : orderType === "cod" ? 5.99 : 0.0;
-    } catch (error) {
-      logger.error("Error calculating shipping fee:", error);
-      return orderType === "cod" ? 5.99 : 0.0;
-    }
+  // Delegates to the shared shipping service so the checkout and the public
+  // shipping-fees API agree: prepaid ships free; COD carries its fee unless the
+  // cart subtotal reaches the brand's free-shipping threshold (then COD is free).
+  const calculateShippingFee = async (paymentType, subtotal = 0, brandId = 1) => {
+    return require('../services/shippingService.js').computeShippingFee({
+      orderType: paymentType,
+      subtotal,
+      brandId,
+    });
   };
 
   // Helper function to calculate shipment dimensions - FIXED VALUES
@@ -472,7 +472,7 @@
 
       const subTotal = Number(totalAmount);
       const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
-      const shippingFee = Number(await calculateShippingFee(payment_type));
+      const shippingFee = Number(await calculateShippingFee(payment_type, subTotal, req.brand?.id || 1));
       const finalAmount = Math.round(subTotal - appliedDiscount + shippingFee);
       logger.debug("subTotal:", subTotal);
       logger.debug("appliedDiscount:", appliedDiscount);
@@ -1228,7 +1228,7 @@
 
       const subTotal = Number(totalAmount);
       const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
-      const shippingFee = Number(await calculateShippingFee(payment_type));
+      const shippingFee = Number(await calculateShippingFee(payment_type, subTotal, req.brand?.id || 1));
       const finalAmount = Math.max(0, subTotal - appliedDiscount + shippingFee);
 
       // ── RTO risk scoring ────────────────────────────────────────────────

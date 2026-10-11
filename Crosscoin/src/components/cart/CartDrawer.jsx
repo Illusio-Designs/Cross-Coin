@@ -270,6 +270,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // Delivery
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
+  const [freeShipThreshold, setFreeShipThreshold] = useState(0);
 
   // COD: direct (no OTP)
   const [fieldErrors, setFieldErrors] = useState({});
@@ -374,6 +375,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       const raw = Array.isArray(data) ? data : data?.shippingFees || data?.fees || [];
       const fees = raw.length > 0 ? raw : FALLBACK_SHIPPING_FEES;
       setShippingFees(fees);
+      setFreeShipThreshold(Number(data?.freeShippingThreshold) || 0);
       const def = fees.find(f => f.orderType === 'prepaid')
         || fees.find(f => f.isDefault)
         || fees[0];
@@ -381,6 +383,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }).catch(() => {
       setShippingFees(FALLBACK_SHIPPING_FEES);
       setSelectedFee(FALLBACK_SHIPPING_FEES[0]);
+      setFreeShipThreshold(0);
     });
   }, [isOpen]);
 
@@ -612,7 +615,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // ── Computed totals ─────────────────────────────────────────────────────
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
-  const shippingFeeAmount = parseFloat(selectedFee?.fee || 0);
+  const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - cartTotal);
+  // Waive the COD shipping fee in the displayed total once the free-shipping
+  // threshold is met (prepaid is already free). Mirrors server-side enforcement.
+  const shippingFeeAmount = (selectedFee?.orderType === 'cod' && freeShipQualifies)
+    ? 0
+    : parseFloat(selectedFee?.fee || 0);
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   // Offers shown in the in-drawer picker, excluding any already-applied coupon.
   const offerCoupons = availableCoupons.filter(
@@ -1384,6 +1393,30 @@ const CartDrawer = ({ isOpen, onClose }) => {
           ) : (
             <div className="cd-single-view">
 
+              {/* ── Free-shipping progress ── */}
+              {freeShipThreshold > 0 && (
+                <div className="cd-freeship">
+                  <p className="cd-freeship-label">
+                    {freeShipQualifies
+                      ? "🎉 You've unlocked FREE shipping!"
+                      : `Add ₹${freeShipRemaining} for FREE shipping`}
+                  </p>
+                  <div
+                    className="cd-freeship-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(Math.min(100, (cartTotal / freeShipThreshold) * 100))}
+                    aria-label="Free shipping progress"
+                  >
+                    <div
+                      className="cd-freeship-fill"
+                      style={{ width: `${Math.min(100, (cartTotal / freeShipThreshold) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* ── 1. Items ── */}
               <div className="cd-section-title">Items</div>
               <div className="cd-items-list">
@@ -1733,6 +1766,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   <div className="cd-delivery-list">
                     {sortedShippingFees.map(fee => {
                       const isCodBlocked = isMounted && fee.orderType === 'cod' && pincodeServiceability && pincodeServiceability.cod_allowed === false;
+                      const feeEffective = (fee.orderType === 'cod' && freeShipQualifies) ? 0 : parseFloat(fee.fee || 0);
                       return (
                         <label
                           key={fee.id}
@@ -1767,8 +1801,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           </div>
                           <div className="cd-delivery-fee-wrap">
                             <span className="cd-delivery-sparkle">✦</span>
-                            <span className={`cd-delivery-fee ${parseFloat(fee.fee || 0) === 0 ? 'free' : ''}`}>
-                              {parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee || 0).toFixed(0)}`}
+                            <span className={`cd-delivery-fee ${feeEffective === 0 ? 'free' : ''}`}>
+                              {feeEffective === 0 ? 'FREE' : `₹${feeEffective.toFixed(0)}`}
                             </span>
                           </div>
                         </label>
