@@ -8,7 +8,15 @@ module.exports.getAllShippingFees = async (req, res) => {
         const where = {};
         if (req.brand && req.brand.id) where.brand_id = req.brand.id;
         const shippingFees = await ShippingFee.findAll({ where });
-        res.json({ shippingFees });
+        // The cart subtotal (₹) at/above which COD ships free, so the storefront
+        // can draw a "₹X away from free shipping" bar that matches what the order
+        // total will actually charge. 0 = no threshold configured.
+        let freeShippingThreshold = 0;
+        try {
+            freeShippingThreshold = await require('../services/shippingService.js')
+                .getFreeShippingThreshold(req.brand && req.brand.id ? req.brand.id : 1);
+        } catch (_) { /* default 0 */ }
+        res.json({ shippingFees, freeShippingThreshold });
     } catch (error) {
         logger.error('Error getting shipping fees:', error);
         res.status(500).json({ message: 'Failed to get shipping fees', error: error.message });

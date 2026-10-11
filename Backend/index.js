@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v4';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v5';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1419,6 +1419,33 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('WhatsApp name backfill failed: ' + err.message);
+        }
+
+        // ── Seed per-brand free-shipping thresholds (COD ships free at/above ₹X) ──
+        // Sets each brand's FREE_SHIPPING_THRESHOLD to its advertised number so the
+        // cart's free-shipping bar and the checkout waiver agree out of the box.
+        // Admin-editable afterwards; only fills brands that don't already have it.
+        try {
+            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'free-ship-threshold-seed-v1' LIMIT 1`);
+            if (!done.length) {
+                const Brand = require('./model/brandModel.js');
+                const { BrandSetting } = require('./model/brandSettingModel.js');
+                const seeds = { crosscoin: '499', gripzus: '999', knitwink: '599', morbix: '999', soxbae: '499', velmique: '2500', velquira: '999' };
+                for (const [slug, value] of Object.entries(seeds)) {
+                    try {
+                        const b = await Brand.findOne({ where: { slug } });
+                        if (!b) continue;
+                        await BrandSetting.findOrCreate({
+                            where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
+                            defaults: { value },
+                        });
+                    } catch (e) { logger.warn(`free-ship threshold seed for ${slug} failed: ` + e.message); }
+                }
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('free-ship-threshold-seed-v1')`);
+                logger.info('✓ Free-shipping thresholds seeded per brand');
+            }
+        } catch (err) {
+            logger.error('Free-shipping threshold seed failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future

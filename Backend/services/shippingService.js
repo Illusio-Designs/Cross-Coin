@@ -1,124 +1,57 @@
-/**
- * Shipping Service — the canonical front-door for shipping operations.
- *
- *   const shipping = require('../services/shippingService.js');
- *   await shipping.createOrder(brandId, orderData);
- *   await shipping.trackByAwb(brandId, awb);
- *   await shipping.cancelShipment(brandId, awb, reason);
- *
- * Under the hood it asks `shippingProviderFactory` for the right
- * provider (iThink today, FShip historically — controlled per-brand
- * via the `SHIPPING_PROVIDER` setting). Calling code stays free of
- * provider-specific knowledge.
- *
- * Both providers expose the same surface:
- *   createForwardOrder, createOrUpdateForwardOrder, getTrackingHistory,
- *   getShipmentStatus, cancelOrder, calculateRates, checkServiceability,
- *   getShippingLabel, registerPickup, mapFShipStatusToCrossCoin,
- *   calculateShipmentDimensions, testConnection.
- *
- * To add a new provider:
- *   1. Implement the same surface as a class in services/.
- *   2. Register the brand setting value in shippingProviderFactory.js.
- *   3. Existing callers keep working unchanged.
- */
+'use strict';
 
-const factory = require('./shippingProviderFactory.js');
+const settingsHelper = require('./settingsHelper.js');
+const { ShippingFee } = require('../model/shippingFeeModel.js');
 const { logger } = require('../config/logging.js');
 
-async function getProvider(brandId = 1) {
-  return factory.getShippingProvider(brandId);
-}
-
-async function getProviderName(brandId = 1) {
-  return factory.getProviderName(brandId);
-}
-
 /**
- * Create a forward shipment for an order. Returns whatever the
- * underlying provider returns — typically { success, orderId, waybill,
- * labelUrl } on success or { success: false, error } on failure.
+ * Single source of truth for the delivery fee and the free-shipping threshold.
+ *
+ * Model (per brand):
+ *   - PREPAID orders always ship FREE.
+ *   - COD orders carry the configured COD fee, UNLESS the cart subtotal reaches
+ *     the brand's FREE_SHIPPING_THRESHOLD, in which case COD ships free too.
+ *
+ * Both the checkout (orderController) and the public shipping-fees API use this,
+ * so the storefront's "₹X away from free shipping" bar can never promise a
+ * waiver the order total won't actually apply.
  */
-async function createOrder(brandId, orderData) {
-  const provider = await getProvider(brandId);
-  return provider.createOrUpdateForwardOrder
-    ? provider.createOrUpdateForwardOrder(orderData)
-    : provider.createForwardOrder(orderData);
-}
 
-// Book a reverse (return) pickup. Only providers that implement createReverseOrder
-// (iThink) support it; others throw a clear error the caller can fail-soft on.
-async function createReversePickup(brandId, orderData) {
-  const provider = await getProvider(brandId);
-  if (typeof provider.createReverseOrder !== 'function') {
-    throw new Error('Active shipping provider does not support reverse pickup');
+// The cart subtotal (₹) at/above which COD shipping becomes free, for this brand.
+// Admin-configurable via the FREE_SHIPPING_THRESHOLD brand setting. 0 / empty =
+// no threshold (COD always carries its fee).
+async function getFreeShippingThreshold(brandId = 1) {
+  try {
+    const raw = await settingsHelper.getSetting(brandId, 'FREE_SHIPPING_THRESHOLD', '0');
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch (_) {
+    return 0;
   }
-  return provider.createReverseOrder(orderData);
 }
 
-async function trackByAwb(brandId, awb) {
-  const provider = await getProvider(brandId);
-  return provider.getTrackingHistory(awb);
-}
-
-async function getStatus(brandId, awb) {
-  const provider = await getProvider(brandId);
-  return provider.getShipmentStatus(awb);
-}
-
-async function cancelShipment(brandId, awb, reason = 'Customer request') {
-  const provider = await getProvider(brandId);
-  return provider.cancelOrder(awb, reason);
-}
-
-async function calculateRates(brandId, rateData) {
-  const provider = await getProvider(brandId);
-  return provider.calculateRates(rateData);
-}
-
-async function checkServiceability(brandId, sourcePincode, destinationPincode) {
-  const provider = await getProvider(brandId);
-  return provider.checkServiceability(sourcePincode, destinationPincode);
-}
-
-async function getLabel(brandId, waybills) {
-  const provider = await getProvider(brandId);
-  // iThink's method is getLabel({ waybills }); FShip's is getShippingLabel(waybill).
-  // Normalise here so callers don't care.
-  const list = Array.isArray(waybills) ? waybills : [waybills];
-  if (typeof provider.getLabel === 'function') {
-    return provider.getLabel({ waybills: list });
+// Resolve the configured COD fee for a brand (brand-scoped first, then any COD row).
+async function getCodFee(brandId = 1) {
+  try {
+    const row = (await ShippingFee.findOne({ where: { orderType: 'cod', brand_id: brandId } }))
+      || (await ShippingFee.findOne({ where: { orderType: 'cod' } }));
+    return row ? Number(row.fee) : 0;
+  } catch (e) {
+    logger.error('getCodFee error: ' + e.message);
+    return 0;
   }
-  return provider.getShippingLabel(list[0]);
 }
 
-async function testConnection(brandId) {
-  const provider = await getProvider(brandId);
-  return provider.testConnection();
+// The delivery fee for an order. Prepaid = 0. COD = configured fee, waived to 0
+// when subtotal ≥ the brand's free-shipping threshold.
+async function computeShippingFee({ orderType, subtotal = 0, brandId = 1 }) {
+  const type = orderType === 'cod' ? 'cod' : 'prepaid';
+  if (type === 'prepaid') return 0;
+
+  const threshold = await getFreeShippingThreshold(brandId);
+  if (threshold > 0 && Number(subtotal) >= threshold) return 0;
+
+  return getCodFee(brandId);
 }
 
-/**
- * Clear cached provider instances. Call after toggling SHIPPING_PROVIDER
- * in brand_settings so the next request picks up the new provider.
- */
-function clearProviderCache(brandId) {
-  factory.clearCache(brandId);
-  logger.info(`[shipping] provider cache cleared for brand ${brandId || 'all'}`);
-}
-
-module.exports = {
-  // Direct factory access (escape hatch for code that needs provider-specific methods)
-  getProvider,
-  getProviderName,
-  clearProviderCache,
-  // Unified surface
-  createOrder,
-  createReversePickup,
-  trackByAwb,
-  getStatus,
-  cancelShipment,
-  calculateRates,
-  checkServiceability,
-  getLabel,
-  testConnection,
-};
+module.exports = { getFreeShippingThreshold, getCodFee, computeShippingFee };
