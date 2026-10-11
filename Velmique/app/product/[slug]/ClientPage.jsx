@@ -406,6 +406,9 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 {displayCompare && displayCompare > displayPrice && (
                   <>
                     <span className="text-[var(--ink-muted)] text-base line-through font-body">{fmt(displayCompare)}</span>
+                    <span className="inline-flex items-center bg-[var(--gold-deep)] text-white text-[11px] font-body font-semibold tracking-wider uppercase px-2 py-0.5">
+                      −{Math.round((1 - displayPrice / displayCompare) * 100)}% OFF
+                    </span>
                     <span className="text-[var(--gold-deep)] text-xs font-body tracking-wider uppercase">
                       Save {fmt(displayCompare - displayPrice)}
                     </span>
