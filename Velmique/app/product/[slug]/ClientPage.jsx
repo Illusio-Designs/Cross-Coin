@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,6 +36,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
   const [loading, setLoading] = useState(!initialProduct);
   const [related, setRelated] = useState([]);
   const [showBuyBar, setShowBuyBar] = useState(false);
+  const revealRef = useRef(null);
 
   const [selectedSize,  setSelectedSize]  = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -64,6 +65,27 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
     const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
     return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
   })();
+
+  // Fade-up the long-form content block by block as it scrolls into view — the
+  // same quiet reveal the home sections use. Runs once the product (and so the
+  // content) has rendered; falls back to immediately visible without IO support.
+  useEffect(() => {
+    if (!product) return;
+    const root = revealRef.current;
+    if (!root) return;
+    const els = root.querySelectorAll('.reveal');
+    if (typeof IntersectionObserver === 'undefined') {
+      els.forEach((el) => el.classList.add('visible'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [product]);
 
   // Fetch live product
   useEffect(() => {
@@ -545,10 +567,10 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
         </div>
 
         {/* ═══════════════ FULL-WIDTH LONG-FORM CONTENT ═══════════════ */}
-        <div className="mt-16 md:mt-24 flex flex-col gap-8">
+        <div ref={revealRef} className="mt-16 md:mt-24 flex flex-col gap-8">
 
           {/* ── Description ─────────────────────────────────── */}
-          <div>
+          <div className="reveal">
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Description</p>
             <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-4">About this fragrance</h2>
             <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
@@ -559,7 +581,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
           <div className="h-px bg-[var(--border)]" />
 
           {/* ── Details ────────────────────────────────────── */}
-          <div>
+          <div className="reveal">
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Details</p>
             <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
               {selectedSize || selectedColor
@@ -588,7 +610,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
           <div className="h-px bg-[var(--border)]" />
 
           {/* ── Fragrance notes pyramid ────────────────────── */}
-          <div>
+          <div className="reveal">
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Composition</p>
             <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
               How it <em className="not-italic gold-text">unfolds</em>
@@ -611,12 +633,12 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
           <div className="h-px bg-[var(--border)]" />
 
           {/* ── Ideal for, storage and use, manufacturing ──── */}
-          <ProductDetailBlocks product={product} />
+          <div className="reveal"><ProductDetailBlocks product={product} /></div>
 
           <div className="h-px bg-[var(--border)]" />
 
           {/* ── Reviews ────────────────────────────────────── */}
-          <div>
+          <div className="reveal">
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Reviews</p>
             <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
               What customers say
