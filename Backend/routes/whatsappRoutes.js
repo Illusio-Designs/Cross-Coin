@@ -64,8 +64,21 @@ router.get('/broadcasts',         isAuthenticated, isWhatsappManager, ctrl.getBr
 router.post('/broadcasts',        isAuthenticated, isWhatsappManager, ctrl.createBroadcast);
 router.post('/broadcasts/:id/run', isAuthenticated, isAdmin, ctrl.runBroadcast);
 
-// ── Media proxy (supports token via query param for browser audio/video/img tags) ──
-router.get('/media/:mediaId', async (req, res, next) => {
+// ── Media proxy ───────────────────────────────────────────────────────────────
+// Two ways to authorize a browser <img>/<audio>/<video> request (neither can
+// send an Authorization header):
+//   1) Preferred: a signed, short-lived URL (?exp=&sig=) scoped to this one
+//      (mediaId, brandId). No session JWT travels in the URL. When valid, the
+//      per-item signature IS the authorization, so we skip isAuthenticated /
+//      isWhatsappManager and serve directly.
+//   2) Legacy fallback (kept for backward compatibility): the session JWT in
+//      ?token=, copied into the Authorization header, then the normal auth chain.
+router.get('/media/:mediaId', (req, res, next) => {
+  const { exp, sig } = req.query;
+  const brandId = req.query.brandId || 1;
+  if (sig && exp && ctrl.verifyMediaAccess(req.params.mediaId, brandId, exp, sig)) {
+    return ctrl.proxyMedia(req, res); // authorized by signature — bypass JWT auth
+  }
   // Allow token via query param so <audio src="..."> works in browser
   if (req.query.token && !req.headers.authorization) {
     req.headers.authorization = `Bearer ${req.query.token}`;

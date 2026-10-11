@@ -550,7 +550,12 @@ function MsgContent({ msg, brandId = 1 }) {
   // Resolve the media URL
   const rawUrl = media?.url;
   const effectiveUrl = rawUrl || (msg.body?.startsWith('http') ? msg.body : null);
-  const proxyUrl = effectiveUrl ? getProxyUrl(effectiveUrl, brandId) : null;
+  // Prefer the server-provided signed, short-lived URL (no session JWT in the
+  // URL). The backend sends it as an origin-relative path, so join it with the
+  // API base. Fall back to the legacy ?token= URL when it's absent.
+  const proxyUrl = msg._mediaUrl
+    ? (msg._mediaUrl.startsWith('http') ? msg._mediaUrl : `${API_BASE}${msg._mediaUrl}`)
+    : (effectiveUrl ? getProxyUrl(effectiveUrl, brandId) : null);
 
   if (process.env.NODE_ENV !== 'production') {
     // Debug removed

@@ -388,11 +388,25 @@ exports.getMessages = async (req, res) => {
       quotedMsgs.forEach(q => { quotedMap[q.id] = q; });
     }
     dbMs = Date.now() - tDb;
+    const brandIdForMedia = conv.brand_id || 1;
     const messagesWithQuotes = rows.map(m => {
       const plain = m.toJSON();
       if (m.quoted_message_id && quotedMap[m.quoted_message_id]) {
         plain._quotedMsg = quotedMap[m.quoted_message_id].toJSON();
       }
+      // For media messages the media id/url lives in the JSON `body`. Attach a
+      // ready-to-use, signed, short-lived proxy URL so the browser can render the
+      // media without putting the session JWT in the URL. The frontend prefers
+      // this when present and falls back to the legacy ?token= URL otherwise.
+      try {
+        if (plain.body) {
+          const parsed = JSON.parse(plain.body);
+          if (parsed && typeof parsed === 'object' && parsed.url) {
+            const { exp, sig } = signMediaAccess(parsed.url, brandIdForMedia);
+            plain._mediaUrl = `/api/whatsapp/media/${encodeURIComponent(parsed.url)}?brandId=${brandIdForMedia}&exp=${exp}&sig=${sig}`;
+          }
+        }
+      } catch (_) { /* not JSON media — frontend falls back to getProxyUrl */ }
       return plain;
     });
 
@@ -1941,6 +1955,54 @@ function isAllowedMediaHost(urlStr) {
     h.endsWith('.fbsbx.com')
   );
 }
+
+// ── Signed, short-lived media-access URLs ───────────────────────────────────
+// Browser <img>/<audio>/<video> tags cannot send an Authorization header, so the
+// media proxy historically accepted the session JWT in the ?token= query string.
+// That leaks the full session JWT into server logs, browser history and Referer
+// headers. Instead we embed a short-lived HMAC signature scoped to a single
+// (mediaId, brandId): it grants read access to exactly that one media item for a
+// bounded window and carries no session secret. The ?token= path is kept as a
+// backward-compatible fallback so existing links never break.
+const MEDIA_URL_TTL_MS = 24 * 60 * 60 * 1000; // ~24h
+
+function mediaUrlSecret() {
+  return process.env.MEDIA_URL_SECRET || process.env.JWT_SECRET || '';
+}
+
+function mediaAccessSig(mediaId, brandId, exp) {
+  return _mediaCrypto
+    .createHmac('sha256', mediaUrlSecret())
+    .update(`${mediaId}|${brandId}|${exp}`)
+    .digest('hex');
+}
+
+// Produce an {exp, sig} pair authorizing read access to (mediaId, brandId).
+function signMediaAccess(mediaId, brandId) {
+  const exp = Date.now() + MEDIA_URL_TTL_MS;
+  return { exp, sig: mediaAccessSig(mediaId, brandId, exp) };
+}
+
+// Validate a signature: not expired, and a constant-time match. Returns a boolean
+// and never throws or logs the signature/secret.
+function verifyMediaAccess(mediaId, brandId, exp, sig) {
+  try {
+    const secret = mediaUrlSecret();
+    if (!secret || !mediaId || !exp || !sig) return false;
+    const expNum = Number(exp);
+    if (!Number.isFinite(expNum) || expNum < Date.now()) return false; // bad/expired
+    const expected = mediaAccessSig(mediaId, brandId, expNum);
+    const a = Buffer.from(String(sig), 'utf8');
+    const b = Buffer.from(expected, 'utf8');
+    if (a.length !== b.length) return false; // timingSafeEqual requires equal length
+    return _mediaCrypto.timingSafeEqual(a, b);
+  } catch (_) {
+    return false;
+  }
+}
+
+exports.signMediaAccess = signMediaAccess;
+exports.verifyMediaAccess = verifyMediaAccess;
 
 exports.proxyMedia = async (req, res) => {
   maybePruneMediaCache(); // bound the cache size; runs off-thread, at most 1/hour
