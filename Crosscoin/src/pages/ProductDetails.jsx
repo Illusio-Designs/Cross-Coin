@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, checkPincodeServiceability } from '../services/publicApi';
+import { getPublicProductBySlug, getPublicCoupons, getPublicProductReviews, checkPincodeServiceability, getAllPublicProducts } from '../services/publicApi';
 import { useCart } from '../context/CartContext';
+import ProductCard from '../components/products/ProductCard';
 import Loader from '../components/common/Loader';
 import InfiniteReviewsSlider from '../components/common/InfiniteReviewsSlider';
 import ReviewForm from '../components/common/ReviewForm';
@@ -44,6 +45,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
   const [productData, setProductData] = useState(null);
   const [rawProduct, setRawProduct] = useState(null);
   const [allReviews, setAllReviews] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [error, setError] = useState(null);
   const viewContentFiredRef = useRef(null);
 
@@ -235,6 +237,43 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
       })
       .catch(() => {});
   }, [rawProduct?.id]);
+
+  // "You may also like" rail — reuse the SAME catalog service the listings use
+  // (getAllPublicProducts). Fetch a handful once the current product id is known,
+  // exclude the current product, and render nothing on empty/failure.
+  useEffect(() => {
+    const pid = productData?.id;
+    if (!pid) return;
+    let alive = true;
+    getAllPublicProducts({ limit: 12 })
+      .then((res) => {
+        const list = res?.data?.products || res?.products || [];
+        const mapped = (Array.isArray(list) ? list : [])
+          .map((p) => ({
+            ...p,
+            price: p.price || p.variations?.[0]?.price || 0,
+            comparePrice: p.comparePrice || p.variations?.[0]?.comparePrice || 0,
+          }))
+          .filter((p) => String(p.id) !== String(pid))
+          .slice(0, 8);
+        if (alive) setRelatedProducts(mapped);
+      })
+      .catch(() => { if (alive) setRelatedProducts([]); });
+    return () => { alive = false; };
+  }, [productData?.id]);
+
+  // Related-rail card handlers — mirror the listings page (route by slug on
+  // click; reuse the PDP's own addToCart for the "+ Add" button).
+  const handleRelatedClick = (p) => {
+    if (p?.slug) router.push(`/products/${p.slug}`);
+    else if (p?.id) router.push(`/products/${p.id}`);
+  };
+  const handleRelatedAddToCart = (e, p, color, size, variationId) => {
+    e.stopPropagation();
+    addToCart(p, color, size, 1, variationId);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2200);
+  };
 
   const handleAddToBag = async () => {
     if (!productData) return;
@@ -776,6 +815,27 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
             <p style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>No reviews yet — be the first!</p>
           )}
         </div>
+
+        {/* ── You may also like — related products rail (reuses the catalog
+            service + the shared ProductCard). Renders nothing when empty. ── */}
+        {relatedProducts.length > 0 && (
+          <div className="pdt-related">
+            <h2 className="pdt-section-title">You may also like</h2>
+            <div
+              className="pdt-related-grid"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginTop: 8 }}
+            >
+              {relatedProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onProductClick={handleRelatedClick}
+                  onAddToCart={handleRelatedAddToCart}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Sticky Bar ── */}
