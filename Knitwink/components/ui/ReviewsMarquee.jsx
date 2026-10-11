@@ -112,10 +112,10 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {[
-              { value: '50K+', label: 'Customers' },
-              { value: '98%',  label: 'Recommend' },
+              { value: `${total.toLocaleString('en-IN')}+`, label: 'Reviews' },
               { value: avg.toFixed(1), label: 'Avg Rating' },
-              { value: '5★',   label: 'Top Reviews' },
+              { value: 'India', label: 'Made in' },
+              { value: '7-day', label: 'Returns' },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-gray-300 px-3 py-2.5 sm:px-4 sm:py-3">
                 <p className="text-base font-bold text-brand-black sm:text-lg">{s.value}</p>
