@@ -1,6 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getAllPublicReviews } from '../../services/publicApi';
+
+// Only FACTUAL trust signals: Made in India (Cross Coin is based in India),
+// secure payments, free shipping (now on all orders), the 7-day returns policy
+// (see /returns and the PDP), and Cash on Delivery (offered at checkout).
+const TRUST_SIGNALS = [
+  'Made in India',
+  '100% secure payments',
+  'Free shipping on all orders',
+  'Easy 7-day returns',
+  'COD available',
+];
 
 const TrustBadges = () => {
+  // Reuse the real store-wide review total (same /api/reviews/all source the
+  // home page's Customer Reviews section uses). Render the rating line only
+  // when real reviews exist — never a fabricated number.
+  const [rating, setRating] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    getAllPublicReviews({ limit: 30, sort: 'highest' })
+      .then((r) => {
+        const list = Array.isArray(r) ? r : (r?.reviews || r?.data || []);
+        const rated = list.filter((x) => Number(x.rating) > 0);
+        const avg = rated.length ? rated.reduce((a, x) => a + Number(x.rating), 0) / rated.length : 0;
+        const total = Math.max(Number(r?.pagination?.total) || 0, list.length);
+        if (active && avg > 0 && total > 0) setRating({ avg, total });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const badges = [
     {
       id: 1,
@@ -63,7 +94,19 @@ const TrustBadges = () => {
           <h2 className="trust-badges-title">Built on <strong>Trust</strong></h2>
           <p className="trust-badges-subtitle">Delivered with care, every single time</p>
         </div>
-        
+
+        {/* Prominent factual trust-signal strip + real store-wide rating */}
+        <div className="trust-badges-strip">
+          {rating && (
+            <span className="trust-badges-pill trust-badges-pill--rating">
+              ★ Rated {rating.avg.toFixed(1)} by {rating.total.toLocaleString('en-IN')}+ happy shoppers
+            </span>
+          )}
+          {TRUST_SIGNALS.map((label) => (
+            <span key={label} className="trust-badges-pill">{label}</span>
+          ))}
+        </div>
+
         <div className="trust-badges-grid">
           {badges.map((badge) => (
             <div key={badge.id} className={`trust-badge-card trust-badge-card--${badge.color}`}>

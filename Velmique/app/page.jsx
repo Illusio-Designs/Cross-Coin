@@ -39,10 +39,22 @@ export default async function HomePage() {
     getAllReviews({ limit: 24 }).catch(() => ({ reviews: [] })),
   ]);
 
+  // Real store-wide rating for the trust marquee — average from the fetched
+  // reviews, exact total from the API. Null when there are no real reviews.
+  const homeReviews = reviewsData?.reviews || [];
+  const ratedReviews = homeReviews.filter((r) => Number(r.rating) > 0);
+  const reviewAvg = ratedReviews.length
+    ? ratedReviews.reduce((a, r) => a + Number(r.rating), 0) / ratedReviews.length
+    : 0;
+  const reviewTotal = Number(reviewsData?.pagination?.total) || 0;
+  const marqueeRating = reviewAvg > 0 && reviewTotal > 0
+    ? { avg: reviewAvg, total: reviewTotal }
+    : null;
+
   return (
     <SeoWrapper pageName="home">
       <HeroMaison />
-      <Marquee />
+      <Marquee rating={marqueeRating} />
       <Intro />
       <BestSellers initialItems={bestsellers} />
       <CollectionsBand initialCategories={categories} />

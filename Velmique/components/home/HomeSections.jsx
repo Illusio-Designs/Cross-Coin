@@ -19,12 +19,28 @@ const reveal = {
 /* ─────────────────────────────────────
    1. MARQUEE — italic serif strip on near-black
    ───────────────────────────────────── */
-const marqueeWords = ['Rare Absolutes', 'Hand Blended', 'Indian Maison', 'Unforgettable Sillage'];
+// Homepage trust strip. Only FACTUAL signals — Crafted in India (Velmique is an
+// Indian maison), secure payments, free shipping (now on all orders), the 7-day
+// returns policy (see /account/returns) and Cash on Delivery (offered at
+// checkout). `rating` ({ avg, total }) is the real store-wide review total the
+// homepage already fetches; it renders only when real reviews exist — never a
+// fabricated number.
+const trustWords = [
+  'Crafted in India',
+  '100% Secure Payments',
+  'Free Shipping on All Orders',
+  'Easy 7-Day Returns',
+  'Cash on Delivery Available',
+];
 
-export function Marquee() {
-  const run = [...marqueeWords, ...marqueeWords];
+export function Marquee({ rating = null }) {
+  const hasRating = rating && Number(rating.avg) > 0 && Number(rating.total) > 0;
+  const words = hasRating
+    ? [`Rated ${Number(rating.avg).toFixed(1)}★ by ${Number(rating.total).toLocaleString('en-IN')}+ Happy Shoppers`, ...trustWords]
+    : trustWords;
+  const run = [...words, ...words];
   return (
-    <section className="overflow-hidden bg-[var(--ink)] text-white py-[18px] whitespace-nowrap">
+    <section className="overflow-hidden bg-[var(--ink)] text-white py-[18px] whitespace-nowrap" aria-label="Why shop Velmique">
       <div className="vq-marquee-track inline-flex items-center gap-[55px]">
         {[...run, ...run].map((w, i) => (
           <span key={i} className="inline-flex items-center gap-[55px]">
