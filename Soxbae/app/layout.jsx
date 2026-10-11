@@ -9,6 +9,7 @@ import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import ExitIntentModal from '@/components/cart/ExitIntentModal';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
@@ -63,6 +64,7 @@ export default function RootLayout({ children }) {
               <main id="main">{children}</main>
               <Footer />
               <CartDrawer />
+              <ExitIntentModal />
             </SmoothScroll>
             <FloatingWidgets />
             <ToastHost />
