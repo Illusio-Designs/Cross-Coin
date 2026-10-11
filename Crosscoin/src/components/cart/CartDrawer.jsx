@@ -222,6 +222,18 @@ const IconTruckSmall = () => <svg viewBox="0 0 24 24" fill="none" stroke="curren
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+// Cross-sell catalog barely changes between cart opens; cache the first fetch
+// for ~5 min so re-opening the drawer doesn't re-hit the API every time. A
+// failed fetch isn't cached, so it retries on the next open.
+let _xsCache = { at: 0, p: null };
+function _xsFetch() {
+  if (_xsCache.p && Date.now() - _xsCache.at < 300000) return _xsCache.p;
+  const p = getAllPublicProducts({ limit: 12 });
+  _xsCache = { at: Date.now(), p };
+  Promise.resolve(p).catch(() => { if (_xsCache.p === p) _xsCache = { at: 0, p: null }; });
+  return p;
+}
+
 const CartDrawer = ({ isOpen, onClose }) => {
   const { cartItems, cartTotal, addToCart, removeFromCart, updateQuantity, clearCart, lastAddedItem, buyNowItem, buyNowTotal, clearBuyNow } = useCart();
   const { user, isAuthenticated } = useAuth();
@@ -586,7 +598,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen || buyNowItem || cartItems.length === 0) { setSuggestedProducts([]); return; }
     let alive = true;
-    getAllPublicProducts({ limit: 12 })
+    _xsFetch()
       .then((res) => {
         if (!alive) return;
         const list = res?.data?.products || res?.products || (Array.isArray(res) ? res : []);

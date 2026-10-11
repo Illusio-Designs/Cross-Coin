@@ -175,7 +175,7 @@ const Home = ({ initialData = {} }) => {
     if (reviewsLoadedRef.current) return;
     reviewsLoadedRef.current = true;
     try {
-      const r = await getAllPublicReviews({ limit: 30, sort: 'highest' });
+      const r = await getAllPublicReviews({ limit: 20, sort: 'highest' });
       const list = Array.isArray(r) ? r : (r?.reviews || r?.data || []);
       setReviews(list);
       // Exact store-wide count from the API (the slider only loads the top 30).

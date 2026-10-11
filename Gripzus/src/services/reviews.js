@@ -24,7 +24,9 @@ function mapReview(r, i = 0) {
 /* All approved reviews — used by the home page review band. */
 export async function getAllReviews() {
   try {
-    const res = await fetch(`${API_URL}/api/reviews/all`, { headers });
+    // Cap at 20 — the marquee only loops a handful; the exact store-wide count
+    // comes from pagination.total, so a small page keeps the payload light.
+    const res = await fetch(`${API_URL}/api/reviews/all?limit=20`, { headers });
     if (!res.ok) return [];
     const data = await res.json();
     const list = data?.reviews ?? data?.data ?? data ?? [];
@@ -38,7 +40,8 @@ export async function getAllReviews() {
    count isn't capped at the number of reviews returned. */
 export async function getAllReviewsWithTotal() {
   try {
-    const res = await fetch(`${API_URL}/api/reviews/all`, { headers });
+    // Cap at 20 for a light payload; total still comes from pagination.total.
+    const res = await fetch(`${API_URL}/api/reviews/all?limit=20`, { headers });
     if (!res.ok) return { reviews: [], total: 0 };
     const data = await res.json();
     const list = data?.reviews ?? data?.data ?? data ?? [];

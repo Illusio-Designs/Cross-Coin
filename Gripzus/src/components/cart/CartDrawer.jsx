@@ -85,6 +85,18 @@ const IconSuccess = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const IconTruck = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>;
 const IconMoney = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C9 2 7 4 7 6h10c0-2-2-4-5-4z" /><path d="M7 6C4 6 2 9 2 12c0 5 4 10 10 10s10-5 10-10c0-3-2-6-5-6H7z" /><path d="M12 10v4M10 12h4" /></svg>;
 
+// Cross-sell bestsellers barely change between cart opens; cache the first
+// fetch for ~5 min so re-opening the drawer doesn't re-hit the API every time.
+// A failed fetch isn't cached, so it retries on the next open.
+let _xsCache = { at: 0, p: null };
+function _xsFetch() {
+  if (_xsCache.p && Date.now() - _xsCache.at < 300000) return _xsCache.p;
+  const p = getBestsellers(8);
+  _xsCache = { at: Date.now(), p };
+  Promise.resolve(p).catch(() => { if (_xsCache.p === p) _xsCache = { at: 0, p: null }; });
+  return p;
+}
+
 export default function CartDrawer() {
   const router = useRouter();
   const { items, open, closeCart, clearCart, removeItem, updateQty, lineKey, addItem } = useCart();
@@ -258,7 +270,7 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!open || items.length === 0) return;
     let alive = true;
-    getBestsellers(8)
+    _xsFetch()
       .then((list) => { if (alive) setSuggestions(Array.isArray(list) ? list : []); })
       .catch(() => { if (alive) setSuggestions([]); });
     return () => { alive = false; };

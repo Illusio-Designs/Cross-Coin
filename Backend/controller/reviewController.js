@@ -1001,12 +1001,17 @@ module.exports.getAllPublicReviews = async (req, res) => {
             include: [
                 { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
                 { model: Product, as: 'Product', attributes: ['id', 'name'] },
-                { model: ReviewImage, as: 'ReviewImages' }
+                // ReviewImages are deliberately NOT joined here. This brand-wide
+                // feed powers only the home testimonials marquees/sliders, which
+                // render text + name + rating (never review photos). Joining the
+                // hasMany ReviewImages forced `distinct` + a large payload on
+                // every homepage fetch; dropping it makes the query and response
+                // far lighter. The PDP review list (which does show photos) uses
+                // the separate /api/reviews/product/:id endpoint.
             ],
             order,
             limit: parseInt(limit),
             offset: offset,
-            distinct: true
         });
 
         res.json({

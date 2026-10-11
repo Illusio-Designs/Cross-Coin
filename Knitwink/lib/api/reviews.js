@@ -12,7 +12,9 @@ export async function getProductReviews(productId) {
 
 // Get all public reviews (for home page)
 export async function getAllReviews() {
-  const res = await fetch(`${API_URL}/api/reviews/all`, { headers })
+  // Cap at 20 — the home marquee only loops a handful; the exact store-wide
+  // count comes from pagination.total, so a small page keeps the payload light.
+  const res = await fetch(`${API_URL}/api/reviews/all?limit=20`, { headers })
   if (!res.ok) throw new Error('Failed to fetch reviews')
   return res.json()
 }

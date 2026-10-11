@@ -86,6 +86,18 @@ function validateAddress(a) {
   return errs;
 }
 
+// Cross-sell bestsellers barely change between cart opens; cache the first
+// fetch for ~5 min so re-opening the drawer doesn't re-hit the API every time.
+// A failed fetch isn't cached, so it retries on the next open.
+let _xsCache = { at: 0, p: null };
+function _xsFetch() {
+  if (_xsCache.p && Date.now() - _xsCache.at < 300000) return _xsCache.p;
+  const p = getBestsellers(8);
+  _xsCache = { at: Date.now(), p };
+  Promise.resolve(p).catch(() => { if (_xsCache.p === p) _xsCache = { at: 0, p: null }; });
+  return p;
+}
+
 export default function CartDrawer() {
   const router = useRouter();
   const {
@@ -211,7 +223,7 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!cartOpen || items.length === 0) return;
     let alive = true;
-    getBestsellers(8)
+    _xsFetch()
       .then(list => { if (alive) setSuggestions(Array.isArray(list) ? list : []); })
       .catch(() => { if (alive) setSuggestions([]); });
     return () => { alive = false; };
