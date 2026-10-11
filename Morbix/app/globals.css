@@ -1320,3 +1320,20 @@ button { font-family: inherit; cursor: pointer; }
   body:has(.pdp-sticky.show) .fab-stack { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .pdp-sticky { transition: none; } }
+
+/* Size chart modal (shown from the PDP "Size chart" link under the sizes) */
+.sc-sizeguide { margin: 10px 0 0; font-size: 13px; color: var(--ink-soft); }
+.sc-sizeguide button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--teal-600); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sc-sizeguide button:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.sc-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(27,35,64,.55); display: grid; place-items: center; padding: 20px; }
+.sc-modal { width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; background: var(--card); color: var(--ink); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
+.sc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sc-head h2 { margin: 0; font-weight: 800; font-size: 24px; letter-spacing: -0.02em; }
+.sc-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; font-size: 22px; line-height: 1; color: var(--ink); cursor: pointer; }
+.sc-note, .sc-tip { margin: 0 0 14px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+.sc-tip { margin: 14px 0 0; }
+.sc-wrap { overflow-x: auto; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sc-table th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--teal-600); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.sc-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); }
+.sc-size { font-weight: 700; }

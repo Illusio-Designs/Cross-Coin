@@ -6,6 +6,8 @@ import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
+import { SIZE_GUIDE } from '@/lib/sizeGuide';
+import SizeChartModal from '@/components/product/SizeChartModal';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -38,7 +40,9 @@ export default function ProductShowcase({ product, initialColor }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [showSticky, setShowSticky] = useState(false); // sticky buy bar visibility
+  const [showChart, setShowChart] = useState(false);   // size chart modal visibility
   const actionsRef = useRef(null);                      // the main buy buttons
+  const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('');
@@ -320,12 +324,12 @@ export default function ProductShowcase({ product, initialColor }) {
           {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
           {off > 0 && <span className="pdp-price-off">−{off}% OFF</span>}
         </div>
-        {off > 0 && <p className="pdp-price-tax">MRP incl. of all taxes</p>}
+        <p className="pdp-price-tax">MRP incl. of all taxes</p>
 
         {/* Free shipping + delivery ETA */}
         <div className="pdp-ship">
           <Icon name="Truck" size={16} />
-          <span><strong>Free shipping</strong> over ₹999</span>
+          <span><strong>Free shipping</strong> on all orders</span>
           <span className="pdp-ship-eta">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
         </div>
 
@@ -388,6 +392,11 @@ export default function ProductShowcase({ product, initialColor }) {
                     onClick={() => setSize(s)}>{s}</button>
                 ))}
               </div>
+              {hasSizeGuide && (
+                <p className="sc-sizeguide">Not sure about your size?{' '}
+                  <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
+                </p>
+              )}
             </div>
           )}
 
@@ -416,6 +425,8 @@ export default function ProductShowcase({ product, initialColor }) {
         </div>
       </div>
     </div>
+
+    {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
 
     {/* ── About + Specifications (specs track the selected variation) ── */}
     <section className="pdp-details">
