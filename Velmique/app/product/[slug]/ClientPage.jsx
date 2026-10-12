@@ -563,11 +563,9 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                 </div>
               ))}
             </div>
-          </section>
-        </div>
-
-        {/* ═══════════════ FULL-WIDTH LONG-FORM CONTENT ═══════════════ */}
-        <div ref={revealRef} className="mt-16 md:mt-24 flex flex-col gap-8">
+          {/* ── Long-form content — scrolls in the right column beside the
+              sticky gallery (not full-width); fades up block by block. ── */}
+          <div ref={revealRef} className="flex flex-col gap-8 pt-2">
 
           {/* ── Description ─────────────────────────────────── */}
           <div className="reveal">
@@ -645,6 +643,8 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             </h2>
             <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
           </div>
+          </div>
+          </section>
         </div>
 
         {/* ── You may also like — related products rail ──────── */}
