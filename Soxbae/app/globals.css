@@ -1120,6 +1120,24 @@ button { font-family: inherit; cursor: pointer; }
 .cd-coupon-opt-text b { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: .02em; }
 .cd-coupon-opt-text span { font-size: 11.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-coupon-opt-apply { font-size: 12px; font-weight: 800; color: var(--teal-600); flex-shrink: 0; }
+
+/* Best-offer banner (replaces the old offers dropdown) */
+.cd-bestoffer-wrap { margin-top: 12px; }
+.cd-bestoffer { display: flex; align-items: center; gap: 10px; background: var(--teal-050); border: 1px solid var(--teal); border-radius: var(--r); padding: 11px 13px; }
+.cd-bestoffer-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #fff; color: var(--teal-600); flex-shrink: 0; }
+.cd-bestoffer-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cd-bestoffer-head { font-size: 13.5px; font-weight: 800; color: var(--ink); letter-spacing: .01em; line-height: 1.25; }
+.cd-bestoffer-sub { font-size: 11.5px; color: var(--ink-soft); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-bestoffer-apply { flex-shrink: 0; border: none; background: var(--navy); color: #fff; font-family: inherit; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 8px 14px; border-radius: 9px; cursor: pointer; transition: background .15s ease, opacity .15s ease; }
+.cd-bestoffer-apply:hover:not(:disabled) { background: var(--teal-600); }
+.cd-bestoffer-apply:disabled { opacity: .55; cursor: not-allowed; }
+.cd-moreoffers { margin-top: 8px; }
+.cd-moreoffers-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: transparent; border: none; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--teal-600); padding: 4px 2px; }
+.cd-moreoffers-toggle:hover { color: var(--ink); }
+.cd-moreoffers-chev { display: inline-flex; transition: transform .18s ease; }
+.cd-moreoffers-toggle.open .cd-moreoffers-chev { transform: rotate(180deg); }
+.cd-moreoffers-list { display: grid; gap: 6px; margin-top: 6px; }
+
 .cd-co-summary { display: grid; gap: 8px; }
 .cd-summary-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-soft); }
 .cd-summary-row span:last-child { color: var(--ink); font-weight: 600; }

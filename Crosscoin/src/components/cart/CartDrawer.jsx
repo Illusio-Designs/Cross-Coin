@@ -712,6 +712,42 @@ const CartDrawer = ({ isOpen, onClose }) => {
   const offerCoupons = availableCoupons.filter(
     (c) => !appliedCoupon || String(c.code).toUpperCase() !== String(appliedCoupon.code).toUpperCase()
   );
+
+  // ── Best-offer preview ──────────────────────────────────────────────────
+  // Client-side ESTIMATE only; the real discount is computed by server-side
+  // validation when the coupon is applied. "basis" is the same subtotal the
+  // coupon section sends to /validate (activeTotal).
+  const couponBasis = activeTotal;
+  const estOfferDiscount = (c) => {
+    const value = parseFloat(c.value) || 0;
+    const cap = parseFloat(c.maxDiscount) || 0;
+    let disc = 0;
+    if (c.type === 'percentage') { disc = (couponBasis * value) / 100; if (cap > 0) disc = Math.min(disc, cap); }
+    else if (c.type === 'fixed') { disc = value; }
+    return Math.round(Math.min(Math.max(0, disc), couponBasis));
+  };
+  // "save ₹X" is only meaningful when type + value are clearly present.
+  const offerHasSave = (c) => (c.type === 'percentage' || c.type === 'fixed') && parseFloat(c.value) > 0;
+  const bestOffer = useMemo(() => {
+    if (offerCoupons.length === 0) return null;
+    const applicable = offerCoupons.filter((c) => couponBasis >= (parseFloat(c.minPurchase) || 0));
+    if (applicable.length > 0) {
+      let best = applicable[0], bestDisc = estOfferDiscount(best);
+      for (const c of applicable) { const d = estOfferDiscount(c); if (d > bestDisc) { best = c; bestDisc = d; } }
+      return { coupon: best, discount: bestDisc, applicable: true, need: 0 };
+    }
+    // None applicable — surface the one needing the least extra spend.
+    let pick = offerCoupons[0], pickNeed = (parseFloat(pick.minPurchase) || 0) - couponBasis;
+    for (const c of offerCoupons) { const need = (parseFloat(c.minPurchase) || 0) - couponBasis; if (need < pickNeed) { pick = c; pickNeed = need; } }
+    return { coupon: pick, discount: 0, applicable: false, need: Math.max(0, Math.round(pickNeed)) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerCoupons, couponBasis]);
+  const bestOfferKey = bestOffer ? (bestOffer.coupon.id || bestOffer.coupon.code) : null;
+  const remainingOffers = useMemo(
+    () => offerCoupons.filter((c) => (c.id || c.code) !== bestOfferKey),
+    [offerCoupons, bestOfferKey]
+  );
+
   const finalTotal = Math.round(Math.max(0, activeTotal + shippingFeeAmount - couponDiscount));
   const totalQty = activeItems.reduce((s, i) => s + (i.quantity || 1), 0);
 
@@ -1603,36 +1639,75 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     </div>
                     {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
 
-                    {offerCoupons.length > 0 && (
-                      <div className="cd-offers" ref={offersRef}>
-                        <button
-                          type="button"
-                          className="cd-offers-trigger"
-                          onClick={() => setOffersOpen((o) => !o)}
-                          aria-expanded={offersOpen}
-                          aria-haspopup="listbox"
-                        >
-                          <span className="cd-offers-trigger-label">Select a coupon</span>
-                          <span className={`cd-dropdown-arrow ${offersOpen ? 'open' : ''}`}><IconChevronDown /></span>
-                        </button>
-                        {offersOpen && (
-                          <div className="cd-offers-menu" role="listbox" aria-label="Available offers">
-                            {offerCoupons.map((c) => (
-                              <button
-                                type="button"
-                                key={c.id || c.code}
-                                className="cd-offer-row"
-                                role="option"
-                                onClick={() => { handleApplyCoupon(c.code); setOffersOpen(false); }}
-                              >
-                                <span className="cd-offer-code">{c.code}</span>
-                                <span className="cd-offer-desc">
-                                  {describeOffer(c)}
-                                  {parseFloat(c.minPurchase) > 0 ? ` · Min ₹${parseFloat(c.minPurchase)}` : ''}
-                                </span>
-                              </button>
-                            ))}
+                    {bestOffer && (
+                      <div className="cd-bestoffer" ref={offersRef}>
+                        {/* Single BEST applicable coupon, shown as a banner. */}
+                        <div className="cd-bestoffer-banner">
+                          <span className="cd-bestoffer-mark" aria-hidden="true"><IconMoneyBag /></span>
+                          <div className="cd-bestoffer-main">
+                            <p className="cd-bestoffer-headline">
+                              {bestOffer.applicable ? (
+                                offerHasSave(bestOffer.coupon) ? (
+                                  <>Apply <strong>{bestOffer.coupon.code}</strong> — save ₹{bestOffer.discount}</>
+                                ) : (
+                                  <>Apply <strong>{bestOffer.coupon.code}</strong> — {describeOffer(bestOffer.coupon)}</>
+                                )
+                              ) : (
+                                <>Add ₹{bestOffer.need} more to use <strong>{bestOffer.coupon.code}</strong></>
+                              )}
+                            </p>
+                            <p className="cd-bestoffer-sub">{bestOffer.applicable ? 'Best offer for your cart' : 'Almost there — unlock this offer'}</p>
                           </div>
+                          {bestOffer.applicable && (
+                            <button
+                              type="button"
+                              className="cd-bestoffer-apply"
+                              onClick={() => handleApplyCoupon(bestOffer.coupon.code)}
+                              disabled={couponLoading}
+                              aria-label={`Apply coupon ${bestOffer.coupon.code}`}
+                            >
+                              {couponLoading ? '…' : 'Apply'}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* See all offers — the remaining coupons (best excluded). */}
+                        {remainingOffers.length > 0 && (
+                          <>
+                            <button
+                              type="button"
+                              className="cd-seeall-toggle"
+                              onClick={() => setOffersOpen((o) => !o)}
+                              aria-expanded={offersOpen}
+                            >
+                              <span>See all {offerCoupons.length} offers</span>
+                              <span className={`cd-dropdown-arrow ${offersOpen ? 'open' : ''}`}><IconChevronDown /></span>
+                            </button>
+                            {offersOpen && (
+                              <div className="cd-seeall-list" role="list">
+                                {remainingOffers.map((c) => (
+                                  <div className="cd-seeall-row" key={c.id || c.code}>
+                                    <div className="cd-seeall-info">
+                                      <span className="cd-offer-code">{c.code}</span>
+                                      <span className="cd-offer-desc">
+                                        {describeOffer(c)}
+                                        {parseFloat(c.minPurchase) > 0 ? ` · Min ₹${parseFloat(c.minPurchase)}` : ''}
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="cd-seeall-apply"
+                                      onClick={() => handleApplyCoupon(c.code)}
+                                      disabled={couponLoading}
+                                      aria-label={`Apply coupon ${c.code}`}
+                                    >
+                                      Apply
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}

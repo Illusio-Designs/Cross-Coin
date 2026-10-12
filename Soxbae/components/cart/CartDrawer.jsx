@@ -787,44 +787,94 @@ export default function CartDrawer() {
                     {couponError && <p className="cd-coupon-msg" role="alert" style={{ color: 'var(--sale)' }}>{couponError}</p>}
                   </>
                 )}
-                {!appliedCoupon && offersToShow.length > 0 && (
-                  <div className="cd-coupon-select-wrap" ref={offersRef}>
-                    <button
-                      type="button"
-                      className={`cd-coupon-select${offersOpen ? ' open' : ''}`}
-                      onClick={() => setOffersOpen((o) => !o)}
-                      disabled={couponLoading}
-                      aria-haspopup="listbox"
-                      aria-expanded={offersOpen}
-                      aria-label="Available offers"
-                    >
-                      <span className="cd-coupon-select-label"><Icon name="Sparkles" size={14} /> Select a coupon</span>
-                      <span className="cd-coupon-select-chev" aria-hidden="true"><Icon name="ChevronDown" size={16} /></span>
-                    </button>
-                    {offersOpen && (
-                      <div className="cd-coupon-menu" role="listbox" aria-label="Available offers">
-                        {offersToShow.map((c) => (
-                          <button
-                            type="button"
-                            key={c.id ?? c.code}
-                            className="cd-coupon-opt"
-                            role="option"
-                            onClick={() => applyCoupon(c.code)}
-                            disabled={couponLoading}
-                            aria-label={`Apply coupon ${c.code}`}
-                          >
-                            <span className="cd-coupon-opt-tag"><Icon name="Sparkles" size={13} /></span>
-                            <span className="cd-coupon-opt-text">
-                              <b>{c.code}</b>
-                              <span>{couponSummary(c)}</span>
-                            </span>
-                            <span className="cd-coupon-opt-apply">Apply</span>
+                {/* Best offer — surfaces the single most valuable applicable
+                    coupon as a banner (preview amount computed client-side; the
+                    REAL discount still comes from server validation on apply). A
+                    "See all N offers" toggle expands the remaining coupons. */}
+                {!appliedCoupon && offersToShow.length > 0 && (() => {
+                  // basis = the cart subtotal the coupon section already uses.
+                  const basis = subtotal;
+                  // Estimate each coupon's discount preview against the subtotal.
+                  const enriched = offersToShow.map((c) => {
+                    const value = parseFloat(c.value);
+                    const min = parseFloat(c.minPurchase) || 0;
+                    const hasAmount = (c.type === 'percentage' || c.type === 'fixed') && Number.isFinite(value) && value > 0;
+                    let est = 0;
+                    if (hasAmount) {
+                      if (c.type === 'percentage') {
+                        est = (basis * value) / 100;
+                        const maxD = parseFloat(c.maxDiscount) || 0;
+                        if (maxD > 0) est = Math.min(est, maxD);
+                      } else est = value;
+                      est = Math.round(Math.min(est, basis));
+                    }
+                    return { c, min, hasAmount, est, applicable: basis >= min, need: Math.max(0, Math.round(min - basis)) };
+                  });
+                  const applicable = enriched.filter((e) => e.applicable);
+                  // best = highest-preview applicable coupon; else the one needing
+                  // the least extra spend.
+                  const best = applicable.length ? applicable.slice().sort((a, b) => b.est - a.est)[0] : null;
+                  const featured = best || enriched.slice().sort((a, b) => a.need - b.need)[0];
+                  const fKey = featured.c.id ?? featured.c.code;
+                  const remaining = enriched.filter((e) => (e.c.id ?? e.c.code) !== fKey);
+
+                  return (
+                    <div className="cd-bestoffer-wrap" ref={offersRef}>
+                      <div className="cd-bestoffer">
+                        <span className="cd-bestoffer-mark" aria-hidden="true"><Icon name="Sparkles" size={16} /></span>
+                        <div className="cd-bestoffer-body">
+                          {best ? (
+                            <>
+                              <span className="cd-bestoffer-head">Apply {featured.c.code}{featured.hasAmount ? <> — save ₹{featured.est}</> : ''}</span>
+                              <span className="cd-bestoffer-sub">{featured.hasAmount ? 'Best offer for your cart' : couponSummary(featured.c)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="cd-bestoffer-head">Add ₹{featured.need} more to use {featured.c.code}</span>
+                              <span className="cd-bestoffer-sub">{couponSummary(featured.c)}</span>
+                            </>
+                          )}
+                        </div>
+                        {best && (
+                          <button type="button" className="cd-bestoffer-apply" onClick={() => applyCoupon(featured.c.code)} disabled={couponLoading} aria-label={`Apply coupon ${featured.c.code}`}>
+                            {couponLoading ? '…' : 'Apply'}
                           </button>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {remaining.length > 0 && (
+                        <div className="cd-moreoffers">
+                          <button type="button" className={`cd-moreoffers-toggle${offersOpen ? ' open' : ''}`} onClick={() => setOffersOpen((o) => !o)} aria-expanded={offersOpen}>
+                            <span>See all {remaining.length} offer{remaining.length > 1 ? 's' : ''}</span>
+                            <span className="cd-moreoffers-chev" aria-hidden="true"><Icon name="ChevronDown" size={16} /></span>
+                          </button>
+                          {offersOpen && (
+                            <div className="cd-moreoffers-list" role="list">
+                              {remaining.map((e) => (
+                                <button
+                                  type="button"
+                                  key={e.c.id ?? e.c.code}
+                                  className="cd-coupon-opt"
+                                  role="listitem"
+                                  onClick={() => applyCoupon(e.c.code)}
+                                  disabled={couponLoading}
+                                  aria-label={`Apply coupon ${e.c.code}`}
+                                >
+                                  <span className="cd-coupon-opt-tag"><Icon name="Sparkles" size={13} /></span>
+                                  <span className="cd-coupon-opt-text">
+                                    <b>{e.c.code}</b>
+                                    <span>{e.applicable ? couponSummary(e.c) : `Add ₹${e.need} more · ${couponSummary(e.c)}`}</span>
+                                  </span>
+                                  <span className="cd-coupon-opt-apply">Apply</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* You may also like — compact cross-sell strip (bestsellers feed) */}
