@@ -42,6 +42,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        {/* Run before paint so the browser never restores the previous scroll
+            position (which could show the footer first) on a fresh load. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
         {/* Type system — Bodoni Moda (display serif) + Manrope (body) via a
             standard Google Fonts link with real family names. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

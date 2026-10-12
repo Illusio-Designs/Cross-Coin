@@ -379,6 +379,7 @@ export function ProductInfo({ product, onColorChange }) {
                     aria-checked={activeColor.name === color.name}
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
+                    aria-label={`Colour: ${color.name}`}
                     className={cn(
                       'no-touch-min flex items-center gap-1 rounded-xl border-2 p-1.5 transition-all sm:px-2.5 sm:py-2.5',
                       activeColor.name === color.name ? 'border-brand-black bg-gray-50' : 'border-gray-200 hover:border-gray-400'
@@ -395,6 +396,7 @@ export function ProductInfo({ product, onColorChange }) {
                     aria-checked={activeColor.name === color.name}
                     onClick={() => handleColorSelect(color)}
                     title={color.name}
+                    aria-label={`Colour: ${color.name}`}
                     className={cn(
                       'h-6 w-6 rounded-full border-2 transition-all sm:h-8 sm:w-8',
                       activeColor.name === color.name ? 'border-brand-black ring-2 ring-brand-black ring-offset-2' : 'border-gray-200 hover:border-gray-400'

@@ -63,6 +63,9 @@ export default function Document({ tracking }) {
   return (
     <Html lang="en">
       <Head>
+        {/* Run before paint so the browser never restores the previous scroll
+            position (which could show the footer first) on a fresh load. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
         {/* Deploy resilience (no Vercel Pro / Skew Protection): if a Next.js CSS
             chunk fails to load — deploy skew, or a flaky mobile connection — the
             page renders unstyled ("raw HTML"). Reload ONCE to fetch the current

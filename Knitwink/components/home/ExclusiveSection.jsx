@@ -192,6 +192,7 @@ export function ExclusiveSection({ products = [] }) {
                 <button
                   key={i}
                   onClick={() => setActiveThumb(i)}
+                  aria-label={`View image ${i + 1}`}
                   data-active={i === activeThumb ? 'true' : undefined}
                   className={`h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-14 sm:w-14 md:h-16 md:w-16 ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                 >
