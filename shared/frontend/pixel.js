@@ -112,6 +112,22 @@ export function fbTrack(event, params = {}) {
   } catch (_) { /* never throw */ }
 }
 
+// GA4 view_cart — fired when the cart drawer/page opens with items in it. This
+// is GA4-ONLY: Meta has no standard ViewCart event, so the pixel is
+// intentionally not touched here. Pass the same {content_ids, contents, value,
+// currency} shape used for the other funnel events. Safe/no-op without gtag and
+// fully wrapped, so it can never break the cart UI.
+export function viewCart(params = {}) {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  try {
+    window.gtag('event', 'view_cart', {
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      items: ga4Items(params),
+    });
+  } catch (_) { /* never throw */ }
+}
+
 // Purchase — fired browser-side on the order-confirmation (thank-you) view.
 //
 // The eventID is DETERMINISTIC (`Purchase_<order_number>`) and matches the

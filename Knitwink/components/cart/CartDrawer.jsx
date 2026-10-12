@@ -27,7 +27,7 @@ import {
   showError,
   showWarning,
 } from '@/lib/toast';
-import { fbTrack, fbPurchase } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart } from '@/utils/pixel';
 import '@/styles/CartDrawer.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -296,6 +296,11 @@ export function CartDrawer() {
   // in-drawer checkout).
   useEffect(() => {
     if (!drawerOpen || items.length === 0) return;
+    viewCart({
+      contents: items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 })),
+      value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
+      currency: 'INR',
+    });
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId)),
       content_type: 'product',

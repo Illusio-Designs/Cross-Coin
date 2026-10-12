@@ -27,7 +27,7 @@ import {
   toastAddressAdded, toastAddressUpdated, toastAddressError,
 } from '@/lib/toast';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
-import { fbTrack, fbPurchase } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -306,6 +306,11 @@ export default function CartDrawer() {
   // so content_ids use the real product id (item.productId).
   useEffect(() => {
     if (!cartOpen || items.length === 0) return;
+    viewCart({
+      contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
+      value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
+      currency: 'INR',
+    });
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId ?? i.id)),
       content_type: 'product',

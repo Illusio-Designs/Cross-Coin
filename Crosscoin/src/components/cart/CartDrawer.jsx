@@ -368,15 +368,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
       value: activeTotal,
       currency: 'INR',
     });
+    const ga4Items = activeItems.map(i => ({
+      item_id: String(i.productId || i.id),
+      item_name: i.name || i.title || '',
+      quantity: i.quantity || 1,
+      price: parseFloat(getPrice(i) || 0),
+    }));
+    // GA4 view_cart — fired just before begin_checkout so the shopping funnel
+    // records the cart view (this drawer is cart + checkout in one).
+    gtagTrack('view_cart', { currency: 'INR', value: activeTotal, items: ga4Items });
     gtagTrack('begin_checkout', {
       currency: 'INR',
       value: activeTotal,
-      items: activeItems.map(i => ({
-        item_id: String(i.productId || i.id),
-        item_name: i.name || i.title || '',
-        quantity: i.quantity || 1,
-        price: parseFloat(getPrice(i) || 0),
-      })),
+      items: ga4Items,
     });
     gtagAdsConversion('begin_checkout', { value: activeTotal, currency: 'INR' });
     // Intentionally only when isOpen flips; cart snapshot is current at open time.
