@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Skeleton from '../common/Skeleton';
 import { collectionUrl } from '../../utils/collectionUrl';
-import { getHeroSrcSet } from '../../utils/imageUtils';
+import { getHeroSrcSet, ikTransform } from '../../utils/imageUtils';
 
 const HeroSlider = ({ slides = [] }) => {
   const [current, setCurrent] = useState(0);
@@ -64,7 +64,7 @@ const HeroSlider = ({ slides = [] }) => {
               <source media="(max-width: 767px)" srcSet={slides[current].mobileImage} />
             )}
             <img
-              src={slides[current].image}
+              src={ikTransform(slides[current].image, 1600)}
               srcSet={getHeroSrcSet(slides[current])}
               sizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
               alt={slides[current].title}

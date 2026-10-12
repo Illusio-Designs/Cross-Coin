@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// Ask ImageKit for a sized, format-negotiated hero image instead of the
+// full-resolution original (big LCP win on the largest image on the page).
+// Only rewrites ImageKit URLs that carry no existing transform, so any crop
+// the backend already applied is left exactly as-is.
+function heroSrc(src) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;
+  }
+  return src;
+}
+
 /* Gripzus hero — a full-bleed image with the content overlaid bottom-left:
    an index kicker, an oversized word-reveal headline, a short line and the
    CTAs, over a soft scrim. Slider index + arrows top-right, progress bars
@@ -61,7 +73,8 @@ export default function HeroBanner({ slides = [] }) {
         {has ? slides.map((sl, i) => (
           <picture key={sl.id ?? i} style={{ display: 'contents' }}>
             {sl.mobileImage && <source media="(max-width: 767px)" srcSet={sl.mobileImage} />}
-            <img src={sl.image} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
+            <img src={heroSrc(sl.image)} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
+              fetchPriority={i === 0 ? 'high' : 'auto'} decoding="async"
               className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
           </picture>
         )) : <div className="absolute inset-0 bg-paper-deep animate-pulse" />}

@@ -10,7 +10,12 @@ export default function Document() {
         <link rel="shortcut icon" href="/Gripzusfavicon.jpeg" />
         <link rel="apple-touch-icon" href="/Gripzusfavicon.jpeg" />
 
-        {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp */}
+        {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp for
+            phone-OTP login. Only login + checkout need it, never at first paint,
+            so we defer the third-party script until the browser is idle instead
+            of loading it eagerly in <head> on every page. By the time a user
+            reaches an OTP step it has long since loaded, but it no longer
+            competes with the critical render path. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -25,9 +30,10 @@ export default function Document() {
                 };
                 var urls = ['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js'];
                 function tryLoad(i) {
-                  if (i >= urls.length) return;
+                  if (i >= urls.length) { window.__msg91Started = false; return; }
                   var s = document.createElement('script');
                   s.type = 'text/javascript';
+                  s.async = true;
                   s.src = urls[i];
                   s.onload = function() {
                     if (typeof initSendOTP === 'function') initSendOTP(configuration);
@@ -35,7 +41,13 @@ export default function Document() {
                   s.onerror = function() { tryLoad(i + 1); };
                   document.head.appendChild(s);
                 }
-                tryLoad(0);
+                function loadMsg91() {
+                  if (window.__msg91Started) return;
+                  window.__msg91Started = true;
+                  tryLoad(0);
+                }
+                var ric = window.requestIdleCallback || function(cb){ return setTimeout(cb, 2500); };
+                ric(loadMsg91);
               })();
             `,
           }}

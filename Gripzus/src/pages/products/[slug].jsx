@@ -461,6 +461,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null })
                       key={curImg}
                       src={ik(images[curImg], 900)}
                       alt={product.name}
+                      loading="eager"
                       fetchPriority="high"
                       decoding="async"
                       className="gz-pdp-img block h-full w-full object-contain sm:h-auto sm:max-h-[26rem] sm:mx-auto"
