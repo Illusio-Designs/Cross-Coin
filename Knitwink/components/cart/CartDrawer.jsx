@@ -633,8 +633,14 @@ export function CartDrawer() {
     try {
       const result = await checkPincodeServiceability(pin);
       setPincodeServiceability({ serviceable: result?.serviceable !== false, cod_allowed: result?.cod_allowed !== false });
+      // Auto-fill City/State from serviceability — only into fields the shopper
+      // hasn't already typed into, so their own entry is never overwritten.
       if (result?.city || result?.state) {
-        setAddressForm(p => ({ ...p, city: result.city || p.city, state: result.state || p.state }));
+        setAddressForm(p => ({
+          ...p,
+          city:  (!String(p.city  || '').trim() && result.city)  ? result.city  : p.city,
+          state: (!String(p.state || '').trim() && result.state) ? result.state : p.state,
+        }));
       }
     } catch { setPincodeServiceability(null); }
   };

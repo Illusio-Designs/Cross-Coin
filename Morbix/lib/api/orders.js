@@ -154,17 +154,17 @@ export async function checkPincodeServiceability(pincode) {
     const res = await fetch(`${API_URL}/api/serviceability/${pincode}`, {
       headers: { 'X-Brand-Name': BRAND },
     });
-    if (!res.ok) return { serviceable: true, cod_allowed: true };
+    if (!res.ok) return { serviceable: true, cod_allowed: true, city: null, state: null };
     const data = await res.json();
     return {
       serviceable: data.serviceable !== false,
       cod_allowed: data.cod_allowed !== false && data.cod_available !== false,
       estimated_delivery_days: data.estimated_delivery_days || 5,
-      city: data.city,
-      state: data.state,
+      city: data.city || null,
+      state: data.state || null,
     };
   } catch {
-    return { serviceable: true, cod_allowed: true };
+    return { serviceable: true, cod_allowed: true, city: null, state: null };
   }
 }
 

@@ -288,12 +288,21 @@ export default function CartDrawer() {
     }).catch(() => setShowForm(true));
   }, [open, authLoading, isAuthenticated]);
 
-  const checkPin = async (pin) => {
+  const checkPin = async (pin, autofill = false) => {
     const p = String(pin || '').replace(/\D/g, '');
     if (p.length !== 6) return;
     try {
       const r = await checkPincodeServiceability(p);
       setServiceability({ serviceable: r.serviceable !== false, cod_allowed: r.cod_allowed !== false });
+      // Auto-fill City/State from the serviceability reply on manual PIN entry,
+      // but only into fields the shopper hasn't already typed into.
+      if (autofill) {
+        setForm((f) => ({
+          ...f,
+          city: f.city?.trim() ? f.city : (r.city || f.city),
+          state: f.state?.trim() ? f.state : (r.state || f.state),
+        }));
+      }
     } catch { setServiceability(null); }
   };
 
@@ -950,7 +959,7 @@ export default function CartDrawer() {
                       <label className="cd-label">State<input className="cd-input" name="state" value={form.state} onChange={onFormChange} required placeholder="State" /></label>
                     </div>
                     <div className="cd-form-grid2">
-                      <label className="cd-label">PIN code<input className="cd-input" name="postalCode" value={form.postalCode} onChange={onFormChange} onBlur={(e) => checkPin(e.target.value)} required placeholder="6-digit PIN" /></label>
+                      <label className="cd-label">PIN code<input className="cd-input" name="postalCode" value={form.postalCode} onChange={onFormChange} onBlur={(e) => checkPin(e.target.value, true)} required placeholder="6-digit PIN" /></label>
                       {serviceability && serviceability.serviceable === false && (
                         <p role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '6px 0 0' }}>Sorry, we don’t deliver to this PIN code yet.</p>
                       )}
