@@ -52,16 +52,24 @@ export default async function HomePage() {
     : null;
 
   return (
-    <SeoWrapper pageName="home">
-      <HeroMaison />
-      <Marquee rating={marqueeRating} />
-      <Intro />
-      <BestSellers initialItems={bestsellers} />
-      <CollectionsBand initialCategories={categories} />
-      <StoryBand />
-      <NotesBand />
-      <CollectionBanner />
-      <Testimonials initialReviews={reviewsData?.reviews || []} initialTotal={reviewsData?.pagination?.total || 0} />
-    </SeoWrapper>
+    <>
+      {/* Preload the LCP hero image so the browser discovers it immediately
+          (fixes Lighthouse "LCP request discovery"). HeroMaison renders this
+          exact local asset as its <img src> — keep the href in sync with the
+          default `image` prop in components/home/HeroMaison.jsx. Next hoists
+          this <link> into <head>. */}
+      <link rel="preload" as="image" fetchPriority="high" href="/perfumehero.webp" />
+      <SeoWrapper pageName="home">
+        <HeroMaison />
+        <Marquee rating={marqueeRating} />
+        <Intro />
+        <BestSellers initialItems={bestsellers} />
+        <CollectionsBand initialCategories={categories} />
+        <StoryBand />
+        <NotesBand />
+        <CollectionBanner />
+        <Testimonials initialReviews={reviewsData?.reviews || []} initialTotal={reviewsData?.pagination?.total || 0} />
+      </SeoWrapper>
+    </>
   );
 }

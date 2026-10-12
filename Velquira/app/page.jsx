@@ -12,6 +12,17 @@ import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getSto
 // Static/ISR — regenerate every 5 min.
 export const revalidate = 300;
 
+// Exact mirror of heroSrc() in components/home/Hero.jsx. It MUST stay byte-for-byte
+// identical so the preloaded hero URL below matches what the hero <img>/<source>
+// actually requests — otherwise the browser double-downloads the LCP image.
+function heroSrc(src, w = 1600) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+  }
+  return src;
+}
+
 export default async function HomePage() {
   const [products, categories, storeReviews, posts, slides] = await Promise.all([
     getBestsellers(),
@@ -40,8 +51,29 @@ export default async function HomePage() {
     image: c.image || products.find((p) => p.categorySlug === c.slug && p.image)?.image || '',
   }));
 
+  // Preload the first slide's hero image (the LCP) so the browser discovers it
+  // immediately instead of waiting for the client Hero component to hydrate —
+  // fixes Lighthouse "LCP request discovery". The Hero uses art-directed sources
+  // (<source media="(max-width:767px)"> on mobile, plain <img> on desktop), each
+  // a single 1x candidate, so we gate the preloads with `media` to request the
+  // exact same URL per breakpoint — no double download. Next hoists these <link>s
+  // into <head>. Guarded against an empty sliders response.
+  const heroSlide = Array.isArray(slides) && slides.length > 0 ? slides[0] : null;
+  const heroDesktopSrc = heroSlide ? heroSrc(heroSlide.image, 1600) : null;
+  const heroMobileSrc = heroSlide && heroSlide.mobileImage ? heroSrc(heroSlide.mobileImage, 820) : null;
+
   return (
     <>
+      {heroDesktopSrc && (
+        heroMobileSrc ? (
+          <>
+            <link rel="preload" as="image" fetchPriority="high" media="(max-width: 767px)" href={heroMobileSrc} />
+            <link rel="preload" as="image" fetchPriority="high" media="(min-width: 768px)" href={heroDesktopSrc} />
+          </>
+        ) : (
+          <link rel="preload" as="image" fetchPriority="high" href={heroDesktopSrc} />
+        )
+      )}
       <Hero features={getHeroFeatures()} slides={slides} />
       <Marquee rating={marqueeRating} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
