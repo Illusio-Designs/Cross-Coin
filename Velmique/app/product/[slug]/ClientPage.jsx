@@ -315,6 +315,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
                     key={gallery[activeImg]}
                     src={ik(gallery[activeImg], 900)}
                     alt={product.name}
+                    loading="eager"
                     fetchPriority="high"
                     decoding="async"
                     className="w-full h-auto object-contain transition-opacity duration-500 lg:max-h-[calc(100vh-9rem)]"

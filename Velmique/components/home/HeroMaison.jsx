@@ -18,6 +18,9 @@ export default function HeroMaison({ image = '/perfumehero.webp' }) {
       <img
         src={image}
         alt="Velmique signature fragrance"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
         className="absolute z-[2] object-contain object-bottom
                    right-[-10%] bottom-[-20px] w-full h-[55%]
                    md:right-[3%] md:bottom-0 md:w-[min(51vw,720px)] md:h-[92%]"

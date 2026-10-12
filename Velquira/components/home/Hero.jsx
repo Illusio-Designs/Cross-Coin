@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/Icon';
 
+// Ask ImageKit for a sized, format-negotiated hero image instead of the
+// full-resolution original (big LCP win on the largest image on the page).
+function heroSrc(src) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;
+  }
+  return src;
+}
+
 // Velquira hero — a centered editorial composition unique to the maison:
 // a hairline-flanked eyebrow, a large serif headline, then a tall ARCHED
 // image framed in gold (a jewellery-portal motif), with an inline hallmark
@@ -42,9 +52,11 @@ export default function Hero({ features = [], slides = [] }) {
               {slides.map((s, i) => (
                 <picture key={i} style={{ display: 'contents' }}>
                   {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
-                  <img src={s.image} alt={s.title || 'Velquira'}
+                  <img src={heroSrc(s.image)} alt={s.title || 'Velquira'}
                     className={`vq-hero-img${i === current ? ' active' : ''}`}
-                    loading={i === 0 ? 'eager' : 'lazy'} />
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={i === 0 ? 'high' : 'auto'}
+                    decoding="async" />
                 </picture>
               ))}
             </div>
