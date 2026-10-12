@@ -122,7 +122,7 @@ function Lightbox({ images, startIndex, productName, onClose }) {
    Forces the shimmer to stay visible for at least 400ms — cached
    images otherwise load in <50ms and the shimmer flashes by too
    fast to see. */
-function ShimmerImage({ src, alt, className }) {
+function ShimmerImage({ src, alt, className, ...rest }) {
   const [loaded, setLoaded] = useState(false)
   const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now())
   const handleLoad = () => {
@@ -141,6 +141,7 @@ function ShimmerImage({ src, alt, className }) {
         alt={alt}
         onLoad={handleLoad}
         className={`${className} ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+        {...rest}
       />
     </>
   )
@@ -183,6 +184,9 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
           src={main?.url}
           alt={main?.alt || productName}
           className="w-full object-contain min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
         />
       </div>
 
@@ -202,6 +206,8 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
                   src={img.url}
                   alt={img.alt || `${productName} ${i + 2}`}
                   className="aspect-square w-full object-contain"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             )

@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/Icon';
 
+// Ask ImageKit for a sized, format-negotiated hero image instead of the
+// full-resolution original (big LCP win on the largest image on the page).
+function heroSrc(src) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;
+  }
+  return src;
+}
+
 // Soxbae hero — an immersive "cover" stage: a large full-bleed product image
 // with the headline + CTA laid over a warm scrim, bottom-left. Driven by the
 // backend sliders API.
@@ -30,8 +40,11 @@ export default function Hero({ features = [], slides = [] }) {
             slides.map((s, i) => (
               <picture key={i} style={{ display: 'contents' }}>
                 {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
-                <img src={s.image} alt={s.title || 'Soxbae'}
-                  className={`sxh-img${i === current ? ' active' : ''}`} loading={i === 0 ? 'eager' : 'lazy'} />
+                <img src={heroSrc(s.image)} alt={s.title || 'Soxbae'}
+                  className={`sxh-img${i === current ? ' active' : ''}`}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={i === 0 ? 'high' : 'auto'}
+                  decoding="async" />
               </picture>
             ))
           ) : (
