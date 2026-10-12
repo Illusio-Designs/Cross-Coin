@@ -24,7 +24,7 @@ import {
   toastOrderError,
   showError,
 } from '../../utils/toast';
-import { fbTrack, fbPurchase, viewCart } from '../../utils/pixel';
+import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '../../utils/pixel';
 
 /* Gripzus cart drawer — full in-drawer checkout, same flow & design as
    the Knitwink cart drawer (guest + signed-in). Styled via CartDrawer.css
@@ -549,8 +549,18 @@ export default function CartDrawer() {
     country: selectedAddress.country || 'India',
   });
 
+  // GA4 funnel: shipping + payment chosen — fired at order placement (after
+  // validation, before the order API call) so GA4 records them ahead of
+  // purchase. GA4-only; same item shape as view_cart/InitiateCheckout.
+  const fireCheckoutFunnel = (mode, value) => {
+    const contents = items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 }));
+    addShippingInfo({ contents, value, currency: 'INR', shipping_tier: mode });
+    addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
+  };
+
   const placeCod = async () => {
     setIsProcessing(true);
+    fireCheckoutFunnel('cod', finalTotal);
     try {
       const base = {
         items: itemsPayload(), payment_type: 'cod', notes: '',
@@ -640,6 +650,7 @@ export default function CartDrawer() {
   const placePrepaid = async () => {
     if (!RAZORPAY_KEY) { showError('Online payment is not configured. Please choose Cash on Delivery.'); return; }
     setIsProcessing(true);
+    fireCheckoutFunnel('razorpay', finalTotal);
     try {
       const ok = await loadRazorpay();
       if (!ok || !window.Razorpay) { showError('Could not load the payment SDK.'); setIsProcessing(false); return; }

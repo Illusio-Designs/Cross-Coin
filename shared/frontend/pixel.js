@@ -128,6 +128,37 @@ export function viewCart(params = {}) {
   } catch (_) { /* never throw */ }
 }
 
+// GA4 add_shipping_info — fired when the shopper commits a valid shipping
+// address + delivery method (just before the order is placed). GA4-ONLY, like
+// view_cart; pass {contents, value, currency, shipping_tier}. Wrapped + no-op
+// without gtag so it can never break checkout.
+export function addShippingInfo(params = {}) {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  try {
+    window.gtag('event', 'add_shipping_info', {
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      shipping_tier: params.shipping_tier || undefined,
+      items: ga4Items(params),
+    });
+  } catch (_) { /* never throw */ }
+}
+
+// GA4 add_payment_info — fired when the payment method is chosen (cod/prepaid),
+// just before the order is placed. GA4-ONLY; pass {contents, value, currency,
+// payment_type}. Wrapped + no-op without gtag.
+export function addPaymentInfo(params = {}) {
+  if (typeof window === 'undefined' || !window.gtag) return;
+  try {
+    window.gtag('event', 'add_payment_info', {
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      payment_type: params.payment_type || undefined,
+      items: ga4Items(params),
+    });
+  } catch (_) { /* never throw */ }
+}
+
 // Purchase — fired browser-side on the order-confirmation (thank-you) view.
 //
 // The eventID is DETERMINISTIC (`Purchase_<order_number>`) and matches the

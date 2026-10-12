@@ -27,7 +27,7 @@ import {
   showError,
   showWarning,
 } from '@/lib/toast';
-import { fbTrack, fbPurchase, viewCart } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import '@/styles/CartDrawer.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -903,8 +903,18 @@ export function CartDrawer() {
   };
 
   // ── Place COD order ──────────────────────────────────────────────────────
+  // GA4 funnel: shipping + payment chosen — fired at order placement (after
+  // validation, before the order API call) so GA4 records them ahead of
+  // purchase. GA4-only; same item shape as view_cart/InitiateCheckout.
+  const fireCheckoutFunnel = (mode, value) => {
+    const contents = items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 }));
+    addShippingInfo({ contents, value, currency: 'INR', shipping_tier: mode });
+    addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
+  };
+
   const placeCodOrder = async () => {
     setIsProcessing(true);
+    fireCheckoutFunnel('cod', finalTotal);
     try {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
@@ -1029,6 +1039,7 @@ export function CartDrawer() {
       if (!RAZORPAY_KEY) { showError('Payment not configured. Please contact support.'); return; }
       if (prepaidPayable <= 0) { showError('Order amount must be greater than zero.'); return; }
       setIsProcessing(true);
+      fireCheckoutFunnel('razorpay', prepaidPayable);
       try {
         const scriptLoaded = await loadRazorpay();
         if (!scriptLoaded || !window.Razorpay) {

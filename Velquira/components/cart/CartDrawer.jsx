@@ -22,7 +22,7 @@ import {
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers } from '@/lib/api';
-import { fbTrack, fbPurchase, viewCart } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -550,6 +550,15 @@ export default function CartDrawer() {
     setCouponInput('');
   };
 
+  // GA4 funnel: shipping + payment chosen — fired at order placement (after
+  // validation, before the order API call) so GA4 records them ahead of
+  // purchase. GA4-only; same item shape as view_cart/InitiateCheckout.
+  const fireCheckoutFunnel = (mode, value) => {
+    const contents = items.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.qty || 1 }));
+    addShippingInfo({ contents, value, currency: 'INR', shipping_tier: mode });
+    addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
+  };
+
   const placeOrder = async () => {
     setError('');
     const addrIssuesNow = validateAddressAll(selectedAddress);
@@ -562,6 +571,7 @@ export default function CartDrawer() {
     }
     if (isCod) {
       setProcessing(true);
+      fireCheckoutFunnel('cod', total);
       try {
         const data = buildData('cod');
         const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
@@ -574,6 +584,7 @@ export default function CartDrawer() {
       if (!RAZORPAY_KEY) { setError('Online payment is not configured. Please choose Cash on Delivery.'); return; }
       if (prepaidPayable <= 0) { setError('Order amount must be greater than zero.'); return; }
       setProcessing(true);
+      fireCheckoutFunnel('razorpay', prepaidPayable);
       try {
         const ok = await loadRazorpay();
         if (!ok || !window.Razorpay) { setError('Could not load the payment SDK.'); setProcessing(false); return; }

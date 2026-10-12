@@ -27,7 +27,7 @@ import {
   toastAddressAdded, toastAddressUpdated, toastAddressError,
 } from '@/lib/toast';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
-import { fbTrack, fbPurchase, viewCart } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -679,8 +679,18 @@ export default function CartDrawer() {
   };
 
   // ── Place order ───────────────────────────────────────────────────────
+  // GA4 funnel: shipping + payment chosen — fired at order placement (after
+  // validation, before the order API call) so GA4 records them ahead of
+  // purchase. GA4-only; same item shape as view_cart/InitiateCheckout.
+  const fireCheckoutFunnel = (mode, value) => {
+    const contents = items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 }));
+    addShippingInfo({ contents, value, currency: 'INR', shipping_tier: mode });
+    addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
+  };
+
   const placeCod = async () => {
     setIsProcessing(true);
+    fireCheckoutFunnel('cod', finalPayable);
     try {
       const data = buildCodOrder(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
@@ -760,6 +770,7 @@ export default function CartDrawer() {
   const placePrepaid = async () => {
     if (!RAZORPAY_KEY) { setErrorMsg('Payment not configured.'); return; }
     setIsProcessing(true);
+    fireCheckoutFunnel('razorpay', finalPayable);
     try {
       const ok = await loadRazorpay();
       if (!ok || !window.Razorpay) {
