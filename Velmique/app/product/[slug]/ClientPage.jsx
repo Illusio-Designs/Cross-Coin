@@ -293,7 +293,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
         <span className="text-[var(--ink)] truncate max-w-[40ch]">{product.name}</span>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-20">
+      <div ref={revealRef} className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
 
           {/* ═══════════════ STICKY IMAGE COLUMN ═══════════════ */}
@@ -565,7 +565,7 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             </div>
           {/* ── Long-form content — scrolls in the right column beside the
               sticky gallery (not full-width); fades up block by block. ── */}
-          <div ref={revealRef} className="flex flex-col gap-8 pt-2">
+          <div className="flex flex-col gap-8 pt-2">
 
           {/* ── Description ─────────────────────────────────── */}
           <div className="reveal">
@@ -605,7 +605,12 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             )}
           </div>
 
-          <div className="h-px bg-[var(--border)]" />
+          </div>
+          </section>
+        </div>
+
+        {/* ═══ FULL-WIDTH — composition → storage → reviews ═══ */}
+        <div className="mt-16 md:mt-24 flex flex-col gap-8">
 
           {/* ── Fragrance notes pyramid ────────────────────── */}
           <div className="reveal">
@@ -643,8 +648,6 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
             </h2>
             <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
           </div>
-          </div>
-          </section>
         </div>
 
         {/* ── You may also like — related products rail ──────── */}
