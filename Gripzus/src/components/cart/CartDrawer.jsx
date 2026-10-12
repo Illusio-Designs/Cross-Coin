@@ -340,6 +340,17 @@ export default function CartDrawer() {
       const r = await checkPincodeServiceability(pin);
       setCodAllowed(r?.cod_allowed !== false);
       setPincodeServiceable(r?.serviceable !== false);
+      // Auto-fill city/state from the serviceability lookup — only when the
+      // field is empty, never overwrite a value the user already typed.
+      const city = r?.city || '';
+      const state = r?.state || '';
+      if (city || state) {
+        setAddressForm((p) => ({
+          ...p,
+          city: String(p.city || '').trim() ? p.city : (city || p.city),
+          state: String(p.state || '').trim() ? p.state : (state || p.state),
+        }));
+      }
     } catch { setCodAllowed(true); setPincodeServiceable(true); }
   };
 

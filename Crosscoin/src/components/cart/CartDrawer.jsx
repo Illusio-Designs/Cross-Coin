@@ -838,12 +838,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
       const city = result?.city || '';
       const state = result?.state || '';
       setPincodeServiceability({ serviceable, cod_allowed, city, state });
-      // Auto-fill city and state if returned
+      // Auto-fill city and state if returned — only when the field is empty,
+      // never overwrite a value the user already typed.
       if (city || state) {
         setAddressForm(p => ({
           ...p,
-          city: city || p.city,
-          state: state || p.state,
+          city: String(p.city || '').trim() ? p.city : (city || p.city),
+          state: String(p.state || '').trim() ? p.state : (state || p.state),
         }));
       }
     } catch {
