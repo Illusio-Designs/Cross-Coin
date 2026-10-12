@@ -5,3 +5,7 @@
 .rvb-st { color: #d0692a; }
 .rvb-ct { color: #75716a; font-weight: 500; }
 .rvb-ct::before { content: '\00B7'; margin-right: 6px; }
+/* On hover the quick-add bar slides up over the card bottom; fade the rating
+   badge out so it never overlaps the Add-to-cart button. */
+.rvb { transition: opacity .28s ease, transform .28s ease; }
+.pcard:hover .rvb { opacity: 0; transform: translateY(10px); pointer-events: none; }

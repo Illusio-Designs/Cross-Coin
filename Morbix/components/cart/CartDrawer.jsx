@@ -692,9 +692,11 @@ export default function CartDrawer() {
                       ? <span className="cd-ship-done">🎉 You've unlocked FREE shipping!</span>
                       : <>Add <b>₹{freeShipRemaining.toFixed(0)}</b> for FREE shipping</>}
                   </span>
-                  <div className="cd-ship-track">
-                    <span className="cd-ship-fill" style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }} />
-                  </div>
+                  {!freeShipQualifies && (
+                    <div className="cd-ship-track">
+                      <span className="cd-ship-fill" style={{ width: `${Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }} />
+                    </div>
+                  )}
                 </div>
               )}
 

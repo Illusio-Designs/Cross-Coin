@@ -4,3 +4,7 @@
 .rvb { left: 10px; bottom: 10px; gap: 6px; padding: 5px 6px 5px 10px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(32,44,110,.16); color: #202c6e; font-size: 12px; font-weight: 700; }
 .rvb-st { color: #f5a623; }
 .rvb-ct { background: #e7f4f2; color: #268b84; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 700; }
+/* On hover the quick-add bar slides up over the card bottom; fade the rating
+   badge out so it never overlaps the Add-to-cart button. */
+.rvb { transition: opacity .28s ease, transform .28s ease; }
+.pcard:hover .rvb { opacity: 0; transform: translateY(10px); pointer-events: none; }
