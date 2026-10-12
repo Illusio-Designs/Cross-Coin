@@ -170,11 +170,16 @@ function initializeCronJobs() {
         const recentOrder = await Order.findOne({ where: { user_id: user.id, createdAt: { [Op.gte]: cart.updatedAt } } });
         if (recentOrder) continue;
 
-        // Check opted out
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${user.phone.slice(-10)}` }, brand_id: 1 } });
+        // The cart has no brand of its own — derive it from the products in it
+        // (products are brand-scoped) so recovery stays multi-brand instead of
+        // always messaging as brand 1.
+        const firstItem = cart.CartItems[0];
+        const brandId = firstItem?.Product?.brand_id || 1;
+
+        // Check opted out (scoped to the cart's own brand)
+        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${user.phone.slice(-10)}` }, brand_id: brandId } });
         if (conv?.opted_out) continue;
 
-        const firstItem = cart.CartItems[0];
         const productName = firstItem?.Product?.name || 'your items';
         const extra = cart.CartItems.length > 1 ? ` (+${cart.CartItems.length - 1} more)` : '';
 
@@ -183,7 +188,12 @@ function initializeCronJobs() {
             customerName: user.username,
             productName: productName + extra,
             couponCode: 'SAVE10',
-          }, 1);
+          }, brandId);
+          // Mark the cart abandoned so the hourly cron never re-messages it.
+          // (Previously nothing marked it, so the same cart was messaged every
+          // hour for up to ~23 hours.) It re-arms to 'active' when the shopper
+          // adds to the cart again — see cartController.addToCart.
+          await cart.update({ status: 'abandoned' });
           sent++;
         } catch (e) { console.warn('Abandoned cart WA failed:', e.message); }
       }

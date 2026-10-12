@@ -161,6 +161,12 @@ module.exports.addToCart = async (req, res) => {
       let cart = await Cart.findOne({ where: { user_id: userId }, transaction });
       if (!cart) {
         cart = await Cart.create({ user_id: userId }, { transaction });
+      } else if (cart.status !== 'active') {
+        // Re-arm abandoned-cart recovery: adding to the cart means the shopper
+        // is active again, so a cart the recovery cron marked 'abandoned' (or a
+        // 'converted' one) becomes active and is eligible for a fresh reminder
+        // if abandoned again.
+        await cart.update({ status: 'active' }, { transaction });
       }
 
       // Task 11.2: Validate product exists and is active
