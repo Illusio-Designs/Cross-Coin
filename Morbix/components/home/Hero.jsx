@@ -6,10 +6,10 @@ import Icon from '@/components/Icon';
 
 // Ask ImageKit for a sized, format-negotiated hero image instead of the
 // full-resolution original (big LCP win on the largest image on the page).
-function heroSrc(src) {
+function heroSrc(src, w = 1200) {
   if (!src || typeof src !== 'string') return src;
   if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-1200,q-78,f-auto`;
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
   }
   return src;
 }
@@ -62,7 +62,7 @@ export default function Hero({ features = [], slides = [] }) {
             <div className="hero-slider">
               {slides.map((s, i) => (
                 <picture key={i} style={{ display: 'contents' }}>
-                  {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
+                  {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
                   <img src={heroSrc(s.image)} alt={s.title || 'Morbix'}
                     className={`hero-slide-img${i === current ? ' active' : ''}`}
                     loading={i === 0 ? 'eager' : 'lazy'}

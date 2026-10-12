@@ -5,10 +5,10 @@ import Icon from '@/components/Icon';
 
 // Ask ImageKit for a sized, format-negotiated hero image instead of the
 // full-resolution original (big LCP win on the largest image on the page).
-function heroSrc(src) {
+function heroSrc(src, w = 1600) {
   if (!src || typeof src !== 'string') return src;
   if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
   }
   return src;
 }
@@ -39,7 +39,7 @@ export default function Hero({ features = [], slides = [] }) {
           {hasSlides ? (
             slides.map((s, i) => (
               <picture key={i} style={{ display: 'contents' }}>
-                {s.mobileImage && <source media="(max-width: 767px)" srcSet={s.mobileImage} />}
+                {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
                 <img src={heroSrc(s.image)} alt={s.title || 'Soxbae'}
                   className={`sxh-img${i === current ? ' active' : ''}`}
                   loading={i === 0 ? 'eager' : 'lazy'}
