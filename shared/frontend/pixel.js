@@ -120,8 +120,26 @@ export function fbTrack(event, params = {}) {
 // already sends Purchase via the Conversions API, this is intentionally NOT
 // relayed again here — the browser pixel is the second, deduped leg.
 export function fbPurchase(orderNumber, params = {}) {
-  if (typeof window === 'undefined' || !window.fbq) return;
+  if (typeof window === 'undefined') return;
   if (!orderNumber || orderNumber === '—') return; // no real order → skip
+
+  // GA4 purchase — mirror the conversion to Google so GA4 sees purchases (this
+  // previously fired only the Meta pixel). transaction_id lets GA4 attribute +
+  // dedupe it; guarded per order id so a re-render never double-counts.
+  try {
+    const key = `ga4_purchase_${orderNumber}`;
+    if (window.gtag && sessionStorage.getItem(key) !== '1') {
+      window.gtag('event', 'purchase', {
+        transaction_id: String(orderNumber),
+        currency: params.currency || 'INR',
+        value: Number(params.value || 0),
+        items: ga4Items(params),
+      });
+      sessionStorage.setItem(key, '1');
+    }
+  } catch (_) { /* never throw */ }
+
+  if (!window.fbq) return;
   try {
     window.fbq('track', 'Purchase', params, { eventID: `Purchase_${orderNumber}` });
   } catch (_) { /* never throw */ }
