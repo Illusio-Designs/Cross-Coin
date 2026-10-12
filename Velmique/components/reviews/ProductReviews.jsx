@@ -180,11 +180,11 @@ export default function ProductReviews({ productId, productName, initialReviewsP
         .pdp-review-card {
           flex: 0 0 auto;
           width: 300px;
-          height: 150px;
+          height: 190px;
           padding: 1rem 1.25rem;
         }
         @media (min-width: 768px) {
-          .pdp-review-card { width: 360px; height: 120px; }
+          .pdp-review-card { width: 360px; height: 180px; }
         }
         @keyframes pdp-reviews-scroll {
           from { transform: translateX(0); }
