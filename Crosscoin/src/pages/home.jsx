@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
 import HeroSlider from "../components/products/HeroSlider";
+import { ikTransform, getHeroSrcSet } from "../utils/imageUtils";
 import ProductCard from "../components/products/ProductCard";
 import Skeleton from "../components/common/Skeleton";
 import SlidingCollection from "../components/products/SlidingCollection";
-import UnlockedExclusives from "../components/common/UnlockedExclusives";
-import InfiniteReviewsSlider from "../components/common/InfiniteReviewsSlider";
-import LookbookShowcase from "../components/common/LookbookShowcase";
+// Below-the-fold home sections — code-split out of the initial bundle (they
+// already lazy-load their data via IntersectionObserver). Cuts initial JS.
+const UnlockedExclusives = dynamic(() => import("../components/common/UnlockedExclusives"), { ssr: false });
+const InfiniteReviewsSlider = dynamic(() => import("../components/common/InfiniteReviewsSlider"), { ssr: false });
+const LookbookShowcase = dynamic(() => import("../components/common/LookbookShowcase"), { ssr: false });
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { getPublicSliders, getPublicCategories, getPublicCategoryByName, getAllPublicReviews } from '../services/publicApi';
@@ -251,7 +255,39 @@ const Home = ({ initialData = {} }) => {
     }
   };
 
+  // Preload the LCP hero image server-side. HeroSlider renders the first slide
+  // in the initial HTML, but as a client component its <img>/<picture> URL isn't
+  // discoverable until hydration — this <link rel=preload> lets the browser start
+  // the hero download from the raw HTML. The href/imageSrcSet/imageSizes mirror
+  // HeroSlider's <img> EXACTLY (same ikTransform sizing + sizes) so the browser
+  // downloads the hero once, not twice. When the slide has a mobile variant we
+  // emit a matching media-gated preload for the <source> too.
+  const heroSlide = slides && slides.length > 0 ? slides[0] : null;
+
   return (
+    <>
+    {heroSlide && (
+      <Head>
+        {heroSlide.mobileImage && (
+          <link
+            rel="preload"
+            as="image"
+            href={heroSlide.mobileImage}
+            media="(max-width: 767px)"
+            fetchpriority="high"
+          />
+        )}
+        <link
+          rel="preload"
+          as="image"
+          href={ikTransform(heroSlide.image, 1600)}
+          imagesrcset={getHeroSrcSet(heroSlide)}
+          imagesizes="(max-width: 600px) 100vw, (max-width: 1024px) 100vw, 100vw"
+          {...(heroSlide.mobileImage ? { media: '(min-width: 768px)' } : {})}
+          fetchpriority="high"
+        />
+      </Head>
+    )}
     <main className="home-page" role="main">
         <h1 className="sr-only">CrossCoin — Premium Performance Socks for Every Adventure</h1>
         <section aria-label="Featured Promotions">
@@ -405,6 +441,7 @@ const Home = ({ initialData = {} }) => {
           <BlogSection />
         </section>
       </main>
+    </>
     );
 };
 

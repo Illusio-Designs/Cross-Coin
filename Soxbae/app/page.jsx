@@ -12,6 +12,17 @@ import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getSto
 // Static/ISR — regenerate every 5 min.
 export const revalidate = 300;
 
+// Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
+// hero <img>/<source> will request (same ImageKit tr= params), avoiding a
+// double download.
+function heroSrc(src, w = 1600) {
+  if (!src || typeof src !== 'string') return src;
+  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
+    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+  }
+  return src;
+}
+
 export default async function HomePage() {
   const [products, categories, storeReviews, posts, slides] = await Promise.all([
     getBestsellers(),
@@ -40,8 +51,30 @@ export default async function HomePage() {
     image: c.image || products.find((p) => p.categorySlug === c.slug && p.image)?.image || '',
   }));
 
+  // Preload the first slide's hero image (the LCP element). Hero renders a
+  // <picture> whose desktop <img> requests heroSrc(image, 1600) and whose
+  // mobile <source media="(max-width:767px)"> requests heroSrc(mobileImage,
+  // 820). imageSrcSet + imageSizes make the browser preload the matching
+  // variant per viewport. Rendering <link rel="preload"> here lets Next hoist
+  // it into <head> so the LCP URL is in the initial HTML.
+  const heroSlide = slides[0];
+
   return (
     <>
+      {heroSlide?.image && (
+        <link
+          rel="preload"
+          as="image"
+          href={heroSrc(heroSlide.image, 1600)}
+          fetchPriority="high"
+          {...(heroSlide.mobileImage
+            ? {
+                imageSrcSet: `${heroSrc(heroSlide.mobileImage, 820)} 820w, ${heroSrc(heroSlide.image, 1600)} 1600w`,
+                imageSizes: '(max-width: 767px) 820px, 1600px',
+              }
+            : {})}
+        />
+      )}
       <Hero features={getHeroFeatures()} slides={slides} />
       <Marquee rating={marqueeRating} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}

@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import SeoWrapper from '../components/SeoWrapper';
 import Reveal from '../components/common/Reveal';
-import HeroBanner from '../components/home/HeroBanner';
+import HeroBanner, { heroSrc } from '../components/home/HeroBanner';
 import Marquee from '../components/home/Marquee';
 import Manifesto from '../components/home/Manifesto';
 import CategoryCards from '../components/home/CategoryCards';
@@ -78,10 +78,36 @@ export default function Home({
   const rating = initialRating;
   const posts = initialPosts;
 
+  // Preload the LCP hero image server-side. HeroBanner renders the first slide
+  // in the initial HTML, but as a client component its <img>/<picture> URL isn't
+  // discoverable until hydration — this <link rel=preload> lets the browser start
+  // the hero download from the raw HTML. href uses the SAME heroSrc() sizing as
+  // HeroBanner's <img> so the browser downloads it once. When the slide has a
+  // mobile variant we emit a matching media-gated preload for its <source> too.
+  const heroSlide = slides && slides.length > 0 ? slides[0] : null;
+
   return (
     <SeoWrapper pageName="home">
       <Head>
         <link rel="icon" href="/Gripzusfavicon.jpeg" />
+        {heroSlide && heroSlide.mobileImage && (
+          <link
+            rel="preload"
+            as="image"
+            href={heroSlide.mobileImage}
+            media="(max-width: 767px)"
+            fetchpriority="high"
+          />
+        )}
+        {heroSlide && (
+          <link
+            rel="preload"
+            as="image"
+            href={heroSrc(heroSlide.image)}
+            {...(heroSlide.mobileImage ? { media: '(min-width: 768px)' } : {})}
+            fetchpriority="high"
+          />
+        )}
       </Head>
 
       <HeroBanner slides={slides} />

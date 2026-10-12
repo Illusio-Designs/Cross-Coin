@@ -5,7 +5,7 @@ import Link from 'next/link';
 // full-resolution original (big LCP win on the largest image on the page).
 // Only rewrites ImageKit URLs that carry no existing transform, so any crop
 // the backend already applied is left exactly as-is.
-function heroSrc(src) {
+export function heroSrc(src) {
   if (!src || typeof src !== 'string') return src;
   if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
     return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;

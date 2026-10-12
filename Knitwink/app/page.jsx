@@ -37,8 +37,19 @@ export default async function HomePage() {
     getPosts().catch(() => []),
   ])
 
+  // Preload the first slide's hero image (the LCP element). HeroBanner renders
+  // it via ShimmerImg as a plain <img src={slide.image}> with NO ImageKit
+  // transform, and its initial (server/desktop) src is always slide.image, so
+  // we preload that exact raw URL. Rendering <link rel="preload"> here lets
+  // Next hoist it into <head>, giving the browser the LCP URL in the initial
+  // HTML instead of waiting for the client hero to hydrate.
+  const heroImage = slides[0]?.image
+
   return (
     <SeoWrapper pageName="home">
+      {heroImage && (
+        <link rel="preload" as="image" href={heroImage} fetchPriority="high" />
+      )}
       {/* Visually-hidden h1 — every page needs exactly one h1 for axe-core
           and screen readers. The hero design has no visible heading, so
           we use the sr-only utility from globals.css. */}
