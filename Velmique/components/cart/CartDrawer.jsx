@@ -335,6 +335,53 @@ export default function CartDrawer() {
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
   const finalPayable = Math.round(Math.max(0, baseTotal - prepaidDisc));
 
+  // ── Available-offer helpers ─────────────────────────────────────────────
+  // Compact, HTML-stripped one-liner for an offer, e.g. "10% off up to ₹200 · Min ₹999".
+  const offerDesc = (c) => {
+    if (c.description) return String(c.description).replace(/<[^>]*>/g, '').trim();
+    const value = parseFloat(c.value) || 0;
+    const min = parseFloat(c.minPurchase) || 0;
+    const maxD = parseFloat(c.maxDiscount) || 0;
+    let head = 'Special offer';
+    if (c.type === 'percentage') head = `${value % 1 === 0 ? value : value.toFixed(0)}% off${maxD > 0 ? ` up to ${fmt(maxD)}` : ''}`;
+    else if (c.type === 'fixed') head = `${fmt(value)} off`;
+    return min > 0 ? `${head} · Min ${fmt(min)}` : head;
+  };
+
+  // ── Best-offer preview (client-side estimate) ───────────────────────────
+  // Surface the single most valuable *applicable* public coupon as a banner,
+  // with the remaining coupons behind a "See all N offers" toggle. The amount
+  // shown is only a preview — the real discount comes from server validation
+  // on apply. basis = the subtotal the coupon section validates against.
+  const bestOffer = useMemo(() => {
+    const appliedCode = (appliedCoupon?.code || '').toUpperCase();
+    const list = availableCoupons.filter(c => c && c.code && c.code.toUpperCase() !== appliedCode);
+    if (list.length === 0) return null;
+    const basis = subtotal;
+    const est = (c) => {
+      const min = parseFloat(c.minPurchase) || 0;
+      const value = parseFloat(c.value) || 0;
+      const maxD = parseFloat(c.maxDiscount) || 0;
+      const hasAmount = (c.type === 'percentage' || c.type === 'fixed') && value > 0;
+      let d = 0;
+      if (c.type === 'percentage') d = (basis * value) / 100;
+      else if (c.type === 'fixed') d = value;
+      if (c.type === 'percentage' && maxD > 0) d = Math.min(d, maxD);
+      d = Math.round(Math.min(Math.max(0, d), basis));
+      return { c, applicable: basis >= min, discount: d, need: Math.max(0, min - basis), hasAmount };
+    };
+    const enriched = list.map(est);
+    const applicable = enriched.filter(e => e.applicable);
+    if (applicable.length > 0) {
+      applicable.sort((a, b) => b.discount - a.discount);
+      const top = applicable[0];
+      return { locked: false, coupon: top.c, discount: top.discount, hasAmount: top.hasAmount, rest: enriched.filter(e => e.c !== top.c).map(e => e.c) };
+    }
+    enriched.sort((a, b) => a.need - b.need);
+    const closest = enriched[0];
+    return { locked: true, coupon: closest.c, need: Math.round(closest.need), rest: enriched.filter(e => e.c !== closest.c).map(e => e.c) };
+  }, [availableCoupons, appliedCoupon, subtotal]);
+
   // ── Auto-remove a payment-mode-restricted coupon on mode switch ─────────
   // A coupon may be restricted to a single payment mode via
   // paymentModeRestriction ('all' | 'cod' | 'prepaid'). Applying under the
@@ -1070,49 +1117,81 @@ export default function CartDrawer() {
                   </div>
                 )}
 
-                {/* Available offers — a COLLAPSED dropdown (select-style). The menu
-                    is position:absolute so it OVERLAYS the summary below and the
-                    drawer height never grows. Shown only when offers exist and no
+                {/* Best offer — the single most valuable applicable coupon shown as
+                    a banner, with the rest behind a "See all N offers" toggle. The
+                    menu is absolutely positioned so it overlays the summary below and
+                    the drawer height never grows. Shown only when offers exist and no
                     coupon is applied. */}
-                {!appliedCoupon && (() => {
-                  const appliedCode = (appliedCoupon?.code || '').toUpperCase();
-                  const offers = availableCoupons.filter(c => c && c.code && c.code.toUpperCase() !== appliedCode);
-                  if (offers.length === 0) return null;
-                  return (
-                    <div className="vq-offers" ref={offersRef}>
-                      <button type="button"
-                        onClick={() => setOffersOpen(o => !o)}
-                        disabled={couponLoading}
-                        aria-haspopup="listbox" aria-expanded={offersOpen}
-                        className={`vq-offers-trigger${offersOpen ? ' open' : ''}`}>
-                        <span className="vq-offers-label"><Sparkles size={13} /> Select a coupon</span>
-                        <ChevronDown size={16} className="vq-offers-chevron" aria-hidden="true" />
-                      </button>
-                      {offersOpen && (
-                        <div className="vq-offers-menu" role="listbox" aria-label="Available offers">
-                          {offers.map(c => (
-                            <button type="button" key={c.id ?? c.code} role="option"
-                              onClick={() => { onApplyCoupon(c.code); setOffersOpen(false); }}
-                              disabled={couponLoading}
-                              aria-label={`Apply coupon ${c.code}`}
-                              className="vq-offer">
-                              <span className="vq-offer-info">
-                                <span className="vq-offer-code"><Sparkles size={12} /> {c.code}</span>
-                                {(c.description || Number(c.minPurchase) > 0) && (
-                                  <span className="vq-offer-desc">
-                                    {c.description || 'Offer on your order'}
-                                    {Number(c.minPurchase) > 0 ? ` · Min ${fmt(c.minPurchase)}` : ''}
-                                  </span>
-                                )}
-                              </span>
-                              <span className="vq-offer-apply">{couponLoading ? '…' : 'Apply'}</span>
-                            </button>
-                          ))}
-                        </div>
+                {!appliedCoupon && bestOffer && (
+                  <div className="relative" ref={offersRef}>
+                    <div className="flex items-center gap-3 bg-[#B89A63]/10 border border-[#B89A63]/40 px-3 py-2.5">
+                      <span className="shrink-0 w-9 h-9 rounded-full bg-[#8F7548] text-white flex items-center justify-center" aria-hidden="true">
+                        <Sparkles size={15} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {bestOffer.locked ? (
+                          <>
+                            <p className="text-sm font-body text-[#11100E] font-medium leading-snug">
+                              Add {fmt(bestOffer.need)} more to use <span className="font-serif italic">{bestOffer.coupon.code}</span>
+                            </p>
+                            <p className="text-[10px] font-body text-[#777168] mt-0.5 truncate">{offerDesc(bestOffer.coupon)}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-body text-[#11100E] font-medium leading-snug">
+                              Apply <span className="font-serif italic">{bestOffer.coupon.code}</span>
+                              {bestOffer.hasAmount && bestOffer.discount > 0 && (
+                                <> — save <span className="text-[#8F7548] font-semibold">{fmt(bestOffer.discount)}</span></>
+                              )}
+                            </p>
+                            <p className="text-[10px] font-body text-[#777168] mt-0.5 truncate">
+                              {bestOffer.hasAmount && bestOffer.discount > 0 ? 'Best offer for your cart' : offerDesc(bestOffer.coupon)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      {!bestOffer.locked && (
+                        <button type="button"
+                          onClick={() => onApplyCoupon(bestOffer.coupon.code)}
+                          disabled={couponLoading}
+                          aria-label={`Apply coupon ${bestOffer.coupon.code}`}
+                          className={`shrink-0 px-4 py-2 bg-[#11100E] text-white text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[#8F7548] transition-colors ${couponLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          {couponLoading ? '…' : 'Apply'}
+                        </button>
                       )}
                     </div>
-                  );
-                })()}
+
+                    {bestOffer.rest.length > 0 && (
+                      <>
+                        <button type="button"
+                          onClick={() => setOffersOpen(o => !o)}
+                          disabled={couponLoading}
+                          aria-haspopup="listbox" aria-expanded={offersOpen}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] tracking-[0.25em] uppercase text-[#8F7548] hover:text-[#11100E] font-body py-1 disabled:opacity-50">
+                          See all {bestOffer.rest.length} offer{bestOffer.rest.length > 1 ? 's' : ''}
+                          <ChevronDown size={14} className={`transition-transform ${offersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                        </button>
+                        {offersOpen && (
+                          <div className="absolute left-0 right-0 top-full z-20 bg-white border border-[#D8D3C9] shadow-lg max-h-56 overflow-y-auto" role="listbox" aria-label="More offers">
+                            {bestOffer.rest.map(c => (
+                              <button type="button" key={c.id ?? c.code} role="option" aria-selected={false}
+                                onClick={() => { onApplyCoupon(c.code); setOffersOpen(false); }}
+                                disabled={couponLoading}
+                                aria-label={`Apply coupon ${c.code}`}
+                                className="w-full flex items-center gap-2 text-left px-3 py-2.5 border-b border-[#EFEAE2] last:border-0 hover:bg-[#EFEAE2] transition-colors">
+                                <span className="flex-1 min-w-0">
+                                  <span className="block font-serif italic text-[#11100E] text-sm">{c.code}</span>
+                                  <span className="block text-[#777168] text-[10px] font-body truncate">{offerDesc(c)}</span>
+                                </span>
+                                <span className="shrink-0 text-[10px] tracking-[0.25em] uppercase text-[#8F7548] font-body">{couponLoading ? '…' : 'Apply'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {couponMsg.text && (
                   <p className={`text-[11px] font-body ${couponMsg.type === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
