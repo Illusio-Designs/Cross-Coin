@@ -16,6 +16,19 @@ const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
  * so a single fire per session is all that's needed. Renders nothing.
  */
 export default function VisitTracker() {
+  // Start every fresh page load at the top. The browser's default scroll
+  // restoration re-applies the previous scroll position on reload; in an SPA
+  // the content renders after that, which could drop the user at the page
+  // bottom. Disable auto-restoration and reset to top (unless deep-linking to
+  // an in-page #anchor). Runs once on initial mount; client-side route changes
+  // are handled by the router.
+  useEffect(() => {
+    try {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      if (!window.location.hash) window.scrollTo(0, 0);
+    } catch { /* non-browser / unavailable — ignore */ }
+  }, []);
+
   useEffect(() => {
     // First-party analytics — only fire with analytics consent (DPDP). If the
     // visitor opts in later in the session, the consent event re-triggers it.

@@ -19,11 +19,23 @@ import VisitTracker from '../components/common/VisitTracker'
 import SentryInit from '../components/SentryInit'
 import ConsentSpeedInsights from '../components/common/ConsentSpeedInsights'
 import CookieBanner from '../components/ui/CookieBanner'
+import { useEffect } from 'react'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
    providers + a global Header / Footer / CartDrawer, so pages
    themselves only render their own content. */
 function MyApp({ Component, pageProps }) {
+  // Start every fresh page load at the top. The browser's default scroll
+  // restoration re-applies the previous scroll position on reload, which in an
+  // SPA can drop the user at the page bottom. Disable it and reset to top
+  // (unless deep-linking to an in-page #anchor).
+  useEffect(() => {
+    try {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      if (!window.location.hash) window.scrollTo(0, 0);
+    } catch { /* ignore */ }
+  }, []);
+
   return (
     <AuthProvider>
       <CurrencyProvider>
