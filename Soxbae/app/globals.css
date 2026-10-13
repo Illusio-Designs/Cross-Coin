@@ -2390,6 +2390,12 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .pdx-care { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .pdx-care li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); font-size: 14px; color: var(--ink); }
 .pdx-care-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-050); color: var(--accent-600); display: grid; place-items: center; flex-shrink: 0; }
+/* Standalone FAQ section (last on the PDP) — centred head, Soxbae styling */
+.pdx-faq-section { }
+.pdx-faq-head { text-align: center; max-width: 720px; margin: 0 auto 28px; }
+.pdx-faq-head .eyebrow { display: block; color: var(--accent-600); margin-bottom: 10px; }
+.pdx-faq-head h2 { margin: 0; font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.1; font-size: clamp(24px, 2.8vw, 34px); color: var(--ink); }
+.pdx-faq-section .pdx-faq { max-width: 860px; margin: 0 auto; }
 .pdx-faq { border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
 .pdx-faq details + details { border-top: 1px solid var(--line); }
 .pdx-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; font-weight: 600; font-size: 15px; color: var(--ink); }

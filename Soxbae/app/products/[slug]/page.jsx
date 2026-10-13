@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductStory from '@/components/product/ProductStory';
 import ProductBenefits from '@/components/product/ProductBenefits';
+import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs, getBundleTiers } from '@/lib/api';
@@ -43,13 +44,13 @@ export default async function ProductPage({ params, searchParams }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} />
 
-      {/* ── Full description, care steps and FAQs ── */}
-      <ProductStory product={product} faqs={faqs} />
-
-      {/* ── "What Soxbae Socks Are Made For" benefits band (home + PDP parity) ── */}
+      {/* ── "What Soxbae Socks Are Made For" benefits band (before the details) ── */}
       <ProductBenefits />
 
-      {/* ── Reviews (same component as the home page + a Write-a-review button) ── */}
+      {/* ── Full description + Ideal for / care / manufacturing (FAQ moved below) ── */}
+      <ProductStory product={product} faqs={faqs} showFaq={false} />
+
+      {/* ── Reviews: moving wall + Write-a-review for this product ── */}
       <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite limit={8} />
 
       {related.length > 0 && (
@@ -60,6 +61,9 @@ export default async function ProductPage({ params, searchParams }) {
           </div>
         </section>
       )}
+
+      {/* ── FAQ — last section before the footer (Morbix parity) ── */}
+      <ProductFaq faqs={faqs} />
     </div>
   );
 }

@@ -5,9 +5,9 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 // Full-width sections under the buy panel: the complete description, the
 // Ideal for / care / manufacturing blocks and FAQs. Everything comes from the product record / FAQ API — a section with
 // no data is simply not rendered. Admin rich text is shown as plain text.
-export default function ProductStory({ product, faqs = [] }) {
+export default function ProductStory({ product, faqs = [], showFaq = true }) {
   const blocks = textBlocks(product.description);
-  const items = faqs.slice(0, 6);
+  const items = showFaq ? faqs.slice(0, 6) : [];
 
   return (
     <div className="pdx-story">
