@@ -35,8 +35,8 @@ export default function Hero({ features = [], slides = [], products = [] }) {
   const ctaText = slide?.buttonText || 'Shop now';
   const ctaHref = slide?.link || (slide?.categorySlug ? `/collections/${slide.categorySlug}` : '/products');
 
-  // Up to 4 colourway cards from the bestseller feed.
-  const cards = (Array.isArray(products) ? products : []).slice(0, 4);
+  // Up to 2 colourway cards from the bestseller feed.
+  const cards = (Array.isArray(products) ? products : []).slice(0, 2);
 
   return (
     <section className="heroc container">
