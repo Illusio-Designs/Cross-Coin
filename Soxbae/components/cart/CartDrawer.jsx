@@ -146,6 +146,8 @@ export default function CartDrawer() {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
   const offersRef = useRef(null);
+  // Two-step checkout: 1 = review cart, 2 = delivery + payment.
+  const [coStep, setCoStep] = useState(1);
   // Cross-sell "You may also like" — reuses the homepage bestsellers feed.
   const [suggested, setSuggested] = useState([]);
 
@@ -345,15 +347,24 @@ export default function CartDrawer() {
     return arr;
   }, [fees]);
 
-  /* Meta funnel: InitiateCheckout — fire once when the drawer opens with items
-     (this drawer is the full in-drawer checkout). */
+  /* On open: reset to the cart step and fire view_cart. InitiateCheckout fires
+     when the shopper taps "Proceed to checkout" (goToCheckout), not on open. */
   useEffect(() => {
-    if (!open || items.length === 0) return;
+    if (!open) return;
+    setCoStep(1);
+    if (items.length === 0) return;
     viewCart({
       contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
       value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
       currency: 'INR',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  /* Advance to the checkout step. Fires InitiateCheckout (Meta) + begin_checkout
+     (GA4) + first-party funnel — tied to checkout intent, not drawer open. */
+  const goToCheckout = () => {
+    if (!items.length) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.id)),
       content_type: 'product',
@@ -362,8 +373,9 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
       currency: 'INR',
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setCoStep(2);
+    requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
+  };
 
   const onFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -703,10 +715,14 @@ export default function CartDrawer() {
         {/* Header */}
         <div className="cd-header">
           <div className="cd-header-left">
-            <span className="cd-header-icon"><Icon name="ShoppingBag" size={18} /></span>
+            {!orderSuccess && items.length > 0 && coStep === 2 ? (
+              <button className="cd-header-icon cd-header-back" onClick={() => setCoStep(1)} aria-label="Back to cart"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            ) : (
+              <span className="cd-header-icon"><Icon name="ShoppingBag" size={18} /></span>
+            )}
             <div>
-              <span className="cd-header-title">{orderSuccess ? 'Order confirmed' : 'Your cart'}</span>
-              {!orderSuccess && <span className="cd-header-count">{count} item{count !== 1 ? 's' : ''}</span>}
+              <span className="cd-header-title">{orderSuccess ? 'Order confirmed' : coStep === 2 ? 'Checkout' : 'Your cart'}</span>
+              {!orderSuccess && <span className="cd-header-count">{coStep === 2 ? 'Step 2 of 2 · delivery & payment' : `${count} item${count !== 1 ? 's' : ''}`}</span>}
             </div>
           </div>
           <button className="cd-close" onClick={closeCart} aria-label="Close cart"><Icon name="X" size={20} /></button>
@@ -735,6 +751,7 @@ export default function CartDrawer() {
           /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
+              {coStep === 1 && (<>
               {/* Free-shipping progress bar — reuses the drawer's cd-ship styling. */}
               {freeShipThreshold > 0 && (
                 <div className="cd-ship" style={{ paddingLeft: 0, paddingRight: 0 }}>
@@ -923,7 +940,9 @@ export default function CartDrawer() {
                 </div>
               )}
 
-              {/* Order summary — right after the items, so pricing is clear up front */}
+              </>)}
+
+              {/* Order summary — visible on both steps so pricing is always clear */}
               <div className="cd-co-section cd-co-summary">
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
@@ -934,6 +953,7 @@ export default function CartDrawer() {
                 <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
               </div>
 
+              {coStep === 2 && (<>
               {/* Delivery details — contact + address in ONE box (like the other brands) */}
               <div className="cd-co-section" ref={deliveryRef}>
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery address' : 'Delivery details'}</div>
@@ -1024,10 +1044,25 @@ export default function CartDrawer() {
                   })}
                 </div>
               </div>
+              </>)}
             </div>
 
             {/* Checkout footer */}
             <div className="cd-foot">
+              {coStep === 1 ? (
+                <>
+                  {error && <p className="cd-error">{error}</p>}
+                  <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
+                    Proceed to checkout · ₹{total.toFixed(0)}
+                  </button>
+                  <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
+                    <span><Icon name="ShieldCheck" size={14} /> Secure</span>
+                    <span><Icon name="RefreshCw" size={14} /> Easy returns</span>
+                    <span><Icon name="ShoppingBag" size={14} /> Razorpay</span>
+                  </div>
+                </>
+              ) : (
+                <>
               {/* Urgency bar */}
               <div className="cd-urgency">
                 <span><Icon name="ShieldCheck" size={13} /> Order in the next</span>
@@ -1058,6 +1093,8 @@ export default function CartDrawer() {
                 <span><Icon name="RefreshCw" size={14} /> Easy returns</span>
                 <span><Icon name="ShoppingBag" size={14} /> Razorpay</span>
               </div>
+                </>
+              )}
             </div>
           </>
         )}
