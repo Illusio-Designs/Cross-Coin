@@ -2093,6 +2093,44 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
   @keyframes sxReviewScroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 7px)); } }
 }
 
+/* ── Reviews "wall" — three rows scrolling in alternating directions (Morbix parity) ── */
+.sxrv-rows { display: flex; flex-direction: column; gap: 16px; }
+.sxrv-marquee { overflow: hidden; position: relative; min-width: 0; outline: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.sxrv-track { display: flex; align-items: stretch; gap: 20px; width: max-content; padding: 2px 0; animation: sxrvScroll var(--sxrv-dur, 60s) linear infinite; }
+.sxrv-marquee:hover .sxrv-track, .sxrv-marquee:focus-within .sxrv-track, .sxrv-marquee:active .sxrv-track { animation-play-state: paused; }
+.sxrv-track.sxrv-rtl { animation-direction: reverse; }
+.sxrv-track > .sx-review, .sxrv-track > .sxrv-dup { flex: 0 0 340px; width: 340px; }
+.sxrv-dup { display: flex; }
+.sxrv-dup > .sx-review { flex: 1 1 auto; width: 100%; }
+@keyframes sxrvScroll { to { transform: translateX(calc(-50% - 10px)); } }
+@media (max-width: 700px) {
+  .sxrv-rows { gap: 12px; }
+  .sxrv-track { gap: 14px; }
+  .sxrv-track > .sx-review, .sxrv-track > .sxrv-dup { flex-basis: 80vw; width: 80vw; max-width: 320px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sxrv-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; scroll-snap-type: x mandatory; }
+  .sxrv-track { animation: none; }
+  .sxrv-track > .sx-review { scroll-snap-align: start; }
+  .sxrv-dup { display: none; }
+}
+
+/* ── "What Soxbae Socks Are Made For" — benefits band (Morbix conditions parity) ── */
+.sx-made .section-head-center { text-align: center; justify-content: center; }
+.sx-made .section-head-center > div { max-width: 640px; margin: 0 auto; }
+.sx-made .section-eyebrow { display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+.sx-made .section-sub { color: var(--muted); margin-top: 8px; }
+.sx-made-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
+.sx-made-card { text-align: center; padding: 26px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease; }
+.sx-made-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -28px rgba(0,0,0,.35); border-color: var(--ink); }
+.sx-made-circle { width: 60px; height: 60px; border-radius: 999px; margin: 0 auto 14px; display: grid; place-items: center; background: var(--accent-soft, rgba(0,0,0,.05)); color: var(--accent, var(--ink)); }
+.sx-made-card h3 { font-size: 16px; margin: 0 0 8px; }
+.sx-made-card p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.55; }
+@media (max-width: 900px) { .sx-made-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .sx-made-grid { grid-template-columns: 1fr; } }
+
 /* ── Footer (warm editorial) ─────────────────────────────────────────────── */
 .sx-footer { background: var(--bg); border-top: 1px solid var(--line); padding: clamp(44px,5vw,60px) 0 26px; overflow: hidden; }
 .sx-footer-top { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); gap: clamp(32px,5vw,72px); }

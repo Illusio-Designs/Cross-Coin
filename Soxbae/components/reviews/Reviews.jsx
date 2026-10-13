@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
+import ReviewRow from '@/components/ui/ReviewRow';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
 
@@ -32,17 +33,12 @@ export default function Reviews({
   const shown = limit ? list.slice(0, limit) : list;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Auto-scroll (infinite marquee) once there are more reviews than fit nicely:
-  // more than 3 on desktop, more than 1 on mobile.
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 700px)');
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-  const scroll = shown.length > (isMobile ? 1 : 3);
+  // Split the sample into three rows that scroll in alternating directions
+  // (left → right → left) for a moving "wall of reviews" look — same as Morbix.
+  const wall = shown.slice(0, 30);
+  const per = Math.ceil(wall.length / 3) || 1;
+  const rows = [wall.slice(0, per), wall.slice(per, per * 2), wall.slice(per * 2)].filter((r) => r.length);
+  const directions = ['left', 'right', 'left'];
 
   const ReviewCard = (r, i) => (
     <article className="sx-review" key={i}>
@@ -115,15 +111,20 @@ export default function Reviews({
 
       {shown.length === 0 ? (
         <div className="empty">No reviews yet — {showWrite ? 'be the first to review this product.' : 'your feedback will appear here.'}</div>
-      ) : scroll ? (
-        <div className="sx-reviews-marquee" aria-label="Customer reviews, auto-scrolling">
-          <div className="sx-reviews-track">
-            {[...shown, ...shown].map((r, i) => ReviewCard(r, i))}
-          </div>
-        </div>
       ) : (
-        <div className="sx-reviews-grid">
-          {shown.map((r, i) => ReviewCard(r, i))}
+        <div className="sxrv-rows">
+          {rows.map((row, idx) => (
+            <ReviewRow
+              key={idx}
+              items={row}
+              staticClassName="sx-reviews-grid"
+              min={4}
+              secPerItem={2.5}
+              minDur={18}
+              direction={directions[idx]}
+              render={ReviewCard}
+            />
+          ))}
         </div>
       )}
 

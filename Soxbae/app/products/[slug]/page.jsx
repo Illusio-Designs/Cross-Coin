@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductStory from '@/components/product/ProductStory';
+import ProductBenefits from '@/components/product/ProductBenefits';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs, getBundleTiers } from '@/lib/api';
@@ -44,6 +45,9 @@ export default async function ProductPage({ params, searchParams }) {
 
       {/* ── Full description, care steps and FAQs ── */}
       <ProductStory product={product} faqs={faqs} />
+
+      {/* ── "What Soxbae Socks Are Made For" benefits band (home + PDP parity) ── */}
+      <ProductBenefits />
 
       {/* ── Reviews (same component as the home page + a Write-a-review button) ── */}
       <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite limit={8} />
