@@ -209,14 +209,14 @@ export async function getFaqs(type = 'global', id, revalidate = 300) {
   } catch { return []; }
 }
 
-// Admin-configured pack/bundle tiers for this brand. Returns [] unless the brand
-// has set tiers (the API's built-in defaults are a setup preview, not live
-// packs), so the PDP shows the selector only once packs are configured.
-export async function getBundleTiers(revalidate = 60) {
+// A product's admin-set packs (2 pairs, 3 pairs, … with exact prices). Returns
+// [] when the product has no packs, so the PDP shows the selector only when
+// packs exist. 1 pair is implicit (the product's own price).
+export async function getBundleTiers(productId, revalidate = 60) {
   try {
-    const data = await brandFetch('/api/public/bundle-tiers', revalidate ?? 300);
-    if (!data || data.defaulted) return [];
-    return Array.isArray(data.tiers) ? data.tiers : [];
+    if (!productId) return [];
+    const data = await brandFetch(`/api/public/bundle-tiers?product_id=${encodeURIComponent(productId)}`, revalidate ?? 60);
+    return Array.isArray(data?.tiers) ? data.tiers : [];
   } catch { return []; }
 }
 

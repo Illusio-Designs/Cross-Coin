@@ -27,7 +27,7 @@ export default async function ProductPage({ params, searchParams }) {
     getAllProducts(),
     getStoreReviews(300),
     getFaqs('global'),
-    getBundleTiers(),
+    getBundleTiers(product.id),
   ]);
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
