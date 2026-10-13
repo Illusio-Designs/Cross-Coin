@@ -187,10 +187,15 @@ function reviewsPayload(data) {
 
 // Brand-wide reviews for the home page.
 export async function getStoreReviews(revalidate) {
+  // Random sample for a varied-date wall. If the random sort returns nothing
+  // (or errors) on a given request, fall back to the recent list so the wall
+  // never shows "No reviews yet" when the store actually has reviews.
   try {
-    // Home testimonials marquee only shows a handful; cap at 20 (exact total
-    // still comes from pagination.total inside reviewsPayload).
-    return reviewsPayload(await brandFetch('/api/reviews/all?limit=30&sort=random', revalidate ?? 300));
+    const out = reviewsPayload(await brandFetch('/api/reviews/all?limit=30&sort=random', revalidate ?? 300));
+    if (out.reviews.length) return out;
+  } catch { /* fall through to recent */ }
+  try {
+    return reviewsPayload(await brandFetch('/api/reviews/all?limit=30', revalidate ?? 300));
   } catch { return { reviews: [], total: 0 }; }
 }
 
