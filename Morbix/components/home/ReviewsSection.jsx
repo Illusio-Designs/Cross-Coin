@@ -1,7 +1,8 @@
 import Icon from '@/components/Icon';
 import ReviewRow from '@/components/ui/ReviewRow';
+import WriteReviewButton from '@/components/product/WriteReviewButton';
 
-export default function ReviewsSection({ reviews = [], total: totalProp }) {
+export default function ReviewsSection({ reviews = [], total: totalProp, productId }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
   const avg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) : 0;
   // Exact store-wide total from the API; the list is only a random sample.
@@ -37,14 +38,17 @@ export default function ReviewsSection({ reviews = [], total: totalProp }) {
           <span className="eyebrow">Reviews</span>
           <h2 style={{ marginTop: 8 }}>What our customers say</h2>
         </div>
-        <div className="reviews-badge">
-          <b>{avg ? avg.toFixed(1) : '—'}</b>
-          <span className="reviews-badge-stars">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Icon key={i} name="Star" size={13} color={i < Math.round(avg) ? 'var(--star)' : '#dce2e6'} />
-            ))}
-          </span>
-          <small>{total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</small>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div className="reviews-badge">
+            <b>{avg ? avg.toFixed(1) : '—'}</b>
+            <span className="reviews-badge-stars">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Icon key={i} name="Star" size={13} color={i < Math.round(avg) ? 'var(--star)' : '#dce2e6'} />
+              ))}
+            </span>
+            <small>{total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</small>
+          </div>
+          {productId ? <WriteReviewButton productId={productId} /> : null}
         </div>
       </div>
 

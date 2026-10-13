@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
-import ProductReviews from '@/components/product/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getStoreReviews, getFaqs } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -24,13 +23,11 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData, storeReviews, faqs] = await Promise.all([
+  const [all, storeReviews, faqs] = await Promise.all([
     getAllProducts(),
-    getProductReviewsWithTotal(product.id),
     getStoreReviews(300),
     getFaqs('global'),
   ]);
-  const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
   const related = all
@@ -55,16 +52,8 @@ export default async function ProductPage({ params, searchParams }) {
       </div>
 
       {/* ── Reviews (real stats + write-a-review) ── */}
-      <ProductReviews
-        productId={product.id}
-        initialReviews={reviews}
-        totalCount={reviewsData.total}
-        fallbackRating={product.rating}
-        fallbackCount={product.reviews}
-      />
-
-      {/* ── Brand-wide testimonials — same 3-row moving wall as the home page ── */}
-      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} />
+      {/* ── Reviews: brand-wide moving wall + Write-a-review for this product ── */}
+      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} productId={product.id} />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
