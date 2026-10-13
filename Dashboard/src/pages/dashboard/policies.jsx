@@ -1,7 +1,8 @@
 // When accessed directly as a Next.js page, redirect to dashboard shell
 export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../components/ui";
+import { Button, Modal, Pagination, Select } from "../../components/ui";
+import { PageHeader, Panel, FilterBar, ResponsiveTable } from "../../components/Dashboard/primitives";
 import Dropdown from "../../components/ui/Dropdown";
 import Loader from "../../components/common/Loader";
 import { ConfirmModal } from '../../components/common/AlertModal';
@@ -121,15 +122,15 @@ export function Policies() {
   };
 
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Title", accessor: "title", cell: ({ title }) => <span className="cat-name-cell">{title}</span> },
-    { header: "Scope", accessor: "brand_id", cell: ({ brand_id }) => <span className="cat-desc-cell">{brand_id == null ? 'Global (all brands)' : (brands.find(b => b.id === brand_id)?.display_name || brands.find(b => b.id === brand_id)?.name || `Brand #${brand_id}`)}</span> },
-    { header: "Content Preview", accessor: "content", cell: ({ content }) => <span className="cat-desc-cell">{getPlainText(content).slice(0, 80)}{getPlainText(content).length > 80 ? '...' : ''}</span> },
+    { key: "serial_number", label: "Sr. No", render: (r) => r.serial_number },
+    { key: "title", label: "Title", render: (r) => <span className="cat-name-cell">{r.title}</span> },
+    { key: "brand_id", label: "Scope", render: (r) => <span className="cat-desc-cell">{r.brand_id == null ? 'Global (all brands)' : (brands.find(b => b.id === r.brand_id)?.display_name || brands.find(b => b.id === r.brand_id)?.name || `Brand #${r.brand_id}`)}</span> },
+    { key: "content", label: "Content Preview", render: (r) => <span className="cat-desc-cell">{getPlainText(r.content).slice(0, 80)}{getPlainText(r.content).length > 80 ? '...' : ''}</span> },
     {
-      header: "Actions", accessor: "actions",
-      cell: ({ id }) => (
+      key: "actions", label: "Actions",
+      render: (r) => (
         <div className="sl-actions">
-          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id)}>{IC.edit}</button>
+          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(r.id)}>{IC.edit}</button>
         </div>
       )
     }
@@ -139,44 +140,46 @@ export function Policies() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.policy}</div>
-            <div>
-              <h1 className="sl-page-title">Policies</h1>
-              <p className="sl-page-sub">{policies.length} polic{policies.length !== 1 ? 'ies' : 'y'} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <Dropdown
-              value={brandId ?? ''}
-              onChange={val => setBrandId(val === 'global' ? 'global' : Number(val))}
-              options={[{ value: 'global', label: 'Global (all brands)' }, ...brands.map(b => ({ value: b.id, label: b.display_name || b.name }))]}
-              className="bset-brand-select"
-            />
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search policies..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
+        <PageHeader
+          title="Policies"
+          subtitle={`${policies.length} polic${policies.length !== 1 ? 'ies' : 'y'} total`}
+          actions={
+            <button className="ds-btn ds-btn--primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
               <span className="sl-add-btn-icon">{IC.add}</span>Add Policy
             </button>
+          }
+        />
+
+        <Panel
+          title="Company GSTIN"
+          subtitle={"One value for all stores — fills the {{GSTIN}} token in every policy."}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <input value={gstin} onChange={e => setGstin(e.target.value)} placeholder="e.g. 24ABCDE1234F1Z5"
+              style={{ flex: '1 1 220px', minWidth: 180, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface, #fff)', color: 'var(--ds-color-text)', fontFamily: 'var(--ds-font-mono, monospace)' }} />
+            <button type="button" onClick={saveGstin} disabled={gstinSaving}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--ds-color-primary, #111)', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: gstinSaving ? 'not-allowed' : 'pointer', opacity: gstinSaving ? 0.6 : 1 }}>
+              {gstinSaving ? 'Saving…' : 'Save GSTIN'}
+            </button>
+            {gstinMsg && <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{gstinMsg}</span>}
           </div>
-        </div>
+        </Panel>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 14px', padding: '12px 14px', border: '1px solid var(--ds-color-border)', borderRadius: 12 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ds-color-text)' }}>Company GSTIN</span>
-          <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{"One value for all stores — fills the {{GSTIN}} token in every policy."}</span>
-          <input value={gstin} onChange={e => setGstin(e.target.value)} placeholder="e.g. 24ABCDE1234F1Z5"
-            style={{ flex: '1 1 220px', minWidth: 180, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface, #fff)', color: 'var(--ds-color-text)', fontFamily: 'var(--ds-font-mono, monospace)' }} />
-          <button type="button" onClick={saveGstin} disabled={gstinSaving}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--ds-color-primary, #111)', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: gstinSaving ? 'not-allowed' : 'pointer', opacity: gstinSaving ? 0.6 : 1 }}>
-            {gstinSaving ? 'Saving…' : 'Save GSTIN'}
-          </button>
-          {gstinMsg && <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{gstinMsg}</span>}
-        </div>
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          placeholder="Search policies..."
+          style={{ marginTop: 'var(--ds-space-4)' }}
+        >
+          <Dropdown
+            value={brandId ?? ''}
+            onChange={val => setBrandId(val === 'global' ? 'global' : Number(val))}
+            options={[{ value: 'global', label: 'Global (all brands)' }, ...brands.map(b => ({ value: b.id, label: b.display_name || b.name }))]}
+            className="bset-brand-select"
+          />
+        </FilterBar>
 
-        <div className="sl-table-wrap">
+        <Panel flush>
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
@@ -188,7 +191,7 @@ export function Policies() {
             </div>
           ) : (
             <>
-              <Table columns={columns} data={currentItems} striped hoverable />
+              <ResponsiveTable columns={columns} data={currentItems} rowKey="id" />
               {filteredData.length > itemsPerPage && (
                 <div className="sl-pagination">
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -196,7 +199,7 @@ export function Policies() {
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Policy" : "Add Policy"} closeOnOverlayClick={false}>

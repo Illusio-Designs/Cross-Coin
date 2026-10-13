@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { productService } from '../../../services';
 import Loader from '../../../components/common/Loader';
 import { Pagination } from '../../../components/ui';
+import { PageHeader, Panel, FilterBar, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import AlertModal, { ConfirmModal } from '../../../components/common/AlertModal';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { GridViewIcon, ListViewIcon, Upload04Icon, Delete02Icon, ViewIcon, Search01Icon, Image02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { GridViewIcon, ListViewIcon, Upload04Icon, Delete02Icon, ViewIcon, Image02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 
 const GridIcon = () => <HugeiconsIcon icon={GridViewIcon} size={16} strokeWidth={2} />;
 const ListIcon = () => <HugeiconsIcon icon={ListViewIcon} size={16} strokeWidth={2} />;
 const UploadIcon = () => <HugeiconsIcon icon={Upload04Icon} size={16} strokeWidth={2} />;
 const TrashIcon = () => <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />;
 const EyeIcon = () => <HugeiconsIcon icon={ViewIcon} size={15} strokeWidth={2} />;
-const SearchIcon = () => <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />;
 const ImgIcon = () => <HugeiconsIcon icon={Image02Icon} size={28} strokeWidth={1.5} />;
 const CheckIcon = () => <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />;
 
@@ -174,30 +174,26 @@ const MediaGallery = () => {
     <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
     <div className="dashboard-page">
       {/* Page Header */}
-      <div className="sl-page-header">
-        <div className="sl-header-left">
-          <div className="sl-header-icon">
-            <ImgIcon />
-          </div>
-          <div>
-            <h1 className="sl-page-title">Media Gallery</h1>
-            <p className="sl-page-sub">{images.length} image{images.length !== 1 ? 's' : ''} in library</p>
-          </div>
-        </div>
-        <div className="sl-header-right">
-          <div className="sl-search-wrap">
-            <span className="sl-search-icon"><SearchIcon /></span>
-            <input type="text" className="sl-search-input" placeholder="Search images..."
-              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-          <input type="file" id="mg-upload" multiple accept="image/*"
-            onChange={handleFileUpload} className="mg-file-input" disabled={uploading} />
-          <label htmlFor="mg-upload" className={`sl-add-btn${uploading ? ' sl-add-btn--disabled' : ''}`}>
-            <span className="sl-add-btn-icon"><UploadIcon /></span>
-            {uploading ? 'Uploading...' : 'Upload'}
-          </label>
-        </div>
-      </div>
+      <PageHeader
+        title="Media Gallery"
+        subtitle={`${images.length} image${images.length !== 1 ? 's' : ''} in library`}
+        actions={
+          <>
+            <input type="file" id="mg-upload" multiple accept="image/*"
+              onChange={handleFileUpload} className="mg-file-input" disabled={uploading} />
+            <label htmlFor="mg-upload" className={`sl-add-btn${uploading ? ' sl-add-btn--disabled' : ''}`}>
+              <span className="sl-add-btn-icon"><UploadIcon /></span>
+              {uploading ? 'Uploading...' : 'Upload'}
+            </label>
+          </>
+        }
+      />
+
+      <FilterBar
+        search={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search images..."
+      />
 
       {error && (
         <div className="mg-error-banner">{error}</div>
@@ -237,6 +233,7 @@ const MediaGallery = () => {
       </div>
 
       {/* Content */}
+      <Panel>
       {loading ? (
         <div className="sl-loader-wrap"><Loader /></div>
       ) : filteredImages.length === 0 ? (
@@ -348,24 +345,14 @@ const MediaGallery = () => {
           )}
         </>
       )}
+      </Panel>
 
       {/* Stats bar */}
-      <div className="mg-stats">
-        <div className="mg-stat-item">
-          <span className="mg-stat-value">{images.length}</span>
-          <span className="mg-stat-label">Total Images</span>
-        </div>
-        <div className="mg-stat-sep" />
-        <div className="mg-stat-item">
-          <span className="mg-stat-value">{filteredImages.length}</span>
-          <span className="mg-stat-label">Filtered</span>
-        </div>
-        <div className="mg-stat-sep" />
-        <div className="mg-stat-item">
-          <span className="mg-stat-value">{selectedImages.length}</span>
-          <span className="mg-stat-label">Selected</span>
-        </div>
-      </div>
+      <StatGrid style={{ marginTop: 20 }}>
+        <StatTile label="Total Images" value={images.length} />
+        <StatTile label="Filtered" value={filteredImages.length} />
+        <StatTile label="Selected" value={selectedImages.length} />
+      </StatGrid>
     </div>
     </>
   );
