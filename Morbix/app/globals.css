@@ -686,8 +686,10 @@ button { font-family: inherit; cursor: pointer; }
 .buy-row { display: flex; gap: 12px; align-items: stretch; min-width: 0; }
 .buy-row .btn-primary { min-width: 0; }
 /* Buy now — outlined secondary beneath Add to cart */
-.pdp-buy-now { width: 100%; margin-top: 12px; background: #fff; color: var(--navy); border: 1.5px solid var(--navy); }
-.pdp-buy-now:hover { background: var(--navy); color: #fff; box-shadow: var(--shadow-soft); }
+.pdp-buy-wrap { margin-top: 12px; display: flex; flex-direction: column; }
+.pdp-prepaid-ribbon { align-self: center; background: #f3e4bf; color: #a97f22; font-weight: 800; font-size: 13px; padding: 5px 14px; border-radius: 999px; margin-bottom: -2px; position: relative; z-index: 1; }
+.pdp-buy-now { width: 100%; margin-top: 0; background: #2f7d32; color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.pdp-buy-now:hover { background: #276a2a; color: #fff; box-shadow: var(--shadow-soft); }
 .qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }
 .qty button { width: 44px; height: 46px; border: 0; background: transparent; font-size: 18px; color: var(--ink); }
 .qty button:hover { background: var(--line-soft); }

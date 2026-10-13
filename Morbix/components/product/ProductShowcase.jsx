@@ -22,6 +22,10 @@ function ik(src, w) {
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
 // and Add to cart sends that precise variation to the backend.
+// Prepaid instant discount (env-configured; 0 unless set) — surfaced as the
+// "₹N OFF on Prepaid Orders" ribbon above Buy now, the same figure the cart uses.
+const PREPAID_OFF = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
+
 export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
   const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -473,7 +477,14 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             </button>
           </div>
           {inStock && (
-            <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>Buy now</button>
+            <div className="pdp-buy-wrap">
+              {PREPAID_OFF > 0 && (
+                <div className="pdp-prepaid-ribbon">₹{Math.round(PREPAID_OFF)} OFF on Prepaid Orders</div>
+              )}
+              <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
+                <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
+              </button>
+            </div>
           )}
         </div>
 
