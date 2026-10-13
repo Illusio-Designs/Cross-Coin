@@ -1305,6 +1305,10 @@ button { font-family: inherit; cursor: pointer; }
 .rv-dup { display: flex; }
 .rv-dup > .review { flex: 1 1 auto; min-width: 0; }
 @keyframes rv-scroll { to { transform: translateX(calc(-50% - 8px)); } }
+/* Reversed row — scrolls the opposite way (used for the middle row of the wall). */
+.rv-track.rv-rtl { animation-direction: reverse; }
+/* Tighter vertical rhythm when several marquee rows stack into a wall. */
+.rv-rows { display: flex; flex-direction: column; gap: 4px; }
 @media (max-width: 760px) {
   .rv-track > .review, .rv-track > .rv-dup { flex-basis: 84vw; width: 84vw; max-width: 320px; }
 }

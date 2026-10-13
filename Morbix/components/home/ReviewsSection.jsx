@@ -4,8 +4,31 @@ import ReviewRow from '@/components/ui/ReviewRow';
 export default function ReviewsSection({ reviews = [], total: totalProp }) {
   const rated = reviews.filter((r) => Number(r.rating) > 0);
   const avg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) : 0;
-  // Exact store-wide total from the API; the list is only the latest page of reviews.
+  // Exact store-wide total from the API; the list is only a random sample.
   const total = Math.max(Number(totalProp) || 0, reviews.length);
+
+  // Split the sample into three rows that scroll in alternating directions
+  // (left → right → left) for a moving "wall of reviews" look.
+  const list = reviews.slice(0, 30);
+  const per = Math.ceil(list.length / 3) || 1;
+  const rows = [list.slice(0, per), list.slice(per, per * 2), list.slice(per * 2)].filter((r) => r.length);
+  const directions = ['left', 'right', 'left'];
+
+  const renderCard = (r, i) => (
+    <div className="review" key={i}>
+      <div className="review-stars" style={{ marginBottom: 10 }}>
+        {[0, 1, 2, 3, 4].map((n) => (
+          <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--star)' : '#dce2e6'} />
+        ))}
+      </div>
+      {r.title && <b className="review-title">{r.title}</b>}
+      <p>{r.text}</p>
+      <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
+        <div className="review-av">{(r.author || '?').charAt(0)}</div>
+        <div className="review-who"><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
+      </div>
+    </div>
+  );
 
   return (
     <section className="section container">
@@ -29,28 +52,20 @@ export default function ReviewsSection({ reviews = [], total: totalProp }) {
         <div className="empty" style={{ marginTop: 8 }}>No reviews yet — your feedback will appear here.</div>
       )}
 
-      <ReviewRow
-        items={reviews.slice(0, 12)}
-        staticClassName="review-grid"
-        min={4}
-        secPerItem={2.5}
-        minDur={18}
-        render={(r, i) => (
-          <div className="review" key={i}>
-            <div className="review-stars" style={{ marginBottom: 10 }}>
-              {[0, 1, 2, 3, 4].map((n) => (
-                <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--star)' : '#dce2e6'} />
-              ))}
-            </div>
-            {r.title && <b className="review-title">{r.title}</b>}
-            <p>{r.text}</p>
-            <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
-              <div className="review-av">{(r.author || '?').charAt(0)}</div>
-              <div className="review-who"><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>
-            </div>
-          </div>
-        )}
-      />
+      <div className="rv-rows">
+        {rows.map((row, idx) => (
+          <ReviewRow
+            key={idx}
+            items={row}
+            staticClassName="review-grid"
+            min={4}
+            secPerItem={2.5}
+            minDur={18}
+            direction={directions[idx]}
+            render={renderCard}
+          />
+        ))}
+      </div>
     </section>
   );
 }

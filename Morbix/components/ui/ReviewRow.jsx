@@ -2,14 +2,14 @@
    seamless loop (CSS only) and pause while hovered, touched or focused; with only a few
    they stay as a normal static list. For people who prefer reduced motion the row becomes
    a plain swipeable strip instead. Markup only, so it works in server components. */
-export default function ReviewRow({ items = [], render, staticClassName = '', min = 4, secPerItem = 13, minDur = 45 }) {
+export default function ReviewRow({ items = [], render, staticClassName = '', min = 4, secPerItem = 13, minDur = 45, direction = 'left' }) {
   if (items.length < min) {
     return <div className={staticClassName}>{items.map((r, i) => render(r, i))}</div>;
   }
   const seconds = Math.max(minDur, items.length * secPerItem);
   return (
     <div className="rv-marquee" role="region" aria-label="Customer reviews" style={{ '--rv-dur': `${seconds}s` }} tabIndex={0}>
-      <div className="rv-track">
+      <div className={`rv-track${direction === 'right' ? ' rv-rtl' : ''}`}>
         {items.map((r, i) => render(r, i))}
         {items.map((r, i) => (
           <div className="rv-dup" aria-hidden="true" key={`dup-${i}`}>{render(r, `d${i}`)}</div>

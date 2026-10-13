@@ -190,7 +190,7 @@ export async function getStoreReviews(revalidate) {
   try {
     // Home testimonials marquee only shows a handful; cap at 20 (exact total
     // still comes from pagination.total inside reviewsPayload).
-    return reviewsPayload(await brandFetch('/api/reviews/all?limit=20&sort=random', revalidate ?? 300));
+    return reviewsPayload(await brandFetch('/api/reviews/all?limit=30&sort=random', revalidate ?? 300));
   } catch { return { reviews: [], total: 0 }; }
 }
 
