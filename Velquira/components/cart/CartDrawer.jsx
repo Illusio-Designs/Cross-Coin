@@ -155,6 +155,15 @@ export default function CartDrawer() {
   // the drawer opens; excludes items already in the cart.
   const [suggestions, setSuggestions] = useState([]);
 
+  // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
+  // fees) each resolve separately and used to pop in one by one. We reset these
+  // on open (for a cart with items) and show one skeleton until all have
+  // settled, then render the real content at once.
+  const [ldCoupons, setLdCoupons] = useState(true);
+  const [ldSuggest, setLdSuggest] = useState(true);
+  const [ldFees, setLdFees] = useState(true);
+  const cartReady = ldCoupons && ldSuggest && ldFees;
+
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
     if (!open) return;
@@ -201,7 +210,7 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!open || items.length === 0) return;
     let alive = true;
-    getPublicCoupons().then((list) => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); }).catch(() => {});
+    getPublicCoupons().then((list) => { if (alive) { setAvailableCoupons(Array.isArray(list) ? list : []); setLdCoupons(true); } }).catch(() => { if (alive) setLdCoupons(true); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -211,7 +220,7 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!open || items.length === 0) return;
     let alive = true;
-    _xsFetch().then((list) => { if (alive) setSuggestions(Array.isArray(list) ? list : []); }).catch(() => { if (alive) setSuggestions([]); });
+    _xsFetch().then((list) => { if (alive) { setSuggestions(Array.isArray(list) ? list : []); setLdSuggest(true); } }).catch(() => { if (alive) { setSuggestions([]); setLdSuggest(true); } });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -246,6 +255,8 @@ export default function CartDrawer() {
     if (!open) return;
     setCoStep(1);
     if (items.length === 0) return;
+    // Re-arm the whole-cart shimmer for this open (cart has items to load for).
+    setLdCoupons(false); setLdSuggest(false); setLdFees(false);
     viewCart({
       contents: items.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.qty || 1 })),
       value: items.reduce((s, i) => s + Number(i.price) * i.qty, 0),
@@ -281,7 +292,8 @@ export default function CartDrawer() {
       setFees(list);
       setFreeShipThreshold(Number(data?.freeShippingThreshold) || 0);
       setSelectedFee((prev) => prev || list.find((f) => f.orderType === 'prepaid') || list.find((f) => f.isDefault) || list[0]);
-    }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); } });
+      setLdFees(true);
+    }).catch(() => { if (alive) { setFees(FALLBACK_FEES); setSelectedFee(FALLBACK_FEES[0]); setLdFees(true); } });
     return () => { alive = false; };
   }, [open]);
 
@@ -700,7 +712,24 @@ export default function CartDrawer() {
           /* ── Single-view cart + checkout ── */
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
-              {coStep === 1 && (<>
+              {coStep === 1 && items.length > 0 && !cartReady && (
+                <div className="cd-skel" aria-hidden="true">
+                  <div className="cd-skel-ship cd-skel-anim" />
+                  {[0, 1].map((n) => (
+                    <div className="cd-skel-item" key={n}>
+                      <div className="cd-skel-thumb cd-skel-anim" />
+                      <div className="cd-skel-lines">
+                        <span className="cd-skel-line cd-skel-anim" />
+                        <span className="cd-skel-line sm cd-skel-anim" />
+                        <span className="cd-skel-line sm cd-skel-anim" />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="cd-skel-chip cd-skel-anim" />
+                  <div className="cd-skel-chip tall cd-skel-anim" />
+                </div>
+              )}
+              {coStep === 1 && (items.length === 0 || cartReady) && (<>
               {/* Free-shipping progress */}
               {freeShipThreshold > 0 && (
                 <div className="cd-ship" style={{ borderRadius: 14, border: '1px solid var(--line-soft)', marginBottom: 10 }}>

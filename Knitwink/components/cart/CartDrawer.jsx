@@ -246,6 +246,15 @@ export function CartDrawer() {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
 
+  // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
+  // fees) each resolve separately and used to pop in one by one. We reset these
+  // on open (for a cart with items) and show one skeleton until all have
+  // settled, then render the real content at once.
+  const [ldCoupons, setLdCoupons] = useState(true);
+  const [ldSuggest, setLdSuggest] = useState(true);
+  const [ldFees, setLdFees] = useState(true);
+  const cartReady = ldCoupons && ldSuggest && ldFees;
+
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
   const offersRef = useRef(null);
@@ -300,6 +309,8 @@ export function CartDrawer() {
     if (!drawerOpen) return;
     setCoStep(1);
     if (items.length === 0) return;
+    // Re-arm the whole-cart shimmer for this open (cart has items to load for).
+    setLdCoupons(false); setLdSuggest(false); setLdFees(false);
     viewCart({
       contents: items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 })),
       value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
@@ -331,8 +342,8 @@ export function CartDrawer() {
     if (!drawerOpen || items.length === 0) return;
     let alive = true;
     getPublicCoupons()
-      .then(list => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); })
-      .catch(() => { if (alive) setAvailableCoupons([]); });
+      .then(list => { if (alive) { setAvailableCoupons(Array.isArray(list) ? list : []); setLdCoupons(true); } })
+      .catch(() => { if (alive) { setAvailableCoupons([]); setLdCoupons(true); } });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawerOpen]);
@@ -360,8 +371,9 @@ export function CartDrawer() {
           if (picks.length >= 4) break;
         }
         setSuggested(picks);
+        setLdSuggest(true);
       })
-      .catch(() => { if (alive) setSuggested([]); });
+      .catch(() => { if (alive) { setSuggested([]); setLdSuggest(true); } });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawerOpen, items.length]);
@@ -415,10 +427,12 @@ export function CartDrawer() {
       setFreeShipThreshold(parseFloat(data?.freeShippingThreshold) || 0);
       const def = fees.find(f => f.orderType === 'prepaid') || fees.find(f => f.isDefault) || fees[0];
       setSelectedFee(def || null);
+      setLdFees(true);
     }).catch(() => {
       setShippingFees(FALLBACK_SHIPPING_FEES);
       setFreeShipThreshold(0);
       setSelectedFee(FALLBACK_SHIPPING_FEES[0]);
+      setLdFees(true);
     });
   }, [drawerOpen]);
 
@@ -1200,7 +1214,24 @@ export function CartDrawer() {
           ) : (
             <div className="cd-single-view">
 
-              {coStep === 1 && (<>
+              {coStep === 1 && items.length > 0 && !cartReady && (
+                <div className="cd-skel" aria-hidden="true">
+                  <div className="cd-skel-ship cd-skel-anim" />
+                  {[0, 1].map((n) => (
+                    <div className="cd-skel-item" key={n}>
+                      <div className="cd-skel-thumb cd-skel-anim" />
+                      <div className="cd-skel-lines">
+                        <span className="cd-skel-line cd-skel-anim" />
+                        <span className="cd-skel-line sm cd-skel-anim" />
+                        <span className="cd-skel-line sm cd-skel-anim" />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="cd-skel-chip cd-skel-anim" />
+                  <div className="cd-skel-chip tall cd-skel-anim" />
+                </div>
+              )}
+              {coStep === 1 && (items.length === 0 || cartReady) && (<>
               {/* Free-shipping progress bar — mirrors FreeShippingBar's style but
                   driven by the API threshold (freeShippingThreshold). */}
               {freeShipThreshold > 0 && (

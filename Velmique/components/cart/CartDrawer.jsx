@@ -143,6 +143,15 @@ export default function CartDrawer() {
   // Two-step checkout: 1 = review bag, 2 = delivery + payment.
   const [coStep, setCoStep] = useState(1);
 
+  // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
+  // fees) each resolve separately and used to pop in one by one. We reset these
+  // on open (for a bag with items) and show one skeleton until all have
+  // settled, then render the real bag-review content at once.
+  const [ldCoupons, setLdCoupons] = useState(true);
+  const [ldSuggest, setLdSuggest] = useState(true);
+  const [ldFees, setLdFees] = useState(true);
+  const cartReady = ldCoupons && ldSuggest && ldFees;
+
   const dropdownRef = useRef(null);
   const bodyRef = useRef(null);
   const offersRef = useRef(null);
@@ -216,8 +225,8 @@ export default function CartDrawer() {
     if (!cartOpen || items.length === 0) return;
     let alive = true;
     getPublicCoupons()
-      .then(list => { if (alive) setAvailableCoupons(Array.isArray(list) ? list : []); })
-      .catch(() => {});
+      .then(list => { if (alive) { setAvailableCoupons(Array.isArray(list) ? list : []); setLdCoupons(true); } })
+      .catch(() => { if (alive) setLdCoupons(true); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
@@ -227,8 +236,8 @@ export default function CartDrawer() {
     if (!cartOpen || items.length === 0) return;
     let alive = true;
     _xsFetch()
-      .then(list => { if (alive) setSuggestions(Array.isArray(list) ? list : []); })
-      .catch(() => { if (alive) setSuggestions([]); });
+      .then(list => { if (alive) { setSuggestions(Array.isArray(list) ? list : []); setLdSuggest(true); } })
+      .catch(() => { if (alive) { setSuggestions([]); setLdSuggest(true); } });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
@@ -273,10 +282,12 @@ export default function CartDrawer() {
         setFreeShipThreshold(Number(raw?.freeShippingThreshold) || 0);
         const def = fees.find(f => f.orderType === 'prepaid') || fees.find(f => f.isDefault) || fees[0];
         setSelectedFee(def || null);
+        setLdFees(true);
       })
       .catch(() => {
         setShippingFees(FALLBACK_FEES);
         setSelectedFee(FALLBACK_FEES[0]);
+        setLdFees(true);
       });
   }, [cartOpen]);
 
@@ -311,6 +322,8 @@ export default function CartDrawer() {
     if (!cartOpen) return;
     setCoStep(1);
     if (items.length === 0) return;
+    // Re-arm the whole-cart shimmer for this open (bag has items to load for).
+    setLdCoupons(false); setLdSuggest(false); setLdFees(false);
     viewCart({
       contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
       value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
@@ -948,8 +961,38 @@ export default function CartDrawer() {
             </div>
           ) : (
             <>
+              {/* ── Whole-cart shimmer: one skeleton for the whole bag-review
+                     body while its async loads settle, so content doesn't pop
+                     in piece by piece. ── */}
+              {coStep === 1 && items.length > 0 && !cartReady && (
+                <div className="animate-pulse" aria-hidden="true">
+                  {/* free-shipping row */}
+                  <div className="px-5 py-3 border-b border-[#D8D3C9]">
+                    <div className="h-3 w-3/4 mx-auto rounded bg-[var(--border)] mb-2" />
+                    <div className="h-1.5 w-full rounded-full bg-[var(--border)]" />
+                  </div>
+                  {/* item rows */}
+                  <div className="px-5 py-4 space-y-4 border-b border-[#D8D3C9]">
+                    {[0, 1].map((n) => (
+                      <div key={n} className="flex gap-3">
+                        <div className="w-20 h-24 shrink-0 rounded bg-[var(--border)]" />
+                        <div className="flex-1 min-w-0 space-y-2 py-1">
+                          <div className="h-4 w-5/6 rounded bg-[var(--border)]" />
+                          <div className="h-3 w-1/3 rounded bg-[var(--border)]" />
+                          <div className="h-6 w-2/3 rounded bg-[var(--border)] mt-3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* chips (coupon + offer) */}
+                  <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
+                    <div className="h-10 w-full rounded bg-[var(--border)]" />
+                    <div className="h-14 w-full rounded bg-[var(--border)]" />
+                  </div>
+                </div>
+              )}
               {/* ── Step 1: review bag (free shipping, items, coupon, cross-sell) ── */}
-              {coStep === 1 && (<>
+              {coStep === 1 && (items.length === 0 || cartReady) && (<>
               {/* ── Free-shipping progress ─────────────────────────────── */}
               {freeShipThreshold > 0 && (
                 <div className="px-5 py-3 border-b border-[#D8D3C9]">
