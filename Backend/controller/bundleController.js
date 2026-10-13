@@ -110,3 +110,33 @@ module.exports.resolveTier = async (brandId, pairs) => {
 };
 
 module.exports.DEFAULT_TIERS = DEFAULT_TIERS;
+
+// Discount FRACTION (0..0.9) applied to a line of `qty` units, from the brand's
+// CONFIGURED tiers ONLY (defaults are NOT used here). Returns 0 when the brand
+// has no tiers set, so checkout/cart pricing is byte-for-byte unchanged until an
+// admin explicitly configures packs. Picks the largest tier whose pairs ≤ qty
+// (buy-more-save-more — never raises the price). Server-authoritative, so the
+// browser can never choose its own pack discount.
+let _tierCache = { at: 0, byBrand: new Map() };
+module.exports.bundleDiscountFraction = async (brandId, qty) => {
+  const q = parseInt(qty, 10);
+  if (!Number.isFinite(q) || q < 1) return 0;
+  const bid = brandId || 1;
+  // 30s in-process cache so a multi-item order doesn't re-query per line.
+  if (Date.now() - _tierCache.at > 30000) _tierCache = { at: Date.now(), byBrand: new Map() };
+  let rows = _tierCache.byBrand.get(bid);
+  if (!rows) {
+    rows = await BundleTier.findAll({
+      where: { brand_id: bid, is_active: true },
+      attributes: ['pairs', 'discount_percent'],
+      order: [['pairs', 'ASC']],
+    });
+    _tierCache.byBrand.set(bid, rows);
+  }
+  if (!rows.length) return 0; // not configured → no bundle pricing
+  const applicable = rows.filter((r) => r.pairs <= q);
+  if (!applicable.length) return 0;
+  const tier = applicable.reduce((a, b) => (b.pairs > a.pairs ? b : a));
+  const pct = Math.max(0, Math.min(90, Number(tier.discount_percent) || 0));
+  return pct / 100;
+};

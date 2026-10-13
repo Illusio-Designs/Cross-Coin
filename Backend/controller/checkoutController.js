@@ -313,7 +313,8 @@ exports.initiateCheckout = async (req, res) => {
         return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${quantity}.`, product_id, variation_id: variation.id, available });
       }
 
-      const price = parseFloat(variation.price);
+      let price = parseFloat(variation.price);
+      { const _bf = await require('./bundleController.js').bundleDiscountFraction(brandId, quantity); if (_bf > 0) price = Math.round(price * (1 - _bf)); }
       const subtotal = price * quantity;
       totalAmount += subtotal;
       validatedItems.push({ product_id, variation_id: variation.id, quantity, price, discount: 0, subtotal });

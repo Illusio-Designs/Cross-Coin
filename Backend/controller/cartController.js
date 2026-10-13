@@ -50,7 +50,7 @@ module.exports.getCart = async (req, res) => {
         let discount = 0;
 
         // Final total
-        const total = Math.max(0, subtotal - discount + shipping);
+        let total = Math.max(0, subtotal - discount + shipping);
 
         const formattedCart = cart.CartItems.map(item => {
             const product = item.Product;
@@ -113,6 +113,7 @@ module.exports.getCart = async (req, res) => {
             return {
                 id: item.id,
                 productId: product ? product.id : null,
+                brand_id: product ? product.brand_id : null,
                 variationId: variation ? variation.id : null,
                 name: product ? product.name : 'Product not found',
                 image: image,
@@ -128,6 +129,21 @@ module.exports.getCart = async (req, res) => {
                 dimensionUnit: product ? product.dimensionUnit : null
             };
         });
+
+        // Bundle pricing (display): discount each line by its quantity tier so
+        // the drawer matches what checkout charges. Inert until the brand has
+        // configured tiers; brand comes from each line's product.
+        try {
+            const { bundleDiscountFraction } = require('./bundleController.js');
+            let bundleSubtotal = 0;
+            for (const fc of formattedCart) {
+                const frac = await bundleDiscountFraction(fc.brand_id || 1, fc.quantity);
+                if (frac > 0) fc.price = Math.round(Number(fc.price) * (1 - frac));
+                bundleSubtotal += (Number(fc.price) || 0) * (fc.quantity || 1);
+            }
+            subtotal = bundleSubtotal;
+            total = Math.max(0, subtotal - discount + shipping);
+        } catch (_) { /* leave full prices on any error */ }
 
         res.json({
             cart: formattedCart,
