@@ -1972,6 +1972,10 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 
 /* ── MARQUEE (quiet hairline strip) ─────────────────────────────────────── */
 .marquee-wrap { background: transparent; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+/* Site-wide top bar (above the header) */
+.marquee-wrap.topbar { margin-top: 0; padding: 9px 0; border-top: 0; }
+.marquee-wrap.topbar .marquee-item { font-size: 12px; }
+.marquee-wrap.topbar .marquee-ic { width: 24px; height: 24px; border-radius: 8px; }
 .marquee-item { color: var(--ink-soft); font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
 .marquee-ic { color: var(--accent-600); }
 .marquee-sep { color: var(--accent); }

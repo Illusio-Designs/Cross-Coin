@@ -1,13 +1,13 @@
 import Hero from '@/components/home/Hero';
-import Marquee from '@/components/home/Marquee';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
 import ProductBenefits from '@/components/product/ProductBenefits';
+import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs } from '@/lib/api';
 
 // Static/ISR — regenerate every 5 min.
 export const revalidate = 300;
@@ -24,24 +24,15 @@ function heroSrc(src, w = 1600) {
 }
 
 export default async function HomePage() {
-  const [products, categories, storeReviews, posts, slides] = await Promise.all([
+  const [products, categories, storeReviews, posts, slides, faqs] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
+    getGlobalFaqs(),
   ]);
   const reviews = storeReviews.reviews;
-
-  // Real store-wide rating for the trust marquee — average from the fetched
-  // reviews, exact total from the API. Null when there are no real reviews.
-  const ratedReviews = (reviews || []).filter((r) => Number(r.rating) > 0);
-  const reviewAvg = ratedReviews.length
-    ? ratedReviews.reduce((a, r) => a + Number(r.rating), 0) / ratedReviews.length
-    : 0;
-  const marqueeRating = reviewAvg > 0 && Number(storeReviews.total) > 0
-    ? { avg: reviewAvg, total: storeReviews.total }
-    : null;
 
   // Collection cards from live categories — same card as the /collections page.
   // Use the category image, or fall back to a product photo from that category.
@@ -76,13 +67,13 @@ export default async function HomePage() {
         />
       )}
       <Hero features={getHeroFeatures()} slides={slides} />
-      <Marquee rating={marqueeRating} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
       <Reveal as="section"><ProductBenefits /></Reveal>
       <Reveal as="section"><Reviews reviews={reviews} total={storeReviews.total} title="In their words" /></Reveal>
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
+      {faqs.length > 0 && <Reveal as="section"><ProductFaq faqs={faqs} /></Reveal>}
     </>
   );
 }

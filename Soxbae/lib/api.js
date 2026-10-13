@@ -234,6 +234,14 @@ export async function getProductFaqs(productId) {
   } catch { return []; }
 }
 
+// Store-wide (global) FAQs for the Soxbae brand — shown on the home page.
+export async function getGlobalFaqs() {
+  try {
+    const data = await brandFetch('/api/public/faqs?type=global', 300).catch(() => null);
+    return mapFaqs(data);
+  } catch { return []; }
+}
+
 // ---- Blog -----------------------------------------------------------------
 
 export async function getBlogPosts() {

@@ -7,6 +7,7 @@ import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
+import Marquee from '@/components/home/Marquee';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
 import ExitIntentModal from '@/components/cart/ExitIntentModal';
@@ -65,6 +66,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <CartProvider>
             <SmoothScroll>
+              <Marquee topbar />
               <Header />
               <main id="main">{children}</main>
               <Footer />
