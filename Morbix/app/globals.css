@@ -288,7 +288,6 @@ button { font-family: inherit; cursor: pointer; }
     radial-gradient(120% 90% at 0% 100%, rgba(32,44,110,.10), transparent 55%),
     #fff;
   border: 1px solid var(--line-soft); box-shadow: 0 24px 60px -40px rgba(27,35,64,.4); }
-.excl-panel::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: linear-gradient(var(--teal), var(--navy)); }
 .excl-panel-head { text-align: center; max-width: 560px; margin: 0 auto 6px; }
 .excl-ribbon { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--teal-600); background: var(--teal-050); padding: 6px 14px; border-radius: 999px; }
 
