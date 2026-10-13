@@ -4,8 +4,9 @@ import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
+import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getStoreReviews } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getStoreReviews, getFaqs } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -23,10 +24,11 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData, storeReviews] = await Promise.all([
+  const [all, reviewsData, storeReviews, faqs] = await Promise.all([
     getAllProducts(),
     getProductReviewsWithTotal(product.id),
     getStoreReviews(300),
+    getFaqs('global'),
   ]);
   const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
@@ -72,6 +74,9 @@ export default async function ProductPage({ params, searchParams }) {
           </div>
         </section>
       )}
+
+      {/* ── FAQ (admin-managed) — last section before the footer ── */}
+      {faqs.length > 0 && <FaqSection faqs={faqs} />}
     </div>
   );
 }

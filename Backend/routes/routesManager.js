@@ -61,7 +61,7 @@ router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
 router.use('/analytics',          require('../integration/dashboardAnalytics.js'));
 
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
-router.use('/', require('./faqRoutes.js'));
+router.use('/', optionalBrand, require('./faqRoutes.js'));
 
 // ── SEO admin (health summary, bulk product SEO editor) ───────────────────
 router.use('/', require('./seoAdminRoutes.js'));

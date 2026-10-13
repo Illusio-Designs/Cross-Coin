@@ -5,9 +5,10 @@ import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
 import Technologies from '@/components/home/Technologies';
 import ReviewsSection from '@/components/home/ReviewsSection';
+import FaqSection from '@/components/home/FaqSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getStoreReviews, getBlogPosts, getSliders } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getStoreReviews, getBlogPosts, getSliders, getFaqs } from '@/lib/api';
 
 // Static/ISR — regenerate every 5 min.
 export const revalidate = 300;
@@ -24,12 +25,13 @@ function heroSrc(src, w = 1200) {
 }
 
 export default async function HomePage() {
-  const [products, categories, storeReviews, posts, slides] = await Promise.all([
+  const [products, categories, storeReviews, posts, slides, faqs] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
+    getFaqs('global'),
   ]);
   const reviews = storeReviews.reviews;
 
@@ -82,6 +84,7 @@ export default async function HomePage() {
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
       <Reveal as="section"><ReviewsSection reviews={reviews} total={storeReviews.total} /></Reveal>
+      {faqs.length > 0 && <Reveal as="section"><FaqSection faqs={faqs} /></Reveal>}
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
     </>
   );

@@ -29,7 +29,9 @@ function normaliseAttach(body) {
  */
 module.exports.getPublicFaqs = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brand_id, 10) || 1;
+    // Brand comes from the X-Brand-Name header (optionalBrand → req.brandId);
+    // fall back to an explicit ?brand_id= or 1 so direct calls still work.
+    const brandId = req.brandId || parseInt(req.query.brand_id, 10) || 1;
     const type = ATTACH_TYPES.includes(req.query.type) ? req.query.type : 'global';
     const where = { brand_id: brandId, attached_to_type: type, is_active: true };
 

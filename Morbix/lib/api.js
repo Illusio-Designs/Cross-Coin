@@ -194,6 +194,16 @@ export async function getStoreReviews(revalidate) {
   } catch { return { reviews: [], total: 0 }; }
 }
 
+// Admin-managed FAQs. type='global' for the site-wide set, 'product' + id for a
+// product's own FAQs. Brand is scoped by the X-Brand-Name header in brandFetch.
+export async function getFaqs(type = 'global', id, revalidate = 300) {
+  try {
+    const q = id ? `&id=${encodeURIComponent(id)}` : '';
+    const data = await brandFetch(`/api/public/faqs?type=${type}${q}`, revalidate ?? 300);
+    return Array.isArray(data?.faqs) ? data.faqs : [];
+  } catch { return []; }
+}
+
 // One product's reviews plus its exact total.
 export async function getProductReviewsWithTotal(productId) {
   if (!productId) return { reviews: [], total: 0 };
