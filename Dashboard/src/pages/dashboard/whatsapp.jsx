@@ -6,6 +6,7 @@ import { Modal, Button } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
+import AbandonedCarts from './consumers/abandoned-carts';
 import { inlineHtml } from '../../utils/sanitizeHtml';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -1617,6 +1618,7 @@ export function WhatsAppManager() {
     { k:'canned',     label:'Canned Responses',  icon: IC.tag },
     { k:'broadcast',  label:'Broadcast',         icon: IC.send },
     { k:'test',       label:'Test Message',      icon: IC.phone },
+    { k:'abandoned',  label:'Abandoned Carts',   icon: IC.cart_abandon, section: 'Recovery' },
     { k:'analytics',  label:'Analytics',         icon: IC.bar,     section: 'Account' },
   ];
 
@@ -1649,6 +1651,13 @@ export function WhatsAppManager() {
 
       {/* ══ MAIN CONTENT ══ */}
       <div className="was-main">
+
+        {/* ── ABANDONED CARTS (shared dashboard primitives) ── */}
+        {page === 'abandoned' && (
+          <div className="was-scroll">
+            <div className="was-content-pad"><AbandonedCarts /></div>
+          </div>
+        )}
 
         {/* ── DASHBOARD ── */}
         {page === 'dashboard' && (
