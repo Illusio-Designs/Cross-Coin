@@ -58,6 +58,7 @@ const ALL_MENU = [
       { label: 'Products',      view: 'products' },
       { label: 'Categories',    view: 'categories' },
       { label: 'Attributes',    view: 'attributes' },
+      { label: 'Pack pricing',  view: 'pack-pricing' },
       { label: 'Media Gallery', view: 'media-gallery' },
     ],
   },

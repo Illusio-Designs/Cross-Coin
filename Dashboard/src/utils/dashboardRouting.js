@@ -4,6 +4,7 @@ export const getPageTitle = (view) => {
     'main': 'Dashboard',
     'products': 'Products',
     'categories': 'Categories',
+    'pack-pricing': 'Pack pricing',
     'attributes': 'Attributes',
     'orders': 'Orders',
     'consumers': 'Consumers',

@@ -10,6 +10,7 @@ import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting"
 import Products from "./products/products";
 import Categories from "./products/categories";
 import Attributes from "./products/attributes";
+import PackPricing from "./products/pack-pricing";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
@@ -231,6 +232,7 @@ function Dashboard() {
       case 'products':        return <Products />;
       case 'categories':      return <Categories />;
       case 'attributes':      return <Attributes />;
+      case 'pack-pricing':    return <PackPricing />;
       case 'orders':          return <Orders />;
       case 'consumers':       return <Consumers />;
       case 'returns':         return <Returns />;

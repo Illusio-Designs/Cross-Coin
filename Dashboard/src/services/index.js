@@ -1954,6 +1954,42 @@ export const faqService = {
   },
 };
 
+// Pack / bundle pricing tiers (buy more, save more) managed per brand.
+export const bundleService = {
+  list: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/bundle-tiers", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  create: async (data) => {
+    try {
+      const response = await adminApi.post("/api/admin/bundle-tiers", data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  update: async (id, data) => {
+    try {
+      const response = await adminApi.put(`/api/admin/bundle-tiers/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  remove: async (id) => {
+    try {
+      const response = await adminApi.delete(`/api/admin/bundle-tiers/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 // Dashboard Services
 export const dashboardService = {
   getDashboardStats: async (params = {}) => {
