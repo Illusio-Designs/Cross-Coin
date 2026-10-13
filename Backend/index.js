@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v7';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v8';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -493,6 +493,29 @@ const startServer = async () => {
             logger.info('✓ Startup migrations already applied — skipping (fast cold start)');
         } else {
             logger.info('Running one-time startup migrations…');
+
+        // ── Idempotent migration: bundle_tiers table (pack / bundle pricing) ─
+        // Per-brand buy-more-save-more tiers. Production doesn't run sequelize
+        // sync, so create it here. CREATE TABLE IF NOT EXISTS → safe every boot.
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS bundle_tiers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                brand_id INT NOT NULL DEFAULT 1,
+                pairs INT NOT NULL DEFAULT 1,
+                discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
+                label VARCHAR(80) NULL,
+                badge VARCHAR(40) NULL,
+                display_order INT NOT NULL DEFAULT 0,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_bundle_lookup (brand_id, is_active, display_order),
+                INDEX idx_bundle_brand_pairs (brand_id, pairs)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+            logger.info('✓ bundle_tiers table ensured');
+        } catch (err) {
+            logger.error('bundle_tiers table migration failed: ' + err.message);
+        }
 
         // ── Idempotent migration: users.roles (multi-role support) ─────────
         // Production doesn't run sequelize sync, so ensure the column exists

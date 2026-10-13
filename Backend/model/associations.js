@@ -44,6 +44,7 @@ const { LookbookHotspot } = require("./lookbookHotspotModel.js");
 const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
 const { OrderShipment } = require("./orderShipmentModel.js");
 const { Faq } = require("./faqModel.js");
+const { BundleTier } = require("./bundleTierModel.js");
 const { AddressQualityScore } = require("./addressQualityScoreModel.js");
 const { Return } = require("./returnModel.js");
 
@@ -96,6 +97,7 @@ module.exports = {
   WhatsappMessage,
   OrderShipment,
   Faq,
+  BundleTier,
 };
 
 // User Associations
