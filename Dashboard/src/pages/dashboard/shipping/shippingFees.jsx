@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Pagination, Select } from "../../../components/ui";
+import { PageHeader, FilterBar, Panel, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { shippingFeeService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, DeliveryTruck01Icon } from '@hugeicons/core-free-icons';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
-  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
   edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
   trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
-  shipping: <HugeiconsIcon icon={DeliveryTruck01Icon} size={20} strokeWidth={2} />,
 };
 
 const EMPTY_FORM = { orderType: "cod", fee: "" };
@@ -93,15 +92,15 @@ export default function ShippingFees() {
   };
 
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Order Type", accessor: "orderType", cell: ({ orderType }) => <span className="sl-cat-badge">{orderType.toUpperCase()}</span> },
-    { header: "Fee", accessor: "fee", cell: ({ fee }) => <span className="cat-name-cell">₹{parseFloat(fee).toFixed(2)}</span> },
+    { key: "serial_number", label: "Sr. No" },
+    { key: "orderType", label: "Order Type", render: (r) => <span className="sl-cat-badge">{r.orderType.toUpperCase()}</span> },
+    { key: "fee", label: "Fee", render: (r) => <span className="cat-name-cell">₹{parseFloat(r.fee).toFixed(2)}</span> },
     {
-      header: "Actions", accessor: "actions",
-      cell: ({ id, ...row }) => (
+      key: "actions", label: "Actions",
+      render: (r) => (
         <div className="sl-actions">
-          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id, row)}>{IC.edit}</button>
-          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
+          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(r.id, r)}>{IC.edit}</button>
+          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(r.id)}>{IC.trash}</button>
         </div>
       )
     }

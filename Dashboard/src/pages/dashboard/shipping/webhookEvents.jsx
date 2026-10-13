@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Table } from "../../../components/ui";
+import { Button, Badge } from "../../../components/ui";
+import { PageHeader, StatGrid, StatTile, Panel, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { orderService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { RefreshIcon, CheckmarkCircle02Icon, Alert02Icon, DeliveryTruck01Icon } from '@hugeicons/core-free-icons';
+import { RefreshIcon, CheckmarkCircle02Icon, Alert02Icon } from '@hugeicons/core-free-icons';
 
 // Backend webhook endpoint the courier (iThink) must be told to call.
 // NOTE: this is the API host, NOT the storefront (www.*).
@@ -45,43 +46,37 @@ export default function WebhookEvents() {
   const pushWorking = !!summary?.pushWorking;
 
   const columns = [
-    { header: "Received", accessor: "createdAt", cell: (r) => <span style={{ whiteSpace: "nowrap" }}>{fmt(r.createdAt)}</span> },
-    { header: "AWB", accessor: "waybill", cell: (r) => <span style={{ fontFamily: "monospace" }}>{r.waybill || "—"}</span> },
-    { header: "Order Ref", accessor: "order_ref", cell: (r) => <span>{r.order_ref || "—"}</span> },
-    { header: "Courier said", accessor: "courier_status", cell: (r) => <span>{r.courier_status || "—"}</span> },
-    { header: "Mapped to", accessor: "mapped_status", cell: (r) => <span style={{ fontWeight: 600 }}>{r.mapped_status || "—"}</span> },
+    { key: "createdAt", label: "Received", render: (r) => <span style={{ whiteSpace: "nowrap" }}>{fmt(r.createdAt)}</span> },
+    { key: "waybill", label: "AWB", render: (r) => <span style={{ fontFamily: "monospace" }}>{r.waybill || "—"}</span> },
+    { key: "order_ref", label: "Order Ref", render: (r) => <span>{r.order_ref || "—"}</span> },
+    { key: "courier_status", label: "Courier said", render: (r) => <span>{r.courier_status || "—"}</span> },
+    { key: "mapped_status", label: "Mapped to", render: (r) => <span style={{ fontWeight: 600 }}>{r.mapped_status || "—"}</span> },
     {
-      header: "Result", accessor: "processed",
-      cell: (r) => r.processed
-        ? <span style={{ color: "#16a34a", fontWeight: 600 }}>Processed</span>
+      key: "processed", label: "Result",
+      render: (r) => r.processed
+        ? <Badge variant="success">Processed</Badge>
         : (r.processing_error
-            ? <span style={{ color: "#dc2626", fontWeight: 600 }} title={r.processing_error}>Failed</span>
-            : <span style={{ color: "#d97706", fontWeight: 600 }}>Pending</span>),
+            ? <Badge variant="danger" title={r.processing_error}>Failed</Badge>
+            : <Badge variant="warning">Pending</Badge>),
     },
   ];
 
   return (
-    <div style={{ padding: "1.25rem" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <HugeiconsIcon icon={DeliveryTruck01Icon} size={24} strokeWidth={2} />
-          <div>
-            <h1 style={{ margin: 0, fontSize: "1.25rem" }}>Courier Webhook Monitor</h1>
-            <p style={{ margin: "2px 0 0", fontSize: "0.85rem", opacity: 0.7 }}>
-              Live proof of whether iThink is pushing status updates to this backend.
-            </p>
-          </div>
-        </div>
-        <Button onClick={load} disabled={loading}>
-          <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} /> Refresh
-        </Button>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title="Courier Webhook Monitor"
+        subtitle="Live proof of whether iThink is pushing status updates to this backend."
+        actions={
+          <Button onClick={load} disabled={loading}>
+            <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} /> Refresh
+          </Button>
+        }
+      />
 
       {/* Status banner */}
       <div style={{
         display: "flex", alignItems: "center", gap: "0.75rem",
-        padding: "0.9rem 1.1rem", borderRadius: 12, marginBottom: "1rem",
+        padding: "0.9rem 1.1rem", borderRadius: 12,
         background: pushWorking ? "rgba(22,163,74,0.10)" : "rgba(217,119,6,0.10)",
         border: `1px solid ${pushWorking ? "rgba(22,163,74,0.35)" : "rgba(217,119,6,0.35)"}`,
       }}>
@@ -102,22 +97,15 @@ export default function WebhookEvents() {
       </div>
 
       {/* Summary tiles */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
-        {[
-          { label: "Total received", value: summary?.total ?? 0 },
-          { label: "Last 24 hours", value: summary?.last24h ?? 0 },
-          { label: "Failed", value: summary?.failed ?? 0, danger: (summary?.failed ?? 0) > 0 },
-          { label: "Last received", value: fmt(summary?.lastReceivedAt), small: true },
-        ].map((t) => (
-          <div key={t.label} style={{ padding: "0.9rem 1rem", borderRadius: 12, border: "1px solid rgba(128,128,128,0.2)" }}>
-            <div style={{ fontSize: "0.75rem", opacity: 0.7 }}>{t.label}</div>
-            <div style={{ fontSize: t.small ? "0.9rem" : "1.5rem", fontWeight: 700, marginTop: 4, color: t.danger ? "#dc2626" : "inherit" }}>{t.value}</div>
-          </div>
-        ))}
-      </div>
+      <StatGrid>
+        <StatTile label="Total received" value={summary?.total ?? 0} />
+        <StatTile label="Last 24 hours" value={summary?.last24h ?? 0} />
+        <StatTile label="Failed" value={summary?.failed ?? 0} tone={(summary?.failed ?? 0) > 0 ? 'danger' : 'default'} />
+        <StatTile label="Last received" value={fmt(summary?.lastReceivedAt)} />
+      </StatGrid>
 
       {/* The URL to give iThink */}
-      <div style={{ padding: "0.9rem 1.1rem", borderRadius: 12, border: "1px dashed rgba(128,128,128,0.4)", marginBottom: "1.25rem" }}>
+      <div style={{ padding: "0.9rem 1.1rem", borderRadius: 12, border: "1px dashed rgba(128,128,128,0.4)" }}>
         <div style={{ fontSize: "0.8rem", opacity: 0.75, marginBottom: 6 }}>
           If nothing is arriving, give this exact URL to iThink as your order-status callback / webhook
           (this is the <strong>api</strong> host, not the storefront):
@@ -129,13 +117,15 @@ export default function WebhookEvents() {
       </div>
 
       {/* Events table */}
-      {error && <div style={{ color: "#dc2626", marginBottom: "1rem" }}>{error}</div>}
+      {error && <div style={{ color: "#dc2626" }}>{error}</div>}
       {loading ? <Loader /> : (
-        events.length === 0
-          ? <div style={{ textAlign: "center", padding: "2.5rem 1rem", opacity: 0.7 }}>
-              No webhooks recorded yet. Once iThink pushes a status (or you send a test), it appears here instantly.
-            </div>
-          : <Table columns={columns} data={events} striped hoverable />
+        <Panel flush>
+          <ResponsiveTable
+            columns={columns}
+            data={events}
+            emptyMessage="No webhooks recorded yet. Once iThink pushes a status (or you send a test), it appears here instantly."
+          />
+        </Panel>
       )}
     </div>
   );

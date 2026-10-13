@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Table, Pagination, Modal, Select } from "../../../components/ui";
+import { PageHeader, FilterBar } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { userService } from "../../../services";
@@ -173,39 +174,25 @@ export default function StaffUsers() {
       <div className="dashboard-page">
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div className="sl-header-icon" style={{ flexShrink: 0 }}>{IC.users}</div>
-          <div style={{ flexShrink: 0 }}>
-            <h1 className="sl-page-title">Staff Users</h1>
-            <p className="sl-page-sub">{filtered.length} staff member{filtered.length !== 1 ? 's' : ''}</p>
-          </div>
-          <div style={{ flex: 1, minWidth: 12 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: '1 1 260px', justifyContent: 'flex-end' }}>
-            <div className="sl-search-wrap" style={{ flex: '1 1 150px' }}>
-              <span className="sl-search-icon">{IC.search}</span>
-              <input
-                type="text"
-                className="sl-search-input"
-                placeholder="Search..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ width: '100%', height: 38 }}
-              />
-            </div>
-            <div style={{ flex: '0 1 150px', minWidth: 120 }}>
-              <Select
-                options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
-                value={filterRole}
-                onChange={val => setFilterRole(val || 'all')}
-                placeholder="All Roles"
-              />
-            </div>
+        <PageHeader
+          title="Staff Users"
+          subtitle={`${filtered.length} staff member${filtered.length !== 1 ? 's' : ''}`}
+          actions={(
             <Button variant="primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', height: 38 }}>
               <span style={{ width: 16, height: 16 }}>{IC.add}</span>
               Add Staff
             </Button>
-          </div>
-        </div>
+          )}
+        />
+
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Search...">
+          <Select
+            options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
+            value={filterRole}
+            onChange={val => setFilterRole(val || 'all')}
+            placeholder="All Roles"
+          />
+        </FilterBar>
 
         {/* ── Table ── */}
         <div className="sl-table-wrap">

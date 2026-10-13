@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { PageHeader, Panel, FilterBar, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { attributeService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
-  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
   edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
   trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
-  attr: <HugeiconsIcon icon={SlidersHorizontalIcon} size={20} strokeWidth={2} />,
 };
 
 const EMPTY_FORM = { name: "", type: "", isRequired: false, values: "" };
@@ -111,14 +110,14 @@ export default function Attributes() {
   };
 
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Name", accessor: "name", cell: ({ name }) => <span className="cat-name-cell">{name}</span> },
-    { header: "Type", accessor: "type_label", cell: ({ type_label }) => <span className="sl-cat-badge">{type_label}</span> },
-    { header: "Values", accessor: "values_label", cell: ({ values_label }) => <span className="cat-desc-cell">{values_label}</span> },
-    { header: "Required", accessor: "isRequired", cell: ({ isRequired }) => <span className={`sl-status-badge sl-status-${isRequired ? 'active' : 'inactive'}`}>{isRequired ? 'Required' : 'Optional'}</span> },
+    { key: "serial_number", label: "Sr. No", render: (r) => r.serial_number },
+    { key: "name", label: "Name", render: (r) => <span className="cat-name-cell">{r.name}</span> },
+    { key: "type", label: "Type", render: (r) => <Badge variant="info">{r.type_label}</Badge> },
+    { key: "values", label: "Values", render: (r) => <span className="cat-desc-cell">{r.values_label}</span> },
+    { key: "isRequired", label: "Required", render: (r) => <Badge variant={r.isRequired ? 'success' : 'default'}>{r.isRequired ? 'Required' : 'Optional'}</Badge> },
     {
-      header: "Actions", accessor: "actions",
-      cell: ({ id }) => (
+      key: "actions", label: "Actions",
+      render: ({ id }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>{IC.edit}</button>
           <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
@@ -131,38 +130,31 @@ export default function Attributes() {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.attr}</div>
-            <div>
-              <h1 className="sl-page-title">Attributes</h1>
-              <p className="sl-page-sub">{attributes.length} attribute{attributes.length !== 1 ? 's' : ''} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search attributes..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>Add Attribute
+        <PageHeader
+          title="Attributes"
+          subtitle={`${attributes.length} attribute${attributes.length !== 1 ? 's' : ''} total`}
+          actions={
+            <button className="ds-btn ds-btn--primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
+              {IC.add}Add Attribute
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="sl-table-wrap">
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Search attributes..." />
+
+        <Panel flush>
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
-          ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.attr}</div>
-              <p>{search ? "No attributes match your search" : "No attributes yet"}</p>
-            </div>
           ) : (
             <>
-              <Table columns={columns} data={currentItems} striped hoverable />
+              <ResponsiveTable
+                columns={columns}
+                data={currentItems}
+                rowKey="id"
+                emptyMessage={search ? "No attributes match your search" : "No attributes yet"}
+              />
               {filteredData.length > itemsPerPage && (
                 <div className="sl-pagination">
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -170,7 +162,7 @@ export default function Attributes() {
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Attribute" : "Add Attribute"} closeOnOverlayClick={false}
