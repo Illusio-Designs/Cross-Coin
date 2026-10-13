@@ -18,7 +18,11 @@ import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import CookieBanner from '@/components/ui/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['400', '500', '600'], style: ['normal', 'italic'] });
+// Fraunces is a variable font: omit an explicit weight array (it supplies the
+// full 100–900 range, which covers the 400–600 the CSS uses) so next/font makes
+// one clean variable-font request. Pinning weights + italic made the Google
+// fetch flaky and broke the production build.
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap', style: ['normal', 'italic'] });
 
 export const metadata = {
   metadataBase: new URL('https://www.soxbaesocks.com'),
