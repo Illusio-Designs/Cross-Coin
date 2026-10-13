@@ -43,6 +43,18 @@ const CartItem = sequelize.define('CartItem', {
     selected_size: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    // Pack grouping: pairs added together as a mixed-colour pack share a pack_id
+    // so the server can price the whole group at the pack rate.
+    packId: {
+        type: DataTypes.STRING(40),
+        allowNull: true,
+        field: 'pack_id'
+    },
+    packSize: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'pack_size'
     }
 }, {
     tableName: 'cart_items',

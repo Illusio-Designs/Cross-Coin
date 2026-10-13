@@ -122,6 +122,8 @@ module.exports.getCart = async (req, res) => {
                 quantity: item.quantity,
                 size: item.selected_size || null,
                 color: attributes.color || null,
+                packId: item.packId || null,
+                packSize: item.packSize || null,
                 stock: variation ? variation.stock : (product ? product.stock_quantity : 0),
                 weight: product ? product.weight : null,
                 weightUnit: product ? product.weightUnit : null,
@@ -135,9 +137,14 @@ module.exports.getCart = async (req, res) => {
         // configured tiers; brand comes from each line's product.
         try {
             const { bundlePerUnit } = require('./bundleController.js');
+            // Pack lines (sharing a packId) price by the group's TOTAL quantity so
+            // a mixed-colour pack shows the pack rate; loose lines use their own qty.
+            const packQty = {};
+            for (const fc of formattedCart) { if (fc.packId) packQty[fc.packId] = (packQty[fc.packId] || 0) + (fc.quantity || 0); }
             let bundleSubtotal = 0;
             for (const fc of formattedCart) {
-                const bu = await bundlePerUnit(fc.brand_id || 1, fc.productId, fc.quantity);
+                const qtyForTier = (fc.packId && packQty[fc.packId]) ? packQty[fc.packId] : fc.quantity;
+                const bu = await bundlePerUnit(fc.brand_id || 1, fc.productId, qtyForTier);
                 if (bu != null) fc.price = bu;
                 bundleSubtotal += (Number(fc.price) || 0) * (fc.quantity || 1);
             }
@@ -164,7 +171,7 @@ module.exports.getCart = async (req, res) => {
 module.exports.addToCart = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { productId, variationId, quantity, size } = req.body;
+    const { productId, variationId, quantity, size, pack_id = null, pack_size = null } = req.body;
 
     // Task 11.4: Validate quantity is a positive integer
     if (!Number.isInteger(quantity) || quantity < 1) {
@@ -192,8 +199,9 @@ module.exports.addToCart = async (req, res) => {
         return res.status(404).json({ message: 'Product not found or inactive' });
       }
 
-      // Check if item already exists (by product and variation)
-      let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null };
+      // Check if item already exists (by product, variation AND pack group — a
+      // pack pair only merges with the same pack, never with a loose line).
+      let where = { cartId: cart.id, productId: productId, variationId: variationId || null, selected_size: size || null, packId: pack_id || null };
       logger.info('[Cart] addToCart where:', where);
       let item = await CartItem.findOne({ where, transaction });
       logger.info('[Cart] addToCart found item:', item);
@@ -226,7 +234,9 @@ module.exports.addToCart = async (req, res) => {
           variationId: variationId || null,
           quantity,
           price,
-          selected_size: size || null
+          selected_size: size || null,
+          packId: pack_id || null,
+          packSize: pack_size || null
         }, { transaction });
         logger.info('[Cart] Created new CartItem:', {
           id: item.id,

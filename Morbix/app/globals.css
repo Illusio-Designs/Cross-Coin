@@ -682,6 +682,14 @@ button { font-family: inherit; cursor: pointer; }
 .buy { display: grid; gap: 18px; min-width: 0; }
 .opt { min-width: 0; }
 .pdp-opts-row { display: flex; flex-wrap: wrap; gap: 16px 36px; }
+
+/* Per-pair colour picker inside a multi-pair pack */
+.packcolor-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.packcolor-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.packcolor-tag { font-size: 12.5px; font-weight: 700; min-width: 54px; color: var(--ink); }
+.packcolor-tag em { display: block; font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 1px; }
+.cd-pack-chip { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--navy); background: color-mix(in srgb, var(--navy) 10%, transparent); padding: 1px 7px; border-radius: 999px; vertical-align: middle; }
+.cd-qty-locked { border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 700; padding: 0 4px; min-width: 0; }
 .opt-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); display: block; margin-bottom: 10px; }
 /* Wrap the colour swatches — a product can have 10+ colours and a single
    non-wrapping row was pushing the whole page wider than the phone screen. */

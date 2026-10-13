@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v10';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v11';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1563,6 +1563,23 @@ const startServer = async () => {
             logger.info('✓ abandoned_carts table ensured');
         } catch (err) {
             logger.error('abandoned_carts table migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: cart_items pack columns (mixed-colour packs) ──
+        // Pairs added together as a pack share a pack_id so the server can price
+        // the whole group at the pack rate. Production doesn't run sync.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items'
+                   AND COLUMN_NAME IN ('pack_id','pack_size')`
+            );
+            const have = new Set(cols.map((c) => c.COLUMN_NAME));
+            if (!have.has('pack_id')) await sequelize.query(`ALTER TABLE cart_items ADD COLUMN pack_id VARCHAR(40) NULL`);
+            if (!have.has('pack_size')) await sequelize.query(`ALTER TABLE cart_items ADD COLUMN pack_size INT NULL`);
+            logger.info('✓ cart_items pack columns ensured');
+        } catch (err) {
+            logger.error('cart_items pack columns migration failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future

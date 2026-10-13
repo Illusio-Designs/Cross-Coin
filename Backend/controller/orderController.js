@@ -356,6 +356,15 @@
       ]);
       logger.debug("✅ createOrder: Batch fetch complete - reduced N+1 queries");
 
+      // Pack-aware bundle pricing: a mixed-colour pack is sent as several lines
+      // sharing a pack_id. Price each pack line by the pack group's TOTAL
+      // quantity (summed server-side here, never trusted from the client) so a
+      // mixed pack still gets the pack rate and a lone line can't fake it. Loose
+      // lines (no pack_id) keep their own quantity, exactly as before.
+      const packQtyById = {};
+      for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
+      const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
+
       // Validate items using pre-fetched data
       for (const item of items) {
         const { product_id, quantity } = item;
@@ -398,7 +407,7 @@
               .json({ message: `Invalid variation for product ${product_id}` });
           }
           price = variation.price;
-          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, quantity); if (_bu != null) price = _bu; }
+          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
           stockAvailable = variation.stock;
           logger.debug(
             "createOrder: Variation validated, price:",
@@ -414,7 +423,7 @@
             variation = variations[0];
             variation_id = variation.id;
             price = variation.price;
-            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, quantity); if (_bu != null) price = _bu; }
+            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
             stockAvailable = variation.stock;
           } else {
             // No variations exist

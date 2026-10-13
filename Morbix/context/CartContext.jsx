@@ -49,8 +49,10 @@ function normalizeServerItem(item) {
   const images = Array.isArray(item.images) ? item.images : [];
   const image = cleanUrl(item.image || images[0]?.image_url || images[0]?.url || '');
   const size = item.size || (Array.isArray(item.size) ? item.size[0] : null) || 'M';
+  const packId = item.packId ?? item.pack_id ?? null;
+  const packSize = item.packSize ?? item.pack_size ?? null;
   return {
-    key: `${productId}-${variationId ?? size}`,
+    key: `${productId}-${variationId ?? size}${packId ? `-${packId}` : ''}`,
     id: productId,
     productId,
     variationId,
@@ -63,6 +65,8 @@ function normalizeServerItem(item) {
     color: attrColor(item),
     size,
     qty: item.quantity || 1,
+    packId,
+    packSize,
   };
 }
 
@@ -179,8 +183,8 @@ export function CartProvider({ children }) {
 
   // Build the local cart-item shape (full details, so the drawer shows colour,
   // image and price instantly — no waiting on the network).
-  const toLocalItem = (product, size, qty, variationId) => ({
-    key: `${product.id}-${variationId ?? size}`,
+  const toLocalItem = (product, size, qty, variationId, meta = {}) => ({
+    key: `${product.id}-${variationId ?? size}${meta.packId ? `-${meta.packId}` : ''}`,
     id: product.id,
     productId: product.id,
     variationId: variationId || null,
@@ -192,9 +196,11 @@ export function CartProvider({ children }) {
     color: product.color || null,
     size,
     qty,
+    packId: meta.packId || null,
+    packSize: meta.packSize || null,
   });
 
-  const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
+  const add = useCallback(async (product, size = 'M', qty = 1, variationId = null, meta = {}) => {
     if (!product?.id) return;
 
     // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
@@ -209,11 +215,11 @@ export function CartProvider({ children }) {
     });
 
     // 1) Optimistic local insert — the item shows in the drawer INSTANTLY.
-    const key = `${product.id}-${variationId ?? size}`;
+    const key = `${product.id}-${variationId ?? size}${meta.packId ? `-${meta.packId}` : ''}`;
     setItems((prev) => {
       const found = prev.find((i) => i.key === key);
       if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
-      return [...prev, toLocalItem(product, size, qty, variationId)];
+      return [...prev, toLocalItem(product, size, qty, variationId, meta)];
     });
     setOpen(true);
     // 2) For logged-in users, sync to the backend in the background and
@@ -225,11 +231,72 @@ export function CartProvider({ children }) {
           variationId: variationId ? Number(variationId) : null,
           quantity: qty,
           size: size || null,
+          pack_id: meta.packId || null,
+          pack_size: meta.packSize || null,
         });
         await refreshServerCart();
       } catch {
         /* optimistic item stays so the UI still reflects intent */
       }
+    }
+  }, []);
+
+  // Add a mixed-colour pack: each distinct colour becomes its own line, all
+  // sharing one packId, every line priced at the pack per-pair rate. The server
+  // re-prices the whole group at the pack rate at checkout (authoritative).
+  // perPair: [{ variationId, color, image }] — one entry per pair in the pack.
+  const addPack = useCallback(async (product, size = 'M', perPair = [], packUnit = 0, packSize = 0) => {
+    if (!product?.id || !perPair.length) return;
+    const packId = `pk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+    fbTrack('AddToCart', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(packUnit) * perPair.length,
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: perPair.length }],
+    });
+
+    // Merge pairs of the same colour into one line with a quantity.
+    const byVar = new Map();
+    for (const p of perPair) {
+      const vid = p.variationId ?? null;
+      const k = String(vid ?? `${p.color || ''}-${size}`);
+      const cur = byVar.get(k) || { variationId: vid, color: p.color || null, image: p.image || null, qty: 0 };
+      cur.qty += 1;
+      byVar.set(k, cur);
+    }
+    const lines = [...byVar.values()];
+
+    setItems((prev) => {
+      const next = [...prev];
+      for (const ln of lines) {
+        next.push({
+          key: `${product.id}-${ln.variationId ?? size}-${packId}`,
+          id: product.id, productId: product.id, variationId: ln.variationId || null,
+          slug: product.slug, name: product.name,
+          price: Number(packUnit), oldPrice: product.oldPrice || null,
+          image: ln.image || product.image || null, color: ln.color || null,
+          size, qty: ln.qty, packId, packSize,
+        });
+      }
+      return next;
+    });
+    setOpen(true);
+
+    if (isAuthed()) {
+      try {
+        for (const ln of lines) {
+          await apiAddToCart({
+            productId: Number(product.id),
+            variationId: ln.variationId ? Number(ln.variationId) : null,
+            quantity: ln.qty, size: size || null,
+            pack_id: packId, pack_size: packSize,
+          });
+        }
+        await refreshServerCart();
+      } catch { /* optimistic items stay */ }
     }
   }, []);
 
@@ -276,7 +343,7 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider
-      value={{ items, add, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
+      value={{ items, add, addPack, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
     >
       {children}
     </CartContext.Provider>

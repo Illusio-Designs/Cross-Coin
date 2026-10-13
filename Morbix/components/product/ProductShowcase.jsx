@@ -26,7 +26,7 @@ function ik(src, w) {
 // admin-created coupon (paymentModeRestriction === 'prepaid') passed in from the
 // page, surfaced above Buy now so the shopper knows the code to apply at checkout.
 export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
-  const { add, open: cartOpen } = useCart();
+  const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
 
@@ -147,6 +147,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   // Default to the 1-pair option (index 0) so the page opens showing the
   // product's actual single price, not a pre-selected multi-pack.
   const [pack, setPack] = useState(0);
+  // Per-pair colour selection for a multi-pair pack (indexes into product.colors).
+  const [packColors, setPackColors] = useState([]);
   const activePack = hasPacks ? packOptions[Math.min(pack, packOptions.length - 1)] : null;
   const packPairs = activePack ? activePack.pairs : 1;
   const packTotal = activePack ? activePack.price : Number(price);
@@ -154,6 +156,27 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const packMrp = Number(price) * packPairs;
   const packHasDiscount = !!activePack && !activePack.base && packTotal < packMrp;
   const packOff = packHasDiscount ? Math.round((1 - packTotal / packMrp) * 100) : 0;
+
+  // Keep the per-pair colour list sized to the chosen pack; new slots default to
+  // the currently-selected colour, existing picks are preserved.
+  useEffect(() => {
+    if (!hasPacks || packPairs <= 1) return;
+    setPackColors((prev) => {
+      const next = prev.slice(0, packPairs);
+      while (next.length < packPairs) next.push(color);
+      return next;
+    });
+  }, [packPairs, hasPacks, color]);
+
+  // Resolve a colour index → its variation (matching the current size), image and name.
+  const resolvePairVariant = (colorIdx) => {
+    const name = colorNames[colorIdx] || null;
+    const v = variants.find((vv) => vv.color === name && vv.size === effectiveSize)
+      || variants.find((vv) => vv.color === name) || null;
+    const imgs = product.colorImages?.[colorIdx];
+    const image = (Array.isArray(imgs) && imgs[0]) || product.image || null;
+    return { variationId: v?.id ?? null, color: name, image };
+  };
 
   // Images for the selected colour (fall back to all product images).
   const perColor = product.colorImages?.[color];
@@ -222,6 +245,16 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   // colour so the cart line shows it. Shared by Add to cart and Buy now.
   const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
+    // Multi-pair pack with per-pair colours → one line per colour, pack-priced.
+    if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
+      const chosen = (packColors.length ? packColors : Array.from({ length: packPairs }, () => color)).slice(0, packPairs);
+      const perPair = chosen.map((ci) => resolvePairVariant(ci));
+      addPack(
+        { ...product, oldPrice: packHasDiscount ? Number(price) : (oldPrice || null) },
+        effectiveSize || 'M', perPair, packUnit, packPairs,
+      );
+      return;
+    }
     const useQty = hasPacks ? packPairs : qty;
     const useUnit = hasPacks ? packUnit : price;
     const useOld = hasPacks ? (packHasDiscount ? Number(price) : (oldPrice || null)) : (oldPrice || null);
@@ -420,6 +453,34 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                         {disc ? <span className="pack-mrp">₹{mrp.toFixed(0)}</span> : null}
                       </span>
                     </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {hasPacks && packPairs > 1 && product.colors?.length > 0 && (
+            <div className="opt pdp-packcolors">
+              <span className="opt-label">Choose a colour for each pair</span>
+              <div className="packcolor-list">
+                {Array.from({ length: packPairs }).map((_, idx) => {
+                  const sel = packColors[idx] ?? color;
+                  return (
+                    <div className="packcolor-row" key={idx}>
+                      <span className="packcolor-tag">Pair {idx + 1}{colorNames[sel] ? <em>{colorNames[sel]}</em> : null}</span>
+                      <div className="swatches">
+                        {product.colors.map((c, ci) => (
+                          <button key={ci} type="button" className={`swatch${ci === sel ? ' active' : ''}`}
+                            style={{ background: c }} title={colorNames[ci] || ''} aria-label={colorNames[ci] || `Colour ${ci + 1}`}
+                            onClick={() => setPackColors((prev) => {
+                              const n = prev.slice(0, packPairs);
+                              while (n.length < packPairs) n.push(color);
+                              n[idx] = ci;
+                              return n;
+                            })} />
+                        ))}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

@@ -511,7 +511,7 @@ export default function CartDrawer() {
 
   const buildItems = () => items
     .filter((i) => (i.productId ?? i.id) != null && !Number.isNaN(Number(i.productId ?? i.id)))
-    .map((i) => ({ product_id: Number(i.productId ?? i.id), variation_id: i.variationId ? Number(i.variationId) : null, quantity: Number(i.qty) || 1 }));
+    .map((i) => ({ product_id: Number(i.productId ?? i.id), variation_id: i.variationId ? Number(i.variationId) : null, quantity: Number(i.qty) || 1, pack_id: i.packId || null, pack_size: i.packSize || null }));
 
   const guestBlocks = () => {
     const parts = (guest.fullName || '').trim().split(/\s+/);
@@ -771,18 +771,27 @@ export default function CartDrawer() {
                         <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-item-name" onClick={closeCart}>{i.name}</Link>
                         <button className="cd-remove" onClick={() => { remove(i.key); toast.info(`${i.name} removed from cart`); }} aria-label={`Remove ${i.name}`}><Icon name="Trash" size={16} /></button>
                       </div>
-                      {i.color && <div className="cd-item-variant">{i.color}</div>}
+                      {(i.color || i.packId) && (
+                        <div className="cd-item-variant">
+                          {i.color}
+                          {i.packId ? <span className="cd-pack-chip">{i.packSize ? `${i.packSize}-pair pack` : 'Pack'}</span> : null}
+                        </div>
+                      )}
                       <div className="cd-item-bot">
                         <div className="cd-item-prices">
-                          <span className="cd-item-price">₹{Number(i.price).toFixed(0)}</span>
+                          <span className="cd-item-price">₹{Number(i.price).toFixed(0)}{i.packId ? ' / pair' : ''}</span>
                           {i.oldPrice > i.price && <span className="cd-item-mrp">₹{Number(i.oldPrice).toFixed(0)}</span>}
                           {i.oldPrice > i.price && <span className="cd-item-off">{Math.round((1 - i.price / i.oldPrice) * 100)}% off</span>}
                         </div>
-                        <div className="cd-qty">
-                          <button onClick={() => setQty(i.key, i.qty - 1)} disabled={i.qty <= 1} aria-label="Decrease quantity">−</button>
-                          <span>{i.qty}</span>
-                          <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
-                        </div>
+                        {i.packId ? (
+                          <div className="cd-qty cd-qty-locked" title="Part of a pack"><span>×{i.qty}</span></div>
+                        ) : (
+                          <div className="cd-qty">
+                            <button onClick={() => setQty(i.key, i.qty - 1)} disabled={i.qty <= 1} aria-label="Decrease quantity">−</button>
+                            <span>{i.qty}</span>
+                            <button onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase quantity">+</button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

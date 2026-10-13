@@ -288,6 +288,13 @@ exports.initiateCheckout = async (req, res) => {
     let totalAmount = 0;
     const validatedItems = [];
 
+    // Pack-aware bundle pricing: price each pack line (lines sharing a pack_id)
+    // by the pack group's TOTAL quantity, summed server-side — so a mixed-colour
+    // pack still gets the pack rate and a lone line can't fake it.
+    const packQtyById = {};
+    for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
+    const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
+
     for (const item of items) {
       const { product_id, quantity } = item;
       let { variation_id } = item;
@@ -314,10 +321,10 @@ exports.initiateCheckout = async (req, res) => {
       }
 
       let price = parseFloat(variation.price);
-      { const _bu = await require('./bundleController.js').bundlePerUnit(brandId, product_id, quantity); if (_bu != null) price = _bu; }
+      { const _bu = await require('./bundleController.js').bundlePerUnit(brandId, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
       const subtotal = price * quantity;
       totalAmount += subtotal;
-      validatedItems.push({ product_id, variation_id: variation.id, quantity, price, discount: 0, subtotal });
+      validatedItems.push({ product_id, variation_id: variation.id, quantity, price, discount: 0, subtotal, pack_id: item.pack_id || null });
     }
 
     const subTotal = Number(totalAmount);
