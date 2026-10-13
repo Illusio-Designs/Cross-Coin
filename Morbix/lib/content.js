@@ -8,7 +8,7 @@
 
 export const heroFeatures = [
   { icon: 'Truck', title: 'Free shipping', sub: 'on qualifying orders' },
-  { icon: 'RefreshCw', title: 'Easy 14-day returns', sub: 'no questions asked' },
+  { icon: 'RefreshCw', title: 'Easy 7-day returns', sub: 'unused & unwashed' },
   { icon: 'ShieldCheck', title: 'Authentic products', sub: 'quality guaranteed' },
 ];
 
