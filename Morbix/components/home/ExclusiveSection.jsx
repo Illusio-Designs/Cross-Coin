@@ -141,6 +141,9 @@ export default function ExclusiveSection({ products = [] }) {
           <div className="excl-info">
             <span className="excl-cat">{product.category}</span>
             <h3>{product.name}</h3>
+            {product.rating ? (
+              <span className="excl-rating"><span className="excl-stars">★★★★★</span> {Number(product.rating).toFixed(1)}{product.reviews ? ` · ${product.reviews} reviews` : ''}</span>
+            ) : null}
             <div className="excl-price">
               ₹{Number(product.price).toFixed(0)}
               {product.oldPrice ? <span className="old">₹{Number(product.oldPrice).toFixed(0)}</span> : null}
@@ -162,6 +165,12 @@ export default function ExclusiveSection({ products = [] }) {
 
             {product.description && <p className="excl-desc">{product.description}</p>}
 
+            <div className="excl-benefits">
+              <span className="excl-benefit"><Icon name="Move" size={14} /> Natural movement</span>
+              <span className="excl-benefit"><Icon name="Heart" size={14} /> All-day comfort</span>
+              <span className="excl-benefit"><Icon name="Leaf" size={14} /> Wellness design</span>
+            </div>
+
             <div className="excl-actions">
               <div className="qty">
                 <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
@@ -173,22 +182,13 @@ export default function ExclusiveSection({ products = [] }) {
               </button>
               <Link href={`/products/${product.slug}`} className="btn btn-ghost">View</Link>
             </div>
-          </div>
 
-          {/* Other products */}
-          {list.length > 1 && (
-            <div className="excl-switch-wrap">
-              <span className="excl-switch-title">Other products</span>
-              <div className="excl-switch" data-lenis-prevent>
-                {list.map((p, i) => (
-                  <button key={p.uid ?? p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
-                    onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                    {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
-                  </button>
-                ))}
-              </div>
+            <div className="excl-reassure">
+              <span><Icon name="ShieldCheck" size={13} /> Secure checkout</span>
+              <span><Icon name="RefreshCw" size={13} /> 7-day returns</span>
+              <span><Icon name="Truck" size={13} /> Cash on Delivery</span>
             </div>
-          )}
+          </div>
         </div>
         </div>
       </div>

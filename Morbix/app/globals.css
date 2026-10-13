@@ -293,7 +293,15 @@ button { font-family: inherit; cursor: pointer; }
 .excl-ribbon { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--teal-600); background: var(--teal-050); padding: 6px 14px; border-radius: 999px; }
 .excl-panel-head h2 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; line-height: 1.1; margin-top: 12px; color: var(--ink); }
 .excl-panel-head p { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
-.excl-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto; grid-template-areas: "gallery info switch"; gap: 28px; margin-top: 26px; align-items: center; }
+.excl-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: "gallery info"; gap: 28px; margin-top: 26px; align-items: center; }
+.excl-rating { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-soft); }
+.excl-rating .excl-stars { color: var(--star); letter-spacing: 1px; }
+.excl-benefits { display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line-soft); padding-top: 14px; }
+.excl-benefit { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--line-soft); padding: 7px 11px; border-radius: 11px; }
+.excl-benefit svg { color: var(--teal-600); }
+.excl-reassure { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-soft); font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+.excl-reassure span { display: inline-flex; align-items: center; gap: 6px; }
+.excl-reassure svg { color: var(--teal-600); }
 /* Image showcase mirrors the product-detail page EXACTLY: a vertical rail of
    92px square thumbnails whose height tracks the main image, and a square main
    image on a light neutral panel with object-fit: contain (full image, never
@@ -328,12 +336,12 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Tablet — gallery + info side by side, product switcher as a strip below */
 @media (max-width: 1024px) {
-  .excl-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "gallery info" "switch switch"; gap: 22px; }
+  .excl-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "gallery info"; gap: 22px; }
   .excl-switch { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
 }
 /* Mobile — single column stack */
 @media (max-width: 760px) {
-  .excl-grid { grid-template-columns: 1fr; grid-template-areas: "gallery" "info" "switch"; gap: 18px; }
+  .excl-grid { grid-template-columns: 1fr; grid-template-areas: "gallery" "info"; gap: 18px; }
   /* Same showcase as the PDP on mobile: 76px thumbnails (PDP shrinks to 76 too),
      square main image, rail height tracks the main. */
   .excl-thumbs { width: 76px; }
