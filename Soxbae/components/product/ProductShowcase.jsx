@@ -6,7 +6,6 @@ import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
-import { leadFrom } from '@/lib/text';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 
@@ -242,7 +241,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   }, []);
 
   const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
-  const lead = leadFrom(product.description);
 
   const specs = [
     ['Colour', selectedColorName],
@@ -308,7 +306,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
         {/* Buy panel */}
         <div className="pdx-buy">
-          <span className="pdx-cat">{product.category}</span>
           <h1 className="pdx-title">{product.name}</h1>
 
           <div className="pdx-rating">
@@ -340,38 +337,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div className="pdx-low"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Only <strong>{stock}</strong> left</div>
           )}
 
-          {lead && <p className="pdx-lead">{lead}</p>}
 
-          <div className="pdx-rule" />
-
-          {/* Delivery / pincode serviceability */}
-          <div className="pdx-pin">
-            <span className="pdx-pin-label">Delivery Details</span>
-            <div className="pdx-pin-row">
-              <input
-                className="pdx-pin-input"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Enter Pincode"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                aria-label="Pincode"
-              />
-              <button type="button" className="pdx-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
-                {checkingPin ? '…' : 'CHECK'}
-              </button>
-            </div>
-            {serviceability && (
-              <div className={`pdx-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
-                {serviceability.error ? (
-                  <span>{serviceability.error}</span>
-                ) : (
-                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdx-cod">COD available</span>}</>
-                )}
-              </div>
-            )}
-          </div>
 
           {(product.colors?.length > 0 || sizesForColor.length > 0) && (
             <div className="pdx-opts-row">
@@ -382,9 +348,9 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                     {product.colors.map((c, i) => (
                       <button key={i} type="button" role="radio" aria-checked={i === color}
                         className={`pdx-color${i === color ? ' active' : ''}`}
-                        onClick={() => pickColor(i)} aria-label={colorNames[i] || `Colour ${i + 1}`}>
+                        onClick={() => pickColor(i)} aria-label={colorNames[i] || `Colour ${i + 1}`}
+                        title={colorNames[i] || `Colour ${i + 1}`}>
                         <span className="pdx-color-dot" style={{ background: c }} />
-                        <span className="pdx-color-name">{colorNames[i] || `Colour ${i + 1}`}</span>
                       </button>
                     ))}
                   </div>
@@ -475,6 +441,35 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cash on Delivery</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
+          </div>
+
+          {/* Delivery / pincode serviceability — below the trust row */}
+          <div className="pdx-pin">
+            <span className="pdx-pin-label">Delivery Details</span>
+            <div className="pdx-pin-row">
+              <input
+                className="pdx-pin-input"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter Pincode"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                aria-label="Pincode"
+              />
+              <button type="button" className="pdx-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
+                {checkingPin ? '…' : 'CHECK'}
+              </button>
+            </div>
+            {serviceability && (
+              <div className={`pdx-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
+                {serviceability.error ? (
+                  <span>{serviceability.error}</span>
+                ) : (
+                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdx-cod">COD available</span>}</>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

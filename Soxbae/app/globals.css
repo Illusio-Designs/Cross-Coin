@@ -1337,10 +1337,10 @@ h1, h2, h3 { letter-spacing: -0.015em; }
    column past the viewport and overflowing the page on phones. */
 .pdx > * { min-width: 0; }
 /* Gallery: big image + horizontal thumbnail strip beneath */
-.pdx-gallery { position: sticky; top: 130px; display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
-.pdx-rail { display: flex; flex-direction: column; gap: 10px; width: 82px; flex-shrink: 0; max-height: var(--pdx-rail-h, 520px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; scroll-behavior: smooth; }
+.pdx-gallery { position: sticky; top: 130px; display: flex; flex-direction: column-reverse; gap: 12px; align-items: stretch; min-width: 0; }
+.pdx-rail { display: flex; flex-direction: row; gap: 10px; width: 100%; max-height: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-behavior: smooth; }
 .pdx-rail::-webkit-scrollbar { display: none; }
-.pdx-main { position: relative; flex: 1; min-width: 0; max-width: 100%; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
+.pdx-main { position: relative; width: 100%; flex: 0 0 auto; min-width: 0; max-width: 100%; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
 .pdx-main img { width: 100%; height: 100%; object-fit: contain; }
 /* Tap-to-zoom main image + overlays + lightbox (matches the CrossCoin gallery) */
 .pdx-main-zoom { all: unset; display: block; width: 100%; height: 100%; cursor: zoom-in; position: relative; }
@@ -1364,7 +1364,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 }
 .pdx-badge { position: absolute; top: 16px; left: 16px; background: var(--ink); color: #fbfaf6; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 7px 13px; border-radius: 999px; }
 .pdx-badge-off { left: auto; right: 16px; background: var(--accent); }
-.pdx-thumb { flex: 0 0 auto; width: 82px; height: 82px; border-radius: 12px; overflow: hidden; background: var(--card); border: 1.5px solid var(--line); padding: 0; cursor: pointer; transition: border-color .15s ease; }
+.pdx-thumb { flex: 0 0 64px; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: var(--card); border: 1.5px solid var(--line); padding: 0; cursor: pointer; transition: border-color .15s ease; }
 .pdx-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .pdx-thumb:hover { border-color: var(--ink-soft); }
 .pdx-thumb.active { border-color: var(--accent); border-width: 2px; }
@@ -2331,10 +2331,10 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 
 /* Colour — named cards instead of bare dots */
 .pdx-colors { display: flex; flex-wrap: wrap; gap: 10px; }
-.pdx-color { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
-.pdx-color:hover { border-color: var(--ink-soft); }
-.pdx-color.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.pdx-color-dot { width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); flex-shrink: 0; }
+.pdx-color { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 999px; line-height: 0; }
+.pdx-color-dot { display: block; width: 30px; height: 30px; border-radius: 999px; border: 2px solid var(--card); outline: 1px solid var(--line); box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); }
+.pdx-color:hover .pdx-color-dot { outline-color: var(--ink-soft); }
+.pdx-color.active .pdx-color-dot { outline: 2px solid var(--accent); }
 
 /* Size chart link */
 .pdx-sizeguide { margin: 12px 0 0; font-size: 13px; color: var(--ink-soft); }
