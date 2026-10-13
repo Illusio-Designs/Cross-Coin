@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductReviews from '@/components/product/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
+import ReviewsSection from '@/components/home/ReviewsSection';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviewsWithTotal } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getStoreReviews } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -22,7 +23,11 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id)]);
+  const [all, reviewsData, storeReviews] = await Promise.all([
+    getAllProducts(),
+    getProductReviewsWithTotal(product.id),
+    getStoreReviews(300),
+  ]);
   const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
@@ -55,6 +60,9 @@ export default async function ProductPage({ params, searchParams }) {
         fallbackRating={product.rating}
         fallbackCount={product.reviews}
       />
+
+      {/* ── Brand-wide testimonials — same 3-row moving wall as the home page ── */}
+      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
