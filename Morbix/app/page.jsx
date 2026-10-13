@@ -84,8 +84,8 @@ export default async function HomePage() {
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
       <Reveal as="section"><Technologies items={getTechnologies()} /></Reveal>
       <Reveal as="section"><ReviewsSection reviews={reviews} total={storeReviews.total} /></Reveal>
-      {faqs.length > 0 && <Reveal as="section"><FaqSection faqs={faqs} /></Reveal>}
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
+      {faqs.length > 0 && <Reveal as="section"><FaqSection faqs={faqs} /></Reveal>}
     </>
   );
 }
