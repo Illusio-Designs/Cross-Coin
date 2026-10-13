@@ -367,35 +367,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <span><strong>Free shipping</strong> on all orders</span>
         </div>
 
-        {/* Delivery / pincode serviceability */}
-        <div className="pdp-pin">
-          <span className="pdp-pin-label">Delivery Details</span>
-          <div className="pdp-pin-row">
-            <input
-              className="pdp-pin-input"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="Enter Pincode"
-              value={pincode}
-              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-              aria-label="Pincode"
-            />
-            <button type="button" className="pdp-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
-              {checkingPin ? '…' : 'CHECK'}
-            </button>
-          </div>
-          {serviceability && (
-            <div className={`pdp-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
-              {serviceability.error ? (
-                <span>{serviceability.error}</span>
-              ) : (
-                <><Icon name="Check" size={14} /> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdp-cod">COD available</span>}</>
-              )}
-            </div>
-          )}
-        </div>
-
         <div className="buy">
           <div className="pdp-opts-row">
             {product.colors?.length > 0 && (
@@ -489,6 +460,35 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01"/><path d="M18 12h.01"/></svg> Cash on Delivery</div>
           <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</div>
           <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
+        </div>
+
+        {/* Delivery / pincode serviceability (after the trust badges) */}
+        <div className="pdp-pin">
+          <span className="pdp-pin-label">Delivery Details</span>
+          <div className="pdp-pin-row">
+            <input
+              className="pdp-pin-input"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Enter Pincode"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+              aria-label="Pincode"
+            />
+            <button type="button" className="pdp-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
+              {checkingPin ? '…' : 'CHECK'}
+            </button>
+          </div>
+          {serviceability && (
+            <div className={`pdp-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
+              {serviceability.error ? (
+                <span>{serviceability.error}</span>
+              ) : (
+                <><Icon name="Check" size={14} /> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdp-cod">COD available</span>}</>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
