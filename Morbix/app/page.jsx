@@ -1,5 +1,4 @@
 import Hero from '@/components/home/Hero';
-import Marquee from '@/components/home/Marquee';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
@@ -78,7 +77,6 @@ export default async function HomePage() {
         />
       )}
       <Hero features={getHeroFeatures()} slides={slides} />
-      <Marquee rating={marqueeRating} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}

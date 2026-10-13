@@ -15,7 +15,7 @@ const TRUST = [
 // `rating` ({ avg, total }) comes from the real store-wide review totals the
 // homepage already fetches. We only render it when there are real reviews — no
 // fabricated numbers.
-export default function Marquee({ rating = null }) {
+export default function Marquee({ rating = null, topbar = false }) {
   const hasRating = rating && Number(rating.avg) > 0 && Number(rating.total) > 0;
   const items = hasRating
     ? [{ icon: 'Star', text: `Rated ${Number(rating.avg).toFixed(1)}★ by ${Number(rating.total).toLocaleString('en-IN')}+ happy shoppers` }, ...TRUST]
@@ -24,7 +24,7 @@ export default function Marquee({ rating = null }) {
   // Duplicate the list so the -50% keyframe loops seamlessly.
   const row = [...items, ...items];
   return (
-    <section className="marquee-wrap" aria-label="Why shop Morbix">
+    <section className={`marquee-wrap${topbar ? ' topbar' : ''}`} aria-label="Why shop Morbix">
       <div className="marquee-track">
         {row.map((it, i) => (
           <span className="marquee-item" key={i} aria-hidden={i >= items.length}>
