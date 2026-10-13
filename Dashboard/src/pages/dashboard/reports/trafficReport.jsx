@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { trafficReportService } from '../../../services';
 import { Button, DateRangePicker } from '../../../components/ui';
+import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 
 /**
  * Traffic & Conversion — a per-brand funnel: sessions (first-party visit
@@ -91,33 +92,32 @@ export default function TrafficReport() {
 
   return (
     <div style={S.wrap}>
-      <div style={S.head}>
-        <div>
-          <h1 style={S.title}>Traffic &amp; Conversion</h1>
-          <p style={S.sub}>Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders &amp; revenue are the real store sales in this window (they match the Overview report). Per-channel orders below count only orders we can attribute to a tracked visit.</p>
-        </div>
-        <div style={S.controls}>
-          <DateRangePicker label="Period" inline startDate={from} endDate={to}
-            onStartChange={setFrom} onEndChange={setTo} onApply={load} maxDate={istDate()} />
-          <Button variant="ghost" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Traffic & Conversion"
+        subtitle="Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders & revenue are the real store sales in this window (they match the Overview report). Per-channel orders below count only orders we can attribute to a tracked visit."
+        actions={
+          <>
+            <DateRangePicker label="Period" inline startDate={from} endDate={to}
+              onStartChange={setFrom} onEndChange={setTo} onApply={load} maxDate={istDate()} />
+            <Button variant="ghost" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
+          </>
+        }
+      />
 
       {error ? <div style={{ ...S.panel, color: 'var(--ds-color-danger, #dc2626)' }}>{error}</div> : null}
 
       {/* Totals */}
-      <div style={S.kpis}>
-        <div style={S.kpi}><div style={S.kLab}>Visits</div><div style={S.kVal}>{num(t?.sessions)}</div></div>
-        <div style={S.kpi}><div style={S.kLab}>Orders</div><div style={S.kVal}>{num(t?.orders)}</div></div>
-        <div style={S.kpi}><div style={S.kLab}>Conversion</div><div style={S.kVal}>{t ? pct(t.conversion_rate) : '—'}</div></div>
-        <div style={S.kpi}><div style={S.kLab}>Revenue</div><div style={S.kVal}>{t ? inr(t.revenue) : '—'}</div></div>
-        <div style={S.kpi}><div style={S.kLab}>AOV</div><div style={S.kVal}>{t ? inr(t.aov) : '—'}</div></div>
-      </div>
+      <StatGrid>
+        <StatTile label="Visits" value={num(t?.sessions)} />
+        <StatTile label="Orders" value={num(t?.orders)} />
+        <StatTile label="Conversion" value={t ? pct(t.conversion_rate) : '—'} />
+        <StatTile label="Revenue" value={t ? inr(t.revenue) : '—'} />
+        <StatTile label="AOV" value={t ? inr(t.aov) : '—'} />
+      </StatGrid>
 
       {/* Funnel (all brands combined) */}
       {t?.stages?.length ? (
-        <div style={S.panel}>
-          <div style={{ ...S.kLab, marginBottom: 12 }}>Funnel — all brands</div>
+        <Panel title="Funnel — all brands">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {t.stages.map((st) => {
               const w = Math.min(100, Math.max(0, st.overall_rate ?? 0));
@@ -143,13 +143,12 @@ export default function TrafficReport() {
             })}
           </div>
           <p style={{ ...S.sub, marginTop: 12 }}>Bar % = share of Visits (top = 100%); the right shows the count and the step conversion from the previous stage. Bot/crawler traffic is excluded. Visits/views/cart/checkout are first-party events; orders/delivered come from the order records.</p>
-        </div>
+        </Panel>
       ) : null}
 
       {/* Traffic sources — grouped into the 5 headline channels */}
       {data?.channels?.length ? (
-        <div style={S.panel}>
-          <div style={{ ...S.kLab, marginBottom: 12 }}>Traffic sources — where visitors come from</div>
+        <Panel title="Traffic sources — where visitors come from">
           <div style={S.tableWrap}>
             <table style={S.table}>
               <thead>
@@ -183,11 +182,11 @@ export default function TrafficReport() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
       ) : null}
 
       {/* Per-brand table */}
-      <div style={S.panel}>
+      <Panel>
         <div style={S.tableWrap}>
           <table style={S.table}>
             <thead>
@@ -236,7 +235,7 @@ export default function TrafficReport() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }
