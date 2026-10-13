@@ -12,6 +12,7 @@ export const getPageTitle = (view) => {
     'webhook-events': 'Courier Webhooks',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
+    'abandoned-carts': 'Abandoned carts',
     'seo': 'SEO',
     // Legacy deep-link views — all open the unified SEO hub on the
     // matching tab. Titles describe the tab so the browser title stays

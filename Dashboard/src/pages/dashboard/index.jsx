@@ -14,6 +14,7 @@ import PackPricing from "./products/pack-pricing";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
+import AbandonedCarts from "./consumers/abandoned-carts";
 import Returns from "./returns/returns";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
@@ -263,6 +264,7 @@ function Dashboard() {
       case 'reports':         return <Reports />;
       case 'traffic-report':  return <TrafficReport />;
       case 'leads':           return <Leads />;
+      case 'abandoned-carts': return <AbandonedCarts />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;
       // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the

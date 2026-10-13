@@ -62,6 +62,51 @@ exports.recovered = async (req, res) => {
   }
 };
 
+// Admin: GET /api/admin/abandoned-carts — list + summary stats for the
+// dashboard. Optional ?brandId= and ?status= filters, ?limit= (max 500).
+exports.adminList = async (req, res) => {
+  try {
+    const Brand = require('../model/brandModel.js');
+    const brands = await Brand.findAll({ attributes: ['id', 'name', 'display_name'], raw: true });
+    const bmap = {};
+    brands.forEach((b) => { bmap[b.id] = b.display_name || b.name; });
+    const brandName = (id) => bmap[id] || (id ? `Brand #${id}` : '—');
+
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+    const where = {};
+    const statWhere = {};
+    if (req.query.brandId) { where.brandId = parseInt(req.query.brandId, 10); statWhere.brandId = parseInt(req.query.brandId, 10); }
+    if (['pending', 'messaged', 'recovered'].includes(req.query.status)) where.status = req.query.status;
+
+    const [total, pending, messaged, recovered, rows] = await Promise.all([
+      AbandonedCart.count({ where: statWhere }),
+      AbandonedCart.count({ where: { ...statWhere, status: 'pending' } }),
+      AbandonedCart.count({ where: { ...statWhere, status: 'messaged' } }),
+      AbandonedCart.count({ where: { ...statWhere, status: 'recovered' } }),
+      AbandonedCart.findAll({ where, order: [['updatedAt', 'DESC']], limit }),
+    ]);
+
+    const carts = rows.map((r) => {
+      const digits = String(r.phone || '').replace(/\D/g, '');
+      return {
+        id: r.id, brand: brandName(r.brandId), brandId: r.brandId,
+        name: r.customerName || '—',
+        phone: digits.length === 10 ? `••• ••• ${digits.slice(-4)}` : '—',
+        cart: r.cartSummary || '—', itemCount: r.itemCount, value: Number(r.cartValue) || 0,
+        status: r.status, waSent: !!r.waSent, createdAt: r.createdAt, updatedAt: r.updatedAt,
+      };
+    });
+
+    // Recovered rate among carts we actually acted on (messaged + recovered).
+    const actioned = messaged + recovered;
+    const recoveredRate = actioned ? Math.round((recovered / actioned) * 100) : 0;
+    return res.json({ success: true, stats: { total, pending, messaged, recovered, recoveredRate }, count: carts.length, carts });
+  } catch (err) {
+    logger.error('Abandoned-cart adminList error: ' + err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Internal helper — mark any pending/messaged row for this phone+brand as
 // recovered so the recovery cron skips it. Safe to call from order-success
 // paths; never throws.

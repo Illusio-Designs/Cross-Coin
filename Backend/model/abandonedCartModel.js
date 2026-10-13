@@ -35,8 +35,7 @@ const AbandonedCart = sequelize.define('AbandonedCart', {
 }, {
   tableName: 'abandoned_carts',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
+  underscored: true, // createdAt/updatedAt attributes map to created_at/updated_at columns
   hooks: {
     beforeSave(instance) {
       if (instance.changed('phone')) {

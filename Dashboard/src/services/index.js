@@ -261,6 +261,18 @@ export const leadService = {
   },
 };
 
+// Abandoned carts — captured checkouts + WhatsApp recovery stats.
+export const abandonedCartService = {
+  list: async (params = {}) => {
+    try {
+      const { data } = await adminApi.get('/api/admin/abandoned-carts', { params });
+      return data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
 export const loyaltyService = {
   getTransactions: async (page = 1, limit = 50) => {
     const { data } = await adminApi.get('/api/admin/loyalty/transactions', { params: { page, limit } });
