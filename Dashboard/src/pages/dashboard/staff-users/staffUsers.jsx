@@ -5,7 +5,7 @@ import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { userService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { UserCheck01Icon, Search01Icon, PencilEdit02Icon, Add01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
+import { UserCheck01Icon, PencilEdit02Icon, Add01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
 
 const ROLES = [
   { value: 'admin',            label: 'Admin',            color: '#ef4444', desc: 'Full access to everything' },
@@ -18,7 +18,6 @@ const STAFF_ROLE_VALUES = ROLES.map(r => r.value);
 
 const IC = {
   users:  <HugeiconsIcon icon={UserCheck01Icon} size={20} strokeWidth={2} />,
-  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
   edit:   <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
   add:    <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
   eye:    <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />,

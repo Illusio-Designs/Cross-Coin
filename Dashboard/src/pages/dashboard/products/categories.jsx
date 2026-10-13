@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { PageHeader, Panel, StatGrid, StatTile, FilterBar, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
@@ -12,15 +13,13 @@ import { validateForm, isFormValid } from "../../../utils/formValidation";
 import SerpPreview from "../../../components/common/SerpPreview";
 import SeoLengthMeter from "../../../components/common/SeoLengthMeter";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon, Tag01Icon, GridViewIcon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
-  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
   edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
   trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
   image: <HugeiconsIcon icon={Image02Icon} size={20} strokeWidth={2} />,
-  category: <HugeiconsIcon icon={Tag01Icon} size={20} strokeWidth={2} />,
 };
 
 const EMPTY_FORM = {
@@ -212,14 +211,14 @@ export default function Categories() {
   };
 
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Name", accessor: "name", cell: ({ name }) => <span className="cat-name-cell">{name}</span> },
-    { header: "Description", accessor: "description", cell: ({ description }) => <span className="cat-desc-cell">{description}</span> },
-    { header: "Brands", accessor: row => <BrandTags brands={row.brands || []} /> },
-    { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
+    { key: "serial_number", label: "Sr. No", render: (r) => r.serial_number },
+    { key: "name", label: "Name", render: (r) => <span className="cat-name-cell">{r.name}</span> },
+    { key: "description", label: "Description", render: (r) => <span className="cat-desc-cell">{r.description}</span> },
+    { key: "brands", label: "Brands", render: (r) => <BrandTags brands={r.brands || []} /> },
+    { key: "status", label: "Status", render: (r) => <Badge variant={r.status === 'active' ? 'success' : 'default'}>{r.status}</Badge> },
     {
-      header: "Actions", accessor: "actions",
-      cell: ({ id }) => (
+      key: "actions", label: "Actions",
+      render: ({ id }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>{IC.edit}</button>
           <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
@@ -240,81 +239,58 @@ export default function Categories() {
         </div>
       )}
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.category}</div>
-            <div>
-              <h1 className="sl-page-title">Categories</h1>
-              <p className="sl-page-sub">{categories.length} categor{categories.length !== 1 ? 'ies' : 'y'} total</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search categories..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <div style={{ minWidth: 180 }}>
-              <Select
-                options={[
-                  { value: '', label: 'All Brands' },
-                  ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
-                ]}
-                value={selectedBrandSlug}
-                onChange={setSelectedBrandSlug}
-                placeholder="All Brands"
-              />
-            </div>
-            <div style={{ minWidth: 160 }}>
-              <Select
-                options={[
-                  { value: '', label: 'All Status' },
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
-                ]}
-                value={statusFilter}
-                onChange={setStatusFilter}
-                placeholder="All Status"
-              />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>Add Category
+        <PageHeader
+          title="Categories"
+          subtitle={`${categories.length} categor${categories.length !== 1 ? 'ies' : 'y'} total`}
+          actions={
+            <button className="ds-btn ds-btn--primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
+              {IC.add}Add Category
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        {/* Stat Cards */}
-        <div className="sl-stat-cards">
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--blue">
-              <HugeiconsIcon icon={GridViewIcon} size={20} strokeWidth={2} />
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Total Categories</span>
-              <span className="sl-stat-value">{categories.length}</span>
-            </div>
-          </div>
-          <div className="sl-stat-card">
-            <div className="sl-stat-icon sl-stat-icon--green">
-              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={20} strokeWidth={2} />
-            </div>
-            <div className="sl-stat-body">
-              <span className="sl-stat-label">Active</span>
-              <span className="sl-stat-value">{activeCount}</span>
-            </div>
-          </div>
-        </div>
+        <StatGrid>
+          <StatTile label="Total Categories" value={categories.length} tone="info" />
+          <StatTile label="Active" value={activeCount} tone="good" />
+        </StatGrid>
 
-        <div className="sl-table-wrap">
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Search categories...">
+          <div style={{ minWidth: 180 }}>
+            <Select
+              options={[
+                { value: '', label: 'All Brands' },
+                ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
+              ]}
+              value={selectedBrandSlug}
+              onChange={setSelectedBrandSlug}
+              placeholder="All Brands"
+            />
+          </div>
+          <div style={{ minWidth: 160 }}>
+            <Select
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="All Status"
+            />
+          </div>
+        </FilterBar>
+
+        <Panel flush>
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
-          ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.category}</div>
-              <p>{search ? "No categories match your search" : "No categories yet"}</p>
-            </div>
           ) : (
             <>
-              <Table columns={columns} data={currentItems} striped hoverable />
+              <ResponsiveTable
+                columns={columns}
+                data={currentItems}
+                rowKey="id"
+                emptyMessage={search ? "No categories match your search" : "No categories yet"}
+              />
               {filteredData.length > itemsPerPage && (
                 <div className="sl-pagination">
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -322,7 +298,7 @@ export default function Categories() {
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Category" : "Add Category"} closeOnOverlayClick={false}

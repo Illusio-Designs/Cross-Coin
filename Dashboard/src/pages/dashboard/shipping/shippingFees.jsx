@@ -116,46 +116,35 @@ export default function ShippingFees() {
             <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
           </div>
         )}
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">{IC.shipping}</div>
-            <div>
-              <h1 className="sl-page-title">Shipping Fees</h1>
-              <p className="sl-page-sub">{shippingFees.length} fee{shippingFees.length !== 1 ? 's' : ''} configured</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">{IC.search}</span>
-              <input type="text" className="sl-search-input" placeholder="Search fees..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <button className="sl-add-btn" onClick={() => { setFormData(EMPTY_FORM); setSelectedFee(null); setIsModalOpen(true); }}>
-              <span className="sl-add-btn-icon">{IC.add}</span>Add Fee
+        <PageHeader
+          title="Shipping Fees"
+          subtitle={`${shippingFees.length} fee${shippingFees.length !== 1 ? 's' : ''} configured`}
+          actions={
+            <button className="ds-btn ds-btn--primary" onClick={() => { setFormData(EMPTY_FORM); setSelectedFee(null); setIsModalOpen(true); }}>
+              {IC.add} Add Fee
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="sl-table-wrap">
-          {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
-          ) : error ? (
-            <div className="sl-error">{error}</div>
-          ) : filteredData.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.shipping}</div>
-              <p>{search ? "No fees match your search" : "No shipping fees configured"}</p>
-            </div>
-          ) : (
-            <>
-              <Table columns={columns} data={currentItems} striped hoverable />
-              {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
-                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Search fees..." />
+
+        {loading ? (
+          <div className="sl-loader-wrap"><Loader /></div>
+        ) : (
+          <Panel flush>
+            <ResponsiveTable
+              columns={columns}
+              data={currentItems}
+              rowKey="id"
+              emptyMessage={search ? "No fees match your search" : "No shipping fees configured"}
+            />
+            {filteredData.length > itemsPerPage && (
+              <div className="sl-pagination">
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+              </div>
+            )}
+          </Panel>
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={selectedFee ? "Edit Shipping Fee" : "Add Shipping Fee"} closeOnOverlayClick={false}>
