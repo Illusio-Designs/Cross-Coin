@@ -45,7 +45,7 @@ export default async function ProductPage({ params, searchParams }) {
     <div className="container" style={{ paddingTop: 24, paddingBottom: 20 }}>
       <nav className="crumbs">
         <Link href="/">Home</Link> <span>/</span> <Link href="/products">Shop</Link>{' '}
-        <span>/</span> <Link href={`/collections/${product.categorySlug}`}>{product.category}</Link>{' '}
+        <span>/</span> <Link href={`/collections/${product.categorySlug}`} className="crumb-collapse" title={product.category} aria-label={product.category}>…</Link>{' '}
         <span>/</span> <b>{product.name}</b>
       </nav>
 

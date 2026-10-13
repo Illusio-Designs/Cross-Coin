@@ -66,17 +66,17 @@ export function Breadcrumb() {
       style={{ top: 102 }}
     >
       <div className="px-5 md:px-8">
-        <ol className={`flex flex-wrap items-center gap-2 py-2.5 text-sm ${textCls}`}>
-          <li>
+        <ol className={`flex flex-nowrap items-center gap-2 py-2.5 text-sm min-w-0 ${textCls}`}>
+          <li className="shrink-0">
             <Link href="/" className={`underline-offset-2 transition-colors ${hoverCls}`}>Home</Link>
           </li>
           {crumbs.map((crumb, i) => {
             const isLast = i === crumbs.length - 1
             return (
-              <li key={crumb.href} className="flex items-center gap-2">
-                <span className={sepCls}>/</span>
+              <li key={crumb.href} className={`flex items-center gap-2 ${isLast ? 'min-w-0' : 'shrink-0'}`}>
+                <span className={`${sepCls} shrink-0`}>/</span>
                 {isLast
-                  ? <span className={activeCls} aria-current="page">{crumb.label}</span>
+                  ? <span className={`${activeCls} truncate block max-w-full`} aria-current="page" title={crumb.label}>{crumb.label}</span>
                   : <Link href={crumb.href} className={`underline-offset-2 transition-colors ${hoverCls}`}>{crumb.label}</Link>
                 }
               </li>

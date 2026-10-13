@@ -572,9 +572,11 @@ button { font-family: inherit; cursor: pointer; }
 .sort-opt.active { border-color: var(--navy); color: var(--navy); }
 .sort-opt svg { color: var(--teal-600); }
 .filter-foot { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); flex-shrink: 0; }
-.crumbs { font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-bottom: 22px; }
-.crumbs a { white-space: nowrap; } .crumbs a:hover { color: var(--navy); }
-.crumbs b { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.crumbs { font-size: 13px; color: var(--ink-soft); display: flex; flex-wrap: nowrap; gap: 4px 8px; align-items: center; margin-bottom: 22px; min-width: 0; }
+.crumbs a { white-space: nowrap; flex-shrink: 0; } .crumbs a:hover { color: var(--navy); }
+.crumbs > span { flex-shrink: 0; }
+.crumb-collapse { flex-shrink: 0; background: var(--line-soft); border-radius: 6px; padding: 1px 7px; font-weight: 700; text-decoration: none; line-height: 1.6; }
+.crumbs b { color: var(--ink); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
 /* Product detail */
 .pdp { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; }
