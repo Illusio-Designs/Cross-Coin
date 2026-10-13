@@ -373,35 +373,39 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             )}
           </div>
 
-          {product.colors?.length > 0 && (
-            <div className="pdx-opt">
-              <span className="pdx-opt-label">Colour{selectedColorName ? <em> — {selectedColorName}</em> : null}</span>
-              <div className="pdx-colors" role="radiogroup" aria-label="Colour">
-                {product.colors.map((c, i) => (
-                  <button key={i} type="button" role="radio" aria-checked={i === color}
-                    className={`pdx-color${i === color ? ' active' : ''}`}
-                    onClick={() => pickColor(i)} aria-label={colorNames[i] || `Colour ${i + 1}`}>
-                    <span className="pdx-color-dot" style={{ background: c }} />
-                    <span className="pdx-color-name">{colorNames[i] || `Colour ${i + 1}`}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {(product.colors?.length > 0 || sizesForColor.length > 0) && (
+            <div className="pdx-opts-row">
+              {product.colors?.length > 0 && (
+                <div className="pdx-opt">
+                  <span className="pdx-opt-label">Colour{selectedColorName ? <em> — {selectedColorName}</em> : null}</span>
+                  <div className="pdx-colors" role="radiogroup" aria-label="Colour">
+                    {product.colors.map((c, i) => (
+                      <button key={i} type="button" role="radio" aria-checked={i === color}
+                        className={`pdx-color${i === color ? ' active' : ''}`}
+                        onClick={() => pickColor(i)} aria-label={colorNames[i] || `Colour ${i + 1}`}>
+                        <span className="pdx-color-dot" style={{ background: c }} />
+                        <span className="pdx-color-name">{colorNames[i] || `Colour ${i + 1}`}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {sizesForColor.length > 0 && (
-            <div className="pdx-opt">
-              <span className="pdx-opt-label">Size</span>
-              <div className="pdx-sizes">
-                {sizesForColor.map((s) => (
-                  <button key={s} type="button" className={`pdx-size${s === effectiveSize ? ' active' : ''}`}
-                    onClick={() => setSize(s)}>{s}</button>
-                ))}
-              </div>
-              {hasSizeGuide && (
-                <p className="pdx-sizeguide">Not sure about your size?{' '}
-                  <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
-                </p>
+              {sizesForColor.length > 0 && (
+                <div className="pdx-opt">
+                  <span className="pdx-opt-label">Size</span>
+                  <div className="pdx-sizes">
+                    {sizesForColor.map((s) => (
+                      <button key={s} type="button" className={`pdx-size${s === effectiveSize ? ' active' : ''}`}
+                        onClick={() => setSize(s)}>{s}</button>
+                    ))}
+                  </div>
+                  {hasSizeGuide && (
+                    <p className="pdx-sizeguide">Not sure about your size?{' '}
+                      <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -445,10 +449,15 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 : added ? <>Added to cart <Icon name="ShieldCheck" size={17} /></>
                 : <>Add to cart · ₹{Number(hasPacks ? packTotal : price * qty).toFixed(0)} <Icon name="ShoppingBag" size={17} /></>}
             </button>
-            {inStock && (
-              <button type="button" className="pdx-buy-now" onClick={onBuyNow}>Buy now</button>
-            )}
           </div>
+
+          {inStock && (
+            <div className="pdx-buy-wrap">
+              <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
+                <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
+              </button>
+            </div>
+          )}
 
           {specs.length > 0 && (
             <div className="pdx-panel-specs">
@@ -464,7 +473,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <div className="pdx-trust">
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cash on Delivery</div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 14-Day Returns</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
           </div>
         </div>

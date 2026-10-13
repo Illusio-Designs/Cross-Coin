@@ -1385,6 +1385,10 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-lead { color: var(--ink-soft); font-size: 15px; line-height: 1.7; margin-top: 16px; max-width: 52ch; }
 .pdx-rule { height: 1px; background: var(--line); margin: 26px 0; }
 .pdx-opt { margin-bottom: 22px; }
+/* Colour + size sit side by side (wrap on narrow screens) */
+.pdx-opts-row { display: flex; flex-wrap: wrap; gap: 14px 40px; margin-bottom: 22px; }
+.pdx-opts-row .pdx-opt { margin-bottom: 0; }
+@media (max-width: 460px) { .pdx-opts-row { gap: 18px; } .pdx-opts-row .pdx-opt { flex: 1 1 100%; } }
 .pdx-opt-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); margin-bottom: 12px; }
 .pdx-opt-label em { font-style: normal; color: var(--ink-soft); text-transform: none; letter-spacing: 0; font-weight: 500; }
 .pdx-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -2320,10 +2324,10 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* Buy now sits beside Add to cart as the quiet, outlined action */
 .pdx-actions { flex-wrap: wrap; }
 .pdx-add { flex: 1 1 200px; }
-.pdx-buy-now { flex: 0 1 auto; min-height: 54px; padding: 0 26px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; transition: background .18s ease, color .18s ease; }
-.pdx-buy-now:hover { background: var(--ink); color: #fbfaf6; }
+.pdx-buy-wrap { margin-top: 12px; }
+.pdx-buy-now { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 26px; border-radius: 999px; border: 0; background: var(--ink); color: #fbfaf6; font: inherit; font-size: 14px; font-weight: 800; letter-spacing: .02em; cursor: pointer; transition: background .18s ease, transform .18s ease; }
+.pdx-buy-now:hover { background: #000; transform: translateY(-1px); }
 .pdx-buy-now:focus-visible, .pdx-color:focus-visible, .pdx-sizeguide button:focus-visible, .pdx-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (max-width: 520px) { .pdx-buy-now { flex: 1 1 100%; } }
 
 /* Colour — named cards instead of bare dots */
 .pdx-colors { display: flex; flex-wrap: wrap; gap: 10px; }
