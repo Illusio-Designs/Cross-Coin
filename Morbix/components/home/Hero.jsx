@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 
-// Ask ImageKit for a sized, format-negotiated hero image instead of the
-// full-resolution original (big LCP win on the largest image on the page).
+// Ask ImageKit for a sized, format-negotiated image instead of the full-res
+// original (keeps the hero light).
 function heroSrc(src, w = 1200) {
   if (!src || typeof src !== 'string') return src;
   if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
@@ -14,10 +14,11 @@ function heroSrc(src, w = 1200) {
   return src;
 }
 
-// Hero driven by the backend sliders API: each slide's real title, description
-// and button + image are shown, cycling every 5s (same idea as the other
-// brands' hero sliders). Falls back to static copy when there are no sliders.
-export default function Hero({ features = [], slides = [] }) {
+// Hero — "Deal Band + colourways" layout. The left band is driven by the backend
+// sliders (title/description/button cycle every 5s); the right shows shoppable
+// colourway cards built from the home's bestseller feed (each exploded colour
+// variant links straight to its PDP with the colour pre-selected).
+export default function Hero({ features = [], slides = [], products = [] }) {
   const [current, setCurrent] = useState(0);
   const hasSlides = slides.length > 0;
 
@@ -28,28 +29,32 @@ export default function Hero({ features = [], slides = [] }) {
   }, [slides.length]);
 
   const slide = hasSlides ? slides[Math.min(current, slides.length - 1)] : null;
-  const title = slide?.title || 'Socks built for rhythm, comfort & every mile';
-  const desc = slide?.description || 'Engineered knit, lasting cushioning and clean design for every step — for sport and the city alike.';
-  const ctaText = slide?.buttonText || 'Shop the catalog';
+  const badge = slide?.eyebrow || 'Premium collection';
+  const title = slide?.title || 'Hot Deals';
+  const desc = slide?.description || 'The best alignment socks at the best prices — limited-time offers.';
+  const ctaText = slide?.buttonText || 'Shop now';
   const ctaHref = slide?.link || (slide?.categorySlug ? `/collections/${slide.categorySlug}` : '/products');
 
+  // Up to 4 colourway cards from the bestseller feed.
+  const cards = (Array.isArray(products) ? products : []).slice(0, 4);
+
   return (
-    <section className="hero container">
-      <div className="hero-card">
-        <div className="hero-copy">
-          <span className="hero-badge">Premium collection</span>
+    <section className="heroc container">
+      <div className="heroc-band">
+        <div className="heroc-copy">
+          <span className="heroc-eyebrow">{badge}</span>
           <h1>{title}</h1>
           <p>{desc}</p>
-          <div className="hero-cta">
+          <div className="heroc-cta">
             {/^https?:\/\//i.test(ctaHref) ? (
-              <a href={ctaHref} className="btn btn-primary">{ctaText} <span className="arrow"><Icon name="ArrowRight" size={14} /></span></a>
+              <a href={ctaHref} className="heroc-btn">{ctaText} <Icon name="ArrowRight" size={14} /></a>
             ) : (
-              <Link href={ctaHref} className="btn btn-primary">{ctaText} <span className="arrow"><Icon name="ArrowRight" size={14} /></span></Link>
+              <Link href={ctaHref} className="heroc-btn">{ctaText} <Icon name="ArrowRight" size={14} /></Link>
             )}
-            <Link href="/collections" className="btn btn-ghost">Collections</Link>
+            <Link href="/collections" className="heroc-link">Collections</Link>
           </div>
           {hasSlides && slides.length > 1 && (
-            <div className="hero-dots">
+            <div className="heroc-dots">
               {slides.map((_, i) => (
                 <button key={i} type="button" className={i === current ? 'active' : ''} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`} />
               ))}
@@ -57,36 +62,28 @@ export default function Hero({ features = [], slides = [] }) {
           )}
         </div>
 
-        <div className="hero-visual">
-          {hasSlides ? (
-            <div className="hero-slider">
-              {slides.map((s, i) => (
-                <picture key={i} style={{ display: 'contents' }}>
-                  {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
-                  <img src={heroSrc(s.image)} alt={s.title || 'Morbix'}
-                    className={`hero-slide-img${i === current ? ' active' : ''}`}
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                    fetchPriority={i === 0 ? 'high' : 'auto'}
-                    decoding="async" />
-                </picture>
-              ))}
-            </div>
-          ) : (
-            <div className="hero-spotlight" aria-hidden>
-              <span className="hero-spotlight-tag">Morbix</span>
-              <Icon name="Footprints" size={130} />
-              <span className="hero-spotlight-cap">Premium knit socks</span>
+        <div className="heroc-cards">
+          {cards.length > 0 ? cards.map((p, i) => {
+            const off = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+            const href = p.colorParam ? `/products/${p.slug}?color=${encodeURIComponent(p.colorParam)}` : `/products/${p.slug}`;
+            return (
+              <Link key={p.uid ?? p.id} href={href} className="heroc-pc">
+                <span className="heroc-ph">
+                  {p.image
+                    ? <img src={heroSrc(p.image, 420)} alt={p.name} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'auto'} decoding="async" />
+                    : <Icon name="Footprints" size={30} />}
+                  {off > 0 && <span className="heroc-off">{off}% OFF</span>}
+                </span>
+                <b>{p.colorParam || p.name}</b>
+                <span className="heroc-pr">₹{Number(p.price).toFixed(0)}{p.oldPrice ? <s>₹{Number(p.oldPrice).toFixed(0)}</s> : null}</span>
+              </Link>
+            );
+          }) : (
+            <div className="heroc-spotlight" aria-hidden>
+              <span className="heroc-spotlight-tag">Morbix</span>
+              <Icon name="Footprints" size={90} />
             </div>
           )}
-
-          <div className="hero-features">
-            {features.slice(0, 3).map((f) => (
-              <div className="hero-feature" key={f.title}>
-                <span className="ic"><Icon name={f.icon} size={18} /></span>
-                <div><b>{f.title}</b><span>{f.sub}</span></div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>

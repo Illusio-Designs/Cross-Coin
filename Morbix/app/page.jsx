@@ -76,7 +76,7 @@ export default async function HomePage() {
             : {})}
         />
       )}
-      <Hero features={getHeroFeatures()} slides={slides} />
+      <Hero features={getHeroFeatures()} slides={slides} products={products} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
