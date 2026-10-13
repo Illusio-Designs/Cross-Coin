@@ -4,7 +4,7 @@ import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductStory from '@/components/product/ProductStory';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs, getBundleTiers } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -22,7 +22,7 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData, faqs] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id), getProductFaqs(product.id)]);
+  const [all, reviewsData, faqs, bundleTiers] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id), getProductFaqs(product.id), getBundleTiers(product.id)]);
   const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
@@ -40,7 +40,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color} />
+      <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} />
 
       {/* ── Full description, care steps and FAQs ── */}
       <ProductStory product={product} faqs={faqs} />

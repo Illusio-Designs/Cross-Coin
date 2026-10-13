@@ -1395,6 +1395,23 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-size { min-width: 48px; height: 46px; padding: 0 14px; border-radius: 11px; border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 14px; color: var(--ink); cursor: pointer; transition: border-color .15s ease, background .15s ease; }
 .pdx-size:hover { border-color: var(--ink); }
 .pdx-size.active { background: var(--ink); border-color: var(--ink); color: #fbfaf6; }
+/* Pack / bundle selector */
+.pdx-packs { margin-bottom: 22px; }
+.pdx-pack-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.pdx-pack { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 13px 15px; transition: border-color .15s ease, background .15s ease; font: inherit; }
+.pdx-pack:hover { border-color: var(--navy); }
+.pdx-pack.active { border-color: var(--navy); background: color-mix(in srgb, var(--navy) 5%, transparent); }
+.pdx-pack-radio { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); position: relative; }
+.pdx-pack.active .pdx-pack-radio { border-color: var(--navy); background: var(--navy); }
+.pdx-pack.active .pdx-pack-radio::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; }
+.pdx-pack-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pdx-pack-name { font-weight: 800; font-size: 15px; color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pdx-pack-badge { font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: #fff; background: var(--navy); border-radius: 999px; padding: 3px 8px; }
+.pdx-pack-per { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pdx-pack-price { text-align: right; flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.pdx-pack-now { font-weight: 800; font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pdx-pack-mrp { font-size: 12.5px; color: var(--ink-soft); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+
 .pdx-actions { display: flex; gap: 12px; align-items: stretch; margin-top: 6px; }
 .pdx-qty { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); padding: 0 6px; flex-shrink: 0; }
 .pdx-qty button { width: 38px; height: 52px; border: 0; background: none; font-size: 20px; color: var(--ink); cursor: pointer; }

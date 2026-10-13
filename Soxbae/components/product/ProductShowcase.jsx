@@ -24,7 +24,7 @@ function ik(src, w) {
 // full-width "details" band pairing the story with a specifications card.
 // Gallery + colour + size share one selection so price, SKU and stock always
 // reflect the exact variation, and Add to cart sends that variation.
-export default function ProductShowcase({ product, initialColor }) {
+export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
   const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
@@ -39,6 +39,7 @@ export default function ProductShowcase({ product, initialColor }) {
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);
+  const [pack, setPack] = useState(0); // selected pack option (0 = 1 pair)
   const [added, setAdded] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const [showSticky, setShowSticky] = useState(false);
@@ -123,6 +124,22 @@ export default function ProductShowcase({ product, initialColor }) {
   const sku = activeVariant?.sku || product.sku;
   const stock = activeVariant?.stock;
   const inStock = stock == null || stock > 0;
+
+  // Pack / bundle pricing — per-product, admin-set exact prices. When a product
+  // has packs, the selector replaces the qty stepper. The backend re-prices the
+  // chosen pack server-side at checkout from the same figure.
+  const rawPacks = Array.isArray(bundleTiers) ? bundleTiers : [];
+  const hasPacks = rawPacks.length > 0;
+  const packOptions = hasPacks
+    ? [{ pairs: 1, price: Number(price), label: '1 Pair', badge: null, base: true },
+       ...rawPacks.map((t) => ({ pairs: t.pairs, price: Number(t.price), label: t.label || `${t.pairs} Pairs`, badge: t.badge }))]
+    : [];
+  const activePack = hasPacks ? packOptions[Math.min(pack, packOptions.length - 1)] : null;
+  const packPairs = activePack ? activePack.pairs : 1;
+  const packTotal = activePack ? activePack.price : Number(price);
+  const packUnit = packPairs > 0 ? packTotal / packPairs : Number(price);
+  const packMrp = Number(price) * packPairs;
+  const packHasDiscount = !!activePack && !activePack.base && packTotal < packMrp;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   const perColor = product.colorImages?.[color];
@@ -186,10 +203,13 @@ export default function ProductShowcase({ product, initialColor }) {
 
   const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
+    const useQty = hasPacks ? packPairs : qty;
+    const useUnit = hasPacks ? packUnit : price;
+    const useOld = hasPacks ? (packHasDiscount ? Number(price) : (oldPrice || null)) : (oldPrice || null);
     add(
-      { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
+      { ...product, price: useUnit, oldPrice: useOld, image: variationMainImage, color: selectedColorName || null, sku },
       effectiveSize || 'M',
-      qty,
+      useQty,
       activeVariant?.id ?? null
     );
   };
@@ -386,16 +406,44 @@ export default function ProductShowcase({ product, initialColor }) {
             </div>
           )}
 
-          <div className="pdx-actions" ref={actionsRef}>
-            <div className="pdx-qty">
-              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
-              <span>{qty}</span>
-              <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+          {hasPacks && (
+            <div className="pdx-opt pdx-packs">
+              <span className="pdx-opt-label">Choose your pack</span>
+              <div className="pdx-pack-list">
+                {packOptions.map((t, i) => {
+                  const per = t.pairs > 0 ? t.price / t.pairs : t.price;
+                  const mrp = Number(price) * t.pairs;
+                  const disc = !t.base && t.price < mrp;
+                  return (
+                    <button type="button" key={i} className={`pdx-pack${i === pack ? ' active' : ''}`} onClick={() => setPack(i)} aria-pressed={i === pack}>
+                      <span className="pdx-pack-radio" aria-hidden="true" />
+                      <span className="pdx-pack-body">
+                        <span className="pdx-pack-name">{t.label}{t.badge ? <span className="pdx-pack-badge">{t.badge}</span> : null}</span>
+                        <span className="pdx-pack-per">₹{per.toFixed(2)} / pair</span>
+                      </span>
+                      <span className="pdx-pack-price">
+                        <span className="pdx-pack-now">₹{t.price.toFixed(0)}</span>
+                        {disc ? <span className="pdx-pack-mrp">₹{mrp.toFixed(0)}</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          <div className="pdx-actions" ref={actionsRef}>
+            {!hasPacks && (
+              <div className="pdx-qty">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              </div>
+            )}
             <button type="button" className="pdx-add" onClick={onAdd} disabled={!inStock}>
               {!inStock ? 'Out of stock'
                 : added ? <>Added to cart <Icon name="ShieldCheck" size={17} /></>
-                : <>Add to cart · ₹{Number(price * qty).toFixed(0)} <Icon name="ShoppingBag" size={17} /></>}
+                : <>Add to cart · ₹{Number(hasPacks ? packTotal : price * qty).toFixed(0)} <Icon name="ShoppingBag" size={17} /></>}
             </button>
             {inStock && (
               <button type="button" className="pdx-buy-now" onClick={onBuyNow}>Buy now</button>

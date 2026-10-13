@@ -214,6 +214,15 @@ function mapFaqs(data) {
     .filter((f) => f.question && f.answer);
 }
 
+// Per-product pack/bundle tiers (brand-scoped). Returns [{pairs, price, label, badge}].
+export async function getBundleTiers(productId, revalidate = 60) {
+  try {
+    if (!productId) return [];
+    const data = await brandFetch(`/api/public/bundle-tiers?product_id=${encodeURIComponent(productId)}`, revalidate ?? 60);
+    return Array.isArray(data?.tiers) ? data.tiers : [];
+  } catch { return []; }
+}
+
 export async function getProductFaqs(productId) {
   if (!productId) return [];
   try {
