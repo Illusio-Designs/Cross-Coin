@@ -573,11 +573,14 @@ button { font-family: inherit; cursor: pointer; }
 .in-stock { display: inline-flex; align-items: center; gap: 5px; color: var(--teal-600); font-weight: 600; }
 
 /* Free-shipping + delivery ETA line */
-.pdp-ship { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13.5px; color: var(--ink); margin: -4px 0 14px; }
+.pdp-ship { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 13.5px; line-height: 1; color: var(--ink); margin: -4px 0 14px; }
 .pdp-ship svg { color: var(--teal-600); }
 .pdp-ship strong { color: var(--teal-600); font-weight: 700; }
 .pdp-ship .pdp-ship-eta { color: var(--ink-soft); }
-.pdp-stock-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--teal-050); color: var(--teal-600); font-weight: 700; font-size: 12px; padding: 3px 9px; border-radius: 999px; }
+.pdp-ship-stock { display: inline-flex; align-items: center; gap: 7px; }
+.pdp-ship-free { position: relative; padding-left: 13px; }
+.pdp-ship-free::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1px; height: 14px; background: var(--line); }
+.pdp-stock-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--teal-050); color: var(--teal-600); font-weight: 700; font-size: 11.5px; line-height: 1; padding: 4px 9px; border-radius: 999px; }
 .pdp-stock-badge.out { background: #fdecea; color: var(--sale, #c9433c); }
 .pdp-ship .pdp-stock-badge svg { color: inherit; }
 

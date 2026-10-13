@@ -340,7 +340,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       )}
 
       <div className="pdp-info">
-        <span className="eyebrow">{product.category}</span>
         <h1>{product.name}</h1>
         <div className="pdp-meta">
           <span className="rating"><Icon name="Star" size={14} color="var(--star)" /> {product.rating}</span>
@@ -360,11 +359,13 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
         {/* Free shipping + stock badge (after the icon) */}
         <div className="pdp-ship">
-          <Icon name="Truck" size={16} />
-          {inStock
-            ? <span className="pdp-stock-badge"><Icon name="ShieldCheck" size={12} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
-            : <span className="pdp-stock-badge out"><Icon name="X" size={12} /> Out of stock</span>}
-          <span><strong>Free shipping</strong> on all orders</span>
+          <span className="pdp-ship-stock">
+            <Icon name="Truck" size={16} />
+            {inStock
+              ? <span className="pdp-stock-badge"><Icon name="ShieldCheck" size={12} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
+              : <span className="pdp-stock-badge out"><Icon name="X" size={12} /> Out of stock</span>}
+          </span>
+          <span className="pdp-ship-free"><strong>Free shipping</strong> on all orders</span>
         </div>
 
         <div className="buy">
