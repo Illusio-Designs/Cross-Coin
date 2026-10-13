@@ -989,6 +989,10 @@ module.exports.getAllPublicReviews = async (req, res) => {
         let order = [['createdAt', 'DESC']];
         if (sort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
         if (sort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
+        // Home testimonials: a random brand-wide sample so the review dates read
+        // as spread across the year, instead of only the newest (which all fall
+        // on the last day or two). Used by the storefront home marquee.
+        if (sort === 'random') order = sequelize.literal('RAND()');
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
 

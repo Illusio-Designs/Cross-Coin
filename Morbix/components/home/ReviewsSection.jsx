@@ -33,6 +33,8 @@ export default function ReviewsSection({ reviews = [], total: totalProp }) {
         items={reviews.slice(0, 12)}
         staticClassName="review-grid"
         min={4}
+        secPerItem={2.5}
+        minDur={18}
         render={(r, i) => (
           <div className="review" key={i}>
             <div className="review-stars" style={{ marginBottom: 10 }}>
