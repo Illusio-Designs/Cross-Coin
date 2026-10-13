@@ -358,18 +358,13 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         </div>
         <p className="pdp-price-tax">MRP incl. of all taxes</p>
 
-        {/* Free shipping + delivery ETA */}
+        {/* Free shipping + stock badge (after the icon) */}
         <div className="pdp-ship">
           <Icon name="Truck" size={16} />
-          <span><strong>Free shipping</strong> on all orders</span>
-          <span className="pdp-ship-eta">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
-        </div>
-
-        {/* Stock reflects the selected variation */}
-        <div className="pdp-stock" style={{ marginBottom: 14 }}>
           {inStock
-            ? <span className="in-stock"><Icon name="ShieldCheck" size={13} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
-            : <span className="muted" style={{ color: 'var(--sale)' }}><Icon name="X" size={13} /> Out of stock</span>}
+            ? <span className="pdp-stock-badge"><Icon name="ShieldCheck" size={12} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
+            : <span className="pdp-stock-badge out"><Icon name="X" size={12} /> Out of stock</span>}
+          <span><strong>Free shipping</strong> on all orders</span>
         </div>
 
         {/* Delivery / pincode serviceability */}
@@ -402,35 +397,37 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         </div>
 
         <div className="buy">
-          {product.colors?.length > 0 && (
-            <div className="opt">
-              <span className="opt-label">Color{selectedColorName ? ` — ${selectedColorName}` : ''}</span>
-              <div className="swatches">
-                {product.colors.map((c, i) => (
-                  <button key={i} type="button" className={`swatch${i === color ? ' active' : ''}`}
-                    style={{ background: c }} onClick={() => pickColor(i)}
-                    aria-label={colorNames[i] || `Color ${i + 1}`} title={colorNames[i] || ''} />
-                ))}
+          <div className="pdp-opts-row">
+            {product.colors?.length > 0 && (
+              <div className="opt">
+                <span className="opt-label">Color{selectedColorName ? ` — ${selectedColorName}` : ''}</span>
+                <div className="swatches">
+                  {product.colors.map((c, i) => (
+                    <button key={i} type="button" className={`swatch${i === color ? ' active' : ''}`}
+                      style={{ background: c }} onClick={() => pickColor(i)}
+                      aria-label={colorNames[i] || `Color ${i + 1}`} title={colorNames[i] || ''} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {sizesForColor.length > 0 && (
-            <div className="opt">
-              <span className="opt-label">Size</span>
-              <div className="size-row">
-                {sizesForColor.map((s) => (
-                  <button key={s} type="button" className={`size-btn${s === effectiveSize ? ' active' : ''}`}
-                    onClick={() => setSize(s)}>{s}</button>
-                ))}
+            {sizesForColor.length > 0 && (
+              <div className="opt">
+                <span className="opt-label">Size</span>
+                <div className="size-row">
+                  {sizesForColor.map((s) => (
+                    <button key={s} type="button" className={`size-btn${s === effectiveSize ? ' active' : ''}`}
+                      onClick={() => setSize(s)}>{s}</button>
+                  ))}
+                </div>
+                {hasSizeGuide && (
+                  <p className="sc-sizeguide">Not sure about your size?{' '}
+                    <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
+                  </p>
+                )}
               </div>
-              {hasSizeGuide && (
-                <p className="sc-sizeguide">Not sure about your size?{' '}
-                  <button type="button" onClick={() => setShowChart(true)}>Size chart</button>
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {hasPacks && (
             <div className="opt pdp-packs">
