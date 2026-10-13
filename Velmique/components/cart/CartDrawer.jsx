@@ -1007,140 +1007,6 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* ── Address section ─────────────────────────────────────── */}
-              <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Deliver To</p>
-                  {isAuthenticated && addresses.length > 1 && !showAddrForm && (
-                    <div className="relative" ref={dropdownRef}>
-                      <button
-                        onClick={() => setShowAddrDropdown(s => !s)}
-                        className="text-[10px] tracking-[0.25em] uppercase text-[#8F7548] hover:text-[#11100E] font-body"
-                      >
-                        Change
-                      </button>
-                      {showAddrDropdown && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#D8D3C9] shadow-lg z-10 max-h-64 overflow-y-auto">
-                          {addresses.map(a => (
-                            <button key={a.id} onClick={() => { setSelectedAddress(a); setShowAddrDropdown(false); }}
-                              className={`w-full text-left px-3 py-2.5 text-xs font-body border-b border-[#EFEAE2] last:border-0 hover:bg-[#EFEAE2] ${selectedAddress?.id === a.id ? 'bg-[#EFEAE2]' : ''}`}>
-                              <p className="font-medium text-[#11100E]">{a.full_name || a.fullName}</p>
-                              <p className="text-[#777168] truncate">{a.address}, {a.city}, {a.state} - {a.postal_code || a.postalCode}</p>
-                            </button>
-                          ))}
-                          <button onClick={() => { setShowAddrDropdown(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); setShowAddrForm(true); }}
-                            className="w-full text-left px-3 py-2.5 text-xs font-body text-[#8F7548] hover:bg-[#EFEAE2] flex items-center gap-1.5">
-                            <Plus size={12} /> Add new address
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {selectedAddress && !showAddrForm && (
-                  <div className="bg-white border border-[#D8D3C9] p-3.5 flex items-start gap-2.5">
-                    <MapPin size={14} className="text-[#8F7548] mt-1 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-serif italic text-[#11100E] text-sm">{selectedAddress.full_name || selectedAddress.fullName}</p>
-                      <p className="text-[#49423A] text-xs font-body mt-0.5 leading-relaxed">
-                        {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postal_code || selectedAddress.postalCode}
-                      </p>
-                      <p className="text-[#777168] text-[10px] font-body mt-1">{selectedAddress.phone_number || selectedAddress.phoneNumber}</p>
-                      {pincodeInfo && pincodeInfo.serviceable === false && (
-                        <p className="text-red-600 text-[10px] font-body mt-1">Not serviceable in this PIN.</p>
-                      )}
-                    </div>
-                    <button onClick={() => onEditAddress(selectedAddress)} className="text-[#8F7548] hover:text-[#11100E]" aria-label="Edit address">
-                      <Edit3 size={13} />
-                    </button>
-                  </div>
-                )}
-
-                {(!selectedAddress || showAddrForm) && (
-                  <form onSubmit={onSaveAddress} className="space-y-2">
-                    <input name="fullName" value={addrForm.fullName}
-                      onChange={(e) => {
-                        onAddrField(e);
-                        if (!isAuthenticated) setGuestInfo(p => ({ ...p, fullName: e.target.value }));
-                      }}
-                      placeholder="Full name" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
-                    <input name="phoneNumber" value={addrForm.phoneNumber}
-                      onChange={(e) => {
-                        onAddrField(e);
-                        if (!isAuthenticated) setGuestInfo(p => ({ ...p, phone: String(e.target.value).replace(/\D/g, '').slice(0, 10) }));
-                      }}
-                      placeholder="10-digit mobile" inputMode="numeric"
-                      className="w-full input-gold px-3 py-2.5 text-sm font-body" />
-                    {!isAuthenticated && (
-                      <input value={guestInfo.email}
-                        onChange={(e) => setGuestInfo(p => ({ ...p, email: e.target.value }))}
-                        placeholder="Email (for order confirmation)" type="email"
-                        className="w-full input-gold px-3 py-2.5 text-sm font-body" />
-                    )}
-                    <input name="address" value={addrForm.address} onChange={onAddrField}
-                      placeholder="Street address" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
-                    <div className="grid grid-cols-3 gap-2">
-                      <input name="postalCode" value={addrForm.postalCode} onChange={onAddrField} onBlur={onPincodeBlur}
-                        placeholder="PIN" inputMode="numeric"
-                        className="input-gold px-3 py-2.5 text-sm font-body" />
-                      <input name="city" value={addrForm.city} onChange={onAddrField}
-                        placeholder="City" className="input-gold px-3 py-2.5 text-sm font-body" />
-                      <input name="state" value={addrForm.state} onChange={onAddrField}
-                        placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body" />
-                    </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      <p className="text-xs text-neutral-500 flex-1">
-                        {addrSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}
-                      </p>
-                      {selectedAddress && (
-                        <button type="button" onClick={() => { setShowAddrForm(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); }}
-                          className="text-[#777168] text-[10px] tracking-[0.3em] uppercase font-body hover:text-[#11100E]">
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              {/* ── Delivery method ─────────────────────────────────────── */}
-              <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-3">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Delivery Method</p>
-                <div className="space-y-2">
-                  {sortedFees.map(f => {
-                    const disabled = f.orderType === 'cod' && codBlocked;
-                    const active = selectedFee?.id === f.id;
-                    return (
-                      <button key={f.id} onClick={() => !disabled && setSelectedFee(f)}
-                        disabled={disabled}
-                        className={`w-full flex items-center gap-3 p-3 border text-left transition-all ${
-                          active ? 'border-[#B89A63] bg-[#B89A63]/10' : 'border-[#D8D3C9] bg-white hover:border-[#B89A63]'
-                        } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                      >
-                        {f.orderType === 'cod'
-                          ? <Wallet size={16} className="text-[#8F7548]" />
-                          : <CreditCard size={16} className="text-[#8F7548]" />
-                        }
-                        <div className="flex-1 min-w-0">
-                          <p className="font-body text-sm text-[#11100E] font-medium">
-                            {f.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card / Net Banking'}
-                          </p>
-                          <p className="text-[#777168] text-[10px] font-body mt-0.5">
-                            {f.orderType === 'cod'
-                              ? (disabled ? 'Not available for this PIN' : 'Pay when your order arrives')
-                              : `Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ${fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-body text-[#8F7548]">
-                          {parseFloat(f.fee || 0) > 0 ? `+ ${fmt(f.fee)}` : 'Free'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* ── Coupon ──────────────────────────────────────────────── */}
               <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Promo Code</p>
@@ -1277,8 +1143,9 @@ export default function CartDrawer() {
                   </div>
                 </div>
               )}
+              </>)}
 
-              {/* ── Summary ─────────────────────────────────────────────── */}
+              {/* ── Summary — visible on both steps so pricing is always clear ─ */}
               <div className="px-5 py-4 space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body mb-2">Order Summary</p>
                 <Row label="Subtotal" value={fmt(subtotal)} />
@@ -1296,28 +1163,184 @@ export default function CartDrawer() {
                   </p>
                 )}
               </div>
+
+              {/* ── Step 2: delivery + payment ──────────────────────────── */}
+              {coStep === 2 && (<>
+              {/* ── Address section ─────────────────────────────────────── */}
+              <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Deliver To</p>
+                  {isAuthenticated && addresses.length > 1 && !showAddrForm && (
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        onClick={() => setShowAddrDropdown(s => !s)}
+                        className="text-[10px] tracking-[0.25em] uppercase text-[#8F7548] hover:text-[#11100E] font-body"
+                      >
+                        Change
+                      </button>
+                      {showAddrDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#D8D3C9] shadow-lg z-10 max-h-64 overflow-y-auto">
+                          {addresses.map(a => (
+                            <button key={a.id} onClick={() => { setSelectedAddress(a); setShowAddrDropdown(false); }}
+                              className={`w-full text-left px-3 py-2.5 text-xs font-body border-b border-[#EFEAE2] last:border-0 hover:bg-[#EFEAE2] ${selectedAddress?.id === a.id ? 'bg-[#EFEAE2]' : ''}`}>
+                              <p className="font-medium text-[#11100E]">{a.full_name || a.fullName}</p>
+                              <p className="text-[#777168] truncate">{a.address}, {a.city}, {a.state} - {a.postal_code || a.postalCode}</p>
+                            </button>
+                          ))}
+                          <button onClick={() => { setShowAddrDropdown(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); setShowAddrForm(true); }}
+                            className="w-full text-left px-3 py-2.5 text-xs font-body text-[#8F7548] hover:bg-[#EFEAE2] flex items-center gap-1.5">
+                            <Plus size={12} /> Add new address
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {selectedAddress && !showAddrForm && (
+                  <div className="bg-white border border-[#D8D3C9] p-3.5 flex items-start gap-2.5">
+                    <MapPin size={14} className="text-[#8F7548] mt-1 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-serif italic text-[#11100E] text-sm">{selectedAddress.full_name || selectedAddress.fullName}</p>
+                      <p className="text-[#49423A] text-xs font-body mt-0.5 leading-relaxed">
+                        {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postal_code || selectedAddress.postalCode}
+                      </p>
+                      <p className="text-[#777168] text-[10px] font-body mt-1">{selectedAddress.phone_number || selectedAddress.phoneNumber}</p>
+                      {pincodeInfo && pincodeInfo.serviceable === false && (
+                        <p className="text-red-600 text-[10px] font-body mt-1">Not serviceable in this PIN.</p>
+                      )}
+                    </div>
+                    <button onClick={() => onEditAddress(selectedAddress)} className="text-[#8F7548] hover:text-[#11100E]" aria-label="Edit address">
+                      <Edit3 size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {(!selectedAddress || showAddrForm) && (
+                  <form onSubmit={onSaveAddress} className="space-y-2">
+                    <input name="fullName" value={addrForm.fullName}
+                      onChange={(e) => {
+                        onAddrField(e);
+                        if (!isAuthenticated) setGuestInfo(p => ({ ...p, fullName: e.target.value }));
+                      }}
+                      placeholder="Full name" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
+                    <input name="phoneNumber" value={addrForm.phoneNumber}
+                      onChange={(e) => {
+                        onAddrField(e);
+                        if (!isAuthenticated) setGuestInfo(p => ({ ...p, phone: String(e.target.value).replace(/\D/g, '').slice(0, 10) }));
+                      }}
+                      placeholder="10-digit mobile" inputMode="numeric"
+                      className="w-full input-gold px-3 py-2.5 text-sm font-body" />
+                    {!isAuthenticated && (
+                      <input value={guestInfo.email}
+                        onChange={(e) => setGuestInfo(p => ({ ...p, email: e.target.value }))}
+                        placeholder="Email (for order confirmation)" type="email"
+                        className="w-full input-gold px-3 py-2.5 text-sm font-body" />
+                    )}
+                    <input name="address" value={addrForm.address} onChange={onAddrField}
+                      placeholder="Street address" className="w-full input-gold px-3 py-2.5 text-sm font-body" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <input name="postalCode" value={addrForm.postalCode} onChange={onAddrField} onBlur={onPincodeBlur}
+                        placeholder="PIN" inputMode="numeric"
+                        className="input-gold px-3 py-2.5 text-sm font-body" />
+                      <input name="city" value={addrForm.city} onChange={onAddrField}
+                        placeholder="City" className="input-gold px-3 py-2.5 text-sm font-body" />
+                      <input name="state" value={addrForm.state} onChange={onAddrField}
+                        placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body" />
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <p className="text-xs text-neutral-500 flex-1">
+                        {addrSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}
+                      </p>
+                      {selectedAddress && (
+                        <button type="button" onClick={() => { setShowAddrForm(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); }}
+                          className="text-[#777168] text-[10px] tracking-[0.3em] uppercase font-body hover:text-[#11100E]">
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* ── Delivery method ─────────────────────────────────────── */}
+              <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-3">
+                <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Delivery Method</p>
+                <div className="space-y-2">
+                  {sortedFees.map(f => {
+                    const disabled = f.orderType === 'cod' && codBlocked;
+                    const active = selectedFee?.id === f.id;
+                    return (
+                      <button key={f.id} onClick={() => !disabled && setSelectedFee(f)}
+                        disabled={disabled}
+                        className={`w-full flex items-center gap-3 p-3 border text-left transition-all ${
+                          active ? 'border-[#B89A63] bg-[#B89A63]/10' : 'border-[#D8D3C9] bg-white hover:border-[#B89A63]'
+                        } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        {f.orderType === 'cod'
+                          ? <Wallet size={16} className="text-[#8F7548]" />
+                          : <CreditCard size={16} className="text-[#8F7548]" />
+                        }
+                        <div className="flex-1 min-w-0">
+                          <p className="font-body text-sm text-[#11100E] font-medium">
+                            {f.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card / Net Banking'}
+                          </p>
+                          <p className="text-[#777168] text-[10px] font-body mt-0.5">
+                            {f.orderType === 'cod'
+                              ? (disabled ? 'Not available for this PIN' : 'Pay when your order arrives')
+                              : `Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ${fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-body text-[#8F7548]">
+                          {parseFloat(f.fee || 0) > 0 ? `+ ${fmt(f.fee)}` : 'Free'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              </>)}
             </>
           )}
         </div>
 
-        {/* Footer — place order */}
+        {/* Footer — step 1: proceed to checkout · step 2: place order */}
         {!orderSuccess && items.length > 0 && (
           <div className="border-t border-[#D8D3C9] px-5 py-4 bg-white space-y-2">
-            {errorMsg && (
-              <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
-                {errorMsg}
-              </div>
+            {coStep === 1 ? (
+              <>
+                {errorMsg && (
+                  <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+                    {errorMsg}
+                  </div>
+                )}
+                <button onClick={goToCheckout} disabled={isProcessing || !items.length}
+                  className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || !items.length ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  Proceed to checkout · {fmt(baseTotal)} <ArrowRight size={13} />
+                </button>
+                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
+                  Secure checkout · 14-day returns
+                </p>
+              </>
+            ) : (
+              <>
+                {errorMsg && (
+                  <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+                    {errorMsg}
+                  </div>
+                )}
+                <button onClick={onPlaceOrder} disabled={isProcessing || (pincodeInfo && pincodeInfo.serviceable === false)}
+                  className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || (pincodeInfo && pincodeInfo.serviceable === false) ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  {isProcessing
+                    ? <><Loader2 size={14} className="animate-spin" /> Processing…</>
+                    : <>{isCod ? 'Place COD Order' : 'Pay & Place Order'} · {fmt(finalPayable)} <ArrowRight size={13} /></>
+                  }
+                </button>
+                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
+                  Secure checkout · 14-day returns
+                </p>
+              </>
             )}
-            <button onClick={onPlaceOrder} disabled={isProcessing || (pincodeInfo && pincodeInfo.serviceable === false)}
-              className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || (pincodeInfo && pincodeInfo.serviceable === false) ? 'opacity-60 cursor-not-allowed' : ''}`}>
-              {isProcessing
-                ? <><Loader2 size={14} className="animate-spin" /> Processing…</>
-                : <>{isCod ? 'Place COD Order' : 'Pay & Place Order'} · {fmt(finalPayable)} <ArrowRight size={13} /></>
-              }
-            </button>
-            <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
-              Secure checkout · 14-day returns
-            </p>
           </div>
         )}
       </aside>
