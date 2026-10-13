@@ -1826,7 +1826,8 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-ticker { background: var(--ink); color: #f4f1ea; overflow: hidden; }
 .sx-ticker-track { display: flex; width: max-content; animation: sxTicker 42s linear infinite; }
 .sx-ticker-run { display: flex; align-items: center; flex-shrink: 0; }
-.sx-ticker-run span { font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 500; padding: 8px 0; }
+.sx-ticker-run span { display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 500; padding: 8px 0; }
+.sx-ticker-run span svg { color: var(--accent); flex-shrink: 0; }
 .sx-ticker-run i { color: var(--accent); font-style: normal; margin: 0 22px; font-size: 9px; }
 @keyframes sxTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .sx-ticker-track { animation: none; } }
