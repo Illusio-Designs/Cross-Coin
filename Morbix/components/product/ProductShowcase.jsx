@@ -145,10 +145,9 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     ? [{ pairs: 1, price: Number(price), label: '1 Pair', badge: null, base: true },
        ...rawPacks.map((t) => ({ pairs: t.pairs, price: Number(t.price), label: t.label || `${t.pairs} Pairs`, badge: t.badge }))]
     : [];
-  const [pack, setPack] = useState(() => {
-    const i = rawPacks.findIndex((t) => /popular/i.test(t.badge || ''));
-    return i >= 0 ? i + 1 : 0; // +1 for the prepended 1-pair option
-  });
+  // Default to the 1-pair option (index 0) so the page opens showing the
+  // product's actual single price, not a pre-selected multi-pack.
+  const [pack, setPack] = useState(0);
   const activePack = hasPacks ? packOptions[Math.min(pack, packOptions.length - 1)] : null;
   const packPairs = activePack ? activePack.pairs : 1;
   const packTotal = activePack ? activePack.price : Number(price);
