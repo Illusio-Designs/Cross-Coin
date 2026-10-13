@@ -7,6 +7,7 @@ import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getStoreReviews, getProductFaqs, getBundleTiers } from '@/lib/api';
+import { getPublicCoupons } from '@/lib/api/orders';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -24,8 +25,11 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData, faqs, bundleTiers] = await Promise.all([getAllProducts(), getStoreReviews(300), getProductFaqs(product.id), getBundleTiers(product.id)]);
+  const [all, reviewsData, faqs, bundleTiers, coupons] = await Promise.all([getAllProducts(), getStoreReviews(300), getProductFaqs(product.id), getBundleTiers(product.id), getPublicCoupons().catch(() => [])]);
   const reviews = reviewsData.reviews;
+  // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
+  // hard-coded discount. Shoppers apply the code at checkout to get the offer.
+  const prepaidCoupon = (Array.isArray(coupons) ? coupons : []).find((c) => c.paymentModeRestriction === 'prepaid') || null;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
   const related = all
@@ -42,7 +46,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} />
+      <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
       {/* ── "What Soxbae Socks Are Made For" benefits band (before the details) ── */}
       <ProductBenefits />

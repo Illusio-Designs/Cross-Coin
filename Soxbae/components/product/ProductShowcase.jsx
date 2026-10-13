@@ -23,7 +23,7 @@ function ik(src, w) {
 // full-width "details" band pairing the story with a specifications card.
 // Gallery + colour + size share one selection so price, SKU and stock always
 // reflect the exact variation, and Add to cart sends that variation.
-export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
+export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
   const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
@@ -484,6 +484,11 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
           {inStock && (
             <div className="pdx-buy-wrap">
+              {prepaidCoupon?.code && (
+                <div className="pdx-prepaid-ribbon">
+                  <Icon name="Tag" size={13} /> Use code <strong>{prepaidCoupon.code}</strong> for extra off on prepaid orders
+                </div>
+              )}
               <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
                 <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
               </button>
