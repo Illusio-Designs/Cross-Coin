@@ -203,6 +203,55 @@ function initializeCronJobs() {
     }
   }));
 
+  // ── Abandoned Checkout Recovery (captured carts) — every hour at :25 ──────
+  // Covers EVERY drop-off that reached checkout with a phone — guest OR
+  // logged-in, COD OR prepaid — via the abandoned_carts capture table. Sends one
+  // recovery WhatsApp per row once it's older than ABANDONED_CART_DELAY_MIN and
+  // still 'pending' (not converted). Opt-out is honoured per brand.
+  cron.schedule('25 * * * *', queued('cron:abandoned-checkout', async () => {
+    console.log('\n⏰ [CRON] Abandoned checkout recovery started at:', new Date().toISOString());
+    try {
+      const { AbandonedCart } = require('../model/abandonedCartModel.js');
+      const { Op } = require('sequelize');
+      const whatsappService = require('../services/whatsappService.js');
+      const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+
+      const delayMin = parseInt(process.env.ABANDONED_CART_DELAY_MIN || '60', 10);
+      const cutoff = new Date(Date.now() - delayMin * 60 * 1000);
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const rows = await AbandonedCart.findAll({
+        where: { status: 'pending', waSent: false, updatedAt: { [Op.between]: [dayAgo, cutoff] } },
+        limit: 200,
+      });
+
+      let sent = 0;
+      for (const row of rows) {
+        const phone = row.phone; // decrypted via model getter
+        const last10 = String(phone || '').replace(/\D/g, '').slice(-10);
+        if (last10.length !== 10) continue;
+        const brandId = row.brandId || 1;
+
+        // Respect WhatsApp marketing opt-out (scoped to the cart's brand).
+        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${last10}` }, brand_id: brandId } });
+        if (conv?.opted_out) { await row.update({ status: 'messaged', waSent: true }); continue; }
+
+        try {
+          await whatsappService.sendAbandonedCart(phone, {
+            customerName: row.customerName,
+            productName: row.cartSummary || 'your items',
+            couponCode: 'SAVE10',
+          }, brandId);
+          await row.update({ status: 'messaged', waSent: true });
+          sent++;
+        } catch (e) { console.warn('Abandoned checkout WA failed:', e.message); }
+      }
+      console.log(`✅ [CRON] Abandoned checkout recovery: ${sent} messages sent`);
+    } catch (error) {
+      console.error('❌ [CRON] Abandoned checkout recovery error:', error.message);
+    }
+  }));
+
   // ── Review Request — daily at 10 AM ──────────────────────────────────────
   // Finds orders delivered 3 days ago with no review yet
   cron.schedule('0 10 * * *', queued('cron:review-request', async () => {

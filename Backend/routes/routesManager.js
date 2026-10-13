@@ -63,6 +63,7 @@ router.use('/analytics',          require('../integration/dashboardAnalytics.js'
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
 router.use('/', optionalBrand, require('./bundleRoutes.js'));
+router.use('/', optionalBrand, require('./abandonedCartRoutes.js'));
 
 // ── SEO admin (health summary, bulk product SEO editor) ───────────────────
 router.use('/', require('./seoAdminRoutes.js'));

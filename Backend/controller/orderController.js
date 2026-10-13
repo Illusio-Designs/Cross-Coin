@@ -822,6 +822,9 @@
                 { cod_address_confirmed: false },
                 { where: { id: createdOrder.id } }
               );
+              // COD is a committed order → stop any abandoned-cart recovery for
+              // this phone+brand (prepaid is marked recovered only on payment success).
+              try { await require('./abandonedCartController.js').markRecovered(createdOrder.brand_id || 1, addr.phone); } catch (_) {}
               logger.debug(`createOrder: COD address confirmation WhatsApp sent for ${createdOrder.order_number}`);
             } else {
               // Prepaid: do NOT send a confirmation here. At creation the order is

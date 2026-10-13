@@ -71,6 +71,10 @@ orderEmitter.on('order.confirmed', async (order) => {
         total: parseFloat(order.final_amount).toFixed(2),
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA confirm failed:', e.message));
     }
+    // Order is confirmed/paid → stop any abandoned-cart recovery for this phone.
+    if (addr?.phone) {
+      try { await require('../controller/abandonedCartController.js').markRecovered(order.brand_id || 1, addr.phone); } catch (_) {}
+    }
 
     // Manual booking mode (default): don't auto-book or enqueue retries — the
     // admin books each order from the dashboard. Set SHIPPING_AUTO_SYNC=on to

@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v9';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v10';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1535,6 +1535,34 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('free-ship-all migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: abandoned_carts table (WhatsApp recovery) ──
+        // Captures a shopper's checkout details (phone encrypted at rest) so the
+        // hourly recovery cron can message guests + logged-in users who dropped
+        // off (COD or prepaid). Production doesn't run sync → create it here.
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS abandoned_carts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                brand_id INT NOT NULL DEFAULT 1,
+                user_id INT NULL,
+                phone VARCHAR(500) NULL,
+                phone_hash VARCHAR(64) NULL,
+                customer_name VARCHAR(120) NULL,
+                cart_summary VARCHAR(255) NULL,
+                item_count INT NOT NULL DEFAULT 0,
+                cart_value DECIMAL(10,2) NOT NULL DEFAULT 0,
+                status ENUM('pending','recovered','messaged') NOT NULL DEFAULT 'pending',
+                wa_sent TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ac_hash_brand (phone_hash, brand_id),
+                INDEX idx_ac_status_updated (status, updated_at),
+                INDEX idx_ac_brand (brand_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+            logger.info('✓ abandoned_carts table ensured');
+        } catch (err) {
+            logger.error('abandoned_carts table migration failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future
