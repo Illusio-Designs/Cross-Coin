@@ -49,8 +49,10 @@ function normalizeServerItem(item) {
   const images = Array.isArray(item.images) ? item.images : [];
   const image = cleanUrl(item.image || images[0]?.image_url || images[0]?.url || '');
   const size = item.size || (Array.isArray(item.size) ? item.size[0] : null) || 'M';
+  const packId = item.packId ?? item.pack_id ?? null;
+  const packSize = item.packSize ?? item.pack_size ?? null;
   return {
-    key: `${productId}-${variationId ?? size}`,
+    key: `${productId}-${variationId ?? size}${packId ? `-${packId}` : ''}`,
     id: productId,
     productId,
     variationId,
@@ -63,6 +65,8 @@ function normalizeServerItem(item) {
     color: attrColor(item),
     size,
     qty: item.quantity || 1,
+    packId,
+    packSize,
   };
 }
 
@@ -179,8 +183,8 @@ export function CartProvider({ children }) {
 
   // Build the local cart-item shape (full details, so the drawer shows colour,
   // image and price instantly — no waiting on the network).
-  const toLocalItem = (product, size, qty, variationId) => ({
-    key: `${product.id}-${variationId ?? size}`,
+  const toLocalItem = (product, size, qty, variationId, extra = {}) => ({
+    key: `${product.id}-${variationId ?? size}${extra.packId ? `-${extra.packId}` : ''}`,
     id: product.id,
     productId: product.id,
     variationId: variationId || null,
@@ -192,6 +196,8 @@ export function CartProvider({ children }) {
     color: product.color || null,
     size,
     qty,
+    packId: extra.packId || null,
+    packSize: extra.packSize || null,
   });
 
   const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
@@ -230,6 +236,60 @@ export function CartProvider({ children }) {
       } catch {
         /* optimistic item stays so the UI still reflects intent */
       }
+    }
+  }, []);
+
+  // Add a multi-pair pack where each pair can be a different colour. Creates one
+  // cart line per distinct colour (merged by quantity), all sharing a packId so
+  // the backend prices the whole group at the pack rate (server-authoritative).
+  const addPack = useCallback(async (product, size = 'M', perPair = [], packUnit = 0, packSize = 0) => {
+    if (!product?.id || !perPair.length) return;
+    const packId = `pk_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+    fbTrack('AddToCart', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(packUnit) * perPair.length,
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: perPair.length }],
+    });
+
+    // Merge pairs of the same colour into one line with a quantity.
+    const byVar = new Map();
+    for (const p of perPair) {
+      const vid = p.variationId ?? null;
+      const k = String(vid ?? `${p.color || ''}-${size}`);
+      const cur = byVar.get(k) || { variationId: vid, color: p.color || null, image: p.image || null, qty: 0 };
+      cur.qty += 1;
+      byVar.set(k, cur);
+    }
+    const lines = [...byVar.values()];
+
+    setItems((prev) => {
+      const next = [...prev];
+      for (const ln of lines) {
+        next.push(toLocalItem(
+          { ...product, price: Number(packUnit), image: ln.image || product.image || null, color: ln.color || null },
+          size, ln.qty, ln.variationId || null, { packId, packSize },
+        ));
+      }
+      return next;
+    });
+    setOpen(true);
+
+    if (isAuthed()) {
+      try {
+        for (const ln of lines) {
+          await apiAddToCart({
+            productId: Number(product.id),
+            variationId: ln.variationId ? Number(ln.variationId) : null,
+            quantity: ln.qty, size: size || null,
+            pack_id: packId, pack_size: packSize,
+          });
+        }
+        await refreshServerCart();
+      } catch { /* optimistic items stay */ }
     }
   }, []);
 
@@ -276,7 +336,7 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider
-      value={{ items, add, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
+      value={{ items, add, addPack, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
     >
       {children}
     </CartContext.Provider>

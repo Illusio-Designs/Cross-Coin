@@ -520,7 +520,7 @@ export default function CartDrawer() {
 
   const buildItems = () => items
     .filter((i) => (i.productId ?? i.id) != null && !Number.isNaN(Number(i.productId ?? i.id)))
-    .map((i) => ({ product_id: Number(i.productId ?? i.id), variation_id: i.variationId ? Number(i.variationId) : null, quantity: Number(i.qty) || 1 }));
+    .map((i) => ({ product_id: Number(i.productId ?? i.id), variation_id: i.variationId ? Number(i.variationId) : null, quantity: Number(i.qty) || 1, pack_id: i.packId || i.pack_id || null }));
 
   const guestBlocks = () => {
     const parts = (guest.fullName || '').trim().split(/\s+/);

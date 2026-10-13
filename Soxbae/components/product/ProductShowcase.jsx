@@ -24,7 +24,7 @@ function ik(src, w) {
 // Gallery + colour + size share one selection so price, SKU and stock always
 // reflect the exact variation, and Add to cart sends that variation.
 export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
-  const { add, open: cartOpen } = useCart();
+  const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
 
@@ -39,6 +39,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);
   const [pack, setPack] = useState(0); // selected pack option (0 = 1 pair)
+  const [packColors, setPackColors] = useState([]); // per-pair colour indexes for a multi-pair pack
   const [added, setAdded] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const [showSticky, setShowSticky] = useState(false);
@@ -139,6 +140,28 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const packUnit = packPairs > 0 ? packTotal / packPairs : Number(price);
   const packMrp = Number(price) * packPairs;
   const packHasDiscount = !!activePack && !activePack.base && packTotal < packMrp;
+  const packOff = packHasDiscount ? Math.round((1 - packTotal / packMrp) * 100) : 0;
+
+  // Keep the per-pair colour list sized to the chosen pack; new slots default to
+  // the currently-selected colour, existing picks are preserved.
+  useEffect(() => {
+    if (!hasPacks || packPairs <= 1) return;
+    setPackColors((prev) => {
+      const next = prev.slice(0, packPairs);
+      while (next.length < packPairs) next.push(color);
+      return next;
+    });
+  }, [packPairs, hasPacks, color]);
+
+  // Resolve a colour index → its variation (matching the current size), image and name.
+  const resolvePairVariant = (colorIdx) => {
+    const name = colorNames[colorIdx] || null;
+    const v = variants.find((vv) => vv.color === name && vv.size === effectiveSize)
+      || variants.find((vv) => vv.color === name) || null;
+    const imgs = product.colorImages?.[colorIdx];
+    const image = (Array.isArray(imgs) && imgs[0]) || product.image || null;
+    return { variationId: v?.id ?? null, color: name, image };
+  };
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   const perColor = product.colorImages?.[color];
@@ -202,6 +225,16 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
   const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
+    // Multi-pair pack with per-pair colours → one line per colour, pack-priced.
+    if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
+      const chosen = (packColors.length ? packColors : Array.from({ length: packPairs }, () => color)).slice(0, packPairs);
+      const perPair = chosen.map((ci) => resolvePairVariant(ci));
+      addPack(
+        { ...product, oldPrice: packHasDiscount ? Number(price) : (oldPrice || null) },
+        effectiveSize || 'M', perPair, packUnit, packPairs,
+      );
+      return;
+    }
     const useQty = hasPacks ? packPairs : qty;
     const useUnit = hasPacks ? packUnit : price;
     const useOld = hasPacks ? (packHasDiscount ? Number(price) : (oldPrice || null)) : (oldPrice || null);
@@ -319,9 +352,13 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           </div>
 
           <div className="pdx-price">
-            <span className="pdx-price-now">₹{Number(price).toFixed(0)}</span>
-            {oldPrice ? <span className="pdx-price-old">₹{Number(oldPrice).toFixed(0)}</span> : null}
-            {off > 0 && <span className="pdx-price-off">−{off}% OFF</span>}
+            <span className="pdx-price-now">₹{Number(hasPacks ? packTotal : price).toFixed(0)}</span>
+            {hasPacks
+              ? (packHasDiscount ? <span className="pdx-price-old">₹{Number(packMrp).toFixed(0)}</span> : null)
+              : (oldPrice ? <span className="pdx-price-old">₹{Number(oldPrice).toFixed(0)}</span> : null)}
+            {hasPacks
+              ? (packHasDiscount && <span className="pdx-price-off">−{packOff}% OFF</span>)
+              : (off > 0 && <span className="pdx-price-off">−{off}% OFF</span>)}
           </div>
           <p className="pdx-price-tax">MRP incl. of all taxes</p>
 
@@ -396,6 +433,34 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                         {disc ? <span className="pdx-pack-mrp">₹{mrp.toFixed(0)}</span> : null}
                       </span>
                     </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {hasPacks && packPairs > 1 && product.colors?.length > 0 && (
+            <div className="pdx-opt pdx-packcolors">
+              <span className="pdx-opt-label">Choose a colour for each pair</span>
+              <div className="pdx-packcolor-list">
+                {Array.from({ length: packPairs }).map((_, idx) => {
+                  const sel = packColors[idx] ?? color;
+                  return (
+                    <div className="pdx-packcolor-row" key={idx}>
+                      <span className="pdx-packcolor-tag">Pair {idx + 1}{colorNames[sel] ? <em>{colorNames[sel]}</em> : null}</span>
+                      <div className="pdx-packcolor-swatches">
+                        {product.colors.map((c, ci) => (
+                          <button key={ci} type="button" className={`pdx-packcolor-dot${ci === sel ? ' active' : ''}`}
+                            style={{ background: c }} title={colorNames[ci] || ''} aria-label={colorNames[ci] || `Colour ${ci + 1}`}
+                            onClick={() => setPackColors((prev) => {
+                              const n = prev.slice(0, packPairs);
+                              while (n.length < packPairs) n.push(color);
+                              n[idx] = ci;
+                              return n;
+                            })} />
+                        ))}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

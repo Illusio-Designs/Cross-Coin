@@ -1416,6 +1416,16 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .pdx-pack-now { font-weight: 800; font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pdx-pack-mrp { font-size: 12.5px; color: var(--ink-soft); text-decoration: line-through; font-variant-numeric: tabular-nums; }
 
+/* Per-pair colour selection for a multi-pair pack (mixed-colour bundles) */
+.pdx-packcolors { margin-bottom: 22px; }
+.pdx-packcolor-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.pdx-packcolor-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 11px 14px; }
+.pdx-packcolor-tag { font-size: 12.5px; font-weight: 700; color: var(--ink); display: inline-flex; align-items: baseline; gap: 7px; }
+.pdx-packcolor-tag em { font-style: normal; font-weight: 500; color: var(--ink-soft); }
+.pdx-packcolor-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.pdx-packcolor-dot { width: 26px; height: 26px; border-radius: 999px; border: 2px solid var(--card); outline: 1px solid var(--line); box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); padding: 0; cursor: pointer; }
+.pdx-packcolor-dot.active { outline: 2px solid var(--accent); }
+
 .pdx-actions { display: flex; gap: 12px; align-items: stretch; margin-top: 6px; }
 .pdx-qty { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); padding: 0 6px; flex-shrink: 0; }
 .pdx-qty button { width: 38px; height: 52px; border: 0; background: none; font-size: 20px; color: var(--ink); cursor: pointer; }
