@@ -203,12 +203,12 @@ function initializeCronJobs() {
     }
   }));
 
-  // ── Abandoned Checkout Recovery (captured carts) — every hour at :25 ──────
+  // ── Abandoned Checkout Recovery (captured carts) — every 5 minutes ───────
   // Covers EVERY drop-off that reached checkout with a phone — guest OR
   // logged-in, COD OR prepaid — via the abandoned_carts capture table. Sends one
   // recovery WhatsApp per row once it's older than ABANDONED_CART_DELAY_MIN and
   // still 'pending' (not converted). Opt-out is honoured per brand.
-  cron.schedule('25 * * * *', queued('cron:abandoned-checkout', async () => {
+  cron.schedule('*/5 * * * *', queued('cron:abandoned-checkout', async () => {
     console.log('\n⏰ [CRON] Abandoned checkout recovery started at:', new Date().toISOString());
     try {
       const { AbandonedCart } = require('../model/abandonedCartModel.js');
@@ -216,7 +216,7 @@ function initializeCronJobs() {
       const whatsappService = require('../services/whatsappService.js');
       const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
 
-      const delayMin = parseInt(process.env.ABANDONED_CART_DELAY_MIN || '60', 10);
+      const delayMin = parseInt(process.env.ABANDONED_CART_DELAY_MIN || '5', 10);
       const cutoff = new Date(Date.now() - delayMin * 60 * 1000);
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
