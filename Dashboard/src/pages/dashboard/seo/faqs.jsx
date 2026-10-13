@@ -263,12 +263,12 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
   const showId = form.attached_to_type === 'product' || form.attached_to_type === 'category';
   const showSlug = form.attached_to_type === 'page';
   return (
-    <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)' }}>
+    <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)', maxWidth: 880 }}>
       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 12 }}>
         {editing ? 'Edit FAQ' : 'New FAQ'}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 10 }}>
-        <Field label="Scope">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'flex-end' }}>
+        <Field label="Scope" style={{ flex: '1 1 220px' }}>
           <select
             value={form.attached_to_type}
             onChange={e => setForm({ ...form, attached_to_type: e.target.value, attached_to_id: '', attached_to_slug: '' })}
@@ -278,7 +278,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
           </select>
         </Field>
         {showId && (
-          <Field label={`${form.attached_to_type === 'product' ? 'Product' : 'Category'} ID`}>
+          <Field label={`${form.attached_to_type === 'product' ? 'Product' : 'Category'} ID`} style={{ flex: '1 1 180px' }}>
             <input
               type="number"
               value={form.attached_to_id}
@@ -290,7 +290,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
           </Field>
         )}
         {showSlug && (
-          <Field label="Page slug">
+          <Field label="Page slug" style={{ flex: '1 1 180px' }}>
             <input
               type="text"
               value={form.attached_to_slug}
@@ -301,8 +301,7 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
             />
           </Field>
         )}
-        {!showId && !showSlug && <div />}
-        <Field label="Order">
+        <Field label="Order" style={{ flex: '0 0 120px' }}>
           <input
             type="number"
             value={form.display_order}
@@ -360,8 +359,8 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
   );
 }
 
-const Field = ({ label, children }) => (
-  <label style={{ display: 'block' }}>
+const Field = ({ label, children, style }) => (
+  <label style={{ display: 'block', ...style }}>
     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ds-color-text-muted)', marginBottom: 4 }}>{label}</div>
     {children}
   </label>
