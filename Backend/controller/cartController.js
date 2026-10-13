@@ -134,11 +134,11 @@ module.exports.getCart = async (req, res) => {
         // the drawer matches what checkout charges. Inert until the brand has
         // configured tiers; brand comes from each line's product.
         try {
-            const { bundleDiscountFraction } = require('./bundleController.js');
+            const { bundlePerUnit } = require('./bundleController.js');
             let bundleSubtotal = 0;
             for (const fc of formattedCart) {
-                const frac = await bundleDiscountFraction(fc.brand_id || 1, fc.quantity);
-                if (frac > 0) fc.price = Math.round(Number(fc.price) * (1 - frac));
+                const bu = await bundlePerUnit(fc.brand_id || 1, fc.productId, fc.quantity);
+                if (bu != null) fc.price = bu;
                 bundleSubtotal += (Number(fc.price) || 0) * (fc.quantity || 1);
             }
             subtotal = bundleSubtotal;

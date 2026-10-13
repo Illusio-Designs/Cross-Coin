@@ -481,7 +481,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v8';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v9';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -515,6 +515,22 @@ const startServer = async () => {
             logger.info('✓ bundle_tiers table ensured');
         } catch (err) {
             logger.error('bundle_tiers table migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: bundle_tiers per-product columns ──────────
+        // Move pack pricing to per-product exact prices: product_id + price.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bundle_tiers'
+                   AND COLUMN_NAME IN ('product_id','price')`
+            );
+            const have = new Set(cols.map((c) => c.COLUMN_NAME));
+            if (!have.has('product_id')) await sequelize.query(`ALTER TABLE bundle_tiers ADD COLUMN product_id INT NULL AFTER brand_id`);
+            if (!have.has('price')) await sequelize.query(`ALTER TABLE bundle_tiers ADD COLUMN price DECIMAL(10,2) NULL AFTER pairs`);
+            logger.info('✓ bundle_tiers per-product columns ensured');
+        } catch (err) {
+            logger.error('bundle_tiers per-product columns migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: users.roles (multi-role support) ─────────

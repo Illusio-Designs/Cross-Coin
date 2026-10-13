@@ -398,7 +398,7 @@
               .json({ message: `Invalid variation for product ${product_id}` });
           }
           price = variation.price;
-          { const _bf = await require('./bundleController.js').bundleDiscountFraction(req.brand?.id || 1, quantity); if (_bf > 0) price = Math.round(Number(price) * (1 - _bf)); }
+          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, quantity); if (_bu != null) price = _bu; }
           stockAvailable = variation.stock;
           logger.debug(
             "createOrder: Variation validated, price:",
@@ -414,7 +414,7 @@
             variation = variations[0];
             variation_id = variation.id;
             price = variation.price;
-            { const _bf = await require('./bundleController.js').bundleDiscountFraction(req.brand?.id || 1, quantity); if (_bf > 0) price = Math.round(Number(price) * (1 - _bf)); }
+            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, quantity); if (_bu != null) price = _bu; }
             stockAvailable = variation.stock;
           } else {
             // No variations exist

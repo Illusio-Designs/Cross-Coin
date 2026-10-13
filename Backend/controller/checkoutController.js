@@ -314,7 +314,7 @@ exports.initiateCheckout = async (req, res) => {
       }
 
       let price = parseFloat(variation.price);
-      { const _bf = await require('./bundleController.js').bundleDiscountFraction(brandId, quantity); if (_bf > 0) price = Math.round(price * (1 - _bf)); }
+      { const _bu = await require('./bundleController.js').bundlePerUnit(brandId, product_id, quantity); if (_bu != null) price = _bu; }
       const subtotal = price * quantity;
       totalAmount += subtotal;
       validatedItems.push({ product_id, variation_id: variation.id, quantity, price, discount: 0, subtotal });
