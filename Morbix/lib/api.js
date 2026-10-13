@@ -204,6 +204,17 @@ export async function getFaqs(type = 'global', id, revalidate = 300) {
   } catch { return []; }
 }
 
+// Admin-configured pack/bundle tiers for this brand. Returns [] unless the brand
+// has set tiers (the API's built-in defaults are a setup preview, not live
+// packs), so the PDP shows the selector only once packs are configured.
+export async function getBundleTiers(revalidate = 300) {
+  try {
+    const data = await brandFetch('/api/public/bundle-tiers', revalidate ?? 300);
+    if (!data || data.defaulted) return [];
+    return Array.isArray(data.tiers) ? data.tiers : [];
+  } catch { return []; }
+}
+
 // One product's reviews plus its exact total.
 export async function getProductReviewsWithTotal(productId) {
   if (!productId) return { reviews: [], total: 0 };

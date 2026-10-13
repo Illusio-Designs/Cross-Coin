@@ -5,7 +5,7 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -23,10 +23,11 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, storeReviews, faqs] = await Promise.all([
+  const [all, storeReviews, faqs, bundleTiers] = await Promise.all([
     getAllProducts(),
     getStoreReviews(300),
     getFaqs('global'),
+    getBundleTiers(),
   ]);
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
@@ -44,7 +45,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color} />
+      <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} />
 
       {/* ── Ideal for, care and manufacturing ── */}
       <div className="pdd-wrap">

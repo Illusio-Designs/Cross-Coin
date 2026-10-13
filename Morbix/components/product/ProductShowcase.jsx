@@ -22,7 +22,7 @@ function ik(src, w) {
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
 // and Add to cart sends that precise variation to the backend.
-export default function ProductShowcase({ product, initialColor }) {
+export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
   const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
@@ -131,6 +131,23 @@ export default function ProductShowcase({ product, initialColor }) {
   // Discount %, same calc the product card uses for its "-off%" badge.
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
+  // Pack / bundle pricing (admin-configured per brand). When tiers exist the
+  // selector replaces the plain qty stepper: the chosen pack sets the quantity
+  // (pairs) and a discounted per-pair price. The backend re-prices the pack
+  // server-side at checkout from the same tiers, so this only mirrors it.
+  const packs = Array.isArray(bundleTiers) ? bundleTiers : [];
+  const hasPacks = packs.length > 0;
+  const [pack, setPack] = useState(() => {
+    const i = packs.findIndex((t) => /popular/i.test(t.badge || ''));
+    return i >= 0 ? i : 0;
+  });
+  const activeTier = hasPacks ? packs[Math.min(pack, packs.length - 1)] : null;
+  const packDisc = activeTier ? (Number(activeTier.discount_percent) || 0) : 0;
+  const packUnit = packDisc > 0 ? Math.round(Number(price) * (1 - packDisc / 100)) : Number(price);
+  const packPairs = activeTier ? activeTier.pairs : 1;
+  const packTotal = packUnit * packPairs;
+  const packMrp = Number(price) * packPairs;
+
   // Images for the selected colour (fall back to all product images).
   const perColor = product.colorImages?.[color];
   const gallery = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
@@ -198,10 +215,13 @@ export default function ProductShowcase({ product, initialColor }) {
   // colour so the cart line shows it. Shared by Add to cart and Buy now.
   const addToCart = () => {
     const variationMainImage = shown[0] || product.image || null;
+    const useQty = hasPacks ? packPairs : qty;
+    const useUnit = hasPacks ? packUnit : price;
+    const useOld = hasPacks ? (packDisc > 0 ? Number(price) : (oldPrice || null)) : (oldPrice || null);
     add(
-      { ...product, price, oldPrice: oldPrice || null, image: variationMainImage, color: selectedColorName || null, sku },
+      { ...product, price: useUnit, oldPrice: useOld, image: variationMainImage, color: selectedColorName || null, sku },
       effectiveSize || 'M',
-      qty,
+      useQty,
       activeVariant?.id ?? null
     );
   };
@@ -320,9 +340,13 @@ export default function ProductShowcase({ product, initialColor }) {
           {sku && <span className="muted">SKU: {sku}</span>}
         </div>
         <div className="pdp-price">
-          ₹{Number(price).toFixed(0)}
-          {oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null}
-          {off > 0 && <span className="pdp-price-off">−{off}% OFF</span>}
+          ₹{Number(hasPacks ? packTotal : price).toFixed(0)}
+          {hasPacks
+            ? (packDisc > 0 ? <span className="old">₹{Number(packMrp).toFixed(0)}</span> : null)
+            : (oldPrice ? <span className="old">₹{Number(oldPrice).toFixed(0)}</span> : null)}
+          {hasPacks
+            ? (packDisc > 0 && <span className="pdp-price-off">−{packDisc}% OFF</span>)
+            : (off > 0 && <span className="pdp-price-off">−{off}% OFF</span>)}
         </div>
         <p className="pdp-price-tax">MRP incl. of all taxes</p>
 
@@ -400,12 +424,43 @@ export default function ProductShowcase({ product, initialColor }) {
             </div>
           )}
 
-          <div className="buy-row" ref={actionsRef}>
-            <div className="qty">
-              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
-              <span>{qty}</span>
-              <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+          {hasPacks && (
+            <div className="opt pdp-packs">
+              <span className="opt-label">Choose your pack</span>
+              <div className="pack-list">
+                {packs.map((t, i) => {
+                  const disc = Number(t.discount_percent) || 0;
+                  const unit = disc > 0 ? Math.round(Number(price) * (1 - disc / 100)) : Number(price);
+                  const totalP = unit * t.pairs;
+                  return (
+                    <button type="button" key={t.id ?? i}
+                      className={`pack-card${i === pack ? ' active' : ''}`}
+                      onClick={() => setPack(i)} aria-pressed={i === pack}>
+                      <span className="pack-radio" aria-hidden="true" />
+                      <span className="pack-body">
+                        <span className="pack-name">{t.label || `${t.pairs} Pair${t.pairs > 1 ? 's' : ''}`}
+                          {t.badge ? <span className="pack-badge">{t.badge}</span> : null}</span>
+                        <span className="pack-per">₹{(totalP / t.pairs).toFixed(2)} / pair</span>
+                      </span>
+                      <span className="pack-price">
+                        <span className="pack-now">₹{totalP.toFixed(0)}</span>
+                        {disc > 0 ? <span className="pack-mrp">₹{(Number(price) * t.pairs).toFixed(0)}</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          <div className="buy-row" ref={actionsRef}>
+            {!hasPacks && (
+              <div className="qty">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              </div>
+            )}
             <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={onAdd} disabled={!inStock}>
               {!inStock ? 'Out of stock'
                 : added ? <>Added to cart <Icon name="ShieldCheck" size={16} /></>
