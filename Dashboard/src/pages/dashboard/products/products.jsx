@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Button, Input, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Input, Modal, Table, Pagination, Select, Badge } from "../../../components/ui";
+import { PageHeader, Panel, FilterBar } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { TableSkeleton } from "../../../components/common/SkeletonLoader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -284,9 +285,9 @@ const ProductsPage = () => {
       accessor: row => {
         const st = row.status || 'unknown';
         return (
-          <span className={`obz-pill ${row.status === 'active' ? 'on' : 'off'}`}>
+          <Badge variant={row.status === 'active' ? 'success' : 'default'}>
             {st.charAt(0).toUpperCase() + st.slice(1)}
-          </span>
+          </Badge>
         );
       }
     },
@@ -1329,36 +1330,37 @@ const ProductsPage = () => {
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
-      <div className="obz-prod-head">
-        <div className="obz-prod-headL">
-          <h1 className="obz-prod-title">Products</h1>
-          <p className="obz-prod-sub">{totalProducts} products · manage your catalog</p>
-        </div>
-        <div className="obz-prod-headR">
-          <div className="obz-search">
-            <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
-            <input type="text" placeholder="Search products…"
-              onChange={handleSearchChange} defaultValue={filterValue} />
-          </div>
-          <div style={{ minWidth: 170 }}>
-            <Select
-              options={[
-                { value: '', label: 'All Brands' },
-                ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
-              ]}
-              value={selectedBrandSlug}
-              onChange={setSelectedBrandSlug}
-              placeholder="All Brands"
-            />
-          </div>
-          <button className="obz-add-btn" onClick={handleAddNew}>
+      <PageHeader
+        title="Products"
+        subtitle={`${totalProducts} products · manage your catalog`}
+        actions={
+          <button className="ds-btn ds-btn--primary" onClick={handleAddNew}>
             <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />
             Add Product
           </button>
+        }
+      />
+
+      <FilterBar hideSearch>
+        <div className="obz-search">
+          <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
+          <input type="text" placeholder="Search products…"
+            onChange={handleSearchChange} defaultValue={filterValue} />
         </div>
-      </div>
+        <div style={{ minWidth: 170 }}>
+          <Select
+            options={[
+              { value: '', label: 'All Brands' },
+              ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
+            ]}
+            value={selectedBrandSlug}
+            onChange={setSelectedBrandSlug}
+            placeholder="All Brands"
+          />
+        </div>
+      </FilterBar>
       {/* Table Section */}
-      <div className="sl-table-wrap">
+      <Panel flush>
         {loading ? (
           <div style={{ padding: '20px' }}>
             <TableSkeleton rows={itemsPerPage} columns={6} />
@@ -1394,7 +1396,7 @@ const ProductsPage = () => {
             )}
           </>
         )}
-      </div>
+      </Panel>
       {/* Modal */}
       <Modal
         isOpen={isModalOpen}

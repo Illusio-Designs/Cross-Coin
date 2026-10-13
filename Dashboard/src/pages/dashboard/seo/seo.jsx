@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button, Input, Modal, Table, Pagination } from "../../../components/ui";
+import { Button, Input, Modal, Pagination } from "../../../components/ui";
+import { PageHeader, Panel, FilterBar, ResponsiveTable, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { seoService, userService } from "../../../services";
@@ -124,15 +125,15 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
 
   // Columns definition
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Page Name", accessor: "page_name" },
-    { header: "Meta Title", accessor: "meta_title" },
-    { header: "Meta Description", accessor: "meta_description" },
-    { header: "Meta Keywords", accessor: "meta_keywords" },
+    { key: "serial_number", label: "Sr. No" },
+    { key: "page_name", label: "Page Name" },
+    { key: "meta_title", label: "Meta Title" },
+    { key: "meta_description", label: "Meta Description" },
+    { key: "meta_keywords", label: "Meta Keywords" },
     {
-      header: "Actions",
-      accessor: "actions",
-      cell: ({ page_name }) => (
+      key: "actions",
+      label: "Actions",
+      render: ({ page_name }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(page_name)}>
             <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />
@@ -268,58 +269,50 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
     <>
       <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
       <div className="dashboard-page">
-        <div className="sl-page-header">
-          <div className="sl-header-left">
-            <div className="sl-header-icon">
-              <HugeiconsIcon icon={Search01Icon} size={20} strokeWidth={2} />
-            </div>
-            <div>
-              <h1 className="sl-page-title">SEO Management</h1>
-              <p className="sl-page-sub">Manage meta titles, descriptions and structured data</p>
-            </div>
-          </div>
-          <div className="sl-header-right">
-            <div className="sl-search-wrap">
-              <span className="sl-search-icon">
-                <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
-              </span>
-              <input type="text" className="sl-search-input" placeholder="Search SEO entries..."
-                onChange={handleSearchChange} defaultValue={filterValue} />
-            </div>
-            <button className="sl-add-btn" onClick={handleAddNew}>
+        <PageHeader
+          title="SEO Management"
+          subtitle="Manage meta titles, descriptions and structured data"
+          actions={
+            <button className="ds-btn ds-btn--primary" onClick={handleAddNew}>
               <span className="sl-add-btn-icon">
                 <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />
               </span>
               Add SEO Entry
             </button>
+          }
+        />
+
+        <FilterBar hideSearch>
+          <div className="sl-search-wrap">
+            <span className="sl-search-icon">
+              <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
+            </span>
+            <input type="text" className="sl-search-input" placeholder="Search SEO entries..."
+              onChange={handleSearchChange} defaultValue={filterValue} />
           </div>
-        </div>
-        
+        </FilterBar>
+
         {/* Table Section */}
-        <div className="sl-table-wrap">
+        <Panel flush>
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="sl-error">{error}</div>
+          ) : filteredData.length === 0 ? (
+            <EmptyState
+              title={filterValue ? "No results found for your search" : "No SEO entries found"}
+            />
           ) : (
             <>
-              {filteredData.length === 0 ? (
-                <div className="sl-empty">
-                  <p>{filterValue ? "No results found for your search" : "No SEO entries found"}</p>
+              <ResponsiveTable columns={columns} data={currentItemsWithSN} rowKey="page_name" />
+              {filteredData.length > itemsPerPage && (
+                <div className="sl-pagination">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
-              ) : (
-                <>
-                  <Table columns={columns} data={currentItemsWithSN} className="w-full" striped={true} hoverable={true} />
-                  {filteredData.length > itemsPerPage && (
-                    <div className="sl-pagination">
-                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                    </div>
-                  )}
-                </>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* Modal */}
