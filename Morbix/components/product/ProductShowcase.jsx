@@ -444,8 +444,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div className="pdp-buy-wrap">
               {prepaidCoupon?.code && (
                 <div className="pdp-prepaid-ribbon">
-                  <Icon name="Tag" size={13} /> Use code <strong>{prepaidCoupon.code}</strong>
-                  {prepaidCoupon.description ? ` — ${prepaidCoupon.description}` : ' for extra off on prepaid orders'}
+                  <Icon name="Tag" size={13} /> Use code <strong>{prepaidCoupon.code}</strong> for extra off on prepaid orders
                 </div>
               )}
               <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
