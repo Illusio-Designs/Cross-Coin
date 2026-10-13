@@ -6,7 +6,7 @@ import ProductBenefits from '@/components/product/ProductBenefits';
 import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getProductReviewsWithTotal, getProductFaqs, getBundleTiers } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getStoreReviews, getProductFaqs, getBundleTiers } from '@/lib/api';
 
 // Incrementally static (ISR): cache each product page and revalidate it every
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
@@ -24,7 +24,7 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, reviewsData, faqs, bundleTiers] = await Promise.all([getAllProducts(), getProductReviewsWithTotal(product.id), getProductFaqs(product.id), getBundleTiers(product.id)]);
+  const [all, reviewsData, faqs, bundleTiers] = await Promise.all([getAllProducts(), getStoreReviews(300), getProductFaqs(product.id), getBundleTiers(product.id)]);
   const reviews = reviewsData.reviews;
   // One card per product (not every colour variation) in "You might also like".
   const seenRel = new Set();
@@ -51,7 +51,7 @@ export default async function ProductPage({ params, searchParams }) {
       <ProductStory product={product} faqs={faqs} showFaq={false} />
 
       {/* ── Reviews: moving wall + Write-a-review for this product ── */}
-      <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite limit={8} />
+      <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite />
 
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
