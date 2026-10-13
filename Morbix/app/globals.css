@@ -577,8 +577,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-ship svg { color: var(--teal-600); }
 .pdp-ship strong { color: var(--teal-600); font-weight: 700; }
 .pdp-ship .pdp-ship-eta { color: var(--ink-soft); }
-.pdp-ship-stock { display: inline-flex; align-items: center; gap: 7px; }
-.pdp-ship-free { position: relative; padding-left: 13px; }
+.pdp-ship-free { position: relative; display: inline-flex; align-items: center; gap: 6px; padding-left: 13px; }
 .pdp-ship-free::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1px; height: 14px; background: var(--line); }
 .pdp-stock-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--teal-050); color: var(--teal-600); font-weight: 700; font-size: 11.5px; line-height: 1; padding: 4px 9px; border-radius: 999px; }
 .pdp-stock-badge.out { background: #fdecea; color: var(--sale, #c9433c); }
@@ -694,7 +693,9 @@ button { font-family: inherit; cursor: pointer; }
 .buy-row .btn-primary { min-width: 0; }
 /* Buy now — outlined secondary beneath Add to cart */
 .pdp-buy-wrap { margin-top: -6px; display: flex; flex-direction: column; }
-.pdp-prepaid-ribbon { align-self: center; background: #f3e4bf; color: #a97f22; font-weight: 800; font-size: 13px; padding: 5px 14px; border-radius: 999px; margin-bottom: -2px; position: relative; z-index: 1; }
+.pdp-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 6px; background: #f3e4bf; color: #a97f22; font-weight: 800; font-size: 12.5px; padding: 5px 14px; border-radius: 999px; margin-bottom: -2px; position: relative; z-index: 1; text-align: center; }
+.pdp-prepaid-ribbon strong { font-weight: 900; letter-spacing: .02em; }
+.pdp-prepaid-ribbon svg { flex-shrink: 0; }
 .pdp-buy-now { width: 100%; margin-top: 0; background: #2f7d32; color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .pdp-buy-now:hover { background: #276a2a; color: #fff; box-shadow: var(--shadow-soft); }
 .qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }

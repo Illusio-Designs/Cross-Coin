@@ -25,9 +25,6 @@ import { getBestsellers } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-// Optional instant discount for paying online (prepaid) — same env-gated
-// incentive the other brands use. Defaults to 0 (no discount) unless configured.
-const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 
 const FALLBACK_FEES = [
   { id: 'fallback-prepaid', orderType: 'prepaid', fee: 0, isDefault: true },
@@ -319,11 +316,10 @@ export default function CartDrawer() {
   const total = Math.round(Math.max(0, subtotal + shippingFee - effectiveCouponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
-  // Prepaid instant discount (0 unless configured) → the amount actually payable
-  // online is the total minus that incentive.
-  // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
-  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
-  const prepaidPayable = Math.round(Math.max(0, total - prepaidInstantDiscount));
+  // No hard-coded prepaid instant discount: any prepaid saving comes only from a
+  // coupon the shopper applies (a Prepaid-only coupon works just like any other).
+  // The amount payable online is simply the coupon-adjusted total.
+  const prepaidPayable = total;
 
   // Auto-remove a payment-mode-restricted coupon (e.g. Prepaid-only) if the
   // shopper switches payment mode AFTER applying it. Applying under the wrong
@@ -499,12 +495,9 @@ export default function CartDrawer() {
   };
 
   const buildData = (paymentType) => {
-    // Prepaid orders fold the instant discount into discount_amount ON TOP of the
-    // coupon discount; COD sends only the coupon discount. The coupon applies to
-    // both. coupon_id is null when no coupon is applied.
-    const discountAmount = paymentType === 'razorpay'
-      ? prepaidInstantDiscount + effectiveCouponDiscount
-      : effectiveCouponDiscount;
+    // Discount is the coupon discount only, for both COD and prepaid. The coupon
+    // applies to both; coupon_id is null when no coupon is applied.
+    const discountAmount = effectiveCouponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
       discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
@@ -920,8 +913,7 @@ export default function CartDrawer() {
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
                 <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
                 {effectiveCouponDiscount > 0 && <div className="cd-summary-row"><span>Coupon ({appliedCoupon?.code})</span><span style={{ color: 'var(--teal-600)' }}>−₹{effectiveCouponDiscount.toFixed(0)}</span></div>}
-                {prepaidInstantDiscount > 0 && <div className="cd-summary-row"><span>Prepaid discount</span><span style={{ color: 'var(--teal-600)' }}>−₹{prepaidInstantDiscount.toFixed(0)}</span></div>}
-                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{(isPrepaid ? prepaidPayable : total).toFixed(0)}</span></div>
+                <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{total.toFixed(0)}</span></div>
               </div>
 
               {/* Delivery details — contact + address in ONE box (like the other brands) */}
@@ -1005,7 +997,7 @@ export default function CartDrawer() {
                         <span className="cd-pay-icon"><Icon name={isCodOpt ? 'ShieldCheck' : 'ShoppingBag'} size={18} /></span>
                         <div className="cd-pay-info">
                           <b>{isCodOpt ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}</b>
-                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : `Secure payment via Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ₹${Math.round(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}</span>
+                          <span className="muted">{codBlocked ? 'Not available for this PIN' : isCodOpt ? 'Pay when you receive your order' : 'Secure payment via Razorpay'}</span>
                           <span className="cd-pay-date"><Icon name="Truck" size={12} /> Delivery by {deliveryDateStr()}</span>
                         </div>
                         <span className={`cd-pay-fee${parseFloat(fee.fee || 0) === 0 ? ' free' : ''}`}>{parseFloat(fee.fee || 0) === 0 ? 'FREE' : `₹${parseFloat(fee.fee).toFixed(0)}`}</span>

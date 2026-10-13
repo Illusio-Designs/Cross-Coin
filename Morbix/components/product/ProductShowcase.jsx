@@ -22,11 +22,10 @@ function ik(src, w) {
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
 // and Add to cart sends that precise variation to the backend.
-// Prepaid instant discount (env-configured; 0 unless set) — surfaced as the
-// "₹N OFF on Prepaid Orders" ribbon above Buy now, the same figure the cart uses.
-const PREPAID_OFF = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
-
-export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
+// Prepaid incentive is NOT a hard-coded instant discount — it is a real,
+// admin-created coupon (paymentModeRestriction === 'prepaid') passed in from the
+// page, surfaced above Buy now so the shopper knows the code to apply at checkout.
+export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
   const { add, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
@@ -357,15 +356,12 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         </div>
         <p className="pdp-price-tax">MRP incl. of all taxes</p>
 
-        {/* Free shipping + stock badge (after the icon) */}
+        {/* Stock badge, then truck joined with the free-shipping line */}
         <div className="pdp-ship">
-          <span className="pdp-ship-stock">
-            <Icon name="Truck" size={16} />
-            {inStock
-              ? <span className="pdp-stock-badge"><Icon name="ShieldCheck" size={12} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
-              : <span className="pdp-stock-badge out"><Icon name="X" size={12} /> Out of stock</span>}
-          </span>
-          <span className="pdp-ship-free"><strong>Free shipping</strong> on all orders</span>
+          {inStock
+            ? <span className="pdp-stock-badge"><Icon name="ShieldCheck" size={12} /> {stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
+            : <span className="pdp-stock-badge out"><Icon name="X" size={12} /> Out of stock</span>}
+          <span className="pdp-ship-free"><Icon name="Truck" size={16} /> <strong>Free shipping</strong> on all orders</span>
         </div>
 
         <div className="buy">
@@ -446,8 +442,11 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           </div>
           {inStock && (
             <div className="pdp-buy-wrap">
-              {PREPAID_OFF > 0 && (
-                <div className="pdp-prepaid-ribbon">₹{Math.round(PREPAID_OFF)} OFF on Prepaid Orders</div>
+              {prepaidCoupon?.code && (
+                <div className="pdp-prepaid-ribbon">
+                  <Icon name="Tag" size={13} /> Use code <strong>{prepaidCoupon.code}</strong>
+                  {prepaidCoupon.description ? ` — ${prepaidCoupon.description}` : ' for extra off on prepaid orders'}
+                </div>
               )}
               <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
                 <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
