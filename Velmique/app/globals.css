@@ -377,6 +377,25 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 }
 .vq-offer:hover:not(:disabled) .vq-offer-apply { background: var(--gold-deep); }
 
+/* ------------------------------------------------------------------
+   Cart drawer — two-step header back button. Shown on the checkout
+   step (step 2) so shoppers can return to the cart review. Mirrors
+   the Soxbae .cd-header-back control, in Velmique's ink/gold tokens.
+   ------------------------------------------------------------------ */
+.vq-cart-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.vq-cart-back:hover { color: var(--gold-deep); opacity: 0.88; }
+
 /* Star rating */
 .star-filled { color: var(--gold); }
 .star-empty { color: var(--border); }

@@ -194,6 +194,8 @@ export function CartDrawer() {
   const [isMounted, setIsMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [urgencySeconds, setUrgencySeconds] = useState(10 * 60);
+  // Two-step checkout: 1 = review cart, 2 = delivery + payment.
+  const [coStep, setCoStep] = useState(1);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -291,16 +293,26 @@ export function CartDrawer() {
     return () => document.removeEventListener('keydown', onKey, true);
   }, [addrIssues]);
 
-  // ── Meta funnel: InitiateCheckout ─────────────────────────────────────────
-  // Fire once when the drawer opens with items (this drawer is the full
-  // in-drawer checkout).
+  // ── On open: reset to the cart step and fire view_cart ────────────────────
+  // InitiateCheckout no longer fires here — it fires when the shopper taps
+  // "Proceed to checkout" (goToCheckout), tied to checkout intent, not open.
   useEffect(() => {
-    if (!drawerOpen || items.length === 0) return;
+    if (!drawerOpen) return;
+    setCoStep(1);
+    if (items.length === 0) return;
     viewCart({
       contents: items.map(i => ({ id: String(i.productId), quantity: i.quantity || 1 })),
       value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
       currency: 'INR',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerOpen]);
+
+  // ── Advance to the checkout step ──────────────────────────────────────────
+  // Fires InitiateCheckout (Meta) with the SAME payload the open effect used
+  // before, now tied to checkout intent rather than drawer open.
+  const goToCheckout = () => {
+    if (items.length === 0) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId)),
       content_type: 'product',
@@ -309,8 +321,9 @@ export function CartDrawer() {
       value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
       currency: 'INR',
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawerOpen]);
+    setCoStep(2);
+    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
+  };
 
   // ── Available offers (public coupons) ─────────────────────────────────────
   // Fetch once when the drawer opens with items so shoppers can tap-to-apply.
@@ -1116,10 +1129,16 @@ export function CartDrawer() {
         {/* Header */}
         <div className="cd-header">
           <div className="cd-header-left">
-            <span className="cd-header-icon"><IconBag /></span>
+            {!orderSuccess && items.length > 0 && coStep === 2 ? (
+              <button className="cd-header-icon cd-header-back" onClick={() => setCoStep(1)} aria-label="Back to cart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            ) : (
+              <span className="cd-header-icon"><IconBag /></span>
+            )}
             <div>
-              <span className="cd-header-title">{orderSuccess ? 'Order Confirmed' : 'Your Cart'}</span>
-              {!orderSuccess && <span className="cd-header-count">{totalQty} item{totalQty !== 1 ? 's' : ''}</span>}
+              <span className="cd-header-title">{orderSuccess ? 'Order Confirmed' : coStep === 2 ? 'Checkout' : 'Your Cart'}</span>
+              {!orderSuccess && <span className="cd-header-count">{coStep === 2 ? 'Step 2 of 2 · delivery & payment' : `${totalQty} item${totalQty !== 1 ? 's' : ''}`}</span>}
             </div>
           </div>
           <button className="cd-close-btn" onClick={closeDrawer} aria-label="Close cart"><IconX /></button>
@@ -1181,6 +1200,7 @@ export function CartDrawer() {
           ) : (
             <div className="cd-single-view">
 
+              {coStep === 1 && (<>
               {/* Free-shipping progress bar — mirrors FreeShippingBar's style but
                   driven by the API threshold (freeShippingThreshold). */}
               {freeShipThreshold > 0 && (
@@ -1378,8 +1398,9 @@ export function CartDrawer() {
                   </div>
                 </div>
               )}
+              </>)}
 
-              {/* Order Summary */}
+              {/* Order Summary — visible on both steps so pricing is always clear */}
               <div className="cd-sv-section">
                 <div className="cd-section-title">Order Summary</div>
                 <div className="cd-summary">
@@ -1419,6 +1440,7 @@ export function CartDrawer() {
 
               </div>
 
+              {coStep === 2 && (<>
               {/* Delivery Address */}
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
@@ -1632,6 +1654,7 @@ export function CartDrawer() {
                   </div>
                 </div>
               )}
+              </>)}
 
             </div>
           )}
@@ -1649,6 +1672,24 @@ export function CartDrawer() {
         {/* Footer */}
         {!orderSuccess && items.length > 0 && (
           <div className="cd-footer">
+            {coStep === 1 ? (
+              <>
+                {/* Step 1 → advance to delivery + payment (fires InitiateCheckout) */}
+                <button className="cd-btn-primary cd-btn-full" onClick={goToCheckout} disabled={isProcessing}>
+                  Proceed to Checkout – ₹{finalTotal.toFixed(0)}
+                </button>
+
+                {/* Trust bar */}
+                <div className="cd-trust-bar">
+                  <span className="cd-trust-item"><IconShield /> 100% Money-Back</span>
+                  <span className="cd-trust-sep">·</span>
+                  <span className="cd-trust-item"><IconTruckSmall /> Easy Returns</span>
+                  <span className="cd-trust-sep">·</span>
+                  <span className="cd-trust-item"><IconLock /> Powered by Razorpay</span>
+                </div>
+              </>
+            ) : (
+              <>
             {/* Urgency */}
             {(() => {
               const mm = String(Math.floor(urgencySeconds / 60)).padStart(2, '0');
@@ -1693,6 +1734,8 @@ export function CartDrawer() {
               <span className="cd-trust-sep">·</span>
               <span className="cd-trust-item"><IconLock /> Powered by Razorpay</span>
             </div>
+              </>
+            )}
           </div>
         )}
 

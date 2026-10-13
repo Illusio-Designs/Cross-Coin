@@ -140,8 +140,11 @@ export default function CartDrawer() {
   // Cross-sell "You may also like" — fetched from the bestsellers service when
   // the drawer opens; excludes items already in the bag.
   const [suggestions, setSuggestions] = useState([]);
+  // Two-step checkout: 1 = review bag, 2 = delivery + payment.
+  const [coStep, setCoStep] = useState(1);
 
   const dropdownRef = useRef(null);
+  const bodyRef = useRef(null);
   const offersRef = useRef(null);
   const lastAutoSaveSig = useRef('');
 
@@ -301,16 +304,25 @@ export default function CartDrawer() {
     if (!selectedAddress) setShowAddrForm(true);
   }, [cartOpen, isAuthenticated, selectedAddress]);
 
-  // Meta funnel: InitiateCheckout — fire once when the drawer opens with items
-  // (this drawer is the full in-drawer checkout). Cart line ids are composite,
-  // so content_ids use the real product id (item.productId).
+  // On open: reset to the bag-review step and fire view_cart. InitiateCheckout
+  // now fires when the shopper taps "Proceed to checkout" (goToCheckout), not on
+  // open. Cart line ids are composite, so content_ids use the real product id.
   useEffect(() => {
-    if (!cartOpen || items.length === 0) return;
+    if (!cartOpen) return;
+    setCoStep(1);
+    if (items.length === 0) return;
     viewCart({
       contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
       value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
       currency: 'INR',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartOpen]);
+
+  // Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
+  // checkout intent, not drawer open — then shows the delivery + payment step.
+  const goToCheckout = () => {
+    if (!items.length) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId ?? i.id)),
       content_type: 'product',
@@ -319,8 +331,9 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
       currency: 'INR',
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartOpen]);
+    setCoStep(2);
+    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
+  };
 
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal       = cartTotal;
@@ -872,14 +885,26 @@ export default function CartDrawer() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#D8D3C9] bg-white">
           <div className="flex items-center gap-3">
-            <ShoppingBag size={18} className="text-[#8F7548]" />
+            {!orderSuccess && items.length > 0 && coStep === 2 ? (
+              <button type="button" onClick={() => setCoStep(1)} aria-label="Back to bag" className="vq-cart-back text-[#8F7548]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            ) : (
+              <ShoppingBag size={18} className="text-[#8F7548]" />
+            )}
             <span className="font-serif italic text-lg text-[#11100E]">
-              {orderSuccess ? 'Order Confirmed' : 'Your Bag'}
+              {orderSuccess ? 'Order Confirmed' : coStep === 2 ? 'Checkout' : 'Your Bag'}
             </span>
-            {!orderSuccess && cartCount > 0 && (
-              <span className="bg-[#B89A63]/20 text-[#8F7548] text-[10px] font-body px-2 py-0.5  tracking-wider uppercase">
-                {cartCount} {cartCount === 1 ? 'item' : 'items'}
-              </span>
+            {!orderSuccess && (
+              coStep === 2 ? (
+                <span className="text-[#777168] text-[10px] font-body tracking-wider uppercase">
+                  Step 2 of 2 · delivery &amp; payment
+                </span>
+              ) : cartCount > 0 ? (
+                <span className="bg-[#B89A63]/20 text-[#8F7548] text-[10px] font-body px-2 py-0.5  tracking-wider uppercase">
+                  {cartCount} {cartCount === 1 ? 'item' : 'items'}
+                </span>
+              ) : null
             )}
           </div>
           <button onClick={() => setCartOpen(false)} className="text-[#11100E]/60 hover:text-[#8F7548] transition-colors" aria-label="Close">
@@ -888,7 +913,7 @@ export default function CartDrawer() {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={bodyRef} className="flex-1 overflow-y-auto">
 
           {/* ── Order success state ───────────────────────────────────── */}
           {orderSuccess ? (
@@ -923,6 +948,8 @@ export default function CartDrawer() {
             </div>
           ) : (
             <>
+              {/* ── Step 1: review bag (free shipping, items, coupon, cross-sell) ── */}
+              {coStep === 1 && (<>
               {/* ── Free-shipping progress ─────────────────────────────── */}
               {freeShipThreshold > 0 && (
                 <div className="px-5 py-3 border-b border-[#D8D3C9]">
