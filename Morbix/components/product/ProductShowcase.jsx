@@ -287,8 +287,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             data-lenis-prevent
             aria-label="Product image thumbnails"
             onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') { e.currentTarget.scrollBy({ top: 120, behavior: 'smooth' }); e.preventDefault(); }
-              if (e.key === 'ArrowUp') { e.currentTarget.scrollBy({ top: -120, behavior: 'smooth' }); e.preventDefault(); }
+              if (e.key === 'ArrowRight') { e.currentTarget.scrollBy({ left: 120, behavior: 'smooth' }); e.preventDefault(); }
+              if (e.key === 'ArrowLeft') { e.currentTarget.scrollBy({ left: -120, behavior: 'smooth' }); e.preventDefault(); }
             }}
           >
             {shown.map((src, i) => (
