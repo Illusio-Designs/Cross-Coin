@@ -10,6 +10,10 @@ const TRUST = [
   { icon: 'Truck',       text: 'Free shipping on all orders' },
   { icon: 'RefreshCw',   text: 'Easy 7-day returns' },
   { icon: 'Check',       text: 'Cash on Delivery available' },
+  // Product build points (moved here from the home ethos band)
+  { icon: 'Layers',      text: 'Cushioned heel & toe' },
+  { icon: 'Wind',        text: 'Breathable mesh knit' },
+  { icon: 'Footprints',  text: 'Anti-slip grip knit' },
 ];
 
 // `rating` ({ avg, total }) comes from the real store-wide review totals the
