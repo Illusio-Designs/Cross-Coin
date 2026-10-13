@@ -164,7 +164,7 @@ export default function FaqsManager({ brandId = 1 } = {}) {
     <div className="dashboard-sections">
       <PageHeader
         title="FAQs"
-        subtitle="Manage site-wide and per-product FAQs. Answers emit FAQPage schema on the product page."
+        subtitle="Manage site-wide and per-product FAQs. Global FAQs now show on the storefront home (before the blog) and at the bottom of every product page; answers also emit FAQPage schema for SEO."
         actions={
           <>
             <select
