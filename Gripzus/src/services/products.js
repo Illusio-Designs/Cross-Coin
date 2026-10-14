@@ -271,6 +271,22 @@ export async function searchProducts(query) {
   }
 }
 
+/* Pack / bundle tiers for a product — GET /api/public/bundle-tiers?product_id=:id
+   Returns the admin-configured packs (pairs >= 2 with an EXACT price); the
+   1-pair option is implicit on the storefront (the product's own price). Uses
+   the same brand-scoped fetch (X-Brand-Name) as every other service here and
+   swallows errors → [] so the PDP degrades to a plain single-price buy panel. */
+export async function getBundleTiers(productId) {
+  if (!productId) return [];
+  try {
+    const data = await brandFetch(`/api/public/bundle-tiers?product_id=${encodeURIComponent(productId)}`);
+    const tiers = data?.tiers || data?.data?.tiers || (Array.isArray(data) ? data : []);
+    return Array.isArray(tiers) ? tiers : [];
+  } catch {
+    return [];
+  }
+}
+
 /* Single product by slug — GET /api/products/by-slug/:slug */
 export async function getProductBySlug(slug) {
   if (!slug) return null;

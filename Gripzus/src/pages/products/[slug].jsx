@@ -10,7 +10,7 @@ import ReviewsSection from '../../components/sections/ReviewsSection';
 import FaqSection from '../../components/sections/FaqSection';
 import SeoWrapper from '../../components/SeoWrapper';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
-import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
+import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId, getBundleTiers } from '../../services/products';
 import { getProductReviews } from '../../services/reviews';
 import { getFaqs } from '../../services/faqs';
 import { getPublicCoupons } from '../../services/publicindex';
@@ -57,10 +57,11 @@ export async function getServerSideProps({ params, res }) {
   // This product's reviews (for the Morbix-style ReviewsSection) + the global
   // FAQ set, fetched in parallel. Each service swallows its own errors and
   // returns empty, so first paint degrades gracefully.
-  const [productReviews, faqs, couponsRes] = await Promise.all([
+  const [productReviews, faqs, couponsRes, bundleTiers] = await Promise.all([
     getProductReviews(product.id),
     getFaqs('global'),
     getPublicCoupons().catch(() => null),
+    getBundleTiers(product.id),
   ]);
 
   // Surface a REAL admin-created prepaid-only coupon on the buy panel (never a
@@ -84,11 +85,12 @@ export async function getServerSideProps({ params, res }) {
       initialReviewTotal: productReviews?.total || 0,
       initialFaqs: faqs || [],
       prepaidCoupon,
+      bundleTiers: bundleTiers || [],
     },
   };
 }
 
-export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [], prepaidCoupon = null }) {
+export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [], prepaidCoupon = null, bundleTiers = [] }) {
   const router = useRouter();
   const slug = slugProp || router.query.slug;
 
@@ -119,6 +121,8 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   const [size, setSize]   = useState(initialProduct?.sizes?.[0] || '');
   const [color, setColor] = useState(() => pickInitialColor(initialProduct));
   const [qty, setQty]     = useState(1);
+  // Selected pack tier (0 = the 1-pair base); only used when this product has packs.
+  const [pack, setPack]   = useState(0);
   const [added, setAdded] = useState(false);
   const [paused, setPaused] = useState(false);
 
@@ -173,6 +177,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     setProduct(p);
     setNotFound(false);
     setActiveImg(0);
+    setPack(0);
     setSize(p.sizes?.[0] || '');
     // Preselect the colour from ?color= (set by the per-colour cards); fall
     // back to the first colour when it's absent or doesn't match.
@@ -314,24 +319,48 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   const curImg   = Math.min(activeImg, images.length - 1);
   const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
 
+  /* ── Pack / bundle pricing ─────────────────────────────────────────────
+     Per-product, admin-set EXACT pack prices (from GET /api/public/bundle-tiers).
+     When a product has packs the selector REPLACES the qty stepper: 1 pair = the
+     product's own price, then each configured pack (2 pairs ₹X, 3 pairs ₹Y…).
+     Pricing stays server-authoritative — the cart/checkout/order endpoints
+     re-price a line by its QUANTITY from the same bundle tier, so adding
+     `packPairs` units of the selected variation is what makes the pack price
+     apply (we never invent a discounted number beyond the tier's own figure). */
+  const rawPacks = Array.isArray(bundleTiers) ? bundleTiers : [];
+  const hasPacks = rawPacks.length > 0;
+  const packOptions = hasPacks
+    ? [{ pairs: 1, price: Number(price), label: '1 Pair', badge: null, base: true },
+       ...rawPacks.map((t) => ({ pairs: Number(t.pairs), price: Number(t.price), label: t.label || `${t.pairs} Pairs`, badge: t.badge }))]
+    : [];
+  const activePack = hasPacks ? packOptions[Math.min(pack, packOptions.length - 1)] : null;
+  const packPairs = activePack ? activePack.pairs : 1;
+  const packTotal = activePack ? activePack.price : Number(price);
+  const packUnit = packPairs > 0 ? packTotal / packPairs : Number(price);
+  const packMrp = Number(price) * packPairs;
+  const packHasDiscount = !!activePack && !activePack.base && packTotal < packMrp;
+  const packOff = packHasDiscount ? Math.round((1 - packTotal / packMrp) * 100) : 0;
+
+  // Build the cart line for the current selection. A multi-pack adds `packPairs`
+  // units of the chosen variation (quantity = pairs); the backend reprices the
+  // line to the admin pack price. The per-unit `price` we send is only used for
+  // the guest localStorage cart + the Meta pixel — the server stays authoritative
+  // for signed-in carts, checkout and the order.
+  const buildCartLine = () => ({
+    id: product.id, name: product.name, slug: product.slug,
+    image: images[0], price: hasPacks ? packUnit : price, collection: product.collection,
+    size, color, qty: hasPacks ? packPairs : qty,
+    variationId: resolveVariationId(product, color, size),
+  });
+
   const handleAdd = () => {
-    addItem({
-      id: product.id, name: product.name, slug: product.slug,
-      image: images[0], price, collection: product.collection,
-      size, color, qty,
-      variationId: resolveVariationId(product, color, size),
-    });
+    addItem(buildCartLine());
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
 
   const handleBuyNow = () => {
-    addItem({
-      id: product.id, name: product.name, slug: product.slug,
-      image: images[0], price, collection: product.collection,
-      size, color, qty,
-      variationId: resolveVariationId(product, color, size),
-    }, { openDrawer: false });
+    addItem(buildCartLine(), { openDrawer: false });
     openCart();
   };
 
@@ -556,17 +585,30 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
 
               <div className="mb-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="h-display text-ink text-4xl">₹{price.toLocaleString('en-IN')}</span>
-                  {compare && compare > price && (
-                    <>
-                      <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
-                      <span className="inline-flex items-center rounded-full bg-paper-warm px-2.5 py-1 text-xs font-semibold text-ink">
-                        −{Math.round(((compare - price) / compare) * 100)}% OFF
-                      </span>
-                    </>
+                  {/* Headline reflects the selected pack: pack total when a
+                      multi-pack is chosen, the normal unit price otherwise. */}
+                  <span className="h-display text-ink text-4xl">₹{Number(hasPacks ? packTotal : price).toLocaleString('en-IN')}</span>
+                  {hasPacks ? (
+                    packHasDiscount && (
+                      <>
+                        <span className="text-ink-muted text-base line-through">₹{Number(packMrp).toLocaleString('en-IN')}</span>
+                        <span className="inline-flex items-center rounded-full bg-paper-warm px-2.5 py-1 text-xs font-semibold text-ink">
+                          −{packOff}% OFF
+                        </span>
+                      </>
+                    )
+                  ) : (
+                    compare && compare > price && (
+                      <>
+                        <span className="text-ink-muted text-base line-through">₹{compare.toLocaleString('en-IN')}</span>
+                        <span className="inline-flex items-center rounded-full bg-paper-warm px-2.5 py-1 text-xs font-semibold text-ink">
+                          −{Math.round(((compare - price) / compare) * 100)}% OFF
+                        </span>
+                      </>
+                    )
                   )}
                 </div>
-                {compare && compare > price && (
+                {((hasPacks && packHasDiscount) || (!hasPacks && compare && compare > price)) && (
                   <p className="text-ink-muted text-xs mt-1.5">MRP incl. of all taxes</p>
                 )}
               </div>
@@ -664,14 +706,67 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 </div>
               )}
 
+              {/* Pack — admin-set bundle tiers; replaces the qty stepper when
+                  present. Shown only when there's a real choice (1-pair base +
+                  at least one pack). Styled with Gripzus's own square, monochrome
+                  control language (border-line → border-ink on select, ink mark,
+                  no pills/circles), matching the size + colour selectors above. */}
+              {packOptions.length > 1 && (
+                <div className="mb-6">
+                  <p className="eyebrow mb-3">Pack — <span className="text-ink">{activePack?.label}</span></p>
+                  <div className="flex flex-col gap-2">
+                    {packOptions.map((t, i) => {
+                      const per = t.pairs > 0 ? t.price / t.pairs : t.price;
+                      const mrp = Number(price) * t.pairs;
+                      const disc = !t.base && t.price < mrp;
+                      const activeCard = i === pack;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setPack(i)}
+                          aria-pressed={activeCard}
+                          className={`flex items-center gap-3 border px-4 py-3 text-left transition-colors ${
+                            activeCard ? 'border-ink bg-paper-warm' : 'border-line hover:border-ink'
+                          }`}
+                        >
+                          {/* Square selection mark — ink-filled when active (the
+                              site is all-square by design; no round radios). */}
+                          <span aria-hidden="true" className={`shrink-0 grid place-items-center w-4 h-4 border ${activeCard ? 'border-ink bg-ink text-paper' : 'border-line'}`}>
+                            {activeCard && (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-semibold text-ink">{t.label}</span>
+                              {t.badge && (
+                                <span className="inline-flex items-center bg-ink px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-paper">{t.badge}</span>
+                              )}
+                            </span>
+                            <span className="block text-xs text-ink-muted mt-0.5">₹{per.toFixed(2)} / pair</span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-sm font-semibold text-ink">₹{t.price.toFixed(0)}</span>
+                            {disc && <span className="block text-xs text-ink-muted line-through">₹{mrp.toFixed(0)}</span>}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Qty + actions */}
               <div ref={actionsRef}>
                 <div className="flex items-center gap-2.5 mb-3 sm:gap-3">
-                  <div className="flex items-center border border-line rounded-sm shrink-0">
-                    <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
-                    <span className="w-9 sm:w-12 text-center text-sm">{qty}</span>
-                    <button onClick={() => setQty((q) => q + 1)} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
-                  </div>
+                  {!hasPacks && (
+                    <div className="flex items-center border border-line rounded-sm shrink-0">
+                      <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">−</button>
+                      <span className="w-9 sm:w-12 text-center text-sm">{qty}</span>
+                      <button onClick={() => setQty((q) => q + 1)} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
+                    </div>
+                  )}
                   <button onClick={handleAdd} className={`btn flex-1 justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
                     {product.inStock === false ? 'Sold Out' : (
                       <>{added ? 'Added to cart' : 'Add to cart'}
@@ -711,6 +806,9 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                   <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</span>
                   <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</span>
                 </div>
+                {/* Policy-accurate caption — COD is conditional and returns apply
+                    to unused items with tags (see Backend dpdpPolicySeeds). */}
+                <p className="mt-2 text-[10px] leading-snug text-ink-muted/80">COD available on eligible pin codes · 7-day returns on unused items with tags.</p>
               </div>
 
               {/* Delivery / pincode serviceability — below the buy actions */}
@@ -860,7 +958,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
             />
             <div className="min-w-0 flex-1">
               <p className="h-display text-ink text-sm md:text-base leading-tight truncate">{product.name}</p>
-              <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{price.toLocaleString('en-IN')}</p>
+              <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{Number(hasPacks ? packTotal : price).toLocaleString('en-IN')}</p>
             </div>
             <button onClick={handleBuyNow} className="btn justify-center !py-3 whitespace-nowrap">
               {product.inStock === false ? 'Sold Out' : 'Buy Now'}
