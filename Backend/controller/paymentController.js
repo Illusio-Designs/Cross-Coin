@@ -557,8 +557,9 @@ module.exports.createRazorpayOrder = async (req, res) => {
                     }
                 }
 
-                await sendFacebookEvent('InitiateCheckout', eventPayload);
-                await sendGAEvent('begin_checkout', eventPayload);
+                // InitiateCheckout is sent (deduped) by the browser pixel + its
+                // CAPI relay when checkout begins — not re-sent server-side here.
+                // AddPaymentInfo has no browser counterpart, so keep it.
                 await sendFacebookEvent('AddPaymentInfo', eventPayload);
                 await sendGAEvent('add_payment_info', eventPayload);
             } catch (err) {
@@ -777,7 +778,7 @@ module.exports.updateOrderPayment = async (req, res) => {
           lastName = guestUser?.lastName || null;
         }
         const eventPayload = {
-          brand_id: order.brand_id || 1, order_number: order.order_number,
+          brand_id: order.brand_id || 1, external_id: order.user_id || null, order_number: order.order_number,
           total_amount: parseFloat(order.final_amount), final_amount: parseFloat(order.final_amount),
           currency: 'INR', ip_address: req.ip || null, user_agent: req.headers['user-agent'] || null,
           email, phone, first_name: firstName, last_name: lastName,

@@ -81,6 +81,9 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     ct: sha256(order.city),
     st: sha256(order.state),
     country: sha256(order.country || 'in'),
+    // Stable user id (hashed) — raises Event Match Quality and ties the browser
+    // (Advanced Matching) and server copies to the same person, like Shopify.
+    external_id: order.external_id ? sha256(String(order.external_id)) : undefined,
     // Click ID (fbc) — not hashed
     fbc: order.fbc || null,
     fbp: order.fbp || null,

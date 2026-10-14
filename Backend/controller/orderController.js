@@ -858,6 +858,7 @@
           const nameParts = (orderUser?.username || '').trim().split(/\s+/);
           const basePayload = {
             brand_id: createdOrder.brand_id || 1,
+            external_id: userId || null,
             order_number: createdOrder.order_number,
             total_amount: parseFloat(createdOrder.final_amount),
             final_amount: parseFloat(createdOrder.final_amount),
@@ -886,10 +887,11 @@
           await sendFacebookEvent("AddShippingInfo", basePayload);
           await sendGAEvent("add_shipping_info", basePayload);
 
-          // COD: also fire InitiateCheckout + AddPaymentInfo here (prepaid fires these in createRazorpayOrder)
+          // InitiateCheckout is already sent (deduped) by the browser pixel + its
+          // CAPI relay when checkout begins — re-sending it here with a different
+          // event_id double-counts, so we don't. AddPaymentInfo has no browser
+          // counterpart, so keep it (COD only; prepaid fires it in createRazorpayOrder).
           if (payment_type === 'cod') {
-            await sendFacebookEvent("InitiateCheckout", basePayload);
-            await sendGAEvent("begin_checkout", basePayload);
             await sendFacebookEvent("AddPaymentInfo", basePayload);
             await sendGAEvent("add_payment_info", basePayload);
           }
@@ -910,6 +912,7 @@
             const nameParts = (orderUser?.username || '').trim().split(/\s+/);
             const eventPayload = {
               brand_id: createdOrder.brand_id || 1,
+              external_id: userId || null,
               order_number: createdOrder.order_number,
               total_amount: parseFloat(createdOrder.final_amount),
               final_amount: parseFloat(createdOrder.final_amount),

@@ -394,6 +394,7 @@ async function handlePaymentSuccess({
 
         const eventPayload = {
           brand_id: order.brand_id || 1,
+          external_id: order.user_id || null,
           order_number: order.order_number,
           total_amount: parseFloat(order.final_amount),
           final_amount: parseFloat(order.final_amount),

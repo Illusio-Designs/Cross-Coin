@@ -420,8 +420,8 @@ exports.initiateCheckout = async (req, res) => {
           fbc: req.body?.fbc || req.cookies?._fbc || null, fbp: req.body?.fbp || req.cookies?._fbp || null,
           items: validatedItems,
         };
-        await sendFacebookEvent('InitiateCheckout', eventPayload);
-        await sendGAEvent('begin_checkout', eventPayload);
+        // InitiateCheckout is sent (deduped) by the browser pixel + its CAPI
+        // relay when checkout begins — don't re-send it server-side here.
       } catch (err) { logger.warn('Analytics InitiateCheckout error:', err.message); }
     });
   } catch (error) {
