@@ -10,7 +10,6 @@ import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
-import ProductReviews from '@/components/reviews/ProductReviews';
 import ReviewWall from '@/components/reviews/ReviewWall';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
@@ -27,7 +26,7 @@ const ik = (src, w) => {
   return src;
 };
 
-export default function ProductPage({ initialProduct = null, initialReviewsPayload = null, initialBrandReviews = [], initialBrandTotal = 0 }) {
+export default function ProductPage({ initialProduct = null, initialBrandReviews = [], initialBrandTotal = 0 }) {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug;
@@ -379,12 +378,6 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
 
             {/* Header — collection eyebrow / title with wishlist / rating / price */}
             <header>
-              {product.collection && (
-                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">
-                  {product.collection}
-                </p>
-              )}
-
               {/* Title row — wishlist sits beside the title */}
               <div className="flex items-start justify-between gap-4">
                 <h1 className="font-display text-[var(--ink)] uppercase leading-[0.95] tracking-tight flex-1"
@@ -653,16 +646,6 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
               eyebrow="Loved across Velmique"
               title="What customers say"
             />
-
-            {/* This fragrance's own rating summary + the write-a-review flow
-                (guest submissions still go through ProductReviews' modal). */}
-            <div className="mt-14 md:mt-20">
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">This fragrance</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-                Rate &amp; review
-              </h2>
-              <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
-            </div>
           </div>
         </div>
 
