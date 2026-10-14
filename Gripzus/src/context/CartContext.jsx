@@ -26,8 +26,11 @@ function isAuthed() {
   try { return !!localStorage.getItem('token'); } catch { return false; }
 }
 
-/* A cart line is uniquely keyed by product id + size + colour. */
-const lineKey = (it) => `${it.id}::${it.size || ''}::${it.color || ''}`;
+/* A cart line is uniquely keyed by product id + size + colour + pack group.
+   The packId suffix keeps each per-colour line of a multi-pair pack distinct and
+   stops a pack pair from collapsing into a matching loose line (packId is '' for
+   ordinary lines, so existing non-pack behaviour is unchanged). */
+const lineKey = (it) => `${it.id}::${it.size || ''}::${it.color || ''}::${it.packId || ''}`;
 
 /* Backend cart row → Gripzus cart-line shape. */
 function normalizeApiItem(row) {
@@ -58,6 +61,9 @@ function normalizeApiItem(row) {
     size:        Array.isArray(row.size) ? row.size[0] : (row.size || ''),
     color:       Array.isArray(row.color) ? row.color.join(', ') : (row.color || ''),
     qty:         Number(row.quantity ?? row.qty ?? 1),
+    // Pack group identifiers (null for ordinary lines).
+    packId:      row.packId ?? row.pack_id ?? null,
+    packSize:    row.packSize ?? row.pack_size ?? null,
   };
 }
 
@@ -90,6 +96,8 @@ export function CartProvider({ children }) {
                 quantity: g.qty || 1,
                 size: g.size || null,
                 color: g.color || null,
+                pack_id: g.packId || null,
+                pack_size: g.packSize || null,
               });
             } catch { /* non-fatal */ }
           }
@@ -141,7 +149,7 @@ export function CartProvider({ children }) {
     }
   }, [open]);
 
-  const addItem = useCallback(async (item, { openDrawer = true } = {}) => {
+  const addItem = useCallback(async (item, { openDrawer = true, toast = true } = {}) => {
     if (!item?.id) return;
 
     // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
@@ -164,6 +172,10 @@ export function CartProvider({ children }) {
           quantity: item.qty || 1,
           size: item.size || null,
           color: item.color || null,
+          // Optional pack identifiers — null for ordinary / single-colour-pack
+          // lines, so the server reprices by plain quantity exactly as before.
+          pack_id: item.packId || null,
+          pack_size: item.packSize || null,
         });
         const data = await apiGetCart();
         const rows = Array.isArray(data) ? data.map(normalizeApiItem) : [];
@@ -178,7 +190,7 @@ export function CartProvider({ children }) {
           rows.forEach((r) => { if (sameLine(r)) r.image = item.image; });
         }
         setItems(rows);
-        toastAddedToCart(item.name);
+        if (toast) toastAddedToCart(item.name);
         if (openDrawer) setOpen(true);
         return;
       } catch {
@@ -197,7 +209,96 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...item, qty: item.qty || 1 }];
     });
-    toastAddedToCart(item.name);
+    if (toast) toastAddedToCart(item.name);
+    if (openDrawer) setOpen(true);
+  }, []);
+
+  /* Add a multi-pair pack whose pairs can be different colours. Each distinct
+     colour becomes its own cart line, all sharing one packId, every line priced
+     at the pack's per-pair rate. The server re-prices the whole pack group from
+     the bundle tier (by the group's TOTAL quantity) at cart/checkout/order time,
+     so the `packUnit` passed here is only used for the guest localStorage line +
+     the Meta pixel — pricing stays server-authoritative.
+     perPair: [{ variationId, color, image }] — one entry per pair in the pack. */
+  const addPack = useCallback(async (product, size = '', perPair = [], packUnit = 0, packSize = 0, { openDrawer = true, toast = true } = {}) => {
+    if (!product?.id || !perPair.length) return;
+    // A stable, unique group id per add so each pack add is its own tier group.
+    const packId = `${product.id}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+    // Meta funnel: AddToCart for the whole pack.
+    fbTrack('AddToCart', {
+      content_ids: [String(product.id)],
+      content_type: 'product',
+      content_name: product.name || undefined,
+      value: Number(packUnit) * perPair.length,
+      currency: 'INR',
+      contents: [{ id: String(product.id), quantity: perPair.length }],
+    });
+
+    // Merge pairs of the same colour/variation into one line with a quantity.
+    const byVar = new Map();
+    for (const p of perPair) {
+      const vid = p.variationId ?? null;
+      const k = String(vid ?? `${p.color || ''}-${size || ''}`);
+      const cur = byVar.get(k) || { variationId: vid, color: p.color || null, image: p.image || null, qty: 0 };
+      cur.qty += 1;
+      byVar.set(k, cur);
+    }
+    const lines = [...byVar.values()];
+
+    if (isAuthed()) {
+      try {
+        for (const ln of lines) {
+          await apiAddToCart({
+            productId: Number(product.id),
+            variationId: ln.variationId || null,
+            quantity: ln.qty,
+            size: size || null,
+            color: ln.color || null,
+            pack_id: packId,
+            pack_size: packSize,
+          });
+        }
+        const data = await apiGetCart();
+        let rows = Array.isArray(data) ? data.map(normalizeApiItem) : [];
+        // Keep each per-colour line's chosen image (the backend may return a
+        // generic row image) for the pack we just added.
+        rows = rows.map((r) => {
+          if (String(r.packId || '') !== String(packId)) return r;
+          const ln = lines.find((l) =>
+            String(l.color || '') === String(r.color || '') &&
+            String(l.variationId ?? '') === String(r.variationId ?? ''));
+          return ln && ln.image ? { ...r, image: ln.image } : r;
+        });
+        setItems(rows);
+        if (toast) toastAddedToCart(product.name);
+        if (openDrawer) setOpen(true);
+        return;
+      } catch {
+        // fall through to a guest add so the shopper isn't blocked
+      }
+    }
+
+    // Guest add — append one line per colour (packId is unique, so no collision
+    // with existing lines).
+    setItems((prev) => [
+      ...prev,
+      ...lines.map((ln) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        image: ln.image || product.image || null,
+        price: Number(packUnit),
+        collection: product.collection,
+        size,
+        color: ln.color || null,
+        qty: ln.qty,
+        variationId: ln.variationId || null,
+        packId,
+        packSize,
+      })),
+    ]);
+    if (toast) toastAddedToCart(product.name);
     if (openDrawer) setOpen(true);
   }, []);
 
@@ -257,7 +358,7 @@ export function CartProvider({ children }) {
   const value = {
     items, count, subtotal, lineKey, loading,
     open, openCart: () => setOpen(true), closeCart: () => setOpen(false),
-    addItem, removeItem, updateQty, clearCart,
+    addItem, addPack, removeItem, updateQty, clearCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

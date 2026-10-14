@@ -524,6 +524,10 @@ export default function CartDrawer() {
       product_id: Number(it.id),
       variation_id: it.variationId ? Number(it.variationId) : null,
       quantity: Number(it.qty) || 1,
+      // Pack group identifiers (null for loose lines). Lines sharing a pack_id
+      // are repriced server-side by the group's total quantity (bundle tier).
+      pack_id: it.packId || null,
+      pack_size: it.packSize || null,
     }));
 
   /* Meta Purchase custom_data — captured from the cart BEFORE it is cleared. */
@@ -833,16 +837,25 @@ export default function CartDrawer() {
                           <p className="cd-item-name">{it.name}</p>
                           {it.color && <p className="cd-item-meta">Colour: {it.color}</p>}
                           {it.size  && <p className="cd-item-meta">Size: {it.size}</p>}
+                          {it.packId && <p className="cd-item-meta">Pack of {it.packSize || it.qty} · priced per pair</p>}
                           <div className="cd-item-row">
                             <div className="cd-item-prices">
                               <span className="cd-item-price">₹{(price * it.qty).toFixed(0)}</span>
                               {mrp > price && <span className="cd-item-original-price">₹{(mrp * it.qty).toFixed(0)}</span>}
                             </div>
-                            <div className="cd-qty">
-                              <button className="cd-qty-btn" onClick={() => updateQty(key, it.qty - 1)} disabled={it.qty <= 1} aria-label="Decrease">−</button>
-                              <span className="cd-qty-val">{it.qty}</span>
-                              <button className="cd-qty-btn" onClick={() => updateQty(key, it.qty + 1)} aria-label="Increase">+</button>
-                            </div>
+                            {it.packId ? (
+                              /* Pack pairs are priced as a group, so their quantity
+                                 is locked (editing one line would desync the tier). */
+                              <div className="cd-qty" aria-label="Pack quantity" title="Part of a pack">
+                                <span className="cd-qty-val">×{it.qty}</span>
+                              </div>
+                            ) : (
+                              <div className="cd-qty">
+                                <button className="cd-qty-btn" onClick={() => updateQty(key, it.qty - 1)} disabled={it.qty <= 1} aria-label="Decrease">−</button>
+                                <span className="cd-qty-val">{it.qty}</span>
+                                <button className="cd-qty-btn" onClick={() => updateQty(key, it.qty + 1)} aria-label="Increase">+</button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <button className="cd-item-remove" onClick={() => removeItem(key)} aria-label="Remove"><IconTrash /></button>

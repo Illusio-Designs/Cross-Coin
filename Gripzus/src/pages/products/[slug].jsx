@@ -94,7 +94,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   const router = useRouter();
   const slug = slugProp || router.query.slug;
 
-  const { addItem, openCart } = useCart();
+  const { addItem, addPack, openCart } = useCart();
   const { has, toggle } = useWishlist();
 
   // Preselect the colour from ?color= (set by the per-colour cards). Computed
@@ -123,8 +123,9 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   const [qty, setQty]     = useState(1);
   // Selected pack tier (0 = the 1-pair base); only used when this product has packs.
   const [pack, setPack]   = useState(0);
+  // Per-pair colour selection for a multi-pair pack — one colour NAME per pair.
+  const [packColors, setPackColors] = useState([]);
   const [added, setAdded] = useState(false);
-  const [paused, setPaused] = useState(false);
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('');
@@ -215,17 +216,25 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   // Reset to the first image whenever the selected colour changes.
   useEffect(() => { setActiveImg(0); }, [color]);
 
-  /* Auto-advance the gallery one image at a time every 3s.
-     Pauses while the shopper hovers the main image. */
+  // The gallery is user-controlled only (thumbnails / prev-next / lightbox) —
+  // no auto-advance, matching Morbix.
+
+  // Keep the per-pair colour list sized to the chosen pack: new slots default to
+  // the currently-selected colour, existing picks are preserved. Computes the
+  // pack's pair count locally (the render-body pack derivation runs after the
+  // early returns, so it isn't available to this hook).
   useEffect(() => {
-    const count = (product?.colors?.find((c) => c.name === color)?.images?.filter(Boolean).length)
-      || product?.images?.length || 0;
-    if (count < 2 || paused || lightbox) return;
-    const id = setTimeout(() => {
-      setActiveImg((i) => (i + 1) % count);
-    }, 3000);
-    return () => clearTimeout(id);
-  }, [product, paused, activeImg, color, lightbox]);
+    const packs = Array.isArray(bundleTiers) ? bundleTiers : [];
+    if (!packs.length) return;
+    const opts = [1, ...packs.map((t) => Number(t.pairs))];
+    const pairs = opts[Math.min(pack, opts.length - 1)] || 1;
+    if (pairs <= 1) return;
+    setPackColors((prev) => {
+      const next = prev.slice(0, pairs);
+      while (next.length < pairs) next.push(color);
+      return next;
+    });
+  }, [pack, color, bundleTiers]);
 
   // Close the zoom lightbox on Escape.
   useEffect(() => {
@@ -248,7 +257,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   }, [product]);
 
   // Keep the active thumbnail in view by scrolling ONLY the rail (never the
-  // page) as the gallery auto-advances.
+  // page) as the shopper changes the active image.
   useEffect(() => {
     const rail = thumbsRef.current;
     if (!rail) return;
@@ -353,14 +362,47 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     variationId: resolveVariationId(product, color, size),
   });
 
+  /* ── Per-pair colour selection (multi-pair packs) ──────────────────────
+     Single, individually-selectable colours (the admin-defined multi-colour
+     "pack" swatches are excluded — you can't pick one of those per pair). When
+     the chosen pack has >1 pair AND there are individual colours, the shopper
+     picks a colour for EACH pair; each colour becomes its own cart line and all
+     lines share one pack_id so the backend prices the group by the bundle tier. */
+  const singleColors = (product.colors || []).filter((c) => !c.packColors);
+  const canPerPair = hasPacks && packPairs > 1 && singleColors.length > 0;
+  // The colour name chosen for each pair (defaults to the main selected colour).
+  const perPairColors = Array.from({ length: packPairs }, (_, i) => packColors[i] ?? color);
+
+  // Resolve a colour NAME → its variation id, its own first image and the name.
+  const resolvePairVariant = (name) => {
+    const c = product.colors?.find((x) => x.name === name);
+    const img = (c?.images || []).filter(Boolean)[0] || images[0] || null;
+    return { variationId: resolveVariationId(product, name, size), color: name, image: img };
+  };
+
+  // Shared, pack-aware line builder used by BOTH Add-to-cart and Buy Now.
+  const addSelectionToCart = (opts = {}) => {
+    if (canPerPair) {
+      const perPair = perPairColors.map((name) => resolvePairVariant(name));
+      // packUnit (tierPrice / pairs) is for the guest line + pixel only; the
+      // server reprices every pack line from the tier via the shared pack_id.
+      addPack({ ...product, image: images[0] }, size, perPair, packUnit, packPairs, opts);
+      return;
+    }
+    addItem(buildCartLine(), opts);
+  };
+
   const handleAdd = () => {
-    addItem(buildCartLine());
+    addSelectionToCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
 
+  // Buy Now mirrors Morbix: run the SAME pack-aware builder (packs + per-pair
+  // colours included), no "added" confirmation, and open the cart/checkout the
+  // Gripzus way.
   const handleBuyNow = () => {
-    addItem(buildCartLine(), { openDrawer: false });
+    addSelectionToCart({ openDrawer: false, toast: false });
     openCart();
   };
 
@@ -511,8 +553,6 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 <div
                   ref={mainImgRef}
                   className="gz-pdp-main relative flex-1 overflow-hidden aspect-square max-w-[340px] mx-auto grid place-items-center sm:aspect-auto sm:max-w-none sm:mx-0 sm:block"
-                  onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true); }}
-                  onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false); }}
                 >
                   <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block h-full w-full cursor-zoom-in relative">
                     <img
@@ -757,6 +797,49 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 </div>
               )}
 
+              {/* Per-pair colour — pick a colour for EACH pair of a multi-pair
+                  pack. One control per pair, each defaulting to the selected
+                  colour; uses the same square monochrome swatch idiom as the
+                  colour selector above. Shown only when the pack has >1 pair AND
+                  the product has individually-selectable colours. */}
+              {canPerPair && (
+                <div className="mb-6">
+                  <p className="eyebrow mb-3">Choose a colour for each pair</p>
+                  <div className="flex flex-col gap-3">
+                    {perPairColors.map((name, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-3">
+                        <span className="eyebrow text-ink-muted shrink-0 min-w-[4.5rem]">
+                          Pair {idx + 1} — <span className="text-ink">{name || '—'}</span>
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {singleColors.map((c) => {
+                            const active = name === c.name;
+                            return (
+                              <button
+                                key={c.name}
+                                type="button"
+                                onClick={() => setPackColors((prev) => {
+                                  const next = Array.from({ length: packPairs }, (_, i) => prev[i] ?? color);
+                                  next[idx] = c.name;
+                                  return next;
+                                })}
+                                title={c.name}
+                                aria-label={`Pair ${idx + 1}: ${c.name}`}
+                                aria-pressed={active}
+                                className={`w-7 h-7 border transition-all ${
+                                  active ? 'border-ink ring-1 ring-ink ring-offset-2 ring-offset-paper' : 'border-line hover:border-ink'
+                                }`}
+                                style={{ backgroundColor: c.hex }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Qty + actions */}
               <div ref={actionsRef}>
                 <div className="flex items-center gap-2.5 mb-3 sm:gap-3">
@@ -798,20 +881,24 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                   BUY NOW – Cash On Delivery
                 </button>
-
-                {/* Trust badges (Morbix parity) */}
-                <div className="mt-5 grid grid-cols-2 gap-y-2.5 gap-x-4 border-t border-line pt-4 text-[11px] font-semibold text-ink-muted">
-                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</span>
-                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg> Cash on Delivery</span>
-                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</span>
-                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</span>
-                </div>
-                {/* Policy-accurate caption — COD is conditional and returns apply
-                    to unused items with tags (see Backend dpdpPolicySeeds). */}
-                <p className="mt-2 text-[10px] leading-snug text-ink-muted/80">COD available on eligible pin codes · 7-day returns on unused items with tags.</p>
               </div>
 
-              {/* Delivery / pincode serviceability — below the buy actions */}
+              {/* Trust strip */}
+              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6 mt-6">
+                {[
+                  ['Secure Checkout', <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>],
+                  ['Cash on Delivery', <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>],
+                  ['7-Day Returns', <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>],
+                  ['100% Genuine', <><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></>],
+                ].map(([label, paths]) => (
+                  <div key={label} className="flex flex-col items-center gap-1.5 text-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink">{paths}</svg>
+                    <span className="text-[10px] font-semibold leading-tight text-ink-muted">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Delivery / pincode serviceability — below the trust strip */}
               <div className="mt-6 rounded-lg border border-line bg-paper-warm/40 p-4">
                 <p className="eyebrow mb-3">Delivery Details</p>
                 <div className="flex gap-2">
@@ -843,21 +930,6 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* Trust strip */}
-              <div className="grid grid-cols-4 gap-2 border-t border-line pt-6 mt-6">
-                {[
-                  ['Secure Checkout', <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>],
-                  ['Cash on Delivery', <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>],
-                  ['7-Day Returns', <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>],
-                  ['100% Genuine', <><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></>],
-                ].map(([label, paths]) => (
-                  <div key={label} className="flex flex-col items-center gap-1.5 text-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink">{paths}</svg>
-                    <span className="text-[10px] font-semibold leading-tight text-ink-muted">{label}</span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>

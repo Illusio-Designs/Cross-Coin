@@ -25,11 +25,14 @@ export async function getCart() {
   return data.cart || data.items || data || [];
 }
 
-export async function addToCart({ productId, variationId, quantity = 1, size = null, color = null }) {
+export async function addToCart({ productId, variationId, quantity = 1, size = null, color = null, pack_id = null, pack_size = null }) {
   const res = await fetch(`${API_URL}/api/cart/items`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ productId, variationId, quantity, size, color }),
+    // pack_id / pack_size are OPTIONAL (null ⇒ a normal loose line, exactly as
+    // before). When set, lines sharing a pack_id are repriced server-side by the
+    // pack group's TOTAL quantity via the bundle tier (server-authoritative).
+    body: JSON.stringify({ productId, variationId, quantity, size, color, pack_id, pack_size }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to add to cart');
