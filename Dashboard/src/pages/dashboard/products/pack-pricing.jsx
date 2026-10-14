@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { bundleService, brandService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
-import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
+import { PageHeader, Panel, FilterBar, ResponsiveTable } from '../../../components/Dashboard/primitives';
+import { Badge, Select } from '../../../components/ui';
 
 const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true };
 
@@ -112,36 +113,63 @@ export default function PackPricingManager() {
   const perPair = (price, pairs) => (pairs > 0 ? Number(price) / pairs : 0);
   const saving100 = (price, pairs) => (basePrice > 0 && pairs > 0 ? Math.round((1 - Number(price) / (basePrice * pairs)) * 100) : 0);
 
+  const dim = (t) => ({ opacity: t.is_active ? 1 : 0.5 });
+  const sortedItems = items.slice().sort((a, b) => a.display_order - b.display_order || a.pairs - b.pairs);
+  const packColumns = [
+    { key: 'pack', label: 'Pack', render: (t) => <span style={dim(t)}>{t.label || `${t.pairs} Pairs`}</span> },
+    { key: 'price', label: 'Pack price', render: (t) => <b style={dim(t)}>{money(t.price)}</b> },
+    { key: 'perPair', label: 'Per pair', render: (t) => <span style={dim(t)}>{money(perPair(t.price, t.pairs))}</span> },
+    ...(basePrice > 0
+      ? [{ key: 'saving', label: 'Saving', render: (t) => <span style={{ ...dim(t), color: 'var(--ds-color-success, #15803d)', fontWeight: 700 }}>{saving100(t.price, t.pairs)}%</span> }]
+      : []),
+    { key: 'badge', label: 'Badge', render: (t) => <span style={dim(t)}>{t.badge || '—'}</span> },
+    { key: 'active', label: 'Active', render: (t) => <Badge variant={t.is_active ? 'success' : 'default'}>{t.is_active ? 'Yes' : 'No'}</Badge> },
+    {
+      key: 'actions',
+      label: '',
+      headerStyle: { textAlign: 'right' },
+      cellStyle: { textAlign: 'right', whiteSpace: 'nowrap' },
+      render: (t) => (
+        <span style={dim(t)}>
+          <button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}
+          <button onClick={() => remove(t.id)} style={btnDanger}>Delete</button>
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="dashboard-sections">
       <PageHeader
         title="Pack pricing"
         subtitle="Set buy-more-save-more packs for each product. 1 pair stays the product's own price; you set the exact total price for 2-pair, 3-pair packs, etc. A product shows the pack picker on the storefront only when it has an active pack."
         actions={
-          <select value={brandId} onChange={(e) => setBrandId(Number(e.target.value))} title="Brand" style={sel}>
-            {brands.length === 0 && <option value={brandId}>Brand #{brandId}</option>}
-            {brands.map((b) => <option key={b.id} value={b.id}>{b.name || b.slug || `Brand #${b.id}`}</option>)}
-          </select>
+          <Select
+            value={brandId}
+            onChange={(v) => setBrandId(Number(v))}
+            options={brands.length === 0
+              ? [{ value: brandId, label: `Brand #${brandId}` }]
+              : brands.map((b) => ({ value: b.id, label: b.name || b.slug || `Brand #${b.id}` }))}
+            placeholder="Brand"
+          />
         }
       />
 
       {/* Product picker */}
       <div className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)', maxWidth: 880 }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Field label="Find a product" style={{ flex: '1 1 220px' }}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name…" style={input} />
-          </Field>
-          <Field label="Product" style={{ flex: '2 1 320px' }}>
-            <select value={productId} onChange={(e) => setProductId(e.target.value)} style={input}>
-              <option value="">{products.length ? 'Select a product…' : 'No products for this brand'}</option>
-              {filtered.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}{(p.price ?? p.sellingPrice) ? ` — ₹${Number(p.price ?? p.sellingPrice)}` : ''}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Search products by name…">
+          <div style={{ flex: '1 1 320px', minWidth: 240 }}>
+            <Select
+              value={productId}
+              onChange={(v) => setProductId(v)}
+              options={filtered.map((p) => ({
+                value: String(p.id),
+                label: `${p.name}${(p.price ?? p.sellingPrice) ? ` — ₹${Number(p.price ?? p.sellingPrice)}` : ''}`,
+              }))}
+              placeholder={products.length ? 'Select a product…' : 'No products for this brand'}
+            />
+          </div>
+        </FilterBar>
         {selectedProduct && (
           <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
             <b style={{ color: 'var(--ds-color-text)' }}>{selectedProduct.name}</b> · 1 pair = <b style={{ color: 'var(--ds-color-text)' }}>{basePrice > 0 ? money(basePrice) : 'its own price'}</b> (sold as single pair)
@@ -195,36 +223,12 @@ export default function PackPricingManager() {
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)' }}>Packs for this product</div>
               {items.length > 0 && <button onClick={openCreate} className="ds-btn ds-btn--primary" style={{ padding: '6px 12px' }}>+ New pack</button>}
             </div>
-            {loading ? (
-              <div style={pad}>Loading…</div>
-            ) : items.length === 0 ? (
-              <div style={pad}>No packs for this product yet. Add one above — e.g. 2 pairs for ₹499, 3 pairs for ₹699.</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                  <thead>
-                    <tr>{['Pack', 'Pack price', 'Per pair', basePrice > 0 ? 'Saving' : '', 'Badge', 'Active', ''].map((h, i) => <th key={i} style={th}>{h}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {items.slice().sort((a, b) => a.display_order - b.display_order || a.pairs - b.pairs).map((t) => (
-                      <tr key={t.id} style={{ borderTop: '1px solid var(--ds-color-border-soft)', opacity: t.is_active ? 1 : 0.5 }}>
-                        <td style={td}>{t.label || `${t.pairs} Pairs`}</td>
-                        <td style={td}><b>{money(t.price)}</b></td>
-                        <td style={td}>{money(perPair(t.price, t.pairs))}</td>
-                        {basePrice > 0 && <td style={{ ...td, color: 'var(--ds-color-success, #15803d)', fontWeight: 700 }}>{saving100(t.price, t.pairs)}%</td>}
-                        {basePrice <= 0 && <td style={td}></td>}
-                        <td style={td}>{t.badge || '—'}</td>
-                        <td style={td}>{t.is_active ? 'Yes' : 'No'}</td>
-                        <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}
-                          <button onClick={() => remove(t.id)} style={btnDanger}>Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <ResponsiveTable
+              columns={packColumns}
+              data={loading ? [] : sortedItems}
+              rowKey="id"
+              emptyMessage={loading ? 'Loading…' : 'No packs for this product yet. Add one above — e.g. 2 pairs for ₹499, 3 pairs for ₹699.'}
+            />
           </Panel>
         </>
       )}
@@ -239,9 +243,6 @@ const Field = ({ label, children, style }) => (
   </label>
 );
 const input = { width: '100%', padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 6, fontSize: 14, outline: 'none', background: 'var(--ds-color-surface)' };
-const sel = { padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-sm)', fontSize: 14, background: 'var(--ds-color-surface)', fontWeight: 600 };
 const pad = { padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' };
-const th = { textAlign: 'left', padding: '10px 12px', fontSize: 12, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid var(--ds-color-border)' };
-const td = { padding: '10px 12px', color: 'var(--ds-color-text)' };
 const btnSecondary = { padding: '6px 10px', border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-text-muted)' };
 const btnDanger = { padding: '6px 10px', border: '1px solid #fecaca', background: '#fef2f2', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: '#991b1b' };

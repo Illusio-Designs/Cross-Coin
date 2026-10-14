@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Pagination, DateRangePicker } from '../../../components/ui';
-import { PageHeader, Panel, StatTile, StatGrid, EmptyState } from '../../../components/Dashboard/primitives';
+import { PageHeader, Panel, StatTile, StatGrid, EmptyState, ResponsiveTable } from '../../../components/Dashboard/primitives';
 
 const UTMAnalytics = () => {
   const [utmData, setUtmData] = useState([]);
@@ -203,6 +203,26 @@ const UTMAnalytics = () => {
     </div>
   );
 
+  const utmColumns = [
+    { key: 'serial_number', label: 'S/N', render: (row) => row.serial_number },
+    { key: 'utm_source', label: 'Source', render: (row) => <span style={{ ...utmChip, color: 'var(--ds-color-text)' }}>{row.utm_source}</span> },
+    { key: 'utm_medium', label: 'Medium', render: (row) => <span style={utmChip}>{row.utm_medium}</span> },
+    { key: 'utm_campaign', label: 'Campaign', render: (row) => <span style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>{row.utm_campaign}</span> },
+    { key: 'visits', label: 'Visits', render: (row) => row.visits },
+    { key: 'orders', label: 'Orders', render: (row) => row.orders },
+    {
+      key: 'conversionRate', label: 'Conversion Rate', render: (row) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ds-color-text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+          {row.conversionRate}%
+          <span style={{ width: 44, height: 6, background: 'var(--ds-color-border-soft)', borderRadius: 4, overflow: 'hidden' }}>
+            <span style={{ display: 'block', height: '100%', width: `${Math.min(100, (parseFloat(row.conversionRate) / maxConv) * 100)}%`, background: 'var(--ds-color-text)', borderRadius: 4 }} />
+          </span>
+        </span>
+      )
+    },
+    { key: 'revenue', label: 'Revenue', render: (row) => <span style={{ fontWeight: 700, color: 'var(--ds-color-success, #10b981)' }}>₹{row.revenue.toFixed(2)}</span> },
+  ];
+
   if (loading) {
     return (
       <div className="dashboard-page">
@@ -268,43 +288,11 @@ const UTMAnalytics = () => {
           />
         ) : (
           <>
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table className="utm-table">
-              <thead>
-                <tr>
-                  <th>S/N</th>
-                  <th>Source</th>
-                  <th>Medium</th>
-                  <th>Campaign</th>
-                  <th>Visits</th>
-                  <th>Orders</th>
-                  <th>Conversion Rate</th>
-                  <th>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItemsWithSN.map((row) => (
-                  <tr key={row.serial_number}>
-                    <td>{row.serial_number}</td>
-                    <td><span style={{ ...utmChip, color: 'var(--ds-color-text)' }}>{row.utm_source}</span></td>
-                    <td><span style={utmChip}>{row.utm_medium}</span></td>
-                    <td style={{ color: 'var(--ds-color-text)', fontWeight: 600 }}>{row.utm_campaign}</td>
-                    <td>{row.visits}</td>
-                    <td>{row.orders}</td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: 'var(--ds-color-text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                        {row.conversionRate}%
-                        <span style={{ width: 44, height: 6, background: 'var(--ds-color-border-soft)', borderRadius: 4, overflow: 'hidden' }}>
-                          <span style={{ display: 'block', height: '100%', width: `${Math.min(100, (parseFloat(row.conversionRate) / maxConv) * 100)}%`, background: 'var(--ds-color-text)', borderRadius: 4 }} />
-                        </span>
-                      </span>
-                    </td>
-                    <td className="revenue">₹{row.revenue.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            <ResponsiveTable
+              columns={utmColumns}
+              data={currentItemsWithSN}
+              rowKey="serial_number"
+            />
 
             {/* Pagination */}
             {totalPages > 1 && (
