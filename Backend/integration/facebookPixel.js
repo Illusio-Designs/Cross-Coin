@@ -42,14 +42,23 @@ async function resolveBrandId(req) {
 async function sendFacebookEvent(eventName, order, extraData = {}) {
   const brandId = order.brand_id || 1;
 
-  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1313610943804396');
+  // Use THIS brand's own pixel id + token from brand_settings. Never fall back
+  // to another brand's pixel — posting one brand's conversions to another's
+  // pixel corrupts BOTH Ads accounts (the brand under-counts, the other gets
+  // phantom conversions). Fail closed: if the brand has no pixel id, skip.
+  // Crosscoin (brand 1) keeps its historical default so it is never left blank.
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', brandId === 1 ? '1313610943804396' : null);
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
   // When set (temporarily, during testing), events appear live in Meta's
   // Events Manager → Test Events tab. Leave it unset in production.
   const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
 
+  if (!FB_PIXEL_ID) {
+    console.log(`Facebook Pixel: Skipping ${eventName} — brand ${brandId} has no FB_PIXEL_ID set`);
+    return { skipped: true, reason: 'no pixel id' };
+  }
   if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === 'YOUR_ACCESS_TOKEN') {
-    console.log(`Facebook Pixel: Skipping ${eventName} — no valid access token`);
+    console.log(`Facebook Pixel: Skipping ${eventName} — brand ${brandId} has no valid access token`);
     return { skipped: true, reason: 'no access token' };
   }
 
@@ -130,10 +139,13 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
  */
 async function sendBrowserPixelEvent(req, body = {}) {
   const brandId = await resolveBrandId(req);
-  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', '1313610943804396');
+  // Per-brand pixel + token; fail closed so one brand's events never post to
+  // another's pixel. Crosscoin (brand 1) keeps its historical default.
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', brandId === 1 ? '1313610943804396' : null);
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
   const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
 
+  if (!FB_PIXEL_ID) return { skipped: true, reason: 'no pixel id' };
   if (!FB_ACCESS_TOKEN || FB_ACCESS_TOKEN === 'YOUR_ACCESS_TOKEN') {
     return { skipped: true, reason: 'no access token' };
   }
