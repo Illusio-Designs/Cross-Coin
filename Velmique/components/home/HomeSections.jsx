@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProductCard from '@/components/shop/ProductCard';
+import ReviewWall from '@/components/reviews/ReviewWall';
 import { getBestsellers } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import { getAllReviews } from '@/lib/api/reviews';
@@ -360,104 +361,44 @@ export function CollectionBanner() {
 }
 
 /* ─────────────────────────────────────
-   8. REVIEWS — live reviews in a 3-up grid (real data)
+   8. REVIEWS — live reviews in a 3-row scrolling "wall" (real data)
    ───────────────────────────────────── */
-function mapReview(r) {
-  return {
-    id: r.id,
-    name: r.reviewerName || r.guestName || r.User?.name || 'Verified customer',
-    text: r.review || r.comment || '',
-    rating: Number(r.rating || 0),
-  };
+// Keep raw review objects (ReviewWall reads name / body / rating / date itself).
+function hasBody(r) {
+  return (r.review || r.comment || r.text || '').trim();
 }
 
-// Shown when the brand has no approved reviews yet, so the homepage always
-// carries a review section (matches the pasted maison design's testimonials).
-const FALLBACK_REVIEWS = [
-  { id: 'vq-f1', name: 'Verified customer', rating: 5, text: 'The kind of fragrance people ask you about without you having to say anything.' },
-  { id: 'vq-f2', name: 'Verified customer', rating: 5, text: 'Elegant, warm and incredibly easy to wear. It has quickly become my signature.' },
-  { id: 'vq-f3', name: 'Verified customer', rating: 5, text: 'Beautiful presentation and a fragrance that feels far more expensive than it is.' },
-];
-
 export function Testimonials({ initialReviews = null, initialTotal = 0 }) {
-  const seed = (Array.isArray(initialReviews) ? initialReviews : []).map(mapReview).filter((r) => r.text);
+  const seed = (Array.isArray(initialReviews) ? initialReviews : []).filter(hasBody);
   const [reviews, setReviews] = useState(() => seed);
-  const [loaded, setLoaded] = useState(() => seed.length > 0);
   // Exact store-wide review count from the API (the list is only the latest few).
   const [total, setTotal] = useState(() => Number(initialTotal) || 0);
 
   useEffect(() => {
     if (seed.length) return;
     let alive = true;
-    getAllReviews({ limit: 12 }).then(({ reviews: rs, pagination }) => {
+    getAllReviews({ limit: 24 }).then(({ reviews: rs, pagination }) => {
       if (!alive) return;
       setTotal(Number(pagination?.total) || 0);
-      setReviews((rs || []).map(mapReview).filter((r) => r.text));
-      setLoaded(true);
+      setReviews((rs || []).filter(hasBody));
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialReviews]);
 
-  const rated = reviews.filter((r) => r.rating > 0);
-  const avgRating = rated.length ? rated.reduce((a, r) => a + r.rating, 0) / rated.length : 0;
-
-  // Always render the section — fall back to curated testimonials when there
-  // are no live reviews yet. Repeat a short list so the marquee fills its row.
-  const source = reviews.length ? reviews : FALLBACK_REVIEWS;
-  const marqueeList = source.length >= 6
-    ? source
-    : Array.from({ length: Math.ceil(6 / source.length) }).flatMap(() => source);
+  // Real data only — render nothing until the brand has approved reviews.
+  if (!reviews.length) return null;
 
   return (
-    <section id="reviews" className="bg-[var(--surface-2)] py-20 md:py-[140px] text-center overflow-hidden">
-      <motion.div {...reveal} className="px-5 sm:px-6 md:px-[7vw]">
-        <p className="text-[var(--gold-deep)] text-[9px] tracking-[0.25em] uppercase font-body">The experience</p>
-        <h2 className="font-serif text-[var(--ink)] font-medium mt-4" style={{ fontSize: 'clamp(2.4rem, 6vw, 5.1rem)', lineHeight: 1.02 }}>
-          Worn by people<br />who know scent.
-        </h2>
-        {reviews.length > 0 && (
-          <p className="mt-6 text-[11px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">
-            <span className="text-[var(--gold-deep)]" aria-hidden="true">★</span>{' '}
-            {(avgRating || 0).toFixed(1)}
-            <span className="mx-2 text-[var(--gold)]" aria-hidden="true">·</span>
-            {Math.max(total, reviews.length).toLocaleString('en-IN')} review{Math.max(total, reviews.length) === 1 ? '' : 's'}
-          </p>
-        )}
+    <section id="reviews" className="bg-[var(--surface-2)] py-20 md:py-[140px] overflow-hidden">
+      <motion.div {...reveal}>
+        <ReviewWall
+          reviews={reviews}
+          total={total}
+          eyebrow="The experience"
+          title={<>Worn by people<br />who know scent.</>}
+        />
       </motion.div>
-
-      {/* Continuous auto-scrolling marquee of reviews (pauses on hover). */}
-      <div className="vq-rev-marquee mt-12 md:mt-16">
-        <div className="vq-rev-track">
-          {[...marqueeList, ...marqueeList].map((t, i) => (
-            <article key={`${t.id}-${i}`} className="vq-rev-card bg-white/55 px-7 py-9 text-left shrink-0">
-              <div className="text-[var(--gold-deep)] text-[11px] tracking-[0.2em]">
-                {'★★★★★'.slice(0, Math.max(1, Math.round(t.rating) || 5))}
-              </div>
-              <p className="font-serif text-[var(--ink)] leading-[1.3] mt-5 line-clamp-5"
-                style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.4rem)' }}>“{t.text}”</p>
-              <div className="mt-5 text-[9px] tracking-[0.2em] uppercase font-body text-[var(--ink-soft)]">{t.name}</div>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      <style jsx>{`
-        .vq-rev-marquee {
-          overflow: hidden; position: relative;
-          -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-          mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-        }
-        .vq-rev-track { display: flex; gap: 20px; width: max-content; padding-inline: 10px;
-          animation: vq-rev 85s linear infinite; }
-        .vq-rev-marquee:hover .vq-rev-track { animation-play-state: paused; }
-        .vq-rev-card { width: 300px; max-width: 82vw; }
-        @media (min-width: 768px) { .vq-rev-card { width: 360px; } }
-        @keyframes vq-rev { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @media (prefers-reduced-motion: reduce) {
-          .vq-rev-track { animation: none; overflow-x: auto; }
-        }
-      `}</style>
     </section>
   );
 }

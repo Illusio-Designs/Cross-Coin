@@ -821,3 +821,45 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   body:has([data-sticky-atc]) .gzwa-greet { bottom: 164px; }
   body:has([data-sticky-atc]) [data-scrolltop] { bottom: 164px; right: 16px; }
 }
+
+/* ── Review wall — three rows scrolling in alternating directions (Soxbae/Morbix
+   parity, Velmique styling). CSS-only seamless loop + pause-on-hover; the
+   component (components/reviews/ReviewWall.jsx) duplicates each row so the
+   translateX(-50%) loop meets itself. ── */
+.vqrv-rows { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+.vqrv-static {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+  padding-inline: 16px;
+}
+.vqrv-static > .vqrv-card { flex: 0 1 340px; width: 340px; max-width: 86vw; }
+.vqrv-marquee {
+  overflow: hidden; position: relative; min-width: 0; outline: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.vqrv-track {
+  display: flex; align-items: stretch; gap: 20px; width: max-content; padding: 2px 10px;
+  animation: vqrvScroll var(--vqrv-dur, 60s) linear infinite;
+  will-change: transform;
+}
+.vqrv-marquee:hover .vqrv-track,
+.vqrv-marquee:focus-within .vqrv-track,
+.vqrv-marquee:active .vqrv-track { animation-play-state: paused; }
+.vqrv-track.vqrv-rtl { animation-direction: reverse; }
+.vqrv-track > .vqrv-card,
+.vqrv-track > .vqrv-dup { flex: 0 0 340px; width: 340px; }
+.vqrv-dup { display: flex; }
+.vqrv-dup > .vqrv-card { flex: 1 1 auto; width: 100%; }
+@keyframes vqrvScroll { to { transform: translateX(calc(-50% - 10px)); } }
+@media (max-width: 700px) {
+  .vqrv-rows { gap: 12px; }
+  .vqrv-track { gap: 14px; }
+  .vqrv-track > .vqrv-card,
+  .vqrv-track > .vqrv-dup { flex-basis: 80vw; width: 80vw; max-width: 320px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vqrv-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; scroll-snap-type: x mandatory; }
+  .vqrv-track { animation: none; }
+  .vqrv-track > .vqrv-card { scroll-snap-align: start; }
+  .vqrv-dup { display: none; }
+}
