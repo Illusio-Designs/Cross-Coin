@@ -131,6 +131,8 @@ export default function CartDrawer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [paymentFailed, setPaymentFailed] = useState(null);
+  // Two-step checkout: 1 = review cart, 2 = delivery + payment.
+  const [coStep, setCoStep] = useState(1);
   // Address validation popup: { errors:[], warnings:[] } while shown, else null.
   const [addrIssues, setAddrIssues] = useState(null);
 
@@ -231,15 +233,31 @@ export default function CartDrawer() {
     return arr;
   }, [shippingFees]);
 
-  /* Meta funnel: InitiateCheckout — fire once when the drawer opens with items
-     (this drawer is the full in-drawer checkout). */
+  /* On open: reset to the cart step and fire view_cart (the drawer opens on the
+     cart review). InitiateCheckout is NOT fired here — it moves to the moment the
+     shopper taps "Proceed to checkout" (goToCheckout), i.e. the step-1→step-2
+     transition, so the funnel event is tied to checkout intent, not merely
+     opening the drawer. */
   useEffect(() => {
-    if (!open || items.length === 0) return;
+    if (!open) return;
+    setCoStep(1);
+    if (items.length === 0) return;
     viewCart({
       contents: items.map((i) => ({ id: String(i.id), quantity: i.qty || 1 })),
       value: items.reduce((s, i) => s + getPrice(i) * i.qty, 0),
       currency: 'INR',
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  /* Reset back to the cart step once the cart empties (e.g. last item removed),
+     so re-opening or re-filling the cart always starts on step 1. */
+  useEffect(() => { if (items.length === 0) setCoStep(1); }, [items.length]);
+
+  /* Advance to the checkout step. Fires Meta InitiateCheckout here — tied to the
+     intent to check out (the step-1→step-2 transition), not to opening the drawer. */
+  const goToCheckout = () => {
+    if (items.length === 0) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.id)),
       content_type: 'product',
@@ -248,8 +266,9 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + getPrice(i) * i.qty, 0),
       currency: 'INR',
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setCoStep(2);
+    requestAnimationFrame(() => { const b = document.querySelector('.cd-body'); if (b) b.scrollTop = 0; });
+  };
 
   /* Available offers — fetch the brand's public coupons once when the drawer
      opens with items in the cart, so shoppers can tap one to auto-apply. */
@@ -743,13 +762,29 @@ export default function CartDrawer() {
           </div>
         )}
 
-        {/* Header */}
+        {/* Header — mirrors the two-step flow: "Your Cart" (step 1) vs
+            "Checkout" + a "Step 2 of 2" subline (step 2), with a back chevron
+            on step 2 that returns to the cart. */}
         <div className="cd-header">
           <div className="cd-header-left">
-            <span className="cd-header-icon"><IconBag /></span>
+            {!orderSuccess && items.length > 0 && coStep === 2 ? (
+              <button
+                type="button"
+                className="cd-header-icon"
+                onClick={() => setCoStep(1)}
+                aria-label="Back to cart"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              </button>
+            ) : (
+              <span className="cd-header-icon"><IconBag /></span>
+            )}
             <div>
-              <span className="cd-header-title">{orderSuccess ? 'Order Confirmed' : 'Your Cart'}</span>
-              {!orderSuccess && <span className="cd-header-count">{totalQty}</span>}
+              <span className="cd-header-title">{orderSuccess ? 'Order Confirmed' : coStep === 2 ? 'Checkout' : 'Your Cart'}</span>
+              {!orderSuccess && (coStep === 2
+                ? <span style={{ display: 'block', fontSize: 11.5, fontWeight: 500, color: '#666', lineHeight: 1.3, marginTop: 2 }}>Step 2 of 2 · delivery &amp; payment</span>
+                : <span className="cd-header-count">{totalQty}</span>)}
             </div>
           </div>
           <button className="cd-close-btn" onClick={closeCart} aria-label="Close cart"><IconX /></button>
@@ -796,8 +831,9 @@ export default function CartDrawer() {
           ) : (
             <div className="cd-single-view">
 
+              {/* ── STEP 1 (Your cart): free-shipping, items, cross-sell ── */}
               {/* Free-shipping progress */}
-              {freeShipThreshold > 0 && (
+              {coStep === 1 && freeShipThreshold > 0 && (
                 <div className="cd-freeship">
                   <p className="cd-freeship-label">
                     {freeShipQualifies
@@ -821,6 +857,7 @@ export default function CartDrawer() {
               )}
 
               {/* Items */}
+              {coStep === 1 && (
               <div className="cd-sv-section">
                 <div className="cd-section-title">Items</div>
                 <div className="cd-items-list">
@@ -864,8 +901,10 @@ export default function CartDrawer() {
                   })}
                 </div>
               </div>
+              )}
 
-              {/* Coupon */}
+              {/* Coupon — part of step 1 (the cart review), like Morbix. */}
+              {coStep === 1 && (
               <div className="cd-sv-section">
                 <div className="cd-section-title">Coupon</div>
                 {appliedCoupon ? (
@@ -970,10 +1009,12 @@ export default function CartDrawer() {
                   </>
                 )}
               </div>
+              )}
 
               {/* You may also like — compact cross-sell strip (above the order
-                  summary). Renders nothing when there's nothing to suggest. */}
-              {crossSell.length > 0 && (
+                  summary). Renders nothing when there's nothing to suggest.
+                  Part of step 1 (the cart review). */}
+              {coStep === 1 && crossSell.length > 0 && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">You may also like</div>
                   <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
@@ -1030,7 +1071,9 @@ export default function CartDrawer() {
                 </div>
               </div>
 
+              {/* ── STEP 2 (Checkout): delivery & payment ── */}
               {/* Delivery details */}
+              {coStep === 2 && (
               <div className="cd-sv-section">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
                 {addressLoading ? (
@@ -1136,9 +1179,10 @@ export default function CartDrawer() {
                   </>
                 )}
               </div>
+              )}
 
               {/* Payment method */}
-              {sortedFees.length > 0 && (
+              {coStep === 2 && sortedFees.length > 0 && (
                 <div className="cd-sv-section">
                   <div className="cd-section-title">How would you like to pay?</div>
                   <div className="cd-delivery-list">
@@ -1177,14 +1221,23 @@ export default function CartDrawer() {
         {/* Footer */}
         {!orderSuccess && !paymentFailed && items.length > 0 && (
           <div className="cd-footer">
-            {!pincodeServiceable && (
-              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 0, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
-                We don’t deliver to this PIN code yet — please try a different delivery address.
-              </div>
+            {coStep === 1 ? (
+              /* Step 1 CTA — advance to the checkout step (fires InitiateCheckout). */
+              <button className="cd-btn-primary cd-btn-full" onClick={goToCheckout} disabled={isProcessing}>
+                Proceed to checkout · ₹{finalTotal.toFixed(0)}
+              </button>
+            ) : (
+              <>
+                {!pincodeServiceable && (
+                  <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 0, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+                    We don’t deliver to this PIN code yet — please try a different delivery address.
+                  </div>
+                )}
+                <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing || !pincodeServiceable}>
+                  {isProcessing ? 'Processing…' : `${isPrepaid ? 'Pay Now' : 'Place Order'} — ₹${finalTotal.toFixed(0)}`}
+                </button>
+              </>
             )}
-            <button className="cd-btn-primary cd-btn-full" onClick={handlePlaceOrder} disabled={isProcessing || !pincodeServiceable}>
-              {isProcessing ? 'Processing…' : `${isPrepaid ? 'Pay Now' : 'Place Order'} — ₹${finalTotal.toFixed(0)}`}
-            </button>
             <div className="cd-trust-bar">
               <span className="cd-trust-item">Secure checkout</span>
               <span className="cd-trust-sep">·</span>
