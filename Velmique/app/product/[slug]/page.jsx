@@ -1,5 +1,5 @@
 import ClientPage from './ClientPage';
-import { getProductReviews } from '@/lib/api/reviews';
+import { getProductReviews, getAllReviews } from '@/lib/api/reviews';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.co.in';
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -37,11 +37,16 @@ export async function generateMetadata({ params }) {
 export default async function Page({ params }) {
   const { slug } = await params;
   const product = await fetchProduct(slug);
-  // Pre-fetch reviews server-side so the first paint already shows
-  // them — saves the ProductReviews client effect a round-trip.
-  const initialReviewsPayload = product?.id
-    ? await getProductReviews(product.id, { limit: 30 }).catch(() => null)
-    : null;
+  // Pre-fetch reviews server-side so the first paint already shows them:
+  //  - this product's reviews + stats (powers ProductReviews' write flow), and
+  //  - brand-wide reviews for the scrolling review wall (same as the home page /
+  //    Morbix + Soxbae PDPs).
+  const [initialReviewsPayload, brandReviewsPayload] = await Promise.all([
+    product?.id ? getProductReviews(product.id, { limit: 30 }).catch(() => null) : null,
+    getAllReviews({ limit: 30 }).catch(() => null),
+  ]);
+  const initialBrandReviews = brandReviewsPayload?.reviews || [];
+  const initialBrandTotal = brandReviewsPayload?.pagination?.total || 0;
 
   const jsonLd = product ? {
     '@context': 'https://schema.org',
@@ -65,7 +70,12 @@ export default async function Page({ params }) {
       {jsonLd && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
-      <ClientPage initialProduct={product} initialReviewsPayload={initialReviewsPayload} />
+      <ClientPage
+        initialProduct={product}
+        initialReviewsPayload={initialReviewsPayload}
+        initialBrandReviews={initialBrandReviews}
+        initialBrandTotal={initialBrandTotal}
+      />
     </>
   );
 }

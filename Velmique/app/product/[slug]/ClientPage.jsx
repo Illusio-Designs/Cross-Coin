@@ -11,6 +11,7 @@ import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import ReviewWall from '@/components/reviews/ReviewWall';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
 import { fbTrack } from '@/utils/pixel';
@@ -26,7 +27,7 @@ const ik = (src, w) => {
   return src;
 };
 
-export default function ProductPage({ initialProduct = null, initialReviewsPayload = null }) {
+export default function ProductPage({ initialProduct = null, initialReviewsPayload = null, initialBrandReviews = [], initialBrandTotal = 0 }) {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug;
@@ -643,11 +644,25 @@ export default function ProductPage({ initialProduct = null, initialReviewsPaylo
 
           {/* ── Reviews ────────────────────────────────────── */}
           <div className="reveal">
-            <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Reviews</p>
-            <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
-              What customers say
-            </h2>
-            <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
+            {/* Brand-wide moving review wall (3 alternating rows). Renders only
+                when the brand has approved reviews — same wall as the home page
+                and the Morbix/Soxbae PDPs. */}
+            <ReviewWall
+              reviews={initialBrandReviews}
+              total={initialBrandTotal}
+              eyebrow="Loved across Velmique"
+              title="What customers say"
+            />
+
+            {/* This fragrance's own rating summary + the write-a-review flow
+                (guest submissions still go through ProductReviews' modal). */}
+            <div className="mt-14 md:mt-20">
+              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">This fragrance</p>
+              <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
+                Rate &amp; review
+              </h2>
+              <ProductReviews productId={product.id} productName={product.name} initialReviewsPayload={initialReviewsPayload} />
+            </div>
           </div>
         </div>
 
