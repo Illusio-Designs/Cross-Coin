@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
-import Icon from './Icon';
 import { submitReview } from '../../services/reviews';
 import { showSuccess, showError } from '../../utils/toast';
 
-// "Write a review" button + modal form, POSTing to /api/reviews/submit via
-// Gripzus's own reviews service. Ported from Morbix; the submit now uses
-// Gripzus's submitReview (same { productId, rating, comment, name, email }
-// signature) and Gripzus's toast helpers. New reviews appear once approved.
+// "Write a review" button + modal, styled in Gripzus's own Monochrome Atelier
+// language (ink/paper/line tokens, square hairline panel) — NOT the ported
+// Morbix modal CSS. Submits to /api/reviews/submit via Gripzus's own
+// submitReview ({ productId, rating, comment, name, email }); new reviews appear
+// once approved. The ?review=open deep link (used by WhatsApp review requests)
+// auto-opens the popup.
 export default function WriteReviewButton({ productId }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
   const [status, setStatus] = useState({ state: 'idle', msg: '' });
 
-  // Open the review popup automatically for WhatsApp review-request deep links (?review=open).
+  // Auto-open for WhatsApp review-request deep links (?review=open).
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -20,6 +21,14 @@ export default function WriteReviewButton({ productId }) {
       if (params.get('review') === 'open') setOpen(true);
     } catch (_) {}
   }, []);
+
+  // Lock body scroll while the modal is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -40,7 +49,7 @@ export default function WriteReviewButton({ productId }) {
         email: form.email.trim(),
       });
       setForm({ name: '', email: '', rating: 5, comment: '' });
-      setStatus({ state: 'success', msg: 'Thanks! Your review has been submitted and will appear once approved.' });
+      setStatus({ state: 'idle', msg: '' });
       setOpen(false);
       showSuccess('Review submitted — it will appear once approved');
     } catch (err) {
@@ -49,42 +58,64 @@ export default function WriteReviewButton({ productId }) {
     }
   };
 
+  const Star = ({ filled }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.4" className={filled ? 'text-ink' : 'text-line'} aria-hidden="true">
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+    </svg>
+  );
+
   return (
     <>
-      <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>
-        Write a review <Icon name="Star" size={15} />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex shrink-0 items-center gap-2 border border-ink px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-paper"
+      >
+        Write a review
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
       </button>
-      {status.state === 'success' && !open && <p className="form-msg success">{status.msg}</p>}
 
       {open && (
-        <div className="review-modal-overlay" onClick={() => setOpen(false)}>
-          <div className="review-modal" data-lenis-prevent onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
-            <div className="review-modal-head">
-              <h3>Write a review</h3>
-              <button type="button" className="review-modal-close" onClick={() => setOpen(false)} aria-label="Close">
-                <Icon name="X" size={18} />
-              </button>
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+          style={{ background: 'rgba(18,18,18,.55)' }}
+          onClick={() => setOpen(false)}
+        >
+          <div
+            data-lenis-prevent
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Write a review"
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto border border-line bg-paper p-6 md:p-7"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="h-display text-xl text-ink">Write a review</h3>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-2xl leading-none text-ink-muted hover:text-ink">×</button>
             </div>
-            <form className="review-form" onSubmit={onSubmit}>
-              <div className="review-form-rating">
-                <span className="opt-label">Your rating</span>
-                <div className="rating-picker">
+
+            <form onSubmit={onSubmit} className="flex flex-col gap-4">
+              <div>
+                <span className="eyebrow text-ink-muted mb-2 block">Your rating</span>
+                <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <button type="button" key={n} onClick={() => setForm((f) => ({ ...f, rating: n }))}
-                      aria-label={`${n} star${n > 1 ? 's' : ''}`} className="rating-star">
-                      <span className="rating-star-ic" style={{ color: n <= form.rating ? 'var(--star)' : '#d7dde2' }}>★</span>
+                    <button type="button" key={n} onClick={() => setForm((f) => ({ ...f, rating: n }))} aria-label={`${n} star${n > 1 ? 's' : ''}`} className="p-0.5">
+                      <Star filled={n <= form.rating} />
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="field-row">
-                <input className="input" placeholder="Your name" value={form.name} onChange={set('name')} required />
-                <input className="input" type="email" placeholder="Email" value={form.email} onChange={set('email')} required />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input className="w-full border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink" placeholder="Your name" value={form.name} onChange={set('name')} required />
+                <input className="w-full border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink" type="email" placeholder="Email" value={form.email} onChange={set('email')} required />
               </div>
-              <textarea className="input" rows={4} placeholder="Share your experience with this product…"
-                value={form.comment} onChange={set('comment')} required />
-              {status.state === 'error' && <p className="form-msg error">{status.msg}</p>}
-              <button type="submit" className="btn btn-primary" disabled={status.state === 'loading'}>
+
+              <textarea className="w-full resize-none border border-line bg-paper px-3.5 py-2.5 text-sm text-ink outline-none focus:border-ink" rows={4} placeholder="Share your experience with this product…" value={form.comment} onChange={set('comment')} required />
+
+              {status.state === 'error' && <p className="text-sm text-red-600">{status.msg}</p>}
+
+              <button type="submit" className="btn w-full justify-center !py-3" disabled={status.state === 'loading'}>
                 {status.state === 'loading' ? 'Submitting…' : 'Submit review'}
               </button>
             </form>

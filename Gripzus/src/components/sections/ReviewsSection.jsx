@@ -1,88 +1,35 @@
-import Icon from './Icon';
-import ReviewRow from './ReviewRow';
+import ReviewMarquee, { ReviewCount } from '../common/ReviewMarquee';
 import WriteReviewButton from './WriteReviewButton';
 
-// Morbix-style "moving wall" of reviews. Ported to Gripzus; the whole section is
-// scoped under `.mbx` so the ported Morbix CSS (its own .section/.eyebrow/.review
-// etc.) can't clobber Gripzus's global classes. Review objects come from
-// Gripzus's reviews service and use { quote, name, rating } — renderCard reads
-// those with Morbix-shape fallbacks (text/author/title/date) so it matches
-// Morbix visually with whichever fields are present.
+// Customer reviews — rendered in Gripzus's OWN design language (NOT the ported
+// Morbix wall). Reuses the brand-native ReviewMarquee + ReviewCount (the exact
+// components the home ReviewBand uses) inside the shared section rhythm
+// (section-y / wrap + a top-hairline eyebrow + h-display header). On the product
+// page a productId is passed, which surfaces the "Write a review" popup; on the
+// home page it is omitted. Review objects are { quote, name, role, rating }.
 export default function ReviewsSection({ reviews = [], total: totalProp, productId }) {
-  const rated = reviews.filter((r) => Number(r.rating) > 0);
-  const avg = rated.length ? (rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) : 0;
-  // Exact store-wide total from the API; the list is only a random sample.
-  const total = Math.max(Number(totalProp) || 0, reviews.length);
-
-  // Split the sample into three rows that scroll in alternating directions
-  // (left → right → left) for a moving "wall of reviews" look.
-  const list = reviews.slice(0, 30);
-  const per = Math.ceil(list.length / 3) || 1;
-  const rows = [list.slice(0, per), list.slice(per, per * 2), list.slice(per * 2)].filter((r) => r.length);
-  const directions = ['left', 'right', 'left'];
-
-  const renderCard = (r, i) => {
-    const text = r.text || r.quote || '';
-    const author = r.author || r.name || 'Anonymous';
-    const sub = r.date || r.role || '';
-    return (
-      <div className="review" key={i}>
-        <div className="review-stars" style={{ marginBottom: 10 }}>
-          {[0, 1, 2, 3, 4].map((n) => (
-            <Icon key={n} name="Star" size={13} color={n < r.rating ? 'var(--star)' : '#dce2e6'} />
-          ))}
-        </div>
-        {r.title && <b className="review-title">{r.title}</b>}
-        <p>{text}</p>
-        <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
-          <div className="review-av">{String(author).charAt(0)}</div>
-          <div className="review-who"><b style={{ fontSize: 13 }}>{author}</b><span className="muted" style={{ fontSize: 12 }}>{sub}</span></div>
-        </div>
-      </div>
-    );
-  };
+  const hasReviews = reviews.length > 0;
 
   return (
-    <div className="mbx">
-      <section className="section container">
-        <div className="section-head">
+    <section className="section-y overflow-hidden">
+      <div className="wrap">
+        <div className="flex flex-wrap items-end justify-between gap-5 border-t border-line pt-6 md:pt-8 mb-8 md:mb-12">
           <div>
-            <span className="eyebrow">Reviews</span>
-            <h2 style={{ marginTop: 8 }}>What our customers say</h2>
+            <p className="eyebrow text-ink-muted mb-2">Reviews</p>
+            <h2 className="h-display text-2xl md:text-4xl text-ink leading-none">What our customers say</h2>
+            <ReviewCount reviews={reviews} total={totalProp} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <div className="reviews-badge">
-              <b>{avg ? avg.toFixed(1) : '—'}</b>
-              <span className="reviews-badge-stars">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Icon key={i} name="Star" size={13} color={i < Math.round(avg) ? 'var(--star)' : '#dce2e6'} />
-                ))}
-              </span>
-              <small>{total.toLocaleString('en-IN')} review{total === 1 ? '' : 's'}</small>
-            </div>
-            {productId ? <WriteReviewButton productId={productId} /> : null}
-          </div>
+          {productId ? <WriteReviewButton productId={productId} /> : null}
         </div>
+      </div>
 
-        {reviews.length === 0 && (
-          <div className="empty" style={{ marginTop: 8 }}>No reviews yet — your feedback will appear here.</div>
-        )}
-
-        <div className="rv-rows">
-          {rows.map((row, idx) => (
-            <ReviewRow
-              key={idx}
-              items={row}
-              staticClassName="review-grid"
-              min={4}
-              secPerItem={2.5}
-              minDur={18}
-              direction={directions[idx]}
-              render={renderCard}
-            />
-          ))}
+      {hasReviews ? (
+        <ReviewMarquee reviews={reviews} />
+      ) : (
+        <div className="wrap">
+          <p className="text-ink-muted text-sm">No reviews yet — your feedback will appear here.</p>
         </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 }
