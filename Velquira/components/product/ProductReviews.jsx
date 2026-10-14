@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
 import ReviewCard from '@/components/product/ReviewCard';
 import { submitReview } from '@/lib/api';
@@ -15,6 +15,15 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
   const [status, setStatus] = useState({ state: 'idle', msg: '' });
+
+  // Open the review popup automatically for WhatsApp review-request deep links (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('review') === 'open') setOpen(true);
+    } catch (_) {}
+  }, []);
 
   // Summary reflects ONLY the reviews actually shown (approved). No fallback to
   // the product's review_count — that includes unapproved reviews and would

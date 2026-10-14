@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/Icon';
 import ReviewRow from '@/components/ui/ReviewRow';
 import { submitReview } from '@/lib/api';
@@ -21,6 +21,15 @@ export default function Reviews({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
   const [status, setStatus] = useState({ state: 'idle', msg: '' });
+
+  // Open the review popup automatically for WhatsApp review-request deep links (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('review') === 'open') setOpen(true);
+    } catch (_) {}
+  }, []);
 
   const { avg, total } = useMemo(() => {
     const rated = list.filter((r) => Number(r.rating) > 0);

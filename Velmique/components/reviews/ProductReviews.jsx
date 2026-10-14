@@ -47,6 +47,16 @@ export default function ProductReviews({ productId, productName, initialReviewsP
   const [showAll, setShowAll] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Open the write-review popup automatically for WhatsApp review-request deep
+  // links (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (productId && params.get('review') === 'open') setModalOpen(true);
+    } catch (_) {}
+  }, [productId]);
+
   useEffect(() => {
     let alive = true;
     if (!productId) return;

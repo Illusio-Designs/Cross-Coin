@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPublicReview } from '../../services/publicApi';
 
 const StarPicker = ({ value, onChange }) => {
@@ -26,6 +26,15 @@ export default function ReviewForm({ productId, productName, onSubmitted }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  // Auto-open the review modal when arriving via a WhatsApp deep link (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('review') === 'open') setOpen(true);
+    } catch (_) {}
+  }, []);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 

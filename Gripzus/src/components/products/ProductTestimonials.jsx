@@ -36,6 +36,15 @@ export default function ProductTestimonials({ productId, productName }) {
 
   useEffect(() => setMounted(true), []);
 
+  // Auto-open the review modal when arriving via a WhatsApp deep link (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('review') === 'open') setOpen(true);
+    } catch (_) {}
+  }, []);
+
   useEffect(() => {
     if (!productId) return;
     let active = true;

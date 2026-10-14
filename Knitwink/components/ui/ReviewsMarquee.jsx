@@ -81,6 +81,17 @@ export function ReviewsSection({ productId = null, productName = null, fetchFn =
   const [stats, setStats] = useState(serverData?.stats ?? { average: 0, total: 0 })
   const [modalOpen, setModalOpen] = useState(false)
 
+  // Open the write-review popup automatically when the PDP is reached with
+  // ?review=open (used by the WhatsApp review-request deep link).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      // Gate on productId: this component is also reused on the home page's
+      // ReviewBand (no productId) — only auto-open on a product detail page.
+      if (productId && params.get('review') === 'open') setModalOpen(true)
+    } catch (_) {}
+  }, [])
+
   useEffect(() => {
     if (parseReviewData(data)) return // server already supplied the reviews — don't refetch
     if (!fetchFn) return

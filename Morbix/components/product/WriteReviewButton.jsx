@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/Icon';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -12,6 +12,16 @@ export default function WriteReviewButton({ productId }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
   const [status, setStatus] = useState({ state: 'idle', msg: '' });
+
+  // Open the review popup automatically for WhatsApp review-request deep links (?review=open).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('review') === 'open') setOpen(true);
+    } catch (_) {}
+  }, []);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const onSubmit = async (e) => {

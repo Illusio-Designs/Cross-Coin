@@ -11,6 +11,7 @@ import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ReviewWall from '@/components/reviews/ReviewWall';
+import ProductReviews from '@/components/reviews/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
 import { tagStyle } from '@/lib/attributeColors';
@@ -28,7 +29,7 @@ const ik = (src, w) => {
   return src;
 };
 
-export default function ProductPage({ initialProduct = null, initialBrandReviews = [], initialBrandTotal = 0 }) {
+export default function ProductPage({ initialProduct = null, initialBrandReviews = [], initialBrandTotal = 0, initialReviewsPayload = null }) {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug;
@@ -667,6 +668,13 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
 
           {/* ── Reviews ────────────────────────────────────── */}
           <div className="reveal">
+            {/* This product's reviews + the "Write a review" popup. Also auto-opens
+                the popup when reached via the WhatsApp review link (?review=open). */}
+            <ProductReviews
+              productId={product.id}
+              productName={product.name}
+              initialReviewsPayload={initialReviewsPayload}
+            />
             {/* Brand-wide moving review wall (3 alternating rows). Renders only
                 when the brand has approved reviews — same wall as the home page
                 and the Morbix/Soxbae PDPs. */}
