@@ -62,8 +62,33 @@ export default async function HomePage() {
   const heroDesktopSrc = heroSlide ? heroSrc(heroSlide.image, 1600) : null;
   const heroMobileSrc = heroSlide && heroSlide.mobileImage ? heroSrc(heroSlide.mobileImage, 820) : null;
 
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in').replace(/\/+$/, '');
+  const homeJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Velquira',
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Velquira',
+      url: SITE_URL,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ];
+
   return (
     <>
+      {homeJsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
+      ))}
       {heroDesktopSrc && (
         heroMobileSrc ? (
           <>
