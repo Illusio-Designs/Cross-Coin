@@ -178,7 +178,13 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
   // Insert an image by URL (always available, no upload needed).
   const insertImageByUrl = () => {
     const url = window.prompt('Image URL:', 'https://');
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+    if (!url) return;
+    // Insert after the current selection so it never replaces a selected image.
+    const at = editor.state.selection.to;
+    editor.chain().focus().insertContentAt(at, {
+      type: 'image',
+      attrs: { src: url, class: 'rte-img' },
+    }).run();
   };
 
   // Upload a single image file to ImageKit and insert it at the cursor. Shared
@@ -192,7 +198,14 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
       const path = extractUploadedPath(result);
       const src = resolveMediaUrl(path);
       if (src) {
-        editor.chain().focus().setImage({ src, alt: file.name || 'image', class: cls }).run();
+        // Insert AFTER the current selection instead of setImage() (which
+        // replaces a selected image node) — so uploading a mobile image right
+        // after a desktop image adds a second one rather than wiping the first.
+        const at = editor.state.selection.to;
+        editor.chain().focus().insertContentAt(at, {
+          type: 'image',
+          attrs: { src, alt: file.name || 'image', class: cls },
+        }).run();
       } else {
         window.alert('Upload succeeded but no image URL was returned. You can paste the image URL instead.');
       }
