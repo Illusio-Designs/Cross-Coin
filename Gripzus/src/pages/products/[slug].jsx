@@ -13,6 +13,7 @@ import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
 import { getProductReviews } from '../../services/reviews';
 import { getFaqs } from '../../services/faqs';
+import { getPublicCoupons } from '../../services/publicindex';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
@@ -56,10 +57,17 @@ export async function getServerSideProps({ params, res }) {
   // This product's reviews (for the Morbix-style ReviewsSection) + the global
   // FAQ set, fetched in parallel. Each service swallows its own errors and
   // returns empty, so first paint degrades gracefully.
-  const [productReviews, faqs] = await Promise.all([
+  const [productReviews, faqs, couponsRes] = await Promise.all([
     getProductReviews(product.id),
     getFaqs('global'),
+    getPublicCoupons().catch(() => null),
   ]);
+
+  // Surface a REAL admin-created prepaid-only coupon on the buy panel (never a
+  // fabricated code). Shoppers apply it at checkout to get the offer.
+  const couponList = couponsRes?.coupons || couponsRes?.data || (Array.isArray(couponsRes) ? couponsRes : []);
+  const prepaidCoupon = (Array.isArray(couponList) ? couponList : [])
+    .find((c) => (c?.paymentModeRestriction || c?.payment_mode_restriction) === 'prepaid') || null;
 
   // CDN caching: product pages change rarely; let the edge serve a stale copy
   // while it revalidates in the background.
@@ -75,11 +83,12 @@ export async function getServerSideProps({ params, res }) {
       initialReviews: productReviews?.reviews || [],
       initialReviewTotal: productReviews?.total || 0,
       initialFaqs: faqs || [],
+      prepaidCoupon,
     },
   };
 }
 
-export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [] }) {
+export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [], prepaidCoupon = null }) {
   const router = useRouter();
   const slug = slugProp || router.query.slug;
 
@@ -529,7 +538,21 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
             <div className="md:col-span-6 md:py-2">
               <span className="eyebrow text-ink-muted mb-4 block">{product.collection}</span>
 
-              <h1 className="h-display text-3xl md:text-4xl leading-tight mb-6">{product.name}</h1>
+              <h1 className="h-display text-3xl md:text-4xl leading-tight mb-3">{product.name}</h1>
+
+              {/* Meta — rating · reviews · SKU (Morbix parity) */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-6 text-sm text-ink-muted">
+                {product.rating > 0 && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#e8a33d" aria-hidden="true"><path d="M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
+                    {Number(product.rating).toFixed(1)}
+                  </span>
+                )}
+                {(product.reviewCount > 0 || initialReviewTotal > 0) && (
+                  <a href="#reviews" className="underline-offset-4 hover:text-ink hover:underline">{product.reviewCount || initialReviewTotal} reviews</a>
+                )}
+                {product.sku && <span>SKU: {product.sku}</span>}
+              </div>
 
               <div className="mb-6">
                 <div className="flex items-baseline gap-3">
@@ -548,13 +571,24 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 )}
               </div>
 
-              {/* Honest low-stock — only when total stock is genuinely low */}
-              {Number.isFinite(Number(product.stock)) && Number(product.stock) > 0 && Number(product.stock) <= 5 && (
-                <div className="inline-flex items-center gap-1.5 mb-5 rounded-full bg-paper-warm px-3 py-1 text-xs font-semibold text-ink">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  Only {Number(product.stock)} left
-                </div>
-              )}
+              {/* Stock badge (shield) + free-shipping line (Morbix parity) */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
+                {product.inStock === false ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'var(--paper-warm, #f3efe8)', color: 'var(--ink, #16181d)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    Out of stock
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: 'rgba(21,128,61,.10)', color: '#15803d' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    {Number.isFinite(Number(product.stock)) && Number(product.stock) > 0 && Number(product.stock) <= 5 ? `Only ${Number(product.stock)} left` : 'In stock'}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                  <strong className="text-ink font-semibold">Free shipping</strong> on all orders
+                </span>
+              </div>
 
               {/* Colour */}
               {product.colors?.length > 0 && (
@@ -638,8 +672,12 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     <span className="w-9 sm:w-12 text-center text-sm">{qty}</span>
                     <button onClick={() => setQty((q) => q + 1)} className="w-9 h-11 sm:w-11 sm:h-12 flex items-center justify-center hover:bg-paper-warm">+</button>
                   </div>
-                  <button onClick={handleAdd} className={`btn flex-1 justify-center !py-3.5 sm:!py-4 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
-                    {added ? 'Added ✓' : product.inStock === false ? 'Sold Out' : 'Add to Bag'}
+                  <button onClick={handleAdd} className={`btn flex-1 justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap ${added ? '!bg-ink-soft' : ''}`}>
+                    {product.inStock === false ? 'Sold Out' : (
+                      <>{added ? 'Added to cart' : 'Add to cart'}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => toggle(product)}
@@ -653,7 +691,26 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     </svg>
                   </button>
                 </div>
-                <button onClick={handleBuyNow} className="btn-outline w-full justify-center !py-3.5 sm:!py-4 whitespace-nowrap">Buy Now</button>
+                {/* Real prepaid-only coupon (admin-created) — never a fabricated code */}
+                {prepaidCoupon?.code && (
+                  <div className="mb-3 flex items-center justify-center gap-3 rounded-md border border-dashed px-3 py-2 text-xs font-bold tracking-[0.12em]" style={{ borderColor: 'rgba(13,125,116,.45)', background: 'rgba(13,125,116,.08)', color: '#0d7d74' }} aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
+                    <span aria-hidden="true" className="opacity-50">✦✦✦</span>
+                    <span>{prepaidCoupon.code}</span>
+                    <span aria-hidden="true" className="opacity-50">✦✦✦</span>
+                  </div>
+                )}
+                <button onClick={handleBuyNow} className="btn w-full justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  BUY NOW – Cash On Delivery
+                </button>
+
+                {/* Trust badges (Morbix parity) */}
+                <div className="mt-5 grid grid-cols-2 gap-y-2.5 gap-x-4 border-t border-line pt-4 text-[11px] font-semibold text-ink-muted">
+                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</span>
+                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg> Cash on Delivery</span>
+                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</span>
+                  <span className="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</span>
+                </div>
               </div>
 
               {/* Delivery / pincode serviceability — below the buy actions */}
