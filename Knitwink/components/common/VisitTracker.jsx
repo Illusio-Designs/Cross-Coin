@@ -61,8 +61,13 @@ export default function VisitTracker() {
         referrer: document.referrer,
       }),
     })
-      .then(() => {
-        try { sessionStorage.setItem('visit_tracked', '1'); } catch (_) { /* ignore */ }
+      .then((res) => res.json().catch(() => null))
+      .then((json) => {
+        try {
+          sessionStorage.setItem('visit_tracked', '1');
+          const sid = json && json.data && json.data.session_id;
+          if (sid) localStorage.setItem('utm_session_id', sid);
+        } catch (_) { /* ignore */ }
       })
       .catch(() => { /* never break the storefront */ });
     };

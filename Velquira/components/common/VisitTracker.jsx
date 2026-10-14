@@ -53,9 +53,16 @@ export default function VisitTracker() {
       credentials: 'include',
       body: JSON.stringify(body),
     })
-      .then(() => {
+      .then((res) => res.json().catch(() => null))
+      .then((json) => {
         try {
           sessionStorage.setItem('visit_tracked', '1');
+          // Persist the server session id in FIRST-PARTY localStorage so the
+          // order call can forward it as utm_session_id and the backend can link
+          // the order to this visit's traffic source. (The backend tracking
+          // cookie is third-party and blocked cross-site, so it can't.)
+          const sid = json && json.data && json.data.session_id;
+          if (sid) localStorage.setItem('utm_session_id', sid);
         } catch {
           /* ignore */
         }

@@ -34,11 +34,25 @@ export async function getOrder(id) {
 }
 
 // ── COD orders ─────────────────────────────────────────────────────────────
+// Attach the first-party UTM session id (captured by VisitTracker in
+// localStorage) so the backend links this order to the visit's traffic source.
+// localStorage is first-party on the storefront domain, unlike the cross-site
+// tracking cookie the backend would otherwise rely on (blocked by browsers).
+function withUtmSession(data) {
+  try {
+    if (typeof window !== 'undefined') {
+      const sid = localStorage.getItem('utm_session_id');
+      if (sid && (!data || !data.utm_session_id)) return { ...data, utm_session_id: sid };
+    }
+  } catch { /* ignore */ }
+  return data;
+}
+
 export async function createOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(orderData),
+    body: JSON.stringify(withUtmSession(orderData)),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
@@ -49,7 +63,7 @@ export async function createGuestOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(orderData),
+    body: JSON.stringify(withUtmSession(orderData)),
   });
   const data = await res.json().catch(() => ({}));
   // Guest checkout auto-creates a user and returns a session token.
@@ -85,7 +99,7 @@ export async function initiateCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/initiate`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(checkoutData),
+    body: JSON.stringify(withUtmSession(checkoutData)),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Checkout failed');
@@ -96,7 +110,7 @@ export async function initiateGuestCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/guest/initiate`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(checkoutData),
+    body: JSON.stringify(withUtmSession(checkoutData)),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Checkout failed');

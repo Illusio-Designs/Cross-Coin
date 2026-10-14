@@ -53,10 +53,13 @@ export default function VisitTracker() {
         referrer: document.referrer,
       }),
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) return;
+        const json = await res.json().catch(() => null);
         try {
           sessionStorage.setItem('visit_tracked', '1');
+          const sid = json && json.data && json.data.session_id;
+          if (sid) localStorage.setItem('utm_session_id', sid);
         } catch {
           /* ignore */
         }
