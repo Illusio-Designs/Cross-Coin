@@ -605,8 +605,6 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
 
             {/* Info — airy, generous spacing */}
             <div className="md:col-span-6 md:py-2">
-              <span className="eyebrow text-ink-muted mb-4 block">{product.collection}</span>
-
               <h1 className="h-display text-3xl md:text-4xl leading-tight mb-3">{product.name}</h1>
 
               {/* Meta — rating · reviews · SKU (Morbix parity) */}
