@@ -295,18 +295,20 @@ exports.getRevenueProfit = async (req, res) => {
       { type: QueryTypes.SELECT }
     );
 
-    const ORDER_FILTER = `created_at BETWEEN :start AND :end
-      AND (status IS NULL OR LOWER(status) NOT IN ('cancelled','order cancelled'))`;
+    // Columns are qualified with the `o` alias — product_variations also has a
+    // `status` column, so an unqualified `status` is ambiguous once joined.
+    const ORDER_FILTER = `o.created_at BETWEEN :start AND :end
+      AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))`;
 
     // Revenue + order count per brand (order-level — no item join, so
     // final_amount isn't multiplied).
     const rev = await sequelize.query(
-      `SELECT brand_id,
+      `SELECT o.brand_id,
               COUNT(*) AS orders,
-              COALESCE(SUM(final_amount), 0) AS revenue
-       FROM orders
+              COALESCE(SUM(o.final_amount), 0) AS revenue
+       FROM orders o
        WHERE ${ORDER_FILTER}
-       GROUP BY brand_id`,
+       GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
@@ -320,7 +322,7 @@ exports.getRevenueProfit = async (req, res) => {
        FROM orders o
        JOIN order_items oi ON oi.order_id = o.id
        LEFT JOIN product_variations pv ON pv.id = oi.variation_id
-       WHERE o.${ORDER_FILTER}
+       WHERE ${ORDER_FILTER}
        GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
