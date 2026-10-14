@@ -519,40 +519,12 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
 
             {/* Gallery — sticky while the info column scrolls */}
             <div className="md:col-span-6 md:sticky md:top-24 md:self-start">
-              <div className="flex flex-row items-start gap-3">
+              <div className="flex flex-col gap-3">
 
-                {/* Thumbnail rail — small squares on the LEFT (both mobile and
-                    desktop); shows 3, the rest scroll, auto-follows the active. */}
-                {images.length > 1 && (
-                  <div
-                    ref={thumbsRef}
-                    style={isMobile && galH ? { maxHeight: galH } : undefined}
-                    className="flex flex-col items-start gap-2 p-1 no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] overflow-y-auto shrink-0 sm:max-h-[26rem]"
-                  >
-                    {images.slice(0, 8).map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveImg(i)}
-                        data-active={curImg === i ? 'true' : undefined}
-                        aria-label={`View image ${i + 1}`}
-                        className={`w-14 h-14 sm:w-12 sm:h-12 shrink-0 overflow-hidden bg-paper-warm transition-all duration-300 ${
-                          curImg === i
-                            ? 'ring-1 ring-ink ring-offset-2 ring-offset-paper'
-                            : 'opacity-45 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={ik(img, 160)} alt="" loading="lazy" className="block h-full w-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Main image — MOBILE: a compact fixed square (same size every
-                    product). DESKTOP: the original larger image (natural, capped
-                    height, never cropped). */}
+                {/* Main image on top — square, never cropped (Morbix layout) */}
                 <div
                   ref={mainImgRef}
-                  className="gz-pdp-main relative flex-1 overflow-hidden aspect-square max-w-[340px] mx-auto grid place-items-center sm:aspect-auto sm:max-w-none sm:mx-0 sm:block"
+                  className="gz-pdp-main relative w-full overflow-hidden aspect-square bg-paper-warm"
                 >
                   <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block h-full w-full cursor-zoom-in relative">
                     <img
@@ -562,12 +534,12 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                       loading="eager"
                       fetchPriority="high"
                       decoding="async"
-                      className="gz-pdp-img block h-full w-full object-contain sm:h-auto sm:max-h-[26rem] sm:mx-auto"
+                      className="gz-pdp-img block h-full w-full object-contain"
                     />
                     {product.sku && (
-                      <span className="absolute left-2.5 bottom-2.5 text-[10px] font-semibold px-2 py-1 rounded-md text-white z-10" style={{ background: 'rgba(24,13,62,.72)' }}>Style: #{product.sku}</span>
+                      <span className="absolute left-2.5 bottom-2.5 bg-ink/80 text-[10px] font-semibold px-2 py-1 text-paper z-10">Style: #{product.sku}</span>
                     )}
-                    <span className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-white/90 grid place-items-center shadow z-10 text-ink" aria-hidden="true">
+                    <span className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-paper/90 grid place-items-center shadow z-10 text-ink" aria-hidden="true">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                     </span>
                   </button>
@@ -582,6 +554,30 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     }
                   `}</style>
                 </div>
+
+                {/* Thumbnail row — horizontal, below the main image (Morbix
+                    layout), larger squares; auto-follows the active image. */}
+                {images.length > 1 && (
+                  <div
+                    ref={thumbsRef}
+                    className="flex flex-row gap-2.5 overflow-x-auto no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch] pb-1"
+                  >
+                    {images.slice(0, 8).map((img, i) => (
+                      <button
+                        key={i}
+                        data-thumb={i}
+                        onClick={() => setActiveImg(i)}
+                        data-active={curImg === i ? 'true' : undefined}
+                        aria-label={`View image ${i + 1}`}
+                        className={`h-[72px] w-[72px] sm:h-16 sm:w-16 shrink-0 overflow-hidden border bg-paper-warm transition-colors ${
+                          curImg === i ? 'border-ink' : 'border-line opacity-60 hover:opacity-100 hover:border-ink'
+                        }`}
+                      >
+                        <img src={ik(img, 160)} alt="" loading="lazy" className="block h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -867,18 +863,26 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     </svg>
                   </button>
                 </div>
-                {/* Real prepaid-only coupon (admin-created) — never a fabricated code */}
-                {prepaidCoupon?.code && (
-                  <div className="mb-3 flex items-center justify-center gap-3 rounded-md border border-dashed px-3 py-2 text-xs font-bold tracking-[0.12em]" style={{ borderColor: 'rgba(13,125,116,.45)', background: 'rgba(13,125,116,.08)', color: '#0d7d74' }} aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
-                    <span aria-hidden="true" className="opacity-50">✦✦✦</span>
-                    <span>{prepaidCoupon.code}</span>
-                    <span aria-hidden="true" className="opacity-50">✦✦✦</span>
-                  </div>
-                )}
-                <button onClick={handleBuyNow} className="btn w-full justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                  BUY NOW – Cash On Delivery
-                </button>
+                {/* Buy Now with the prepaid coupon ticket OVERLAPPING the button's
+                    top edge (Morbix pattern) — a real admin-created prepaid-only
+                    coupon (never fabricated), in Gripzus's monochrome tokens. */}
+                <div className="flex flex-col items-stretch">
+                  {prepaidCoupon?.code && (
+                    <div
+                      className="relative z-[2] -mb-3 self-center inline-flex items-center gap-2 border border-ink bg-paper px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink shadow-[0_6px_14px_-7px_rgba(18,18,18,0.35)]"
+                      aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}
+                    >
+                      <span aria-hidden="true" className="flex gap-0.5 text-ink-muted"><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /></span>
+                      <strong className="font-extrabold tracking-[0.06em]">{prepaidCoupon.code}</strong>
+                      <span className="font-semibold text-ink-muted normal-case tracking-normal">· extra off on prepaid</span>
+                      <span aria-hidden="true" className="flex gap-0.5 text-ink-muted"><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /></span>
+                    </div>
+                  )}
+                  <button onClick={handleBuyNow} className="btn w-full justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    BUY NOW – Cash On Delivery
+                  </button>
+                </div>
               </div>
 
               {/* Trust strip */}
