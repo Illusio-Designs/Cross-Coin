@@ -11,6 +11,14 @@ import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { PencilEdit02Icon, Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
 
+// True when the string is empty (allowed) or parses as JSON. Used to gate the
+// JSON-LD field so we never POST a broken structured_data blob (the backend
+// rejects invalid JSON with a 400).
+const isValidJson = (s) => {
+  if (!s || !String(s).trim()) return true;
+  try { JSON.parse(s); return true; } catch { return false; }
+};
+
 export default function SEO({ brandSlug = 'crosscoin' } = {}) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +36,9 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
     meta_title: "",
     meta_description: "",
     meta_keywords: "",
+    canonical_url: "",
+    robots: "",
+    structured_data: "",
     meta_image: null
   });
 
@@ -156,6 +167,12 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
         meta_title: data.meta_title || "",
         meta_description: data.meta_description || "",
         meta_keywords: data.meta_keywords || "",
+        canonical_url: data.canonical_url || "",
+        robots: data.robots || "",
+        // structured_data is a JSON column — show it pretty-printed for editing.
+        structured_data: data.structured_data
+          ? (typeof data.structured_data === 'string' ? data.structured_data : JSON.stringify(data.structured_data, null, 2))
+          : "",
         meta_image: data.meta_image || null
       });
       setIsModalOpen(true);
@@ -188,6 +205,9 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
       meta_title: "",
       meta_description: "",
       meta_keywords: "",
+      canonical_url: "",
+      robots: "",
+      structured_data: "",
       meta_image: null
     });
     setIsModalOpen(true);
@@ -201,6 +221,9 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
       meta_title: "",
       meta_description: "",
       meta_keywords: "",
+      canonical_url: "",
+      robots: "",
+      structured_data: "",
       meta_image: null
     });
   };
@@ -234,6 +257,13 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
       // Ensure page_name is included first
       if (!formData.page_name) {
         setError('Page name is required');
+        setLoading(false);
+        return;
+      }
+
+      // Block submit if the JSON-LD doesn't parse (backend would 400 anyway).
+      if (!isValidJson(formData.structured_data)) {
+        setError('Structured data (JSON-LD) is not valid JSON. Fix it or clear the field.');
         setLoading(false);
         return;
       }
@@ -358,6 +388,44 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
               onChange={handleInputChange}
               required
             />
+            <Input
+              label="Canonical URL"
+              type="text"
+              name="canonical_url"
+              value={formData.canonical_url}
+              onChange={handleInputChange}
+              placeholder="Leave blank to auto-generate from the page name"
+            />
+            <div className="input-field">
+              <label className="input-field-label">Robots directive</label>
+              <select
+                name="robots"
+                value={formData.robots}
+                onChange={handleInputChange}
+                className="input-field"
+              >
+                <option value="">Default (index, follow)</option>
+                <option value="index, follow">index, follow</option>
+                <option value="index, follow, max-image-preview:large">index, follow, max-image-preview:large</option>
+                <option value="noindex, follow">noindex, follow</option>
+                <option value="noindex, nofollow">noindex, nofollow</option>
+              </select>
+            </div>
+            <div className="input-field">
+              <label className="input-field-label">Structured data (JSON-LD)</label>
+              <textarea
+                name="structured_data"
+                value={formData.structured_data}
+                onChange={handleInputChange}
+                className="input-field"
+                rows={8}
+                placeholder='Optional. Paste a schema.org JSON-LD object, e.g. {"@context":"https://schema.org","@type":"Organization", ...}'
+                style={{ fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 12 }}
+              />
+              {formData.structured_data && !isValidJson(formData.structured_data) && (
+                <span style={{ fontSize: 12, color: 'var(--ds-color-danger, #dc2626)' }}>⚠️ Not valid JSON — this won't be saved until the JSON is fixed.</span>
+              )}
+            </div>
             <div className="input-field">
               <label className="input-field-label">Meta Image</label>
               <input

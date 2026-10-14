@@ -46,8 +46,22 @@ const generateSlugAndCanonical = (pageName) => {
 
     // Generate canonical URL
     const canonicalUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}${slug}`;
-    
+
     return { slug, canonicalUrl };
+};
+
+// Coerce an incoming structured_data value (object OR JSON string) into a storable
+// JSON value. Returns { ok, value }: invalid JSON is rejected so a broken JSON-LD
+// blob is never saved. `undefined` means "field not sent" → leave the column as-is.
+const coerceStructuredData = (input) => {
+    if (input === undefined) return { ok: true, value: undefined };
+    if (input === null || input === '') return { ok: true, value: null };
+    if (typeof input === 'object') return { ok: true, value: input };
+    if (typeof input === 'string') {
+        try { return { ok: true, value: JSON.parse(input) }; }
+        catch (_) { return { ok: false, value: null }; }
+    }
+    return { ok: false, value: null };
 };
 
 // Initialize default SEO data for pages
@@ -296,18 +310,28 @@ module.exports.getAllSEOData = async (req, res) => {
 // Update SEO data for a page
 module.exports.updateSEOData = async (req, res) => {
     try {
-        const { 
-            page_name, 
-            meta_title, 
-            meta_description, 
-            meta_keywords
+        const {
+            page_name,
+            meta_title,
+            meta_description,
+            meta_keywords,
+            canonical_url,
+            robots,
+            structured_data
         } = req.body;
 
         if (!page_name) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: 'Page name is required' 
+                message: 'Page name is required'
             });
+        }
+
+        // Validate structured_data (JSON-LD) up front so a bad blob is rejected
+        // with a clear message rather than silently dropped or saved broken.
+        const sd = coerceStructuredData(structured_data);
+        if (!sd.ok) {
+            return res.status(400).json({ success: false, message: 'structured_data must be valid JSON' });
         }
 
         // First try to find existing SEO data using exact page_name
@@ -319,14 +343,17 @@ module.exports.updateSEOData = async (req, res) => {
         if (!seoData) {
             // Generate slug and canonical URL for new entry
             const { slug, canonicalUrl } = generateSlugAndCanonical(page_name);
-            
+
             seoData = await SeoMetadata.create({
                 page_name,
                 meta_title: meta_title || `${page_name} - Your Trusted Shopping Partner`,
                 meta_description: meta_description || `Learn about ${page_name} and our commitment to providing the best shopping experience.`,
                 meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
                 slug,
-                canonical_url: canonicalUrl,
+                // Respect an admin-supplied canonical; otherwise use the generated one.
+                canonical_url: canonical_url || canonicalUrl,
+                robots: robots || null,
+                structured_data: sd.value === undefined ? null : sd.value,
                 brand_id: req.brandId || null
             });
         } else {
@@ -357,14 +384,18 @@ module.exports.updateSEOData = async (req, res) => {
                 }
             }
 
-            // Update the existing SEO data
+            // Update the existing SEO data. Canonical, robots and structured_data
+            // are now persisted (they used to be dropped): an admin value wins,
+            // else the existing value is kept, else the generated canonical is used.
             await seoData.update({
                 meta_title: meta_title || seoData.meta_title,
                 meta_description: meta_description || seoData.meta_description,
                 meta_keywords: meta_keywords || seoData.meta_keywords,
                 meta_image: meta_image,
                 slug,
-                canonical_url: canonicalUrl
+                canonical_url: canonical_url || seoData.canonical_url || canonicalUrl,
+                robots: robots !== undefined ? (robots || null) : seoData.robots,
+                structured_data: sd.value === undefined ? seoData.structured_data : sd.value
             });
         }
 
@@ -396,19 +427,27 @@ module.exports.createSEOData = async (req, res) => {
         logger.info('Received create request body:', req.body);
         logger.info('Received create request file:', req.file);
 
-        const { 
-            page_name, 
-            meta_title, 
-            meta_description, 
-            meta_keywords
+        const {
+            page_name,
+            meta_title,
+            meta_description,
+            meta_keywords,
+            canonical_url,
+            robots,
+            structured_data
         } = req.body;
 
         if (!page_name) {
             logger.info('Page name missing in request');
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: 'Page name is required' 
+                message: 'Page name is required'
             });
+        }
+
+        const sd = coerceStructuredData(structured_data);
+        if (!sd.ok) {
+            return res.status(400).json({ success: false, message: 'structured_data must be valid JSON' });
         }
 
         // Check if page already exists
@@ -434,7 +473,9 @@ module.exports.createSEOData = async (req, res) => {
             meta_description: meta_description || `Learn about ${page_name} and our commitment to providing the best shopping experience.`,
             meta_keywords: meta_keywords || `${page_name}, shopping, online store`,
             slug,
-            canonical_url: canonicalUrl,
+            canonical_url: canonical_url || canonicalUrl,
+            robots: robots || null,
+            structured_data: sd.value === undefined ? null : sd.value,
             meta_image: req.file ? `/uploads/seo/${req.file.filename}` : null,
             brand_id: req.brandId || null
         });
