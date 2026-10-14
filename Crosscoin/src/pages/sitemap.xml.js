@@ -1,125 +1,174 @@
-const BASE_URL = 'https://www.crosscoin.in';
+/**
+ * Dynamic XML sitemap for Crosscoin — served at /sitemap.xml
+ *
+ * Crosscoin is a Next.js PAGES ROUTER app, so it cannot use the App Router's
+ * app/sitemap.js convention. Instead this is a normal page whose
+ * getServerSideProps streams the XML straight to the response and renders
+ * nothing. It runs on the server at request time, so newly created
+ * products / categories / blogs / policies appear on the next crawl without a
+ * code change or rebuild.
+ *
+ * NOTE: there is a separate human-facing HTML sitemap at src/pages/sitemap.jsx
+ * which serves at /sitemap. This file is sitemap.xml.js and serves at the
+ * distinct /sitemap.xml path, so the two never collide.
+ *
+ * URL path shapes were verified against the real page files under
+ * src/pages:
+ *   - products:   /products/<slug>     (src/pages/products/[slug].jsx)
+ *   - collections:/collections/<slug>  (src/pages/collections/[slug].jsx)
+ *   - journal:    /journal/<slug>       (src/pages/journal/[slug].jsx)
+ *   - policies:   /policy/<slug>        (src/pages/policy/[slug].jsx)
+ * Static route casing matches the page filenames (Products.jsx -> /Products).
+ */
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
+
+// Static, always-present routes. Casing matches the page filenames under
+// src/pages (Next pages-router routes are case-sensitive).
 const STATIC_ROUTES = [
-  { path: '/',                  priority: '1.0', changefreq: 'daily' },
-  { path: '/Products',          priority: '0.9', changefreq: 'daily' },
-  { path: '/Collections',       priority: '0.8', changefreq: 'weekly' },
-  { path: '/journal',              priority: '0.7', changefreq: 'weekly' },
-  { path: '/About',             priority: '0.6', changefreq: 'monthly' },
-  { path: '/Contact',           priority: '0.6', changefreq: 'monthly' },
-  { path: '/OrderTracking',     priority: '0.5', changefreq: 'monthly' },
-  // Policies are emitted dynamically below from the live policy list so a
-  // new policy in the admin shows up in the sitemap without a code change.
+  { path: '/',              priority: '1.0', changefreq: 'daily' },
+  { path: '/Products',      priority: '0.9', changefreq: 'daily' },
+  { path: '/Collections',   priority: '0.8', changefreq: 'weekly' },
+  { path: '/journal',       priority: '0.7', changefreq: 'weekly' },
+  { path: '/About',         priority: '0.6', changefreq: 'monthly' },
+  { path: '/Contact',       priority: '0.6', changefreq: 'monthly' },
+  { path: '/returns',       priority: '0.5', changefreq: 'monthly' },
+  { path: '/OrderTracking', priority: '0.5', changefreq: 'monthly' },
+  // Per-policy and per-product/category/blog URLs are emitted dynamically
+  // below from the live API so new items show up without a code change.
 ];
 
+async function safeFetch(path) {
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: { 'X-Brand-Name': BRAND },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Policy slug = lowercased + hyphenated title, matching the backend policy
+// matcher, the footer links, and src/pages/policy/[slug].jsx.
+function policySlug(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function toLastmod(value) {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  return d.toISOString().slice(0, 10); // W3C date (YYYY-MM-DD)
+}
+
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function generateSitemapXml(urls) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(({ path, priority, changefreq }) => `  <url>
-    <loc>${BASE_URL}${path}</loc>
+  const body = urls
+    .map(({ path, priority, changefreq, lastmod }) => `  <url>
+    <loc>${escapeXml(BASE_URL + path)}</loc>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
-  </url>`).join('\n')}
+  </url>`)
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
 </urlset>`;
 }
 
 export async function getServerSideProps({ res }) {
-  let dynamicRoutes = [];
+  const now = toLastmod();
+  const dynamicRoutes = [];
 
-  try {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+  const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
+    safeFetch('/api/products/catalog?limit=500'),
+    safeFetch('/api/categories?nocache=true'),
+    safeFetch('/api/public/blogs?limit=200'),
+    safeFetch('/api/public/policies'),
+  ]);
 
-    // Fetch products → /products/<slug> (clean SEO URL, set up in Phase A).
-    // Falls back to id-based query if a product has no slug yet.
-    const prodRes = await fetch(`${API}/api/products/catalog?limit=500`, {
-      headers: { 'X-Brand-Name': 'crosscoin' },
-    });
-    if (prodRes.ok) {
-      const prodData = await prodRes.json();
-      const products = prodData?.products || prodData || [];
-      products.forEach(p => {
-        if (p.slug) {
-          dynamicRoutes.push({
-            path: `/products/${p.slug}`,
-            priority: '0.8',
-            changefreq: 'weekly',
-          });
-        }
+  // Products -> /products/<slug>
+  const products =
+    productsResp?.data?.products || productsResp?.products || productsResp?.data || (Array.isArray(productsResp) ? productsResp : []);
+  (products || []).forEach((p) => {
+    if (p?.slug) {
+      dynamicRoutes.push({
+        path: `/products/${p.slug}`,
+        priority: '0.8',
+        changefreq: 'weekly',
+        lastmod: toLastmod(p.updatedAt),
       });
     }
+  });
 
-    // Fetch blogs → /blog/<slug> (Phase C).
-    const blogRes = await fetch(`${API}/api/blogs/listing?limit=200`, {
-      headers: { 'X-Brand-Name': 'crosscoin' },
-    });
-    if (blogRes.ok) {
-      const blogData = await blogRes.json();
-      const blogs = blogData?.posts || blogData?.blogs || blogData || [];
-      blogs.forEach(b => {
-        if (b.slug) {
-          dynamicRoutes.push({
-            path: `/journal/${b.slug}`,
-            priority: '0.6',
-            changefreq: 'monthly',
-          });
-        }
+  // Categories -> /collections/<slug>
+  const categories =
+    categoriesResp?.data?.categories || categoriesResp?.categories || categoriesResp?.data || (Array.isArray(categoriesResp) ? categoriesResp : []);
+  (categories || []).forEach((c) => {
+    const slug = c?.slug || c?.handle;
+    if (slug && c.seoIndex !== false) {
+      dynamicRoutes.push({
+        path: `/collections/${slug}`,
+        priority: '0.7',
+        changefreq: 'weekly',
+        lastmod: toLastmod(c.updatedAt),
       });
     }
+  });
 
-    // Fetch policies → /policy/<slug> (clean slug; backend matches the
-    // slug against the title for the public read endpoint).
-    const polRes = await fetch(`${API}/api/policies`, {
-      headers: { 'X-Brand-Name': 'crosscoin' },
-    });
-    if (polRes.ok) {
-      const polData = await polRes.json();
-      const policies = Array.isArray(polData) ? polData : (polData?.policies || polData?.data || []);
-      policies.forEach(p => {
-        // Same slug rule as the backend policy matcher and footer links so a
-        // title like "Terms & Conditions" maps to /policy/terms-and-conditions.
-        const slug = String(p.title || '')
-          .toLowerCase()
-          .replace(/&/g, ' and ')
-          .trim()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-]/g, '')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-        if (slug) {
-          dynamicRoutes.push({
-            path: `/policy/${slug}`,
-            priority: '0.4',
-            changefreq: 'yearly',
-          });
-        }
+  // Blogs -> /journal/<slug>
+  const blogs =
+    blogResp?.data?.posts || blogResp?.posts || blogResp?.blogs || blogResp?.data || (Array.isArray(blogResp) ? blogResp : []);
+  (blogs || []).forEach((b) => {
+    if (b?.slug) {
+      dynamicRoutes.push({
+        path: `/journal/${b.slug}`,
+        priority: '0.6',
+        changefreq: 'monthly',
+        lastmod: toLastmod(b.updatedAt),
       });
     }
+  });
 
-    // Fetch categories → /collections/<slug> (Phase C).
-    const catRes = await fetch(`${API}/api/categories/listing`, {
-      headers: { 'X-Brand-Name': 'crosscoin' },
-    });
-    if (catRes.ok) {
-      const catData = await catRes.json();
-      const cats = catData?.categories || catData?.data || catData || [];
-      cats.forEach(c => {
-        if (c.slug && c.seoIndex !== false) {
-          dynamicRoutes.push({
-            path: `/collections/${c.slug}`,
-            priority: '0.7',
-            changefreq: 'weekly',
-          });
-        }
+  // Policies -> /policy/<slug>
+  const policies =
+    policiesResp?.data?.policies || policiesResp?.policies || policiesResp?.data || (Array.isArray(policiesResp) ? policiesResp : []);
+  (policies || []).forEach((p) => {
+    const slug = p?.slug ? policySlug(p.slug) : policySlug(p?.title || p?.name);
+    if (slug) {
+      dynamicRoutes.push({
+        path: `/policy/${slug}`,
+        priority: '0.4',
+        changefreq: 'yearly',
+        lastmod: toLastmod(p.updatedAt),
       });
     }
-  } catch {
-    // silently fall back to static only
-  }
+  });
 
-  const allUrls = [...STATIC_ROUTES, ...dynamicRoutes];
-  const xml = generateSitemapXml(allUrls);
+  const staticRoutes = STATIC_ROUTES.map((r) => ({ ...r, lastmod: now }));
+  const xml = generateSitemapXml([...staticRoutes, ...dynamicRoutes]);
 
-  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Type', 'text/xml');
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate');
   res.write(xml);
   res.end();

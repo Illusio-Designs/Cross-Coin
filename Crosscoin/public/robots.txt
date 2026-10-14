@@ -1,4 +1,4 @@
-# robots.txt for CrossCoin — https://www.crosscoin.in
+# robots.txt for CrossCoin — https://crosscoin.in
 # Crawlers obey ONLY the most specific matching User-agent group, so each
 # AI-crawler group below repeats the private-path rules to keep them protected.
 
@@ -7,12 +7,16 @@
 # ---------------------------------------------------------------------------
 User-agent: *
 Allow: /
-Disallow: /dashboard
-Disallow: /dashboard/
-Disallow: /auth/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
 Disallow: /login
 Disallow: /register
 Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
 Disallow: /api/
 
 # ---------------------------------------------------------------------------
@@ -22,48 +26,64 @@ Disallow: /api/
 # OpenAI (ChatGPT search/indexing)
 User-agent: GPTBot
 Allow: /
-Disallow: /dashboard
-Disallow: /dashboard/
-Disallow: /auth/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
 Disallow: /login
 Disallow: /register
 Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
 Disallow: /api/
 
 # Perplexity AI
 User-agent: PerplexityBot
 Allow: /
-Disallow: /dashboard
-Disallow: /dashboard/
-Disallow: /auth/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
 Disallow: /login
 Disallow: /register
 Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
 Disallow: /api/
 
 # Anthropic (Claude)
 User-agent: ClaudeBot
 Allow: /
-Disallow: /dashboard
-Disallow: /dashboard/
-Disallow: /auth/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
 Disallow: /login
 Disallow: /register
 Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
 Disallow: /api/
 
 # Google AI (Gemini / Vertex AI training signal)
 User-agent: Google-Extended
 Allow: /
-Disallow: /dashboard
-Disallow: /dashboard/
-Disallow: /auth/
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
 Disallow: /login
 Disallow: /register
 Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
 Disallow: /api/
 
 # ---------------------------------------------------------------------------
 # Sitemap
 # ---------------------------------------------------------------------------
-Sitemap: https://www.crosscoin.in/sitemap.xml
+Sitemap: https://crosscoin.in/sitemap.xml
