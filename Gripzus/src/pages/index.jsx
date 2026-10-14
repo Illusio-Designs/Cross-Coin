@@ -7,13 +7,16 @@ import Manifesto from '../components/home/Manifesto';
 import CategoryCards from '../components/home/CategoryCards';
 import ExclusiveSection from '../components/home/ExclusiveSection';
 import BestsellerRow from '../components/home/BestsellerRow';
-import ReviewBand from '../components/home/ReviewBand';
 import BlogStrip from '../components/home/BlogStrip';
 import TrustStrip from '../components/home/TrustStrip';
+import ConditionsSection from '../components/sections/ConditionsSection';
+import ReviewsSection from '../components/sections/ReviewsSection';
+import FaqSection from '../components/sections/FaqSection';
 import { getPublicSliders } from '../services/sliders';
 import { getPublicCategories } from '../services/categories';
 import { getBestsellers } from '../services/products';
 import { getAllReviewsWithTotal } from '../services/reviews';
+import { getFaqs } from '../services/faqs';
 import { getPosts } from '../services/blog';
 
 /* Home — composes the section components, Knitwink-style.
@@ -24,14 +27,15 @@ import { getPosts } from '../services/blog';
 export async function getServerSideProps({ res }) {
   // Fetch every above-the-fold dataset in parallel. Each service already
   // swallows its own errors and returns [], so first paint degrades gracefully.
-  // Reviews are fetched once here and shared by ReviewBand and TrustStrip so the
-  // store-wide reviews request no longer fires twice on the client.
-  const [slides, categories, products, reviewData, posts] = await Promise.all([
+  // Reviews are fetched once here and shared by the Morbix ReviewsSection and
+  // TrustStrip so the store-wide reviews request no longer fires twice.
+  const [slides, categories, products, reviewData, posts, faqs] = await Promise.all([
     getPublicSliders(),   // Hero slider — /api/sliders/listing
     getPublicCategories(), // Collections section — /api/categories/listing
     getBestsellers(8),    // Bestseller / exclusive sections — /api/products/best-sellers
-    getAllReviewsWithTotal(), // Reviews — /api/reviews/all (shared band + strip)
+    getAllReviewsWithTotal(), // Reviews — /api/reviews/all (Morbix reviews wall)
     getPosts(),           // Journal strip — /api/blogs/listing
+    getFaqs('global'),    // FAQ accordion — /api/public/faqs?type=global
   ]);
 
   // Store-wide rating derived from the shared review payload — same calc the
@@ -56,6 +60,7 @@ export async function getServerSideProps({ res }) {
       initialReviewTotal: total,
       initialRating: rating,
       initialPosts: posts || [],
+      initialFaqs: faqs || [],
     },
   };
 }
@@ -68,6 +73,7 @@ export default function Home({
   initialReviewTotal = 0,
   initialRating = null,
   initialPosts = [],
+  initialFaqs = [],
 }) {
   // Data arrives from the server as props — no post-hydration useEffect fetch.
   const slides = initialSlides;
@@ -77,6 +83,7 @@ export default function Home({
   const reviewTotal = initialReviewTotal;
   const rating = initialRating;
   const posts = initialPosts;
+  const faqs = initialFaqs;
 
   // Preload the LCP hero image server-side. HeroBanner renders the first slide
   // in the initial HTML, but as a client component its <img>/<picture> URL isn't
@@ -116,12 +123,16 @@ export default function Home({
       <Reveal><ExclusiveSection products={products} /></Reveal>
       <Reveal><BestsellerRow products={products} eyebrow="Most loved" title="Bestsellers" accent="this season." ctaHref="/products" /></Reveal>
       <Manifesto />
-      {/* Reviews/posts/rating come from the server once. Pass undefined/null when
-          the server fetch returned empty so each component's client fetch still
+      {/* Ported Morbix sections — conditions band + moving reviews wall. */}
+      <Reveal><ConditionsSection /></Reveal>
+      <Reveal><ReviewsSection reviews={reviews} total={reviewTotal} /></Reveal>
+      {/* posts/rating come from the server once. Pass undefined/null when the
+          server fetch returned empty so each component's client fetch still
           runs as a fallback. */}
-      <Reveal><ReviewBand reviews={reviews.length ? reviews : undefined} total={reviewTotal} /></Reveal>
       <Reveal><BlogStrip posts={posts.length ? posts : undefined} /></Reveal>
       <Reveal><TrustStrip rating={rating} /></Reveal>
+      {/* Ported Morbix FAQ accordion — renders nothing when there are no FAQs. */}
+      <Reveal><FaqSection faqs={faqs} /></Reveal>
     </SeoWrapper>
   );
 }

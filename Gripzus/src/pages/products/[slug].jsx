@@ -3,12 +3,16 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ProductCard from '../../components/products/ProductCard';
-import ProductTestimonials from '../../components/products/ProductTestimonials';
 import ProductDetailBlocks from '../../components/product/ProductDetailBlocks';
 import SizeChartModal from '../../components/product/SizeChartModal';
+import ConditionsSection from '../../components/sections/ConditionsSection';
+import ReviewsSection from '../../components/sections/ReviewsSection';
+import FaqSection from '../../components/sections/FaqSection';
 import SeoWrapper from '../../components/SeoWrapper';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { getProductBySlug, getProductsByCategory, getPublicProducts, resolveVariationId } from '../../services/products';
+import { getProductReviews } from '../../services/reviews';
+import { getFaqs } from '../../services/faqs';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
@@ -49,6 +53,14 @@ export async function getServerSideProps({ params, res }) {
   const product = await getProductBySlug(slug);
   if (!product) return { notFound: true };
 
+  // This product's reviews (for the Morbix-style ReviewsSection) + the global
+  // FAQ set, fetched in parallel. Each service swallows its own errors and
+  // returns empty, so first paint degrades gracefully.
+  const [productReviews, faqs] = await Promise.all([
+    getProductReviews(product.id),
+    getFaqs('global'),
+  ]);
+
   // CDN caching: product pages change rarely; let the edge serve a stale copy
   // while it revalidates in the background.
   res?.setHeader?.(
@@ -56,10 +68,18 @@ export async function getServerSideProps({ params, res }) {
     'public, s-maxage=300, stale-while-revalidate=86400'
   );
 
-  return { props: { slug, initialProduct: product } };
+  return {
+    props: {
+      slug,
+      initialProduct: product,
+      initialReviews: productReviews?.reviews || [],
+      initialReviewTotal: productReviews?.total || 0,
+      initialFaqs: faqs || [],
+    },
+  };
 }
 
-export default function ProductDetail({ slug: slugProp, initialProduct = null }) {
+export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [] }) {
   const router = useRouter();
   const slug = slugProp || router.query.slug;
 
@@ -729,15 +749,19 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null })
           </div>
         </section>
 
+        {/* ── Conditions it can help with (ported Morbix section) ──────── */}
+        <div className="wrap"><div className="hairline" /></div>
+        <ConditionsSection />
+
         {/* ── Ideal for, care and manufacturing ────────────────────────── */}
         <div className="wrap"><div className="hairline" /></div>
         <section className="wrap py-10 md:py-14">
           <ProductDetailBlocks product={product} />
         </section>
 
-        {/* ── Editorial band 3 — Reviews ───────────────────────────────── */}
+        {/* ── Editorial band 3 — Reviews (ported Morbix moving wall) ───── */}
         <div className="wrap"><div className="hairline" /></div>
-        <ProductTestimonials productId={product.id} productName={product.name} />
+        <ReviewsSection reviews={initialReviews} total={initialReviewTotal} productId={product.id} />
 
         {/* ── Editorial band 4 — You may also like ─────────────────────── */}
         {related.length > 0 && (
@@ -759,6 +783,10 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null })
             </section>
           </>
         )}
+
+        {/* ── FAQ accordion (ported Morbix section) — renders nothing when empty ── */}
+        <div className="wrap"><div className="hairline" /></div>
+        <FaqSection faqs={initialFaqs} />
 
         {/* Sticky add-to-bag bar — slides in once the action block scrolls away */}
         <div
