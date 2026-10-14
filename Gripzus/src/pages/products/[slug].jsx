@@ -695,7 +695,17 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null })
           {product.description && (
             <div>
               <p className="eyebrow text-ink-muted mb-4">The story</p>
-              <p className="prose-body whitespace-pre-line text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
+              {/* Admin rich text is server-sanitised on save (safe subset incl <img>,
+                  scripts stripped), so rendering the stored HTML directly is XSS-safe.
+                  Old products have plain-text descriptions → fall back to plain render. */}
+              {/<[a-z][\s\S]*>/i.test(product.descriptionHtml || '') ? (
+                <div
+                  className="gz-desc-rich prose-body text-base md:text-lg text-justify hyphens-auto"
+                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                />
+              ) : (
+                <p className="prose-body whitespace-pre-line text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
+              )}
             </div>
           )}
 

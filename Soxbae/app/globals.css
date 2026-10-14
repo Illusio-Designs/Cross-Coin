@@ -2423,6 +2423,18 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .pdx-story-sec h2 { margin: 0 0 18px; font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.1; font-size: clamp(24px, 2.8vw, 34px); color: var(--ink); }
 .pdx-desc p { margin: 0 0 14px; font-size: 15.5px; line-height: 1.75; color: var(--ink-soft); max-width: 66ch; }
 .pdx-desc ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; font-size: 15.5px; line-height: 1.65; color: var(--ink-soft); }
+.pdx-desc-rich { max-width: 66ch; }
+.pdx-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+.pdx-desc-rich h2, .pdx-desc-rich h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); margin: 22px 0 10px; }
+.pdx-desc-rich h2 { font-size: clamp(20px, 2.2vw, 26px); }
+.pdx-desc-rich h3 { font-size: clamp(17px, 1.8vw, 20px); }
+.pdx-desc-rich p { margin: 0 0 14px; font-size: 15.5px; line-height: 1.75; color: var(--ink-soft); }
+.pdx-desc-rich ul, .pdx-desc-rich ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; font-size: 15.5px; line-height: 1.65; color: var(--ink-soft); }
+.pdx-desc-rich li { margin: 0; }
+.pdx-desc-rich a { color: var(--accent-600); text-decoration: underline; text-underline-offset: 2px; }
+.pdx-desc-rich a:hover { color: var(--accent-700, var(--accent-600)); }
+.pdx-desc-rich blockquote { margin: 16px 0; padding: 8px 16px; border-left: 3px solid var(--accent-600); color: var(--ink-soft); font-style: italic; }
+.pdx-desc-rich img + p, .pdx-desc-rich img + h2, .pdx-desc-rich img + h3 { margin-top: 0; }
 .pdx-care { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .pdx-care li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); font-size: 14px; color: var(--ink); }
 .pdx-care-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-050); color: var(--accent-600); display: grid; place-items: center; flex-shrink: 0; }

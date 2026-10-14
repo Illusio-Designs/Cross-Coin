@@ -7,19 +7,24 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 // no data is simply not rendered. Admin rich text is shown as plain text.
 export default function ProductStory({ product, faqs = [], showFaq = true }) {
   const blocks = textBlocks(product.description);
+  const hasHtml = product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml);
   const items = showFaq ? faqs.slice(0, 6) : [];
 
   return (
     <div className="pdx-story">
-      {blocks.length > 0 && (
+      {(hasHtml || blocks.length > 0) && (
         <section className="pdx-story-sec" aria-labelledby="pdx-desc-h">
           <span className="eyebrow">About this product</span>
           <h2 id="pdx-desc-h">Product description</h2>
-          <div className="pdx-desc">
-            {blocks.map((b, i) => b.type === 'ul'
-              ? <ul key={i}>{b.lines.map((l, j) => <li key={j}>{l}</li>)}</ul>
-              : <p key={i}>{b.lines[0]}</p>)}
-          </div>
+          {hasHtml
+            ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+            : (
+              <div className="pdx-desc">
+                {blocks.map((b, i) => b.type === 'ul'
+                  ? <ul key={i}>{b.lines.map((l, j) => <li key={j}>{l}</li>)}</ul>
+                  : <p key={i}>{b.lines[0]}</p>)}
+              </div>
+            )}
         </section>
       )}
 

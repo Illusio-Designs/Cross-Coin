@@ -146,6 +146,10 @@ export function mapProduct(p) {
     // honest low-stock indicator on the product page.
     stock:         variations.length ? totalStock : null,
     description:   plainText(p.description),
+    // Raw server-sanitised HTML (safe subset incl <img>, scripts stripped on save)
+    // so the PDP can render formatting + images; `description` above stays plain
+    // text for meta/cards/structured data.
+    descriptionHtml: p.description || '',
     rating:        Number(p.avg_rating) || 0,
     reviewCount:   Number(p.review_count) || 0,
     care:          p.care || '',

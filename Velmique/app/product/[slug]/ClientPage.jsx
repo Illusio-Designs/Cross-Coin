@@ -14,6 +14,7 @@ import ReviewWall from '@/components/reviews/ReviewWall';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
 import { tagStyle } from '@/lib/attributeColors';
+import { richHtml } from '@/lib/richHtml';
 import { fbTrack } from '@/utils/pixel';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -566,9 +567,16 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
           <div className="reveal">
             <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Description</p>
             <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-4">About this fragrance</h2>
-            <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
-              {product.description || 'No description available for this product.'}
-            </p>
+            {product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml) ? (
+              <div
+                className="vq-desc-rich text-[var(--ink-soft)] text-[15px] font-body leading-[1.8]"
+                {...richHtml(product.descriptionHtml)}
+              />
+            ) : (
+              <p className="text-[var(--ink-soft)] text-[15px] font-body leading-[1.8] whitespace-pre-line text-justify hyphens-auto">
+                {product.description || 'No description available for this product.'}
+              </p>
+            )}
           </div>
 
           <div className="h-px bg-[var(--border)]" />

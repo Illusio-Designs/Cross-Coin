@@ -676,6 +676,21 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-details { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; margin-top: 48px; padding-top: 40px; border-top: 1px solid var(--line); align-items: start; }
 .pdp-about h2 { font-size: clamp(22px, 2.6vw, 28px); font-weight: 900; margin: 8px 0 16px; }
 .pdp-about p { color: var(--ink-soft); font-size: 15px; margin: 0 0 14px; }
+/* Rich product description (server-sanitized HTML: formatting + <img>) */
+.pdp-desc-rich { color: var(--ink-soft); font-size: 15px; line-height: 1.65; }
+.pdp-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+.pdp-desc-rich p { color: var(--ink-soft); font-size: 15px; margin: 0 0 14px; }
+.pdp-desc-rich h2 { color: var(--ink); font-size: clamp(19px, 2.2vw, 23px); font-weight: 900; margin: 22px 0 10px; }
+.pdp-desc-rich h3 { color: var(--ink); font-size: 17px; font-weight: 800; margin: 18px 0 8px; }
+.pdp-desc-rich ul, .pdp-desc-rich ol { margin: 0 0 14px; padding-left: 22px; }
+.pdp-desc-rich li { margin: 0 0 6px; }
+.pdp-desc-rich li::marker { color: var(--teal-600); }
+.pdp-desc-rich a { color: var(--navy); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.pdp-desc-rich a:hover { color: var(--teal-600); }
+.pdp-desc-rich blockquote { margin: 16px 0; padding: 8px 16px; border-left: 3px solid var(--teal); background: var(--teal-050); border-radius: 0 8px 8px 0; color: var(--ink); }
+.pdp-desc-rich strong, .pdp-desc-rich b { color: var(--ink); font-weight: 700; }
+.pdp-desc-rich > :first-child { margin-top: 0; }
+.pdp-desc-rich > :last-child { margin-bottom: 0; }
 .pdp-features { list-style: none; padding: 0; margin: 22px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pdp-features li { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; }
 .pdp-features .ic { width: 38px; height: 38px; border-radius: 11px; background: var(--teal-050); color: var(--teal-600); display: grid; place-items: center; flex-shrink: 0; }

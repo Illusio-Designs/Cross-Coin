@@ -863,3 +863,56 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   .vqrv-track > .vqrv-card { scroll-snap-align: start; }
   .vqrv-dup { display: none; }
 }
+
+/* ── Rich product description (admin rich-text, may include images) ──
+   Renders formatted HTML on the PDP with on-brand Velmique typography
+   (cream/ink/gold, serif display headings). Mirrors the plain-text
+   description scale (15px body, 1.8 line-height). ── */
+.vq-desc-rich { word-break: break-word; }
+.vq-desc-rich img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 14px 0;
+  display: block;
+}
+.vq-desc-rich h2,
+.vq-desc-rich h3 {
+  font-family: 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 24px 0 10px;
+}
+.vq-desc-rich h2 { font-size: 1.5rem; }
+.vq-desc-rich h3 { font-size: 1.2rem; }
+.vq-desc-rich p { margin: 0 0 14px; }
+.vq-desc-rich p:last-child { margin-bottom: 0; }
+.vq-desc-rich ul,
+.vq-desc-rich ol { margin: 0 0 14px; padding-left: 1.4em; }
+.vq-desc-rich li { margin: 0 0 6px; }
+.vq-desc-rich ul li { list-style: disc; }
+.vq-desc-rich ol li { list-style: decimal; }
+.vq-desc-rich a {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.vq-desc-rich a:hover { color: var(--gold); }
+.vq-desc-rich blockquote {
+  margin: 18px 0;
+  padding: 4px 0 4px 18px;
+  border-left: 2px solid var(--gold);
+  color: var(--ink-muted);
+  font-style: italic;
+}
+.vq-desc-rich strong,
+.vq-desc-rich b { color: var(--ink); font-weight: 600; }
+.vq-desc-rich figure { margin: 14px 0; }
+.vq-desc-rich figcaption {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-top: 6px;
+}

@@ -181,6 +181,7 @@ export function mapProduct(p) {
     slug:           p.slug,
     name:           p.name,
     description:    plainText(p.description),
+    descriptionHtml: p.description || '',
     care:           p.care || '',
     origin:         p.origin || '',
     price,

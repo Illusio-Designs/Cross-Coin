@@ -506,6 +506,10 @@ function mapProduct(p) {
     badgeKey: typeof p.badge === 'string' ? p.badge : null,
     badge: (typeof p.badge === 'string' && BADGE_LABELS[p.badge]) || null,
     description: plainText(str(p.description)),
+    // RAW server-sanitized HTML (safe subset incl. <img>, scripts stripped on
+    // save) — used by the PDP to render rich descriptions. `description` above
+    // stays plain text for meta tags / cards.
+    descriptionHtml: str(p.description || ''),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,

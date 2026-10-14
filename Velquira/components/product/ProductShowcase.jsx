@@ -390,9 +390,13 @@ export default function ProductShowcase({ product }) {
         <div className="pdp-about">
           <span className="eyebrow">Details</span>
           <h2>About this product</h2>
-          {product.description
-            ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
-            : <p className="muted">No description available for this product yet.</p>}
+          {/* When the admin description holds HTML (formatting / images), render the
+              server-sanitized markup directly; otherwise fall back to plain text. */}
+          {product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml)
+            ? <div className="vq-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+            : product.description
+              ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
+              : <p className="muted">No description available for this product yet.</p>}
 
           {product.features?.length > 0 && (
             <ul className="pdp-features">

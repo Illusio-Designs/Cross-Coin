@@ -43,3 +43,29 @@
 .sc-table th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .sc-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); }
 .sc-size { font-weight: 700; }
+
+/* ── Rich product description (admin HTML, server-sanitised: formatting + <img>) ── */
+.gz-desc-rich { color: var(--ink); }
+.gz-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+.gz-desc-rich p { margin: 0 0 14px; }
+.gz-desc-rich p:last-child { margin-bottom: 0; }
+.gz-desc-rich h1, .gz-desc-rich h2, .gz-desc-rich h3,
+.gz-desc-rich h4, .gz-desc-rich h5, .gz-desc-rich h6 {
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-weight: 700; line-height: 1.2; letter-spacing: -.01em;
+  margin: 24px 0 12px; color: var(--ink);
+}
+.gz-desc-rich h1 { font-size: 26px; }
+.gz-desc-rich h2 { font-size: 22px; }
+.gz-desc-rich h3 { font-size: 18px; }
+.gz-desc-rich h4, .gz-desc-rich h5, .gz-desc-rich h6 { font-size: 15px; }
+.gz-desc-rich *:first-child { margin-top: 0; }
+.gz-desc-rich ul, .gz-desc-rich ol { margin: 0 0 14px; padding-left: 1.4em; }
+.gz-desc-rich li { margin: 0 0 6px; }
+.gz-desc-rich a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.gz-desc-rich blockquote {
+  margin: 16px 0; padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--line, var(--ink)); color: var(--ink-soft, var(--mut));
+}
+.gz-desc-rich strong { font-weight: 700; }
+.gz-desc-rich em { font-style: italic; }

@@ -1336,3 +1336,33 @@ body:has([data-sticky-atc]) .back-to-top { bottom: 184px; }
 @media (max-width: 640px) {
   body:has([data-sticky-atc]) .gzwa-fab { bottom: 112px; }
 }
+
+/* PDP rich-text product description (admin ReactQuill HTML incl. <img>).
+   Rendered via lib/richHtml.js + .knit-desc-rich wrapper on the PDP. */
+.knit-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+.knit-desc-rich p { margin: 0 0 0.85em; }
+.knit-desc-rich p:last-child { margin-bottom: 0; }
+.knit-desc-rich h1, .knit-desc-rich h2, .knit-desc-rich h3,
+.knit-desc-rich h4, .knit-desc-rich h5, .knit-desc-rich h6 {
+  font-weight: 600; line-height: 1.3; margin: 1.1em 0 0.5em; color: #1a1a1a;
+}
+.knit-desc-rich h1 { font-size: 1.4rem; }
+.knit-desc-rich h2 { font-size: 1.2rem; }
+.knit-desc-rich h3 { font-size: 1.05rem; }
+.knit-desc-rich ul, .knit-desc-rich ol { margin: 0.6em 0 0.9em; padding-left: 1.4em; }
+.knit-desc-rich ul { list-style: disc; }
+.knit-desc-rich ol { list-style: decimal; }
+.knit-desc-rich li { margin: 0.3em 0; }
+.knit-desc-rich a { color: #000; text-decoration: underline; text-underline-offset: 2px; }
+.knit-desc-rich blockquote {
+  margin: 0.9em 0; padding: 0.4em 0 0.4em 1em;
+  border-left: 3px solid #d1d5db; color: #4b5563; font-style: italic;
+}
+.knit-desc-rich pre, .knit-desc-rich code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em;
+}
+.knit-desc-rich pre { background: #f3f4f6; border-radius: 8px; padding: 0.9em 1em; overflow-x: auto; margin: 0.9em 0; }
+.knit-desc-rich figure { margin: 12px 0; }
+.knit-desc-rich figcaption { font-size: 0.8rem; color: #6b7280; margin-top: 4px; text-align: center; }
+.knit-desc-rich table { width: 100%; border-collapse: collapse; margin: 0.9em 0; font-size: 0.9em; }
+.knit-desc-rich th, .knit-desc-rich td { border: 1px solid #e5e7eb; padding: 0.5em 0.7em; text-align: left; }
