@@ -185,4 +185,46 @@ async function autoRefundOnCancel(orderId, reason, adminId) {
   }
 }
 
-module.exports = { processRefund, autoRefundOnCancel };
+/**
+ * Auto-refund for a prepaid RTO order once the returned parcel is RECEIVED and
+ * confirmed at the warehouse (order status 'rto delivered' / 'returned_rto').
+ *
+ * This is the rule-compliant trigger: on RTO *start* the money is NOT moved —
+ * the order/payment are parked at 'refund_pending' and the customer gets the
+ * "refund on the way" notice. Only when the goods are physically back do we call
+ * this, which issues the real Razorpay refund and sends the "Refund Initiated"
+ * WhatsApp message (via processRefund). COD RTOs never reach here (no pay_ id).
+ *
+ * Idempotent-ish: the paid row flips to 'refunded' after a successful refund, so
+ * a second warehouse webhook finds nothing refundable and quietly no-ops.
+ */
+async function autoRefundOnRtoReceipt(orderId, reason, adminId) {
+  const { Payment } = require('../model/paymentModel.js');
+
+  // Accept the paid row in any still-refundable state. After RTO start we set it
+  // to 'refund_pending'; a straight webhook may still show 'successful'/'completed'.
+  const payment = await Payment.findOne({
+    where: { order_id: orderId, status: ['successful', 'completed', 'refund_pending'] },
+    order: [['createdAt', 'DESC']],
+  });
+
+  if (!payment || !payment.transaction_id?.startsWith('pay_')) {
+    logger.info(`[Refund] No refundable prepaid payment for RTO order ${orderId} — skipping warehouse-receipt refund`);
+    return null;
+  }
+
+  try {
+    return await processRefund({
+      paymentId: payment.id,
+      amount: null, // full refund
+      reason: reason || 'Prepaid RTO — returned parcel received at warehouse',
+      adminId: adminId || null,
+      brandId: payment.brand_id || 1,
+    });
+  } catch (err) {
+    logger.error(`[Refund] Warehouse-receipt RTO refund failed for order ${orderId}:`, err.message);
+    return null;
+  }
+}
+
+module.exports = { processRefund, autoRefundOnCancel, autoRefundOnRtoReceipt };

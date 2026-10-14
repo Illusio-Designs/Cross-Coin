@@ -29,7 +29,7 @@ const SOXBAE = {
   name:            'Soxbae',
   slug:            'soxbae',
   display_name:    'Soxbae',
-  domain:          'soxbae.com',
+  domain:          'soxbaesocks.com',
   primary_color:   '#111827',   // placeholder — update in dashboard
   secondary_color: '#f43f5e',   // placeholder — update in dashboard
   contact_email:   'support@soxbae.com',

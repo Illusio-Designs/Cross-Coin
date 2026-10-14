@@ -28,7 +28,7 @@ const VELQUIRA = {
   name:            'Velquira',
   slug:            'velquira',
   display_name:    'Velquira',
-  domain:          'velquira.com',
+  domain:          'velquira.in',
   primary_color:   '#C2A36B',
   secondary_color: '#2A241C',
   contact_email:   'support@velquira.com',

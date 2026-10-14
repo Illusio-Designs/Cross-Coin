@@ -510,26 +510,30 @@ module.exports.handleFShipWebhook = async (req, res) => {
     if (orderStatus === 'rto' && order.status !== 'rto') {
       logger.debug(`🔄 Automatic RTO processing initiated for Order: ${order.order_number}`);
 
-      // Update payment status for COD orders
+      // Update payment status for COD orders — NO refund (nothing was paid).
+      // Rule: COD cancellations and RTO orders → no refund initiated.
       if (order.payment_type === 'cod') {
         updateData.payment_status = 'failed';
-        logger.debug(`💳 COD payment marked as failed for RTO order`);
+        logger.debug(`💳 COD payment marked as failed for RTO order (no refund due)`);
       }
 
-      // Handle refund for prepaid orders
+      // Prepaid RTO — do NOT refund yet and do NOT mark it 'refunded'. Rule: the
+      // refund is initiated ONLY after the returned product is received and
+      // confirmed at the warehouse (order status 'rto delivered'/'returned_rto',
+      // handled below). Here we only park the payment at 'refund_pending' so the
+      // books stay honest — the money has not moved.
       if (order.payment_type !== 'cod' && order.payment_status === 'paid') {
-        updateData.payment_status = 'refunded';
+        updateData.payment_status = 'refund_pending';
 
-        // Update payment record
         const payment = order.Payment || null;
         if (payment) {
           await payment.update({
-            status: 'refunded',
-            notes: `Auto-refund initiated for RTO. Reason: ${rto_reason || 'Return to Origin'}`
+            status: 'refund_pending',
+            notes: `RTO started — refund pending warehouse receipt. Reason: ${rto_reason || 'Return to Origin'}`
           }, { transaction });
 
-          logger.debug(`💰 Prepaid order marked for refund: ₹${order.final_amount}`);
-          webhookNotes += ` - Refund initiated for prepaid order`;
+          logger.debug(`⏳ Prepaid RTO parked at refund_pending (awaiting warehouse receipt): ₹${order.final_amount}`);
+          webhookNotes += ` - Prepaid refund pending warehouse receipt`;
         }
       }
 
@@ -689,12 +693,25 @@ module.exports.handleFShipWebhook = async (req, res) => {
             orderNumber: order.order_number,
             refundInfo: order.payment_status === 'refund_pending' ? 'Refund will be processed in 5-7 business days' : 'No refund applicable'
           }, order.brand_id || 1);
-        } else if (orderStatus === 'rto' || orderStatus === 'rto delivered') {
-          await whatsappService.sendOrderCancelled(phone, {
-            name,
-            orderNumber: order.order_number,
-            refundInfo: 'Your order was returned. Refund will be processed in 5-7 business days if payment was made online.'
-          }, order.brand_id || 1);
+        } else if (orderStatus === 'rto' || orderStatus === 'rto delivered' || orderStatus === 'returned_rto') {
+          const isWarehouseReceipt = orderStatus === 'rto delivered' || orderStatus === 'returned_rto';
+          if (order.payment_type === 'cod') {
+            // COD RTO → no refund, ever. One notice is enough; only send it on the
+            // first RTO transition so a later 'rto delivered' doesn't double-ping.
+            if (!isWarehouseReceipt) {
+              await whatsappService.sendRtoCod(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
+            }
+          } else if (!isWarehouseReceipt) {
+            // Prepaid RTO just started — set the expectation, move no money.
+            await whatsappService.sendRtoPrepaid(phone, {
+              name, orderNumber: order.order_number, amount: Number(order.final_amount || 0).toFixed(2),
+            }, order.brand_id || 1);
+          } else {
+            // Prepaid parcel RECEIVED at warehouse → issue the real refund now.
+            // processRefund sends its own "Refund Initiated" WhatsApp message.
+            const refundService = require('../services/refundService.js');
+            await refundService.autoRefundOnRtoReceipt(order.id, `RTO received at warehouse (${rto_reason || 'Return to Origin'})`, null);
+          }
         }
       } catch (waErr) {
         logger.warn('WhatsApp status notification failed:', waErr.message);
@@ -1669,12 +1686,24 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
                   ? 'Refund will be processed in 5-7 business days'
                   : 'No refund applicable',
               }, _notifyOrder.brand_id || 1);
-            } else if (_notifyStatus === 'rto' || _notifyStatus === 'rto delivered') {
-              await whatsappSvc.sendOrderCancelled(phone, {
-                name,
-                orderNumber: _notifyOrder.order_number,
-                refundInfo: 'Your order was returned. Refund will be processed in 5-7 business days if payment was made online.',
-              }, _notifyOrder.brand_id || 1);
+            } else if (_notifyStatus === 'rto' || _notifyStatus === 'rto delivered' || _notifyStatus === 'returned_rto') {
+              const isWarehouseReceipt = _notifyStatus === 'rto delivered' || _notifyStatus === 'returned_rto';
+              if (_notifyOrder.payment_type === 'cod') {
+                // COD RTO → no refund. Notify once, on the first RTO transition.
+                if (!isWarehouseReceipt) {
+                  await whatsappSvc.sendRtoCod(phone, { name, orderNumber: _notifyOrder.order_number }, _notifyOrder.brand_id || 1);
+                }
+              } else if (!isWarehouseReceipt) {
+                // Prepaid RTO started → set expectation, move no money.
+                await whatsappSvc.sendRtoPrepaid(phone, {
+                  name, orderNumber: _notifyOrder.order_number, amount: Number(_notifyOrder.final_amount || 0).toFixed(2),
+                }, _notifyOrder.brand_id || 1);
+              } else {
+                // Prepaid parcel received at warehouse → issue the real refund now
+                // (processRefund sends its own "Refund Initiated" message).
+                const refundService = require('../services/refundService.js');
+                await refundService.autoRefundOnRtoReceipt(_notifyOrder.id, 'Prepaid RTO received at warehouse', null);
+              }
             }
           } catch (waErr) {
             logger.warn(`[FShip] WhatsApp status notification failed for ${_notifyOrder.order_number}: ${waErr.message}`);

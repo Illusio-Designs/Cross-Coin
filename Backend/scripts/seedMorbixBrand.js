@@ -27,7 +27,7 @@ const MORBIX = {
   name:            'Morbix',
   slug:            'morbix',
   display_name:    'Morbix',
-  domain:          'morbix.com',
+  domain:          'morbixsocks.com',
   primary_color:   '#202c6e',
   secondary_color: '#2fa39b',
   contact_email:   'support@morbix.com',

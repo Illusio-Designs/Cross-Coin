@@ -144,16 +144,83 @@ async function _brandName(brandId) {
 // the order number from ?order=, so the link opens pre-filled. This replaces the
 // old hard-coded crosscoin.in/OrderTracking link that was wrong for every other
 // brand (wrong domain AND wrong path).
-async function _trackingUrl(brandId, orderNumber) {
-  let domain = '';
+// Canonical live custom domains per brand. The brands table was seeded with the
+// WRONG domains for several stores (morbix.com / soxbae.com / velquira.com — none
+// of which resolve; the live stores are on morbixsocks.com / soxbaesocks.com /
+// velquira.in). These are the verified production domains (source: CORS allow-list
+// in config/corsConfig.js). Keyed by normalised brand name so a wrong Brand.domain
+// row can't produce a dead tracking link. Keep in sync with corsConfig.js.
+const CANONICAL_BRAND_DOMAINS = {
+  crosscoin: 'crosscoin.in',
+  morbix:    'morbixsocks.com',
+  soxbae:    'soxbaesocks.com',
+  velquira:  'velquira.in',
+  velmique:  'velmique.co.in',
+  knitwink:  'knitwink.com',
+  gripzus:   'gripzus.com',
+};
+
+function _normBrandKey(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
+// Brands whose PDP route segment is SINGULAR "/product/<slug>". Every other
+// storefront uses the PLURAL "/products/<slug>". (Verified against the actual
+// storefront route folders: only Velmique's app/ uses app/product/[slug]; Morbix,
+// Soxbae, Velquira, Knitwink, Gripzus and Crosscoin all use /products/…)
+const SINGULAR_PDP_BRANDS = new Set(['velmique']);
+
+// Resolve a brand to the pieces every WhatsApp link needs, in ONE DB read:
+//   • domain — the brand's OWN bare domain (no protocol / trailing slash)
+//   • key    — normalised brand name (for per-brand route quirks)
+// Domain resolution order:
+//   1. Canonical map above, keyed by the Brand's name  ← authoritative
+//   2. Brand.domain column                              ← may be a dead seed value
+//   3. STORE_URL setting                                ← usually unset per brand
+//   4. 'crosscoin.in'                                   ← last-ditch default
+// Steps 3–4 previously ran FIRST for every sender, so a Soxbae / Morbix / Velmique
+// customer got crosscoin.in links. Now a known brand always resolves to its own
+// live domain.
+async function _brandInfo(brandId) {
+  let domain = '', key = '';
   try {
     const Brand = require('../model/brandModel.js');
-    const b = await Brand.findByPk(brandId, { attributes: ['domain'] });
-    domain = String((b && b.domain) || '').trim();
+    const b = await Brand.findByPk(brandId, { attributes: ['domain', 'name', 'display_name'] });
+    key = _normBrandKey(b && (b.name || b.display_name));
+    domain = CANONICAL_BRAND_DOMAINS[key] || String((b && b.domain) || '').trim();
   } catch (_) { /* fall through */ }
   if (!domain) domain = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
   domain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  const path = /crosscoin/i.test(domain) ? '/OrderTracking' : '/track-order';
+  // Keep the key in step with the resolved domain when the Brand row was unreadable.
+  if (!key) key = _normBrandKey(domain.split('.')[0]);
+  return { domain, key };
+}
+
+async function _brandDomain(brandId) {
+  return (await _brandInfo(brandId)).domain;
+}
+
+// Full https URL for a brand path, e.g. _brandUrl(2, '/track-order').
+async function _brandUrl(brandId, path = '') {
+  const { domain } = await _brandInfo(brandId);
+  const p = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  return `https://${domain}${p}`;
+}
+
+// Product detail page — the ONLY place reviews can actually be left, and the real
+// target for back-in-stock / upsell / review links. Uses the brand's own PDP
+// route segment (singular for Velmique, plural everywhere else) so the link is a
+// live page, not a 404.
+async function _productUrl(brandId, slug, anchor = '') {
+  const { domain, key } = await _brandInfo(brandId);
+  const seg = SINGULAR_PDP_BRANDS.has(key) ? 'product' : 'products';
+  return `https://${domain}/${seg}/${encodeURIComponent(slug)}${anchor || ''}`;
+}
+
+async function _trackingUrl(brandId, orderNumber) {
+  const { domain, key } = await _brandInfo(brandId);
+  // Crosscoin's storefront route is /OrderTracking; every other brand uses /track-order.
+  const path = (key === 'crosscoin' || /crosscoin/i.test(domain)) ? '/OrderTracking' : '/track-order';
   return `https://${domain}${path}?order=${encodeURIComponent(orderNumber)}`;
 }
 
@@ -392,6 +459,38 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // COD RTO — order returned to origin. NO refund is due (nothing was paid),
+      // so this template must never promise one. Rule: COD cancellations and RTO
+      // orders → no refund initiated.
+      name: tName('cod_rto'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Order Returned to Us' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, your *{{2}}* order *#{{3}}* was returned to us and is now closed.\n\nAs this was a *Cash on Delivery* order, no payment was collected, so there's nothing to refund.\n\nStill want it? Just reply here and we'll help you reorder right away. 😊`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      // Prepaid RTO — order returned to origin. Rule: refund is initiated ONLY
+      // after the returned product is received and confirmed at the warehouse.
+      // So this first message sets the expectation; the actual "Refund Initiated"
+      // message (refund_processed) fires later, once warehouse receipt triggers
+      // the real Razorpay refund.
+      name: tName('prepaid_rto'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Order Returned — Refund on the Way' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, your *{{2}}* order *#{{3}}* is on its way back to us.\n\n💳 *Refund:* ₹{{4}} to your original payment method\n📦 We'll initiate it as soon as the returned parcel is received and checked at our warehouse, then it reaches you in 5–7 working days.\n\nWe'll message you here the moment your refund is initiated. Thanks for your patience!`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', '699']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
       name: tName('cod_order_confirmation'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Confirm Your COD Order' },
@@ -467,7 +566,7 @@ function buildTemplates(storeName, storeUrl) {
         {
           type: 'BODY',
           text: `Thanks for your order, {{1}}! 🌟\n\nHow did we do? Please take a moment to rate your experience with *{{2}}* or leave a quick review — it means the world to us and helps other shoppers.\n\n👉 Share your feedback here: {{3}}\n\nThank you — it only takes a minute!`,
-          example: { body_text: [['Rushikesh', storeName, `https://${storeUrl}/review`]] },
+          example: { body_text: [['Rushikesh', storeName, `https://${storeUrl}/products/sample-product#reviews`]] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -523,7 +622,7 @@ function listDefaultTemplateDefs() {
 // Pass `names` (array) to seed only those templates; omit to seed them all.
 async function seedDefaultTemplates(brandId = 1, names = null) {
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const storeUrl  = await _brandDomain(brandId);
   let templates = buildTemplates(storeName, storeUrl);
   if (Array.isArray(names) && names.length) {
     const want = new Set(names);
@@ -551,7 +650,7 @@ async function seedDefaultTemplates(brandId = 1, names = null) {
 // The template re-enters PENDING review after recreation.
 async function updateTemplate(name, brandId = 1) {
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const storeUrl  = await _brandDomain(brandId);
   const templates = buildTemplates(storeName, storeUrl);
   const tpl = templates.find(t => t.name === name);
   if (!tpl) throw new Error(`Template "${name}" is not defined in the default template list`);
@@ -602,7 +701,7 @@ async function updateTemplate(name, brandId = 1) {
 // avoid hitting Meta's template-management rate limit.
 async function updateAllTemplates(brandId = 1, names = null) {
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
+  const storeUrl  = await _brandDomain(brandId);
   let templates = buildTemplates(storeName, storeUrl);
   if (Array.isArray(names) && names.length) {
     const want = new Set(names);
@@ -783,6 +882,28 @@ async function sendOrderCancelled(phone, data, brandId = 1) {
   ], brandId);
 }
 
+// COD RTO notice — no refund (nothing was paid). Rule-compliant: never promises
+// money back on a COD return.
+async function sendRtoCod(phone, data, brandId = 1) {
+  return sendTemplate(phone, tName('cod_rto'), [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+  ], brandId);
+}
+
+// Prepaid RTO notice — refund is promised but deferred until the parcel is
+// received at the warehouse (the real refund + "Refund Initiated" message fire
+// then). This only sets the expectation; it does NOT move any money.
+async function sendRtoPrepaid(phone, data, brandId = 1) {
+  return sendTemplate(phone, tName('prepaid_rto'), [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+    String(data.amount ?? ''),
+  ], brandId);
+}
+
 async function sendReturnRequested(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('return_requested'), [
     data.name || 'there',
@@ -877,39 +998,43 @@ async function sendAbandonedCart(phone, data, brandId = 1) {
 }
 
 async function sendReviewRequest(phone, data, brandId = 1) {
-  const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  // There is no /review route on any storefront — reviews are left on the product
+  // page. Deep-link to the PDP (with a #reviews anchor) when we know the product;
+  // otherwise fall back to the store homepage. Never link to the dead /review path.
+  const reviewUrl = data.reviewUrl
+    || (data.productSlug ? await _productUrl(brandId, data.productSlug, '#reviews') : await _brandUrl(brandId));
   return sendTemplate(phone, tName('review_request'), [
     data.name || data.customerName || 'there',
     await _brandName(brandId),
-    data.reviewUrl || `https://${storeUrl}/review`,
+    reviewUrl,
   ], brandId);
 }
 
 async function sendBackInStock(phone, data, brandId = 1) {
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
-  const text = `🎉 Good news! *${data.productName}* is back in stock at *${storeName}*.\n\nGrab it before it sells out again!\n👉 https://${storeUrl}/product/${data.productSlug}`;
+  const storeName = await _brandName(brandId);
+  const link = await _productUrl(brandId, data.productSlug);
+  const text = `🎉 Good news! *${data.productName}* is back in stock at *${storeName}*.\n\nGrab it before it sells out again!\n👉 ${link}`;
   return sendTextMessage(phone, text, brandId);
 }
 
 async function sendLoyaltyNotification(phone, data, brandId = 1) {
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
-  const text = `🌟 *${storeName} Rewards*\n\nHi ${data.customerName || 'there'}! You just earned *${data.points} points* for your order.\n\nYour balance: *${data.balance} points*\n\nRedeem at checkout 👉 https://${storeUrl}`;
+  const storeName = await _brandName(brandId);
+  const link = await _brandUrl(brandId);
+  const text = `🌟 *${storeName} Rewards*\n\nHi ${data.customerName || 'there'}! You just earned *${data.points} points* for your order.\n\nYour balance: *${data.balance} points*\n\nRedeem at checkout 👉 ${link}`;
   return sendTextMessage(phone, text, brandId);
 }
 
 async function sendWinBack(phone, data, brandId = 1) {
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
-  const text = `Hey ${data.customerName || 'there'}! 👋\n\nWe miss you at *${storeName}*. It's been a while since your last order.\n\nHere's *${data.couponCode || '10% OFF'}* just for you — use it on your next order!\n\n👉 https://${storeUrl}`;
+  const storeName = await _brandName(brandId);
+  const link = await _brandUrl(brandId);
+  const text = `Hey ${data.customerName || 'there'}! 👋\n\nWe miss you at *${storeName}*. It's been a while since your last order.\n\nHere's *${data.couponCode || '10% OFF'}* just for you — use it on your next order!\n\n👉 ${link}`;
   return sendTextMessage(phone, text, brandId);
 }
 
 async function sendPostPurchaseUpsell(phone, data, brandId = 1) {
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const storeUrl  = (await settingsHelper.getSetting(brandId, 'STORE_URL'))  || 'crosscoin.in';
-  const text = `Hi ${data.customerName || 'there'}! 😊\n\nLoved your *${data.purchasedProduct}* from *${storeName}*?\n\nYou might also like: *${data.suggestedProduct}*\n\n👉 https://${storeUrl}/product/${data.suggestedSlug}`;
+  const storeName = await _brandName(brandId);
+  const link = await _productUrl(brandId, data.suggestedSlug);
+  const text = `Hi ${data.customerName || 'there'}! 😊\n\nLoved your *${data.purchasedProduct}* from *${storeName}*?\n\nYou might also like: *${data.suggestedProduct}*\n\n👉 ${link}`;
   return sendTextMessage(phone, text, brandId);
 }
 
@@ -1053,7 +1178,8 @@ async function syncProductsToCatalog(brandId = 1) {
   const { token, businessAccountId } = await getCredentials(brandId);
   const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
   if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
-  const storeUrl = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
+  const { domain: storeUrl, key: brandKey } = await _brandInfo(brandId);
+  const pdpSeg = SINGULAR_PDP_BRANDS.has(brandKey) ? 'product' : 'products';
 
   const { Product } = require('../model/productModel.js');
   const { ProductVariation } = require('../model/productVariationModel.js');
@@ -1107,7 +1233,7 @@ async function syncProductsToCatalog(brandId = 1) {
           currency: 'INR',
           category: 'PRODUCTS',
           image_url: imageUrl,
-          url: `https://${storeUrl}/product/${product.slug}`,
+          url: `https://${storeUrl}/${pdpSeg}/${product.slug}`,
           availability: variation.stock > 0 ? 'in stock' : 'out of stock',
         };
 
@@ -1160,6 +1286,8 @@ module.exports = {
   sendOutForDelivery,
   sendOrderDelivered,
   sendOrderCancelled,
+  sendRtoCod,
+  sendRtoPrepaid,
   sendCodConfirmation,
   sendRefundProcessed,
   sendReturnRequested,
