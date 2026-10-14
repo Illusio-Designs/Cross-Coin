@@ -217,9 +217,9 @@ export default function RevenueProfitReport() {
         <StatGrid>
           <StatTile label="Revenue" value={inr(totals.revenue)} />
           <StatTile label="COGS (cost price)" value={inr(totals.cogs)} />
-          <StatTile label="Gross profit · before ads" value={inr(totals.beforeAds)} tone={totals.beforeAds >= 0 ? 'good' : 'bad'} />
+          <StatTile label="Gross profit · before ads" value={inr(totals.beforeAds)} tone={totals.beforeAds >= 0 ? 'good' : 'danger'} />
           <StatTile label="Total ad spend" value={inr(totals.adSpend)} />
-          <StatTile label="Gross profit · after ads" value={inr(totals.afterAds)} tone={totals.afterAds >= 0 ? 'good' : 'bad'} />
+          <StatTile label="Gross profit · after ads" value={inr(totals.afterAds)} tone={totals.afterAds >= 0 ? 'good' : 'danger'} />
           <StatTile label="Margin · after ads" value={`${totals.marginAfter.toFixed(1)}%`} />
           <StatTile label="Orders" value={num(totals.orders)} />
         </StatGrid>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { trafficReportService } from '../../../services';
 import { Button, DateRangePicker } from '../../../components/ui';
-import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
+import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
 
 /**
  * Traffic & Conversion — a per-brand funnel: sessions (first-party visit
@@ -54,6 +54,9 @@ const S = {
   chip: { fontSize: 10.5, fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '2px 8px' },
   empty: { padding: 40, textAlign: 'center', color: 'var(--ds-color-text-muted)', fontSize: 13 },
 };
+
+// Tabular-number cells for the ResponsiveTable numeric columns.
+const tdNum = { textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 
 export default function TrafficReport() {
   const [from, setFrom] = useState(shiftDay(istDate(), -29));
@@ -148,93 +151,59 @@ export default function TrafficReport() {
 
       {/* Traffic sources — grouped into the 5 headline channels */}
       {data?.channels?.length ? (
-        <Panel title="Traffic sources — where visitors come from">
-          <div style={S.tableWrap}>
-            <table style={S.table}>
-              <thead>
-                <tr>
-                  <th style={{ ...S.th, ...S.thL }}>Channel</th>
-                  <th style={S.th}>Visitors</th>
-                  <th style={S.th}>Share</th>
-                  <th style={S.th}>Orders</th>
-                  <th style={S.th}>Conversion</th>
-                  <th style={{ ...S.th, ...S.thL, width: '30%' }}>Share of visits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.channels.map((s, i) => (
-                  <tr key={i}>
-                    <td style={{ ...S.td, ...S.tdL }}>
-                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chColor(s.channel), marginRight: 8, verticalAlign: 'middle' }} />
-                      {s.channel}
-                    </td>
-                    <td style={S.td}>{num(s.sessions)}</td>
-                    <td style={S.td}>{pct(s.share)}</td>
-                    <td style={S.td}>{num(s.orders)}</td>
-                    <td style={S.td}>{pct(s.conversion_rate)}</td>
-                    <td style={{ ...S.td, textAlign: 'left' }}>
-                      <div style={{ background: 'var(--ds-color-border)', borderRadius: 6, height: 14, overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(100, Math.max(2, s.share))}%`, height: '100%', background: chColor(s.channel), borderRadius: 6 }} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <Panel title="Traffic sources — where visitors come from" flush>
+          <ResponsiveTable
+            rowKey={(r) => r.channel}
+            data={data.channels}
+            emptyMessage="No traffic sources yet."
+            columns={[
+              { key: 'channel', label: 'Channel', render: (s) => (
+                <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chColor(s.channel), marginRight: 8, verticalAlign: 'middle' }} />{s.channel}</span>
+              ) },
+              { key: 'sessions', label: 'Visitors', cellStyle: tdNum, render: (s) => num(s.sessions) },
+              { key: 'share', label: 'Share', cellStyle: tdNum, render: (s) => pct(s.share) },
+              { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (s) => num(s.orders) },
+              { key: 'conversion_rate', label: 'Conversion', cellStyle: tdNum, render: (s) => pct(s.conversion_rate) },
+              { key: 'bar', label: 'Share of visits', headerStyle: { width: '30%' }, render: (s) => (
+                <div style={{ background: 'var(--ds-color-border)', borderRadius: 6, height: 14, overflow: 'hidden', minWidth: 120 }}>
+                  <div style={{ width: `${Math.min(100, Math.max(2, s.share))}%`, height: '100%', background: chColor(s.channel), borderRadius: 6 }} />
+                </div>
+              ) },
+            ]}
+          />
         </Panel>
       ) : null}
 
       {/* Per-brand table */}
-      <Panel>
-        <div style={S.tableWrap}>
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={{ ...S.th, ...S.thL }}>Brand</th>
-                <th style={S.th}>Visits</th>
-                <th style={S.th}>Views</th>
-                <th style={S.th}>Cart</th>
-                <th style={S.th}>Checkout</th>
-                <th style={S.th}>Orders</th>
-                <th style={S.th}>Delivered</th>
-                <th style={S.th}>Conv.</th>
-                <th style={S.th}>Revenue</th>
-                <th style={S.th}>AOV</th>
-                <th style={{ ...S.th, ...S.thL }}>Top channels</th>
-              </tr>
-            </thead>
-            <tbody>
-              {brands.length === 0 ? (
-                <tr><td colSpan={11} style={S.empty}>{loading ? 'Loading…' : 'No data for this period yet.'}</td></tr>
-              ) : brands.map((b) => (
-                <tr key={b.brand_id}>
-                  <td style={{ ...S.td, ...S.tdL }}>{b.brand}</td>
-                  <td style={S.td}>{num(b.sessions)}</td>
-                  <td style={S.td}>{num(b.views)}</td>
-                  <td style={S.td}>{num(b.carts)}</td>
-                  <td style={S.td}>{num(b.checkouts)}</td>
-                  <td style={S.td}>{num(b.orders)}</td>
-                  <td style={S.td}>{num(b.delivered)}</td>
-                  <td style={S.td}>{pct(b.conversion_rate)}</td>
-                  <td style={S.td}>{inr(b.revenue)}</td>
-                  <td style={S.td}>{inr(b.aov)}</td>
-                  <td style={{ ...S.td, textAlign: 'left' }}>
-                    <div style={S.chan}>
-                      {(b.channels || []).length === 0 ? <span style={S.chip}>—</span>
-                        : b.channels.map((c, i) => (
-                          <span key={i} style={S.chip}>
-                            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: chColor(c.channel), marginRight: 6, verticalAlign: 'middle' }} />
-                            {c.channel} · {num(c.sessions)}
-                          </span>
-                        ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Panel flush>
+        <ResponsiveTable
+          rowKey="brand_id"
+          data={brands}
+          emptyMessage={loading ? 'Loading…' : 'No data for this period yet.'}
+          columns={[
+            { key: 'brand', label: 'Brand', render: (b) => b.brand },
+            { key: 'sessions', label: 'Visits', cellStyle: tdNum, render: (b) => num(b.sessions) },
+            { key: 'views', label: 'Views', cellStyle: tdNum, render: (b) => num(b.views) },
+            { key: 'carts', label: 'Cart', cellStyle: tdNum, render: (b) => num(b.carts) },
+            { key: 'checkouts', label: 'Checkout', cellStyle: tdNum, render: (b) => num(b.checkouts) },
+            { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (b) => num(b.orders) },
+            { key: 'delivered', label: 'Delivered', cellStyle: tdNum, render: (b) => num(b.delivered) },
+            { key: 'conversion_rate', label: 'Conv.', cellStyle: tdNum, render: (b) => pct(b.conversion_rate) },
+            { key: 'revenue', label: 'Revenue', cellStyle: tdNum, render: (b) => inr(b.revenue) },
+            { key: 'aov', label: 'AOV', cellStyle: tdNum, render: (b) => inr(b.aov) },
+            { key: 'channels', label: 'Top channels', render: (b) => (
+              <div style={S.chan}>
+                {(b.channels || []).length === 0 ? <span style={S.chip}>—</span>
+                  : b.channels.map((c, i) => (
+                    <span key={i} style={S.chip}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: chColor(c.channel), marginRight: 6, verticalAlign: 'middle' }} />
+                      {c.channel} · {num(c.sessions)}
+                    </span>
+                  ))}
+              </div>
+            ) },
+          ]}
+        />
       </Panel>
     </div>
   );
