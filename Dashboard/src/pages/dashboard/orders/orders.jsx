@@ -16,7 +16,7 @@ import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
-import { PageHeader, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
+import { PageHeader, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
     ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
@@ -952,31 +952,19 @@ const Orders = () => {
                                         </div>
                                     );
                                 })()}
-                                <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--border, #eee)', borderRadius: 8 }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                        <thead>
-                                            <tr style={{ textAlign: 'left', background: 'var(--surface-muted, #f7f7f7)' }}>
-                                                <th style={{ padding: '6px 10px' }}>When</th>
-                                                <th style={{ padding: '6px 10px' }}>Order / AWB</th>
-                                                <th style={{ padding: '6px 10px' }}>Courier status</th>
-                                                <th style={{ padding: '6px 10px' }}>Mapped</th>
-                                                <th style={{ padding: '6px 10px' }}>OK</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(webhookData.events || []).length === 0 ? (
-                                                <tr><td colSpan={5} style={{ padding: '12px 10px', color: 'var(--text-muted, #666)' }}>No webhook events recorded yet.</td></tr>
-                                            ) : (webhookData.events || []).map((e) => (
-                                                <tr key={e.id} style={{ borderTop: '1px solid var(--border, #eee)' }}>
-                                                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</td>
-                                                    <td style={{ padding: '6px 10px' }}>{e.order_ref || e.waybill || '—'}</td>
-                                                    <td style={{ padding: '6px 10px' }}>{e.courier_status || '—'}</td>
-                                                    <td style={{ padding: '6px 10px' }}>{e.mapped_status || '—'}</td>
-                                                    <td style={{ padding: '6px 10px' }}>{e.processed ? '✅' : (e.processing_error ? '⚠️' : '⏳')}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                                    <ResponsiveTable
+                                        rowKey="id"
+                                        data={webhookData.events || []}
+                                        emptyMessage="No webhook events recorded yet."
+                                        columns={[
+                                            { key: 'createdAt', label: 'When', cellStyle: { whiteSpace: 'nowrap' }, render: (e) => (e.createdAt ? new Date(e.createdAt).toLocaleString() : '—') },
+                                            { key: 'ref', label: 'Order / AWB', render: (e) => e.order_ref || e.waybill || '—' },
+                                            { key: 'courier_status', label: 'Courier status', render: (e) => e.courier_status || '—' },
+                                            { key: 'mapped_status', label: 'Mapped', render: (e) => e.mapped_status || '—' },
+                                            { key: 'ok', label: 'OK', render: (e) => (e.processed ? '✅' : (e.processing_error ? '⚠️' : '⏳')) },
+                                        ]}
+                                    />
                                 </div>
                             </div>
                         ) : null}
