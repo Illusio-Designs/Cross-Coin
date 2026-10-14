@@ -82,16 +82,17 @@ function escapeXml(str) {
 
 function generateSitemapXml(urls) {
   const body = urls
-    .map(({ path, priority, changefreq, lastmod }) => `  <url>
+    .map(({ path, priority, changefreq, lastmod, image }) => `  <url>
     <loc>${escapeXml(BASE_URL + path)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
+    <priority>${priority}</priority>${image ? `
+    <image:image><image:loc>${escapeXml(image)}</image:loc></image:image>` : ''}
   </url>`)
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${body}
 </urlset>`;
 }
@@ -117,6 +118,7 @@ export async function getServerSideProps({ res }) {
         priority: '0.8',
         changefreq: 'weekly',
         lastmod: toLastmod(p.updatedAt),
+        image: p.mainImage || p.images?.[0]?.image_url || (typeof p.image === 'string' ? p.image : undefined),
       });
     }
   });

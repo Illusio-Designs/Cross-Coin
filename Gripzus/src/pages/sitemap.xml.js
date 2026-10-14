@@ -48,13 +48,16 @@ async function safeFetch(path) {
   }
 }
 
-function urlTag({ loc, lastmod, changefreq, priority }) {
+function urlTag({ loc, lastmod, changefreq, priority, image }) {
   return (
     '<url>' +
     `<loc>${escapeXml(`${SITE_URL}${loc}`)}</loc>` +
     (lastmod ? `<lastmod>${lastmod}</lastmod>` : '') +
     `<changefreq>${changefreq}</changefreq>` +
     `<priority>${priority}</priority>` +
+    // Image sitemap extension — associates the product's primary photo with the
+    // page so it is eligible for Google Images.
+    (image ? `<image:image><image:loc>${escapeXml(image)}</image:loc></image:image>` : '') +
     '</url>'
   );
 }
@@ -96,6 +99,7 @@ export async function getServerSideProps({ res }) {
       lastmod: lastmodOf(p.updatedAt || p.updated_at),
       changefreq: 'weekly',
       priority: '0.8',
+      image: p.mainImage || p.images?.[0]?.image_url || (typeof p.image === 'string' ? p.image : undefined),
     }));
 
   // Categories → /collections/<slug>  (pages/collections/[slug].jsx)
@@ -135,7 +139,7 @@ export async function getServerSideProps({ res }) {
 
   const xml =
     '<?xml version="1.0" encoding="UTF-8"?>' +
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">' +
     entries.map(urlTag).join('') +
     '</urlset>';
 
