@@ -245,4 +245,4 @@ const Field = ({ label, children, style }) => (
 const input = { width: '100%', padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 6, fontSize: 14, outline: 'none', background: 'var(--ds-color-surface)' };
 const pad = { padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' };
 const btnSecondary = { padding: '6px 10px', border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-text-muted)' };
-const btnDanger = { padding: '6px 10px', border: '1px solid #fecaca', background: '#fef2f2', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: '#991b1b' };
+const btnDanger = { padding: '6px 10px', border: '1px solid var(--ds-color-danger-border, #fecaca)', background: 'var(--ds-color-danger-bg, #fef2f2)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-danger, #991b1b)' };
