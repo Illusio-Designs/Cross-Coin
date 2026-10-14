@@ -1366,3 +1366,11 @@ body:has([data-sticky-atc]) .back-to-top { bottom: 184px; }
 .knit-desc-rich figcaption { font-size: 0.8rem; color: #6b7280; margin-top: 4px; text-align: center; }
 .knit-desc-rich table { width: 100%; border-collapse: collapse; margin: 0.9em 0; font-size: 0.9em; }
 .knit-desc-rich th, .knit-desc-rich td { border: 1px solid #e5e7eb; padding: 0.5em 0.7em; text-align: left; }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.knit-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .knit-desc-rich .only-desktop { display: none; }
+  .knit-desc-rich .only-mobile { display: block; }
+}

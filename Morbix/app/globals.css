@@ -1507,3 +1507,11 @@ button { font-family: inherit; cursor: pointer; }
 .sc-table th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--teal-600); padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .sc-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); }
 .sc-size { font-weight: 700; }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.pdp-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .pdp-desc-rich .only-desktop { display: none; }
+  .pdp-desc-rich .only-mobile { display: block; }
+}

@@ -2455,3 +2455,11 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .pdx-faq-a p:last-child { margin-bottom: 0; }
 .pdx-faq-a ul { margin: 0 0 10px; padding-left: 20px; font-size: 14.5px; line-height: 1.7; color: var(--ink-soft); }
 @media (prefers-reduced-motion: reduce) { .pdx-sticky, .pdx-faq summary svg { transition: none; } }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.pdx-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .pdx-desc-rich .only-desktop { display: none; }
+  .pdx-desc-rich .only-mobile { display: block; }
+}

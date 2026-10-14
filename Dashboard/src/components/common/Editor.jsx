@@ -9,6 +9,23 @@ import { productService } from '../../services';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
+// Image node that keeps a per-image `class`, so an image can be tagged
+// desktop-only / mobile-only. The storefronts show/hide the matching one at each
+// breakpoint via `.*-desc-rich .only-desktop` / `.only-mobile` CSS. Without this
+// the Tiptap Image extension drops any class other than its fixed HTMLAttributes.
+const ResponsiveImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      class: {
+        default: 'rte-img',
+        parseHTML: (el) => el.getAttribute('class') || 'rte-img',
+        renderHTML: (attrs) => (attrs.class ? { class: attrs.class } : {}),
+      },
+    };
+  },
+});
+
 // Resolve an uploaded image path to a full URL (mirrors the media gallery).
 function resolveMediaUrl(path) {
   if (!path || typeof path !== 'string') return null;
@@ -55,6 +72,9 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
   // Holds the latest upload-and-insert handler so the paste/drop handlers below
   // (created once at mount) always call the current one without stale closures.
   const uploadInsertRef = useRef(null);
+  // The class the NEXT file-picker upload should tag its image with (set by the
+  // All / Desktop / Mobile upload buttons just before opening the file dialog).
+  const pendingClassRef = useRef('rte-img');
 
   // Grab the first image file from a paste/drop event, if any.
   const imageFileFromEvent = (list) => {
@@ -81,7 +101,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
         HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },
       }),
       Placeholder.configure({ placeholder }),
-      Image.configure({ inline: false, HTMLAttributes: { class: 'rte-img' } }),
+      ResponsiveImage.configure({ inline: false }),
     ],
     content: value || '',
     // Intercept pasted/dropped image files and upload them to ImageKit instead
@@ -164,7 +184,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
   // Upload a single image file to ImageKit and insert it at the cursor. Shared
   // by the toolbar button, paste, and drop so all three behave identically and
   // never leave base64 in the document.
-  const uploadAndInsert = async (file) => {
+  const uploadAndInsert = async (file, cls = 'rte-img') => {
     if (!file) return;
     try {
       setUploading(true);
@@ -172,7 +192,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
       const path = extractUploadedPath(result);
       const src = resolveMediaUrl(path);
       if (src) {
-        editor.chain().focus().setImage({ src, alt: file.name || 'image' }).run();
+        editor.chain().focus().setImage({ src, alt: file.name || 'image', class: cls }).run();
       } else {
         window.alert('Upload succeeded but no image URL was returned. You can paste the image URL instead.');
       }
@@ -188,7 +208,26 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
   const handleImageFile = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    uploadAndInsert(file);
+    const cls = pendingClassRef.current || 'rte-img';
+    pendingClassRef.current = 'rte-img'; // reset to default for paste/drop
+    uploadAndInsert(file, cls);
+  };
+
+  // Open the file picker, remembering which device class to tag the upload with.
+  const pickImage = (cls) => {
+    if (uploading) return;
+    pendingClassRef.current = cls;
+    fileInputRef.current?.click();
+  };
+
+  // Re-tag the currently-selected image (desktop-only / mobile-only / both).
+  const tagSelectedImage = (device) => {
+    if (!editor.isActive('image')) {
+      window.alert('Click the image you want to tag first, then choose Desktop-only or Mobile-only.');
+      return;
+    }
+    const cls = device === 'both' ? 'rte-img' : `rte-img only-${device}`;
+    editor.chain().focus().updateAttributes('image', { class: cls }).run();
   };
 
   const items = [
@@ -206,8 +245,14 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
     { t: 'Quote', l: '❝', on: () => editor.chain().focus().toggleBlockquote().run(), a: editor.isActive('blockquote') },
     { sep: true },
     { t: 'Insert Link', l: '🔗', on: setLink, a: editor.isActive('link') },
-    { t: uploading ? 'Uploading…' : 'Upload image', l: uploading ? '⏳' : '🖼️', on: () => { if (!uploading) fileInputRef.current?.click(); } },
+    { t: uploading ? 'Uploading…' : 'Upload image (shows on all devices)', l: uploading ? '⏳' : '🖼️', on: () => pickImage('rte-img') },
+    { t: 'Upload a DESKTOP-only image', l: '🖥️', on: () => pickImage('rte-img only-desktop') },
+    { t: 'Upload a MOBILE-only image', l: '📱', on: () => pickImage('rte-img only-mobile') },
     { t: 'Image by URL', l: '🌐', on: insertImageByUrl },
+    { sep: true },
+    { t: 'Tag the SELECTED image as desktop-only', l: '🖥–', on: () => tagSelectedImage('desktop') },
+    { t: 'Tag the SELECTED image as mobile-only', l: '📱–', on: () => tagSelectedImage('mobile') },
+    { t: 'Show the SELECTED image on all devices', l: '⇋', on: () => tagSelectedImage('both') },
     { t: 'Clear Formatting', l: '✕', on: () => editor.chain().focus().unsetAllMarks().clearNodes().run() },
     { sep: true },
     { t: 'Undo', l: '↺', on: () => editor.chain().focus().undo().run() },
@@ -279,6 +324,11 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
         .rte-editor-wrap :global(.ProseMirror a) { color: #2563eb; text-decoration: underline; }
         .rte-editor-wrap :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
         .rte-editor-wrap :global(.ProseMirror img.ProseMirror-selectednode) { outline: 2px solid #2563eb; }
+        /* Editor-only cues so tagged images are distinguishable (both show here;
+           only the storefront hides the non-matching one). Blue = desktop-only,
+           green = mobile-only. */
+        .rte-editor-wrap :global(.ProseMirror img.only-desktop) { outline: 2px dashed #2563eb; outline-offset: 3px; }
+        .rte-editor-wrap :global(.ProseMirror img.only-mobile) { outline: 2px dashed #16a34a; outline-offset: 3px; }
         .rte-editor-wrap :global(.ProseMirror p.is-editor-empty:first-child::before) {
           content: attr(data-placeholder);
           color: #aaa;

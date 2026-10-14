@@ -69,3 +69,11 @@
 }
 .gz-desc-rich strong { font-weight: 700; }
 .gz-desc-rich em { font-style: italic; }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.gz-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .gz-desc-rich .only-desktop { display: none; }
+  .gz-desc-rich .only-mobile { display: block; }
+}

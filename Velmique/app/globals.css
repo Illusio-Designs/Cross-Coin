@@ -916,3 +916,11 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   text-align: center;
   margin-top: 6px;
 }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.vq-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .vq-desc-rich .only-desktop { display: none; }
+  .vq-desc-rich .only-mobile { display: block; }
+}

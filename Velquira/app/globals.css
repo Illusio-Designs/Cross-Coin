@@ -2294,3 +2294,11 @@ p { text-align: justify; text-justify: inter-word; }
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.vq-desc-rich .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .vq-desc-rich .only-desktop { display: none; }
+  .vq-desc-rich .only-mobile { display: block; }
+}

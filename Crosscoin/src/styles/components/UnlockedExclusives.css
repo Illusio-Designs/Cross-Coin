@@ -914,3 +914,11 @@
   background: #f9f9f9;
   border-top: 1px solid #e0e0e0;
 }
+
+/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
+   in the admin editor to show a different image per breakpoint. */
+.detail-description .only-mobile { display: none; }
+@media (max-width: 767px) {
+  .detail-description .only-desktop { display: none; }
+  .detail-description .only-mobile { display: block; }
+}
