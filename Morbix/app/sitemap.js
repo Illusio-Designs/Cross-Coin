@@ -50,12 +50,16 @@ export default async function sitemap() {
 
   const productUrls = (productsResp?.data?.products || productsResp?.products || productsResp?.data || [])
     .filter((p) => p?.slug)
-    .map((p) => ({
-      url: `/products/${p.slug}`,
-      lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }));
+    .map((p) => {
+      const img = p.mainImage || p.images?.[0]?.image_url;
+      return {
+        url: `/products/${p.slug}`,
+        lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
+        changeFrequency: 'weekly',
+        priority: 0.8,
+        ...(img ? { images: [img] } : {}),
+      };
+    });
 
   const categoryUrls = (categoriesResp?.data?.categories || categoriesResp?.categories || categoriesResp?.data || [])
     .filter((c) => c?.slug || c?.handle)

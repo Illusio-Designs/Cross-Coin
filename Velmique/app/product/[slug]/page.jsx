@@ -65,11 +65,22 @@ export default async function Page({ params }) {
     },
   } : null;
 
+  const breadcrumbLd = product ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
+      { '@type': 'ListItem', position: 2, name: 'Shop', item: `${SITE}/collections` },
+      { '@type': 'ListItem', position: 3, name: product.name || product.title, item: `${SITE}/product/${slug}` },
+    ],
+  } : null;
+  const jsonLdBlocks = [jsonLd, breadcrumbLd].filter(Boolean);
+
   return (
     <>
-      {jsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      )}
+      {jsonLdBlocks.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
+      ))}
       <ClientPage
         initialProduct={product}
         initialReviewsPayload={initialReviewsPayload}

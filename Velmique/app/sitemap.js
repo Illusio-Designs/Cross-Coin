@@ -35,12 +35,16 @@ export default async function sitemap() {
     safeList('/api/categories'),
   ]);
 
-  const productRoutes = products.map((p) => ({
-    url: `${SITE}/product/${p.slug || p.handle || p.id}`,
-    lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
-    changeFrequency: 'weekly',
-    priority: 0.9,
-  }));
+  const productRoutes = products.map((p) => {
+    const img = p.mainImage || p.image || p.images?.[0]?.image_url || p.images?.[0];
+    return {
+      url: `${SITE}/product/${p.slug || p.handle || p.id}`,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+      ...(typeof img === 'string' && /^https?:\/\//.test(img) ? { images: [img] } : {}),
+    };
+  });
 
   const blogRoutes = blogs.map((b) => ({
     url: `${SITE}/blog/${b.slug || b.id}`,

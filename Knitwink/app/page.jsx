@@ -45,8 +45,24 @@ export default async function HomePage() {
   // HTML instead of waiting for the client hero to hydrate.
   const heroImage = slides[0]?.image
 
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com').replace(/\/+$/, '');
+  const homeJsonLd = [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Knitwink', url: SITE_URL, logo: `${SITE_URL}/logo.png` },
+    {
+      '@context': 'https://schema.org', '@type': 'WebSite', name: 'Knitwink', url: SITE_URL,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ];
+
   return (
     <SeoWrapper pageName="home">
+      {homeJsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
+      ))}
       {heroImage && (
         <link rel="preload" as="image" href={heroImage} fetchPriority="high" />
       )}

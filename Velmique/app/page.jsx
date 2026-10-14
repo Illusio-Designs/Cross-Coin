@@ -51,8 +51,24 @@ export default async function HomePage() {
     ? { avg: reviewAvg, total: reviewTotal }
     : null;
 
+  const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velmique.co.in').replace(/\/+$/, '');
+  const homeJsonLd = [
+    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Velmique', url: SITE_URL, logo: `${SITE_URL}/logo.png` },
+    {
+      '@context': 'https://schema.org', '@type': 'WebSite', name: 'Velmique', url: SITE_URL,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ];
+
   return (
     <>
+      {homeJsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
+      ))}
       {/* Preload the LCP hero image so the browser discovers it immediately
           (fixes Lighthouse "LCP request discovery"). HeroMaison renders this
           exact local asset as its <img src> — keep the href in sync with the
