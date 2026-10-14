@@ -775,12 +775,14 @@ button { font-family: inherit; cursor: pointer; }
 .buy-row { display: flex; gap: 12px; align-items: stretch; min-width: 0; }
 .buy-row .btn-primary { min-width: 0; }
 /* Buy now — outlined secondary beneath Add to cart */
-.pdp-buy-wrap { margin-top: -6px; display: flex; flex-direction: column; }
-.pdp-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 6px; background: #f3e4bf; color: #a97f22; font-weight: 800; font-size: 12.5px; padding: 5px 14px; border-radius: 999px; margin-bottom: -2px; position: relative; z-index: 1; text-align: center; }
-.pdp-prepaid-ribbon strong { font-weight: 900; letter-spacing: .02em; }
-.pdp-prepaid-ribbon svg { flex-shrink: 0; }
-.pdp-buy-now { width: 100%; margin-top: 0; background: #2f7d32; color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.pdp-buy-now:hover { background: #276a2a; color: #fff; box-shadow: var(--shadow-soft); }
+.pdp-buy-wrap { margin-top: 10px; display: flex; flex-direction: column; align-items: stretch; }
+/* Prepaid coupon as a floating badge fused to the top of Buy Now (style 5) */
+.pdp-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 9px; background: #f3e4bf; color: #8a6a1c; font-weight: 900; font-size: 12.5px; letter-spacing: .06em; padding: 8px 18px; border-radius: 999px; margin-bottom: -14px; position: relative; z-index: 2; box-shadow: 0 10px 20px -8px rgba(27,35,64,.3); }
+.pdp-prepaid-ribbon strong { font-weight: 900; letter-spacing: .04em; }
+.pdp-perf { display: inline-flex; flex-direction: column; gap: 2.5px; }
+.pdp-perf i { display: block; width: 8px; height: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
+.pdp-buy-now { width: 100%; margin-top: 0; background: var(--navy); color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.pdp-buy-now:hover { background: var(--navy-700); color: #fff; box-shadow: var(--shadow-soft); }
 .qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }
 .qty button { width: 44px; height: 46px; border: 0; background: transparent; font-size: 18px; color: var(--ink); }
 .qty button:hover { background: var(--line-soft); }

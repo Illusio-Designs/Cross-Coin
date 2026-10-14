@@ -485,8 +485,10 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           {inStock && (
             <div className="pdx-buy-wrap">
               {prepaidCoupon?.code && (
-                <div className="pdx-prepaid-ribbon">
-                  <Icon name="Tag" size={13} /> Use code <strong>{prepaidCoupon.code}</strong> for extra off on prepaid orders
+                <div className="pdx-prepaid-ribbon" aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
+                  <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
+                  <strong>{prepaidCoupon.code}</strong>
+                  <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
                 </div>
               )}
               <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
