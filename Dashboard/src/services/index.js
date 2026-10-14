@@ -544,6 +544,18 @@ export const orderService = {
     }
   },
 
+  // Inbound shipping-webhook health: tells whether iThink/FShip is actually
+  // pushing status updates (so Shipped/Delivered/RTO WhatsApp fire in real time
+  // instead of waiting for the twice-daily poll), plus the recent events.
+  getShippingWebhookEvents: async (limit = 20) => {
+    try {
+      const response = await adminApi.get('/api/orders/shipping/webhook-events', { params: { limit } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Bulk refresh order statuses from FShip
   bulkRefreshFShipStatus: async () => {
     try {

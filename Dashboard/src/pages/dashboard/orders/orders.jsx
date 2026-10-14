@@ -117,6 +117,10 @@ const Orders = () => {
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [pickupOpen, setPickupOpen] = useState(false);
+    const [webhookOpen, setWebhookOpen] = useState(false);
+    const [webhookLoading, setWebhookLoading] = useState(false);
+    const [webhookData, setWebhookData] = useState(null);
+    const [webhookError, setWebhookError] = useState(null);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
     const [awbNumber, setAwbNumber] = useState('');
@@ -282,6 +286,19 @@ const Orders = () => {
         } catch (error) {
             showError('syncFailed', error.message || error.error || 'Failed to refresh order statuses');
         } finally { setRefreshingStatus(false); }
+    };
+
+    // Open the webhook-health modal and load the latest inbound shipping events.
+    const checkWebhook = async () => {
+        setWebhookOpen(true);
+        setWebhookLoading(true);
+        setWebhookError(null);
+        try {
+            const res = await orderService.getShippingWebhookEvents(20);
+            setWebhookData(res);
+        } catch (error) {
+            setWebhookError(error.message || error.error || 'Failed to load webhook status');
+        } finally { setWebhookLoading(false); }
     };
 
     const updateSingleOrder = async (orderId) => {
@@ -880,6 +897,12 @@ const Orders = () => {
                                     <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />
                                     Pickup Schedule
                                 </button>
+                                <button className="order-sync-main-btn" type="button"
+                                    title="Check whether the courier (iThink/FShip) is pushing live tracking updates to us"
+                                    onClick={checkWebhook}>
+                                    <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
+                                    Check Webhook
+                                </button>
                                 <DateRangePicker
                                     label=""
                                     startDate={statsStartDate}
@@ -894,6 +917,70 @@ const Orders = () => {
                     />
 
                     <PickupScheduleModal open={pickupOpen} onClose={() => setPickupOpen(false)} />
+
+                    <Modal isOpen={webhookOpen} onClose={() => setWebhookOpen(false)} title="Courier Webhook Status" size="lg"
+                        footer={<Button variant="secondary" onClick={() => setWebhookOpen(false)}>Close</Button>}>
+                        {webhookLoading ? (
+                            <p style={{ padding: '1rem 0', color: 'var(--text-muted, #666)' }}>Checking…</p>
+                        ) : webhookError ? (
+                            <p style={{ padding: '1rem 0', color: '#b42318' }}>{webhookError}</p>
+                        ) : webhookData ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                                {(() => {
+                                    const s = webhookData.summary || {};
+                                    const working = !!s.pushWorking && Number(s.last24h) > 0;
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                                                <span style={{ width: 10, height: 10, borderRadius: '50%', background: working ? '#12b76a' : '#f04438', display: 'inline-block' }} />
+                                                {working
+                                                    ? 'Live push is working — the courier is sending us tracking updates.'
+                                                    : 'No recent pushes. The courier webhook is likely NOT set up — statuses update only at the 6 AM / 6 PM poll.'}
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #666)' }}>
+                                                Last received: <b>{s.lastReceivedAt ? new Date(s.lastReceivedAt).toLocaleString() : 'never'}</b>
+                                                {'  ·  '}Last 24h: <b>{Number(s.last24h || 0)}</b>
+                                                {'  ·  '}Total: <b>{Number(s.total || 0)}</b>
+                                                {'  ·  '}Failed: <b style={{ color: Number(s.failed) ? '#b42318' : 'inherit' }}>{Number(s.failed || 0)}</b>
+                                            </div>
+                                            {!working && (
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #666)' }}>
+                                                    To enable real-time updates, point the iThink/FShip tracking webhook at
+                                                    <code> /api/orders/shipping/webhook</code>.
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                                <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--border, #eee)', borderRadius: 8 }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                        <thead>
+                                            <tr style={{ textAlign: 'left', background: 'var(--surface-muted, #f7f7f7)' }}>
+                                                <th style={{ padding: '6px 10px' }}>When</th>
+                                                <th style={{ padding: '6px 10px' }}>Order / AWB</th>
+                                                <th style={{ padding: '6px 10px' }}>Courier status</th>
+                                                <th style={{ padding: '6px 10px' }}>Mapped</th>
+                                                <th style={{ padding: '6px 10px' }}>OK</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(webhookData.events || []).length === 0 ? (
+                                                <tr><td colSpan={5} style={{ padding: '12px 10px', color: 'var(--text-muted, #666)' }}>No webhook events recorded yet.</td></tr>
+                                            ) : (webhookData.events || []).map((e) => (
+                                                <tr key={e.id} style={{ borderTop: '1px solid var(--border, #eee)' }}>
+                                                    <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{e.createdAt ? new Date(e.createdAt).toLocaleString() : '—'}</td>
+                                                    <td style={{ padding: '6px 10px' }}>{e.order_ref || e.waybill || '—'}</td>
+                                                    <td style={{ padding: '6px 10px' }}>{e.courier_status || '—'}</td>
+                                                    <td style={{ padding: '6px 10px' }}>{e.mapped_status || '—'}</td>
+                                                    <td style={{ padding: '6px 10px' }}>{e.processed ? '✅' : (e.processing_error ? '⚠️' : '⏳')}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : null}
+                    </Modal>
 
                     {/* ── KPI Strip — one clean row (prototype style) ── */}
                     <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}>
