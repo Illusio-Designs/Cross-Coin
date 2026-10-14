@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ShoppingBag, Heart, ChevronRight, Star, Minus, Plus, Zap,
-  Truck, RotateCcw, ShieldCheck, Sparkles, Check, X, AlertTriangle,
+  Truck, RotateCcw, ShieldCheck, Check, X, AlertTriangle, Banknote,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
@@ -57,14 +57,6 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
     catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
     finally { setCheckingPin(false); }
   };
-  const eta = (() => {
-    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    const day = d.getDate();
-    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
-    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
-  })();
 
   // Fade-up the long-form content block by block as it scrolls into view — the
   // same quiet reveal the home sections use. Runs once the product (and so the
@@ -430,51 +422,12 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
                 )}
               </div>
               <p className="text-[var(--ink-muted)] text-xs font-body mt-2">MRP incl. of all taxes</p>
-              <p className="flex items-center gap-1.5 text-[var(--ink-soft)] text-xs font-body mt-2">
-                <Truck size={13} className="text-[var(--gold-deep)]" /> Delivered by {eta.day}{eta.suffix} {eta.month}
-              </p>
               {Number.isFinite(Number(displayStock)) && Number(displayStock) > 0 && Number(displayStock) <= 5 && (
                 <p className="inline-flex items-center gap-1.5 mt-3 bg-[var(--surface-2)] px-3 py-1.5 text-xs font-body font-medium text-[var(--gold-deep)]">
                   <AlertTriangle size={12} /> Only {Number(displayStock)} left
                 </p>
               )}
             </header>
-
-            <div className="h-px bg-[var(--border)]" />
-
-            {/* Delivery / pincode serviceability */}
-            <div className="border border-[var(--border)] bg-white p-4">
-              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Delivery Details</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="Enter Pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                  aria-label="Pincode"
-                  className="min-w-0 flex-1 border border-[var(--border)] bg-white px-4 h-11 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)]"
-                />
-                <button
-                  type="button"
-                  onClick={handlePincodeCheck}
-                  disabled={checkingPin}
-                  className="pill-cta pill-cta-dark shrink-0 !px-6 justify-center disabled:opacity-60"
-                >
-                  {checkingPin ? '…' : 'Check'}
-                </button>
-              </div>
-              {serviceability && (
-                <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-xs font-body font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
-                  {serviceability.error ? (
-                    <span>{serviceability.error}</span>
-                  ) : (
-                    <><Check size={14} /> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1  bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Colour swatches */}
             {product.colors?.length > 0 && (
@@ -544,10 +497,10 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
             {/* Trust & delivery — right under the buy buttons */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--border)] border border-[var(--border)]">
               {[
-                { icon: Truck,       label: 'Free shipping', sub: 'Over ₹2,500' },
-                { icon: RotateCcw,   label: '14-day returns', sub: 'Sealed bottles' },
-                { icon: ShieldCheck, label: '100% authentic', sub: 'Bandra atelier' },
-                { icon: Sparkles,    label: 'GST included',  sub: 'No surprises' },
+                { icon: Truck,       label: 'Free shipping',    sub: 'On all orders' },
+                { icon: Banknote,    label: 'Cash on Delivery', sub: 'Pay at your door' },
+                { icon: RotateCcw,   label: '7-day returns',    sub: 'Easy & hassle-free' },
+                { icon: ShieldCheck, label: '100% authentic',   sub: 'Genuine products' },
               ].map(t => (
                 <div key={t.label} className="flex items-center gap-2.5 bg-white px-3.5 py-3">
                   <t.icon size={15} className="text-[var(--gold-deep)] shrink-0" />
@@ -557,6 +510,40 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Delivery / pincode serviceability — after the trust row */}
+            <div className="border border-[var(--border)] bg-white p-4">
+              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--ink-muted)] font-body mb-3">Delivery Details</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Enter Pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  aria-label="Pincode"
+                  className="min-w-0 flex-1 border border-[var(--border)] bg-white px-4 h-11 text-sm font-body text-[var(--ink)] outline-none focus:border-[var(--gold)]"
+                />
+                <button
+                  type="button"
+                  onClick={handlePincodeCheck}
+                  disabled={checkingPin}
+                  className="pill-cta pill-cta-dark shrink-0 !px-6 justify-center disabled:opacity-60"
+                >
+                  {checkingPin ? '…' : 'Check'}
+                </button>
+              </div>
+              {serviceability && (
+                <div className={`mt-3 flex flex-wrap items-center gap-1.5 text-xs font-body font-medium ${serviceability.error ? 'text-red-600' : serviceability.serviceable ? 'text-green-700' : 'text-red-600'}`}>
+                  {serviceability.error ? (
+                    <span>{serviceability.error}</span>
+                  ) : (
+                    <><Check size={14} /> Delivery to <span className="font-semibold">{pincode}</span> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="ml-1  bg-green-100 px-2 py-0.5 text-[10px] text-green-700">COD available</span>}</>
+                  )}
+                </div>
+              )}
             </div>
           {/* ── Long-form content — scrolls in the right column beside the
               sticky gallery (not full-width); fades up block by block. ── */}
