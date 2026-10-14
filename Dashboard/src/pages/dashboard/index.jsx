@@ -38,6 +38,7 @@ import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
 import TrafficReport from "./reports/trafficReport";
+import RevenueProfitReport from "./reports/revenueProfit";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
@@ -263,6 +264,7 @@ function Dashboard() {
       case 'utm-analytics':   return <UTMAnalytics />;
       case 'reports':         return <Reports />;
       case 'traffic-report':  return <TrafficReport />;
+      case 'revenue-profit':  return <RevenueProfitReport />;
       case 'leads':           return <Leads />;
       case 'abandoned-carts': return <AbandonedCarts />;
       case 'loyalty':         return <Loyalty />;

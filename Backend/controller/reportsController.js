@@ -273,3 +273,95 @@ exports.getBrandTraffic = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to build traffic report', error: error.message });
   }
 };
+
+// GET /api/reports/revenue-profit?startDate=&endDate=
+// Revenue & gross-profit report. The backend returns the raw, non-opinionated
+// figures per brand (revenue, COGS, order count, unit count); the dashboard then
+// applies the per-order cost knobs (shipping, service charge, CPP) live so the
+// operator can tweak CPP — which varies per campaign — without a round-trip.
+//
+// COGS = Σ(variation cost_price × qty). Items with no cost_price (NULL, or a
+// non-variation line) count as 0, exactly as requested — so profit is an UPPER
+// bound until cost prices are filled in. Same order set as the traffic report:
+// every placed order in the window except genuinely cancelled ones.
+exports.getRevenueProfit = async (req, res) => {
+  try {
+    const { start, end } = parseRange(req.query);
+    const repl = { start, end };
+
+    // Brands (for names)
+    const brands = await sequelize.query(
+      `SELECT id, name, COALESCE(display_name, name) AS display_name FROM brands ORDER BY id`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const ORDER_FILTER = `created_at BETWEEN :start AND :end
+      AND (status IS NULL OR LOWER(status) NOT IN ('cancelled','order cancelled'))`;
+
+    // Revenue + order count per brand (order-level — no item join, so
+    // final_amount isn't multiplied).
+    const rev = await sequelize.query(
+      `SELECT brand_id,
+              COUNT(*) AS orders,
+              COALESCE(SUM(final_amount), 0) AS revenue
+       FROM orders
+       WHERE ${ORDER_FILTER}
+       GROUP BY brand_id`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+
+    // COGS + units per brand (item-level). cost_price missing → 0. A line also
+    // flags whether its cost was known, so the UI can warn when cost data is thin.
+    const cogs = await sequelize.query(
+      `SELECT o.brand_id,
+              COALESCE(SUM(COALESCE(pv.cost_price, 0) * oi.quantity), 0) AS cogs,
+              COALESCE(SUM(oi.quantity), 0) AS units,
+              COALESCE(SUM(CASE WHEN pv.cost_price IS NULL OR pv.cost_price = 0 THEN oi.quantity ELSE 0 END), 0) AS units_without_cost
+       FROM orders o
+       JOIN order_items oi ON oi.order_id = o.id
+       LEFT JOIN product_variations pv ON pv.id = oi.variation_id
+       WHERE o.${ORDER_FILTER}
+       GROUP BY o.brand_id`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+
+    const revMap = new Map(rev.map(r => [r.brand_id, r]));
+    const cogsMap = new Map(cogs.map(c => [c.brand_id, c]));
+
+    const rows = brands.map(b => {
+      const r = revMap.get(b.id) || {};
+      const c = cogsMap.get(b.id) || {};
+      const orders = Number(r.orders || 0);
+      const revenue = Number(r.revenue || 0);
+      const cogsAmt = Number(c.cogs || 0);
+      const units = Number(c.units || 0);
+      const unitsWithoutCost = Number(c.units_without_cost || 0);
+      return {
+        brandId: b.id,
+        brand: b.display_name,
+        orders,
+        units,
+        unitsWithoutCost,          // units with no cost_price (counted as 0 COGS)
+        revenue: Math.round(revenue),
+        cogs: Math.round(cogsAmt), // Σ cost_price × qty (0 where unknown)
+      };
+    }).filter(r => r.orders > 0 || r.revenue > 0);
+
+    const totals = rows.reduce((t, r) => {
+      t.orders += r.orders; t.units += r.units; t.unitsWithoutCost += r.unitsWithoutCost;
+      t.revenue += r.revenue; t.cogs += r.cogs; return t;
+    }, { orders: 0, units: 0, unitsWithoutCost: 0, revenue: 0, cogs: 0 });
+
+    res.json({
+      success: true,
+      range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
+      // Default per-order cost assumptions (the UI can override these live).
+      defaults: { shippingPerOrder: 90, servicePerOrder: 30, cppPerOrder: 0 },
+      brands: rows.sort((a, b) => b.revenue - a.revenue),
+      totals,
+    });
+  } catch (error) {
+    logger.error('getRevenueProfit report failed: ' + error.message);
+    res.status(500).json({ success: false, message: 'Failed to build revenue/profit report', error: error.message });
+  }
+};

@@ -293,6 +293,10 @@ export const trafficReportService = {
     const { data } = await adminApi.get('/api/reports/brand-traffic', { params: { startDate, endDate } });
     return data;
   },
+  getRevenueProfit: async (startDate, endDate) => {
+    const { data } = await adminApi.get('/api/reports/revenue-profit', { params: { startDate, endDate } });
+    return data;
+  },
 };
 
 // Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve
