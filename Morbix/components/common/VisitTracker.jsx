@@ -41,6 +41,9 @@ export default function VisitTracker() {
 
     const params = new URLSearchParams(window.location.search);
     const utm = (key) => params.get(key) || null;
+    // Capture the Meta click id so the order can send _fbc for attribution.
+    const fbclid = params.get('fbclid');
+    if (fbclid) { try { localStorage.setItem('fbclid', fbclid); } catch { /* ignore */ } }
 
     fetch(`${API_URL}/api/utm/track`, {
       method: 'POST',

@@ -536,8 +536,8 @@ module.exports.createRazorpayOrder = async (req, res) => {
                     currency: currency || 'INR',
                     ip_address: req.ip || null,
                     user_agent: req.headers['user-agent'] || null,
-                    fbc: req.cookies?._fbc || req.body?.fbc || null,
-                    fbp: req.cookies?._fbp || null,
+                    fbc: req.body?.fbc || req.cookies?._fbc || null,
+                    fbp: req.body?.fbp || req.cookies?._fbp || null,
                     items: items || [],
                 };
 
@@ -783,7 +783,7 @@ module.exports.updateOrderPayment = async (req, res) => {
           email, phone, first_name: firstName, last_name: lastName,
           zip_code: shippingAddr?.pincode || null, city: shippingAddr?.city || null,
           state: shippingAddr?.state || null, country: 'in',
-          fbc: req.cookies?._fbc || req.body?.fbc || null, fbp: req.cookies?._fbp || null,
+          fbc: req.body?.fbc || req.cookies?._fbc || null, fbp: req.body?.fbp || req.cookies?._fbp || null,
           items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: parseFloat(i.price || 0), name: i.Product?.name || '' })),
         };
         await sendFacebookEvent('Purchase', eventPayload);

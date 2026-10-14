@@ -34,6 +34,9 @@ export default function VisitTracker() {
     }
 
     const params = new URLSearchParams(window.location.search);
+    // Capture the Meta click id so the order can send _fbc for attribution.
+    const _fbclid = params.get('fbclid');
+    if (_fbclid) { try { localStorage.setItem('fbclid', _fbclid); } catch { /* ignore */ } }
     const body = {
       utm_source: params.get('utm_source'),
       utm_medium: params.get('utm_medium'),

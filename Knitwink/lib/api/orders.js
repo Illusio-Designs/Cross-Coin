@@ -25,18 +25,36 @@ export async function getUserOrders(params = {}) {
 }
 
 // Create order (logged-in user)
-// Attach the first-party UTM session id (captured by VisitTracker in
-// localStorage) so the backend links this order to the visit's traffic source.
-// localStorage is first-party on the storefront domain, unlike the cross-site
-// tracking cookie the backend would otherwise rely on (blocked by browsers).
-function withUtmSession(data) {
+// Read a first-party cookie by name (set on this storefront's own domain).
+function readCookie(name) {
+  try {
+    const m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\/+^])/g, '\\$1') + '=([^;]*)');
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch { return null; }
+}
+
+// Attach first-party tracking ids to an order/checkout payload so the backend
+// can (a) link the order to the visit's traffic source via utm_session_id and
+// (b) improve Meta match quality with the Facebook browser id (_fbp) and click
+// id (_fbc). _fbc is reconstructed from a stored fbclid when the cookie is
+// absent. All best-effort — never blocks checkout.
+function withTracking(data) {
+  const out = { ...(data || {}) };
   try {
     if (typeof window !== 'undefined') {
       const sid = localStorage.getItem('utm_session_id');
-      if (sid && (!data || !data.utm_session_id)) return { ...data, utm_session_id: sid };
+      if (sid && !out.utm_session_id) out.utm_session_id = sid;
+      const fbp = readCookie('_fbp');
+      if (fbp && !out.fbp) out.fbp = fbp;
+      let fbc = readCookie('_fbc');
+      if (!fbc) {
+        const clid = localStorage.getItem('fbclid');
+        if (clid) fbc = 'fb.1.' + Date.now() + '.' + clid;
+      }
+      if (fbc && !out.fbc) out.fbc = fbc;
     }
   } catch { /* ignore */ }
-  return data;
+  return out;
 }
 
 export async function createOrder(orderData) {
@@ -44,7 +62,7 @@ export async function createOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: headers(token),
-    body: JSON.stringify(withUtmSession(orderData)),
+    body: JSON.stringify(withTracking(orderData)),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || 'Order creation failed')
@@ -56,7 +74,7 @@ export async function createGuestOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify(withUtmSession(orderData)),
+    body: JSON.stringify(withTracking(orderData)),
   })
   const data = await res.json()
   // Store auto-created user token
@@ -97,7 +115,7 @@ export async function initiateCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/initiate`, {
     method: 'POST',
     headers: headers(token),
-    body: JSON.stringify(withUtmSession(checkoutData)),
+    body: JSON.stringify(withTracking(checkoutData)),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || 'Checkout failed')
@@ -109,7 +127,7 @@ export async function initiateGuestCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/guest/initiate`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify(withUtmSession(checkoutData)),
+    body: JSON.stringify(withTracking(checkoutData)),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || 'Checkout failed')

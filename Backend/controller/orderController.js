@@ -872,8 +872,8 @@
             city: orderAddress?.city || null,
             state: orderAddress?.state || null,
             country: 'in',
-            fbc: req.cookies?._fbc || req.body?.fbc || null,
-            fbp: req.cookies?._fbp || null,
+            fbc: req.body?.fbc || req.cookies?._fbc || null,
+            fbp: req.body?.fbp || req.cookies?._fbp || null,
             items: createdOrder.OrderItems.map(i => ({
               product_id: i.product_id,
               quantity: i.quantity,
@@ -924,8 +924,8 @@
               city: orderAddress?.city || null,
               state: orderAddress?.state || null,
               country: 'in',
-              fbc: req.cookies?._fbc || req.body?.fbc || null,
-              fbp: req.cookies?._fbp || null,
+              fbc: req.body?.fbc || req.cookies?._fbc || null,
+              fbp: req.body?.fbp || req.cookies?._fbp || null,
               items: createdOrder.OrderItems.map(i => ({
                 product_id: i.product_id,
                 quantity: i.quantity,
@@ -1398,9 +1398,11 @@
               name: i.Product?.name || '',
             })),
           };
-          await sendFacebookEvent('Purchase', eventPayload);
+          // Admin-created MANUAL orders (phone / offline) are NOT website ad
+          // conversions — do not send them to the Meta pixel/CAPI or they inflate
+          // ad Purchase counts with non-ad sales (and have no fbp/fbc to match on).
+          // Keep internal GA only.
           await sendGAEvent('purchase', eventPayload);
-          await sendFacebookEvent('AddShippingInfo', eventPayload);
           await sendGAEvent('add_shipping_info', eventPayload);
         } catch (e) { logger.error('[AdminManualOrder] Analytics error:', e.message); }
       });

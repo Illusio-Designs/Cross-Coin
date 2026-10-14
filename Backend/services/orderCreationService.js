@@ -408,8 +408,8 @@ async function handlePaymentSuccess({
           city: shippingAddr?.city || null,
           state: shippingAddr?.state || null,
           country: 'in',
-          fbc: req?.cookies?._fbc || null,
-          fbp: req?.cookies?._fbp || null,
+          fbc: req?.body?.fbc || req?.cookies?._fbc || null,
+          fbp: req?.body?.fbp || req?.cookies?._fbp || null,
           items: orderItems.map(i => ({
             product_id: i.product_id,
             quantity: i.quantity,

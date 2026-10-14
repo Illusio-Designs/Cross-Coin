@@ -417,7 +417,7 @@ exports.initiateCheckout = async (req, res) => {
           brand_id: brandId, order_number: reservationId, total_amount: finalAmount,
           final_amount: finalAmount, currency: 'INR', ip_address: req.ip || null,
           user_agent: req.headers['user-agent'] || null,
-          fbc: req.cookies?._fbc || req.body?.fbc || null, fbp: req.cookies?._fbp || null,
+          fbc: req.body?.fbc || req.cookies?._fbc || null, fbp: req.body?.fbp || req.cookies?._fbp || null,
           items: validatedItems,
         };
         await sendFacebookEvent('InitiateCheckout', eventPayload);

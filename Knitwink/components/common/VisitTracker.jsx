@@ -43,6 +43,9 @@ export default function VisitTracker() {
     } catch (_) { /* sessionStorage blocked — fall through and still try once */ }
 
     const params = new URLSearchParams(window.location.search);
+    // Capture the Meta click id so the order can send _fbc for attribution.
+    const _fbclid = params.get('fbclid');
+    if (_fbclid) { try { localStorage.setItem('fbclid', _fbclid); } catch { /* ignore */ } }
 
     fetch(`${API_URL}/api/utm/track`, {
       method: 'POST',
