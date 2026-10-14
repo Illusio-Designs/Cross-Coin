@@ -566,6 +566,58 @@ const setupDatabase = async () => {
       console.log("⚠️ seo_metadata column patch skipped:", seoColErr.message);
     }
 
+    // Ensure products has the merchandising `attributes` JSON column.
+    // Holds storefront PDP/card tags + fragrance notes:
+    //   { tags: [{ label, color }], notes: [{ name, image }] }
+    // Prod never runs sync({alter:true}), so patch existing installs here.
+    console.log("Ensuring products.attributes column...");
+    try {
+      const [productsTbl] = await sequelize.query(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products'
+      `);
+      if (productsTbl.length) {
+        const [attrCol] = await sequelize.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'attributes'
+        `);
+        if (!attrCol.length) {
+          await sequelize.query(
+            `ALTER TABLE products ADD COLUMN attributes JSON NULL COMMENT 'Storefront merchandising attributes: { tags:[{label,color}], notes:[{name,image}] }'`
+          );
+          console.log("  ✓ Added products.attributes");
+        }
+      }
+      console.log("✓ products.attributes column ensured");
+    } catch (prodAttrErr) {
+      console.log("⚠️ products.attributes column patch skipped:", prodAttrErr.message);
+    }
+
+    // Ensure product_variations has the internal `cost_price` column, used by
+    // admin profit/margin reports. Never exposed on the storefront.
+    console.log("Ensuring product_variations.cost_price column...");
+    try {
+      const [variationsTbl] = await sequelize.query(`
+        SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variations'
+      `);
+      if (variationsTbl.length) {
+        const [costCol] = await sequelize.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variations' AND COLUMN_NAME = 'cost_price'
+        `);
+        if (!costCol.length) {
+          await sequelize.query(
+            `ALTER TABLE product_variations ADD COLUMN cost_price DECIMAL(10,2) NULL COMMENT 'Internal cost/buying price for profit reporting' AFTER comparePrice`
+          );
+          console.log("  ✓ Added product_variations.cost_price");
+        }
+      }
+      console.log("✓ product_variations.cost_price column ensured");
+    } catch (costErr) {
+      console.log("⚠️ product_variations.cost_price column patch skipped:", costErr.message);
+    }
+
     // One-time cleanup: re-slug any existing products / categories whose
     // slugs still contain non-alphanumeric characters from older runs
     // when slugify didn't have strict:true. Keeps URLs clean:

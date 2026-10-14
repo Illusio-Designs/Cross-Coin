@@ -4,6 +4,7 @@ import { Heart } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 import ReviewBadge from '@/components/product/ReviewBadge';
+import { tagStyle } from '@/lib/attributeColors';
 
 // Request a card-sized image from ImageKit (WebP/AVIF via f-auto) instead of
 // loading the full-resolution original. Only rewrites ImageKit URLs.
@@ -140,6 +141,18 @@ export default function ProductCard({ product, index = 0 }) {
             {product.name}
           </h3>
         </Link>
+        {/* Vibrant attribute chips — square, right after the name. Capped at
+            two so the grid stays calm; the full set shows on the PDP. */}
+        {product.tags?.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 mt-2.5">
+            {product.tags.slice(0, 2).map((t, i) => (
+              <span key={i} style={tagStyle(t.color)}
+                className="inline-flex items-center px-2 py-1 text-[8.5px] tracking-[0.06em] uppercase font-bold leading-none">
+                {t.label}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.14em] uppercase font-body mt-2">
           {meta}
         </p>

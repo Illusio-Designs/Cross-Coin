@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ShoppingBag, Heart, ChevronRight, Star, Minus, Plus, Zap,
+  ShoppingBag, Heart, ChevronRight, Star, Minus, Plus,
   Truck, RotateCcw, ShieldCheck, Check, X, AlertTriangle, Banknote,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
@@ -13,6 +13,7 @@ import { checkServiceability } from '@/lib/api/serviceability';
 import ReviewWall from '@/components/reviews/ReviewWall';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
+import { tagStyle } from '@/lib/attributeColors';
 import { fbTrack } from '@/utils/pixel';
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -397,6 +398,18 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
                 </button>
               </div>
 
+              {/* Vibrant attribute chips — square, right after the name */}
+              {product.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {product.tags.map((t, i) => (
+                    <span key={i} style={tagStyle(t.color)}
+                      className="inline-flex items-center px-3 py-2 text-[11px] tracking-[0.08em] uppercase font-extrabold leading-none">
+                      {t.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {(product.rating > 0 || product.reviews > 0) && (
                 <div className="flex items-center gap-2 mt-4">
                   <div className="flex">
@@ -467,32 +480,32 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
               </div>
             )}
 
-            {/* Quantity + Add to Bag + Buy Now — all in one row */}
-            <div className="flex flex-wrap items-stretch gap-3">
+            {/* Quantity + Add to Bag share one row; Buy Now sits full-width below. */}
+            <div className="flex items-stretch gap-3">
               <div className="flex items-center border border-[var(--border)] bg-white shrink-0">
                 <button onClick={() => setQty(Math.max(1, qty - 1))}
+                  aria-label="Decrease quantity"
                   className="px-4 py-3 text-[var(--ink-soft)] hover:text-[var(--gold-deep)] transition-colors">
                   <Minus size={14} />
                 </button>
-                <span className="px-5 text-[var(--ink)] font-body text-sm">{qty}</span>
+                <span className="px-5 text-[var(--ink)] font-body text-sm tabular-nums">{qty}</span>
                 <button onClick={() => setQty(qty + 1)}
+                  aria-label="Increase quantity"
                   className="px-4 py-3 text-[var(--ink-soft)] hover:text-[var(--gold-deep)] transition-colors">
                   <Plus size={14} />
                 </button>
               </div>
 
               <button onClick={handleAddToCart} disabled={!displayInStock}
-                className={`pill-cta flex-1 min-w-[150px] justify-center !py-4 !px-5 ${added ? '!bg-green-700' : ''} ${!displayInStock ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <ShoppingBag size={14} />
-                {!displayInStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Bag'}
-              </button>
-
-              <button onClick={handleBuyNow} disabled={!displayInStock}
-                className={`pill-cta pill-cta-dark flex-1 min-w-[150px] justify-center !py-4 !px-5 ${!displayInStock ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <Zap size={14} />
-                Buy Now
+                className={`flex-1 flex items-center justify-center bg-[var(--ink)] hover:bg-black text-white font-body font-semibold uppercase tracking-[0.18em] text-[12px] px-5 transition-colors ${added ? '!bg-green-700' : ''} ${!displayInStock ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {!displayInStock ? 'Sold Out' : added ? 'Added ✓' : 'Add to Cart'}
               </button>
             </div>
+
+            <button onClick={handleBuyNow} disabled={!displayInStock}
+              className={`w-full flex items-center justify-center bg-[var(--gold-deep)] hover:bg-[#7b6239] text-white font-body font-bold uppercase tracking-[0.26em] text-[13px] py-4 transition-colors ${!displayInStock ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              Buy Now
+            </button>
 
             {/* Trust & delivery — right under the buy buttons */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[var(--border)] border border-[var(--border)]">
@@ -614,6 +627,38 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
               ))}
             </div>
           </div>
+
+          {/* ── Notes (named + imagery) ─────────────────────── */}
+          {product.notes?.length > 0 && (
+            <>
+              <div className="h-px bg-[var(--border)]" />
+              <div className="reveal">
+                <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">The Notes</p>
+                <h2 className="font-display text-[var(--ink)] text-2xl md:text-3xl uppercase tracking-tight mb-5">
+                  Notes
+                </h2>
+                <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+                  {product.notes.map((n, i) => (
+                    <figure key={i} className="shrink-0 w-[150px] sm:w-[170px] snap-start">
+                      <div className="relative w-full overflow-hidden bg-[var(--surface-2)]" style={{ aspectRatio: '0.62' }}>
+                        {n.image ? (
+                          <img src={ik(n.image, 400)} alt={n.name} loading="lazy" decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center font-display text-[var(--gold-deep)] opacity-40 text-3xl">
+                            {n.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <figcaption className="mt-3 text-center font-body font-bold uppercase tracking-[0.1em] text-[var(--ink)] text-[13px]">
+                        {n.name}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="h-px bg-[var(--border)]" />
 

@@ -24,6 +24,21 @@ const Editor = dynamic(() => import('../../../components/common/Editor'), {
   loading: () => <div style={{ height: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />
 });
 
+// Fixed color keys for fragrance attribute tags. Each key maps to the chip
+// background / text used for the live preview below the editor. Shared with
+// the storefront so the keys (not the hex values) are what gets saved.
+const ATTRIBUTE_TAG_COLORS = {
+  blue:   { bg: '#BBD9F7', text: '#123C66' },
+  coral:  { bg: '#F0604E', text: '#3A0C04' },
+  amber:  { bg: '#F6B93B', text: '#4A3410' },
+  green:  { bg: '#BFE6C8', text: '#1C4A2B' },
+  purple: { bg: '#D9CBF2', text: '#3C2A63' },
+  pink:   { bg: '#F7CFE0', text: '#6E2246' },
+  teal:   { bg: '#BFE6E2', text: '#194E48' },
+  gold:   { bg: '#E7D5A8', text: '#5A4714' },
+};
+const ATTRIBUTE_TAG_COLOR_KEYS = Object.keys(ATTRIBUTE_TAG_COLORS);
+
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -62,10 +77,12 @@ const ProductsPage = () => {
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
     gst_rate: "5",
+    attributes: { tags: [], notes: [] },
     brandIds: [], // Will be set by BrandAssignment component
     variations: [{
       price: "",
       comparePrice: "",
+      cost_price: "",
       stock: "",
       sku: "",
       attributes: {}
@@ -367,6 +384,20 @@ const ProductsPage = () => {
         dimensions: product.dimensions || { length: '', width: '', height: '' },
         dimensionUnit: product.dimensionUnit || 'cm',
         gst_rate: product.gst_rate != null ? String(product.gst_rate) : '5',
+        attributes: (() => {
+          let parsed;
+          try {
+            parsed = typeof product.attributes === 'string'
+              ? JSON.parse(product.attributes || '{}')
+              : (product.attributes || {});
+          } catch (e) {
+            parsed = { tags: [], notes: [] };
+          }
+          return {
+            tags: Array.isArray(parsed?.tags) ? parsed.tags : [],
+            notes: Array.isArray(parsed?.notes) ? parsed.notes : []
+          };
+        })(),
         variations: product.variations?.map(variation => {
           // Parse attributes if it's a string and ensure proper object structure
           let attributes = variation.attributes || {}; // Directly get attributes from attributes from variation
@@ -388,6 +419,7 @@ const ProductsPage = () => {
             id: variation.id,
             price: variation.price,
             comparePrice: variation.comparePrice,
+            cost_price: variation.cost_price != null ? String(variation.cost_price) : '',
             stock: variation.stock,
             sku: variation.sku,
             attributes: formattedAttributes
@@ -486,10 +518,12 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
+      attributes: { tags: [], notes: [] },
       brandIds: [],
       variations: [{
         price: "",
         comparePrice: "",
+        cost_price: "",
         stock: "",
         sku: "",
         attributes: {}
@@ -531,9 +565,11 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
+      attributes: { tags: [], notes: [] },
       variations: [{
         price: "",
         comparePrice: "",
+        cost_price: "",
         stock: "",
         sku: "",
         attributes: {}
@@ -703,7 +739,7 @@ const ProductsPage = () => {
         ...prev,
         variations: [
           ...prev.variations,
-          { price: "", comparePrice: "", stock: "", sku: "", attributes: {} }
+          { price: "", comparePrice: "", cost_price: "", stock: "", sku: "", attributes: {} }
         ]
       };
     });
@@ -713,6 +749,64 @@ const ProductsPage = () => {
     setFormData(prev => ({
       ...prev,
       variations: prev.variations.filter((_, i) => i !== index)
+    }));
+  };
+
+  // --- Fragrance attributes: tags ---
+  const addAttributeTag = () => {
+    setFormData(prev => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        tags: [...(prev.attributes?.tags || []), { label: '', color: 'blue' }]
+      }
+    }));
+  };
+
+  const updateAttributeTag = (index, field, value) => {
+    setFormData(prev => {
+      const tags = [...(prev.attributes?.tags || [])];
+      tags[index] = { ...tags[index], [field]: value };
+      return { ...prev, attributes: { ...prev.attributes, tags } };
+    });
+  };
+
+  const removeAttributeTag = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        tags: (prev.attributes?.tags || []).filter((_, i) => i !== index)
+      }
+    }));
+  };
+
+  // --- Fragrance attributes: notes ---
+  const addAttributeNote = () => {
+    setFormData(prev => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        notes: [...(prev.attributes?.notes || []), { name: '', image: '' }]
+      }
+    }));
+  };
+
+  const updateAttributeNote = (index, field, value) => {
+    setFormData(prev => {
+      const notes = [...(prev.attributes?.notes || [])];
+      notes[index] = { ...notes[index], [field]: value };
+      return { ...prev, attributes: { ...prev.attributes, notes } };
+    });
+  };
+
+  const removeAttributeNote = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        notes: (prev.attributes?.notes || []).filter((_, i) => i !== index)
+      }
     }));
   };
 
@@ -771,6 +865,7 @@ const ProductsPage = () => {
                 id: variation.id,
             price: variation.price,
                 comparePrice: variation.comparePrice || null,
+                cost_price: variation.cost_price !== '' && variation.cost_price != null ? variation.cost_price : null,
             stock: variation.stock,
             sku: variation.sku,
                 attributes: processedAttributes
@@ -835,6 +930,13 @@ const ProductsPage = () => {
         formDataToSend.append('dimensions', JSON.stringify(formData.dimensions));
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
         formDataToSend.append('gst_rate', formData.gst_rate ?? '5');
+
+        // Fragrance attributes — presentational tags + notes. Drop empty rows,
+        // trim, and default each tag's color so the saved shape is always
+        // { tags: [{label, color}], notes: [{name, image}] }.
+        const cleanTags  = (formData.attributes?.tags  || []).filter(t => t && t.label && t.label.trim()).map(t => ({ label: t.label.trim(), color: t.color || 'blue' }));
+        const cleanNotes = (formData.attributes?.notes || []).filter(n => n && n.name && n.name.trim()).map(n => ({ name: n.name.trim(), image: (n.image || '').trim() }));
+        formDataToSend.append('attributes', JSON.stringify({ tags: cleanTags, notes: cleanNotes }));
         
         // Add brand IDs
         formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
@@ -1168,6 +1270,109 @@ const ProductsPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Fragrance attributes — presentational tags + notes shown on the storefront */}
+            <div className="attributes-section">
+              <h6>Fragrance attributes</h6>
+              <p className="dm-help">Shown on the product page and the shop cards</p>
+
+              {/* Tags */}
+              <div className="dm-field">
+                <label className="dm-label">Tags</label>
+                {(formData.attributes?.tags || []).map((tag, index) => {
+                  const colorKey = tag.color || 'blue';
+                  const swatch = ATTRIBUTE_TAG_COLORS[colorKey] || ATTRIBUTE_TAG_COLORS.blue;
+                  return (
+                    <div key={index} className="attr-row">
+                      <input
+                        type="text"
+                        className="dm-input"
+                        value={tag.label || ''}
+                        onChange={(e) => updateAttributeTag(index, 'label', e.target.value)}
+                        placeholder="Label (e.g. Super Lasting)"
+                      />
+                      <select
+                        className="dm-input dm-select"
+                        value={colorKey}
+                        onChange={(e) => updateAttributeTag(index, 'color', e.target.value)}
+                      >
+                        {ATTRIBUTE_TAG_COLOR_KEYS.map(key => (
+                          <option key={key} value={key}>
+                            {key.charAt(0).toUpperCase() + key.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      <span
+                        className="attr-chip-preview"
+                        style={{
+                          background: swatch.bg,
+                          color: swatch.text,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {tag.label || 'Preview'}
+                      </span>
+                      <button
+                        type="button"
+                        className="variation-remove-btn"
+                        onClick={() => removeAttributeTag(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+                <Button variant="secondary" size="small" onClick={addAttributeTag}>
+                  + Add tag
+                </Button>
+              </div>
+
+              {/* Notes */}
+              <div className="dm-field">
+                <label className="dm-label">Notes</label>
+                {(formData.attributes?.notes || []).map((note, index) => (
+                  <div key={index} className="attr-row">
+                    <input
+                      type="text"
+                      className="dm-input"
+                      value={note.name || ''}
+                      onChange={(e) => updateAttributeNote(index, 'name', e.target.value)}
+                      placeholder="Note name (e.g. Cinnamon)"
+                    />
+                    <input
+                      type="text"
+                      className="dm-input"
+                      value={note.image || ''}
+                      onChange={(e) => updateAttributeNote(index, 'image', e.target.value)}
+                      placeholder="Image URL (https://ik.imagekit.io/...)"
+                    />
+                    {note.image ? (
+                      <img
+                        src={note.image}
+                        alt={note.name || 'Note'}
+                        className="attr-note-thumb"
+                        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--ds-color-border)' }}
+                      />
+                    ) : null}
+                    <button
+                      type="button"
+                      className="variation-remove-btn"
+                      onClick={() => removeAttributeNote(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <Button variant="secondary" size="small" onClick={addAttributeNote}>
+                  + Add note
+                </Button>
+              </div>
+            </div>
           </>
         );
       case 2:
@@ -1243,14 +1448,24 @@ const ProductsPage = () => {
                             placeholder="Optional"
                           />
                         </div>
-                        <Input
-                          label="Stock"
-                          type="number"
-                          name={`variations.${index}.stock`}
-                          value={variation.stock}
-                          onChange={handleInputChange}
-                          required
-                        />
+                        <div className="dm-2col">
+                          <Input
+                            label="Cost Price"
+                            type="number"
+                            name={`variations.${index}.cost_price`}
+                            value={variation.cost_price || ''}
+                            onChange={handleInputChange}
+                            placeholder="Internal — for reports"
+                          />
+                          <Input
+                            label="Stock"
+                            type="number"
+                            name={`variations.${index}.stock`}
+                            value={variation.stock}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
                         <AttributeSelector
                           variationIndex={index}
                           attributes={attributes}

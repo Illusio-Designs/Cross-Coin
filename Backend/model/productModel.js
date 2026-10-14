@@ -85,6 +85,15 @@ const Product = sequelize.define('Product', {
         type: DataTypes.ENUM('cm', 'm', 'in', 'ft'),
         allowNull: true
     },
+    // Merchandising attributes shown on the storefront PDP + shop cards.
+    // JSON shape: { tags: [{ label, color }], notes: [{ name, image }] }
+    //  - tags  : short labelled chips (e.g. Male / Super Lasting / Strong Projection)
+    //  - notes : named fragrance notes, each with an image URL
+    attributes: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: 'Storefront merchandising attributes: { tags:[{label,color}], notes:[{name,image}] }'
+    },
     created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW

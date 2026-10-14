@@ -28,6 +28,12 @@ const ProductVariation = sequelize.define('ProductVariation', {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
     },
+    // Internal cost / buying price — never exposed on the storefront, used by
+    // admin profit/margin reports (revenue − cost).
+    cost_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
     stock: {
         type: DataTypes.INTEGER,
         allowNull: false,

@@ -54,6 +54,38 @@ const uploadFileToImageKit = async (file) => {
   }
 };
 
+// Parse + sanitize the storefront merchandising `attributes` payload coming
+// from the admin form (a JSON string) into { tags:[{label,color}], notes:[{name,image}] }.
+// Returns null when nothing usable was sent, so we never overwrite with junk.
+const ATTR_COLORS = ['blue', 'coral', 'amber', 'green', 'purple', 'pink', 'teal', 'gold'];
+const parseProductAttributes = (raw) => {
+  if (raw === undefined || raw === null || raw === '') return null;
+  let obj = raw;
+  if (typeof raw === 'string') {
+    try { obj = JSON.parse(raw); } catch { return null; }
+  }
+  if (!obj || typeof obj !== 'object') return null;
+
+  const tags = Array.isArray(obj.tags) ? obj.tags
+    .map((t) => ({
+      label: String(t?.label ?? '').trim().slice(0, 40),
+      color: ATTR_COLORS.includes(t?.color) ? t.color : 'blue',
+    }))
+    .filter((t) => t.label)
+    .slice(0, 12) : [];
+
+  const notes = Array.isArray(obj.notes) ? obj.notes
+    .map((n) => ({
+      name: String(n?.name ?? '').trim().slice(0, 40),
+      image: String(n?.image ?? '').trim().slice(0, 500),
+    }))
+    .filter((n) => n.name)
+    .slice(0, 20) : [];
+
+  if (!tags.length && !notes.length) return { tags: [], notes: [] };
+  return { tags, notes };
+};
+
 // Helper function to format product response
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
@@ -102,6 +134,7 @@ const formatProductResponse = (product) => {
         id: variation.id,
         price: variation.price,
         comparePrice: variation.comparePrice,
+        cost_price: variation.cost_price,
         stock: variation.stock,
         sku: variation.sku,
         attributes: variation.attributes,
@@ -331,6 +364,7 @@ module.exports.createProduct = async (req, res) => {
           : null,
         dimensionUnit: req.body.dimensionUnit || "cm",
         gst_rate: req.body.gst_rate != null && req.body.gst_rate !== '' ? Number(req.body.gst_rate) : 5,
+        attributes: parseProductAttributes(req.body.attributes),
         brand_id: brandIds[0] ? Number(brandIds[0]) : null,
       },
       { transaction }
@@ -383,6 +417,12 @@ module.exports.createProduct = async (req, res) => {
             comparePrice: variation.comparePrice
               ? Number(variation.comparePrice)
               : null,
+            cost_price:
+              variation.cost_price !== undefined &&
+              variation.cost_price !== null &&
+              variation.cost_price !== ''
+                ? Number(variation.cost_price)
+                : null,
             stock: Number(variation.stock || 0),
             attributes: variation.attributes || {},
           },
@@ -802,6 +842,9 @@ module.exports.updateProduct = async (req, res) => {
         ...(req.body.gst_rate != null && req.body.gst_rate !== ''
           ? { gst_rate: Number(req.body.gst_rate) }
           : {}),
+        ...(req.body.attributes !== undefined
+          ? { attributes: parseProductAttributes(req.body.attributes) }
+          : {}),
       },
       { transaction }
     );
@@ -868,6 +911,12 @@ module.exports.updateProduct = async (req, res) => {
             comparePrice: variation.comparePrice
               ? Number(variation.comparePrice)
               : null,
+            cost_price:
+              variation.cost_price !== undefined &&
+              variation.cost_price !== null &&
+              variation.cost_price !== ''
+                ? Number(variation.cost_price)
+                : null,
             stock: Number(variation.stock || 0),
             attributes: variation.attributes || {},
           },
@@ -888,6 +937,12 @@ module.exports.updateProduct = async (req, res) => {
             comparePrice: variation.comparePrice
               ? Number(variation.comparePrice)
               : null,
+            cost_price:
+              variation.cost_price !== undefined &&
+              variation.cost_price !== null &&
+              variation.cost_price !== ''
+                ? Number(variation.cost_price)
+                : null,
             stock: Number(variation.stock || 0),
             attributes: variation.attributes || {},
           },

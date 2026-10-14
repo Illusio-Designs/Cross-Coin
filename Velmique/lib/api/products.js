@@ -127,6 +127,21 @@ export function mapProduct(p) {
     variations.flatMap(v => v.attributes?.season || [])
   )).filter(Boolean);
 
+  // Merchandising attributes set in the admin: vibrant tag chips + fragrance
+  // notes. `p.attributes` is the product-level JSON column (distinct from each
+  // variation's own `attributes`), sometimes delivered as a JSON string.
+  const pAttrs = typeof p.attributes === 'string' ? safeJson(p.attributes) : (p.attributes || {});
+  const tags = Array.isArray(pAttrs.tags)
+    ? pAttrs.tags
+        .filter(t => t && t.label)
+        .map(t => ({ label: String(t.label), color: t.color || 'blue' }))
+    : [];
+  const notes = Array.isArray(pAttrs.notes)
+    ? pAttrs.notes
+        .filter(n => n && n.name)
+        .map(n => ({ name: String(n.name), image: cleanUrl(n.image || '') }))
+    : [];
+
   // In-stock if ANY variation has stock, or product-level fallback.
   const inStock = variations.length
     ? variations.some(v => v.inStock)
@@ -168,6 +183,8 @@ export function mapProduct(p) {
     badge:          BADGE_MAP[p.badge] || (p.badge && !['none', 'null', 'undefined'].includes(String(p.badge).toLowerCase()) ? p.badge : null),
     inStock,
     details,
+    tags,                             // vibrant attribute chips (label + color)
+    notes,                            // fragrance notes (name + image)
     variations,                       // full per-variation data for the detail page
     defaultVariationId: defaultVariation?.id || null,
     raw: p,
