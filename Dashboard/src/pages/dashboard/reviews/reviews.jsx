@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
-import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
+import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { reviewService, brandService } from "../../../services";
@@ -30,6 +30,8 @@ const revInitials = (s = '') => {
   const w = String(s).trim().split(/\s+/).filter(Boolean);
   return ((w.length >= 2 ? w[0][0] + w[1][0] : (w[0] || '').slice(0, 2)).toUpperCase()) || '·';
 };
+
+const STATUS_VARIANT = { approved: 'success', pending: 'warning', rejected: 'danger' };
 
 export default function Reviews() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -276,21 +278,21 @@ export default function Reviews() {
     : '0.0';
 
   const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Customer", accessor: "customerName", cell: ({ customerName }) => (
+    { key: "serial_number", label: "Sr. No" },
+    { key: "customerName", label: "Customer", render: ({ customerName }) => (
       <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--ds-color-text)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{revInitials(customerName)}</span>
         <span style={{ color: 'var(--ds-color-text)', fontWeight: 600, whiteSpace: 'nowrap' }}>{customerName}</span>
       </span>
     ) },
-    { header: "Product", accessor: "productName", cell: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
-    { header: "Brand", accessor: "brandName", cell: ({ brandName }) => brandName ? <span className="sl-cat-badge">{brandName}</span> : <span className="sl-na">—</span> },
-    { header: "Rating", accessor: "rating", cell: ({ rating }) => <StarRating rating={rating} /> },
-    { header: "Review", accessor: "review", cell: ({ review }) => <span className="cat-desc-cell">{review}</span> },
-    { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
+    { key: "productName", label: "Product", render: ({ productName }) => <span className="cat-desc-cell">{productName}</span> },
+    { key: "brandName", label: "Brand", render: ({ brandName }) => brandName ? <span className="sl-cat-badge">{brandName}</span> : <span className="sl-na">—</span> },
+    { key: "rating", label: "Rating", render: ({ rating }) => <StarRating rating={rating} /> },
+    { key: "review", label: "Review", render: ({ review }) => <span className="cat-desc-cell">{review}</span> },
+    { key: "status", label: "Status", render: ({ status }) => <Badge variant={STATUS_VARIANT[status] || 'default'}>{status}</Badge> },
     {
-      header: "Actions", accessor: "actions",
-      cell: (row) => (
+      key: "actions", label: "Actions",
+      render: (row) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Moderate" onClick={() => handleModerate(row.id)}>{IC.moderate}</button>
           <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(row.id)}>{IC.trash}</button>
@@ -352,7 +354,7 @@ export default function Reviews() {
             />
           ) : (
             <>
-              <Table columns={columns} data={currentItemsWithSN} striped hoverable cardOnMobile />
+              <ResponsiveTable columns={columns} data={currentItemsWithSN} rowKey="id" emptyMessage="No reviews yet." />
               {totalReviews > itemsPerPage && (
                 <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
