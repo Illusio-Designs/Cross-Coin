@@ -11,6 +11,7 @@
 */
 
 import { plainText } from '@/lib/plainText';
+import { colorForAttrKey, TAG_BLOCK_KEYS } from '@/lib/attributeColors';
 
 
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
@@ -127,15 +128,30 @@ export function mapProduct(p) {
     variations.flatMap(v => v.attributes?.season || [])
   )).filter(Boolean);
 
-  // Merchandising attributes set in the admin: vibrant tag chips + fragrance
-  // notes. `p.attributes` is the product-level JSON column (distinct from each
-  // variation's own `attributes`), sometimes delivered as a JSON string.
+  // Vibrant attribute chips — derived from the product's EXISTING variation
+  // attributes (gender, longevity, projection, …), not a separate field. Each
+  // descriptor value becomes a chip, coloured by its attribute key; functional
+  // selectors (size/colour/pack) are blocked. De-duped across variations.
+  const tags = [];
+  const tagSeen = new Set();
+  variations.forEach(v => {
+    Object.entries(v.attributes || {}).forEach(([key, vals]) => {
+      if (TAG_BLOCK_KEYS.has(String(key).toLowerCase())) return;
+      (Array.isArray(vals) ? vals : [vals]).forEach(val => {
+        const label = String(val ?? '').trim();
+        if (!label) return;
+        const id = `${String(key).toLowerCase()}::${label.toLowerCase()}`;
+        if (tagSeen.has(id)) return;
+        tagSeen.add(id);
+        tags.push({ label, color: colorForAttrKey(key) });
+      });
+    });
+  });
+  const tagsCapped = tags.slice(0, 8);
+
+  // Fragrance notes (name + image) — these carry imagery, which the attribute
+  // system can't hold, so they live in the product `attributes.notes` JSON.
   const pAttrs = typeof p.attributes === 'string' ? safeJson(p.attributes) : (p.attributes || {});
-  const tags = Array.isArray(pAttrs.tags)
-    ? pAttrs.tags
-        .filter(t => t && t.label)
-        .map(t => ({ label: String(t.label), color: t.color || 'blue' }))
-    : [];
   const notes = Array.isArray(pAttrs.notes)
     ? pAttrs.notes
         .filter(n => n && n.name)
@@ -183,7 +199,7 @@ export function mapProduct(p) {
     badge:          BADGE_MAP[p.badge] || (p.badge && !['none', 'null', 'undefined'].includes(String(p.badge).toLowerCase()) ? p.badge : null),
     inStock,
     details,
-    tags,                             // vibrant attribute chips (label + color)
+    tags: tagsCapped,                 // chips derived from variation attributes
     notes,                            // fragrance notes (name + image)
     variations,                       // full per-variation data for the detail page
     defaultVariationId: defaultVariation?.id || null,

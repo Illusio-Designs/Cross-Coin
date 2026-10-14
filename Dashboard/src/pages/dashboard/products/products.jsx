@@ -24,21 +24,6 @@ const Editor = dynamic(() => import('../../../components/common/Editor'), {
   loading: () => <div style={{ height: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />
 });
 
-// Fixed color keys for fragrance attribute tags. Each key maps to the chip
-// background / text used for the live preview below the editor. Shared with
-// the storefront so the keys (not the hex values) are what gets saved.
-const ATTRIBUTE_TAG_COLORS = {
-  blue:   { bg: '#BBD9F7', text: '#123C66' },
-  coral:  { bg: '#F0604E', text: '#3A0C04' },
-  amber:  { bg: '#F6B93B', text: '#4A3410' },
-  green:  { bg: '#BFE6C8', text: '#1C4A2B' },
-  purple: { bg: '#D9CBF2', text: '#3C2A63' },
-  pink:   { bg: '#F7CFE0', text: '#6E2246' },
-  teal:   { bg: '#BFE6E2', text: '#194E48' },
-  gold:   { bg: '#E7D5A8', text: '#5A4714' },
-};
-const ATTRIBUTE_TAG_COLOR_KEYS = Object.keys(ATTRIBUTE_TAG_COLORS);
-
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -77,7 +62,7 @@ const ProductsPage = () => {
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
     gst_rate: "5",
-    attributes: { tags: [], notes: [] },
+    attributes: { notes: [] },
     brandIds: [], // Will be set by BrandAssignment component
     variations: [{
       price: "",
@@ -391,10 +376,9 @@ const ProductsPage = () => {
               ? JSON.parse(product.attributes || '{}')
               : (product.attributes || {});
           } catch (e) {
-            parsed = { tags: [], notes: [] };
+            parsed = { notes: [] };
           }
           return {
-            tags: Array.isArray(parsed?.tags) ? parsed.tags : [],
             notes: Array.isArray(parsed?.notes) ? parsed.notes : []
           };
         })(),
@@ -518,7 +502,7 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
-      attributes: { tags: [], notes: [] },
+      attributes: { notes: [] },
       brandIds: [],
       variations: [{
         price: "",
@@ -565,7 +549,7 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
-      attributes: { tags: [], notes: [] },
+      attributes: { notes: [] },
       variations: [{
         price: "",
         comparePrice: "",
@@ -752,35 +736,6 @@ const ProductsPage = () => {
     }));
   };
 
-  // --- Fragrance attributes: tags ---
-  const addAttributeTag = () => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: {
-        ...prev.attributes,
-        tags: [...(prev.attributes?.tags || []), { label: '', color: 'blue' }]
-      }
-    }));
-  };
-
-  const updateAttributeTag = (index, field, value) => {
-    setFormData(prev => {
-      const tags = [...(prev.attributes?.tags || [])];
-      tags[index] = { ...tags[index], [field]: value };
-      return { ...prev, attributes: { ...prev.attributes, tags } };
-    });
-  };
-
-  const removeAttributeTag = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: {
-        ...prev.attributes,
-        tags: (prev.attributes?.tags || []).filter((_, i) => i !== index)
-      }
-    }));
-  };
-
   // --- Fragrance attributes: notes ---
   const addAttributeNote = () => {
     setFormData(prev => ({
@@ -931,12 +886,10 @@ const ProductsPage = () => {
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
         formDataToSend.append('gst_rate', formData.gst_rate ?? '5');
 
-        // Fragrance attributes — presentational tags + notes. Drop empty rows,
-        // trim, and default each tag's color so the saved shape is always
-        // { tags: [{label, color}], notes: [{name, image}] }.
-        const cleanTags  = (formData.attributes?.tags  || []).filter(t => t && t.label && t.label.trim()).map(t => ({ label: t.label.trim(), color: t.color || 'blue' }));
+        // Fragrance notes — named notes with imagery. Drop empty rows and trim
+        // so the saved shape is always { notes: [{name, image}] }.
         const cleanNotes = (formData.attributes?.notes || []).filter(n => n && n.name && n.name.trim()).map(n => ({ name: n.name.trim(), image: (n.image || '').trim() }));
-        formDataToSend.append('attributes', JSON.stringify({ tags: cleanTags, notes: cleanNotes }));
+        formDataToSend.append('attributes', JSON.stringify({ notes: cleanNotes }));
         
         // Add brand IDs
         formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
@@ -1271,66 +1224,10 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Fragrance attributes — presentational tags + notes shown on the storefront */}
+            {/* Fragrance notes — named notes with imagery shown on the storefront */}
             <div className="attributes-section">
-              <h6>Fragrance attributes</h6>
-              <p className="dm-help">Shown on the product page and the shop cards</p>
-
-              {/* Tags */}
-              <div className="dm-field">
-                <label className="dm-label">Tags</label>
-                {(formData.attributes?.tags || []).map((tag, index) => {
-                  const colorKey = tag.color || 'blue';
-                  const swatch = ATTRIBUTE_TAG_COLORS[colorKey] || ATTRIBUTE_TAG_COLORS.blue;
-                  return (
-                    <div key={index} className="attr-row">
-                      <input
-                        type="text"
-                        className="dm-input"
-                        value={tag.label || ''}
-                        onChange={(e) => updateAttributeTag(index, 'label', e.target.value)}
-                        placeholder="Label (e.g. Super Lasting)"
-                      />
-                      <select
-                        className="dm-input dm-select"
-                        value={colorKey}
-                        onChange={(e) => updateAttributeTag(index, 'color', e.target.value)}
-                      >
-                        {ATTRIBUTE_TAG_COLOR_KEYS.map(key => (
-                          <option key={key} value={key}>
-                            {key.charAt(0).toUpperCase() + key.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                      <span
-                        className="attr-chip-preview"
-                        style={{
-                          background: swatch.bg,
-                          color: swatch.text,
-                          padding: '4px 10px',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {tag.label || 'Preview'}
-                      </span>
-                      <button
-                        type="button"
-                        className="variation-remove-btn"
-                        onClick={() => removeAttributeTag(index)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  );
-                })}
-                <Button variant="secondary" size="small" onClick={addAttributeTag}>
-                  + Add tag
-                </Button>
-              </div>
+              <h6>Fragrance notes</h6>
+              <p className="dm-help">Named notes with imagery, shown on the product page</p>
 
               {/* Notes */}
               <div className="dm-field">

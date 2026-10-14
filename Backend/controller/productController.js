@@ -54,10 +54,11 @@ const uploadFileToImageKit = async (file) => {
   }
 };
 
-// Parse + sanitize the storefront merchandising `attributes` payload coming
-// from the admin form (a JSON string) into { tags:[{label,color}], notes:[{name,image}] }.
-// Returns null when nothing usable was sent, so we never overwrite with junk.
-const ATTR_COLORS = ['blue', 'coral', 'amber', 'green', 'purple', 'pink', 'teal', 'gold'];
+// Parse + sanitize the product `attributes` payload from the admin form (a JSON
+// string) into { notes:[{name,image}] }. Storefront attribute CHIPS are derived
+// from each variation's own attributes (gender/longevity/projection/…), so this
+// product-level field only carries fragrance notes, which need an image the
+// attribute system can't hold. Returns null when nothing usable was sent.
 const parseProductAttributes = (raw) => {
   if (raw === undefined || raw === null || raw === '') return null;
   let obj = raw;
@@ -65,14 +66,6 @@ const parseProductAttributes = (raw) => {
     try { obj = JSON.parse(raw); } catch { return null; }
   }
   if (!obj || typeof obj !== 'object') return null;
-
-  const tags = Array.isArray(obj.tags) ? obj.tags
-    .map((t) => ({
-      label: String(t?.label ?? '').trim().slice(0, 40),
-      color: ATTR_COLORS.includes(t?.color) ? t.color : 'blue',
-    }))
-    .filter((t) => t.label)
-    .slice(0, 12) : [];
 
   const notes = Array.isArray(obj.notes) ? obj.notes
     .map((n) => ({
@@ -82,8 +75,7 @@ const parseProductAttributes = (raw) => {
     .filter((n) => n.name)
     .slice(0, 20) : [];
 
-  if (!tags.length && !notes.length) return { tags: [], notes: [] };
-  return { tags, notes };
+  return { notes };
 };
 
 // Helper function to format product response
@@ -305,11 +297,13 @@ module.exports.createProduct = async (req, res) => {
     const { logger } = require('../config/logging.js');
     logger.debug("=== CREATE PRODUCT REQUEST ===");
 
-    const { sanitize } = require('../utils/sanitize.js');
+    const { sanitize, sanitizeRichText } = require('../utils/sanitize.js');
 
     // Parse form data
     const name = sanitize(req.body.name?.trim());
-    const description = sanitize(req.body.description?.trim());
+    // Description is rich-text HTML (formatting + uploaded images) — keep a safe
+    // tag subset instead of stripping every tag (which deleted images on save).
+    const description = sanitizeRichText(req.body.description?.trim());
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");
@@ -725,12 +719,13 @@ module.exports.updateProduct = async (req, res) => {
 
   try {
     const { logger } = require('../config/logging.js');
-    const { sanitize } = require('../utils/sanitize.js');
+    const { sanitize, sanitizeRichText } = require('../utils/sanitize.js');
     const { id } = req.params;
-    
+
     // Parse form data
     const name = req.body.name ? sanitize(req.body.name.trim()) : undefined;
-    const description = req.body.description ? sanitize(req.body.description.trim()) : undefined;
+    // Rich-text HTML — keep safe formatting + images (see create handler note).
+    const description = req.body.description ? sanitizeRichText(req.body.description.trim()) : undefined;
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");

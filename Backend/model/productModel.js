@@ -85,14 +85,15 @@ const Product = sequelize.define('Product', {
         type: DataTypes.ENUM('cm', 'm', 'in', 'ft'),
         allowNull: true
     },
-    // Merchandising attributes shown on the storefront PDP + shop cards.
-    // JSON shape: { tags: [{ label, color }], notes: [{ name, image }] }
-    //  - tags  : short labelled chips (e.g. Male / Super Lasting / Strong Projection)
-    //  - notes : named fragrance notes, each with an image URL
+    // Product-level merchandising JSON. Currently holds fragrance notes:
+    //   { notes: [{ name, image }] }
+    // Storefront attribute chips are derived from each variation's own
+    // `attributes` (gender/longevity/projection/…), not from here — notes live
+    // here because they carry an image the attribute system can't hold.
     attributes: {
         type: DataTypes.JSON,
         allowNull: true,
-        comment: 'Storefront merchandising attributes: { tags:[{label,color}], notes:[{name,image}] }'
+        comment: 'Product-level merchandising JSON: { notes:[{name,image}] }'
     },
     created_at: {
         type: DataTypes.DATE,
