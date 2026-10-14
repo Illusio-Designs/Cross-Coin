@@ -659,7 +659,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-ship .pdp-stock-badge svg { color: inherit; }
 
 /* Delivery / pincode serviceability */
-.pdp-pin { background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 18px; }
+.pdp-pin { background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 14px 16px; margin-top: 20px; margin-bottom: 18px; }
 .pdp-pin-label { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
 .pdp-pin-row { display: flex; gap: 8px; }
 .pdp-pin-input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: #fff; outline: 0; }
@@ -775,12 +775,12 @@ button { font-family: inherit; cursor: pointer; }
 .buy-row { display: flex; gap: 12px; align-items: stretch; min-width: 0; }
 .buy-row .btn-primary { min-width: 0; }
 /* Buy now — outlined secondary beneath Add to cart */
-.pdp-buy-wrap { margin-top: 10px; display: flex; flex-direction: column; align-items: stretch; }
-/* Prepaid coupon as a floating badge fused to the top of Buy Now (style 5) */
-.pdp-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 9px; background: #f3e4bf; color: #8a6a1c; font-weight: 900; font-size: 12.5px; letter-spacing: .06em; padding: 8px 18px; border-radius: 999px; margin-bottom: -14px; position: relative; z-index: 2; box-shadow: 0 10px 20px -8px rgba(27,35,64,.3); }
-.pdp-prepaid-ribbon strong { font-weight: 900; letter-spacing: .04em; }
-.pdp-perf { display: inline-flex; flex-direction: column; gap: 2.5px; }
-.pdp-perf i { display: block; width: 8px; height: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
+.pdp-buy-wrap { margin-top: 4px; display: flex; flex-direction: column; align-items: stretch; }
+/* Prepaid coupon as a compact on-brand badge fused to the top of Buy Now */
+.pdp-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 7px; background: var(--teal-050); color: var(--teal-600); font-weight: 800; font-size: 11.5px; letter-spacing: .05em; padding: 5px 13px; border-radius: 999px; margin-bottom: -13px; position: relative; z-index: 2; box-shadow: 0 6px 14px -7px rgba(27,35,64,.28); border: 1px solid rgba(47,163,155,.25); }
+.pdp-prepaid-ribbon strong { font-weight: 900; letter-spacing: .03em; }
+.pdp-perf { display: inline-flex; flex-direction: column; gap: 2px; }
+.pdp-perf i { display: block; width: 6px; height: 1.5px; border-radius: 2px; background: currentColor; opacity: .45; }
 .pdp-buy-now { width: 100%; margin-top: 0; background: var(--navy); color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .pdp-buy-now:hover { background: var(--navy-700); color: #fff; box-shadow: var(--shadow-soft); }
 .qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }

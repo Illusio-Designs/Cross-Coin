@@ -2355,13 +2355,12 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* Buy now sits beside Add to cart as the quiet, outlined action */
 .pdx-actions { flex-wrap: wrap; }
 .pdx-add { flex: 1 1 200px; }
-.pdx-buy-wrap { margin-top: 12px; display: flex; flex-direction: column; align-items: stretch; }
-/* Real prepaid coupon surfaced above Buy Now (code applied at checkout) */
-/* Prepaid coupon as a floating badge fused to the top of Buy Now (style 5) */
-.pdx-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 9px; background: var(--accent-050, #f3e7d9); color: var(--accent-600, #b9571f); font-weight: 900; font-size: 12.5px; letter-spacing: .06em; padding: 8px 18px; border-radius: 999px; margin-bottom: -14px; position: relative; z-index: 2; box-shadow: 0 10px 20px -8px rgba(28,27,25,.28); }
-.pdx-prepaid-ribbon strong { font-weight: 900; letter-spacing: .04em; }
-.pdx-perf { display: inline-flex; flex-direction: column; gap: 2.5px; }
-.pdx-perf i { display: block; width: 8px; height: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
+.pdx-buy-wrap { margin-top: 4px; display: flex; flex-direction: column; align-items: stretch; }
+/* Prepaid coupon as a compact on-brand badge fused to the top of Buy Now */
+.pdx-prepaid-ribbon { align-self: center; display: inline-flex; align-items: center; gap: 7px; background: var(--accent-050, #f3e7d9); color: var(--accent-600, #b9571f); font-weight: 800; font-size: 11.5px; letter-spacing: .05em; padding: 5px 13px; border-radius: 999px; margin-bottom: -13px; position: relative; z-index: 2; box-shadow: 0 6px 14px -7px rgba(28,27,25,.26); border: 1px solid rgba(208,105,42,.22); }
+.pdx-prepaid-ribbon strong { font-weight: 900; letter-spacing: .03em; }
+.pdx-perf { display: inline-flex; flex-direction: column; gap: 2px; }
+.pdx-perf i { display: block; width: 6px; height: 1.5px; border-radius: 2px; background: currentColor; opacity: .45; }
 .pdx-buy-now { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 26px; border-radius: 999px; border: 0; background: var(--ink); color: #fbfaf6; font: inherit; font-size: 14px; font-weight: 800; letter-spacing: .02em; cursor: pointer; transition: background .18s ease, transform .18s ease; }
 .pdx-buy-now:hover { background: #000; transform: translateY(-1px); }
 .pdx-buy-now:focus-visible, .pdx-color:focus-visible, .pdx-sizeguide button:focus-visible, .pdx-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
