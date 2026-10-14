@@ -50,7 +50,11 @@ class ImageKitService {
     // a backend /uploads URL (Express static ignores the query) and is honoured
     // for a full ImageKit URL.
     if (/^https?:\/\//i.test(imagePath)) {
-      const base = imagePath.split('?tr=')[0].split('&tr=')[0];
+      let base = imagePath.split('?tr=')[0].split('&tr=')[0];
+      // Heal local fallback image URLs: a bare /uploads/* path is served by the
+      // fronting web server on the production host and 404s; the Node app only
+      // receives /api/*. Rewrite /uploads/ → /api/uploads/ (unless already so).
+      base = base.replace(/(?<!\/api)\/uploads\//, '/api/uploads/');
       const sep = base.includes('?') ? '&' : '?';
       const result = `${base}${sep}tr=w-${config.width},h-${config.height},q-${config.quality},f-auto`;
       logger.debug('✅ ImageKit URL (full URL, as-is):', result);

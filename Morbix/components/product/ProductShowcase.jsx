@@ -562,11 +562,11 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       <div className="pdp-about">
         <span className="eyebrow">Details</span>
         <h2>About this product</h2>
-        {product.description
-          ? (product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml)
-              ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
-              : <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>)
-          : <p className="muted">No description available for this product yet.</p>}
+        {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
+          ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+          : product.description
+            ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
+            : <p className="muted">No description available for this product yet.</p>}
 
         {product.features?.length > 0 && (
           <ul className="pdp-features">

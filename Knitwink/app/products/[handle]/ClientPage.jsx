@@ -148,7 +148,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
       </div>
 
       {/* Description */}
-      {product.description && (
+      {(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) && (
         <section className="bg-white">
           <div className="mx-auto max-w-site grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr]">
             {/* Text */}

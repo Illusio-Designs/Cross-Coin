@@ -50,7 +50,10 @@ const uploadFileToImageKit = async (file) => {
     // full http URL is used as-is by getOptimizedUrl.
     logger.error('ImageKit upload failed for ' + file.filename + ', keeping local copy: ' + err.message);
     const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
-    return `${apiBase}/uploads/products/${file.filename}`;
+    // Serve via /api/uploads so the request reaches the Node app on the
+    // production host (bare /uploads/* is handled by the fronting web server
+    // and 404s). See the static mounts in index.js.
+    return `${apiBase}/api/uploads/products/${file.filename}`;
   }
 };
 
@@ -81,6 +84,13 @@ const parseProductAttributes = (raw) => {
 // Helper function to format product response
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
+
+  // Heal local fallback image URLs embedded in the rich-text description:
+  // rewrite /uploads/ → /api/uploads/ (unless already /api/uploads/) so images
+  // saved while ImageKit was over quota load from the Node app on production.
+  if (typeof productData.description === 'string' && productData.description.includes('/uploads/')) {
+    productData.description = productData.description.replace(/(?<!\/api)\/uploads\//g, '/api/uploads/');
+  }
 
   // Format dimensions - handle JSON string conversion
   if (productData.dimensions) {
@@ -2225,7 +2235,9 @@ module.exports.uploadImages = async (req, res) => {
         // non-existent ImageKit URL.)
         _logger.error(`ImageKit upload failed for ${file.originalname}, keeping local copy: ${error.message}`);
         const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/$/, '');
-        const localUrl = `${apiBase}/uploads/products/${file.filename}`;
+        // /api/uploads so the request reaches the Node app on the production
+        // host (bare /uploads/* 404s there). See the static mounts in index.js.
+        const localUrl = `${apiBase}/api/uploads/products/${file.filename}`;
         uploadedImages.push({
           originalName: file.originalname,
           filename: file.filename,

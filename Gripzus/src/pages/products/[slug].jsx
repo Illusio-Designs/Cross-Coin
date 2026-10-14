@@ -690,9 +690,9 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null })
 
         {/* ── Story + Details & care — one tight two-column row ────────── */}
         <div className="wrap"><div className="hairline" /></div>
-        <section className={`wrap py-10 md:py-14 grid grid-cols-1 gap-10 lg:gap-16 ${product.description ? 'lg:grid-cols-2' : ''}`}>
+        <section className={`wrap py-10 md:py-14 grid grid-cols-1 gap-10 lg:gap-16 ${(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) ? 'lg:grid-cols-2' : ''}`}>
           {/* Story */}
-          {product.description && (
+          {(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) && (
             <div>
               <p className="eyebrow text-ink-muted mb-4">The story</p>
               {/* Admin rich text is server-sanitised on save (safe subset incl <img>,

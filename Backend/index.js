@@ -208,33 +208,46 @@ if (!fs.existsSync(seoUploadsDir)) {
     fs.mkdirSync(seoUploadsDir, { recursive: true });
 }
 
-// Serve static files with Cache-Control and ETag headers (Requirement 4.4)
-app.use('/uploads', (req, res, next) => {
+// Serve static files with Cache-Control and ETag headers (Requirement 4.4).
+// These are PUBLIC images embedded cross-origin — the storefronts
+// (crosscoin.in, morbixsocks.com, …) load them via <img> from this API host
+// (api.crosscoin.in). helmet() sets a global "Cross-Origin-Resource-Policy:
+// same-origin", which makes the browser BLOCK such cross-origin loads
+// (net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin) even though the file serves
+// with 200. Override it to cross-origin so uploaded/fallback images display
+// everywhere, matching how ImageKit's CDN serves them. (ImageKit was never
+// blocked because its responses already send cross-origin.)
+const uploadsHeaders = (req, res, next) => {
     res.set('Cache-Control', 'public, max-age=86400');
-    // These are PUBLIC images embedded cross-origin — the storefronts
-    // (crosscoin.in, morbixsocks.com, …) load them via <img> from this API host
-    // (api.crosscoin.in). helmet() sets a global "Cross-Origin-Resource-Policy:
-    // same-origin", which makes the browser BLOCK such cross-origin loads
-    // (net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin) even though the file serves
-    // with 200. Override it to cross-origin so uploaded/fallback images display
-    // everywhere, matching how ImageKit's CDN serves them. (ImageKit was never
-    // blocked because its responses already send cross-origin.)
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.set('Access-Control-Allow-Origin', '*');
     next();
-}, express.static(uploadsDir));
+};
+
+// Static uploads are served under BOTH /uploads and /api/uploads. On the
+// production host (cPanel/Passenger) only the Node app receives /api/* — bare
+// /uploads/* requests are handled by the fronting web server from its docroot,
+// which doesn't contain these files, so they 404 ("File not found") even though
+// the file exists in the app's uploads/ dir. Serving the same directory under
+// /api/uploads guarantees the request reaches Node. When ImageKit is over quota
+// and images fall back to local storage, their URLs use /api/uploads so they
+// load reliably from the server.
+app.use('/uploads', uploadsHeaders, express.static(uploadsDir));
+app.use('/api/uploads', uploadsHeaders, express.static(uploadsDir));
 
 // Handle trailing slashes in uploads URLs - ONLY if URL actually ends with /
-app.use('/uploads', (req, res, next) => {
+const uploadsTrailingSlash = (req, res, next) => {
     // Only redirect if the URL actually ends with a trailing slash
-    if (req.originalUrl.endsWith('/') && req.originalUrl !== '/uploads/') {
+    if (req.originalUrl.endsWith('/') && !/\/(?:api\/)?uploads\/$/.test(req.originalUrl)) {
         logger.debug('Trailing slash detected in uploads URL:', req.originalUrl);
         const newUrl = req.originalUrl.slice(0, -1);
         logger.debug('Redirecting to:', newUrl);
         return res.redirect(301, newUrl);
     }
     next();
-});
+};
+app.use('/uploads', uploadsTrailingSlash);
+app.use('/api/uploads', uploadsTrailingSlash);
 
 // ── robots.txt — tell crawlers this is an API, not a website ─────────────────
 app.get('/robots.txt', (req, res) => {
