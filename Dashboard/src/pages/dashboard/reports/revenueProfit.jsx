@@ -54,6 +54,21 @@ export default function RevenueProfitReport() {
   const [service, setService] = useState('30');
   const [cpp, setCpp] = useState('0');
 
+  // "Missing cost price" finder (loaded on demand).
+  const [missing, setMissing] = useState(null);
+  const [missingLoading, setMissingLoading] = useState(false);
+  const [missingError, setMissingError] = useState('');
+
+  const loadMissing = useCallback(async () => {
+    setMissingLoading(true); setMissingError('');
+    try {
+      const res = await trafficReportService.getMissingCostPrices();
+      if (res?.success) setMissing(res); else setMissingError(res?.message || 'Failed to load');
+    } catch (e) {
+      setMissingError(e?.response?.data?.message || e.message || 'Failed to load');
+    } finally { setMissingLoading(false); }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -186,6 +201,48 @@ export default function RevenueProfitReport() {
           emptyMessage="No sales in this period."
           getRowStyle={(row) => (row._isTotal ? { fontWeight: 800, background: 'var(--ds-color-surface-soft, rgba(0,0,0,0.03))' } : {})}
         />
+      </Panel>
+
+      {/* ── Missing cost-price finder ── */}
+      <Panel
+        title="Variations missing a cost price"
+        subtitle="Active variations with no cost price set — these count as ₹0 COGS and inflate the profit above. Fill their cost in Products → edit the product."
+        actions={
+          <Button variant="secondary" onClick={loadMissing} disabled={missingLoading}>
+            {missingLoading ? 'Checking…' : (missing ? 'Refresh' : 'Find missing cost prices')}
+          </Button>
+        }
+      >
+        {missingError ? (
+          <span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{missingError}</span>
+        ) : !missing ? (
+          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
+            Click “Find missing cost prices” to list every active variation that still needs a cost price.
+          </span>
+        ) : missing.count === 0 ? (
+          <span style={{ fontSize: 13, color: 'var(--ds-color-success, #12b76a)', fontWeight: 600 }}>
+            ✅ Every active variation has a cost price. Gross profit above is fully costed.
+          </span>
+        ) : (
+          <>
+            <div style={{ marginBottom: 10, fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
+              {num(missing.count)}{missing.limited ? '+' : ''} variation{missing.count === 1 ? '' : 's'} need a cost price.
+              Search the SKU in <strong>Products</strong> to edit it.
+            </div>
+            <Table
+              columns={[
+                { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand || '—' },
+                { header: 'Product', accessor: 'productName', align: 'left', cell: ({ productName }) => <strong>{productName}</strong> },
+                { header: 'Variant', accessor: 'variant', align: 'left', cell: ({ variant }) => variant || '—' },
+                { header: 'SKU', accessor: 'sku', align: 'left', cell: ({ sku }) => sku || '—' },
+                { header: 'Price', accessor: 'price', align: 'right', cell: ({ value }) => inr(value) },
+              ]}
+              data={missing.items}
+              sortable={false}
+              emptyMessage="None — all variations are costed."
+            />
+          </>
+        )}
       </Panel>
     </div>
   );

@@ -365,3 +365,57 @@ exports.getRevenueProfit = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to build revenue/profit report', error: error.message });
   }
 };
+
+// GET /api/reports/missing-cost-prices
+// Lists ACTIVE product variations that have no cost price set (NULL or 0) — the
+// exact rows that make the Revenue & Profit report an upper bound. Returns enough
+// to identify and jump to each product so staff can fill the cost in.
+exports.getMissingCostPrices = async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 500, 2000));
+    const rows = await sequelize.query(
+      `SELECT pv.id            AS variation_id,
+              pv.sku           AS sku,
+              pv.price         AS price,
+              pv.attributes    AS attributes,
+              p.id             AS product_id,
+              p.name           AS product_name,
+              p.slug           AS slug,
+              p.brand_id       AS brand_id,
+              COALESCE(b.display_name, b.name) AS brand
+         FROM product_variations pv
+         JOIN products p ON p.id = pv.product_id
+         LEFT JOIN brands b ON b.id = p.brand_id
+        WHERE (pv.cost_price IS NULL OR pv.cost_price = 0)
+          AND pv.status = 'active'
+          AND p.status = 'active'
+        ORDER BY b.name, p.name, pv.id
+        LIMIT ${limit}`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const items = rows.map(r => {
+      let attrs = r.attributes;
+      if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (_) { attrs = null; } }
+      const variantLabel = attrs && typeof attrs === 'object'
+        ? Object.values(attrs).filter(Boolean).join(' / ')
+        : '';
+      return {
+        variationId: r.variation_id,
+        productId: r.product_id,
+        productName: r.product_name,
+        slug: r.slug,
+        brandId: r.brand_id,
+        brand: r.brand,
+        sku: r.sku,
+        price: Number(r.price) || 0,
+        variant: variantLabel,
+      };
+    });
+
+    res.json({ success: true, count: items.length, limited: items.length >= limit, items });
+  } catch (error) {
+    logger.error('getMissingCostPrices report failed: ' + error.message);
+    res.status(500).json({ success: false, message: 'Failed to load missing cost prices', error: error.message });
+  }
+};

@@ -9,4 +9,7 @@ router.get('/brand-traffic', isAuthenticated, isAdmin, reportsController.getBran
 // Admin — revenue & gross-profit (COGS + per-order shipping/service/CPP)
 router.get('/revenue-profit', isAuthenticated, isAdmin, reportsController.getRevenueProfit);
 
+// Admin — active variations missing a cost price (feeds the profit report)
+router.get('/missing-cost-prices', isAuthenticated, isAdmin, reportsController.getMissingCostPrices);
+
 module.exports = router;
