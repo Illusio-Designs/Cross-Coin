@@ -140,16 +140,6 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
     return product.images || [];
   }, [product, activeVariation]);
 
-  // Auto-rotate through gallery images every 3 seconds — paused while the
-  // zoom lightbox is open.
-  useEffect(() => {
-    if (gallery.length <= 1 || lightbox) return;
-    const id = setInterval(() => {
-      setActiveImg(prev => (prev + 1) % gallery.length);
-    }, 3000);
-    return () => clearInterval(id);
-  }, [gallery.length, lightbox]);
-
   // Close the zoom lightbox on Escape.
   useEffect(() => {
     if (!lightbox) return;

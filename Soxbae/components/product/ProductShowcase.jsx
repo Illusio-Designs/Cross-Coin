@@ -187,14 +187,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color, product?.id]);
 
-  // Auto-advance the main image through the strip every 3.5s — paused while the
-  // zoom lightbox is open.
-  useEffect(() => {
-    if (shown.length <= 1 || lightbox) return;
-    const t = setInterval(() => setActive((a) => (a + 1) % shown.length), 3500);
-    return () => clearInterval(t);
-  }, [shown.length, color, lightbox]);
-
   // Close the zoom lightbox on Escape.
   useEffect(() => {
     if (!lightbox) return;

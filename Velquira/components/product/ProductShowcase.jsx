@@ -139,13 +139,6 @@ export default function ProductShowcase({ product }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color, product?.id]);
 
-  // Auto-advance the main image every 3s — paused while the lightbox is open.
-  useEffect(() => {
-    if (shown.length <= 1 || lightbox) return;
-    const t = setInterval(() => setActive((a) => (a + 1) % shown.length), 3000);
-    return () => clearInterval(t);
-  }, [shown.length, color, lightbox]);
-
   // Close the zoom lightbox on Escape.
   useEffect(() => {
     if (!lightbox) return;

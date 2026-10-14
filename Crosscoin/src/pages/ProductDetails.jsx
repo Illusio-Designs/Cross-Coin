@@ -30,7 +30,6 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [galleryPaused, setGalleryPaused] = useState(false);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -217,15 +216,6 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Auto-cycle through gallery images every 3 seconds
-  useEffect(() => {
-    if (!galleryImages || galleryImages.length <= 1 || galleryPaused) return;
-    const id = setInterval(() => {
-      setSelectedImage(prev => (prev + 1) % galleryImages.length);
-    }, 3000);
-    return () => clearInterval(id);
-  }, [galleryImages?.length, galleryPaused]);
 
   // Fetch real reviews once product id is known
   useEffect(() => {
@@ -425,12 +415,7 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
                 </button>
               ))}
             </div>
-            <div
-              className="pdt-main-img-wrap"
-              onMouseEnter={() => setGalleryPaused(true)}
-              onMouseLeave={() => setGalleryPaused(false)}
-              onTouchStart={() => setGalleryPaused(true)}
-            >
+            <div className="pdt-main-img-wrap">
               <button
                 className="pdt-main-img"
                 onClick={() => { setLightboxIndex(selectedImage); setShowLightbox(true); }}
