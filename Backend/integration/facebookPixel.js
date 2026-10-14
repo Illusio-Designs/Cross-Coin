@@ -46,8 +46,7 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
   // to another brand's pixel — posting one brand's conversions to another's
   // pixel corrupts BOTH Ads accounts (the brand under-counts, the other gets
   // phantom conversions). Fail closed: if the brand has no pixel id, skip.
-  // Crosscoin (brand 1) keeps its historical default so it is never left blank.
-  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', brandId === 1 ? '1313610943804396' : null);
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID');
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
   // When set (temporarily, during testing), events appear live in Meta's
   // Events Manager → Test Events tab. Leave it unset in production.
@@ -140,8 +139,8 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
 async function sendBrowserPixelEvent(req, body = {}) {
   const brandId = await resolveBrandId(req);
   // Per-brand pixel + token; fail closed so one brand's events never post to
-  // another's pixel. Crosscoin (brand 1) keeps its historical default.
-  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID', brandId === 1 ? '1313610943804396' : null);
+  // another's pixel. No cross-brand default.
+  const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID');
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
   const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
 
