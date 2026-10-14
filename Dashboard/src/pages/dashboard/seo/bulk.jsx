@@ -20,6 +20,7 @@ import { seoAdminService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { PageHeader, Panel, FilterBar } from '../../../components/Dashboard/primitives';
+import { Table } from '../../../components/ui';
 
 const PAGE_SIZE = 25;
 
@@ -92,6 +93,84 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
     }
   };
 
+  const columns = [
+    {
+      header: 'Product',
+      accessor: 'name',
+      cell: (p) => {
+        const edited = edits[p.id] || {};
+        const isDirty = Object.keys(edited).length > 0;
+        return (
+          <div style={{ minWidth: 180 }}>
+            <div style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{p.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontFamily: 'ui-monospace, monospace' }}>{p.slug}</div>
+            {isDirty && <div style={{ marginTop: 4, fontSize: 11, color: 'var(--ds-color-warn)', fontWeight: 600 }}>● unsaved</div>}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Meta Title',
+      accessor: 'metaTitle',
+      cell: (p) => {
+        const title = edits[p.id]?.metaTitle ?? p.seo.metaTitle;
+        return (
+          <div style={{ minWidth: 220 }}>
+            <input
+              value={title}
+              onChange={e => editValue(p.id, 'metaTitle', e.target.value)}
+              placeholder="Auto: from product name"
+              style={cellInput}
+            />
+            <SeoLengthMeter value={title || ''} type="title" />
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Meta Description',
+      accessor: 'metaDescription',
+      cell: (p) => {
+        const description = edits[p.id]?.metaDescription ?? p.seo.metaDescription;
+        return (
+          <div style={{ minWidth: 280 }}>
+            <textarea
+              value={description}
+              onChange={e => editValue(p.id, 'metaDescription', e.target.value)}
+              placeholder="Auto: from product description"
+              rows={2}
+              style={{ ...cellInput, resize: 'vertical', minHeight: 50 }}
+            />
+            <SeoLengthMeter value={description || ''} type="description" />
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Keywords',
+      accessor: 'metaKeywords',
+      cell: (p) => {
+        const keywords = edits[p.id]?.metaKeywords ?? p.seo.metaKeywords;
+        return (
+          <div style={{ minWidth: 180 }}>
+            <input
+              value={keywords}
+              onChange={e => editValue(p.id, 'metaKeywords', e.target.value)}
+              placeholder="Auto: name, brand, india"
+              style={cellInput}
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
+  const rowStyle = (row) => (
+    Object.keys(edits[row.id] || {}).length > 0
+      ? { background: 'var(--ds-color-warn-bg)' }
+      : { background: 'var(--ds-color-surface)' }
+  );
+
   return (
     <div className="dashboard-sections">
       <PageHeader
@@ -136,69 +215,13 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
       </div>
 
       <Panel flush style={{ overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>Loading…</div>
-        ) : items.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ds-color-text-muted)' }}>No products match.</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--ds-color-surface-soft)', borderBottom: '1px solid var(--ds-color-border)' }}>
-                  <th style={th}>Product</th>
-                  <th style={th}>Meta Title</th>
-                  <th style={th}>Meta Description</th>
-                  <th style={th}>Keywords</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(p => {
-                  const edited = edits[p.id] || {};
-                  const title       = edited.metaTitle       ?? p.seo.metaTitle;
-                  const description = edited.metaDescription ?? p.seo.metaDescription;
-                  const keywords    = edited.metaKeywords    ?? p.seo.metaKeywords;
-                  const isDirty = Object.keys(edited).length > 0;
-                  return (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--ds-color-border-soft)', background: isDirty ? '#fffbeb' : 'var(--ds-color-surface)' }}>
-                      <td style={{ ...td, verticalAlign: 'top', minWidth: 180 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{p.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontFamily: 'ui-monospace, monospace' }}>{p.slug}</div>
-                        {isDirty && <div style={{ marginTop: 4, fontSize: 11, color: '#d97706', fontWeight: 600 }}>● unsaved</div>}
-                      </td>
-                      <td style={{ ...td, verticalAlign: 'top', minWidth: 220 }}>
-                        <input
-                          value={title}
-                          onChange={e => editValue(p.id, 'metaTitle', e.target.value)}
-                          placeholder="Auto: from product name"
-                          style={cellInput}
-                        />
-                        <SeoLengthMeter value={title || ''} type="title" />
-                      </td>
-                      <td style={{ ...td, verticalAlign: 'top', minWidth: 280 }}>
-                        <textarea
-                          value={description}
-                          onChange={e => editValue(p.id, 'metaDescription', e.target.value)}
-                          placeholder="Auto: from product description"
-                          rows={2}
-                          style={{ ...cellInput, resize: 'vertical', minHeight: 50 }}
-                        />
-                        <SeoLengthMeter value={description || ''} type="description" />
-                      </td>
-                      <td style={{ ...td, verticalAlign: 'top', minWidth: 180 }}>
-                        <input
-                          value={keywords}
-                          onChange={e => editValue(p.id, 'metaKeywords', e.target.value)}
-                          placeholder="Auto: name, brand, india"
-                          style={cellInput}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <Table
+          columns={columns}
+          data={items}
+          loading={loading}
+          emptyMessage="No products match."
+          getRowStyle={rowStyle}
+        />
       </Panel>
 
       {/* Pagination */}
@@ -213,8 +236,6 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
   );
 }
 
-const th = { textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
-const td = { padding: '10px 12px', color: 'var(--ds-color-text-muted)' };
 const cellInput = {
   width: '100%',
   padding: '6px 8px',

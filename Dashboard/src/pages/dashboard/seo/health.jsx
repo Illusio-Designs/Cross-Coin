@@ -11,7 +11,8 @@
 import { useEffect, useState } from 'react';
 import { seoAdminService } from '../../../services';
 import { handleViewChange } from '../../../utils/dashboardRouting';
-import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
+import { PageHeader, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
+import { Badge } from '../../../components/ui';
 
 export default function SeoHealth({ brandId } = {}) {
   const [data, setData] = useState(null);
@@ -130,36 +131,30 @@ export default function SeoHealth({ brandId } = {}) {
               subtitle="Most recently updated — fix these first"
               flush
             >
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--ds-color-surface-soft)', borderBottom: '1px solid var(--ds-color-border)' }}>
-                      <th style={th}>Product</th>
-                      <th style={th}>Slug</th>
-                      <th style={th}>Missing</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.sampleProductsWithGaps.map(p => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--ds-color-border-soft)' }}>
-                        <td style={td}>{p.name}</td>
-                        <td style={{ ...td, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono)', fontSize: 12 }}>{p.slug}</td>
-                        <td style={td}>
-                          {p.gaps.map(g => (
-                            <span key={g} style={{
-                              display: 'inline-block', marginRight: 6,
-                              padding: '1px 6px', borderRadius: 10,
-                              background: 'var(--ds-color-danger-bg)',
-                              color: 'var(--ds-color-danger)',
-                              fontSize: 11, fontWeight: 600,
-                            }}>{g}</span>
-                          ))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                columns={[
+                  { key: 'name', label: 'Product', render: (p) => p.name },
+                  {
+                    key: 'slug',
+                    label: 'Slug',
+                    render: (p) => (
+                      <span style={{ color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono)', fontSize: 12 }}>{p.slug}</span>
+                    ),
+                  },
+                  {
+                    key: 'gaps',
+                    label: 'Missing',
+                    render: (p) => (
+                      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
+                        {p.gaps.map(g => <Badge key={g} variant="danger" size="sm">{g}</Badge>)}
+                      </span>
+                    ),
+                  },
+                ]}
+                data={data.sampleProductsWithGaps}
+                rowKey="id"
+                emptyMessage="No products with gaps."
+              />
             </Panel>
           )}
         </>
@@ -208,6 +203,3 @@ function Stat({ label, count, total, tone = 'auto' }) {
     </div>
   );
 }
-
-const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 };
-const td = { padding: '8px 10px', color: 'var(--ds-color-text-muted)' };
