@@ -308,6 +308,17 @@ export default function ProductDetails({ initialProduct = null, initialSlug = nu
       selectedVariation?.id || null,
       galleryImages
     );
+    // Fire AddToCart before InitiateCheckout so the funnel records add_to_cart
+    // for Buy Now too (the cart state is already handled by buyNow above — this
+    // only emits the tracking event, it does not add to the cart again).
+    fbqTrack('AddToCart', {
+      content_ids: [selectedVariation ? `${productData.id}_${selectedVariation.id}` : String(productData.id)],
+      content_name: productData.title,
+      content_type: 'product',
+      value: productData.price * quantity,
+      currency: 'INR',
+      quantity,
+    });
     fbqTrack('InitiateCheckout', {
       content_ids: [selectedVariation ? `${productData.id}_${selectedVariation.id}` : String(productData.id)],
       content_name: productData.title,

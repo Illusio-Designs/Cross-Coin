@@ -4,6 +4,17 @@ import apiCache from "../utils/apiCache";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 const BRAND_NAME = "gripzus"; // ✅ Gripzus brand identifier
 
+// Small cookie reader — best-effort, returns undefined if unavailable.
+const readCookie = (name) => {
+  try {
+    if (typeof document === "undefined") return undefined;
+    const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return m ? decodeURIComponent(m[1]) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 // Create axios instance with brand header
 const createPublicApiClient = () => {
   return axios.create({
@@ -545,7 +556,23 @@ export const createOrder = async (orderData) => {
       orderData.utm_session_id = utmSessionId;
       console.log("createOrder: Adding UTM session_id:", utmSessionId);
     }
-    
+
+    // Add Facebook browser id (_fbp) and click id (_fbc) so the backend
+    // Conversions API can match the user. Best-effort — never block checkout.
+    try {
+      const fbp = readCookie('_fbp');
+      if (fbp) orderData.fbp = fbp;
+
+      let fbc = readCookie('_fbc');
+      if (!fbc) {
+        const fbclid = localStorage.getItem('fbclid');
+        if (fbclid) fbc = 'fb.1.' + Date.now() + '.' + fbclid;
+      }
+      if (fbc) orderData.fbc = fbc;
+    } catch {
+      /* best-effort — ignore */
+    }
+
     console.log("createOrder: Making API call to:", `${API_URL}/api/orders`);
 
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {

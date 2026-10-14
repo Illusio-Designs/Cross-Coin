@@ -34,6 +34,40 @@ export const authHeader = () => {
   };
 };
 
+// Read a single cookie value by name from document.cookie. Returns null when
+// absent or when document is unavailable (SSR). Never throws.
+export const getCookie = (name) => {
+  try {
+    if (typeof document === "undefined" || !document.cookie) return null;
+    const match = document.cookie.match(
+      new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1") + "=([^;]*)")
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Attach Facebook _fbp / _fbc identifiers to an order/checkout payload so the
+// backend Conversions API can match the user. Best-effort — wrapped so it can
+// never block checkout.
+export const attachFbTracking = (payload) => {
+  try {
+    const fbp = getCookie("_fbp");
+    if (fbp) payload.fbp = fbp;
+
+    let fbc = getCookie("_fbc");
+    if (!fbc) {
+      const fbclid = (typeof localStorage !== "undefined") ? localStorage.getItem("fbclid") : null;
+      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    }
+    if (fbc) payload.fbc = fbc;
+  } catch (e) {
+    /* best-effort; never block checkout */
+  }
+  return payload;
+};
+
 // Axios instance for offer API
 export const offerAPI = axios.create({
   baseURL: `${API_BASE_URL}/api`,

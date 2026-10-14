@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_URL, addBrandHeader } from "./config";
+import { API_URL, addBrandHeader, attachFbTracking } from "./config";
 
 export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
   try {
@@ -30,6 +30,7 @@ export const initiateCheckout = async (checkoutData) => {
     const token = localStorage.getItem("token");
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) checkoutData.utm_session_id = utmSessionId;
+    attachFbTracking(checkoutData);
     const response = await axios.post(`${API_URL}/api/checkout/initiate`, checkoutData, {
       headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
       withCredentials: true, timeout: 30000,
@@ -42,6 +43,7 @@ export const initiateGuestCheckout = async (checkoutData) => {
   try {
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) checkoutData.utm_session_id = utmSessionId;
+    attachFbTracking(checkoutData);
     const response = await axios.post(`${API_URL}/api/checkout/guest/initiate`, checkoutData, {
       headers: { "X-Brand-Name": "crosscoin" }, withCredentials: true, timeout: 30000,
     });

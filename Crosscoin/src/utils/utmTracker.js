@@ -13,6 +13,13 @@ export const captureUTMParameters = () => {
     timestamp: new Date().toISOString()
   };
 
+  // Capture the Facebook click id (fbclid) on landing so orders can send an
+  // _fbc value even when the _fbc cookie is absent. Best-effort, never throws.
+  try {
+    const fbclid = urlParams.get('fbclid');
+    if (fbclid) localStorage.setItem('fbclid', fbclid);
+  } catch (e) { /* ignore storage errors */ }
+
   // Persist campaign params for conversion attribution only when present.
   const hasUTMParams = Object.entries(utmData)
     .filter(([key]) => key.startsWith('utm_'))

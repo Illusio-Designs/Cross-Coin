@@ -11,6 +11,14 @@ const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus'
 
 export default function VisitTracker() {
   useEffect(() => {
+    // Capture the Facebook click id (fbclid) from the URL so checkout can
+    // rebuild an _fbc value for the Conversions API when the cookie is absent.
+    // Best-effort — never throw.
+    try {
+      const fbclid = new URLSearchParams(window.location.search).get('fbclid')
+      if (fbclid) localStorage.setItem('fbclid', fbclid)
+    } catch { /* localStorage/URL unavailable — swallow */ }
+
     const fire = () => {
       if (!getConsent().analytics) return;
     try {

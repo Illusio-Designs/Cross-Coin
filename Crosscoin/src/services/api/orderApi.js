@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_URL, BRAND_NAME, addBrandHeader } from "./config";
+import { API_URL, BRAND_NAME, addBrandHeader, attachFbTracking } from "./config";
 
 export const getUserOrders = async (params = {}) => {
   try {
@@ -20,6 +20,7 @@ export const createOrder = async (orderData) => {
     const token = localStorage.getItem("token");
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) orderData.utm_session_id = utmSessionId;
+    attachFbTracking(orderData);
     const response = await axios.post(`${API_URL}/api/orders`, orderData, {
       headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
       withCredentials: true, timeout: 30000,
@@ -32,6 +33,7 @@ export const createGuestOrder = async (orderData) => {
   try {
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) orderData.utm_session_id = utmSessionId;
+    attachFbTracking(orderData);
     const response = await axios.post(`${API_URL}/api/orders/guest-checkout`, orderData, {
       headers: { "X-Brand-Name": "crosscoin" }, withCredentials: true,
     });
