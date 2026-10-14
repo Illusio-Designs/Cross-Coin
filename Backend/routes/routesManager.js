@@ -65,6 +65,11 @@ router.use('/', optionalBrand, require('./faqRoutes.js'));
 router.use('/', optionalBrand, require('./bundleRoutes.js'));
 router.use('/', optionalBrand, require('./abandonedCartRoutes.js'));
 
+// ── WhatsApp button redirects (/track/:orderNumber, /shop/:brandId) ───────
+// Brand-neutral fixed URLs that 302 to the customer's OWN store (one shared
+// WhatsApp number can't carry per-brand button domains).
+router.use('/', require('./trackRedirectRoutes.js'));
+
 // ── SEO admin (health summary, bulk product SEO editor) ───────────────────
 router.use('/', require('./seoAdminRoutes.js'));
 

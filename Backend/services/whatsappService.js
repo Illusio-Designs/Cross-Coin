@@ -200,6 +200,21 @@ async function _brandDomain(brandId) {
   return (await _brandInfo(brandId)).domain;
 }
 
+// Brand logo URL — the safe fallback header image for any IMAGE-header template
+// when a more specific image (e.g. a product photo) isn't supplied. Reads
+// Brand.logo_url; if absent, uses the brand's own /favicon-ish logo path so a
+// send never fails purely for want of a header image.
+async function _brandLogo(brandId) {
+  try {
+    const Brand = require('../model/brandModel.js');
+    const b = await Brand.findByPk(brandId, { attributes: ['logo_url'] });
+    const url = String((b && b.logo_url) || '').trim();
+    if (url) return url.startsWith('http') ? url : `https://${(await _brandInfo(brandId)).domain}${url.startsWith('/') ? '' : '/'}${url}`;
+  } catch (_) { /* fall through */ }
+  const { domain } = await _brandInfo(brandId);
+  return `https://${domain}/logo.png`;
+}
+
 // Full https URL for a brand path, e.g. _brandUrl(2, '/track-order').
 async function _brandUrl(brandId, path = '') {
   const { domain } = await _brandInfo(brandId);
@@ -338,6 +353,40 @@ async function listTemplates(brandId = 1, { force = false } = {}) {
   return res.data; // { data: [...], paging: {...} }
 }
 
+// Fixed backend base for WhatsApp button links. One shared number serves all
+// brands, so a template button can only carry ONE domain; this backend URL
+// 302-redirects to the customer's own store (see routes/trackRedirectRoutes.js).
+const WA_API_BASE = (process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
+const WA_TRACK_BASE = `${WA_API_BASE}/api/track`;   // + /{{orderNumber}}
+const WA_SHOP_BASE  = `${WA_API_BASE}/api/shop`;    // + /{{brandId}}
+
+// Inspect the LIVE approved template so a sender only attaches a header-image or
+// button component when the template actually has one. This lets us re-shape
+// templates (add buttons / image headers) and deploy the matching sender code
+// together WITHOUT a downtime window: before Meta re-approves, the live template
+// is still the old shape and the extra params are simply not attached; the moment
+// the new shape is approved, the sender starts attaching them. Reads the cached
+// template list (60s TTL) so it costs nothing on the hot path.
+async function _templateShape(name, brandId = 1) {
+  try {
+    const data = await listTemplates(brandId);
+    const list = data?.data || [];
+    const tpl = list.find(t => t.name === name && String(t.status).toUpperCase() === 'APPROVED');
+    if (!tpl) return { headerFormat: null, urlButtonIndex: -1 };
+    const comps = tpl.components || [];
+    const header = comps.find(c => c.type === 'HEADER');
+    const btns = comps.find(c => c.type === 'BUTTONS');
+    let urlButtonIndex = -1;
+    if (btns && Array.isArray(btns.buttons)) {
+      // Dynamic URL buttons (url contains a {{n}} variable) need a param on send.
+      urlButtonIndex = btns.buttons.findIndex(b => b.type === 'URL' && /\{\{\d+\}\}/.test(b.url || ''));
+    }
+    return { headerFormat: header?.format || null, urlButtonIndex };
+  } catch (_) {
+    return { headerFormat: null, urlButtonIndex: -1 };
+  }
+}
+
 async function createTemplate(tplData, brandId = 1) {
   const { token, businessAccountId } = await getCredentials(brandId);
   const payload = {
@@ -384,7 +433,27 @@ function buildTemplates(storeName, storeUrl) {
   // messages consistent on the shared number.
   const footer = `Need help? Just reply to this message.`;
 
-  return [
+  // Call-to-action buttons. Dynamic URL buttons carry ONE variable at the end of
+  // the URL (the order number / brand id); the backend redirect then sends the
+  // customer to their OWN store. Meta forbids emojis / newlines in button labels.
+  const trackButton = {
+    type: 'BUTTONS',
+    buttons: [{
+      type: 'URL', text: 'Track Order',
+      url: `${WA_TRACK_BASE}/{{1}}`,
+      example: [`${WA_TRACK_BASE}/CC-20240101-0001`],
+    }],
+  };
+  const shopButton = {
+    type: 'BUTTONS',
+    buttons: [{
+      type: 'URL', text: 'Shop Now',
+      url: `${WA_SHOP_BASE}/{{1}}`,
+      example: [`${WA_SHOP_BASE}/1`],
+    }],
+  };
+
+  const templates = [
     // ── Transactional / Utility ────────────────────────────────────────────────
     {
       name: tName('order_confirmation'), category: 'UTILITY', language: 'en',
@@ -586,16 +655,44 @@ function buildTemplates(storeName, storeUrl) {
     {
       name: tName('cart_abandoned'), category: 'MARKETING', language: 'en',
       components: [
+        // Header becomes an IMAGE (product photo) via the by-name pass below.
         { type: 'HEADER', format: 'TEXT', text: 'Your Cart Is Waiting!' },
         {
           type: 'BODY',
-          text: `Hi {{1}}!\n\nIt looks like you left something behind — your *{{2}}* is still waiting in your *{{3}}* cart.\n\nTo make it easier for you to complete your purchase, we are offering you an *additional 10% OFF* with code *{{4}}*. This offer is valid for the next 24 hours only!\n\nDon't let your favourites sell out — complete your order before it's too late.`,
-          example: { body_text: [['Rushikesh', 'CrossCoin Ankle Socks – Pack of 3', storeName, 'SAVE10']] },
+          text: `Hi {{1}}! 🛒\n\nYour *{{2}}* cart is still saved for you:\n\n🛍️ {{3}}\n💰 *Cart total:* ₹{{4}}\n\nComplete your order now and enjoy an *extra 10% OFF* with code *{{5}}* — valid for the next 24 hours only.\n\nDon't let your favourites sell out!`,
+          example: { body_text: [['Rushikesh', storeName, 'Ankle Socks – Pack of 3 ×2 (+1 more)', '899', 'SAVE10']] },
         },
         { type: 'FOOTER', text: footer },
       ],
     },
   ];
+
+  // ── Attach CTA buttons + image headers by name ──────────────────────────────
+  // Phase 2: a "Track Order" button on every order-lifecycle message, a "Shop
+  // Now" button on recovery/return messages, and a product-image header on the
+  // abandoned-cart message. Done here (not inline) so the template list stays
+  // readable and the button set is easy to audit in one place.
+  const withTrack = new Set([
+    'order_confirmation', 'order_packed', 'order_shipped',
+    'order_out_for_delivery', 'order_delivered', 'prepaid_rto',
+  ].map(tName));
+  const withShop = new Set(['cod_rto', 'cart_abandoned'].map(tName));
+
+  for (const t of templates) {
+    if (withTrack.has(t.name)) t.components.push(trackButton);
+    else if (withShop.has(t.name)) t.components.push(shopButton);
+  }
+
+  // NOTE on IMAGE headers: Meta requires a resumable-upload `header_handle` (not a
+  // plain URL) to CREATE a media-header template, so we don't force one here — it
+  // would make seeding fail. The sender (`sendTemplate`) already supports an IMAGE
+  // header and passes the product photo when the live template has that format, so
+  // the only thing needed to turn it on is creating cart_abandoned with an IMAGE
+  // header via the upload handshake (FB App ID + sample upload). Wired as a
+  // follow-up; until then cart_abandoned keeps its TEXT header and still carries
+  // the product name, cart total and Shop Now button.
+
+  return templates;
 }
 
 // ─── Default template definitions (brand-neutral, for the management UI) ──────
@@ -783,7 +880,14 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
 // sendTemplate — for SENDING messages, component types are LOWERCASE ('body',
 // 'header', 'button'). Uppercase is only for template CREATION. (sendCodConfirmation
 // already uses lowercase 'body'/'button'.)
-async function sendTemplate(phone, templateName, bodyParams, brandId = 1) {
+// opts (all optional, all self-adapting to the LIVE template shape):
+//   headerImage    — image URL for an IMAGE-header template
+//   trackOrder     — order number for a dynamic "Track Order" URL button
+//   shopBrandId    — brand id for a dynamic "Shop" URL button
+// Any opt whose component is absent on the approved template is simply ignored,
+// and an IMAGE header with no headerImage falls back to the brand logo so the
+// send never fails for lack of media.
+async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts = {}) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
@@ -792,9 +896,32 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1) {
   const rateLimited = await checkRateLimit(to);
   if (rateLimited) return rateLimited;
 
-  const components = bodyParams?.length
-    ? [{ type: 'body', parameters: bodyParams.map(p => ({ type: 'text', text: String(p) })) }]
-    : [];
+  const shape = await _templateShape(templateName, brandId);
+  const components = [];
+
+  // Header image — only when the live template declares an IMAGE header.
+  if (shape.headerFormat === 'IMAGE') {
+    let img = opts.headerImage;
+    if (!img) { try { img = await _brandLogo(brandId); } catch (_) {} }
+    if (img) components.push({ type: 'header', parameters: [{ type: 'image', image: { link: img } }] });
+  }
+
+  if (bodyParams?.length) {
+    components.push({ type: 'body', parameters: bodyParams.map(p => ({ type: 'text', text: String(p) })) });
+  }
+
+  // Dynamic URL button — attach the variable only when the live template has one.
+  if (shape.urlButtonIndex >= 0) {
+    const btnParam = opts.trackOrder != null ? opts.trackOrder
+                   : opts.shopBrandId != null ? opts.shopBrandId
+                   : null;
+    if (btnParam != null) {
+      components.push({
+        type: 'button', sub_type: 'url', index: String(shape.urlButtonIndex),
+        parameters: [{ type: 'text', text: String(btnParam) }],
+      });
+    }
+  }
 
   const res = await waPostWithRetry(
     `${GRAPH_API_URL}/${phoneNumberId}/messages`,
@@ -824,7 +951,7 @@ async function sendOrderConfirmation(phone, data, brandId = 1) {
     await _brandName(brandId),
     data.orderNumber,
     String(data.total ?? ''),
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendOrderPacked(phone, data, brandId = 1) {
@@ -832,7 +959,7 @@ async function sendOrderPacked(phone, data, brandId = 1) {
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendAddressRequest(phone, data, brandId = 1) {
@@ -853,7 +980,7 @@ async function sendOrderShipped(phone, data, brandId = 1) {
     data.orderNumber,
     data.awbNumber || 'N/A',
     trackingUrl,
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendOutForDelivery(phone, data, brandId = 1) {
@@ -862,7 +989,7 @@ async function sendOutForDelivery(phone, data, brandId = 1) {
     await _brandName(brandId),
     data.orderNumber,
     data.courierName || 'our courier partner',
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendOrderDelivered(phone, data, brandId = 1) {
@@ -870,7 +997,7 @@ async function sendOrderDelivered(phone, data, brandId = 1) {
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendOrderCancelled(phone, data, brandId = 1) {
@@ -889,7 +1016,7 @@ async function sendRtoCod(phone, data, brandId = 1) {
     data.name || 'there',
     await _brandName(brandId),
     data.orderNumber,
-  ], brandId);
+  ], brandId, { shopBrandId: brandId });
 }
 
 // Prepaid RTO notice — refund is promised but deferred until the parcel is
@@ -901,7 +1028,7 @@ async function sendRtoPrepaid(phone, data, brandId = 1) {
     await _brandName(brandId),
     data.orderNumber,
     String(data.amount ?? ''),
-  ], brandId);
+  ], brandId, { trackOrder: data.orderNumber });
 }
 
 async function sendReturnRequested(phone, data, brandId = 1) {
@@ -988,21 +1115,28 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 
 // ─── New ecommerce notification helpers ──────────────────────────────────────
 
+// data: { customerName, itemsSummary|productName, total, couponCode, productImage }
+// New cart_abandoned params: name, brand, items, total, coupon. The product image
+// (when supplied) rides the IMAGE header; it falls back to the brand logo so the
+// send never fails for lack of media, and a "Shop Now" button links to the store.
 async function sendAbandonedCart(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('cart_abandoned'), [
     data.customerName || 'there',
-    data.productName || 'your items',
     await _brandName(brandId),
+    data.itemsSummary || data.productName || 'your items',
+    String(data.total ?? data.cartValue ?? '—'),
     data.couponCode || 'SAVE10',
-  ], brandId);
+  ], brandId, { shopBrandId: brandId, headerImage: data.productImage });
 }
 
 async function sendReviewRequest(phone, data, brandId = 1) {
   // There is no /review route on any storefront — reviews are left on the product
-  // page. Deep-link to the PDP (with a #reviews anchor) when we know the product;
-  // otherwise fall back to the store homepage. Never link to the dead /review path.
+  // page. Deep-link to the PDP with ?review=open so each store's PDP auto-opens
+  // its "write a review" popup on arrival (handled client-side per store). Fall
+  // back to the store homepage when we don't know the product. Never link to the
+  // dead /review path.
   const reviewUrl = data.reviewUrl
-    || (data.productSlug ? await _productUrl(brandId, data.productSlug, '#reviews') : await _brandUrl(brandId));
+    || (data.productSlug ? await _productUrl(brandId, data.productSlug, '?review=open') : await _brandUrl(brandId));
   return sendTemplate(phone, tName('review_request'), [
     data.name || data.customerName || 'there',
     await _brandName(brandId),
@@ -1313,4 +1447,9 @@ module.exports = {
   sendMediaMessage,
   sendImageLink,
   mediaKindFromMime,
+  // URL resolvers (reused by the public track/shop redirect so the link lands
+  // on the customer's OWN store).
+  getTrackingUrl: _trackingUrl,
+  getBrandDomain: _brandDomain,
+  getProductUrl: _productUrl,
 };

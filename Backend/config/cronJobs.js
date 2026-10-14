@@ -183,10 +183,26 @@ function initializeCronJobs() {
         const productName = firstItem?.Product?.name || 'your items';
         const extra = cart.CartItems.length > 1 ? ` (+${cart.CartItems.length - 1} more)` : '';
 
+        // Cart total (price/qty) and the first product's image for the message.
+        const cartTotal = cart.CartItems.reduce((sum, it) => {
+          const price = Number(it.price ?? it.Product?.price ?? 0);
+          return sum + price * Number(it.quantity || 1);
+        }, 0);
+        let productImage = null;
+        try {
+          const { ProductImage } = require('../model/associations.js');
+          if (firstItem?.Product?.id && ProductImage) {
+            const img = await ProductImage.findOne({ where: { product_id: firstItem.Product.id }, order: [['id', 'ASC']] });
+            if (img?.image_url) productImage = /^https?:\/\//.test(img.image_url) ? img.image_url : `https://api.crosscoin.in/api/uploads/${String(img.image_url).replace(/^\/+/, '').replace(/^api\/uploads\//, '').replace(/^uploads\//, '')}`;
+          }
+        } catch (_) { /* image is optional — header falls back to the brand logo */ }
+
         try {
           await whatsappService.sendAbandonedCart(user.phone, {
             customerName: user.username,
-            productName: productName + extra,
+            itemsSummary: productName + extra,
+            total: cartTotal ? cartTotal.toFixed(0) : undefined,
+            productImage,
             couponCode: 'SAVE10',
           }, brandId);
           // Mark the cart abandoned so the hourly cron never re-messages it.
@@ -239,7 +255,9 @@ function initializeCronJobs() {
         try {
           await whatsappService.sendAbandonedCart(phone, {
             customerName: row.customerName,
-            productName: row.cartSummary || 'your items',
+            itemsSummary: row.cartSummary || 'your items',
+            total: row.cartValue != null ? Number(row.cartValue).toFixed(0) : undefined,
+            // No per-item image in the capture table — header falls back to logo.
             couponCode: 'SAVE10',
           }, brandId);
           await row.update({ status: 'messaged', waSent: true });
