@@ -982,12 +982,12 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
 
         {/* ── Ideal for, care and manufacturing ────────────────────────── */}
         <div className="wrap"><div className="hairline" /></div>
-        <section className="wrap py-10 md:py-14">
+        <section className="wrap pt-10 md:pt-14 pb-0">
           <ProductDetailBlocks product={product} />
         </section>
 
-        {/* ── Editorial band 3 — Reviews (ported Morbix moving wall) ───── */}
-        <div className="wrap"><div className="hairline" /></div>
+        {/* ── Reviews ─ ReviewsSection self-pads (section-y) and draws its own
+            top hairline, so no extra divider/wrapper here (avoids a double gap). */}
         <ReviewsSection reviews={initialReviews} total={initialReviewTotal} productId={product.id} />
 
         {/* ── Editorial band 4 — You may also like ─────────────────────── */}
