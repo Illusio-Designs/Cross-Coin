@@ -282,7 +282,7 @@ function App({ Component, pageProps }) {
           content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
         />
         <title>Cross Coin</title>
-        <link rel="icon" href="/crosscoin-icon.png" />
+        {/* Favicon is declared once in _document.jsx (white-bg set + .ico). */}
       </Head>
       <UTMTracker />
       <Analytics />

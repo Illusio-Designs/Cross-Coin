@@ -182,8 +182,12 @@ export default function Document({ tracking }) {
         {/* Theme color for mobile browsers */}
         <meta name="theme-color" content="#180D3E" />
 
-        {/* Favicon */}
-        <link rel="icon" href="/crosscoin-icon.png" />
+        {/* Favicons — white-background, square, multiple sizes + a real .ico so
+            the icon resolves reliably for browsers and crawlers. */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
         {/* Prevent dark mode */}
         <meta name="color-scheme" content="light" />
