@@ -339,6 +339,23 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   const curImg   = Math.min(activeImg, images.length - 1);
   const colorLabel  = activeColor?.packColors ? `Pack of ${activeColor.packColors.length}` : (color || '—');
 
+  // "About this product" — story (left) + Specifications card (right). The spec
+  // rows reflect the SELECTED colour / size, then the product's real fields.
+  // Nothing fabricated: a field with no value is simply not shown.
+  const hasStory = product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '');
+  const specRows = [
+    product.colors?.length > 0 && ['Colour', colorLabel],
+    size && ['Size', size],
+    product.material && ['Material', product.material],
+    product.care && ['Care', product.care],
+    product.fit && ['Fit', product.fit],
+    product.cushioning && ['Cushioning', product.cushioning],
+    product.collection && ['Collection', product.collection],
+    product.category && ['Category', product.category],
+    product.sku && ['SKU', product.sku],
+    product.origin && ['Origin', product.origin],
+  ].filter(Boolean);
+
   /* ── Pack / bundle pricing ─────────────────────────────────────────────
      Per-product, admin-set EXACT pack prices (from GET /api/public/bundle-tiers).
      When a product has packs the selector REPLACES the qty stepper: 1 pair = the
@@ -948,45 +965,50 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
           </div>
         </section>
 
-        {/* ── Story + Details & care — one tight two-column row ────────── */}
-        <div className="wrap"><div className="hairline" /></div>
-        <section className={`wrap pt-10 md:pt-14 pb-0 grid grid-cols-1 gap-10 lg:gap-16 lg:items-start ${(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) ? 'lg:grid-cols-2' : ''}`}>
-          {/* Story */}
-          {(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) && (
-            <div>
-              <p className="eyebrow text-ink-muted mb-4">The story</p>
-              {/* Admin rich text is server-sanitised on save (safe subset incl <img>,
-                  scripts stripped), so rendering the stored HTML directly is XSS-safe.
-                  Old products have plain-text descriptions → fall back to plain render. */}
-              {/<[a-z][\s\S]*>/i.test(product.descriptionHtml || '') ? (
-                <div
-                  className="gz-desc-rich prose-body text-base md:text-lg text-justify hyphens-auto"
-                  dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
-                />
-              ) : (
-                <p className="prose-body whitespace-pre-line text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
-              )}
-            </div>
-          )}
+        {/* ── About this product — story + Specifications card (Morbix parity,
+               kept in Gripzus's own monochrome UI; specs track the selection) ── */}
+        {(hasStory || specRows.length > 0) && (
+          <>
+            <div className="wrap"><div className="hairline" /></div>
+            <section className="wrap pt-10 md:pt-14 pb-0">
+              <p className="eyebrow text-ink-muted mb-3">Details</p>
+              <h2 className="h-display text-3xl md:text-4xl mb-8 md:mb-10">About <span className="h-italic">this product.</span></h2>
+              <div className={`grid grid-cols-1 gap-10 lg:gap-16 lg:items-start ${hasStory ? 'lg:grid-cols-3' : ''}`}>
+                {/* Story */}
+                {hasStory && (
+                  <div className="lg:col-span-2 min-w-0">
+                    {/* Admin rich text is server-sanitised on save (safe subset incl <img>,
+                        scripts stripped), so rendering the stored HTML directly is XSS-safe.
+                        Old products have plain-text descriptions → fall back to plain render. */}
+                    {/<[a-z][\s\S]*>/i.test(product.descriptionHtml || '') ? (
+                      <div
+                        className="gz-desc-rich prose-body text-base md:text-lg text-justify hyphens-auto"
+                        dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                      />
+                    ) : (
+                      <p className="prose-body whitespace-pre-line text-base md:text-lg text-justify hyphens-auto">{product.description}</p>
+                    )}
+                  </div>
+                )}
 
-          {/* Details & care — compact definition rows */}
-          <div>
-            <p className="eyebrow text-ink-muted mb-4">Details &amp; care</p>
-            <div className="border-t border-line">
-              {[
-                product.sku && ['SKU', product.sku],
-                ['Collection', product.collection],
-                product.sizes?.length > 0 && ['Sizes', product.sizes.join(', ')],
-                product.colors?.length > 0 && ['Colour', colorLabel],
-              ].filter(Boolean).map(([label, value]) => (
-                <div key={label} className="flex items-baseline justify-between gap-6 py-3 border-b border-line">
-                  <span className="eyebrow text-ink-muted shrink-0">{label}</span>
-                  <span className="prose-body text-sm text-ink text-right">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+                {/* Specifications — bordered card */}
+                {specRows.length > 0 && (
+                  <aside className={`border border-line bg-paper-warm rounded-lg p-6 lg:sticky lg:top-24 ${hasStory ? 'lg:col-span-1' : 'lg:max-w-md'}`}>
+                    <p className="eyebrow text-ink-muted mb-4">Specifications</p>
+                    <dl className="border-t border-line">
+                      {specRows.map(([label, value]) => (
+                        <div key={label} className="flex items-baseline justify-between gap-6 py-3 border-b border-line last:border-b-0">
+                          <dt className="eyebrow text-ink-muted shrink-0 m-0">{label}</dt>
+                          <dd className="prose-body text-sm text-ink text-right m-0">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </aside>
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
         {/* ── Conditions it can help with ─────────────────────────────── */}
         <ConditionsSection />
