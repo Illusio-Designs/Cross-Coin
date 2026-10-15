@@ -939,7 +939,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
 
         {/* ── Story + Details & care — one tight two-column row ────────── */}
         <div className="wrap"><div className="hairline" /></div>
-        <section className={`wrap py-10 md:py-14 grid grid-cols-1 gap-10 lg:gap-16 ${(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) ? 'lg:grid-cols-2' : ''}`}>
+        <section className={`wrap pt-10 md:pt-14 pb-0 grid grid-cols-1 gap-10 lg:gap-16 lg:items-start ${(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) ? 'lg:grid-cols-2' : ''}`}>
           {/* Story */}
           {(product.description || /<[a-z][\s\S]*>/i.test(product.descriptionHtml || '')) && (
             <div>
@@ -966,7 +966,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 product.sku && ['SKU', product.sku],
                 ['Collection', product.collection],
                 product.sizes?.length > 0 && ['Sizes', product.sizes.join(', ')],
-                product.colors?.length > 0 && ['Colours', product.colors.map((c) => c.name).join(', ')],
+                product.colors?.length > 0 && ['Colour', colorLabel],
               ].filter(Boolean).map(([label, value]) => (
                 <div key={label} className="flex items-baseline justify-between gap-6 py-3 border-b border-line">
                   <span className="eyebrow text-ink-muted shrink-0">{label}</span>
@@ -974,12 +974,10 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                 </div>
               ))}
             </div>
-            <p className="spec block pt-4">Hand-finished and inspected pair-by-pair · 7-day returns.</p>
           </div>
         </section>
 
-        {/* ── Conditions it can help with (ported Morbix section) ──────── */}
-        <div className="wrap"><div className="hairline" /></div>
+        {/* ── Conditions it can help with ─────────────────────────────── */}
         <ConditionsSection />
 
         {/* ── Ideal for, care and manufacturing ────────────────────────── */}
