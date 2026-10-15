@@ -46,7 +46,7 @@ function MyApp({ Component, pageProps }) {
               {/* Fixed header overlays content; default top clearance so normal
                   pages sit below it. Full-bleed heros opt out with a negative
                   top margin so they start behind the header. */}
-              <main className="flex-1 pt-[76px] md:pt-[84px]">
+              <main className="flex-1 pt-[116px] md:pt-[124px]">
                 <Component {...pageProps} />
               </main>
               <Footer />

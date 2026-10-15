@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
+import Marquee from '../home/Marquee';
 
 /* Gripzus header — "The Frame". A full-width, hairline-ruled bar (no floating
    pill): wordmark left, a centered underline-nav, minimal square icon actions
@@ -51,6 +52,9 @@ export default function Header() {
       <header className={`fixed top-0 inset-x-0 z-40 bg-paper/95 backdrop-blur-xl border-b transition-all duration-300 ${
         scrolled ? 'border-line shadow-[0_1px_0_0_var(--line),0_12px_28px_-24px_rgba(0,0,0,0.35)]' : 'border-line/70'
       }`}>
+        {/* Trust-signal topbar — a site-wide strip above the nav (as per
+            Morbix / Soxbae). Lives inside the fixed header so it stays pinned. */}
+        <Marquee />
         <div className="wrap grid grid-cols-[auto_1fr_auto] items-center h-[76px] md:h-[84px] gap-4">
 
           {/* Left — hamburger (mobile) + wordmark */}

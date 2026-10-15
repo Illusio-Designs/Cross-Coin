@@ -257,7 +257,9 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 /* Marquee ticker — hairline-ruled band of making-notes in the display face. */
 .gz-marquee {
   overflow: hidden;
-  padding: 13px 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
   background: var(--ink);
 }
 .gz-marquee-track {

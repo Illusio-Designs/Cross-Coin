@@ -1,14 +1,15 @@
-/* Marquee — a slow editorial ticker of the brand's making-notes, set in the
-   display face between hairline rules. A quiet premium device: it reads as a
-   considered detail, not decoration. Pauses on hover; still for reduced-motion. */
+/* Marquee — a slow trust-signal ticker (as per Morbix / Soxbae), set in the
+   display face. Only FACTUAL claims: Made in India, secure payments, COD,
+   7-day returns (per policy), nationwide delivery — no "free shipping on all
+   orders" claim, since the store uses a free-shipping threshold. Pauses on
+   hover; still for reduced-motion. */
 
 const PHRASES = [
-  'Hand-linked toes',
-  'Small-batch knit',
-  'Made in Morbi',
-  'Low-stretch arch',
-  'Known yarns only',
-  'Finished by hand',
+  'Made in India',
+  '100% secure payments',
+  'Cash on Delivery available',
+  'Easy 7-day returns',
+  'Pan-India delivery',
 ];
 
 export default function Marquee() {

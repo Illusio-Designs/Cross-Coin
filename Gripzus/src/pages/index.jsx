@@ -2,7 +2,6 @@ import Head from 'next/head';
 import SeoWrapper from '../components/SeoWrapper';
 import Reveal from '../components/common/Reveal';
 import HeroBanner, { heroSrc } from '../components/home/HeroBanner';
-import Marquee from '../components/home/Marquee';
 import Manifesto from '../components/home/Manifesto';
 import CategoryCards from '../components/home/CategoryCards';
 import ExclusiveSection from '../components/home/ExclusiveSection';
@@ -118,7 +117,6 @@ export default function Home({
       </Head>
 
       <HeroBanner slides={slides} />
-      <Marquee />
       <Reveal><CategoryCards categories={categories} /></Reveal>
       <Reveal><ExclusiveSection products={products} /></Reveal>
       <Reveal><BestsellerRow products={products} eyebrow="Most loved" title="Bestsellers" accent="this season." ctaHref="/products" /></Reveal>
