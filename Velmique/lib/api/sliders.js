@@ -39,8 +39,8 @@ export async function getPublicSliders() {
   try {
     const res = await fetch(`${API_URL}/api/sliders/listing`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
-      // Always fetch fresh in dev; cache in prod for 5 min.
-      next: { revalidate: 300 },
+      // Always fetch fresh in dev; cache in prod for 1 min.
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const data = await res.json();

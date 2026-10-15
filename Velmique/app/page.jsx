@@ -14,9 +14,9 @@ import { getPublicCategories } from '@/lib/api/categories';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
 
-// Regenerate the homepage at most every 5 minutes (ISR) so it stays fast and
+// Regenerate the homepage at most every 1 minute (ISR) so it stays fast and
 // fresh without re-fetching on every request.
-export const revalidate = 300;
+export const revalidate = 60;
 
 /* Homepage flow (maison de parfum layout):
    1. Hero               — static "Wear your presence." product-shot hero

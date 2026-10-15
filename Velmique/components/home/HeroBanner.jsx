@@ -83,13 +83,17 @@ export default function HeroBanner({ slides = [] }) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-[52vh] md:h-[78vh] flex items-end justify-center">
+                {/* Stage sized to the art's aspect ratio per breakpoint so
+                    object-cover fills with zero cropping: mobile art is 4:5
+                    (below 768px, matching the <source> mobile breakpoint),
+                    desktop art is 16:9 (768px and up). */}
+                <div className="relative w-full aspect-[4/5] md:aspect-[16/9] overflow-hidden flex items-end justify-center">
                   <picture style={{ display: 'contents' }}>
                     {slide.mobileImage && <source media="(max-width: 767px)" srcSet={slide.mobileImage} />}
                     <img
                       src={slide.image}
                       alt={slide.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                   </picture>
                 </div>

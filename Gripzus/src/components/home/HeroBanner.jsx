@@ -36,7 +36,7 @@ export default function HeroBanner({ slides = [] }) {
   if (!has) {
     return (
       <section className="relative w-full overflow-hidden bg-paper-warm">
-        <div className="relative h-[82vh] min-h-[540px] max-h-[840px] w-full">
+        <div className="relative aspect-[4/5] md:aspect-[16/9] w-full">
           <div className="absolute inset-0 flex items-end">
             <div className="wrap w-full pb-14 md:pb-20">
               <div className="max-w-2xl">
@@ -68,7 +68,7 @@ export default function HeroBanner({ slides = [] }) {
 
   return (
     <section className="relative w-full overflow-hidden bg-ink">
-      <div className="relative h-[82vh] min-h-[540px] max-h-[840px] w-full">
+      <div className="relative aspect-[4/5] md:aspect-[16/9] w-full">
         {/* Crossfading images */}
         {has ? slides.map((sl, i) => (
           <picture key={sl.id ?? i} style={{ display: 'contents' }}>

@@ -132,7 +132,7 @@ export async function searchProducts(query) {
 
 export async function getSliders() {
   try {
-    const data = await brandFetch('/api/sliders/listing', 300);
+    const data = await brandFetch('/api/sliders/listing', 60);
     const list = data?.sliders || data?.data || (Array.isArray(data) ? data : []);
     return (Array.isArray(list) ? list : [])
       .map((s) => ({
