@@ -9,8 +9,9 @@ import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs } from '@/lib/api';
 
-// Static/ISR — regenerate every 5 min.
-export const revalidate = 300;
+// Static/ISR — regenerate every 60s so dashboard edits (hero slider, featured
+// products, etc.) reflect on the homepage within about a minute.
+export const revalidate = 60;
 
 // Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
 // hero <img>/<source> will request (same ImageKit tr= params), avoiding a

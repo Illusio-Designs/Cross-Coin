@@ -133,7 +133,9 @@ export async function searchProducts(query) {
 
 export async function getSliders() {
   try {
-    const data = await brandFetch('/api/sliders/listing', 300);
+    // Short ISR (60s) so a hero/slider edit in the dashboard shows on the
+    // storefront within about a minute instead of up to 5 minutes.
+    const data = await brandFetch('/api/sliders/listing', 60);
     const list = data?.sliders || data?.data || (Array.isArray(data) ? data : []);
     return (Array.isArray(list) ? list : [])
       .map((s) => ({

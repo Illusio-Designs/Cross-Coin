@@ -2282,11 +2282,18 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sxh-dots { position: absolute; right: 24px; bottom: 26px; z-index: 2; display: flex; gap: 8px; }
 .sxh-dots button { width: 28px; height: 3px; border: 0; padding: 0; background: rgba(251,250,246,.4); cursor: pointer; transition: background .2s ease; }
 .sxh-dots button.active { background: #fbfaf6; }
-@media (max-width: 700px) {
-  .sxh-stage { aspect-ratio: 3 / 4; min-height: 520px; }
-  .sxh-scrim { background: linear-gradient(to top, rgba(24,20,15,.74), rgba(24,20,15,.12) 62%, transparent); }
-  .sxh-inner { max-width: none; }
-  .sxh-badge { display: none; }
+/* Full-stage tap target — only used on mobile, where the poster carries its own CTA. */
+.sxh-tap { display: none; position: absolute; inset: 0; z-index: 2; }
+@media (max-width: 767px) {
+  /* The mobile slide is a self-contained 4:5 poster (backend art is 1080×1350),
+     so match the stage to it and show it in FULL — never crop. The site's own
+     overlay (headline / badge / scrim) is hidden so it doesn't collide with the
+     poster's baked-in headline + CTA; the whole poster is tappable instead. */
+  .sxh-stage { aspect-ratio: 4 / 5; min-height: 0; background: #f5efe4; }
+  .sxh-img { object-fit: contain; }
+  .sxh-scrim, .sxh-inner, .sxh-badge { display: none; }
+  .sxh-tap { display: block; }
+  .sxh-dots { z-index: 3; right: 16px; bottom: 12px; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════

@@ -65,6 +65,10 @@ export default function Hero({ features = [], slides = [] }) {
 
           <span className="sxh-badge">Free shipping on all orders</span>
 
+          {/* Mobile: the site overlay is hidden (the poster has its own headline
+              + CTA), so make the whole stage tap through to the slide's target. */}
+          <a className="sxh-tap" href={ctaHref} aria-label={ctaText} />
+
           {hasSlides && slides.length > 1 && (
             <div className="sxh-dots">
               {slides.map((_, i) => (
