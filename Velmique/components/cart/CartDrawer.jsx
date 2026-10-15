@@ -18,7 +18,7 @@ import {
   getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
   createOrder, createGuestOrder,
   initiateCheckout, initiateGuestCheckout,
-  verifyPayment,
+  verifyPayment, captureAbandonedCart,
 } from '@/lib/api/orders';
 import {
   toastOrderPlaced, toastOrderError,
@@ -156,6 +156,9 @@ export default function CartDrawer() {
   const bodyRef = useRef(null);
   const offersRef = useRef(null);
   const lastAutoSaveSig = useRef('');
+  // Last phone we captured an abandoned cart for — guards the capture effect so
+  // it fires at most once per distinct 10-digit phone.
+  const capturedPhoneRef = useRef('');
 
   // ── Reset on close ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -347,6 +350,33 @@ export default function CartDrawer() {
     setCoStep(2);
     requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
   };
+
+  /* Abandoned-cart capture: once the shopper reaches the checkout step with a
+     valid 10-digit phone + items in the bag, record it so the backend can send
+     a WhatsApp recovery if they don't complete (guest or logged-in, COD or
+     prepaid). Fires once per distinct phone; best-effort, never blocks checkout. */
+  useEffect(() => {
+    if (coStep !== 2 || items.length === 0) return;
+    const rawPhone = isAuthenticated
+      ? (selectedAddress?.phone_number || selectedAddress?.phoneNumber || addrForm.phoneNumber || '')
+      : (guestInfo.phone || '');
+    const digits = String(rawPhone).replace(/\D/g, '');
+    if (digits.length !== 10 || capturedPhoneRef.current === digits) return;
+    capturedPhoneRef.current = digits;
+    const first = items[0];
+    const summary = `${first?.name || 'your items'}${items.length > 1 ? ` (+${items.length - 1} more)` : ''}`;
+    const name = isAuthenticated
+      ? (selectedAddress?.full_name || selectedAddress?.fullName || user?.username || user?.name || '')
+      : (guestInfo.fullName || '');
+    captureAbandonedCart({
+      phone: digits,
+      name,
+      cartSummary: summary.slice(0, 250),
+      itemCount: cartCount,
+      cartValue: cartTotal,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addrForm.phoneNumber, isAuthenticated]);
 
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal       = cartTotal;

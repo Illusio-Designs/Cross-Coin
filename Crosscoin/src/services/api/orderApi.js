@@ -102,3 +102,20 @@ export const getMyReturns = async () => {
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }
 };
+
+// ── Abandoned-cart capture (WhatsApp recovery) ───────────────────────────────
+// Record the shopper's in-progress checkout (phone + cart summary) so the
+// backend can message them if they don't complete. Best-effort + keepalive so
+// it still lands if they close the tab — uses fetch (axios has no keepalive).
+// Brand is resolved server-side from the X-Brand-Name header.
+// payload: { phone (10 digits REQUIRED), name, cartSummary (<=250), itemCount, cartValue }
+export const captureAbandonedCart = async (payload) => {
+  try {
+    await fetch(`${API_URL}/api/abandoned-cart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Brand-Name": BRAND_NAME },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch (_) { /* best-effort, never block checkout */ }
+};

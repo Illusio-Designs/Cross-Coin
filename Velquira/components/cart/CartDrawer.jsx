@@ -19,6 +19,7 @@ import {
   checkPincodeServiceability,
   validateCoupon,
   getPublicCoupons,
+  captureAbandonedCart,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers } from '@/lib/api';
@@ -150,6 +151,8 @@ export default function CartDrawer() {
   const offersRef = useRef(null);
   // Two-step checkout: 1 = review cart, 2 = delivery + payment.
   const [coStep, setCoStep] = useState(1);
+  // Abandoned-cart capture: the last phone we recorded, so we fire once per phone.
+  const capturedPhoneRef = useRef('');
 
   // Cross-sell "You may also like" — fetched from the bestsellers service when
   // the drawer opens; excludes items already in the cart.
@@ -280,6 +283,27 @@ export default function CartDrawer() {
     setCoStep(2);
     requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
   };
+
+  /* Abandoned-cart capture: once the shopper reaches the checkout step (coStep 2)
+     with items + a valid 10-digit phone, record it so the backend can send a
+     WhatsApp recovery if they don't complete (guest or logged-in, COD or
+     prepaid). Fires once per phone; best-effort and never blocks checkout. */
+  useEffect(() => {
+    if (coStep !== 2 || items.length === 0) return;
+    const rawPhone = isAuthenticated
+      ? (selectedAddress?.phone_number || selectedAddress?.phoneNumber || form.phoneNumber || '')
+      : (guest.phone || '');
+    const digits = String(rawPhone).replace(/\D/g, '');
+    if (digits.length !== 10 || capturedPhoneRef.current === digits) return;
+    capturedPhoneRef.current = digits;
+    const first = items[0];
+    const summary = `${first?.name || 'your items'}${items.length > 1 ? ` (+${items.length - 1} more)` : ''}`;
+    const name = isAuthenticated
+      ? (selectedAddress?.full_name || selectedAddress?.fullName || form.fullName || '')
+      : (guest.fullName || '');
+    captureAbandonedCart({ phone: digits, name, cartSummary: summary.slice(0, 250), itemCount: count, cartValue: total });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coStep, items, guest.phone, guest.fullName, selectedAddress, form.phoneNumber, isAuthenticated]);
 
   // Load shipping fees + addresses as soon as the drawer opens (single view)
   useEffect(() => {

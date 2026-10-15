@@ -19,6 +19,7 @@ import {
   checkPincodeServiceability,
   validateCoupon,
   getPublicCoupons,
+  captureAbandonedCart,
 } from '@/lib/api/orders';
 import { getBestsellers } from '@/lib/api/products';
 import {
@@ -258,6 +259,8 @@ export function CartDrawer() {
   const bodyRef = useRef(null);
   const dropdownRef = useRef(null);
   const offersRef = useRef(null);
+  // Abandoned-cart capture: the last phone we recorded, so we fire once per phone.
+  const capturedPhoneRef = useRef('');
   const [showScrollHint, setShowScrollHint] = useState(false);
 
   // ── Visibility ─────────────────────────────────────────────────────────
@@ -545,6 +548,34 @@ export function CartDrawer() {
   const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   const finalTotal = Math.round(Math.max(0, cartTotal + shippingFeeAmount - couponDiscount));
   const totalQty = items.reduce((s, i) => s + (i.quantity || 1), 0);
+
+  // ── Abandoned-cart capture (WhatsApp recovery) ────────────────────────────
+  // Once the shopper is on the checkout step (coStep 2) with a non-empty cart
+  // and a valid 10-digit phone, record it so the backend can send a WhatsApp
+  // recovery if they don't complete (guest or logged-in). Fires once per phone,
+  // ref-guarded, best-effort — never blocks checkout.
+  useEffect(() => {
+    if (coStep !== 2 || items.length === 0) return;
+    const rawPhone = isAuthenticated
+      ? (selectedAddress?.phone_number || selectedAddress?.phoneNumber || addressForm.phoneNumber || '')
+      : (guestInfo.phone || '');
+    const digits = String(rawPhone).replace(/\D/g, '');
+    if (digits.length !== 10 || capturedPhoneRef.current === digits) return;
+    capturedPhoneRef.current = digits;
+    const first = items[0];
+    const summary = `${first?.name || 'your items'}${items.length > 1 ? ` (+${items.length - 1} more)` : ''}`;
+    const name = isAuthenticated
+      ? (selectedAddress?.full_name || selectedAddress?.fullName || addressForm.fullName || '')
+      : (guestInfo.fullName || '');
+    captureAbandonedCart({
+      phone: digits,
+      name,
+      cartSummary: summary.slice(0, 250),
+      itemCount: totalQty,
+      cartValue: cartTotal,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addressForm.phoneNumber, isAuthenticated]);
 
   // Compact one-line summary for an available offer, e.g. "10% off, min ₹499".
   const couponSummary = (c) => {

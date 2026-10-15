@@ -20,6 +20,7 @@ import {
   verifyCheckoutPhoneOtp,
   getPublicCoupons,
   getAllPublicProducts,
+  captureAbandonedCart,
 } from '../../services/publicApi';
 import {
   showOrderPlacedSuccessToast,
@@ -536,6 +537,39 @@ const CartDrawer = ({ isOpen, onClose }) => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddressForm, addressForm, guestInfo, fieldErrors, pincodeServiceability, addressSaving, isAuthenticated, editingAddressId]);
+
+  // ── Abandoned-cart capture (WhatsApp recovery) ──────────────────────────
+  // Once the shopper is at checkout (drawer open) with items + a valid 10-digit
+  // phone, record it so the backend can send a WhatsApp recovery if they don't
+  // complete (guest or logged-in). Best-effort; fires once per distinct phone.
+  const capturedPhoneRef = useRef('');
+  useEffect(() => {
+    if (!isOpen) return;
+    const items = buyNowItem ? [buyNowItem] : cartItems;
+    if (!items.length) return;
+    const rawPhone = isAuthenticated
+      ? (addressForm.phoneNumber || '')
+      : (guestInfo.phone || '');
+    const digits = String(rawPhone).replace(/\D/g, '');
+    if (digits.length !== 10 || capturedPhoneRef.current === digits) return;
+    capturedPhoneRef.current = digits;
+    const total = buyNowItem ? buyNowTotal : cartTotal;
+    const first = items[0];
+    const firstName = first?.name || first?.title || 'your items';
+    const summary = `${firstName}${items.length > 1 ? ` (+${items.length - 1} more)` : ''}`;
+    const itemCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
+    const name = isAuthenticated
+      ? String(addressForm.fullName || '').trim()
+      : `${guestInfo.firstName || ''} ${guestInfo.lastName || ''}`.trim();
+    captureAbandonedCart({
+      phone: digits,
+      name,
+      cartSummary: summary.slice(0, 250),
+      itemCount,
+      cartValue: total,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, cartItems, buyNowItem, addressForm.phoneNumber, guestInfo.phone, isAuthenticated]);
 
   // Close the address-issues popup on Escape (capture phase so it wins over the
   // drawer's own Escape-to-close handler).

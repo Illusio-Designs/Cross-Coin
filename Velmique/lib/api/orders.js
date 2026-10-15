@@ -220,6 +220,23 @@ export async function validateCoupon({ code, cartTotal, paymentMode, cartItems }
   return data;
 }
 
+/* ────── Abandoned-cart capture (WhatsApp recovery) ─────────────────────── */
+// Record the shopper's in-progress checkout (phone + cart summary) so the
+// backend can message them on WhatsApp if they don't complete. Best-effort +
+// keepalive so it still lands if they close the tab. Brand comes from the
+// X-Brand-Name header (authHeaders), and the bearer token rides along when the
+// shopper is logged in. Never throws — must not block checkout.
+export async function captureAbandonedCart(payload) {
+  try {
+    await fetch(`${API_URL}/api/abandoned-cart`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch (_) { /* best-effort, never block checkout */ }
+}
+
 /* Aliases for compatibility with the CartDrawer port */
 export { verifyPayment as updateOrderPayment };
 

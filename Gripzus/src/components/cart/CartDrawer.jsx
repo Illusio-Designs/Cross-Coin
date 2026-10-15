@@ -16,6 +16,7 @@ import {
   verifyPayment,
   checkPincodeServiceability,
   validateCoupon,
+  captureAbandonedCart,
 } from '../../services/orders';
 import { getPublicCoupons } from '../../services/publicindex';
 import { getBestsellers, resolveVariationId, getBundleTiers, getProductBySlug } from '../../services/products';
@@ -111,6 +112,9 @@ export default function CartDrawer() {
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressSaving, setAddressSaving] = useState(false);
   const lastAutoSaveSig = useRef('');
+  // Abandoned-cart capture guard — the last 10-digit phone we posted, so the
+  // capture fires at most once per phone (not on every checkout-step re-render).
+  const capturedPhoneRef = useRef('');
 
   const [shippingFees, setShippingFees] = useState([]);
   const [selectedFee, setSelectedFee] = useState(null);
@@ -330,6 +334,27 @@ export default function CartDrawer() {
     setCoStep(2);
     requestAnimationFrame(() => { const b = document.querySelector('.cd-body'); if (b) b.scrollTop = 0; });
   };
+
+  /* Abandoned-cart capture: once the shopper is on the checkout step (coStep 2)
+     with a valid 10-digit phone + items, record it so the backend can send a
+     WhatsApp recovery if they don't complete (guest or signed-in). Fires once
+     per phone (capturedPhoneRef guard) and is best-effort / non-blocking. */
+  useEffect(() => {
+    if (coStep !== 2 || items.length === 0) return;
+    const rawPhone = isAuthenticated
+      ? (selectedAddress?.phone_number || selectedAddress?.phoneNumber || addressForm.phoneNumber || '')
+      : (guestInfo.phone || '');
+    const digits = String(rawPhone).replace(/\D/g, '');
+    if (digits.length !== 10 || capturedPhoneRef.current === digits) return;
+    capturedPhoneRef.current = digits;
+    const first = items[0];
+    const summary = `${first?.name || 'your items'}${items.length > 1 ? ` (+${items.length - 1} more)` : ''}`;
+    const name = isAuthenticated
+      ? (selectedAddress?.full_name || selectedAddress?.fullName || addressForm.fullName || '')
+      : (guestInfo.fullName || '');
+    captureAbandonedCart({ phone: digits, name, cartSummary: summary.slice(0, 250), itemCount: totalQty, cartValue: cartTotal });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addressForm.phoneNumber, isAuthenticated]);
 
   /* Available offers — fetch the brand's public coupons once when the drawer
      opens with items in the cart, so shoppers can tap one to auto-apply. */

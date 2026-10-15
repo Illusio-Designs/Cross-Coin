@@ -316,3 +316,19 @@ export async function getMyReturns() {
   if (!res.ok) throw new Error('Failed to fetch returns')
   return res.json()
 }
+
+// ── Abandoned-cart capture (WhatsApp recovery) ───────────────────────────────
+// Record the shopper's in-progress checkout (phone + cart summary) so the
+// backend can message them if they don't complete. Best-effort + keepalive so
+// it still lands if they close the tab. Brand comes from the X-Brand-Name
+// header (resolved server-side); headers() also attaches auth when present.
+export async function captureAbandonedCart(payload) {
+  try {
+    await fetch(`${API_URL}/api/abandoned-cart`, {
+      method: 'POST',
+      headers: headers(getToken()),
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+  } catch (_) { /* best-effort, never block checkout */ }
+}

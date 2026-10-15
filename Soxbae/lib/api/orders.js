@@ -229,6 +229,22 @@ export async function getPublicCoupons() {
   }
 }
 
+// ── Abandoned-cart capture (WhatsApp recovery) ───────────────────────────────
+// Record the shopper's in-progress checkout (phone + cart summary) so the
+// backend can message them if they don't complete. Best-effort + keepalive so
+// it still lands if they close the tab. The brand is resolved server-side from
+// the X-Brand-Name header, which authHeaders() sets (same as every other call).
+export async function captureAbandonedCart(payload) {
+  try {
+    await fetch(`${API_URL}/api/abandoned-cart`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch (_) { /* best-effort, never block checkout */ }
+}
+
 // Aliases for backward-compat with Knitwink naming.
 export const getOrders = getUserOrders;
 export const updateOrderPayment = verifyPayment;
