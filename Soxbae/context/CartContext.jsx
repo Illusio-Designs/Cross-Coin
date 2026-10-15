@@ -200,7 +200,11 @@ export function CartProvider({ children }) {
     packSize: extra.packSize || null,
   });
 
-  const add = useCallback(async (product, size = 'M', qty = 1, variationId = null) => {
+  // `meta` (optional) carries { packId, packSize } so the drawer's "Buy More,
+  // Save More" can group lines under a shared pack_id — the backend then prices
+  // the whole group by its total pairs (server-authoritative). Omitted/null
+  // leaves the item a normal loose line, unchanged from before.
+  const add = useCallback(async (product, size = 'M', qty = 1, variationId = null, meta = {}) => {
     if (!product?.id) return;
 
     // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
@@ -215,11 +219,11 @@ export function CartProvider({ children }) {
     });
 
     // 1) Optimistic local insert — the item shows in the drawer INSTANTLY.
-    const key = `${product.id}-${variationId ?? size}`;
+    const key = `${product.id}-${variationId ?? size}${meta.packId ? `-${meta.packId}` : ''}`;
     setItems((prev) => {
       const found = prev.find((i) => i.key === key);
       if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i));
-      return [...prev, toLocalItem(product, size, qty, variationId)];
+      return [...prev, toLocalItem(product, size, qty, variationId, meta)];
     });
     setOpen(true);
     // 2) For logged-in users, sync to the backend in the background and
@@ -231,6 +235,8 @@ export function CartProvider({ children }) {
           variationId: variationId ? Number(variationId) : null,
           quantity: qty,
           size: size || null,
+          pack_id: meta.packId || null,
+          pack_size: meta.packSize || null,
         });
         await refreshServerCart();
       } catch {

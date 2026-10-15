@@ -83,12 +83,17 @@ export default async function ProductPage({ params, searchParams }) {
   // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
   // hard-coded discount. Shoppers apply the code at checkout to get the offer.
   const prepaidCoupon = (Array.isArray(coupons) ? coupons : []).find((c) => c.paymentModeRestriction === 'prepaid') || null;
-  // One card per product (not every colour variation) in "You might also like".
-  const seenRel = new Set();
-  const related = all
-    .filter((p) => p.categorySlug === product.categorySlug && p.slug !== product.slug)
-    .filter((p) => { if (seenRel.has(p.slug)) return false; seenRel.add(p.slug); return true; })
-    .slice(0, 5);
+  // "You might also like" — one card per product (not every colour variation).
+  // Prefer same-category products; fall back to any other products so the rail
+  // always shows (some products' category has no other items).
+  const pickOthers = (pool) => {
+    const seen = new Set();
+    return pool
+      .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
+      .slice(0, 5);
+  };
+  let related = pickOthers(all.filter((p) => p.categorySlug === product.categorySlug));
+  if (related.length === 0) related = pickOthers(all);
 
   const jsonLd = buildProductJsonLd(product);
 
