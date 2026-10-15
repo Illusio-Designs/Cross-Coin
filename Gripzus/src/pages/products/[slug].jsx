@@ -198,18 +198,29 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, initialProduct]);
 
-  // Related products — same collection, fallback to catalogue.
+  // Related products — "you may also like". Always shows: prefer same-category
+  // products, then fall back to any other products (Morbix's pickOthers pattern).
+  // One card per PRODUCT (deduped by slug), since the catalogue explodes each
+  // colour into its own card and they share a slug.
   useEffect(() => {
     if (!product) return;
     let alive = true;
-    getProductsByCategory(product.collection)
-      .then((list) => {
-        const pool = list.filter((p) => p.slug !== product.slug);
-        if (pool.length) return pool;
-        return getPublicProducts({ limit: 8 }).then((all) => all.filter((p) => p.slug !== product.slug));
-      })
-      .then((list) => { if (alive) setRelated(list.slice(0, 4)); })
-      .catch(() => {});
+    // Dedupe by slug, drop this product, cap at 4 for the grid.
+    const pickOthers = (pool) => {
+      const seen = new Set();
+      return (Array.isArray(pool) ? pool : [])
+        .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
+        .slice(0, 4);
+    };
+    Promise.all([
+      getProductsByCategory(product.collection).catch(() => []),
+      getPublicProducts({ limit: 12 }).catch(() => []),
+    ]).then(([sameCat, all]) => {
+      if (!alive) return;
+      let rel = pickOthers(sameCat);
+      if (rel.length === 0) rel = pickOthers(all);
+      setRelated(rel);
+    });
     return () => { alive = false; };
   }, [product]);
 

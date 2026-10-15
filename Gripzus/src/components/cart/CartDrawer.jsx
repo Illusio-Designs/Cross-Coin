@@ -18,7 +18,7 @@ import {
   validateCoupon,
 } from '../../services/orders';
 import { getPublicCoupons } from '../../services/publicindex';
-import { getBestsellers, resolveVariationId } from '../../services/products';
+import { getBestsellers, resolveVariationId, getBundleTiers, getProductBySlug } from '../../services/products';
 import {
   toastOrderPlaced,
   toastOrderError,
@@ -140,6 +140,15 @@ export default function CartDrawer() {
   // service when the drawer opens; excludes items already in the cart.
   const [suggestions, setSuggestions] = useState([]);
 
+  // Pair/pack progress stepper — the real admin-set bundle tiers for the
+  // primary (loose) cart line. null when the product has no tiers (then the
+  // stepper renders nothing). Display-only: it reads getBundleTiers for the
+  // labels, the server still prices the pack group by its total quantity.
+  const [packState, setPackState] = useState(null); // { productId, tiers:[{pairs,price,label,badge}] }
+  // The primary cart line's FULL product (all variations) so "Buy More, Save
+  // More" can offer its OTHER in-stock colours/sizes not yet in the cart.
+  const [bmsProduct, setBmsProduct] = useState(null);
+
   const getPrice = (it) => Number(it.salePrice ?? it.price ?? 0);
   const getMrp = (it) => {
     const sale = it.salePrice != null ? Number(it.salePrice) : null;
@@ -203,11 +212,63 @@ export default function CartDrawer() {
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
   const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
-  const freeShipRemaining = Math.max(0, freeShipThreshold - cartTotal);
   /* Waive the COD fee in the displayed total once the free-shipping threshold is
      met (prepaid is already free). Mirrors the server-side enforcement. */
   const shippingFee = (isCod && freeShipQualifies) ? 0 : Number(selectedFee?.fee || 0);
-  const finalTotal = Math.round(Math.max(0, cartTotal + shippingFee - couponDiscount));
+
+  /* ── Bundle-tier DISPLAY repricing, by PACK GROUP (server-authoritative) ──
+     "Buy More, Save More" groups the primary line and any added variations
+     under one pack_id. The backend prices a pack group by its TOTAL pairs (the
+     cart / checkout / order controllers sum quantity across the shared pack_id
+     and apply the bundle tier where pairs == groupTotal). So the stepper and the
+     shown total must reflect the GROUP total, not one line. A logged-in grouped
+     cart is already repriced server-side (each line ≈ tier/N); a guest cart
+     keeps single-pair prices until placement — so we correct only the DISPLAY
+     here, using the exact tier total, and never double-discount or alter the
+     payload. */
+  const packProdLines = packState ? items.filter((i) => String(i.id) === String(packState.productId)) : [];
+  const packGroupPackId = packProdLines.find((i) => i.packId)?.packId || null;
+  // The group the server prices together: the shared-pack_id lines, else the
+  // loose line(s) of this product (the not-yet-bundled primary).
+  const packGroupLines = packGroupPackId
+    ? packProdLines.filter((i) => i.packId === packGroupPackId)
+    : packProdLines.filter((i) => !i.packId);
+  const packGroupQty = packGroupLines.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  // Line whose quantity a milestone tap nudges (the largest, so the group total
+  // lands on the tapped tier).
+  const packAnchor = packGroupLines.length
+    ? packGroupLines.reduce((a, b) => ((Number(b.qty) || 0) > (Number(a.qty) || 0) ? b : a))
+    : null;
+  // Single-pair base price for the savings labels (the product's canonical
+  // price, falling back to a group line's price before any repricing).
+  const packBaseUnit = Number(bmsProduct?.price) || (packGroupLines[0] ? getPrice(packGroupLines[0]) : 0) || 0;
+  // Tier the GROUP total currently matches (exact pairs == groupTotal).
+  const packMatchedTier = (packState && packGroupQty > 0)
+    ? (packState.tiers.find((t) => t.pairs === packGroupQty) || null)
+    : null;
+  // Show the exact tier total when the group hits a tier but its lines are NOT
+  // yet repriced to the pack per-unit (guest carts). A group already repriced
+  // (every line ≈ tier/groupTotal — the logged-in case) is left untouched → no
+  // double discount.
+  let displaySubtotal = cartTotal;
+  if (packState && packMatchedTier && packGroupLines.length) {
+    const groupContribution = packGroupLines.reduce((s, i) => s + getPrice(i) * (Number(i.qty) || 0), 0);
+    const perUnitTier = Number(packMatchedTier.price) / packGroupQty;
+    const allRepriced = packGroupLines.every((i) => Math.abs(getPrice(i) - perUnitTier) < 0.5);
+    if (!allRepriced) displaySubtotal = cartTotal - groupContribution + Number(packMatchedTier.price);
+  }
+  displaySubtotal = Math.max(0, displaySubtotal);
+
+  // Set the whole pack group's total to P pairs by nudging the anchor line (via
+  // the existing qty path → the server reprices the group). Used by the
+  // tappable stepper milestones.
+  const setGroupPairs = (P) => {
+    if (!packAnchor) return;
+    const others = packGroupQty - (Number(packAnchor.qty) || 0);
+    updateQty(lineKey(packAnchor), Math.max(1, P - others));
+  };
+
+  const finalTotal = Math.round(Math.max(0, displaySubtotal + shippingFee - couponDiscount));
 
   /* Auto-remove a payment-mode-restricted coupon when the shopper switches
      payment mode after applying it (e.g. a Prepaid-only coupon applied while
@@ -333,6 +394,95 @@ export default function CartDrawer() {
       qty: 1,
       variationId: resolveVariationId(p, color, size),
     }, { openDrawer: false });
+  };
+
+  /* The primary cart line that drives the pair/pack stepper: prefer a loose
+     (non-pack) line, else the first item. Its product id drives the tier +
+     full-product fetches below. */
+  const primaryPackPid = (() => {
+    const p = items.find((i) => !i.packId) || items[0];
+    return p ? (p.id ?? null) : null;
+  })();
+
+  /* Load the primary product's admin-set bundle tiers so the stepper can show
+     the "pair concept" progress. Display-only — it never prices or posts
+     anything; the existing qty path + shared pack_id drive server repricing.
+     Renders nothing when the product has no tiers. */
+  useEffect(() => {
+    if (!open || primaryPackPid == null) { setPackState(null); return; }
+    let alive = true;
+    getBundleTiers(primaryPackPid)
+      .then((tiers) => {
+        if (!alive) return;
+        const list = (Array.isArray(tiers) ? tiers : [])
+          .map((t) => ({ pairs: Number(t.pairs), price: Number(t.price), label: t.label || `${Number(t.pairs)} Pairs`, badge: t.badge || null }))
+          .filter((t) => Number.isFinite(t.pairs) && t.pairs > 1 && Number.isFinite(t.price) && t.price > 0)
+          .sort((a, b) => a.pairs - b.pairs);
+        setPackState(list.length ? { productId: primaryPackPid, tiers: list } : null);
+      })
+      .catch(() => { if (alive) setPackState(null); });
+    return () => { alive = false; };
+  }, [open, primaryPackPid]);
+
+  /* Load the primary line's FULL product (all variations) so "Buy More, Save
+     More" can offer its other colours/sizes. The cart item only carries the
+     one chosen variation, so we fetch the product the way the PDP does. */
+  useEffect(() => {
+    const primary = items.find((i) => !i.packId) || items[0];
+    if (!open || !primary || primaryPackPid == null) { setBmsProduct(null); return; }
+    const slug = primary.slug || String(primaryPackPid);
+    let alive = true;
+    getProductBySlug(slug)
+      .then((p) => { if (alive) setBmsProduct(p && p.id ? p : null); })
+      .catch(() => { if (alive) setBmsProduct(null); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, primaryPackPid]);
+
+  /* "Buy More, Save More": add a variation of the primary product so it BUILDS
+     A BUNDLE with the primary line. Both join one shared pack_id; the backend
+     prices the whole group by its TOTAL pairs (cart/checkout/order controllers
+     sum quantity across the shared pack_id and apply the bundle tier), so a
+     2-pair group is charged the 2-pair tier. Reuses the existing addItem/pack
+     path the PDP per-pair-colour packs use — no client price is the source of
+     truth; the variation id is posted and the server reprices. */
+  const buildBundleWith = async (v) => {
+    const prod = bmsProduct;
+    if (!prod?.id) return;
+    const prodLines = items.filter((i) => String(i.id) === String(prod.id));
+    const existingPackId = prodLines.find((i) => i.packId)?.packId || null;
+    const groupId = existingPackId || ('pk-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    const looseLines = prodLines.filter((i) => !i.packId);
+    // pack_size is metadata only (the server prices by summed quantity); set it
+    // to the group's projected pair count.
+    const packSize = prodLines.reduce((s, i) => s + (Number(i.qty) || 0), 0) + 1;
+    const prodImage = (prod.images && prod.images[0]) || null;
+    const lineFor = (src, qty, variationId) => ({
+      id: prod.id,
+      name: prod.name,
+      slug: prod.slug,
+      image: src.image || prodImage || null,
+      price: Number(src.price) || Number(prod.price) || 0,
+      collection: prod.collection,
+      size: src.size || '',
+      color: src.color || null,
+      qty,
+      variationId: variationId ?? null,
+      packId: groupId,
+      packSize,
+    });
+    try {
+      // First bundle add: move the loose primary line(s) into the pack group
+      // (pack_id is part of the line key, so remove + re-add with the pack_id).
+      for (const ll of looseLines) {
+        await removeItem(lineKey(ll));
+        await addItem(lineFor(ll, Number(ll.qty) || 1, ll.variationId ?? null), { openDrawer: false, toast: false });
+      }
+      // Add the chosen variation into the same group.
+      await addItem(lineFor(v, 1, v.variationId ?? null), { openDrawer: false, toast: false });
+    } catch {
+      showError('Could not update the bundle. Please try again.');
+    }
   };
 
   /* Close the offers dropdown on outside click / Escape. */
@@ -831,30 +981,88 @@ export default function CartDrawer() {
           ) : (
             <div className="cd-single-view">
 
-              {/* ── STEP 1 (Your cart): free-shipping, items, cross-sell ── */}
-              {/* Free-shipping progress */}
-              {coStep === 1 && freeShipThreshold > 0 && (
-                <div className="cd-freeship">
-                  <p className="cd-freeship-label">
-                    {freeShipQualifies
-                      ? "🎉 You've unlocked FREE shipping!"
-                      : `Add ₹${freeShipRemaining} for FREE shipping`}
-                  </p>
-                  <div
-                    className="cd-freeship-track"
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={Math.round(Math.min(100, (cartTotal / freeShipThreshold) * 100))}
-                    aria-label="Free shipping progress"
-                  >
-                    <div
-                      className="cd-freeship-fill"
-                      style={{ width: `${Math.min(100, (cartTotal / freeShipThreshold) * 100)}%` }}
-                    />
+              {/* ── STEP 1 (Your cart): pair/pack stepper, items, bundle builder ── */}
+              {/* Pair/pack progress stepper — reflects the admin-set bundle tiers
+                  for the primary product's PACK GROUP (the "pair concept"). qty is
+                  the COMBINED pairs across every line sharing the group's pack_id,
+                  so adding a variation via "Buy More, Save More" moves the stepper
+                  and unlocks a pack. Tapping a milestone sets the group's pairs,
+                  and the backend applies the pack price. Server-authoritative:
+                  getBundleTiers drives the labels, the group's live qty drives the
+                  fill, and the server prices the group by its total pairs. Styled
+                  in Gripzus's own square, monochrome tokens (no bars, no colour). */}
+              {coStep === 1 && packState && packGroupLines.length > 0 && (() => {
+                const tiers = packState.tiers;
+                const qty = packGroupQty;
+                const baseUnit = packBaseUnit;
+                const canTap = !!packAnchor;
+                const milestones = [
+                  { pairs: 1, total: baseUnit, label: '1 Pair' },
+                  ...tiers.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label })),
+                ];
+                const n = milestones.length;
+                const maxPairs = milestones[n - 1].pairs;
+                const savedFor = (pairs, total) => Math.max(0, Math.round(baseUnit * pairs - total));
+                // Fill measured along the evenly-spaced dots (by index, not pair
+                // value) so it lands on the dots even when tiers aren't consecutive.
+                let reachedIdx = 0;
+                for (let k = 0; k < n; k++) { if (qty >= milestones[k].pairs) reachedIdx = k; }
+                let frac = reachedIdx;
+                if (reachedIdx < n - 1) {
+                  const cur = milestones[reachedIdx].pairs, nxt = milestones[reachedIdx + 1].pairs;
+                  if (nxt > cur) frac += Math.min(1, (qty - cur) / (nxt - cur));
+                }
+                const fillPct = n > 1 ? (frac / (n - 1)) * 100 : 0;
+                const nextTier = tiers.find((t) => t.pairs > qty) || null;
+                let msg;
+                if (nextTier) {
+                  const need = nextTier.pairs - qty;
+                  const saved = savedFor(nextTier.pairs, nextTier.price);
+                  msg = <>Add <b style={{ color: 'var(--ink)' }}>{need} pair{need > 1 ? 's' : ''}</b> → {nextTier.pairs}-pair pack{saved > 0 ? <>, save ₹{saved}</> : ''}</>;
+                } else {
+                  msg = <span style={{ fontWeight: 700, color: 'var(--ink)' }}>Best value — {maxPairs}-pair pack applied</span>;
+                }
+                return (
+                  <div className="cd-sv-section">
+                    <div className="cd-section-title">Pack savings</div>
+                    <div style={{ padding: '13px 14px', background: 'var(--paper-warm, #ECE9E1)', border: '1px solid var(--line, #E2DDD2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 7, fontSize: 12.5, color: 'var(--ink-soft, #575552)', lineHeight: 1.35 }}>
+                        <span style={{ minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg}</span>
+                      </div>
+                      <div style={{ position: 'relative', height: 48, marginTop: 14 }}>
+                        {/* hairline track + ink fill (6%..94% so the ends sit under the edge marks) */}
+                        <div style={{ position: 'absolute', left: '6%', right: '6%', top: 6, height: 2, background: 'var(--line-ink, #D5CFC3)' }} />
+                        <div style={{ position: 'absolute', left: '6%', top: 6, height: 2, background: 'var(--ink, #121212)', width: `calc(88% * ${fillPct / 100})`, transition: 'width .35s ease' }} />
+                        {milestones.map((m, i) => {
+                          const pct = n > 1 ? 6 + (i / (n - 1)) * 88 : 50;
+                          const reached = qty >= m.pairs;
+                          const selected = qty === m.pairs;
+                          const saved = m.pairs > 1 ? savedFor(m.pairs, m.total) : 0;
+                          return (
+                            <button
+                              type="button"
+                              key={i}
+                              onClick={canTap ? () => setGroupPairs(m.pairs) : undefined}
+                              disabled={!canTap}
+                              aria-label={`Set ${m.pairs} pair${m.pairs > 1 ? 's' : ''}`}
+                              aria-pressed={selected}
+                              style={{ position: 'absolute', left: `${pct}%`, top: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 70, background: 'none', border: 0, padding: 0, font: 'inherit', cursor: canTap ? 'pointer' : 'default' }}
+                            >
+                              {/* Square selection mark — ink-filled when reached (the
+                                  site is all-square by design; no round dots). */}
+                              <span aria-hidden="true" style={{ width: 14, height: 14, display: 'grid', placeItems: 'center', background: reached ? 'var(--ink, #121212)' : 'var(--paper, #F4F2EC)', border: `1px solid ${reached ? 'var(--ink, #121212)' : 'var(--line-ink, #D5CFC3)'}`, color: 'var(--paper, #F4F2EC)', boxShadow: selected ? '0 0 0 2px var(--paper-warm, #ECE9E1), 0 0 0 3px var(--ink, #121212)' : 'none' }}>
+                                {reached ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : null}
+                              </span>
+                              <span style={{ fontSize: 10.5, fontWeight: 700, marginTop: 6, color: reached ? 'var(--ink, #121212)' : 'var(--ink-muted, #9A968F)', whiteSpace: 'nowrap' }}>{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                              {saved > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-soft, #575552)', marginTop: 1, whiteSpace: 'nowrap' }}>save ₹{saved}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Items */}
               {coStep === 1 && (
@@ -1011,52 +1219,110 @@ export default function CartDrawer() {
               </div>
               )}
 
-              {/* You may also like — compact cross-sell strip (above the order
-                  summary). Renders nothing when there's nothing to suggest.
-                  Part of step 1 (the cart review). */}
-              {coStep === 1 && crossSell.length > 0 && (
-                <div className="cd-sv-section">
-                  <div className="cd-section-title">You may also like</div>
-                  <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-                    {crossSell.map((p) => {
-                      const img = (p.images && p.images[0]) || p.image;
-                      const price = Number(p.salePrice ?? p.price ?? 0);
-                      return (
-                        <div
-                          key={p.uid ?? p.id}
-                          style={{ flex: '0 0 130px', width: 130, border: '1px solid var(--line, #e5e1d8)', background: 'var(--paper-warm, #fafafa)', display: 'flex', flexDirection: 'column' }}
-                        >
-                          <Link href={`/products/${p.slug}`} onClick={closeCart} style={{ display: 'block', aspectRatio: '4 / 5', overflow: 'hidden', background: '#f3f1ec' }}>
-                            {img ? <img src={img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
-                          </Link>
-                          <div style={{ padding: '7px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
-                            <Link href={`/products/${p.slug}`} onClick={closeCart} style={{ fontSize: 12, lineHeight: 1.25, color: 'var(--ink, #1a1a1a)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none' }}>
-                              {p.name}
-                            </Link>
-                            <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink, #1a1a1a)' }}>₹{price.toFixed(0)}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleAddSuggestion(p)}
-                                aria-label={`Add ${p.name} to cart`}
-                                style={{ border: '1px solid var(--ink, #1a1a1a)', background: 'transparent', color: 'var(--ink, #1a1a1a)', fontSize: 11.5, fontWeight: 600, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                              >
-                                + Add
-                              </button>
+              {/* Buy More, Save More — offers the CART product's OTHER in-stock
+                  variations (colours/sizes not yet in the cart) so the shopper
+                  can build toward a bundle-pack tier. Adding one JOINS a shared
+                  pack_id group with the primary line (buildBundleWith) so the
+                  combined pairs build the bundle and the stepper counts the group
+                  total. Falls back to the bestsellers cross-sell feed when the
+                  product has no other variations. Server stays price-authoritative:
+                  each "+ Add" posts the real variation via the shared add path —
+                  no client price is the source of truth. RTL horizontal scroll
+                  (container dir=rtl, cards dir=ltr). Styled in Gripzus's own
+                  square, monochrome tokens. */}
+              {coStep === 1 && (() => {
+                // Primary line's product variations not already in the cart.
+                const variantRows = (() => {
+                  const prod = bmsProduct;
+                  if (!prod || !Array.isArray(prod.variations) || prod.variations.length === 0) return [];
+                  const attrsOf = (v) => { try { return typeof v.attributes === 'string' ? JSON.parse(v.attributes) : (v.attributes || {}); } catch { return {}; } };
+                  const arr = (x) => (Array.isArray(x) ? x : (x == null || x === '' ? [] : [x]));
+                  const colorImg = {};
+                  (prod.colors || []).forEach((c) => { if (c && c.name) colorImg[String(c.name).toLowerCase()] = (c.images || []).filter(Boolean)[0] || null; });
+                  const mine = items.filter((i) => String(i.id) === String(prod.id));
+                  const inCartVarIds = new Set(mine.map((i) => i.variationId).filter((x) => x != null).map(String));
+                  const inCartKeys = new Set(mine.map((i) => `${String(i.color || '').toLowerCase()}|${String(i.size || '').toLowerCase()}`));
+                  const seen = new Set();
+                  const rows = [];
+                  for (const v of prod.variations) {
+                    if (!v || v.id == null) continue;
+                    if ((Number(v.stock) || 0) <= 0) continue; // only addable variations
+                    const a = attrsOf(v);
+                    const colors = arr(a.color).map((c) => String(c).trim()).filter(Boolean);
+                    if (colors.length !== 1) continue; // skip multi-colour pack rows
+                    const color = colors[0];
+                    const size = arr(a.size).map((s) => String(s).trim()).filter(Boolean)[0] || '';
+                    const vid = String(v.id);
+                    if (seen.has(vid)) continue;
+                    const key = `${color.toLowerCase()}|${size.toLowerCase()}`;
+                    if (inCartVarIds.has(vid) || inCartKeys.has(key)) continue;
+                    seen.add(vid);
+                    const image = colorImg[color.toLowerCase()] || (prod.images && prod.images[0]) || null;
+                    const price = Number(v.price) || Number(prod.price) || 0;
+                    const cmp = Number(v.comparePrice);
+                    const mrp = Number.isFinite(cmp) && cmp > price ? cmp : (Number(prod.compareAtPrice) > price ? Number(prod.compareAtPrice) : 0);
+                    const label = [color, size ? `Size ${size}` : null].filter(Boolean).join(' · ') || prod.name;
+                    rows.push({ key: `v-${vid}`, image, name: prod.name, label, price, mrp, onAdd: () => buildBundleWith({ variationId: v.id, color, size, price, image }) });
+                    if (rows.length >= 8) break;
+                  }
+                  return rows;
+                })();
+
+                // Fall back to the bestsellers feed so the section is never empty.
+                const rows = variantRows.length > 0 ? variantRows : crossSell.map((p) => {
+                  const img = (p.images && p.images[0]) || p.image;
+                  const price = Number(p.salePrice ?? p.price ?? 0);
+                  const mrp = Number(p.compareAtPrice) > price ? Number(p.compareAtPrice) : 0;
+                  const sz = Array.isArray(p.sizes) ? (p.sizes[0] || '') : '';
+                  const variant = p.colorParam || (Array.isArray(p.colors) ? p.colors[0]?.name : null) || null;
+                  return { key: `s-${p.uid ?? p.id}`, image: img, name: p.name, label: [variant, sz ? `Size ${sz}` : null].filter(Boolean).join(' · '), price, mrp, onAdd: () => handleAddSuggestion(p) };
+                });
+
+                if (rows.length === 0) return null;
+                const isVariants = variantRows.length > 0;
+
+                return (
+                  <div className="cd-sv-section">
+                    <style>{`.cd-bms-scroll::-webkit-scrollbar{width:0;height:0;display:none}`}</style>
+                    <div className="cd-section-title">Buy More, Save More</div>
+                    <div style={{ background: 'var(--paper-warm, #ECE9E1)', border: '1px solid var(--line, #E2DDD2)', padding: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--ink, #121212)', marginBottom: 10, textAlign: 'center' }}>
+                        {isVariants ? 'Add one more & save — bundle prices unlocked' : 'You may also like'}
+                      </div>
+                      <div className="cd-bms-scroll" dir="rtl" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+                        {rows.map((r) => {
+                          const save = r.mrp > r.price ? Math.round(r.mrp - r.price) : 0;
+                          return (
+                            <div key={r.key} dir="ltr" style={{ flex: '0 0 auto', width: 232, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--paper, #F4F2EC)', border: '1px solid var(--line, #E2DDD2)', padding: 8 }}>
+                              <div style={{ width: 46, height: 46, overflow: 'hidden', background: 'var(--paper-deep, #E3DFD5)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+                                {r.image
+                                  ? <img src={r.image} alt={r.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  : null}
+                              </div>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink, #121212)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                                {r.label && <div style={{ fontSize: 10.5, color: 'var(--ink-muted, #9A968F)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{r.label}</div>}
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink, #121212)' }}>₹{r.price.toFixed(0)}</span>
+                                  {r.mrp > r.price && <span style={{ fontSize: 11, color: 'var(--ink-muted, #9A968F)', textDecoration: 'line-through' }}>₹{r.mrp.toFixed(0)}</span>}
+                                  {save > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink, #121212)', background: 'var(--paper, #F4F2EC)', border: '1px solid var(--line-ink, #D5CFC3)', padding: '1px 6px' }}>Save ₹{save}</span>}
+                                </div>
+                              </div>
+                              <button type="button" onClick={r.onAdd} aria-label={`Add ${r.name} to cart`} style={{ flexShrink: 0, border: '1px solid var(--ink, #121212)', background: 'transparent', color: 'var(--ink, #121212)', fontSize: 11.5, fontWeight: 600, padding: '6px 11px', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add</button>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Order Summary */}
               <div className="cd-sv-section">
                 <div className="cd-section-title">Order Summary</div>
                 <div className="cd-summary">
-                  <div className="cd-summary-row"><span>Subtotal</span><span>₹{cartTotal.toFixed(0)}</span></div>
+                  <div className="cd-summary-row"><span>Subtotal</span><span>₹{displaySubtotal.toFixed(0)}</span></div>
                   <div className="cd-summary-row">
                     <span>Shipping</span>
                     <span style={shippingFee === 0 ? { color: '#16a34a', fontWeight: 700 } : {}}>{shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}</span>
