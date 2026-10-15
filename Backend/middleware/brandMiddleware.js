@@ -6,21 +6,24 @@ const Brand = require('../model/brandModel.js');
  */
 module.exports.identifyBrand = async (req, res, next) => {
     try {
-        // Get brand slug from X-Brand-Name header
-        const brandSlug = req.headers['x-brand-name'];
+        // Brand slug from the X-Brand-Name header, or the ?brand=<slug> query
+        // param as a fallback for integrations that cannot set a custom header
+        // (e.g. Shiprocket Checkout calling the public feeds). The header wins
+        // when both are present, so the storefronts are unaffected.
+        const brandSlug = req.headers['x-brand-name'] || req.query.brand;
 
-        // If no brand header provided, return error
+        // If neither is provided, return error
         if (!brandSlug) {
             return res.status(400).json({
                 success: false,
-                message: 'Brand identifier required. Please provide X-Brand-Name header'
+                message: 'Brand identifier required. Provide the X-Brand-Name header or ?brand=<slug>'
             });
         }
 
         // Fetch brand from database
         const brand = await Brand.findOne({
-            where: { 
-                slug: brandSlug.toLowerCase(),
+            where: {
+                slug: String(brandSlug).toLowerCase(),
                 status: 'active'
             }
         });
@@ -74,11 +77,13 @@ module.exports.identifyBrand = async (req, res, next) => {
  */
 module.exports.optionalBrand = async (req, res, next) => {
     try {
-        const brandSlug = req.headers['x-brand-name'];
-        
+        // Header first (storefront); fall back to ?brand=<slug> for integrations
+        // that cannot send a custom header (e.g. Shiprocket Checkout feeds).
+        const brandSlug = req.headers['x-brand-name'] || req.query.brand;
+
         if (brandSlug) {
             const brand = await Brand.findOne({
-                where: { slug: brandSlug.toLowerCase(), status: 'active' }
+                where: { slug: String(brandSlug).toLowerCase(), status: 'active' }
             });
             
             if (brand) {
