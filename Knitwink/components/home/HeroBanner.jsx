@@ -88,7 +88,11 @@ export function HeroBanner({ slides = [] }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative flex min-h-[66vh] items-end justify-start bg-gray-900 sm:min-h-[70vh] md:min-h-[88vh]">
+      {/* Size the stage to the banner art's aspect ratio so object-cover fills
+          it with NO cropping: 4:5 for the mobile art (1080×1350) and 16:9 for
+          the desktop art (1920×1080). The switch is at md (768px), matching the
+          width where the dedicated mobile image kicks in (useIsMobile ≤767). */}
+      <div className="relative flex aspect-[4/5] w-full items-end justify-start overflow-hidden bg-gray-900 md:aspect-[16/9]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}

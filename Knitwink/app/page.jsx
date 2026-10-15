@@ -14,8 +14,8 @@ import SeoWrapper from '@/components/SeoWrapper'
 
 // Regenerate at most every 5 minutes (ISR). Combined with the server-cached
 // fetches below, the homepage is served as static HTML from Vercel's edge and
-// only re-rendered every 5 min instead of on every request.
-export const revalidate = 300
+// re-rendered every 60s so dashboard edits (hero slider etc.) reflect promptly.
+export const revalidate = 60
 
 // Fetch the above-the-fold lists on the SERVER and render them into the initial
 // HTML. Previously this page was a 'use client' component that fetched sliders,
