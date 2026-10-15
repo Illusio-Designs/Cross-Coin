@@ -9,8 +9,8 @@ import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs } from '@/lib/api';
 
-// Static/ISR — regenerate every 5 min.
-export const revalidate = 300;
+// Static/ISR — regenerate every 1 min.
+export const revalidate = 60;
 
 // Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
 // hero <img>/<source> will request (same ImageKit tr= params), avoiding a
