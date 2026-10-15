@@ -22,6 +22,15 @@ function markSeen() {
   try { sessionStorage.setItem(SESSION_KEY, '1'); } catch { /* storage may throw */ }
 }
 
+// Human label for the coupon's real discount (never a fabricated number).
+function offerText(c) {
+  if (!c) return '';
+  const v = Number(c.value) || 0;
+  if (c.type === 'percentage') return `${v}% off your order`;
+  if (c.type === 'fixed') return `₹${v} off your order`;
+  return c.description || 'Special offer on your order';
+}
+
 export default function ExitIntentModal() {
   const { itemCount, openDrawer } = useCart();
   const [visible, setVisible] = useState(false);
@@ -59,8 +68,8 @@ export default function ExitIntentModal() {
       .then((data) => {
         if (!alive) return;
         const list = Array.isArray(data) ? data : (data?.coupons || []);
-        const first = list.find((c) => c && c.code);
-        if (first) setCoupon(first);
+        const pick = list.find((c) => c?.code?.toUpperCase() === 'CART10') || list.find((c) => c && c.code);
+        if (pick) setCoupon(pick);
       })
       .catch(() => { /* no coupon → free-shipping message only */ });
     return () => { alive = false; };
@@ -92,13 +101,13 @@ export default function ExitIntentModal() {
       <div className="eim-card" role="dialog" aria-modal="true" aria-labelledby="eim-title">
         <button type="button" className="eim-close" aria-label="Close" onClick={close}>×</button>
         <h2 id="eim-title" className="eim-title">Leaving so soon?</h2>
-        <p className="eim-msg">Your cart is saved — complete your order and enjoy free shipping on all orders.</p>
+        <p className="eim-msg">Your cart is saved — use the code below to complete your order and save.</p>
 
         {coupon && (
           <div className="eim-coupon">
             <div className="eim-coupon-main">
               <span className="eim-coupon-code">{coupon.code}</span>
-              {coupon.description && <span className="eim-coupon-desc">{coupon.description}</span>}
+              <span className="eim-coupon-desc">{offerText(coupon)}</span>
             </div>
             <button type="button" className="eim-copy" onClick={copyCode}>{copied ? 'Copied' : 'Copy'}</button>
           </div>
