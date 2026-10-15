@@ -1505,6 +1505,22 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 }
 @media (max-width: 560px) { .pdx-features { grid-template-columns: 1fr; } }
 
+/* About this product — description (left) + Specifications card (right), Morbix parity */
+.pdx-about-band { margin-top: clamp(40px,5vw,64px); padding-top: clamp(32px,4vw,48px); border-top: 1px solid var(--line); }
+.pdx-about-band > .eyebrow { display: block; color: var(--accent-600); margin-bottom: 8px; }
+.pdx-about-title { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.06; font-size: clamp(26px,3vw,38px); color: var(--ink); margin: 0 0 24px; }
+.pdx-about-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 32px; align-items: start; }
+.pdx-about-main { min-width: 0; }
+.pdx-about-desc { white-space: pre-line; color: var(--ink-soft); font-size: 15px; line-height: 1.7; margin: 0; }
+.pdx-about-desc.muted { color: var(--muted, var(--ink-soft)); }
+.pdx-about-main .pdx-desc-rich { color: var(--ink-soft); font-size: 15px; line-height: 1.7; }
+.pdx-about-main .pdx-desc-rich :where(img) { max-width: 100%; height: auto; border-radius: var(--r-lg); margin: 10px 0; }
+.pdx-about-main .pdx-desc-rich :where(h1,h2,h3,h4) { color: var(--ink); }
+.pdx-specs-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; position: sticky; top: 96px; }
+.pdx-specs-card h3 { font-family: var(--serif); font-weight: 400; font-size: 20px; color: var(--ink); margin: 0 0 8px; }
+.pdx-specs-card dl { margin: 0; }
+@media (max-width: 860px) { .pdx-about-grid { grid-template-columns: 1fr; gap: 24px; } .pdx-specs-card { position: static; } }
+
 /* ── PDP → warm editorial (serif titles, accent actions, sticky buy) ─────── */
 .pdp { align-items: start; }
 .pdp-main, .pdp-thumb { background: var(--card); }

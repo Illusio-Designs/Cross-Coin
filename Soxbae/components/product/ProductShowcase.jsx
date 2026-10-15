@@ -489,17 +489,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             </div>
           )}
 
-          {specs.length > 0 && (
-            <div className="pdx-panel-specs">
-              <span className="pdx-panel-label">Specifications</span>
-              <dl>
-                {specs.map(([k, v]) => (
-                  <div className="pdx-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
-                ))}
-              </dl>
-            </div>
-          )}
-
           <div className="pdx-trust">
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</div>
             <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cash on Delivery</div>
@@ -537,6 +526,34 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           </div>
         </div>
       </div>
+
+      {/* ── About this product + Specifications (Morbix parity: the spec card
+             tracks the SELECTED colour / size / SKU, beside the description) ── */}
+      {((product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml)) || product.description || specs.length > 0) && (
+        <section className="pdx-about-band">
+          <span className="eyebrow">Details</span>
+          <h2 className="pdx-about-title">About this product</h2>
+          <div className="pdx-about-grid">
+            <div className="pdx-about-main">
+              {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
+                ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+                : product.description
+                  ? <p className="pdx-about-desc">{product.description}</p>
+                  : <p className="pdx-about-desc muted">No description available for this product yet.</p>}
+            </div>
+            {specs.length > 0 && (
+              <aside className="pdx-specs-card">
+                <h3>Specifications</h3>
+                <dl>
+                  {specs.map(([k, v]) => (
+                    <div className="pdx-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>
+                  ))}
+                </dl>
+              </aside>
+            )}
+          </div>
+        </section>
+      )}
 
       {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
 
