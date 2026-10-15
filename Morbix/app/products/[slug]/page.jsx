@@ -118,10 +118,7 @@ export default async function ProductPage({ params, searchParams }) {
         <ProductDetailBlocks product={product} />
       </div>
 
-      {/* ── Reviews (real stats + write-a-review) ── */}
-      {/* ── Reviews: brand-wide moving wall + Write-a-review for this product ── */}
-      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} productId={product.id} />
-
+      {/* ── You might also like — moved to sit BEFORE the reviews ── */}
       {related.length > 0 && (
         <section className="section" style={{ paddingBottom: 0 }}>
           <div className="section-head"><h2>You might also like</h2></div>
@@ -130,6 +127,9 @@ export default async function ProductPage({ params, searchParams }) {
           </div>
         </section>
       )}
+
+      {/* ── Reviews: brand-wide moving wall + Write-a-review for this product ── */}
+      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} productId={product.id} />
 
       {/* ── FAQ (admin-managed) — last section before the footer ── */}
       {faqs.length > 0 && <FaqSection faqs={faqs} />}
