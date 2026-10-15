@@ -154,9 +154,6 @@ export default function CartDrawer() {
   // Pair/pack progress stepper — real admin-set bundle tiers for the primary
   // (loose) cart line. null when the product has no tiers (then nothing renders).
   const [packState, setPackState] = useState(null); // { productId, tiers:[{pairs,price,label,badge}] }
-  // Remembered single-pair base price so the stepper milestones don't wobble
-  // once the server reprices the line to a pack rate at a matching quantity.
-  const packBaseRef = useRef({ pid: null, base: 0 });
   // Full product data for the primary cart line — lets "Buy More, Save More"
   // offer that product's OTHER variations (colours/sizes not yet in the cart).
   const [bmsProduct, setBmsProduct] = useState(null);
@@ -340,24 +337,46 @@ export default function CartDrawer() {
     toast.cart(`${product.name} added to cart`);
   };
 
-  // Add a SPECIFIC variation of a cart product (used by "Buy More, Save More").
-  // Reuses the shared add() path and posts the variation_id — the backend stays
-  // the price authority (the price passed is only the optimistic display value).
-  const addVariant = (product, v, image) => {
-    add(
-      {
-        ...product,
-        color: v.color || null,
-        image: image || product.image || null,
-        price: v.price,
-        oldPrice: v.oldPrice ?? null,
-        sku: v.sku || product.sku || null,
-      },
-      v.size || 'M',
-      1,
-      v.id ?? null
-    );
-    toast.cart(`${product.name} added to cart`);
+  // "Buy More, Save More": add a variation of the primary product so it BUILDS A
+  // BUNDLE with the primary line. Both join one shared pack_id; the backend prices
+  // the whole group by its TOTAL pairs via bundlePerUnit (exact pairs==groupTotal),
+  // so a 2-pair group (e.g. Black + Navy) is charged the 2-pair tier. Reuses the
+  // existing pack/add() path the PDP per-pair-colour feature uses — no client price
+  // is the source of truth; the variation_id is posted and the server reprices.
+  const buildBundleWith = async (v, image) => {
+    const prod = bmsProduct;
+    if (!prod?.id) return;
+    const prodLines = items.filter((i) => (i.productId ?? i.id) === prod.id);
+    const existingPackId = prodLines.find((i) => i.packId)?.packId || null;
+    const groupId = existingPackId || ('pk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    const looseLines = prodLines.filter((i) => !i.packId);
+    // pack_size is metadata (the server prices by summed quantity, not pack_size);
+    // set it to the group's projected pair count.
+    const packSize = prodLines.reduce((s, i) => s + (Number(i.qty) || 0), 0) + 1;
+    const prodFor = (src) => ({
+      ...prod,
+      id: prod.id,
+      slug: prod.slug,
+      name: prod.name,
+      color: src.color || null,
+      image: src.image || prod.image || null,
+      price: Number(src.price) || Number(prod.price) || 0,
+      oldPrice: src.oldPrice ?? null,
+      sku: src.sku || prod.sku || null,
+    });
+    try {
+      // First bundle add: move the loose primary line(s) into the pack group
+      // (pack_id can't be changed in place, so remove + re-add with the pack_id).
+      for (const ll of looseLines) {
+        await remove(ll.key);
+        await add(prodFor(ll), ll.size || 'M', Number(ll.qty) || 1, ll.variationId ?? null, { packId: groupId, packSize });
+      }
+      // Add the chosen variation into the same group.
+      await add(prodFor(v), v.size || 'M', 1, v.id ?? null, { packId: groupId, packSize });
+      toast.cart(`${prod.name} added — bundle updated`);
+    } catch {
+      toast.error('Could not update the bundle. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -398,42 +417,54 @@ export default function CartDrawer() {
   // (prepaid is already 0). Checkout enforces this server-side.
   const shippingFee = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
 
-  // ── Bundle-tier DISPLAY repricing (server-authoritative) ───────────────────
-  // The pair/pack stepper sets the primary line's quantity to a tier (e.g. 2).
-  // The context subtotal is Σ(i.price*qty); a logged-in line is ALREADY repriced
-  // to the pack per-unit, but a guest line stays at the single-pair price until
-  // order placement — so the DISPLAYED total could lag the real pack price. We
-  // correct only the DISPLAY here, using the exact tier total (== what the server
-  // charges at checkout), and never double-discount or change what gets posted.
-  const packLine = packState
-    ? (items.find((i) => !i.packId && (i.productId ?? i.id) === packState.productId)
-       || items.find((i) => (i.productId ?? i.id) === packState.productId))
+  // ── Bundle-tier DISPLAY repricing, by PACK GROUP (server-authoritative) ─────
+  // "Buy More, Save More" groups the primary line and added variations under one
+  // pack_id. The backend prices a pack group by its TOTAL pairs (cartController /
+  // orderController / checkoutController sum quantity across the shared pack_id
+  // and apply bundlePerUnit(pairs==groupTotal)). So the stepper and the displayed
+  // total must reflect the GROUP total, not one line. A logged-in grouped cart is
+  // already repriced server-side (each line == tier/N); a guest cart keeps the
+  // single-pair prices until placement — so we correct only the DISPLAY here,
+  // using the exact tier total, and never double-discount or change what's posted.
+  const packProdLines = packState ? items.filter((i) => (i.productId ?? i.id) === packState.productId) : [];
+  const packGroupPackId = packProdLines.find((i) => i.packId)?.packId || null;
+  // The group the server will price together: the shared-pack_id lines, else the
+  // loose line(s) of this product (the not-yet-bundled primary).
+  const packGroupLines = packGroupPackId
+    ? packProdLines.filter((i) => i.packId === packGroupPackId)
+    : packProdLines.filter((i) => !i.packId);
+  const packGroupQty = packGroupLines.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  // Line whose quantity we nudge when a milestone is tapped (the largest, so the
+  // group total lands on the tapped tier).
+  const packAnchor = packGroupLines.length
+    ? packGroupLines.reduce((a, b) => ((Number(b.qty) || 0) > (Number(a.qty) || 0) ? b : a))
     : null;
-  if (packLine && packState) {
-    const q = Number(packLine.qty) || 1;
-    const onTier = packState.tiers.some((t) => t.pairs === q);
-    if (packBaseRef.current.pid !== packState.productId) packBaseRef.current = { pid: packState.productId, base: 0 };
-    // Capture the single-pair base only while the line is NOT sitting on a tier
-    // (i.e. before any repricing), so it stays stable once a pack unlocks.
-    if (!onTier && Number(packLine.price) > 0) packBaseRef.current.base = Number(packLine.price);
-  }
-  const packBaseUnit = packLine ? (packBaseRef.current.base || Number(packLine.price) || 0) : 0;
-  const packMatchedTier = (packLine && packState)
-    ? (packState.tiers.find((t) => t.pairs === (Number(packLine.qty) || 1)) || null)
+  // Single-pair base price for the savings labels (the product's canonical price,
+  // falling back to a group line's price before any repricing).
+  const packBaseUnit = Number(bmsProduct?.price) || (packGroupLines[0] ? Number(packGroupLines[0].price) : 0) || 0;
+  // Tier the GROUP total currently matches (exact pairs==groupTotal, as the server does).
+  const packMatchedTier = (packState && packGroupQty > 0)
+    ? (packState.tiers.find((t) => t.pairs === packGroupQty) || null)
     : null;
-  // Replace the line's contribution with the exact tier total ONLY when the line
-  // is still carrying the single-pair amount (base*qty). A line already repriced
-  // to the pack rate (price*qty already ≈ tier total — the logged-in case) is left
-  // untouched, so we never subtract the discount twice.
+  // Show the exact tier total when the group hits a tier but its lines are NOT yet
+  // repriced to the pack per-unit (guest carts). A group already repriced (every
+  // line ≈ tier/groupTotal — the logged-in case) is left untouched → no double discount.
   let displaySubtotal = subtotal;
-  if (packLine && packMatchedTier && packBaseUnit > 0) {
-    const q = Number(packLine.qty) || 1;
-    const lineContribution = Number(packLine.price) * q;
-    if (Math.abs(lineContribution - packBaseUnit * q) < 0.5) {
-      displaySubtotal = subtotal - lineContribution + Number(packMatchedTier.price);
-    }
+  if (packState && packMatchedTier && packGroupLines.length) {
+    const groupContribution = packGroupLines.reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.qty) || 0), 0);
+    const perUnitTier = Number(packMatchedTier.price) / packGroupQty;
+    const allRepriced = packGroupLines.every((i) => Math.abs((Number(i.price) || 0) - perUnitTier) < 0.5);
+    if (!allRepriced) displaySubtotal = subtotal - groupContribution + Number(packMatchedTier.price);
   }
   displaySubtotal = Math.max(0, displaySubtotal);
+
+  // Set the whole pack group's total to P pairs by nudging the anchor line (the
+  // existing qty path → the server reprices the group). Used by milestone taps.
+  const setGroupPairs = (P) => {
+    if (!packAnchor) return;
+    const others = packGroupQty - (Number(packAnchor.qty) || 0);
+    setQty(packAnchor.key, Math.max(1, P - others));
+  };
 
   // couponDiscount is state (set on a successful validate). Clamp so an over-large
   // coupon can never make the order total negative.
@@ -883,23 +914,22 @@ export default function CartDrawer() {
               )}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
               {/* Pair/pack progress stepper — reflects the admin-set bundle tiers
-                  for the primary cart line (the "pair concept"). Server-authoritative:
-                  it reads getBundleTiers for display plus the line's live qty/price
-                  only. Increasing the line's quantity with the existing qty stepper
-                  is what applies the pack price server-side; this never prices, sends
-                  a client price, or changes how items are posted. */}
-              {packState && (() => {
-                // packLine / packBaseUnit are computed in the component body (above)
-                // so the base price and the display subtotal stay in sync.
-                const line = packLine;
-                if (!line) return null;
+                  for the primary product's PACK GROUP (the "pair concept"). qty is
+                  the COMBINED pairs across all lines sharing the group's pack_id, so
+                  adding a variation via "Buy More, Save More" moves the stepper and
+                  unlocks a pack. Server-authoritative: it reads getBundleTiers for
+                  display plus the group's live qty; the backend prices the group by
+                  its total pairs (bundlePerUnit). It never sends a client price. */}
+              {packState && packGroupLines.length > 0 && (() => {
+                // packGroupQty / packBaseUnit / packAnchor are computed in the body
+                // so the stepper and the display subtotal stay in sync.
                 const tiers = packState.tiers;
-                const qty = Number(line.qty) || 1;
+                const qty = packGroupQty;
                 const baseUnit = packBaseUnit;
-                // Tapping a milestone sets this line's quantity (same path as the
-                // line's +/- buttons), which is what applies the pack price
-                // server-side. Only loose (non-pack) lines are tappable.
-                const canTap = !line.packId;
+                // Tapping a milestone sets the whole GROUP's total pairs (via the
+                // anchor line's qty → the existing qty path), which is what applies
+                // the pack price server-side.
+                const canTap = !!packAnchor;
                 const milestones = [
                   { pairs: 1, total: baseUnit, label: '1 Pair' },
                   ...tiers.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label })),
@@ -945,7 +975,7 @@ export default function CartDrawer() {
                           <button
                             type="button"
                             key={i}
-                            onClick={canTap ? () => setQty(line.key, m.pairs) : undefined}
+                            onClick={canTap ? () => setGroupPairs(m.pairs) : undefined}
                             disabled={!canTap}
                             aria-label={`Set ${m.pairs} pair${m.pairs > 1 ? 's' : ''}`}
                             aria-pressed={selected}
@@ -1170,7 +1200,7 @@ export default function CartDrawer() {
                     const ci = colorIdx[String(v.color || '').toLowerCase()];
                     const image = (Array.isArray(prod.colorImages) && ci != null && prod.colorImages[ci] && prod.colorImages[ci][0]) || prod.image || null;
                     const label = [v.color, v.size ? `Size ${v.size}` : null].filter(Boolean).join(' · ') || prod.name;
-                    rows.push({ key: `v-${vid}`, image, name: prod.name, label, price: Number(v.price) || 0, mrp: Number(v.oldPrice) || 0, onAdd: () => addVariant(prod, v, image) });
+                    rows.push({ key: `v-${vid}`, image, name: prod.name, label, price: Number(v.price) || 0, mrp: Number(v.oldPrice) || 0, onAdd: () => buildBundleWith(v, image) });
                     if (rows.length >= 8) break;
                   }
                   return rows;
