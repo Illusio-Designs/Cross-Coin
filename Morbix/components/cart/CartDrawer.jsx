@@ -22,7 +22,7 @@ import {
   captureAbandonedCart,
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
-import { getBestsellers } from '@/lib/api';
+import { getBestsellers, getBundleTiers } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -151,6 +151,12 @@ export default function CartDrawer() {
   const capturedPhoneRef = useRef('');
   // Cross-sell "You may also like" — reuses the homepage bestsellers feed.
   const [suggested, setSuggested] = useState([]);
+  // Pair/pack progress stepper — real admin-set bundle tiers for the primary
+  // (loose) cart line. null when the product has no tiers (then nothing renders).
+  const [packState, setPackState] = useState(null); // { productId, tiers:[{pairs,price,label,badge}] }
+  // Remembered single-pair base price so the stepper milestones don't wobble
+  // once the server reprices the line to a pack rate at a matching quantity.
+  const packBaseRef = useRef({ pid: null, base: 0 });
 
   // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
   // fees) each resolve separately and used to pop in one by one. We reset these
@@ -266,6 +272,33 @@ export default function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, items.length]);
+
+  // The primary cart line for the pair/pack stepper: prefer a loose (non-pack)
+  // line, else the first item. Its product id drives the tier fetch.
+  const primaryPackPid = (() => {
+    const p = items.find((i) => !i.packId) || items[0];
+    return p ? (p.productId ?? p.id ?? null) : null;
+  })();
+
+  // Load this product's admin-set bundle tiers (2-pair, 3-pair packs …) so the
+  // stepper can show the "pair concept" progress. Display-only: it never prices
+  // or posts anything — the existing qty stepper drives server-side repricing.
+  // Renders nothing when the product has no tiers.
+  useEffect(() => {
+    if (!open || primaryPackPid == null) { setPackState(null); return; }
+    let alive = true;
+    getBundleTiers(primaryPackPid)
+      .then((tiers) => {
+        if (!alive) return;
+        const list = (Array.isArray(tiers) ? tiers : [])
+          .map((t) => ({ pairs: Number(t.pairs), price: Number(t.price), label: t.label || `${Number(t.pairs)} Pairs`, badge: t.badge || null }))
+          .filter((t) => Number.isFinite(t.pairs) && t.pairs > 1 && Number.isFinite(t.price) && t.price > 0)
+          .sort((a, b) => a.pairs - b.pairs);
+        setPackState(list.length ? { productId: primaryPackPid, tiers: list } : null);
+      })
+      .catch(() => { if (alive) setPackState(null); });
+    return () => { alive = false; };
+  }, [open, primaryPackPid]);
 
   // Add a suggested product — mirrors the shared AddToCart handler.
   const addSuggested = (product) => {
@@ -773,21 +806,79 @@ export default function CartDrawer() {
                 </div>
               )}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
-              {/* Free-shipping progress bar — reuses the drawer's cd-ship styling. */}
-              {freeShipThreshold > 0 && (
-                <div className="cd-ship" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                  <span>
-                    {freeShipQualifies
-                      ? <span className="cd-ship-done">🎉 You've unlocked FREE shipping!</span>
-                      : <>Add <b>₹{freeShipRemaining.toFixed(0)}</b> for FREE shipping</>}
-                  </span>
-                  {!freeShipQualifies && (
-                    <div className="cd-ship-track">
-                      <span className="cd-ship-fill" style={{ width: `${Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }} />
+              {/* Pair/pack progress stepper — reflects the admin-set bundle tiers
+                  for the primary cart line (the "pair concept"). Server-authoritative:
+                  it reads getBundleTiers for display plus the line's live qty/price
+                  only. Increasing the line's quantity with the existing qty stepper
+                  is what applies the pack price server-side; this never prices, sends
+                  a client price, or changes how items are posted. */}
+              {packState && (() => {
+                const line = items.find((i) => !i.packId && (i.productId ?? i.id) === packState.productId)
+                  || items.find((i) => (i.productId ?? i.id) === packState.productId);
+                if (!line) return null;
+                const tiers = packState.tiers;
+                const qty = Number(line.qty) || 1;
+                const tierPairsSet = new Set(tiers.map((t) => t.pairs));
+                // Stable single-pair base price: the line's unit price while its qty
+                // is NOT on a configured tier (i.e. before the server reprices it to a
+                // pack rate). Remembered so milestone labels don't wobble once unlocked.
+                if (packBaseRef.current.pid !== packState.productId) packBaseRef.current = { pid: packState.productId, base: 0 };
+                if (!tierPairsSet.has(qty) && Number(line.price) > 0) packBaseRef.current.base = Number(line.price);
+                const baseUnit = packBaseRef.current.base || Number(line.price) || 0;
+                const milestones = [
+                  { pairs: 1, total: baseUnit, label: '1 Pair' },
+                  ...tiers.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label })),
+                ];
+                const n = milestones.length;
+                const maxPairs = milestones[n - 1].pairs;
+                const savedFor = (pairs, total) => Math.max(0, Math.round(baseUnit * pairs - total));
+                // Fill measured along the evenly-spaced dots (by index, not pair value)
+                // so it lands on the dots even when tiers aren't consecutive.
+                let reachedIdx = 0;
+                for (let k = 0; k < n; k++) { if (qty >= milestones[k].pairs) reachedIdx = k; }
+                let frac = reachedIdx;
+                if (reachedIdx < n - 1) {
+                  const cur = milestones[reachedIdx].pairs, nxt = milestones[reachedIdx + 1].pairs;
+                  if (nxt > cur) frac += Math.min(1, (qty - cur) / (nxt - cur));
+                }
+                const fillPct = n > 1 ? (frac / (n - 1)) * 100 : 0;
+                const nextTier = tiers.find((t) => t.pairs > qty) || null;
+                let msg;
+                if (nextTier) {
+                  const need = nextTier.pairs - qty;
+                  const saved = savedFor(nextTier.pairs, nextTier.price);
+                  msg = <>Add <b>{need} more pair{need > 1 ? 's' : ''}</b> to unlock the {nextTier.pairs}-pair pack{saved > 0 ? <> — save ₹{saved}</> : ''}</>;
+                } else {
+                  msg = <span style={{ color: 'var(--teal-600)', fontWeight: 700 }}>🎉 Best value unlocked — you're getting the {maxPairs}-pair pack price!</span>;
+                }
+                return (
+                  <div className="cd-pairstep" style={{ padding: '14px 16px', background: 'var(--teal-050)', border: '1px solid var(--line-soft)', borderRadius: 16, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--ink)', lineHeight: 1.35 }}>
+                      <span style={{ color: 'var(--teal-600)', flex: '0 0 auto', display: 'inline-flex' }}><Icon name="Sparkles" size={15} /></span>
+                      <span>{msg}</span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div style={{ position: 'relative', height: 50, marginTop: 14 }}>
+                      {/* track + fill (7%..93% so the ends sit under the edge dots) */}
+                      <div style={{ position: 'absolute', left: '7%', right: '7%', top: 8, height: 4, borderRadius: 999, background: '#cfe6e2' }} />
+                      <div style={{ position: 'absolute', left: '7%', top: 8, height: 4, borderRadius: 999, background: 'var(--teal)', width: `calc(86% * ${fillPct / 100})`, transition: 'width .35s ease' }} />
+                      {milestones.map((m, i) => {
+                        const pct = n > 1 ? 7 + (i / (n - 1)) * 86 : 50;
+                        const reached = qty >= m.pairs;
+                        const saved = m.pairs > 1 ? savedFor(m.pairs, m.total) : 0;
+                        return (
+                          <div key={i} style={{ position: 'absolute', left: `${pct}%`, top: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 76 }}>
+                            <span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: '50%', display: 'grid', placeItems: 'center', background: reached ? 'var(--teal)' : '#fff', border: `2px solid ${reached ? 'var(--teal)' : '#cfe6e2'}`, color: '#fff' }}>
+                              {reached ? <Icon name="Check" size={11} /> : null}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 700, marginTop: 6, color: reached ? 'var(--teal-600)' : 'var(--ink)', whiteSpace: 'nowrap' }}>{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                            {saved > 0 && <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--sale)', marginTop: 1, whiteSpace: 'nowrap' }}>save ₹{saved}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Items */}
               <div className="cd-co-section">
@@ -967,23 +1058,39 @@ export default function CartDrawer() {
                 })()}
               </div>
 
-              {/* You may also like — compact cross-sell strip (bestsellers feed) */}
+              {/* Buy More, Save More — cross-sell upsell strip (bestsellers feed).
+                  Same feed + addSuggested handler; approved card layout. */}
               {suggested.length > 0 && (
                 <div className="cd-co-section">
-                  <div className="cd-section-title">You may also like</div>
+                  <div className="cd-section-title">Buy More, Save More</div>
                   <div className="cd-crosssell" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
-                    {suggested.map((p) => (
-                      <div key={p.uid ?? p.id} style={{ flex: '0 0 auto', width: 118 }}>
-                        <div style={{ position: 'relative', width: 118, height: 118, borderRadius: 10, overflow: 'hidden', background: 'var(--c-surface, #f4f4f5)' }}>
-                          {p.image
-                            ? <ShimmerImg src={p.image} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <span style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: 'var(--muted, #9ca3af)' }}><Icon name="Footprints" size={22} /></span>}
+                    {suggested.map((p) => {
+                      const sz = Array.isArray(p.sizes) ? (p.sizes[1] || p.sizes[0] || 'M') : 'M';
+                      const variant = Array.isArray(p.colorNames) ? p.colorNames[0] : null;
+                      const price = Number(p.price) || 0;
+                      const mrp = Number(p.oldPrice) || 0;
+                      const meta = [variant, sz ? `Size ${sz}` : null].filter(Boolean).join(' · ');
+                      return (
+                        <div key={p.uid ?? p.id} style={{ flex: '0 0 auto', width: 152, border: '1px solid var(--line-soft)', borderRadius: 14, background: '#fff', padding: 8, display: 'flex', flexDirection: 'column', gap: 7, boxShadow: 'var(--shadow-soft)' }}>
+                          <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
+                            <div style={{ position: 'relative', width: 52, height: 52, borderRadius: 10, overflow: 'hidden', background: '#eef1f4', flexShrink: 0, display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>
+                              {p.image
+                                ? <ShimmerImg src={p.image} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : <Icon name="Footprints" size={20} />}
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.25, color: 'var(--ink)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
+                              {meta && <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</div>}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--sale)' }}>₹{price.toFixed(0)}</span>
+                            {mrp > price && <span style={{ fontSize: 11.5, color: 'var(--ink-soft)', textDecoration: 'line-through' }}>₹{mrp.toFixed(0)}</span>}
+                          </div>
+                          <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '7px 8px', fontSize: 12 }} onClick={() => addSuggested(p)} aria-label={`Add ${p.name} to cart`}>+ Add</button>
                         </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginTop: 6, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted, #6b7280)', margin: '2px 0 6px' }}>₹{Number(p.price).toFixed(0)}</div>
-                        <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '6px 8px', fontSize: 12 }} onClick={() => addSuggested(p)} aria-label={`Add ${p.name} to cart`}>+ Add</button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
