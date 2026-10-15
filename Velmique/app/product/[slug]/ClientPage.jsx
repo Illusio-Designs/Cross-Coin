@@ -10,8 +10,6 @@ import { useStore } from '@/lib/store';
 import SeoWrapper from '@/components/SeoWrapper';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { checkServiceability } from '@/lib/api/serviceability';
-import ReviewWall from '@/components/reviews/ReviewWall';
-import ProductReviews from '@/components/reviews/ProductReviews';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ProductCard from '@/components/shop/ProductCard';
 import { tagStyle } from '@/lib/attributeColors';
@@ -663,28 +661,6 @@ export default function ProductPage({ initialProduct = null, initialBrandReviews
 
           {/* ── Ideal for, storage and use, manufacturing ──── */}
           <div className="reveal"><ProductDetailBlocks product={product} /></div>
-
-          <div className="h-px bg-[var(--border)]" />
-
-          {/* ── Reviews ────────────────────────────────────── */}
-          <div className="reveal">
-            {/* This product's reviews + the "Write a review" popup. Also auto-opens
-                the popup when reached via the WhatsApp review link (?review=open). */}
-            <ProductReviews
-              productId={product.id}
-              productName={product.name}
-              initialReviewsPayload={initialReviewsPayload}
-            />
-            {/* Brand-wide moving review wall (3 alternating rows). Renders only
-                when the brand has approved reviews — same wall as the home page
-                and the Morbix/Soxbae PDPs. */}
-            <ReviewWall
-              reviews={initialBrandReviews}
-              total={initialBrandTotal}
-              eyebrow="Loved across Velmique"
-              title="What customers say"
-            />
-          </div>
         </div>
 
         {/* ── You may also like — related products rail ──────── */}
