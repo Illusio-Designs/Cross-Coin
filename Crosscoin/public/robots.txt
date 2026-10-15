@@ -1,4 +1,4 @@
-# robots.txt for CrossCoin — https://crosscoin.in
+# robots.txt for CrossCoin — https://www.crosscoin.in
 # Crawlers obey ONLY the most specific matching User-agent group, so each
 # AI-crawler group below repeats the private-path rules to keep them protected.
 
@@ -86,4 +86,4 @@ Disallow: /api/
 # ---------------------------------------------------------------------------
 # Sitemap
 # ---------------------------------------------------------------------------
-Sitemap: https://crosscoin.in/sitemap.xml
+Sitemap: https://www.crosscoin.in/sitemap.xml

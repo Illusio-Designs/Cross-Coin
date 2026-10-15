@@ -21,7 +21,7 @@
  * Static route casing matches the page filenames (Products.jsx -> /Products).
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
 

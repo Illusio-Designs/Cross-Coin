@@ -24,7 +24,7 @@ import ProductFaqSection from '../../components/common/ProductFaqSection';
 import { useBreadcrumb } from '../../components/common/Breadcrumb';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 
 async function fetchJson(url) {
   try {

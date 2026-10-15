@@ -11,7 +11,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
     const hasFetchedRef = useRef(false);
 
     const defaultSeoData = useMemo(() => {
-        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
         const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
         return {
             meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
@@ -62,7 +62,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
     const getAbsoluteCanonicalUrl = (url) => {
         if (!url) {
             // If no URL provided, use current page URL
-            const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+            const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
             const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
             return `${baseUrl}${currentPath}`;
         }
@@ -73,7 +73,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
         }
         
         // If relative URL, make it absolute
-        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+        const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
         return `${baseUrl}${cleanUrl}`;
     };
@@ -141,7 +141,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
  * search results.
  */
 function buildHomeDefaultLd(canonicalUrl, fullImageUrl) {
-    const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://crosscoin.in';
+    const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
     return [
         {
             '@context': 'https://schema.org',
