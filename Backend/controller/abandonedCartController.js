@@ -31,7 +31,9 @@ exports.capture = async (req, res) => {
         userId: userId || null, status: 'pending', waSent: false,
       },
     });
+    let prevStatus = null;
     if (!created) {
+      prevStatus = row.status;
       await row.update({
         phone: digits,
         customerName: name || row.customerName,
@@ -42,6 +44,35 @@ exports.capture = async (req, res) => {
         status: 'pending', waSent: false,
       });
     }
+
+    // Fire the recovery WhatsApp IMMEDIATELY (no cron wait) now that we have the
+    // shopper's phone + cart — on the first capture, or on a fresh abandonment
+    // after a previous message/recovery. Re-entering details within the same
+    // pending cycle does NOT re-fire (avoids spam); the 5-minute cron stays as a
+    // backstop. Non-blocking + opt-out honoured; never blocks the response.
+    const freshCycle = created || prevStatus === 'messaged' || prevStatus === 'recovered';
+    if (freshCycle) {
+      setImmediate(async () => {
+        try {
+          const whatsappService = require('../services/whatsappService.js');
+          const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+          const conv = await WhatsappConversation.findOne({
+            where: { customer_phone: { [Op.like]: `%${digits}` }, brand_id: brandId },
+          });
+          if (conv?.opted_out) { await row.update({ status: 'messaged', waSent: true }); return; }
+          await whatsappService.sendAbandonedCart(digits, {
+            customerName: name || null,
+            itemsSummary: cartSummary || 'your items',
+            total: Number(cartValue) ? Number(cartValue).toFixed(0) : undefined,
+            couponCode: 'CART10',
+          }, brandId);
+          await row.update({ status: 'messaged', waSent: true });
+        } catch (e) {
+          logger.warn('Immediate abandoned-cart WA failed: ' + e.message);
+        }
+      });
+    }
+
     return res.json({ success: true });
   } catch (err) {
     logger.error('Abandoned-cart capture error: ' + err.message);

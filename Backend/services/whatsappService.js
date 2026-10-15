@@ -660,7 +660,7 @@ function buildTemplates(storeName, storeUrl) {
         {
           type: 'BODY',
           text: `Hi {{1}}! 🛒\n\nYour *{{2}}* cart is still saved for you:\n\n🛍️ {{3}}\n💰 *Cart total:* ₹{{4}}\n\nComplete your order now and enjoy an *extra 10% OFF* with code *{{5}}* — valid for the next 24 hours only.\n\nDon't let your favourites sell out!`,
-          example: { body_text: [['Rushikesh', storeName, 'Ankle Socks – Pack of 3 ×2 (+1 more)', '899', 'SAVE10']] },
+          example: { body_text: [['Rushikesh', storeName, 'Ankle Socks – Pack of 3 ×2 (+1 more)', '899', 'CART10']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -1125,7 +1125,7 @@ async function sendAbandonedCart(phone, data, brandId = 1) {
     await _brandName(brandId),
     data.itemsSummary || data.productName || 'your items',
     String(data.total ?? data.cartValue ?? '—'),
-    data.couponCode || 'SAVE10',
+    data.couponCode || 'CART10',
   ], brandId, { shopBrandId: brandId, headerImage: data.productImage });
 }
 

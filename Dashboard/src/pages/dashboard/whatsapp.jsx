@@ -76,7 +76,7 @@ const SIDEBAR_GROUPS = [
 
 // Positional sample values for the preview — aligned to the canonical templates'
 // leading order: {{1}}=name, {{2}}=brand, {{3}}=order #, {{4}}=amount, {{5}}=link.
-const SAMPLES = ['Rushikesh','CrossCoin','CC-20240601-0042','1,299','https://crosscoin.in/track','SAVE10','Surat, Gujarat - 395006','BlueDart Express','CrossCoin Ankle Socks'];
+const SAMPLES = ['Rushikesh','CrossCoin','CC-20240601-0042','1,299','https://crosscoin.in/track','CART10','Surat, Gujarat - 395006','BlueDart Express','CrossCoin Ankle Socks'];
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

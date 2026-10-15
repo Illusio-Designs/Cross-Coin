@@ -716,6 +716,35 @@ const startServer = async () => {
             logger.error('DPDP global policy seed failed: ' + err.message);
         }
 
+        // ── Idempotent seed: CART10 cart-recovery coupon (per brand) ──────
+        // The abandoned-cart WhatsApp + exit-intent popup offer CART10 (10% off),
+        // so a REAL, checkout-enforced coupon must exist for every brand. Created
+        // only when absent (findOrCreate), so admin edits are never overwritten
+        // on reboot.
+        try {
+            const { Coupon } = require('./model/couponModel.js');
+            const Brand = require('./model/brandModel.js');
+            const brands = await Brand.findAll({ attributes: ['id'] });
+            const startDate = new Date();
+            const endDate = new Date('2099-12-31T23:59:59Z');
+            for (const b of brands) {
+                const [, created] = await Coupon.findOrCreate({
+                    where: { code: 'CART10', brand_id: b.id },
+                    defaults: {
+                        code: 'CART10', type: 'percentage', value: 10,
+                        minPurchase: null, maxDiscount: null,
+                        paymentModeRestriction: 'all', firstOrderOnly: false,
+                        startDate, endDate, usageLimit: null, perUserLimit: null,
+                        status: 'active', description: 'Cart recovery — 10% off',
+                        brand_id: b.id,
+                    },
+                });
+                if (created) logger.info('Seeded CART10 coupon for brand ' + b.id);
+            }
+        } catch (err) {
+            logger.error('CART10 coupon seed failed: ' + err.message);
+        }
+
         // ── One-time cleanup: drop old per-brand policy duplicates ────────
         // Now that the global policies exist, remove the per-brand rows for the
         // SAME slugs (a global replaces them). Flag-gated so it runs ONCE —

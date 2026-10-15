@@ -5,7 +5,7 @@ import { Badge, Select } from '../../../components/ui';
 
 /**
  * Abandoned carts — checkouts captured at the delivery/payment step that didn't
- * convert. The backend sends a WhatsApp recovery (SAVE10) a few minutes after
+ * convert. The backend sends a WhatsApp recovery (CART10) a few minutes after
  * capture; this view shows what was captured, what got messaged, and how many
  * recovered (completed an order). Built on the shared dashboard primitives so it
  * matches the rest of the admin (same PageHeader / StatGrid / FilterBar / table).
@@ -73,7 +73,7 @@ export default function AbandonedCarts() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Abandoned carts"
-        subtitle="Checkouts captured at the delivery/payment step. A WhatsApp recovery (code SAVE10) is sent a few minutes after capture; carts convert to “Recovered” when the shopper completes an order."
+        subtitle="Checkouts captured at the delivery/payment step. A WhatsApp recovery (code CART10) is sent immediately on capture (with a 5-min backstop); carts convert to “Recovered” when the shopper completes an order."
         actions={<button className="ds-btn" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>}
       />
 

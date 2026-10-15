@@ -203,7 +203,7 @@ function initializeCronJobs() {
             itemsSummary: productName + extra,
             total: cartTotal ? cartTotal.toFixed(0) : undefined,
             productImage,
-            couponCode: 'SAVE10',
+            couponCode: 'CART10',
           }, brandId);
           // Mark the cart abandoned so the hourly cron never re-messages it.
           // (Previously nothing marked it, so the same cart was messaged every
@@ -258,7 +258,7 @@ function initializeCronJobs() {
             itemsSummary: row.cartSummary || 'your items',
             total: row.cartValue != null ? Number(row.cartValue).toFixed(0) : undefined,
             // No per-item image in the capture table — header falls back to logo.
-            couponCode: 'SAVE10',
+            couponCode: 'CART10',
           }, brandId);
           await row.update({ status: 'messaged', waSent: true });
           sent++;
