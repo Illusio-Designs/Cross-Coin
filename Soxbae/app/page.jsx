@@ -13,6 +13,11 @@ import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlo
 // products, etc.) reflect on the homepage within about a minute.
 export const revalidate = 60;
 
+// Self-referencing canonical for the homepage. Next App Router does NOT emit a
+// canonical automatically, so without this the home page had no <link rel=
+// "canonical">. Resolved against metadataBase (https://www.soxbaesocks.com).
+export const metadata = { alternates: { canonical: '/' } };
+
 // Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
 // hero <img>/<source> will request (same ImageKit tr= params), avoiding a
 // double download.

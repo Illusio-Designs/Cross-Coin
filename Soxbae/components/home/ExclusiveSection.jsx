@@ -125,7 +125,7 @@ export default function ExclusiveSection({ products = [] }) {
                 {gallery.map((src, i) => (
                   <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
                     onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
-                    <img src={src} alt="" loading="lazy" />
+                    <img src={src} alt={`${product.name} — view ${i + 1}`} loading="lazy" />
                   </button>
                 ))}
               </div>
@@ -185,7 +185,7 @@ export default function ExclusiveSection({ products = [] }) {
                 {list.map((p, i) => (
                   <button key={p.uid ?? p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
                     onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                    {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Footprints" size={20} />}
+                    {p.image ? <img src={p.image} alt={p.name} loading="lazy" /> : <Icon name="Footprints" size={20} />}
                   </button>
                 ))}
               </div>

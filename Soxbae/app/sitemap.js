@@ -10,7 +10,8 @@
  * created products show up on the next crawl.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com';
+// Must match layout.jsx metadataBase (www) so sitemap URLs == canonical URLs.
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.soxbaesocks.com';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
 
