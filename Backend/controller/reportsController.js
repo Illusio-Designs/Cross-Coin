@@ -3,41 +3,16 @@ const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
 const { BOT_SQL_REGEXP } = require('../utils/botDetect');
 const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
+// Shopify-style channel roll-up (Direct / Facebook / Instagram / Google / AI
+// chatbot / Email / SMS / Referral), shared with the tracker and the anonymous
+// pageview counter so the buckets never drift. Self-referrals → Direct.
+const { channelOf } = require('../utils/channel');
 const { isOwnHost } = require('../utils/ownHosts');
 
 // Excludes bot/crawler user agents from a utm_tracking scan (belt-and-suspenders
 // for rows recorded before ingestion-time bot filtering existed).
 const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
 
-// Roll a raw source/medium up into Shopify-style marketing channels. Shopify
-// buckets every session into Direct, Social, Search, Email, SMS and Referral,
-// never leaving your own domain showing up as a "source". We keep the three
-// social/search names the business actually buys ads on (Facebook, Instagram,
-// Google) plus an AI-chatbot bucket, and otherwise follow Shopify's grouping.
-//
-// `selfHosts` is the set of our own storefront domains (brand `domain` values);
-// a session whose source is one of them is a self-referral → Direct, exactly
-// like Shopify, so an internal page-to-page hop is never counted as traffic
-// from an external site.
-function channelOf(source, medium, selfHosts) {
-  const s = String(source || '').toLowerCase().trim();
-  const m = String(medium || '').toLowerCase().trim();
-  // Direct: no source, an explicit direct marker, or a self-referral host.
-  if (!s || s === 'direct' || s === '(direct)' || s === 'none' || s === '(none)') return 'Direct';
-  if (isOwnHost(s, selfHosts)) return 'Direct';
-  // Email / SMS — owned channels, keyed off source or medium.
-  if (/^e[-]?mail$|newsletter|klaviyo|mailchimp|sendgrid/.test(s) || /^e[-]?mail$|newsletter/.test(m)) return 'Email';
-  if (/^sms$|textmessage|text-message/.test(s) || /^sms$|^text$/.test(m)) return 'SMS';
-  // Social / search the business buys ads on — matched by name (covers both the
-  // paid utm_source and the organic referrer host, e.g. "l.facebook.com").
-  if (/facebook|(^|[^a-z])fb([^a-z]|$)|meta$|meta\b/.test(s) || /facebook/.test(m)) return 'Facebook';
-  if (s === 'instagram' || s === 'ig' || /instagram/.test(s)) return 'Instagram';
-  if (/google/.test(s)) return 'Google';
-  if (/chatgpt|openai|perplexity|gemini|bard|copilot|claude|anthropic|poe|phind|deepseek|you\.com|grok|meta\.ai|(^|[^a-z])ai([^a-z]|$)/.test(s)) return 'AI chatbot';
-  // Any other real external site → Referral (Shopify's catch-all for a known
-  // referring domain), rather than a vague "Other".
-  return 'Referral';
-}
 const CHANNEL_ORDER = ['Direct', 'Facebook', 'Instagram', 'Google', 'AI chatbot', 'Email', 'SMS', 'Referral'];
 
 // Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Day
@@ -153,6 +128,34 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
+    // Anonymous, cookieless pageview counts (page_hits) — REAL visit volume for
+    // every visitor, not just those who accepted analytics cookies. Aggregate
+    // only (brand/day/channel), so it can't tie to orders, but it answers "how
+    // many actually landed" next to the consented funnel. Wrapped defensively:
+    // the table may not exist yet on a brand-new deploy (no pings recorded).
+    const dayOf = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
+    let pageHits = [];
+    try {
+      pageHits = await sequelize.query(
+        `SELECT brand_id, channel, SUM(count) AS hits
+           FROM page_hits
+          WHERE day BETWEEN :startDay AND :endDay${hasBrand ? ' AND brand_id = :brandId' : ''}
+          GROUP BY brand_id, channel`,
+        { replacements: { startDay: dayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT }
+      );
+    } catch (e) {
+      logger.warn && logger.warn('page_hits query skipped: ' + e.message);
+    }
+    const hitsByBrand = new Map();
+    const hitsByChannel = new Map();
+    let totalHits = 0;
+    for (const r of pageHits) {
+      const h = Number(r.hits) || 0;
+      totalHits += h;
+      hitsByBrand.set(r.brand_id, (hitsByBrand.get(r.brand_id) || 0) + h);
+      hitsByChannel.set(r.channel, (hitsByChannel.get(r.channel) || 0) + h);
+    }
+
     // Where ALL visitors come from (across brands) + how each source converts.
     // Orders are matched back to the visit via orders.utm_tracking_id.
     const sourceRows = await sequelize.query(
@@ -249,6 +252,7 @@ exports.getBrandTraffic = async (req, res) => {
         brand_id: b.id,
         brand: b.display_name,
         sessions: s,
+        allVisits: hitsByBrand.get(b.id) || 0, // anonymous (cookieless) real visits
         views,
         carts,
         checkouts,
@@ -274,6 +278,7 @@ exports.getBrandTraffic = async (req, res) => {
       },
       { sessions: 0, views: 0, carts: 0, checkouts: 0, orders: 0, delivered: 0, revenue: 0 }
     );
+    totals.allVisits = totalHits; // anonymous real visits across the shown brands
     totals.conversion_rate = totals.sessions > 0 ? Number(((totals.orders / totals.sessions) * 100).toFixed(2)) : 0;
     totals.aov = totals.orders > 0 ? Math.round(totals.revenue / totals.orders) : 0;
     totals.stages = [
@@ -305,6 +310,7 @@ exports.getBrandTraffic = async (req, res) => {
       return {
         channel: name,
         sessions: g.sessions,
+        allVisits: hitsByChannel.get(name) || 0, // anonymous real visits in this channel
         share: Number(((g.sessions / totalSrcSessions) * 100).toFixed(2)),
         orders: g.orders,
         conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : 0,
@@ -312,7 +318,7 @@ exports.getBrandTraffic = async (req, res) => {
     })
       // Show only channels that actually have data in the window (Shopify hides
       // empty channels) — but always keep Direct as the anchor row.
-      .filter((c) => c.channel === 'Direct' || c.sessions > 0 || c.orders > 0);
+      .filter((c) => c.channel === 'Direct' || c.sessions > 0 || c.orders > 0 || c.allVisits > 0);
 
     // Reconciling row: the per-channel orders above only count orders matched to
     // a tracked visit (orders.utm_tracking_id). Real orders with no tracked

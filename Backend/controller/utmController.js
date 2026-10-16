@@ -4,49 +4,9 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
-const { isOwnHost } = require('../utils/ownHosts');
-
-// Classify a visit that carries no UTM parameters by its referrer so the
-// traffic report can still bucket organic / social / direct / referral.
-function hostOf(url) {
-  try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); }
-  catch { return ''; }
-}
-function deriveSource(referrer) {
-  const h = hostOf(referrer);
-  if (!h) return 'direct';
-  // Self-referral: a hop from one of our own storefronts is NOT a new traffic
-  // source (Shopify excludes these). Treat it as direct so the original source
-  // that actually brought the visitor in is what the report keeps — and so our
-  // own domains never show up as a "source".
-  if (isOwnHost(h)) return 'direct';
-  // AI assistants first — some live on google/bing/microsoft subdomains, so
-  // they must be matched before the search-engine checks below.
-  if (/(chatgpt|openai)/.test(h)) return 'chatgpt';
-  if (/perplexity/.test(h)) return 'perplexity';
-  if (/gemini\.google|bard\.google|gemini\./.test(h)) return 'gemini';
-  if (/copilot|(^|\.)bing\.com.*chat/.test(h)) return 'copilot';
-  if (/claude\.ai|anthropic/.test(h)) return 'claude';
-  if (/(poe\.com|phind|deepseek|you\.com|grok|meta\.ai)/.test(h)) return 'ai';
-  if (/google\./.test(h)) return 'google';
-  if (/bing\./.test(h)) return 'bing';
-  if (/duckduckgo\./.test(h)) return 'duckduckgo';
-  if (/(facebook|fb)\./.test(h) || h === 'l.facebook.com') return 'facebook';
-  if (/instagram\./.test(h)) return 'instagram';
-  if (/(youtube|youtu\.be)/.test(h)) return 'youtube';
-  if (/(twitter|t\.co|x\.com)/.test(h)) return 'twitter';
-  if (/(whatsapp|wa\.me)/.test(h)) return 'whatsapp';
-  if (/linkedin\./.test(h)) return 'linkedin';
-  return h; // any other referring domain
-}
-function deriveMedium(referrer) {
-  const h = hostOf(referrer);
-  if (!h) return 'none'; // direct
-  if (isOwnHost(h)) return 'none'; // self-referral → treated as direct
-  if (/(google|bing|duckduckgo|yahoo)\./.test(h)) return 'organic';
-  if (/(facebook|fb|instagram|youtube|youtu\.be|twitter|t\.co|x\.com|linkedin|whatsapp|wa\.me)/.test(h)) return 'social';
-  return 'referral';
-}
+// Referrer → source/medium classification (incl. self-referral exclusion) lives
+// in utils/channel so the tracker, the report and the anonymous counter agree.
+const { deriveSource, deriveMedium } = require('../utils/channel');
 
 // Track UTM parameters
 exports.trackUTM = async (req, res) => {

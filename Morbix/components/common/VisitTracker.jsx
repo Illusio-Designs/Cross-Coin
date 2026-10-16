@@ -31,6 +31,10 @@ export default function VisitTracker() {
 
   useEffect(() => {
     const fire = () => {
+      // Anonymous, cookieless pageview — fires for EVERY visitor (no consent
+      // needed; nothing identifying is stored server-side). Independent of the
+      // consented UTM ping below. Guarded to once per full page load.
+      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/public/pageview`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
       if (!getConsent().analytics) return;
     try {
       if (sessionStorage.getItem('visit_tracked')) return;

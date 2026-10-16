@@ -73,6 +73,12 @@ router.use('/', require('./trackRedirectRoutes.js'));
 // ── SEO admin (health summary, bulk product SEO editor) ───────────────────
 router.use('/', require('./seoAdminRoutes.js'));
 
+// ── Anonymous, cookieless pageview counter ────────────────────────────────
+// Increments an aggregate (brand, day, channel) count for EVERY visitor — no
+// cookie, no consent, no personal data stored — so the traffic report can show
+// real visit volume next to the consent-gated utm_tracking funnel.
+router.post('/public/pageview', optionalBrand, require('../controller/pageviewController.js').recordPageview);
+
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the
 // public site's <Analytics> component can mount gtag / fbq / Clarity with

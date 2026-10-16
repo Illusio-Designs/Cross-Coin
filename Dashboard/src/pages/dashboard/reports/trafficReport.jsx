@@ -137,7 +137,8 @@ export default function TrafficReport() {
 
       {/* Totals */}
       <StatGrid>
-        <StatTile label="Visits" value={num(t?.sessions)} />
+        <StatTile label="All visits" value={num(t?.allVisits)} sub="Every visitor · cookieless" />
+        <StatTile label="Tracked visits" value={num(t?.sessions)} sub="Consented · drives funnel" />
         <StatTile label="Orders" value={num(t?.orders)} />
         <StatTile label="Conversion" value={t ? pct(t.conversion_rate) : '—'} />
         <StatTile label="Revenue" value={t ? inr(t.revenue) : '—'} />
@@ -190,7 +191,8 @@ export default function TrafficReport() {
               { key: 'channel', label: 'Channel', render: (s) => (
                 <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chColor(s.channel), marginRight: 8, verticalAlign: 'middle' }} />{s.channel}</span>
               ) },
-              { key: 'sessions', label: 'Visitors', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : num(s.sessions)) },
+              { key: 'allVisits', label: 'All visits', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : num(s.allVisits)) },
+              { key: 'sessions', label: 'Tracked', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : num(s.sessions)) },
               { key: 'share', label: 'Share', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : pct(s.share)) },
               { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (s) => num(s.orders) },
               // Untracked orders have no tracked visit, so a visit→order rate is N/A.

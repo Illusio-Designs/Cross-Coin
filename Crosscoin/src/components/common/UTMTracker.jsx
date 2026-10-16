@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
-import { captureUTMParameters, sendUTMToBackend } from '@/utils/utmTracker';
+import { captureUTMParameters, sendUTMToBackend, sendPageviewPing } from '@/utils/utmTracker';
 
 export default function UTMTracker() {
   useEffect(() => {
+    // Anonymous, cookieless pageview — fires for EVERY visitor regardless of
+    // cookie consent (nothing identifying is stored), so the report shows real
+    // visit volume. Separate from the consented utm/track call below.
+    sendPageviewPing();
+
     // Fire once per browser session — record every visit for the traffic
     // report, not just campaign links. The backend dedupes per session_id too.
     try {

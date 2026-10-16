@@ -77,6 +77,27 @@ export const sendUTMToBackend = async (utmData) => {
   }
 };
 
+// Anonymous, cookieless pageview ping — fires for EVERY visitor (no consent
+// required; the backend stores only an aggregate brand/day/channel count, no
+// cookie, IP, UA, session id or referrer string). This is what gives the
+// traffic report real visit volume next to the consent-gated utm/track funnel.
+// Guarded to once per full page load.
+export const sendPageviewPing = () => {
+  try {
+    if (typeof window === 'undefined' || window.__ccPv) return;
+    window.__ccPv = true;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
+    const p = new URLSearchParams(window.location.search);
+    fetch(`${apiUrl}/api/public/pageview`, {
+      method: 'POST',
+      keepalive: true,
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin' },
+      body: JSON.stringify({ utm_source: p.get('utm_source'), utm_medium: p.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }),
+    }).catch(() => {});
+  } catch (e) { /* never break the page */ }
+};
+
 // Get session ID for order tracking
 export const getUTMSessionId = () => {
   return localStorage.getItem('utm_session_id');

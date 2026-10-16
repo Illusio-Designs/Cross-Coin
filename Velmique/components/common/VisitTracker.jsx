@@ -33,6 +33,7 @@ export default function VisitTracker() {
     // First-party analytics — only fire with analytics consent (DPDP). If the
     // visitor opts in later in the session, the consent event re-triggers it.
     const fire = () => {
+      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/public/pageview`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND_NAME }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
       if (!getConsent().analytics) return;
       try {
         if (sessionStorage.getItem('visit_tracked')) return;
