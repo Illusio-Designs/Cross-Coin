@@ -53,6 +53,32 @@ export function normalizeProduct(p) {
   const sizes = [];
   vars.forEach((v) => listVals(attrsOf(v).size).forEach((s) => { if (s && !sizes.includes(String(s))) sizes.push(String(s)); }));
 
+  // Buyable variants (how Crosscoin models single pair vs multi-pair packs: a
+  // variation whose colour attribute has >1 colour IS a "Pack of N"). Each
+  // variant carries its own price, compare-at, image, colours and sizes.
+  const variants = vars.map((v) => {
+    const a = attrsOf(v);
+    const vcolors = listVals(a.color).filter(Boolean);
+    const vsizes = listVals(a.size).filter(Boolean).map(String);
+    const vprice = parseFloat(v.price ?? p.price ?? 0) || 0;
+    const vcompare = parseFloat(v.comparePrice ?? v.compare_price ?? 0) || 0;
+    const pairs = vcolors.length || 1;
+    const isPack = pairs > 1;
+    return {
+      id: v.id,
+      colors: vcolors,
+      sizes: vsizes,
+      size: vsizes[0] || '',
+      price: vprice,
+      comparePrice: vcompare,
+      off: vcompare > vprice && vcompare > 0 ? Math.round((1 - vprice / vcompare) * 100) : 0,
+      img: imgOf(selectProductImage(p, v)),
+      pairs, isPack,
+      label: isPack ? `Pack of ${pairs}` : (vcolors[0] || 'Single'),
+      swatch: colorToCss(vcolors[0] || ''),
+    };
+  }).filter((v) => v.price > 0 || v.colors.length);
+
   let images = [];
   try { images = (selectProductImages(p, v0, 5) || []).map(getImageUrl).filter(Boolean); } catch (_) {}
   const mainImg = imgOf(selectProductImage(p, v0)) || images[0] || '';
@@ -68,7 +94,7 @@ export function normalizeProduct(p) {
     img: mainImg, images,
     rating: rating != null ? Number(rating).toFixed(1) : null,
     revs: p.reviewCount ?? p.review_count ?? 0,
-    colors, sizes,
+    colors, sizes, variants,
     raw: p,
   };
 }

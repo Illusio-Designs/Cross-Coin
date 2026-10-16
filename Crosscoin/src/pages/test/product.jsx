@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts, fetchBundleTiers, fetchProductReviews, fetchProductFaqs } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, colorToCss } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
@@ -28,10 +28,8 @@ export default function TestProduct() {
   const [p, setP] = useState(null);
   const [loading, setLoading] = useState(true);
   const [also, setAlso] = useState([]);
-  const [color, setColor] = useState(null);     // {name,hex,img}
+  const [variant, setVariant] = useState(null); // selected variant (single pair or pack)
   const [size, setSize] = useState('');
-  const [tiers, setTiers] = useState([]);        // real bundle tiers
-  const [packQ, setPackQ] = useState(1);         // selected pack size (pairs)
   const [qty, setQty] = useState(1);
   const [acc, setAcc] = useState(0);
   const [mainImg, setMainImg] = useState('');
@@ -50,11 +48,13 @@ export default function TestProduct() {
         if (off) return;
         setP(prod);
         if (prod) {
-          const c0 = prod.colors?.[0] || null;
-          setColor(c0); setSize(prod.sizes?.[0] || ''); setPackQ(1); setTiers([]); setQty(1);
-          setMainImg(c0?.img || prod.img || prod.images?.[0] || '');
+          const vlist = prod.variants || [];
+          const v0 = vlist.find((v) => v.pairs === 1) || vlist[0] || null; // default to a single pair
+          setVariant(v0);
+          setSize((v0?.sizes?.length ? v0.sizes[0] : prod.sizes?.[0]) || '');
+          setQty(1);
+          setMainImg(v0?.img || prod.img || prod.images?.[0] || '');
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
-          fetchBundleTiers(prod.id).then((t) => { if (!off) setTiers(t); }).catch(() => {});
           fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
         }
@@ -68,20 +68,18 @@ export default function TestProduct() {
   if (loading) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ color: 'var(--ink-faint)', padding: '60px 0', fontSize: 13 }}>Loading product…</p></div></TestLayout>;
   if (!p) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Back to shop</a></p></div></TestLayout>;
 
-  // Pack ladder from REAL admin-set bundle tiers only. Products with no tiers
-  // show a normal single-price product (the pack selector is hidden).
-  const packOptions = tiers.length
-    ? [{ q: 1, label: 'Single', total: p.now, best: false }, ...tiers.map((t) => ({ q: t.pairs, label: t.label, total: t.price, best: /best|popular/i.test(t.badge || '') }))]
-    : [{ q: 1, label: 'Single', total: p.now, best: false }];
-  const selected = packOptions.find((o) => o.q === packQ) || packOptions[0];
-  const perUnit = Math.round(selected.total / selected.q);
-  const total = selected.total * qty;
-  const thumbs = (p.images && p.images.length ? p.images : p.colors.map((c) => c.img).filter(Boolean));
+  // The selected variant (single pair or a pack) drives price + image. Fall back
+  // to the product's own price when a product has no structured variants.
+  const variants = p.variants || [];
+  const cur = variant || { id: 0, price: p.now, comparePrice: p.was, off: p.off, pairs: 1, colors: [], sizes: p.sizes, label: 'Single', img: p.img };
+  const sizeOpts = (cur.sizes && cur.sizes.length) ? cur.sizes : p.sizes;
+  const total = cur.price * qty;
+  const thumbs = (p.images && p.images.length ? p.images : variants.map((v) => v.img).filter(Boolean));
+
+  const pickVariant = (v) => { setVariant(v); if (v.img) setMainImg(v.img); if (v.sizes?.length) setSize(v.sizes[0]); };
 
   const add = (buyNow) => {
-    // A pack of N pairs adds N units at the per-unit pack price; the qty stepper
-    // multiplies packs. Same group-pricing idea as the live store.
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: color?.name || '', size, pack: selected.label, packq: selected.q, unit: perUnit, was: p.was, base: p.now, img: color?.img || mainImg || p.img }, selected.q * qty);
+    addItem({ id: p.id, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     if (buyNow) router.push('/test/cart');
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
@@ -97,7 +95,7 @@ export default function TestProduct() {
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden' }}><Thumb src={mainImg} color={color?.name} /></div>
+            <div className="gmain" style={{ overflow: 'hidden' }}><Thumb src={mainImg} color={cur.colors?.[0]} /></div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
@@ -111,37 +109,31 @@ export default function TestProduct() {
             <div className="kl">{p.brand}</div>
             <h1>{p.name}</h1>
             {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
-            <div className="prow"><span className="now">{inr(p.now)}</span>{p.was > p.now && <span className="was">{inr(p.was)}</span>}{p.off > 0 && <span className="off">{p.off}% OFF</span>}</div>
+            <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">Inclusive of all taxes · Free shipping over ₹799</div>
 
-            {p.colors.length > 0 && (<>
-              <div className="optlabel">Colour — <span style={{ color: 'var(--ink)', textTransform: 'none', letterSpacing: 0 }}>{color?.name}</span></div>
-              <div className="swatches">
-                {p.colors.map((c) => (
-                  <button key={c.name} className={`sw${c.name === color?.name ? ' on' : ''}`} title={c.name} style={{ background: c.hex }} onClick={() => { setColor(c); if (c.img) setMainImg(c.img); }} />
+            {/* Single pair vs multi-pair packs — each is a real variant with its
+                own price. (Crosscoin models a pack as a multi-colour variation.) */}
+            {variants.length > 1 && (<>
+              <div className="optlabel">Choose your option</div>
+              <div className="packs">
+                {variants.map((v) => (
+                  <div key={v.id} className={`pack${variant && v.id === variant.id ? ' on' : ''}`} onClick={() => pickVariant(v)}>
+                    {v.isPack && <span className="tagbest">PACK OF {v.pairs}</span>}
+                    <span className="radio" />
+                    <span style={{ display: 'inline-flex', gap: 4, flexShrink: 0 }}>
+                      {(v.colors.length ? v.colors : ['']).slice(0, 4).map((c, ci) => <span key={ci} title={c} style={{ width: 18, height: 18, borderRadius: '50%', background: colorToCss(c), border: '2px solid var(--line-ink)' }} />)}
+                    </span>
+                    <div style={{ minWidth: 0 }}><b>{v.label}</b><div className="d" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.colors.join(', ') || 'Single pair'}</div></div>
+                    <div className="pp"><div className="pnow">{inr(v.price)}</div>{v.off > 0 ? <div className="psave">{v.off}% off</div> : <div className="psave">&nbsp;</div>}</div>
+                  </div>
                 ))}
               </div>
             </>)}
 
-            {p.sizes.length > 0 && (<>
+            {sizeOpts.length > 0 && (<>
               <div className="optlabel">Size <a onClick={() => toast('Pick the size that matches your usual fit.')}>Size chart</a></div>
-              <div className="sizes">{p.sizes.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
-            </>)}
-
-            {packOptions.length > 1 && (<>
-              <div className="optlabel">Pack &amp; save</div>
-              <div className="packs">
-                {packOptions.map((o) => {
-                  const save = Math.max(0, Math.round(p.now * o.q - o.total));
-                  return (
-                    <div key={o.q} className={`pack${o.q === packQ ? ' on' : ''}`} onClick={() => setPackQ(o.q)}>
-                      {o.best && <span className="tagbest">MOST POPULAR</span>}
-                      <span className="radio" /><div><b>{o.label}</b><div className="d">{o.q === 1 ? 'Single pair' : `${o.q} pairs${save > 0 ? ` · ${inr(Math.round(o.total / o.q))}/pair` : ''}`}</div></div>
-                      <div className="pp"><div className="pnow">{inr(o.total)}</div>{save > 0 ? <div className="psave">save {inr(save)}</div> : <div className="psave">&nbsp;</div>}</div>
-                    </div>
-                  );
-                })}
-              </div>
+              <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </>)}
 
             <div className="qtyrow">
