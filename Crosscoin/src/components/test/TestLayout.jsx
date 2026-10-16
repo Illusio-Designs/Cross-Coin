@@ -110,8 +110,15 @@ const MOBILE_CSS = `
 @media (max-width:820px){ .cc-test-root .cgrid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:480px){ .cc-test-root .cgrid{ grid-template-columns:1fr; } }
 /* huge round feature icons */
-.cc-test-root .techcard .mk{ width:66px; height:66px; margin-bottom:16px; background:color-mix(in srgb,var(--gold) 16%,transparent); }
-.cc-test-root .techcard .mk svg{ width:30px; height:30px; }
+.cc-test-root .techcard .mk{ width:72px; height:72px; margin-bottom:16px; background:color-mix(in srgb,var(--gold) 16%,transparent); }
+.cc-test-root .techcard .mk svg{ width:34px; height:34px; }
+/* bigger icons across every /test section (overrides inline svg sizes) */
+.cc-test-root .pdptrust__i{ padding:14px 6px; }
+.cc-test-root .pdptrust__i svg{ width:30px !important; height:30px !important; }
+.cc-test-root .idealchip svg{ width:22px !important; height:22px !important; }
+.cc-test-root .contactrow .pi svg{ width:28px !important; height:28px !important; }
+.cc-test-root .washitem svg{ width:40px !important; height:40px !important; }
+.cc-test-root .usp svg{ width:24px !important; height:24px !important; }
 /* Defensive: a product-card image can never balloon out of its card/grid cell,
    on any browser or during image load — the card clips and the ratio box caps. */
 .cc-test-root .pgrid > *, .cc-test-root .prail > *{ min-width:0; }
