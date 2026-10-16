@@ -4,10 +4,10 @@ import TestLayout from '../../components/test/TestLayout';
 import { I } from '../../components/test/ui';
 
 const VALUES = [
-  ['Premium materials', 'Long-staple combed cotton and tested blends that stay soft and hold shape wash after wash.'],
-  ['Tested to last', 'Every batch goes through wash, stretch and wear tests before it reaches your door.'],
-  ['Honest pricing', 'We work directly with manufacturers and control the supply chain — no middleman markup.'],
-  ['Made in India', 'Designed and manufactured in Morbi, Gujarat, with a 7-day easy return promise.'],
+  ['Quality promise', 'Every product is tested for durability, comfort and consistency before it ships.'],
+  ['Built different, by design', 'We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials.'],
+  ['A growing community', 'People who refuse to settle for uncomfortable basics — and keep coming back.'],
+  ['Pan-India delivery', 'Shipping to every corner of India with real-time tracking on every order.'],
 ];
 
 export default function TestAbout() {
@@ -19,14 +19,16 @@ export default function TestAbout() {
       <div className="shophead">
         <div className="wrap">
           <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / About</div>
-          <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>The Cross Coin&reg; promise</h2>
+          <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Comfort is not a luxury</h2>
         </div>
       </div>
 
       <div className="wrap" style={{ paddingBottom: 60, maxWidth: 820 }}>
         <div className="legal" style={{ marginTop: 24 }}>
-          <p>At Cross Coin&reg;, we started with a frustration most people share but rarely talk about — socks that lose shape after two washes, seams that dig in, and fabrics that trap heat. We decided to fix that.</p>
-          <p>We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Cross Coin&reg; promise — everyday essentials, minted to a standard and priced without the markup.</p>
+          <p>Cross Coin&reg; was built on a simple belief — the things closest to your skin deserve the most attention. We craft performance socks that combine technical precision with everyday wearability.</p>
+          <p>We started with a frustration most people share but rarely talk about — socks that lose shape after two washes, seams that dig in, and fabrics that trap heat. We decided to fix that.</p>
+          <p>Our mission is to engineer everyday essentials that perform as hard as you do. Whether you are running a marathon, sitting through back-to-back meetings, or just going about your day — your socks should never be the problem.</p>
+          <p>We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Cross Coin&reg; promise.</p>
         </div>
         <div className="techgrid" style={{ marginTop: 28 }}>
           {VALUES.map(([t, d]) => (

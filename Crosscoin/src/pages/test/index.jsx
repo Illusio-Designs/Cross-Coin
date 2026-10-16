@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards } from '../../components/test/ui';
-import { FAQS } from '../../components/test/data';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 
 const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
@@ -30,10 +29,10 @@ export default function TestHome() {
         if (off) return;
         setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6));
         setReviews(revs.slice(0, 10)); setDeal(coupons[0] || null);
-        setBlogs(posts); setFaqs(realFaqs.length ? realFaqs : FAQS);
+        setBlogs(posts); setFaqs(realFaqs);
         setSlide(sliders[0] || null);
       })
-      .catch(() => { if (!off) setFaqs(FAQS); })
+      .catch(() => {})
       .finally(() => { if (!off) setLoading(false); });
     return () => { off = true; };
   }, []);
@@ -165,7 +164,8 @@ export default function TestHome() {
         </section>
       )}
 
-      {/* faq */}
+      {/* faq — real global FAQs only */}
+      {faqs.length > 0 && (
       <section className="block" id="faq" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="sechead" style={{ justifyContent: 'center', textAlign: 'center' }}><div><span className="eyebrow">[ 06 ] Fine print</span><h2>Questions, answered</h2></div></div>
@@ -179,18 +179,8 @@ export default function TestHome() {
           </div>
         </div>
       </section>
+      )}
 
-      {/* mint club */}
-      <section className="block" style={{ paddingTop: 0 }}>
-        <div className="wrap"><div className="mint">
-          <span className="eyebrow" style={{ color: '#ffd3d9' }}>Join the mint club</span>
-          <h2>Join the mint club</h2>
-          <p>Early access to drops, members-only prices and the occasional good story. No spam, unsubscribe anytime.</p>
-          <form className="mintform" onSubmit={(e) => { e.preventDefault(); toast('You’re in — ₹100 off on its way'); e.currentTarget.reset(); }}>
-            <input type="email" placeholder="you@email.com" aria-label="Email" required /><button className="btn" type="submit">Subscribe</button>
-          </form>
-        </div></div>
-      </section>
     </TestLayout>
   );
 }

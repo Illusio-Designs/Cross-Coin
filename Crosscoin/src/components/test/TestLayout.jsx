@@ -96,6 +96,9 @@ const MOBILE_CSS = `
 /* breathing room above the product grids / rail */
 .cc-test-root .pgrid{ padding-top:6px; }
 .cc-test-root .prail{ padding-top:6px; }
+/* huge round feature icons */
+.cc-test-root .techcard .mk{ width:66px; height:66px; margin-bottom:16px; background:color-mix(in srgb,var(--gold) 16%,transparent); }
+.cc-test-root .techcard .mk svg{ width:30px; height:30px; }
 /* Defensive: a product-card image can never balloon out of its card/grid cell,
    on any browser or during image load — the card clips and the ratio box caps. */
 .cc-test-root .pgrid > *, .cc-test-root .prail > *{ min-width:0; }
@@ -164,6 +167,12 @@ const MOBILE_CSS = `
 .cc-test-root .collcard__ct{ font-family:"Space Mono",monospace; font-size:11px; opacity:.85; margin-top:4px; }
 @media (max-width:760px){ .cc-test-root .collgrid{ grid-template-columns:1fr 1fr; } }
 @media (max-width:460px){ .cc-test-root .collgrid{ grid-template-columns:1fr; } }
+/* account hub tiles */
+.cc-test-root .acctile{ text-align:left; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); box-shadow:var(--stamp-sm); padding:18px; cursor:pointer; font:inherit; color:var(--ink); transition:transform .16s var(--ease); display:flex; flex-direction:column; gap:4px; min-height:120px; }
+.cc-test-root .acctile:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
+.cc-test-root .acctile__ic{ color:var(--crimson); margin-bottom:6px; }
+.cc-test-root .acctile b{ font-family:"Fraunces",serif; font-size:17px; }
+.cc-test-root .acctile__d{ font-size:13px; color:var(--ink-soft); }
 /* Legal / policy / article rich text */
 .cc-test-root .legal{ font-size:15px; line-height:1.72; color:var(--ink-soft); }
 .cc-test-root .legal h1,.cc-test-root .legal h2,.cc-test-root .legal h3{ color:var(--ink); margin:22px 0 10px; }
@@ -386,7 +395,7 @@ export default function TestLayout({ children }) {
     <>
       <Link href="/test/shop" onClick={() => setMnav(false)}>Shop</Link>
       <Link href="/test/collections" onClick={() => setMnav(false)}>Collections</Link>
-      <Link href="/test#journal" onClick={() => setMnav(false)}>Journal</Link>
+      <Link href="/test/journal" onClick={() => setMnav(false)}>Journal</Link>
       <Link href="/test/about" onClick={() => setMnav(false)}>About</Link>
       <Link href="/test/contact" onClick={() => setMnav(false)}>Contact</Link>
       <Link href="/test/wishlist" onClick={() => setMnav(false)}>Wishlist</Link>
@@ -421,7 +430,7 @@ export default function TestLayout({ children }) {
             <span className="nav__extra">
               <button className="ibtn" aria-label="Search" onClick={() => go('/test/search')}>{I.search()}</button>
               <button className="ibtn" aria-label="Wishlist" onClick={() => go('/test/wishlist')}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>
-              <button className="ibtn" aria-label="Track order" onClick={() => go('/test/track')}>{I.user()}</button>
+              <button className="ibtn" aria-label="Account" onClick={() => go('/test/account')}>{I.user()}</button>
             </span>
             <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
@@ -450,9 +459,9 @@ export default function TestLayout({ children }) {
               <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></a>
             </div>
           </div>
-          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test#journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
+          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test/journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
           <div><h4>Account</h4><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/wishlist')}>Wishlist</a><a onClick={() => go('/test/search')}>Search</a><a onClick={() => go('/test/shop')}>Shop</a></div>
-          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={() => showToast('Cookie settings — manage your preferences')}>Cookie Settings</a></div>
+          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={() => go('/test/policy/privacy-policy')}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
