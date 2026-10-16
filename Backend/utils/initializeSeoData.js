@@ -45,26 +45,34 @@ const initializeSeoData = async () => {
         const brands = await Brand.findAll({ where: { status: 'active' } });
         if (!brands.length) { console.log('SEO seed: no active brands'); return; }
 
-        let created = 0;
+        let created = 0, failed = 0;
         for (const brand of brands) {
             const brandName = brand.display_name || brand.name || 'Our Store';
             for (const page of DEFAULT_PAGES) {
-                const [, wasCreated] = await SeoMetadata.findOrCreate({
-                    where: { page_name: page.page_name, brand_id: brand.id },
-                    defaults: {
-                        page_name: page.page_name,
-                        slug: page.slug,
-                        meta_title: page.title(brandName),
-                        meta_description: page.desc(brandName),
-                        meta_keywords: `${brandName}, buy online, india`,
-                        canonical_url: null,
-                        robots: 'index, follow, max-image-preview:large',
-                        brand_id: brand.id,
-                    },
-                });
-                if (wasCreated) created += 1;
+                // Per-row try/catch so one brand/page failure (e.g. a lingering
+                // constraint) can never abort seeding for the remaining brands.
+                try {
+                    const [, wasCreated] = await SeoMetadata.findOrCreate({
+                        where: { page_name: page.page_name, brand_id: brand.id },
+                        defaults: {
+                            page_name: page.page_name,
+                            slug: page.slug,
+                            meta_title: page.title(brandName),
+                            meta_description: page.desc(brandName),
+                            meta_keywords: `${brandName}, buy online, india`,
+                            canonical_url: null,
+                            robots: 'index, follow, max-image-preview:large',
+                            brand_id: brand.id,
+                        },
+                    });
+                    if (wasCreated) created += 1;
+                } catch (rowErr) {
+                    failed += 1;
+                    console.error(`SEO seed: ${page.page_name} / brand ${brand.id} failed: ${rowErr.message}`);
+                }
             }
         }
+        if (failed) console.error(`SEO seed: ${failed} row(s) failed (see above)`);
         console.log(`SEO seed: ensured ${DEFAULT_PAGES.length} pages × ${brands.length} brand(s); created ${created} new row(s), left the rest untouched`);
     } catch (error) {
         console.error('Error initializing SEO data:', error);

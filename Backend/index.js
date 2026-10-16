@@ -1663,22 +1663,60 @@ const startServer = async () => {
             logger.error('[perf-index] boot hook failed: ' + err.message);
         }
 
+        // Migrate seo_metadata indexes (ungated, idempotent). The table was
+        // created with a GLOBAL UNIQUE on `slug`, which blocks per-brand SEO rows
+        // that legitimately share a slug (every brand's home is '/'): the seeder
+        // could insert brand 1 but threw on brand 2's '/', so only crosscoin got
+        // seeded. Drop any single-column global unique on slug / page_name (same
+        // approach as the users table) and ensure the composite (page_name,
+        // brand_id) unique exists. Never touches PRIMARY or composite indexes.
+        try {
+            const dropSingleColUnique = async (table, column) => {
+                const [idx] = await sequelize.query(
+                    `SELECT INDEX_NAME FROM information_schema.STATISTICS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+                       AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'
+                     GROUP BY INDEX_NAME
+                     HAVING COUNT(*) = 1 AND MAX(COLUMN_NAME) = ?`,
+                    { replacements: [table, column] }
+                );
+                for (const r of idx) {
+                    logger.info(`Migrating: dropping legacy global unique ${r.INDEX_NAME} on ${table}(${column})…`);
+                    await sequelize.query(`ALTER TABLE \`${table}\` DROP INDEX \`${r.INDEX_NAME}\``);
+                }
+            };
+            await dropSingleColUnique('seo_metadata', 'slug');
+            await dropSingleColUnique('seo_metadata', 'page_name');
+            const [cidx] = await sequelize.query(
+                `SELECT 1 AS present FROM information_schema.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seo_metadata'
+                   AND NON_UNIQUE = 0 AND COLUMN_NAME IN ('page_name','brand_id')
+                 GROUP BY INDEX_NAME HAVING COUNT(*) = 2 LIMIT 1`
+            );
+            if (!cidx.length) {
+                await sequelize.query(`ALTER TABLE seo_metadata ADD UNIQUE INDEX uniq_seo_page_brand (page_name, brand_id)`)
+                    .catch((e) => logger.warn('could not add seo_metadata composite unique: ' + e.message));
+            }
+        } catch (err) {
+            logger.error('seo_metadata index migration failed: ' + err.message);
+        }
+
         // Initialize SEO data — runs once per seeder version, skipped afterwards.
         // Piggybacks on the schema_version table to avoid a DB query every start.
         // The version marker is BUMPED whenever the seeder changes, so the new
-        // logic runs once on the next boot: 'seo-init-v2-perbrand' seeds default
-        // page SEO for EVERY brand (not just crosscoin) and cleans up legacy
-        // brand_id=null rows. initializeSeoData is idempotent (findOrCreate), so
-        // re-running never overwrites admin edits.
+        // logic runs once on the next boot: 'seo-init-v3-perbrand' seeds default
+        // page SEO for EVERY active brand (not just crosscoin) and cleans up
+        // legacy brand_id=null rows. initializeSeoData is idempotent (findOrCreate
+        // per row), so re-running never overwrites admin edits.
         try {
-            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-v2-perbrand' LIMIT 1`);
+            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-v3-perbrand' LIMIT 1`);
             if (!seoRows.length) {
-                logger.info('Initializing SEO data (per-brand seed v2)...');
+                logger.info('Initializing SEO data (per-brand seed v3)...');
                 await initializeSeoData();
-                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-v2-perbrand')`);
+                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-v3-perbrand')`);
                 logger.info('✓ SEO data initialized (per-brand)');
             } else {
-                logger.info('✓ SEO data already initialized (v2), skipping');
+                logger.info('✓ SEO data already initialized (v3), skipping');
             }
         } catch {
             // Fallback: run it anyway if the check fails
