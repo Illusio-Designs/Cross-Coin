@@ -95,6 +95,18 @@
 /* Clean, flat KPI tiles like the prototype — no coloured accent bars.
    Tone classes are kept as no-ops so existing usages don't break. */
 .ds-stat:hover { border-color: var(--ds-color-text-faint); }
+/* Optional KPI glyph, pinned to the tile's top-right corner. Muted so it
+   reads as a quiet signifier, not a second focal point against the value. */
+.ds-stat__icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  color: var(--ds-color-text-faint);
+  pointer-events: none;
+}
+/* Only icon-bearing tiles reserve room for the corner glyph. */
+.ds-stat--has-icon .ds-stat__label { padding-right: 22px; }
 .ds-stat__label {
   font-size: 12px;
   font-weight: 600;

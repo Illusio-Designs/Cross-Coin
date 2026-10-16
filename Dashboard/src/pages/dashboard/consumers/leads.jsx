@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { leadService } from '../../../services';
 import { PageHeader, FilterBar, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge, Button } from '../../../components/ui';
+import { Badge, Button, Select } from '../../../components/ui';
 
 /**
  * Leads & grievances — popup phone leads + contact-form messages
@@ -90,16 +90,16 @@ export default function Leads() {
         const age = daysSince(l.createdAt);
         return l.type === 'contact' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <select
-              style={{ ...S.select, color: statusColor(l.status) }}
+            <Select
+              options={[
+                { value: 'open', label: 'Open' },
+                { value: 'in_progress', label: 'In progress' },
+                { value: 'resolved', label: 'Resolved' },
+              ]}
               value={l.status || 'open'}
               disabled={savingId === l.id}
-              onChange={(e) => setStatus(l, e.target.value)}
-            >
-              <option value="open">Open</option>
-              <option value="in_progress">In progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
+              onChange={(v) => setStatus(l, v)}
+            />
             {l.kind === 'grievance' && l.status !== 'resolved' && age != null && (
               <span style={{ fontSize: 10.5, color: age >= 7 ? 'var(--ds-color-danger,#dc2626)' : 'var(--ds-color-text-muted)' }}>{age}d open</span>
             )}

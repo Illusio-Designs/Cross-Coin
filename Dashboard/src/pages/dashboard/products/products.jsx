@@ -24,6 +24,14 @@ const Editor = dynamic(() => import('../../../components/common/Editor'), {
   loading: () => <div style={{ height: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />
 });
 
+// Friendly labels for the per-product SEO gap badges (keys match the backend
+// listing's `seoGaps` values).
+const SEO_GAP_LABEL = {
+  metaTitle: 'Meta title',
+  metaDescription: 'Meta desc',
+  ogImage: 'OG image',
+};
+
 const ProductsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -281,6 +289,30 @@ const ProductsPage = () => {
           ? <span className="obz-rating"><HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />{Number(row.avg_rating).toFixed(1)}</span>
           : <span className="obz-na">N/A</span>
       )
+    },
+    {
+      header: "SEO",
+      sortable: false,
+      accessor: row => {
+        // Per-product SEO gaps come from the listing endpoint (seoGaps). This
+        // surfaces the same missing-field flags the SEO Health page used to
+        // show, right where you edit the product. `undefined` = older cached
+        // payload / backend not yet restarted → show a neutral dash.
+        const gaps = row.seoGaps;
+        if (!Array.isArray(gaps)) return <span className="obz-na">—</span>;
+        if (gaps.length === 0) {
+          return (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--ds-color-success, #16a34a)' }}>
+              <HugeiconsIcon icon={Tick02Icon} size={15} strokeWidth={2.5} /> Complete
+            </span>
+          );
+        }
+        return (
+          <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+            {gaps.map(g => <Badge key={g} variant="danger" size="sm">{SEO_GAP_LABEL[g] || g}</Badge>)}
+          </span>
+        );
+      }
     },
     {
       header: "Status",
@@ -1056,25 +1088,18 @@ const ProductsPage = () => {
               />
             </div>
             <div className="obz-form-row3">
-            <div className="dm-field">
-              <label className="dm-label">Category</label>
-              <select
-                value={formData.categoryId}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  }}
-                name="categoryId"
-                required
-                className="dm-input dm-select"
-              >
-                <option value="">Select a category</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Category"
+              required
+              // Coerce to string so a numeric categoryId loaded on edit still
+              // matches the String(cat.id) option values (DS Select uses ===).
+              value={formData.categoryId != null ? String(formData.categoryId) : ''}
+              onChange={(v) => setFormData(prev => ({ ...prev, categoryId: v }))}
+              options={[
+                { value: '', label: 'Select a category' },
+                ...categories.map(cat => ({ value: String(cat.id), label: cat.name })),
+              ]}
+            />
             <Input
               label="Status"
               type="select"
@@ -1234,16 +1259,14 @@ const ProductsPage = () => {
                 <label className="dm-label">Notes</label>
                 {(formData.attributes?.notes || []).map((note, index) => (
                   <div key={index} className="attr-row">
-                    <input
+                    <Input
                       type="text"
-                      className="dm-input"
                       value={note.name || ''}
                       onChange={(e) => updateAttributeNote(index, 'name', e.target.value)}
                       placeholder="Note name (e.g. Cinnamon)"
                     />
-                    <input
+                    <Input
                       type="text"
-                      className="dm-input"
                       value={note.image || ''}
                       onChange={(e) => updateAttributeNote(index, 'image', e.target.value)}
                       placeholder="Image URL (https://ik.imagekit.io/...)"

@@ -10,9 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { seoAdminService } from '../../../services';
-import { handleViewChange } from '../../../utils/dashboardRouting';
-import { PageHeader, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge } from '../../../components/ui';
+import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 
 export default function SeoHealth({ brandId } = {}) {
   const [data, setData] = useState(null);
@@ -101,62 +99,10 @@ export default function SeoHealth({ brandId } = {}) {
             </KpiGrid>
           </Panel>
 
-          <Panel
-            title="FAQs"
-            subtitle={`${data.faqs.active} active / ${data.faqs.total} total`}
-            style={{ marginBottom: 'var(--ds-space-4)' }}
-          >
-            {data.faqs.total === 0 && (
-              <div style={{
-                padding: 16,
-                background: 'var(--ds-color-warn-bg)',
-                border: '1px solid var(--ds-color-warn-bd)',
-                borderRadius: 'var(--ds-radius-sm)',
-                color: 'var(--ds-color-warn)',
-                fontSize: 13,
-              }}>
-                No FAQs configured. Adding 3–5 site-wide FAQs (return policy, shipping time, warranty) wins entire rich-result slots on Google mobile and AI shopping.
-                <a
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); handleViewChange('faqs', () => {}); }}
-                  style={{ marginLeft: 8, color: 'var(--ds-color-brand)', fontWeight: 600 }}
-                >Add FAQs →</a>
-              </div>
-            )}
-          </Panel>
-
-          {data.sampleProductsWithGaps?.length > 0 && (
-            <Panel
-              title="Recent products with gaps"
-              subtitle="Most recently updated — fix these first"
-              flush
-            >
-              <ResponsiveTable
-                columns={[
-                  { key: 'name', label: 'Product', render: (p) => p.name },
-                  {
-                    key: 'slug',
-                    label: 'Slug',
-                    render: (p) => (
-                      <span style={{ color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono)', fontSize: 12 }}>{p.slug}</span>
-                    ),
-                  },
-                  {
-                    key: 'gaps',
-                    label: 'Missing',
-                    render: (p) => (
-                      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
-                        {p.gaps.map(g => <Badge key={g} variant="danger" size="sm">{g}</Badge>)}
-                      </span>
-                    ),
-                  },
-                ]}
-                data={data.sampleProductsWithGaps}
-                rowKey="id"
-                emptyMessage="No products with gaps."
-              />
-            </Panel>
-          )}
+          {/* FAQ SEO status moved to the FAQ manager (seo → FAQs), and the
+              per-product gap list moved to a "SEO" column on the Products
+              table — so each gap shows up where you actually fix it. This
+              page stays a pure at-a-glance score overview. */}
         </>
       )}
     </div>

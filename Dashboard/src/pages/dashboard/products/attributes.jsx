@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { Button, Modal, Pagination, Select, Badge, Input, Switch } from "../../../components/ui";
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -177,10 +177,15 @@ export default function Attributes() {
           {error && <div className="dm-error-banner">{error}</div>}
           <div className="modal-body">
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Attribute Name <span className="dm-required">*</span></label>
-                <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Color, Size" required />
-              </div>
+              <Input
+                label="Attribute Name"
+                required
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="e.g., Color, Size"
+              />
               <div className="dm-field">
                 <label className="dm-label">Type <span className="dm-required">*</span></label>
                 <Select
@@ -196,16 +201,24 @@ export default function Attributes() {
               </div>
             </div>
             {formData.type === 'select' && (
-              <div className="dm-field">
-                <label className="dm-label">Values <span className="dm-required">*</span> <span className="dm-hint">(comma-separated)</span></label>
-                <input className="dm-input" type="text" name="values" value={formData.values} onChange={handleInputChange} placeholder="e.g., Red, Blue, Green" required />
-              </div>
+              <Input
+                label="Values"
+                required
+                helperText="(comma-separated)"
+                type="text"
+                name="values"
+                value={formData.values}
+                onChange={handleInputChange}
+                placeholder="e.g., Red, Blue, Green"
+              />
             )}
             <div className="dm-field">
-              <label className="dm-checkbox-row">
-                <input type="checkbox" name="isRequired" checked={formData.isRequired} onChange={handleInputChange} />
-                <span className="dm-checkbox-label">Mark as Required</span>
-              </label>
+              <Switch
+                name="isRequired"
+                checked={formData.isRequired}
+                onChange={(checked) => setFormData(prev => ({ ...prev, isRequired: checked }))}
+                label="Mark as Required"
+              />
             </div>
           </div>
         </form>

@@ -26,13 +26,15 @@ export default function StatTile({
   sub,                // small secondary text (e.g. "vs last week")
   prefix,
   suffix,
+  icon,               // optional glyph (e.g. a <HugeiconsIcon/>) shown top-right
   ...rest
 }) {
   return (
     <div
-      className={clsx('ds-stat', tone !== 'default' && `ds-stat--${tone}`)}
+      className={clsx('ds-stat', tone !== 'default' && `ds-stat--${tone}`, icon && 'ds-stat--has-icon')}
       {...rest}
     >
+      {icon && <span className="ds-stat__icon" aria-hidden="true">{icon}</span>}
       <div className="ds-stat__label">{label}</div>
       <div className="ds-stat__value">
         {prefix}{value}{suffix}

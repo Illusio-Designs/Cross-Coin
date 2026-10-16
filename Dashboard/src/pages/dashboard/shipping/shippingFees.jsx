@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Pagination, Select } from "../../../components/ui";
+import { Button, Modal, Pagination, Select, Input } from "../../../components/ui";
 import { PageHeader, FilterBar, Panel, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -162,10 +162,15 @@ export default function ShippingFees() {
                   }}
                 />
               </div>
-              <div className="dm-field">
-                <label className="dm-label">Fee (₹) <span className="dm-required">*</span></label>
-                <input className="dm-input" type="number" name="fee" value={selectedFee ? selectedFee.fee : formData.fee} onChange={handleInputChange} placeholder="0.00" required />
-              </div>
+              <Input
+                label="Fee (₹)"
+                required
+                type="number"
+                name="fee"
+                value={selectedFee ? selectedFee.fee : formData.fee}
+                onChange={handleInputChange}
+                placeholder="0.00"
+              />
             </div>
           </div>
           <div className="modal-footer">

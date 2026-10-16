@@ -77,6 +77,11 @@ export default function FaqsManager({ brandId = 1 }) {
     return Object.values(buckets);
   }, [items]);
 
+  // FAQ SEO status — moved here from the SEO Health page so the score shows
+  // where FAQs are actually managed. Counts respect the current scope filter.
+  const faqActive = useMemo(() => items.filter(f => f.is_active).length, [items]);
+  const faqTotal = items.length;
+
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyForm });
@@ -181,6 +186,32 @@ export default function FaqsManager({ brandId = 1 }) {
           </>
         }
       />
+
+      {/* FAQ SEO status — relocated from the SEO Health page. */}
+      <Panel
+        title="FAQ status"
+        subtitle={`${faqActive} active / ${faqTotal} total${filterType !== 'all' ? ' in this scope' : ''}`}
+        style={{ marginBottom: 'var(--ds-space-4)' }}
+      >
+        {!loading && faqTotal === 0 ? (
+          <div style={{
+            padding: 16,
+            background: 'var(--ds-color-warn-bg)',
+            border: '1px solid var(--ds-color-warn-bd)',
+            borderRadius: 'var(--ds-radius-sm)',
+            color: 'var(--ds-color-warn)',
+            fontSize: 13,
+          }}>
+            No FAQs configured. Adding 3–5 site-wide FAQs (return policy, shipping time, warranty) wins entire rich-result slots on Google mobile and AI shopping — use the form below to add your first.
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
+            {faqActive === faqTotal
+              ? 'Every FAQ in this scope is active and emits FAQPage schema on the storefront.'
+              : `${faqTotal - faqActive} inactive FAQ${faqTotal - faqActive === 1 ? '' : 's'} won't show on the site or emit schema.`}
+          </div>
+        )}
+      </Panel>
 
       <FaqForm
         form={form}

@@ -2,6 +2,18 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { abandonedCartService } from '../../../services';
 import { PageHeader, StatGrid, StatTile, FilterBar, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { Badge, Select } from '../../../components/ui';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  ShoppingBag01Icon,
+  Clock01Icon,
+  WhatsappIcon,
+  CheckmarkCircle02Icon,
+  Analytics01Icon,
+  RefreshIcon,
+} from '@hugeicons/core-free-icons';
+
+// KPI glyphs — quiet corner signifiers for each stat tile.
+const kpi = (icon) => <HugeiconsIcon icon={icon} size={18} strokeWidth={1.8} />;
 
 /**
  * Abandoned carts — checkouts captured at the delivery/payment step that didn't
@@ -74,15 +86,20 @@ export default function AbandonedCarts() {
       <PageHeader
         title="Abandoned carts"
         subtitle="Checkouts captured at the delivery/payment step. A WhatsApp recovery (code CART10) is sent immediately on capture (with a 5-min backstop); carts convert to “Recovered” when the shopper completes an order."
-        actions={<button className="ds-btn" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>}
+        actions={
+          <button className="ds-btn" onClick={load} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={1.8} />
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        }
       />
 
       <StatGrid>
-        <StatTile label="Total captured" value={stats.total ?? 0} />
-        <StatTile label="Pending" value={stats.pending ?? 0} tone="warn" />
-        <StatTile label="Messaged" value={stats.messaged ?? 0} tone="info" />
-        <StatTile label="Recovered" value={stats.recovered ?? 0} tone="good" />
-        <StatTile label="Recovered rate" value={`${stats.recoveredRate || 0}%`} tone="good" />
+        <StatTile label="Total captured" value={stats.total ?? 0} icon={kpi(ShoppingBag01Icon)} />
+        <StatTile label="Pending" value={stats.pending ?? 0} tone="warn" icon={kpi(Clock01Icon)} />
+        <StatTile label="Messaged" value={stats.messaged ?? 0} tone="info" icon={kpi(WhatsappIcon)} />
+        <StatTile label="Recovered" value={stats.recovered ?? 0} tone="good" icon={kpi(CheckmarkCircle02Icon)} />
+        <StatTile label="Recovered rate" value={`${stats.recoveredRate || 0}%`} tone="good" icon={kpi(Analytics01Icon)} />
       </StatGrid>
 
       <FilterBar search={q} onSearchChange={setQ} placeholder="Search name / phone / brand / item">

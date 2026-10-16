@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Modal, Table, Pagination, Select } from "../../../components/ui";
+import { Button, Input, Modal, Table, Pagination, Select } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -199,10 +199,14 @@ export default function Coupons() {
           {error && <div className="dm-error-banner">{error}</div>}
           <div className="modal-body">
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Coupon Code <span className="dm-required">*</span></label>
-                <input className="dm-input" type="text" name="code" value={formData.code} onChange={handleInputChange} placeholder="e.g., SAVE20" required />
-              </div>
+              <Input
+                label="Coupon Code"
+                required
+                name="code"
+                value={formData.code}
+                onChange={handleInputChange}
+                placeholder="e.g., SAVE20"
+              />
               <div className="dm-field">
                 <label className="dm-label">Status <span className="dm-required">*</span></label>
                 <Select
@@ -212,10 +216,16 @@ export default function Coupons() {
                 />
               </div>
             </div>
-            <div className="dm-field">
-              <label className="dm-label">Description <span className="dm-required">*</span></label>
-              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Describe this coupon..." required />
-            </div>
+            <Input
+              label="Description"
+              required
+              multiline
+              rows={3}
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Describe this coupon..."
+            />
             <div className="dm-section-title">Discount</div>
             <div className="dm-2col">
               <div className="dm-field">
@@ -233,40 +243,67 @@ export default function Coupons() {
                   onChange={v => setFormData(prev => ({ ...prev, type: v }))}
                 />
               </div>
-              <div className="dm-field">
-                <label className="dm-label">Discount Value <span className="dm-required">*</span></label>
-                <input className="dm-input" type="number" name="value" value={formData.value} onChange={handleInputChange} placeholder={formData.type === 'percentage' ? '0–100' : '0.00'} required />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Min Purchase (₹)</label>
-                <input className="dm-input" type="number" name="minPurchase" value={formData.minPurchase} onChange={handleInputChange} placeholder="0.00" />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Max Discount (₹)</label>
-                <input className="dm-input" type="number" name="maxDiscount" value={formData.maxDiscount} onChange={handleInputChange} placeholder="0.00" />
-              </div>
+              <Input
+                label="Discount Value"
+                required
+                type="number"
+                name="value"
+                value={formData.value}
+                onChange={handleInputChange}
+                placeholder={formData.type === 'percentage' ? '0–100' : '0.00'}
+              />
+              <Input
+                label="Min Purchase (₹)"
+                type="number"
+                name="minPurchase"
+                value={formData.minPurchase}
+                onChange={handleInputChange}
+                placeholder="0.00"
+              />
+              <Input
+                label="Max Discount (₹)"
+                type="number"
+                name="maxDiscount"
+                value={formData.maxDiscount}
+                onChange={handleInputChange}
+                placeholder="0.00"
+              />
             </div>
             <div className="dm-section-title">Usage Limits</div>
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Usage Limit</label>
-                <input className="dm-input" type="number" name="usageLimit" value={formData.usageLimit} onChange={handleInputChange} placeholder="Unlimited" />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Per User Limit</label>
-                <input className="dm-input" type="number" name="perUserLimit" value={formData.perUserLimit} onChange={handleInputChange} placeholder="Unlimited" />
-              </div>
+              <Input
+                label="Usage Limit"
+                type="number"
+                name="usageLimit"
+                value={formData.usageLimit}
+                onChange={handleInputChange}
+                placeholder="Unlimited"
+              />
+              <Input
+                label="Per User Limit"
+                type="number"
+                name="perUserLimit"
+                value={formData.perUserLimit}
+                onChange={handleInputChange}
+                placeholder="Unlimited"
+              />
             </div>
             <div className="dm-section-title">Validity</div>
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Start Date</label>
-                <input className="dm-input" type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">End Date</label>
-                <input className="dm-input" type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} />
-              </div>
+              <Input
+                label="Start Date"
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleInputChange}
+              />
+              <Input
+                label="End Date"
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="dm-section-title">Restrictions</div>
             <div className="dm-2col">

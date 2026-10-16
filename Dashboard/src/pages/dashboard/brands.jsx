@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService } from '../../services';
-import { Modal, Button } from '../../components/ui';
+import { Modal, Button, Input } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import Loader from '../../components/common/Loader';
 import { ConfirmModal } from '../../components/common/AlertModal';
@@ -244,12 +244,12 @@ export function BrandManager() {
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
             <div className="dm-2col">
-              <div className="dm-field"><label className="dm-label">Brand Name <span className="dm-required">*</span></label><input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" required /></div>
-              <div className="dm-field"><label className="dm-label">Display Name <span className="dm-required">*</span></label><input className="dm-input" type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" required /></div>
-              <div className="dm-field"><label className="dm-label">Slug</label><input className="dm-input" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" /></div>
-              <div className="dm-field"><label className="dm-label">Domain</label><input className="dm-input" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.in" /></div>
-              <div className="dm-field"><label className="dm-label">Contact Email</label><input className="dm-input" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" /></div>
-              <div className="dm-field"><label className="dm-label">Contact Phone</label><input className="dm-input" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" /></div>
+              <Input label="Brand Name" required type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" />
+              <Input label="Display Name" required type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" />
+              <Input label="Slug" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" />
+              <Input label="Domain" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.in" />
+              <Input label="Contact Email" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" />
+              <Input label="Contact Phone" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" />
             </div>
             {formData.domain?.trim() && (
               <div className="dm-field">
@@ -260,7 +260,7 @@ export function BrandManager() {
                 </div>
               </div>
             )}
-            <div className="dm-field"><label className="dm-label">Logo URL</label><input className="dm-input" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" /></div>
+            <Input label="Logo URL" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" />
             <div className="dm-field"><label className="dm-label">Status</label>
               <Dropdown value={formData.status} onChange={val => handleInputChange({ target: { name: 'status', value: val } })} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
             </div>

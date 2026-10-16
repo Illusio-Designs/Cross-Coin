@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { Button, Input, Modal, Pagination, Select, Switch, Badge } from "../../../components/ui";
 import { PageHeader, Panel, StatGrid, StatTile, FilterBar, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -315,16 +315,26 @@ export default function Categories() {
       >
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="dm-field">
-              <label className="dm-label">Category Name <span className="dm-required">*</span></label>
-              <input className="dm-input" type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., Footwear" required style={formErrors.name ? { borderColor: '#dc2626' } : {}} />
-              {formErrors.name && <span style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.name}</span>}
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Description <span className="dm-required">*</span></label>
-              <textarea className="dm-input dm-textarea" name="description" value={formData.description} onChange={handleInputChange} placeholder="Short description..." required style={formErrors.description ? { borderColor: '#dc2626' } : {}} />
-              {formErrors.description && <span style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px', display: 'block' }}>{formErrors.description}</span>}
-            </div>
+            <Input
+              label="Category Name"
+              required
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="e.g., Footwear"
+              error={formErrors.name}
+            />
+            <Input
+              label="Description"
+              required
+              multiline
+              rows={3}
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Short description..."
+              error={formErrors.description}
+            />
             <div className="dm-2col">
               <div className="dm-field">
                 <label className="dm-label">Status <span className="dm-required">*</span></label>
@@ -335,10 +345,13 @@ export default function Categories() {
                   required
                 />
               </div>
-              <div className="dm-field">
-                <label className="dm-label">Meta Keywords</label>
-                <input className="dm-input" type="text" name="metaKeywords" value={formData.metaKeywords} onChange={handleInputChange} placeholder="keyword1, keyword2" />
-              </div>
+              <Input
+                label="Meta Keywords"
+                name="metaKeywords"
+                value={formData.metaKeywords}
+                onChange={handleInputChange}
+                placeholder="keyword1, keyword2"
+              />
             </div>
 
             {/* ── SEO ── */}
@@ -349,38 +362,62 @@ export default function Categories() {
               </div>
 
               <div className="dm-field">
-                <label className="dm-label">Meta Title</label>
-                <input className="dm-input" type="text" name="metaTitle" value={formData.metaTitle} onChange={handleInputChange} placeholder={`Auto: ${formData.name || 'Category Name'} | CrossCoin`} />
+                <Input
+                  label="Meta Title"
+                  name="metaTitle"
+                  value={formData.metaTitle}
+                  onChange={handleInputChange}
+                  placeholder={`Auto: ${formData.name || 'Category Name'} | CrossCoin`}
+                />
                 <SeoLengthMeter value={formData.metaTitle || ''} type="title" />
               </div>
 
               <div className="dm-field">
-                <label className="dm-label">Meta Description</label>
-                <textarea className="dm-input dm-textarea" name="metaDescription" value={formData.metaDescription} onChange={handleInputChange} placeholder="Auto: first 160 chars of category description" />
+                <Input
+                  label="Meta Description"
+                  multiline
+                  rows={3}
+                  name="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={handleInputChange}
+                  placeholder="Auto: first 160 chars of category description"
+                />
                 <SeoLengthMeter value={formData.metaDescription || ''} type="description" />
               </div>
 
               <div className="dm-2col">
-                <div className="dm-field">
-                  <label className="dm-label">OG Image URL</label>
-                  <input className="dm-input" type="text" name="ogImage" value={formData.ogImage} onChange={handleInputChange} placeholder="Auto: category image" />
-                </div>
-                <div className="dm-field">
-                  <label className="dm-label">Canonical URL</label>
-                  <input className="dm-input" type="text" name="canonicalUrl" value={formData.canonicalUrl} onChange={handleInputChange} placeholder={`Auto: https://crosscoin.in/collections/${formData.slug || '<slug>'}`} />
-                </div>
+                <Input
+                  label="OG Image URL"
+                  name="ogImage"
+                  value={formData.ogImage}
+                  onChange={handleInputChange}
+                  placeholder="Auto: category image"
+                />
+                <Input
+                  label="Canonical URL"
+                  name="canonicalUrl"
+                  value={formData.canonicalUrl}
+                  onChange={handleInputChange}
+                  placeholder={`Auto: https://crosscoin.in/collections/${formData.slug || '<slug>'}`}
+                />
               </div>
 
-              <div className="dm-field">
-                <label className="dm-label">Structured Data (JSON-LD) — optional override</label>
-                <textarea className="dm-input dm-textarea" name="structuredData" value={formData.structuredData} onChange={handleInputChange} placeholder="Auto: CollectionPage + ItemList of all category products" />
-              </div>
+              <Input
+                label="Structured Data (JSON-LD) — optional override"
+                multiline
+                rows={3}
+                name="structuredData"
+                value={formData.structuredData}
+                onChange={handleInputChange}
+                placeholder="Auto: CollectionPage + ItemList of all category products"
+              />
 
               <div className="dm-field">
-                <label className="dm-checkbox-label" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input type="checkbox" checked={!!formData.seoIndex} onChange={e => setFormData(prev => ({ ...prev, seoIndex: e.target.checked }))} />
-                  <span>Allow Google to index this category (uncheck for sale-ended or deprecated categories)</span>
-                </label>
+                <Switch
+                  checked={!!formData.seoIndex}
+                  onChange={(checked) => setFormData(prev => ({ ...prev, seoIndex: checked }))}
+                  label="Allow Google to index this category (uncheck for sale-ended or deprecated categories)"
+                />
               </div>
 
               <div style={{ marginTop: 12 }}>

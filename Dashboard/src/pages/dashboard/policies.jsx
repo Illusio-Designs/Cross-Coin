@@ -1,7 +1,7 @@
 // When accessed directly as a Next.js page, redirect to dashboard shell
 export { default } from './index';
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Pagination, Select } from "../../components/ui";
+import { Button, Modal, Pagination, Select, Input } from "../../components/ui";
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from "../../components/Dashboard/primitives";
 import Dropdown from "../../components/ui/Dropdown";
 import Loader from "../../components/common/Loader";
@@ -155,8 +155,9 @@ export function Policies() {
           subtitle={"One value for all stores — fills the {{GSTIN}} token in every policy."}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <input value={gstin} onChange={e => setGstin(e.target.value)} placeholder="e.g. 24ABCDE1234F1Z5"
-              style={{ flex: '1 1 220px', minWidth: 180, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface, #fff)', color: 'var(--ds-color-text)', fontFamily: 'var(--ds-font-mono, monospace)' }} />
+            <div style={{ flex: '1 1 220px', minWidth: 180 }}>
+              <Input value={gstin} onChange={e => setGstin(e.target.value)} placeholder="e.g. 24ABCDE1234F1Z5" />
+            </div>
             <button type="button" onClick={saveGstin} disabled={gstinSaving}
               style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--ds-color-primary, #111)', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: gstinSaving ? 'not-allowed' : 'pointer', opacity: gstinSaving ? 0.6 : 1 }}>
               {gstinSaving ? 'Saving…' : 'Save GSTIN'}
@@ -205,10 +206,15 @@ export function Policies() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Policy" : "Add Policy"} closeOnOverlayClick={false}>
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
-            <div className="dm-field">
-              <label className="dm-label">Policy Title <span className="dm-required">*</span></label>
-              <input className="dm-input" type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g., Privacy Policy" required />
-            </div>
+            <Input
+              label="Policy Title"
+              required
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="e.g., Privacy Policy"
+            />
             <div className="dm-field">
               <label className="dm-label">Content</label>
               <div className="dm-quill-wrap">

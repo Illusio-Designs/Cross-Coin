@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Pagination, Select, Badge } from "../../../components/ui";
+import { Button, Modal, Pagination, Select, Badge, Input, Switch } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState, ResponsiveTable } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from '../../../components/common/AlertModal';
@@ -426,11 +426,10 @@ export default function Reviews() {
 
               <div className="dm-field">
                 <label className="dm-label">File <span className="dm-required">*</span></label>
-                <input
+                <Input
                   type="file"
                   accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
                   onChange={e => { setImportFile(e.target.files?.[0] || null); setImportError(null); }}
-                  className="dm-input"
                 />
                 {importFile && <small style={{ color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{importFile.name}</small>}
               </div>
@@ -493,14 +492,22 @@ export default function Reviews() {
               />
             </div>
             <div className="dm-field">
-              <label className="dm-checkbox-row">
-                <input type="checkbox" name="is_featured" checked={formData.is_featured} onChange={handleInputChange} />
-                <span className="dm-checkbox-label">Mark as Featured Review</span>
-              </label>
+              <Switch
+                checked={formData.is_featured}
+                onChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
+                label="Mark as Featured Review"
+              />
             </div>
             <div className="dm-field">
               <label className="dm-label">Admin Notes</label>
-              <textarea className="dm-input dm-textarea" name="admin_notes" value={formData.admin_notes} onChange={handleInputChange} placeholder="Internal notes about this review..." />
+              <Input
+                multiline
+                rows={4}
+                name="admin_notes"
+                value={formData.admin_notes}
+                onChange={handleInputChange}
+                placeholder="Internal notes about this review..."
+              />
             </div>
           </div>
           <div className="modal-footer">

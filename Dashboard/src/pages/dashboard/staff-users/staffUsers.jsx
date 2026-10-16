@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Table, Pagination, Modal, Select } from "../../../components/ui";
+import { Button, Table, Pagination, Modal, Select, Input } from "../../../components/ui";
 import { PageHeader, FilterBar } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
@@ -230,14 +230,22 @@ export default function StaffUsers() {
             {/* User info — create mode */}
             {!editUser && (
               <div className="dm-2col">
-                <div className="dm-field">
-                  <label className="dm-label">Username <span className="dm-required">*</span></label>
-                  <input className="dm-input" type="text" placeholder="e.g. john_manager" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
-                </div>
-                <div className="dm-field">
-                  <label className="dm-label">Email <span className="dm-required">*</span></label>
-                  <input className="dm-input" type="email" placeholder="e.g. john@crosscoin.in" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
-                </div>
+                <Input
+                  label="Username"
+                  required
+                  type="text"
+                  placeholder="e.g. john_manager"
+                  value={form.username}
+                  onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                />
+                <Input
+                  label="Email"
+                  required
+                  type="email"
+                  placeholder="e.g. john@crosscoin.in"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                />
               </div>
             )}
 

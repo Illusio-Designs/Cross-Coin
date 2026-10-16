@@ -604,6 +604,10 @@ module.exports.getAllProducts = async (req, res) => {
       ? [
           { model: Category, attributes: ['id', 'name', 'slug'] },
           { ...brandInclude, attributes: ['id', 'name', 'slug', 'display_name'] },
+          // Lightweight SEO join (3 tracked columns only) so the listing can
+          // show a per-product "SEO gaps" badge without the full ProductSEO
+          // payload. required:false → products with no SEO row still list.
+          { model: ProductSEO, as: 'ProductSEO', attributes: ['metaTitle', 'metaDescription', 'ogImage'], required: false },
         ]
       : [
           { model: Category, attributes: ['id', 'name', 'slug'] },
@@ -652,6 +656,21 @@ module.exports.getAllProducts = async (req, res) => {
         price_override: brand.ProductBrand?.price_override,
         stock_override: brand.ProductBrand?.stock_override
       })) : [];
+      // Per-product SEO gap flags for the listing's "SEO" column. A field is a
+      // gap when empty/absent; a product with no SEO row at all = all 3 missing.
+      // Same definition the SEO Health summary uses (metaTitle/metaDescription/
+      // ogImage). Only computed in listMode (the only mode that joins the lean
+      // ProductSEO columns); the `seo` blob is stripped to keep the row small.
+      if (listMode) {
+        const seo = formatted.seo || {};
+        const miss = (v) => v == null || String(v).trim() === '';
+        const seoGaps = [];
+        if (miss(seo.metaTitle)) seoGaps.push('metaTitle');
+        if (miss(seo.metaDescription)) seoGaps.push('metaDescription');
+        if (miss(seo.ogImage)) seoGaps.push('ogImage');
+        formatted.seoGaps = seoGaps;
+        delete formatted.seo;
+      }
       return formatted;
     });
 

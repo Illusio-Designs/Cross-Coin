@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { bundleService, brandService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge, Select } from '../../../components/ui';
+import { Badge, Select, Input, Switch } from '../../../components/ui';
 
 const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true };
 
@@ -186,25 +186,23 @@ export default function PackPricingManager() {
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 12 }}>{editing ? 'Edit pack' : 'New pack'}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'flex-end' }}>
               <Field label="Pairs" style={{ flex: '0 0 90px' }}>
-                <input type="number" min="1" value={form.pairs} onChange={(e) => setForm({ ...form, pairs: e.target.value })} style={input} required />
+                <Input type="number" min="1" value={form.pairs} onChange={(e) => setForm({ ...form, pairs: e.target.value })} required />
               </Field>
               <Field label="Pack price ₹" style={{ flex: '0 0 130px' }}>
-                <input type="number" min="0" step="1" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder={basePrice ? String(basePrice * (parseInt(form.pairs, 10) || 1)) : '499'} style={input} required />
+                <Input type="number" min="0" step="1" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder={basePrice ? String(basePrice * (parseInt(form.pairs, 10) || 1)) : '499'} required />
               </Field>
               <Field label="Label" style={{ flex: '1 1 150px' }}>
-                <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={`${form.pairs || 1} Pairs`} style={input} />
+                <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={`${form.pairs || 1} Pairs`} />
               </Field>
               <Field label="Badge (optional)" style={{ flex: '1 1 150px' }}>
-                <input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="Most Popular" style={input} />
+                <Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="Most Popular" />
               </Field>
               <Field label="Order" style={{ flex: '0 0 80px' }}>
-                <input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} style={input} />
+                <Input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} />
               </Field>
             </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 13, color: 'var(--ds-color-text-muted)', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="checkbox" checked={!!form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Active
-              </label>
+              <Switch checked={!!form.is_active} onChange={(checked) => setForm({ ...form, is_active: checked })} label="Active" />
               {form.price && form.pairs ? (
                 <>
                   <span>·</span>
@@ -242,7 +240,6 @@ const Field = ({ label, children, style }) => (
     {children}
   </label>
 );
-const input = { width: '100%', padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 6, fontSize: 14, outline: 'none', background: 'var(--ds-color-surface)' };
 const pad = { padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' };
 const btnSecondary = { padding: '6px 10px', border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-text-muted)' };
 const btnDanger = { padding: '6px 10px', border: '1px solid var(--ds-color-danger-border, #fecaca)', background: 'var(--ds-color-danger-bg, #fef2f2)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-danger, #991b1b)' };

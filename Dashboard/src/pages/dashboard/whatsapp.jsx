@@ -2,7 +2,7 @@
 export { default } from './index';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Modal, Button } from '../../components/ui';
+import { Modal, Button, Input } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
@@ -2553,10 +2553,13 @@ export function WhatsAppManager() {
           <div className="modal-body">
             <div className="was-modal-notice">Template name must be lowercase with underscores only. Approval takes 5 min – a few hours.</div>
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Template Name *</label>
-                <input className="dm-input" value={form.name} onChange={e => setF('name', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))} placeholder="order_confirmation" required />
-              </div>
+              <Input
+                label="Template Name"
+                required
+                value={form.name}
+                onChange={e => setF('name', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,''))}
+                placeholder="order_confirmation"
+              />
               <div className="dm-field">
                 <label className="dm-label">Category</label>
                 <Dropdown
@@ -2570,14 +2573,20 @@ export function WhatsAppManager() {
                 />
               </div>
             </div>
-            <div className="dm-field">
-              <label className="dm-label">Body *</label>
-              <textarea className="dm-input dm-textarea" rows={5} value={form.body} onChange={e => setF('body', e.target.value)} style={{fontFamily:'monospace',fontSize:12}} required />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Footer</label>
-              <input className="dm-input" value={form.footer} onChange={e => setF('footer', e.target.value)} />
-            </div>
+            <Input
+              label="Body"
+              required
+              multiline
+              rows={5}
+              value={form.body}
+              onChange={e => setF('body', e.target.value)}
+              style={{fontFamily:'monospace',fontSize:12}}
+            />
+            <Input
+              label="Footer"
+              value={form.footer}
+              onChange={e => setF('footer', e.target.value)}
+            />
             {formResponse && <div className={`wa-response wa-response-${formResponse.type}`}><pre>{formResponse.text}</pre></div>}
           </div>
           <div className="modal-footer">
@@ -2592,29 +2601,33 @@ export function WhatsAppManager() {
         <form onSubmit={saveCannedResponse} className="seo-form">
           <div className="modal-body">
             <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Shortcut * (type /shortcut in reply)</label>
-                <input
-                  className="dm-input"
-                  value={cannedForm.shortcut}
-                  onChange={e => {
-                    let val = e.target.value.toLowerCase().replace(/\s/g,'').replace(/[^a-z0-9/_-]/g,'');
-                    if (val && !val.startsWith('/')) val = '/' + val;
-                    setCannedForm(p => ({...p, shortcut: val}));
-                  }}
-                  placeholder="/track"
-                  required
-                />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">Title *</label>
-                <input className="dm-input" value={cannedForm.title} onChange={e => setCannedForm(p => ({...p, title: e.target.value}))} placeholder="Order Tracking Reply" required />
-              </div>
+              <Input
+                label="Shortcut (type /shortcut in reply)"
+                required
+                value={cannedForm.shortcut}
+                onChange={e => {
+                  let val = e.target.value.toLowerCase().replace(/\s/g,'').replace(/[^a-z0-9/_-]/g,'');
+                  if (val && !val.startsWith('/')) val = '/' + val;
+                  setCannedForm(p => ({...p, shortcut: val}));
+                }}
+                placeholder="/track"
+              />
+              <Input
+                label="Title"
+                required
+                value={cannedForm.title}
+                onChange={e => setCannedForm(p => ({...p, title: e.target.value}))}
+                placeholder="Order Tracking Reply"
+              />
             </div>
-            <div className="dm-field">
-              <label className="dm-label">Message Body *</label>
-              <textarea className="dm-input dm-textarea" rows={4} value={cannedForm.body} onChange={e => setCannedForm(p => ({...p, body: e.target.value}))} required />
-            </div>
+            <Input
+              label="Message Body"
+              required
+              multiline
+              rows={4}
+              value={cannedForm.body}
+              onChange={e => setCannedForm(p => ({...p, body: e.target.value}))}
+            />
           </div>
           <div className="modal-footer">
             <Button variant="secondary" type="button" onClick={() => setCannedModal(false)}>Cancel</Button>
@@ -2628,18 +2641,26 @@ export function WhatsAppManager() {
         <form onSubmit={createBroadcast} className="seo-form">
           <div className="modal-body">
             <div className="was-modal-notice">Broadcasts are sent to all opted-in customers. Only use approved templates.</div>
-            <div className="dm-field">
-              <label className="dm-label">Campaign Name *</label>
-              <input className="dm-input" value={broadcastForm.name} onChange={e => setBroadcastForm(p => ({...p, name: e.target.value}))} placeholder="Summer Sale 2025" required />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Template Name *</label>
-              <input className="dm-input" value={broadcastForm.templateName} onChange={e => setBroadcastForm(p => ({...p, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))} placeholder="cart_abandoned" required />
-            </div>
-            <div className="dm-field">
-              <label className="dm-label">Audience Filter (optional)</label>
-              <input className="dm-input" value={broadcastForm.audienceFilter} onChange={e => setBroadcastForm(p => ({...p, audienceFilter: e.target.value}))} placeholder='e.g. {"tags":"vip"}' />
-            </div>
+            <Input
+              label="Campaign Name"
+              required
+              value={broadcastForm.name}
+              onChange={e => setBroadcastForm(p => ({...p, name: e.target.value}))}
+              placeholder="Summer Sale 2025"
+            />
+            <Input
+              label="Template Name"
+              required
+              value={broadcastForm.templateName}
+              onChange={e => setBroadcastForm(p => ({...p, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))}
+              placeholder="cart_abandoned"
+            />
+            <Input
+              label="Audience Filter (optional)"
+              value={broadcastForm.audienceFilter}
+              onChange={e => setBroadcastForm(p => ({...p, audienceFilter: e.target.value}))}
+              placeholder='e.g. {"tags":"vip"}'
+            />
           </div>
           <div className="modal-footer">
             <Button variant="secondary" type="button" onClick={() => setBroadcastModal(false)}>Cancel</Button>
