@@ -17,6 +17,7 @@ export default function TestLayout({ children }) {
   const [mnav, setMnav] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const tt = useRef();
+  const rootRef = useRef(null);
 
   // Inject the Mint design system CSS only while a /test page is mounted.
   // Theme toggle writes data-theme on <html>; cleaned up on unmount.
@@ -28,12 +29,14 @@ export default function TestLayout({ children }) {
     return () => {
       window.removeEventListener('cc-test-toast', onToast);
       window.removeEventListener('cc-test-opencart', onOpen);
-      try { document.documentElement.removeAttribute('data-theme'); } catch (_) {}
     };
   }, []);
 
+  // Theme is scoped to the preview root (the dark CSS is .cc-test-root[data-theme]),
+  // so toggle the attribute on the wrapper, not <html>.
   const toggleTheme = () => {
-    const el = document.documentElement;
+    const el = rootRef.current;
+    if (!el) return;
     const cur = el.getAttribute('data-theme');
     const dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
     el.setAttribute('data-theme', dark ? 'light' : 'dark');
@@ -52,7 +55,7 @@ export default function TestLayout({ children }) {
   );
 
   return (
-    <div className="cc-test-root">
+    <div className="cc-test-root" ref={rootRef}>
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
