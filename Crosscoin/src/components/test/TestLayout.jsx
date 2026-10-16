@@ -39,6 +39,16 @@ const MOBILE_CSS = `
   .cc-test-root .hero .wrap{ grid-template-columns:1fr; padding-block:30px 44px; }
   .cc-test-root .hero .tagpill{ white-space:nowrap; }
 }
+/* The horizontal product rail's grid-auto-flow:column + 1fr sizing collapses on
+   phones (card image box shrinks, cards overflow onto the next section). Render
+   it as a normal 2-up grid on mobile instead. */
+@media (max-width:700px){
+  .cc-test-root .prail{ display:grid; grid-auto-flow:row; grid-auto-columns:auto; grid-template-columns:1fr 1fr; overflow:visible; }
+  .cc-test-root .prail > *{ scroll-snap-align:none; }
+}
+@media (max-width:380px){
+  .cc-test-root .prail{ grid-template-columns:1fr; }
+}
 @media (max-width:480px){
   .cc-test-root .nav{ gap:8px; height:60px; }
   .cc-test-root .nav__extra{ display:none; }
