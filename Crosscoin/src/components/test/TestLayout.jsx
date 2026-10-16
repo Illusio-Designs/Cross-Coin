@@ -554,8 +554,9 @@ export default function TestLayout({ children }) {
                     </div>
                   </div>
                   <div className="lp" style={{ textAlign: 'right' }}>
-                    {inr(i.unit * i.qty)}
-                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 11, color: 'var(--ink-faint)', textDecoration: 'line-through', fontWeight: 400 }}>{inr(i.was * i.qty)}</div>}
+                    <div><b>{inr(i.unit)}</b>{hasTiers ? <small className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 400 }}> / pair</small> : null}</div>
+                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 11, color: 'var(--ink-faint)', textDecoration: 'line-through', fontWeight: 400 }}>{inr(i.was)}</div>}
+                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 10.5, color: 'var(--crimson)', fontWeight: 700 }}>{Math.round((1 - i.unit / i.was) * 100)}% off</div>}
                   </div>
                 </div>
                 );
