@@ -3,6 +3,28 @@ const { defaultSeoData } = require('../config/defaultSeoData.js');
 
 const initializeSeoData = async () => {
     try {
+        // One-time, idempotent cleanup of legacy brand_id=null SEO rows. These were
+        // created by an earlier seed and are the rows the storefront never reads
+        // (it prefers brand_id=1), so admin edits that landed on them looked lost.
+        // Data-preserving: an orphan null row (no brand_id=1 twin) is PROMOTED to
+        // brand_id=1 so its edits survive; a null row that merely duplicates an
+        // existing brand_id=1 row is deleted. After this runs once there are no
+        // null rows left, so on later startups it is a cheap no-op.
+        try {
+            const nullRows = await SeoMetadata.findAll({ where: { brand_id: null } });
+            let promoted = 0, removed = 0;
+            for (const row of nullRows) {
+                const twin = await SeoMetadata.findOne({ where: { page_name: row.page_name, brand_id: 1 } });
+                if (twin) { await row.destroy(); removed += 1; }
+                else { await row.update({ brand_id: 1 }); promoted += 1; }
+            }
+            if (promoted || removed) {
+                console.log(`SEO cleanup: promoted ${promoted} orphan null row(s) to brand_id=1, removed ${removed} duplicate(s)`);
+            }
+        } catch (cleanupErr) {
+            console.error('SEO null-row cleanup skipped:', cleanupErr.message);
+        }
+
         // Get all existing page names
         const existingPages = await SeoMetadata.findAll({
             attributes: ['page_name']
