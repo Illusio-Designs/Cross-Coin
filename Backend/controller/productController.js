@@ -870,11 +870,26 @@ module.exports.updateProduct = async (req, res) => {
       }
     }
 
-    // Update or create SEO data — all derivation handled by the helper
-    // so we don't drift from the create path.
+    // Update or create SEO data — all derivation handled by the helper so we
+    // don't drift from the create path. IMPORTANT: a product edit that doesn't
+    // resend the SEO form (req.body.seo = "{}") must NOT wipe an admin's custom
+    // SEO. Feed the already-saved ProductSEO back in as a fallback so stored
+    // text fields survive; a value sent in THIS request still wins, and the
+    // JSON-LD (structuredData) is left to regenerate from live product data.
+    const prevSeo = product.ProductSEO ? product.ProductSEO.toJSON() : {};
+    const mergedSeo = {
+      ...seo,
+      metaTitle: seo.metaTitle || seo.meta_title || prevSeo.metaTitle,
+      metaDescription: seo.metaDescription || seo.meta_description || prevSeo.metaDescription,
+      metaKeywords: seo.metaKeywords || seo.meta_keywords || prevSeo.metaKeywords,
+      ogTitle: seo.ogTitle || seo.og_title || prevSeo.ogTitle,
+      ogDescription: seo.ogDescription || seo.og_description || prevSeo.ogDescription,
+      ogImage: seo.ogImage || seo.og_image || prevSeo.ogImage,
+      canonicalUrl: seo.canonicalUrl || seo.canonical_url || prevSeo.canonicalUrl,
+    };
     const seoData = await buildProductSeoData({
       product,
-      seo,
+      seo: mergedSeo,
       variations,
       images,
     });

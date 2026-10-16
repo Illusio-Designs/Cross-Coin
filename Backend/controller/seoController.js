@@ -336,7 +336,7 @@ module.exports.updateSEOData = async (req, res) => {
 
         // First try to find existing SEO data using exact page_name
         let seoData = await SeoMetadata.findOne({
-            where: { page_name, brand_id: req.brandId || null }
+            where: { page_name, brand_id: req.brandId || 1 }
         });
 
         // If no existing data, create new
@@ -354,7 +354,7 @@ module.exports.updateSEOData = async (req, res) => {
                 canonical_url: canonical_url || canonicalUrl,
                 robots: robots || null,
                 structured_data: sd.value === undefined ? null : sd.value,
-                brand_id: req.brandId || null
+                brand_id: req.brandId || 1
             });
         } else {
             // Generate new slug and canonical URL for existing entry
@@ -401,7 +401,7 @@ module.exports.updateSEOData = async (req, res) => {
 
         // Fetch the updated data
         const updatedData = await SeoMetadata.findOne({
-            where: { page_name, brand_id: req.brandId || null }
+            where: { page_name, brand_id: req.brandId || 1 }
         });
 
         await invalidateSeoCache();
@@ -452,7 +452,7 @@ module.exports.createSEOData = async (req, res) => {
 
         // Check if page already exists
         const existingPage = await SeoMetadata.findOne({
-            where: { page_name: page_name.toLowerCase().trim(), brand_id: req.brandId || null }
+            where: { page_name: page_name.toLowerCase().trim(), brand_id: req.brandId || 1 }
         });
 
         if (existingPage) {
@@ -477,7 +477,7 @@ module.exports.createSEOData = async (req, res) => {
             robots: robots || null,
             structured_data: sd.value === undefined ? null : sd.value,
             meta_image: req.file ? `/uploads/seo/${req.file.filename}` : null,
-            brand_id: req.brandId || null
+            brand_id: req.brandId || 1
         });
 
         logger.info('Created SEO data:', seoData.toJSON());
@@ -513,7 +513,7 @@ module.exports.deleteSEOData = async (req, res) => {
         const deleted = await SeoMetadata.destroy({
             where: {
                 page_name: pageName.toLowerCase().trim(),
-                brand_id: req.brandId || null
+                brand_id: req.brandId || 1
             }
         });
         

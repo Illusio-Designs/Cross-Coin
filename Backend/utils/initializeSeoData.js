@@ -15,8 +15,13 @@ const initializeSeoData = async () => {
         );
 
         if (newPages.length > 0) {
-            // Create new SEO entries
-            await SeoMetadata.bulkCreate(newPages);
+            // Create new SEO entries scoped to the default brand (id 1 / crosscoin).
+            // The public reader and the admin writer both key off brand_id=1 when
+            // no brand is resolved, so seeding at brand_id=1 (not null) keeps the
+            // seed row, the storefront read, and the dashboard edit on the SAME row
+            // — otherwise an admin edit (brand_id=1) is invisible behind a stale
+            // brand_id=null seed row.
+            await SeoMetadata.bulkCreate(newPages.map((p) => ({ ...p, brand_id: 1 })));
             console.log(`Created ${newPages.length} new SEO entries`);
         } else {
             console.log('All default SEO entries already exist');
