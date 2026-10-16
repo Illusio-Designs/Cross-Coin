@@ -7,6 +7,7 @@ import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, set
 import { I, Thumb } from './ui';
 import { inr } from './data';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons } from './real';
+import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 
 const FREE_SHIP = 799;
 
@@ -194,6 +195,8 @@ export default function TestLayout({ children }) {
   const [coupon, setCoupon] = useState(null);
   const [pay, setPay] = useState('cod');
   const [orderNo, setOrderNo] = useState('');
+  const [placing, setPlacing] = useState(false);
+  const [orderErr, setOrderErr] = useState('');
   const [offers, setOffers] = useState([]);
   const [primTiers, setPrimTiers] = useState([]);
   const tt = useRef();
@@ -263,13 +266,42 @@ export default function TestLayout({ children }) {
     const v = (typeof codeArg === 'string' ? codeArg : (promoRef.current?.value || '')).trim().toUpperCase();
     if (!v) return;
     const res = await validateCouponReal(v, sub, pay);
-    if (res.ok) { setCoupon({ code: res.code, amount: res.amount }); showToast(`${res.code} applied — ${inr(res.amount)} off`); }
+    if (res.ok) { setCoupon({ id: res.id, code: res.code, amount: res.amount }); showToast(`${res.code} applied — ${inr(res.amount)} off`); }
     else { setCoupon(null); showToast(res.message || 'Invalid code'); }
   };
-  const placeOrder = () => {
+  // Real order placement (guest). COD creates the order directly; prepaid opens
+  // real Razorpay and the order is created server-side on successful verify.
+  const placeOrder = async () => {
+    if (placing) return;
     if (!formRef.current || !formRef.current.reportValidity()) return;
-    setOrderNo('#CC-' + String(Math.floor(10000 + Math.random() * 89999)));
-    setStep('done'); clearCart(); setCoupon(null);
+    const fd = new FormData(formRef.current);
+    const form = {
+      name: (fd.get('name') || '').toString().trim(),
+      email: (fd.get('email') || '').toString().trim(),
+      phone: (fd.get('phone') || '').toString().trim(),
+      addr: (fd.get('addr') || '').toString().trim(),
+      city: (fd.get('city') || '').toString().trim(),
+      state: (fd.get('state') || '').toString().trim(),
+      pin: (fd.get('pin') || '').toString().trim(),
+    };
+    setOrderErr(''); setPlacing(true);
+    const done = (no) => { setOrderNo(no); setStep('done'); clearCart(); setCoupon(null); setPlacing(false); };
+    const fail = (msg) => { setOrderErr(msg || 'Something went wrong. Please try again.'); setPlacing(false); };
+    try {
+      if (pay === 'prepaid') {
+        await placePrepaidGuest({
+          cart, form, couponId: coupon?.id || null, discount: disc,
+          onSuccess: (no) => done(no),
+          onFail: (msg) => fail(msg),
+          onDismiss: () => setPlacing(false),
+        });
+      } else {
+        const r = await placeCodGuest({ cart, form, couponId: coupon?.id || null, discount: disc });
+        if (r.ok) done(r.orderNo); else fail(r.raw?.message || 'Order could not be placed.');
+      }
+    } catch (e) {
+      fail(e?.message || e?.toString?.() || 'Order could not be placed.');
+    }
   };
 
   const navLinks = (
@@ -425,9 +457,10 @@ export default function TestLayout({ children }) {
             <form ref={formRef}>
               <div className="optlabel">Delivery details</div>
               <div className="ffield"><label>Full name</label><input name="name" required placeholder="Aarav Sharma" /></div>
-              <div className="ffield"><label>Phone</label><input name="phone" required inputMode="tel" placeholder="+91 98765 43210" /></div>
+              <div className="frow"><div className="ffield"><label>Email</label><input name="email" required type="email" inputMode="email" placeholder="you@email.com" /></div><div className="ffield"><label>Phone</label><input name="phone" required inputMode="tel" placeholder="9876543210" /></div></div>
               <div className="ffield"><label>Address</label><input name="addr" required placeholder="Flat, street, area" /></div>
-              <div className="frow"><div className="ffield"><label>City</label><input name="city" required placeholder="Mumbai" /></div><div className="ffield"><label>Pincode</label><input name="pin" required inputMode="numeric" placeholder="400001" /></div></div>
+              <div className="frow"><div className="ffield"><label>City</label><input name="city" required placeholder="Mumbai" /></div><div className="ffield"><label>State</label><input name="state" required placeholder="Maharashtra" /></div></div>
+              <div className="ffield"><label>Pincode</label><input name="pin" required inputMode="numeric" placeholder="400001" /></div>
               <div className="optlabel">Payment</div>
               <div className="pay">
                 <label className={`payopt${pay === 'cod' ? ' on' : ''}`} onClick={() => setPay('cod')}>
@@ -447,7 +480,11 @@ export default function TestLayout({ children }) {
             <div className="srow" style={{ padding: '3px 0' }}><span>Shipping</span><span>{ship === 0 ? 'FREE' : inr(ship)}</span></div>
             {cod > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>COD handling</span><span>{inr(cod)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            <button className="btn btn--crimson btn--block btn--lg" onClick={placeOrder}>Place order · {inr(total)}</button>
+            {orderErr && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12, marginBottom: 10 }}>{orderErr}</div>}
+            <button className="btn btn--crimson btn--block btn--lg" onClick={placeOrder} disabled={placing || !cart.length}>
+              {placing ? 'Placing…' : (pay === 'prepaid' ? `Pay ${inr(total)}` : `Place order · ${inr(total)}`)}
+            </button>
+            <p className="mono" style={{ fontSize: 10.5, color: 'var(--ink-faint)', textAlign: 'center', margin: '9px 0 0' }}>Preview checkout — places a real order (tagged TEST PREVIEW).</p>
           </div>
         </>)}
 

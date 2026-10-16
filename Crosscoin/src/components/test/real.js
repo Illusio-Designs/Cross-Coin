@@ -256,6 +256,6 @@ export async function fetchSearch(q, params = {}) {
 export async function validateCouponReal(code, cartTotal, paymentMode) {
   const { validateCoupon } = await import('../../services/publicApi');
   const data = await validateCoupon(code, cartTotal, paymentMode || null, null);
-  if (data?.success && data?.coupon) return { ok: true, code: data.coupon.code, amount: parseFloat(data.discountAmount) || 0 };
+  if (data?.success && data?.coupon) return { ok: true, id: data.coupon.id, code: data.coupon.code, amount: parseFloat(data.discountAmount) || 0 };
   return { ok: false, message: data?.message || 'Invalid or expired code' };
 }
