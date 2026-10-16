@@ -179,7 +179,7 @@ export async function fetchBlogs(limit = 3) {
     const r = await getPublicBlogs({ limit });
     const list = r?.data?.posts || r?.data?.blogs || r?.posts || r?.blogs || (Array.isArray(r?.data) ? r.data : (Array.isArray(r) ? r : []));
     return list.map((b) => {
-      const raw = b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image || b.banner || b.bannerImage || '';
+      const raw = b.thumbnail_image || b.hero_image || b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image || b.banner || b.bannerImage || '';
       let img = '';
       try { img = raw ? ikTransform(getDirectImageUrl({ image_url: raw }) || raw, 800) : ''; } catch (_) { img = ''; }
       if (!img) { try { img = imgOf(raw); } catch (_) { img = ''; } }
