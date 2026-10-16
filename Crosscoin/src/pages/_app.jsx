@@ -111,8 +111,13 @@ import ErrorBoundary from "../components/common/ErrorBoundary";
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();
   const { user } = useAuth();
+  const router = useRouter();
   const [showBackTop, setShowBackTop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  // The /test design-preview routes ship their own full chrome (header, footer,
+  // cart drawer). Render them bare so the live site's Header/Footer/Breadcrumb
+  // don't stack on top. (Providers above still apply — harmless.)
+  const isTestPreview = router.pathname === '/test' || router.pathname.startsWith('/test/');
 
   // Start every fresh page load at the top. The browser's default scroll
   // restoration re-applies the previous scroll position on reload, which in an
@@ -131,6 +136,15 @@ function AppContent({ Component, pageProps, progressRef }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  if (isTestPreview) {
+    return (
+      <>
+        <Component {...pageProps} />
+        <ToastContainer position="top-right" autoClose={1500} hideProgressBar newestOnTop closeOnClick theme="light" limit={3} />
+      </>
+    );
+  }
 
   return (
     <>
