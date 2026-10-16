@@ -28,6 +28,12 @@ export function toast(msg) {
   window.dispatchEvent(new CustomEvent('cc-test-toast', { detail: msg }));
 }
 
+// Shimmer skeleton cards shown while the real catalogue loads. Drop them into a
+// .pgrid or .prail — they take the grid cells just like real product cards.
+export function SkeletonCards({ n = 8 }) {
+  return Array.from({ length: n }).map((_, i) => <div className="cc-skel cc-skelcard" key={i} aria-hidden="true" />);
+}
+
 // A product thumbnail that shows the real image, falling back to a neutral
 // coin-tile (keeps the look intact when a product has no image).
 export function Thumb({ src, color, className, style }) {
@@ -47,15 +53,15 @@ export function ProductCard({ p }) {
     window.dispatchEvent(new CustomEvent('cc-test-opencart'));
   };
   return (
-    <article className="card">
-      <div className="card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer', overflow: 'hidden' }}>
+    <article className="cc-card">
+      <div className="cc-card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer', overflow: 'hidden' }}>
         {p.off > 0 && <span className="flag sale">−{p.off}%</span>}
-        <button className="card__wish" aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); e.currentTarget.classList.toggle('on'); toast('Saved to wishlist ♥'); }}>{I.heart(16)}</button>
+        <button className="cc-card__wish" aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); e.currentTarget.classList.toggle('on'); toast('Saved to wishlist ♥'); }}>{I.heart(16)}</button>
         {p.img
           ? <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <><span className="mint" style={{ background: 'var(--paper-2)' }} /><span className="ring" /></>}
       </div>
-      <div className="card__body">
+      <div className="cc-card__body">
         <span className="kl">{p.brand}</span>
         <h3 onClick={open} style={{ cursor: 'pointer' }}>{p.name}</h3>
         {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}

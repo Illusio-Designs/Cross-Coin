@@ -33,7 +33,7 @@ export default function TestCollections() {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && cats.length === 0
-          ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Loading collections…</p>
+          ? <div className="collgrid" style={{ marginTop: 24 }}>{Array.from({ length: 6 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 170 }} key={i} aria-hidden="true" />)}</div>
           : (
             <div className="collgrid">
               {cats.map((c, i) => (

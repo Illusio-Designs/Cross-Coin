@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard } from '../../components/test/ui';
+import { ProductCard, SkeletonCards } from '../../components/test/ui';
 import { fetchSearch } from '../../components/test/real';
 
 export default function TestSearch() {
@@ -57,7 +57,7 @@ export default function TestSearch() {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading
-          ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Searching…</p>
+          ? <div className="pgrid" style={{ paddingTop: 20 }}><SkeletonCards n={8} /></div>
           : !q.trim()
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Type something above to search the real catalogue.</p>
             : ran && results.length === 0

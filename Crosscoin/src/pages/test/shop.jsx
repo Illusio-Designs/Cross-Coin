@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard } from '../../components/test/ui';
+import { ProductCard, SkeletonCards } from '../../components/test/ui';
 import { fetchProducts, fetchCategories } from '../../components/test/real';
 
 export default function TestShop() {
@@ -60,7 +60,7 @@ export default function TestShop() {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && products.length === 0
-          ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Loading the catalogue…</p>
+          ? <div className="pgrid" style={{ paddingTop: 20 }}><SkeletonCards n={8} /></div>
           : list.length === 0
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>No products in this category.</p>
             : <div className="pgrid">{list.map((p) => <ProductCard key={p.id} p={p} />)}</div>}

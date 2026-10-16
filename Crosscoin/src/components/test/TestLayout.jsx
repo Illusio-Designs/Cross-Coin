@@ -85,15 +85,15 @@ const MOBILE_CSS = `
    which made product/journal/gallery image boxes shrink to ~0 and the cards
    float over the next section. Use a robust padding-top ratio box with
    absolutely-filled media instead (applies at all widths). */
-.cc-test-root .card__img{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
-.cc-test-root .card__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.cc-test-root .card__img .mint{ left:20%; top:20%; }
+.cc-test-root .cc-card__img{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
+.cc-test-root .cc-card__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cc-test-root .cc-card__img .mint{ left:20%; top:20%; }
 /* Defensive: a product-card image can never balloon out of its card/grid cell,
    on any browser or during image load — the card clips and the ratio box caps. */
 .cc-test-root .pgrid > *, .cc-test-root .prail > *{ min-width:0; }
-.cc-test-root .card{ overflow:hidden; }
-.cc-test-root .card__img{ max-height:72vh; }
-.cc-test-root .card__img img{ max-width:100%; max-height:100%; }
+.cc-test-root .cc-card{ overflow:hidden; }
+.cc-test-root .cc-card__img{ max-height:72vh; }
+.cc-test-root .cc-card__img img{ max-width:100%; max-height:100%; }
 /* Real banner/slider image in the hero (stamped frame). */
 .cc-test-root .hero__art--banner{ position:relative; border:2px solid var(--line-ink); border-radius:14px; overflow:hidden; box-shadow:var(--stamp); background:var(--paper-2); aspect-ratio:4/3; width:100%; }
 .cc-test-root .hero__art--banner img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -103,6 +103,13 @@ const MOBILE_CSS = `
 .cc-test-root .searchbar input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:15px; box-shadow:var(--stamp-sm); }
 .cc-test-root .searchbar input:focus{ outline:none; border-color:var(--crimson); }
 .cc-test-root .searchbar .btn{ flex:0 0 auto; }
+/* Loading shimmer / skeletons */
+.cc-test-root .cc-skel{ position:relative; overflow:hidden; background:var(--paper-2); border:2px solid var(--line-ink); border-radius:var(--r); box-shadow:var(--stamp-sm); }
+.cc-test-root .cc-skelcard{ height:0; padding-top:128%; }
+.cc-test-root .cc-skel::after{ content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--surface) 75%,transparent),transparent); animation:ccShimmer 1.25s infinite; }
+@keyframes ccShimmer{ 100%{ transform:translateX(100%); } }
+.cc-test-root .cc-skelblock{ border-radius:8px; }
+@media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel::after{ animation:none; } }
 /* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
 .cc-test-root .idealrow{ display:flex; flex-wrap:wrap; gap:10px; }
 .cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:999px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
@@ -409,14 +416,17 @@ export default function TestLayout({ children }) {
           </div>
           <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test#journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
           <div><h4>Account</h4><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/search')}>Search</a><a onClick={() => go('/test/shop')}>Shop</a></div>
-          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a></div>
+          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={() => showToast('Cookie settings — manage your preferences')}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
             Contact: <a href="tel:+919712891700" style={{ color: 'var(--crimson)' }}>+91 97128 91700</a> · <a href="mailto:obzusindia@gmail.com" style={{ color: 'var(--crimson)' }}>obzusindia@gmail.com</a>
           </div>
         </div>
-        <div className="wrap footend"><span>© {new Date().getFullYear()} CROSSCOIN. All rights reserved.</span><span>PRIVACY · TERMS · MADE IN INDIA 🇮🇳</span></div>
+        <div className="wrap footend">
+          <span>© {new Date().getFullYear()} CROSSCOIN. All rights reserved. · MADE IN INDIA 🇮🇳</span>
+          <span>Made with ❤ by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--crimson)' }}>Finvera.solutions</a></span>
+        </div>
       </footer>
 
       {/* cart drawer — full cart + 2-step checkout, Morbix-style */}

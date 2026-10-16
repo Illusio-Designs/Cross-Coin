@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, I, toast } from '../../components/test/ui';
+import { ProductCard, I, toast, SkeletonCards } from '../../components/test/ui';
 import { FAQS } from '../../components/test/data';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 
@@ -99,7 +99,7 @@ export default function TestHome() {
             <span className="seelink" onClick={() => router.push('/test/shop')}>See all →</span></div>
           <div className="prail">
             {loading && rail.length === 0
-              ? <div className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '20px 2px' }}>Loading products…</div>
+              ? <SkeletonCards n={6} />
               : rail.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         </div>
@@ -183,8 +183,8 @@ export default function TestHome() {
       {/* mint club */}
       <section className="block" style={{ paddingTop: 0 }}>
         <div className="wrap"><div className="mint">
-          <span className="eyebrow" style={{ color: '#ffd3d9' }}>{deal ? 'Live deal' : 'Join the mint club'}</span>
-          <h2>{deal ? <>Use code <span className="mono">{deal.code}</span> — {deal.label}</> : 'Join the mint club'}</h2>
+          <span className="eyebrow" style={{ color: '#ffd3d9' }}>Join the mint club</span>
+          <h2>Join the mint club</h2>
           <p>Early access to drops, members-only prices and the occasional good story. No spam, unsubscribe anytime.</p>
           <form className="mintform" onSubmit={(e) => { e.preventDefault(); toast('You’re in — ₹100 off on its way'); e.currentTarget.reset(); }}>
             <input type="email" placeholder="you@email.com" aria-label="Email" required /><button className="btn" type="submit">Subscribe</button>

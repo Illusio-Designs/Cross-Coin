@@ -164,26 +164,26 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .pgrid{ display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
 .cc-test-root .prail{ display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 16px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; }
 .cc-test-root .prail > *{ scroll-snap-align: start; }
-.cc-test-root .card{ background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; box-shadow: var(--stamp-sm); transition: transform .18s var(--ease), box-shadow .18s var(--ease); display: flex; flex-direction: column; }
-.cc-test-root .card:hover{ transform: translate(-3px,-3px); box-shadow: 6px 6px 0 var(--line-ink); }
-.cc-test-root .card__img{ aspect-ratio: 1/1; position: relative; display: grid; place-items: center; border-bottom: 2px solid var(--line-ink); cursor: pointer; }
-.cc-test-root .card__img .mint{ position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; opacity: .92; box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08); }
-.cc-test-root .card__img .ring{ position:absolute; inset: 14%; border-radius: 50%; border: 2px dashed rgba(0,0,0,.15); }
-.cc-test-root .card__img .flag{ position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--surface); font-family:"Space Mono"; font-size: 10px; font-weight:700; padding: 4px 8px; border-radius: 3px; letter-spacing:.04em; }
-.cc-test-root .card__img .flag.sale{ background: var(--crimson); color: #fff; }
-.cc-test-root .card__wish{ position: absolute; top: 9px; right: 9px; width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line-ink); display: grid; place-items: center; cursor: pointer; transition: .2s; }
-.cc-test-root .card__wish svg{ width: 16px; height: 16px; }
-.cc-test-root .card__wish.on{ background: var(--crimson); color: #fff; }
-.cc-test-root .card__body{ padding: 13px 14px 15px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.cc-test-root .card__body .kl{ font-family:"Space Mono"; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
-.cc-test-root .card__body h3{ font-family: "Inter"; font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
+.cc-test-root .cc-card{ background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; box-shadow: var(--stamp-sm); transition: transform .18s var(--ease), box-shadow .18s var(--ease); display: flex; flex-direction: column; }
+.cc-test-root .cc-card:hover{ transform: translate(-3px,-3px); box-shadow: 6px 6px 0 var(--line-ink); }
+.cc-test-root .cc-card__img{ aspect-ratio: 1/1; position: relative; display: grid; place-items: center; border-bottom: 2px solid var(--line-ink); cursor: pointer; }
+.cc-test-root .cc-card__img .mint{ position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; opacity: .92; box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08); }
+.cc-test-root .cc-card__img .ring{ position:absolute; inset: 14%; border-radius: 50%; border: 2px dashed rgba(0,0,0,.15); }
+.cc-test-root .cc-card__img .flag{ position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--surface); font-family:"Space Mono"; font-size: 10px; font-weight:700; padding: 4px 8px; border-radius: 3px; letter-spacing:.04em; }
+.cc-test-root .cc-card__img .flag.sale{ background: var(--crimson); color: #fff; }
+.cc-test-root .cc-card__wish{ position: absolute; top: 9px; right: 9px; width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line-ink); display: grid; place-items: center; cursor: pointer; transition: .2s; }
+.cc-test-root .cc-card__wish svg{ width: 16px; height: 16px; }
+.cc-test-root .cc-card__wish.on{ background: var(--crimson); color: #fff; }
+.cc-test-root .cc-card__body{ padding: 13px 14px 15px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.cc-test-root .cc-card__body .kl{ font-family:"Space Mono"; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
+.cc-test-root .cc-card__body h3{ font-family: "Inter"; font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
 .cc-test-root .stars{ color: var(--crimson); font-size: 12px; letter-spacing: 1px; }
 .cc-test-root .stars small{ color: var(--ink-faint); font-family: "Space Mono"; margin-left: 5px; }
 .cc-test-root .price{ display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 8px; font-family: "Space Mono"; }
 .cc-test-root .price .now{ font-weight: 700; font-size: 16px; }
 .cc-test-root .price .was{ color: var(--ink-faint); text-decoration: line-through; font-size: 12px; }
 .cc-test-root .price .off{ margin-left: auto; color: var(--crimson); font-weight: 700; font-size: 11px; }
-.cc-test-root .card .add{ margin: 0 14px 14px; }
+.cc-test-root .cc-card .add{ margin: 0 14px 14px; }
 .cc-test-root .tech{ background: var(--indigo); color: #efe9ff; border-block: 2px solid var(--line-ink); }
 .cc-test-root[data-theme="dark"] .tech, .cc-test-root:not([data-theme="light"]) .tech{ background: #0b0718; }
 .cc-test-root .tech .wrap{ padding-block: 60px; }
