@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { trafficReportService } from '../../../services';
+import { trafficReportService, brandService } from '../../../services';
 import { Button, DateRangePicker } from '../../../components/ui';
+import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
 
 /**
@@ -65,21 +66,36 @@ const tdNum = { textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 export default function TrafficReport() {
   const [from, setFrom] = useState(shiftDay(istDate(), -29));
   const [to, setTo] = useState(istDate());
+  const [brandId, setBrandId] = useState('');     // '' = all brands
+  const [brandList, setBrandList] = useState([]);  // for the dropdown options
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  // Brand options for the filter dropdown — fetched once, independent of the
+  // report response (which collapses to a single brand once one is selected).
+  useEffect(() => {
+    let off = false;
+    brandService.getAllBrands(true)
+      .then((r) => { if (!off && r?.success) setBrandList(r.data || []); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, []);
+
+  const load = useCallback(async (bId = brandId) => {
     setLoading(true); setError('');
     try {
-      const res = await trafficReportService.getBrandTraffic(from, to);
+      const res = await trafficReportService.getBrandTraffic(from, to, bId || undefined);
       if (res?.success) setData(res); else setError(res?.message || 'Failed to load report');
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Failed to load report');
     } finally { setLoading(false); }
-  }, [from, to]);
+  }, [from, to, brandId]);
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  // Changing the brand reloads immediately (date changes still apply on "Apply").
+  const onBrandChange = (val) => { const v = val === 'all' ? '' : val; setBrandId(v); load(v); };
 
   const t = data?.totals;
   const brands = data?.brands || [];
@@ -104,8 +120,14 @@ export default function TrafficReport() {
         subtitle="Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders & revenue are the real store sales in this window (they match the Overview report). Per-channel orders below count only orders we can attribute to a tracked visit."
         actions={
           <>
+            <Dropdown
+              value={brandId || 'all'}
+              onChange={onBrandChange}
+              options={[{ value: 'all', label: 'All brands' }, ...brandList.map((b) => ({ value: b.id, label: b.display_name || b.name }))]}
+              className="bset-brand-select"
+            />
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
-              onStartChange={setFrom} onEndChange={setTo} onApply={load} maxDate={istDate()} />
+              onStartChange={setFrom} onEndChange={setTo} onApply={() => load()} maxDate={istDate()} />
             <Button variant="ghost" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
           </>
         }
@@ -124,7 +146,7 @@ export default function TrafficReport() {
 
       {/* Funnel (all brands combined) */}
       {t?.stages?.length ? (
-        <Panel title="Funnel — all brands">
+        <Panel title={`Funnel — ${brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name || 'brand') : 'all brands'}`}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {t.stages.map((st) => {
               const w = Math.min(100, Math.max(0, st.overall_rate ?? 0));

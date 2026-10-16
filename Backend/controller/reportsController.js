@@ -71,10 +71,21 @@ function parseRange(q) {
 exports.getBrandTraffic = async (req, res) => {
   try {
     const { start, end } = parseRange(req.query);
+    // Optional brand filter (?brandId=) — scopes every figure to one store.
+    const brandIdNum = Number.parseInt(req.query.brandId, 10);
+    const hasBrand = Number.isFinite(brandIdNum) && brandIdNum > 0;
     const repl = { start, end, bot: BOT_SQL_REGEXP };
+    if (hasBrand) repl.brandId = brandIdNum;
+    // SQL fragments appended to each WHERE when a brand is selected. The column
+    // is `brand_id` on the bare utm_tracking / orders / funnel_events scans, and
+    // `u.brand_id` on the source/campaign scans that alias utm_tracking as `u`.
+    const bFilt = hasBrand ? ' AND brand_id = :brandId' : '';
+    const bFiltU = hasBrand ? ' AND u.brand_id = :brandId' : '';
 
     // Brands (incl. domain so we can recognise self-referrals from the live
     // store domains, not just the hard-coded fallback list in utils/ownHosts).
+    // Always load ALL brands (not just the filtered one) so self-referral
+    // detection still knows every family domain.
     const brands = await sequelize.query(
       `SELECT id, name, COALESCE(display_name, name) AS display_name, domain FROM brands ORDER BY id`,
       { type: QueryTypes.SELECT }
@@ -91,7 +102,7 @@ exports.getBrandTraffic = async (req, res) => {
     const sessions = await sequelize.query(
       `SELECT brand_id, COUNT(DISTINCT session_id) AS sessions
        FROM utm_tracking
-       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt}
        GROUP BY brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -115,7 +126,7 @@ exports.getBrandTraffic = async (req, res) => {
               COUNT(CASE WHEN status = 'delivered' THEN 1 END) AS delivered
        FROM orders
        WHERE created_at BETWEEN :start AND :end
-         AND (status IS NULL OR LOWER(status) NOT IN ('cancelled','order cancelled'))
+         AND (status IS NULL OR LOWER(status) NOT IN ('cancelled','order cancelled'))${bFilt}
        GROUP BY brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -124,7 +135,7 @@ exports.getBrandTraffic = async (req, res) => {
     const funnel = await sequelize.query(
       `SELECT brand_id, event, COUNT(DISTINCT session_id) AS sessions
        FROM funnel_events
-       WHERE created_at BETWEEN :start AND :end
+       WHERE created_at BETWEEN :start AND :end${bFilt}
        GROUP BY brand_id, event`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -136,7 +147,7 @@ exports.getBrandTraffic = async (req, res) => {
               COALESCE(utm_medium,'none')   AS medium,
               COUNT(DISTINCT session_id)    AS sessions
        FROM utm_tracking
-       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt}
        GROUP BY brand_id, source, medium
        ORDER BY sessions DESC`,
       { replacements: repl, type: QueryTypes.SELECT }
@@ -151,7 +162,7 @@ exports.getBrandTraffic = async (req, res) => {
               COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders
        FROM utm_tracking u
        LEFT JOIN orders o ON o.utm_tracking_id = u.id
-       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFiltU}
        GROUP BY source, medium
        ORDER BY sessions DESC`,
       { replacements: repl, type: QueryTypes.SELECT }
@@ -172,7 +183,7 @@ exports.getBrandTraffic = async (req, res) => {
               COALESCE(SUM(CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END), 0) AS revenue
        FROM utm_tracking u
        LEFT JOIN orders o ON o.utm_tracking_id = u.id
-       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFiltU}
        GROUP BY source, medium, campaign
        ORDER BY revenue DESC, orders DESC, sessions DESC`,
       { replacements: repl, type: QueryTypes.SELECT }
@@ -205,7 +216,10 @@ exports.getBrandTraffic = async (req, res) => {
     // than the one above it; the raw counts and conversion_rate stay exact.
     const barRate = (n, base) => Math.min(100, rate(n, base));
 
-    const rows = brands.map((b) => {
+    // When a brand is selected, only that brand's row is built (and in turn it
+    // drives the totals, funnel and channel roll-ups below).
+    const rowBrands = hasBrand ? brands.filter((b) => b.id === brandIdNum) : brands;
+    const rows = rowBrands.map((b) => {
       const s = sessMap.get(b.id) || 0;
       const o = ordMap.get(b.id) || { orders: 0, revenue: 0, delivered: 0 };
       const fe = funnelByBrand.get(b.id) || {};
@@ -354,6 +368,7 @@ exports.getBrandTraffic = async (req, res) => {
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
+      brandId: hasBrand ? brandIdNum : null,
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
       channels: channelGroups,

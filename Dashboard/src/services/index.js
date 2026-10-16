@@ -289,8 +289,10 @@ export const loyaltyService = {
 
 // Brand-wise traffic & conversion funnel (sessions → orders → revenue).
 export const trafficReportService = {
-  getBrandTraffic: async (startDate, endDate) => {
-    const { data } = await adminApi.get('/api/reports/brand-traffic', { params: { startDate, endDate } });
+  getBrandTraffic: async (startDate, endDate, brandId) => {
+    const params = { startDate, endDate };
+    if (brandId) params.brandId = brandId;
+    const { data } = await adminApi.get('/api/reports/brand-traffic', { params });
     return data;
   },
   getRevenueProfit: async (startDate, endDate) => {

@@ -74,78 +74,14 @@ export default function SeoHealth({ brandId } = {}) {
             })()}
           </Panel>
 
-          <Panel
-            title="Products"
-            subtitle={`${data.products.total} total · ${data.products.withSeoRow} with SEO row`}
-            style={{ marginBottom: 'var(--ds-space-4)' }}
-          >
-            <KpiGrid>
-              <Stat label="Missing meta title"       count={data.products.missingMetaTitle}       total={data.products.total} />
-              <Stat label="Missing meta description" count={data.products.missingMetaDescription} total={data.products.total} />
-              <Stat label="Missing OG image"         count={data.products.missingOgImage}         total={data.products.total} />
-            </KpiGrid>
-          </Panel>
-
-          <Panel
-            title="Categories"
-            subtitle={`${data.categories.total} total`}
-            style={{ marginBottom: 'var(--ds-space-4)' }}
-          >
-            <KpiGrid>
-              <Stat label="Missing meta title"       count={data.categories.missingMetaTitle}       total={data.categories.total} />
-              <Stat label="Missing meta description" count={data.categories.missingMetaDescription} total={data.categories.total} />
-              <Stat label="Missing OG image"         count={data.categories.missingOgImage}         total={data.categories.total} />
-              <Stat label="Noindex"                  count={data.categories.noindex}                total={data.categories.total} tone="neutral" />
-            </KpiGrid>
-          </Panel>
-
-          {/* FAQ SEO status moved to the FAQ manager (seo → FAQs), and the
-              per-product gap list moved to a "SEO" column on the Products
-              table — so each gap shows up where you actually fix it. This
-              page stays a pure at-a-glance score overview. */}
+          {/* The per-type gap breakdown (Products / Categories stat cards) was
+              removed — product gaps now live on a "SEO" column on the Products
+              table and FAQ status on the FAQ manager, so each gap shows up
+              where you actually fix it. This page stays a pure at-a-glance
+              score overview. */}
         </>
       )}
     </div>
   );
 }
 
-function KpiGrid({ children }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-      {children}
-    </div>
-  );
-}
-
-function Stat({ label, count, total, tone = 'auto' }) {
-  const pct = total ? Math.round((count / total) * 100) : 0;
-  const filledPct = 100 - pct;
-  const allSet = count === 0 && tone !== 'neutral';
-  return (
-    <div style={{
-      padding: 12,
-      border: `1px solid ${allSet ? 'var(--ds-color-text)' : 'var(--ds-color-border)'}`,
-      borderRadius: 8,
-      background: 'var(--ds-color-surface)',
-    }}>
-      <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
-      {allSet ? (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 700, color: 'var(--ds-color-text)' }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-          All set <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ds-color-text-faint)' }}>0 / {total}</span>
-        </span>
-      ) : (
-        <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--ds-color-text)' }}>{count}</span>
-            <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>/ {total} ({pct}% missing)</span>
-          </div>
-          {/* Monochrome completeness meter — how much of this field is filled. */}
-          <div style={{ height: 4, borderRadius: 99, background: 'var(--ds-color-border)', overflow: 'hidden' }}>
-            <span style={{ display: 'block', height: '100%', width: `${filledPct}%`, background: 'var(--ds-color-text)', borderRadius: 99 }} />
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
