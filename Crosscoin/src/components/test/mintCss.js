@@ -15,6 +15,7 @@ export const MINT_CSS = `.cc-test-root{
     --line: #e4dac6;
     --line-ink: #231b12;
     --gold: #c9a25a;
+    --teal: #0f766e;
 
     --bg: var(--paper);
     --fg: var(--ink);
@@ -39,6 +40,7 @@ export const MINT_CSS = `.cc-test-root{
       --crimson-700: #ff6b7e;
       --indigo: #cbc0f0;
       --gold: #e3bd74;
+      --teal: #0d9488;
       --bg: var(--paper);
       --fg: var(--ink);
       --stamp: 4px 4px 0 #000;
@@ -49,7 +51,7 @@ export const MINT_CSS = `.cc-test-root{
     --paper: #100b1f; --paper-2: #16102a; --surface: #1a1430;
     --ink: #f4eede; --ink-soft: #c5bcce; --ink-faint: #8f85a0;
     --line: #2e2650; --line-ink: #40366a;
-    --crimson: #ff485f; --crimson-700: #ff6b7e; --indigo: #cbc0f0; --gold: #e3bd74;
+    --crimson: #ff485f; --crimson-700: #ff6b7e; --indigo: #cbc0f0; --gold: #e3bd74; --teal: #0d9488;
     --bg: var(--paper); --fg: var(--ink);
     --stamp: 4px 4px 0 #000; --stamp-sm: 3px 3px 0 #000;
     color-scheme: dark;
@@ -196,12 +198,15 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .techcard b{ color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: "Fraunces"; }
 .cc-test-root .techcard span{ color: #c6bce4; font-size: 13px; }
 .cc-test-root .revgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
-.cc-test-root .rev{ background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); padding: 22px; box-shadow: var(--stamp-sm); }
-.cc-test-root .rev p{ margin: 11px 0 16px; font-size: 14.5px; }
-.cc-test-root .rev .who{ display: flex; align-items: center; gap: 11px; }
-.cc-test-root .rev .av{ width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Fraunces"; border: 2px solid var(--line-ink); }
+.cc-test-root .rev{ border: 2px solid var(--line-ink); border-radius: var(--r); background: linear-gradient(160deg, color-mix(in srgb, var(--crimson) 8%, var(--surface)), var(--surface)); padding: 20px; box-shadow: var(--stamp-sm); }
+.cc-test-root .rev__top{ display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cc-test-root .rev .stars{ margin-bottom: 8px; }
+.cc-test-root .rev p{ margin: 0; font-size: 14px; line-height: 1.55; }
+.cc-test-root .rev .who{ display: flex; flex-direction: column; min-width: 0; }
+.cc-test-root .rev .av{ width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Fraunces"; border: 2px solid var(--line-ink); flex: 0 0 auto; }
 .cc-test-root .rev .who b{ font-size: 13.5px; }
-.cc-test-root .rev .who span{ font-size: 11.5px; color: var(--ink-faint); font-family: "Space Mono"; }
+.cc-test-root .rev .who span{ font-size: 11px; color: var(--ink-faint); font-family: "Space Mono"; }
+.cc-test-root .rev .vbadge{ margin-left: auto; align-self: flex-start; font-family: "Space Mono"; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--teal); padding: 3px 8px; border-radius: 999px; flex: 0 0 auto; }
 .cc-test-root .jgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .cc-test-root .post{ border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; background: var(--surface); box-shadow: var(--stamp-sm); transition: transform .18s var(--ease), box-shadow .18s var(--ease); cursor: pointer; }
 .cc-test-root .post:hover{ transform: translate(-3px,-3px); box-shadow: 6px 6px 0 var(--line-ink); }

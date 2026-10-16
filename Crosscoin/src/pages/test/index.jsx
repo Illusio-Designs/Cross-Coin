@@ -148,9 +148,13 @@ export default function TestHome() {
                 <div className={`revscroll__track${row === 1 ? ' revscroll__track--rev' : ''}`} key={row}>
                   {cards.map((r, i) => (
                     <div className="rev" key={i}>
+                      <div className="rev__top">
+                        <div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div>
+                        <div className="who"><b>{r.name}</b>{r.loc ? <span>{r.loc}</span> : null}</div>
+                        <span className="vbadge">VERIFIED</span>
+                      </div>
                       <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
                       <p>&ldquo;{r.text}&rdquo;</p>
-                      <div className="who"><div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>{r.loc ? `${r.loc} · ` : ''}VERIFIED</span></div></div>
                     </div>
                   ))}
                 </div>
