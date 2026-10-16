@@ -11,12 +11,16 @@ import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack, addItem } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
-import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts } from './real';
+import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
 
+// Fallbacks used only until the live /api/shipping-fees response arrives.
 const FREE_SHIP = 799;
+// Instant discount for paying online, matching the live storefront
+// (NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR, default ₹50). Does not stack with a coupon.
+const PREPAID_DISC = Math.max(0, Number.parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '50') || 0);
 
 // Buy More, Save More pair stepper for the primary cart line (Morbix-style).
 function CartPairStepper({ item, tiers, onSet }) {
@@ -430,6 +434,7 @@ export default function TestLayout({ children }) {
   const [tiersMap, setTiersMap] = useState({});
   const [suggested, setSuggested] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
+  const [shipCfg, setShipCfg] = useState({ threshold: FREE_SHIP, codFee: 49, prepaidFee: 0 });
   const [cookieOpen, setCookieOpen] = useState(false);
   const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
@@ -445,7 +450,9 @@ export default function TestLayout({ children }) {
   // Inject the Mint design system CSS only while a /test page is mounted.
   useEffect(() => {
     const onToast = (e) => { setToastMsg(e.detail || ''); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
-    const onOpen = () => { setStep('cart'); setDrawer(true); };
+    // "Buy it now" (PDP) opens the real drawer straight to checkout; the plain
+    // add-to-cart / cart icon opens it at the cart step.
+    const onOpen = (e) => { setStep(e?.detail === 'checkout' ? 'checkout' : 'cart'); setDrawer(true); };
     window.addEventListener('cc-test-toast', onToast);
     window.addEventListener('cc-test-opencart', onOpen);
     return () => {
@@ -456,6 +463,20 @@ export default function TestLayout({ children }) {
 
   // Live coupons → tappable offers in the cart.
   useEffect(() => { let off = false; fetchCoupons().then((c) => { if (!off) setOffers(c); }).catch(() => {}); return () => { off = true; }; }, []);
+
+  // Live shipping fees + free-shipping threshold (replaces the hard-coded values).
+  useEffect(() => {
+    let off = false;
+    fetchShippingFees().then((s) => {
+      if (off || !s) return;
+      setShipCfg({
+        threshold: s.threshold || FREE_SHIP,
+        codFee: s.codFee != null ? s.codFee : 49,
+        prepaidFee: s.prepaidFee != null ? s.prepaidFee : 0,
+      });
+    }).catch(() => {});
+    return () => { off = true; };
+  }, []);
 
   // Bundle tiers for EVERY distinct product in the cart → a Buy More, Save More
   // pair stepper on each line (Crosscoin moves every product in pairs).
@@ -498,18 +519,21 @@ export default function TestLayout({ children }) {
 
   const showToast = (m) => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
 
-  // Order math (same rules as the live cart): free COD shipping ≥ ₹799, ₹30 COD
-  // handling, prepaid ships free, coupon discount from live validation.
+  // Order math (same rules as the live cart): free-shipping threshold + fees come
+  // from /api/shipping-fees; coupon discount from live validation; paying online
+  // gives the ₹50 instant discount (doesn't stack with a coupon) and ships free.
   const sub = cartSubtotal(cart);
   const disc = coupon ? Math.min(coupon.amount, sub) : 0;
-  const afterDisc = Math.max(0, sub - disc);
-  const ship = sub === 0 ? 0 : (pay === 'prepaid' ? 0 : (afterDisc >= FREE_SHIP ? 0 : 49));
-  const cod = pay === 'cod' ? 30 : 0;
+  const prepaidDisc = (pay === 'prepaid' && !coupon) ? Math.min(PREPAID_DISC, sub) : 0;
+  const afterDisc = Math.max(0, sub - disc - prepaidDisc);
+  const freeShipQualifies = shipCfg.threshold > 0 && afterDisc >= shipCfg.threshold;
+  const ship = sub === 0 ? 0 : (pay === 'prepaid' ? shipCfg.prepaidFee : (freeShipQualifies ? 0 : shipCfg.codFee));
+  const cod = 0; // COD handling is folded into the shipping fee from the live config
   const total = afterDisc + ship + cod;
-  const need = Math.max(0, FREE_SHIP - afterDisc);
-  // Total savings = MRP − price + coupon.
+  const need = Math.max(0, shipCfg.threshold - afterDisc);
+  // Total savings = MRP − price + coupon + prepaid discount.
   const mrp = cart.reduce((s, i) => s + (i.was > i.unit ? i.was : i.unit) * i.qty, 0);
-  const youSave = Math.max(0, mrp - sub) + disc;
+  const youSave = Math.max(0, mrp - sub) + disc + prepaidDisc;
 
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
@@ -544,13 +568,13 @@ export default function TestLayout({ children }) {
     try {
       if (pay === 'prepaid') {
         await placePrepaidGuest({
-          cart, form, couponId: coupon?.id || null, discount: disc,
+          cart, form, couponId: coupon?.id || null, discount: disc + prepaidDisc,
           onSuccess: (no) => done(no),
           onFail: (msg) => fail(msg),
           onDismiss: () => setPlacing(false),
         });
       } else {
-        const r = await placeCodGuest({ cart, form, couponId: coupon?.id || null, discount: disc });
+        const r = await placeCodGuest({ cart, form, couponId: coupon?.id || null, discount: disc + prepaidDisc });
         if (r.ok) done(r.orderNo); else fail(r.raw?.message || 'Order could not be placed.');
       }
     } catch (e) {
@@ -772,6 +796,7 @@ export default function TestLayout({ children }) {
                 <label className={`payopt${pay === 'prepaid' ? ' on' : ''}`} onClick={() => setPay('prepaid')}>
                   <span className="radio" /><span className="pi">{I.shield(20)}</span>
                   <span><b>Pay online (UPI / Card)</b><span className="d">GPay, PhonePe, cards &amp; net-banking</span></span>
+                  {PREPAID_DISC > 0 && !coupon && <span className="tag" style={{ background: 'var(--teal)', color: '#fff' }}>₹{Math.round(PREPAID_DISC)} OFF</span>}
                 </label>
               </div>
             </form>
@@ -779,8 +804,8 @@ export default function TestLayout({ children }) {
           <div className="drawer__foot">
             <div className="srow" style={{ padding: '3px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
             {coupon && disc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+            {prepaidDisc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Prepaid discount</span><span style={{ color: 'var(--crimson)' }}>−{inr(prepaidDisc)}</span></div>}
             <div className="srow" style={{ padding: '3px 0' }}><span>Shipping</span><span>{ship === 0 ? 'FREE' : inr(ship)}</span></div>
-            {cod > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>COD handling</span><span>{inr(cod)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
             {orderErr && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12, marginBottom: 10 }}>{orderErr}</div>}
             <button className="btn btn--crimson btn--block btn--lg" onClick={placeOrder} disabled={placing || !cart.length}>

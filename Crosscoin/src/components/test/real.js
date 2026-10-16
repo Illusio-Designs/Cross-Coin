@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability, getShippingFees } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -169,6 +169,24 @@ export async function fetchCoupons() {
       return { code: c.code, label, min: c.minOrderValue ?? c.min_order_value ?? null };
     }).filter((c) => c.code);
   } catch (_) { return []; }
+}
+
+// Live shipping fees + free-shipping threshold (same source as the real cart).
+// Returns { threshold, codFee, prepaidFee } with safe fallbacks.
+export async function fetchShippingFees() {
+  try {
+    const data = await getShippingFees();
+    const raw = Array.isArray(data) ? data : (data?.shippingFees || data?.fees || []);
+    const feeOf = (type) => {
+      const f = raw.find((x) => (x.orderType || x.order_type) === type);
+      return f ? Number(f.fee) || 0 : null;
+    };
+    return {
+      threshold: Number(data?.freeShippingThreshold ?? data?.free_shipping_threshold) || 0,
+      codFee: feeOf('cod'),
+      prepaidFee: feeOf('prepaid'),
+    };
+  } catch (_) { return { threshold: 0, codFee: null, prepaidFee: null }; }
 }
 
 // Real global FAQs (admin-managed) → [question, answer] pairs.

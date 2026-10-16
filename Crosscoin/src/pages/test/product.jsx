@@ -107,7 +107,10 @@ export default function TestProduct() {
     } else {
       addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     }
-    if (buyNow) router.push('/test/cart');
+    // Buy-now opens the real drawer straight to checkout (places a genuine
+    // order); plain add opens it at the cart step. Both use the real drawer —
+    // no routing to the mock /test/cart page.
+    if (buyNow) window.dispatchEvent(new CustomEvent('cc-test-opencart', { detail: 'checkout' }));
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
 
