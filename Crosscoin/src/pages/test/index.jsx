@@ -45,11 +45,21 @@ export default function TestHome() {
       <section className="hero">
         <div className="wrap">
           <div>
+            {loading ? (
+              <>
+                <div className="cc-skel cc-skelblock" style={{ height: 24, width: 220, marginBottom: 18 }} aria-hidden="true" />
+                <div className="cc-skel cc-skelblock" style={{ height: 48, width: '92%', marginBottom: 12 }} aria-hidden="true" />
+                <div className="cc-skel cc-skelblock" style={{ height: 48, width: '70%', marginBottom: 18 }} aria-hidden="true" />
+                <div className="cc-skel cc-skelblock" style={{ height: 16, width: '85%', marginBottom: 8 }} aria-hidden="true" />
+                <div className="cc-skel cc-skelblock" style={{ height: 16, width: '60%', marginBottom: 22 }} aria-hidden="true" />
+              </>
+            ) : (<>
             <span className="tagpill"><i>DROP 04</i> {slide?.catName || 'The Winter Mint is live'}</span>
             {slide?.title
               ? <h1>{slide.title}</h1>
               : <h1>Everyday<br />essentials, <em className="ul">minted</em><br />to last.</h1>}
             <p className="lede">{slide?.description || 'Honest basics struck like coins — built to a standard, priced without the markup. Socks, knitwear and more, one friendly checkout.'}</p>
+            </>)}
             <div className="cta">
               <button className="btn btn--crimson btn--lg" onClick={() => router.push(slide?.catName ? `/test/shop?cat=${encodeURIComponent(slide.catName)}` : '/test/shop')}>{slide?.cta || 'Shop the mint'} {I.arrow()}</button>
               <button className="btn btn--lg" onClick={() => router.push('/test/shop')}>Bestsellers</button>
@@ -60,7 +70,9 @@ export default function TestHome() {
               <div className="denom"><div className="n">7-day</div><div className="l">Easy returns</div></div>
             </div>
           </div>
-          {slide?.img
+          {loading
+            ? <div className="hero__art hero__art--banner cc-skel" aria-hidden="true" />
+            : slide?.img
             ? <div className="hero__art hero__art--banner"><img src={slide.img} alt={slide.title || 'CrossCoin'} /></div>
             : (
               <div className="hero__art">

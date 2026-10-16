@@ -112,7 +112,12 @@ export async function fetchProducts(params = {}) {
 }
 export async function fetchCategories() {
   const r = await getPublicCategories();
-  return unwrapCats(r).map((c) => ({ id: c.id, name: c.name, count: c.productCount ?? c.product_count ?? c.count ?? null }));
+  return unwrapCats(r).map((c) => {
+    const raw = c.image || c.imageUrl || c.image_url || c.thumbnail || c.banner || c.coverImage || '';
+    let img = '';
+    try { img = raw ? (ikTransform(getDirectImageUrl({ image_url: raw }) || raw, 800)) : ''; } catch (_) { img = ''; }
+    return { id: c.id, name: c.name, count: c.productCount ?? c.product_count ?? c.count ?? null, img };
+  });
 }
 export async function fetchProduct(slug) {
   const r = await getPublicProductBySlug(slug);

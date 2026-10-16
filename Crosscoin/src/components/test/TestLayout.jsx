@@ -194,7 +194,10 @@ const MOBILE_CSS = `
 .cc-test-root .collcard:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
 .cc-test-root .collcard__no{ position:absolute; top:14px; left:16px; font-family:"Space Mono",monospace; font-size:12px; opacity:.8; }
 .cc-test-root .collcard__name{ font-family:"Fraunces",serif; font-weight:700; font-size:22px; line-height:1.05; }
-.cc-test-root .collcard__ct{ font-family:"Space Mono",monospace; font-size:11px; opacity:.85; margin-top:4px; }
+.cc-test-root .collcard__ct{ font-family:"Space Mono",monospace; font-size:11px; opacity:.9; margin-top:4px; position:relative; z-index:2; }
+.cc-test-root .collcard__img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+.cc-test-root .collcard::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(10,6,24,.15),rgba(10,6,24,.62)); z-index:1; }
+.cc-test-root .collcard__no, .cc-test-root .collcard__name{ position:relative; z-index:2; }
 @media (max-width:760px){ .cc-test-root .collgrid{ grid-template-columns:1fr 1fr; } }
 @media (max-width:460px){ .cc-test-root .collgrid{ grid-template-columns:1fr; } }
 /* account hub tiles */

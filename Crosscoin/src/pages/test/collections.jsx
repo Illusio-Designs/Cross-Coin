@@ -38,6 +38,7 @@ export default function TestCollections() {
             <div className="collgrid">
               {cats.map((c, i) => (
                 <button className="collcard" key={c.id || c.name} style={{ background: SWATCH[i % SWATCH.length] }} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                  {c.img && <img className="collcard__img" src={c.img} alt="" loading="lazy" />}
                   <span className="collcard__no">0{i + 1}</span>
                   <span className="collcard__name">{c.name}</span>
                   {c.count != null && <span className="collcard__ct">{c.count} styles</span>}
