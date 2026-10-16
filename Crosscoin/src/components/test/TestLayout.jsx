@@ -99,6 +99,14 @@ const MOBILE_CSS = `
 .cc-test-root .ccps__dot .sv{ font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--crimson); margin-top:1px; white-space:nowrap; }
 .cc-test-root .offerwrap{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 2px; }
 .cc-test-root .offerwrap .chip{ font-size:11px; padding:6px 11px; cursor:pointer; }
+/* PDP: let the grid columns shrink so the buy column (buttons, option rows)
+   never overflows and gets clipped on mobile. */
+.cc-test-root .pd{ min-width:0; }
+.cc-test-root .pd > *{ min-width:0; }
+.cc-test-root .buy{ min-width:0; }
+.cc-test-root .gthumbs{ overflow-x:auto; }
+.cc-test-root .optlabel{ gap:10px; }
+.cc-test-root .optlabel span, .cc-test-root .optlabel a{ white-space:nowrap; }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
