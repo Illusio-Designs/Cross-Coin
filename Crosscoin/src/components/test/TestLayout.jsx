@@ -9,6 +9,7 @@ import { inr } from './data';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
+import { getConsent, setConsent } from '../../lib/consent';
 
 const FREE_SHIP = 799;
 
@@ -133,6 +134,19 @@ const MOBILE_CSS = `
 @keyframes ccShimmer{ 100%{ transform:translateX(100%); } }
 .cc-test-root .cc-skelblock{ border-radius:10px; }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel::after{ animation:none; } }
+/* cookie preferences modal */
+.cc-test-root .ckmodal{ position:fixed; left:50%; bottom:-100%; transform:translateX(-50%); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:14px; box-shadow:var(--stamp); padding:20px; transition:bottom .3s var(--ease); }
+.cc-test-root .ckmodal.on{ bottom:max(18px,env(safe-area-inset-bottom,0px)); }
+.cc-test-root .ckmodal__h{ display:flex; align-items:center; justify-content:space-between; }
+.cc-test-root .ckmodal__h b{ font-family:"Fraunces",serif; font-size:19px; }
+.cc-test-root .ckmodal__intro{ font-size:13px; color:var(--ink-soft); line-height:1.55; margin:8px 0 14px; }
+.cc-test-root .ckrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-top:1.5px solid var(--line); cursor:pointer; }
+.cc-test-root .ckrow b{ display:block; font-size:14px; }
+.cc-test-root .ckrow span{ font-size:12px; color:var(--ink-faint); }
+.cc-test-root .ckrow .ckon{ font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:#0f766e; }
+.cc-test-root .ckrow input[type=checkbox]{ width:20px; height:20px; accent-color:var(--crimson); flex-shrink:0; }
+.cc-test-root .ckmodal__btns{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+.cc-test-root .ckmodal__btns .btn{ flex:1; min-width:120px; }
 /* cart item pack chip */
 .cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:999px; padding:2px 8px; }
 /* Buy More, Save More carousel (Morbix) */
@@ -360,7 +374,12 @@ export default function TestLayout({ children }) {
   const [offers, setOffers] = useState([]);
   const [tiersMap, setTiersMap] = useState({});
   const [suggested, setSuggested] = useState([]);
+  const [cookieOpen, setCookieOpen] = useState(false);
+  const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
+
+  const openCookie = () => { const c = getConsent(); setConsentUI({ analytics: c.analytics, marketing: c.marketing }); setCookieOpen(true); };
+  const saveCookie = (vals, msg) => { try { setConsent(vals, { action: 'custom', source: 'preview' }); } catch (_) {} setConsentUI(vals); setCookieOpen(false); showToast(msg || 'Cookie preferences saved'); };
   const rootRef = useRef(null);
   const formRef = useRef(null);
   const promoRef = useRef(null);
@@ -546,7 +565,7 @@ export default function TestLayout({ children }) {
           </div>
           <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test/journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
           <div><h4>Account</h4><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/wishlist')}>Wishlist</a><a onClick={() => go('/test/search')}>Search</a><a onClick={() => go('/test/shop')}>Shop</a></div>
-          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={() => go('/test/policy/privacy-policy')}>Cookie Settings</a></div>
+          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
@@ -715,6 +734,21 @@ export default function TestLayout({ children }) {
           </div>
         )}
       </aside>
+
+      {/* Cookie preferences — real consent (DPDP) like the live site */}
+      <div className={`scrim${cookieOpen ? ' on' : ''}`} onClick={() => setCookieOpen(false)} />
+      <div className={`ckmodal${cookieOpen ? ' on' : ''}`} role="dialog" aria-label="Cookie settings" aria-modal="true">
+        <div className="ckmodal__h"><b>Cookie preferences</b><button className="ibtn" onClick={() => setCookieOpen(false)} aria-label="Close">{I.close()}</button></div>
+        <p className="ckmodal__intro">We use cookies to run the store and, with your consent, to understand usage and show relevant offers. You can change this anytime.</p>
+        <div className="ckrow"><div><b>Strictly necessary</b><span>Required for the cart, checkout and security.</span></div><span className="ckon">Always on</span></div>
+        <label className="ckrow"><div><b>Analytics</b><span>Helps us understand what’s working.</span></div><input type="checkbox" checked={consent.analytics} onChange={(e) => setConsentUI((c) => ({ ...c, analytics: e.target.checked }))} /></label>
+        <label className="ckrow"><div><b>Marketing</b><span>Lets us show relevant offers.</span></div><input type="checkbox" checked={consent.marketing} onChange={(e) => setConsentUI((c) => ({ ...c, marketing: e.target.checked }))} /></label>
+        <div className="ckmodal__btns">
+          <button className="btn" onClick={() => saveCookie({ analytics: false, marketing: false }, 'Only necessary cookies kept')}>Reject all</button>
+          <button className="btn" onClick={() => saveCookie(consent, 'Cookie preferences saved')}>Save choices</button>
+          <button className="btn btn--crimson" onClick={() => saveCookie({ analytics: true, marketing: true }, 'All cookies accepted')}>Accept all</button>
+        </div>
+      </div>
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
     </div>
