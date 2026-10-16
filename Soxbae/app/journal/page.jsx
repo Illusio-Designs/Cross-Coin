@@ -1,7 +1,11 @@
 import JournalClient from './JournalClient';
+import { buildMetadata } from '@/lib/api/seo';
 
 export const revalidate = 300;
-export const metadata = { title: 'Journal' };
+
+export async function generateMetadata() {
+  return buildMetadata('blog', { title: 'Journal' });
+}
 
 export default function JournalPage() {
   return (

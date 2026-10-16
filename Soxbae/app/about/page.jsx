@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const metadata = { title: 'About' };
+export async function generateMetadata() {
+  return buildMetadata('about', { title: 'About' });
+}
 
 const PROCESS = [
   { icon: 'Layers', title: 'Knit', text: 'We start at the yarn — combed cotton and recycled fibres knit on fine-gauge machines for a smooth, dense feel underfoot.' },

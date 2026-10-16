@@ -1,6 +1,9 @@
 import Icon from '@/components/Icon';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const metadata = { title: 'Contact' };
+export async function generateMetadata() {
+  return buildMetadata('contact', { title: 'Contact' });
+}
 
 const DETAILS = [
   { icon: 'Phone', label: 'Phone', value: '+91 97128 91700', href: 'tel:+919712891700' },

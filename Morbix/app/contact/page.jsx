@@ -1,7 +1,10 @@
 import Icon from '@/components/Icon';
 import ContactForm from '@/components/contact/ContactForm';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const metadata = { title: 'Contact' };
+export async function generateMetadata() {
+  return buildMetadata('contact', { title: 'Contact' });
+}
 
 const DETAILS = [
   { icon: 'Phone', label: 'Phone', value: '+91 97128 91700' },

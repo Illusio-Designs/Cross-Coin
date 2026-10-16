@@ -1,6 +1,9 @@
 import Icon from '@/components/Icon';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const metadata = { title: 'About' };
+export async function generateMetadata() {
+  return buildMetadata('about', { title: 'About' });
+}
 
 const VALUES = [
   { icon: 'Layers', title: 'Built to last', text: 'Reinforced knit and premium fibres that survive wash after wash.' },

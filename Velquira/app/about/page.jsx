@@ -1,6 +1,9 @@
 import Icon from '@/components/Icon';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const metadata = { title: 'About' };
+export async function generateMetadata() {
+  return buildMetadata('about', { title: 'About' });
+}
 
 const VALUES = [
   { icon: 'ShieldCheck', title: 'Hallmarked purity', text: 'Every piece is 916 BIS-certified gold — assured purity you can pass down.' },

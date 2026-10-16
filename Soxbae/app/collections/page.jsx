@@ -1,8 +1,12 @@
 import CollectionCard from '@/components/CollectionCard';
 import { getCategories, getAllProducts } from '@/lib/api';
+import { buildMetadata } from '@/lib/api/seo';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Collections' };
+
+export async function generateMetadata() {
+  return buildMetadata('categories', { title: 'Collections' });
+}
 
 const ICONS = ['Activity', 'Dumbbell', 'Gauge', 'Sparkles', 'Layers', 'Leaf'];
 

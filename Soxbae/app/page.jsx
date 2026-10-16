@@ -8,6 +8,7 @@ import Reviews from '@/components/reviews/Reviews';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs } from '@/lib/api';
+import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 60s so dashboard edits (hero slider, featured
 // products, etc.) reflect on the homepage within about a minute.
@@ -16,7 +17,11 @@ export const revalidate = 60;
 // Self-referencing canonical for the homepage. Next App Router does NOT emit a
 // canonical automatically, so without this the home page had no <link rel=
 // "canonical">. Resolved against metadataBase (https://www.soxbaesocks.com).
-export const metadata = { alternates: { canonical: '/' } };
+// Dashboard-controlled page SEO is merged OVER this fallback; canonical '/'
+// is preserved unless the backend supplies a non-empty canonical_url.
+export async function generateMetadata() {
+  return buildMetadata('home', { alternates: { canonical: '/' } });
+}
 
 // Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
 // hero <img>/<source> will request (same ImageKit tr= params), avoiding a

@@ -8,9 +8,16 @@ import ReviewsSection from '@/components/home/ReviewsSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getStoreReviews, getBlogPosts, getSliders } from '@/lib/api';
+import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 1 min.
 export const revalidate = 60;
+
+// Dashboard-controlled page SEO merged over the page's defaults (layout
+// supplies the base title/description; backend wins per-field when set).
+export async function generateMetadata() {
+  return buildMetadata('home', {});
+}
 
 // Exact mirror of heroSrc() in components/home/Hero.jsx. It MUST stay byte-for-byte
 // identical so the preloaded hero URL below matches what the hero <img>/<source>

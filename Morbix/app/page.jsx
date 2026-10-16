@@ -8,9 +8,14 @@ import FaqSection from '@/components/home/FaqSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs } from '@/lib/api';
+import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 1 min.
 export const revalidate = 60;
+
+export async function generateMetadata() {
+  return buildMetadata('home', {});
+}
 
 // Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
 // hero <img>/<source> will request (same ImageKit tr= params), avoiding a
