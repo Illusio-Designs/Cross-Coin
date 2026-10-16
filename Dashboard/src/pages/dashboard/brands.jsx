@@ -60,6 +60,7 @@ const SEO_SETTING = (s) => {
   return cat === 'seo' || /^SEO_/i.test(key)        // SEO Settings page owns these
       || cat === 'legal' || key === 'company_gstin' // Policies page owns the GSTIN
       || /^WHATSAPP_/i.test(key)                    // WhatsApp config — set once on Crosscoin, used globally
+      || key === 'PICKUP_SCHEDULE'                  // shared pickup schedule — managed from Orders → Pickup Schedule (all brands together)
       || INTERNAL_MARKER.test(key);                 // internal boot/migration flags
 };
 
