@@ -7,7 +7,32 @@ import { useCart, cartCount, cartSubtotal, changeQty } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
 
-const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'CODE CROSS10 −10%', 'RETURNS 7-DAY', 'COD AVAILABLE', 'MERINO · LOW STOCK'];
+const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'RETURNS 7-DAY', 'COD AVAILABLE', 'SECURE CHECKOUT'];
+const LOGO = '/assets/crosscoin_logo.webp';
+
+// Mobile polish, scoped like the rest of the preview.
+const MOBILE_CSS = `
+.cc-test-root .cc-logo{ height:30px; width:auto; display:block; }
+.cc-test-root footer.site .cc-logo{ height:34px; }
+.cc-test-root .brand{ gap:0; }
+.cc-test-root .mnav .brand .cc-logo{ height:30px; }
+@media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
+@media (max-width:520px){
+  .cc-test-root .sechead{ flex-direction:column; align-items:flex-start; }
+  .cc-test-root .denoms{ gap:8px; }
+  .cc-test-root .denom{ padding:8px 11px; flex:1 1 auto; }
+}
+@media (max-width:480px){
+  .cc-test-root .nav{ gap:8px; height:60px; }
+  .cc-test-root .nav__extra{ display:none; }
+  .cc-test-root .ibtn{ width:40px; height:40px; }
+  .cc-test-root .hero .wrap{ padding-block:34px 44px; }
+  .cc-test-root .hero__art{ max-width:290px; }
+  .cc-test-root .cc-logo{ height:24px; }
+  .cc-test-root .cowrap{ gap:18px; }
+  .cc-test-root .citem{ gap:12px; }
+}
+`;
 
 export default function TestLayout({ children }) {
   const router = useRouter();
@@ -63,6 +88,8 @@ export default function TestLayout({ children }) {
       </Head>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: MINT_CSS }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: MOBILE_CSS }} />
 
       <div className="ticker" aria-hidden="true">
         <div className="ticker__track">
@@ -72,12 +99,14 @@ export default function TestLayout({ children }) {
 
       <header className="site">
         <div className="wrap nav">
-          <Link href="/test" className="brand" aria-label="CrossCoin home"><span className="coin">✕</span>Cross<b>Coin</b></Link>
+          <Link href="/test" className="brand" aria-label="CrossCoin home"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></Link>
           <nav className="nav__links">{navLinks}</nav>
           <div className="nav__act">
             <button className="ibtn" onClick={toggleTheme} aria-label="Theme">{I.sun()}</button>
-            <button className="ibtn" aria-label="Search">{I.search()}</button>
-            <button className="ibtn" aria-label="Account">{I.user()}</button>
+            <span className="nav__extra">
+              <button className="ibtn" aria-label="Search">{I.search()}</button>
+              <button className="ibtn" aria-label="Account">{I.user()}</button>
+            </span>
             <button className="ibtn" aria-label="Cart" onClick={() => setDrawer(true)}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
           </div>
@@ -86,7 +115,7 @@ export default function TestLayout({ children }) {
 
       <div className={`mnav${mnav ? ' on' : ''}`}>
         <div className="nav" style={{ height: 'auto', justifyContent: 'space-between' }}>
-          <span className="brand"><span className="coin">✕</span>Cross<b>Coin</b></span>
+          <span className="brand"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></span>
           <button className="ibtn" onClick={() => setMnav(false)} aria-label="Close">{I.close()}</button>
         </div>
         {navLinks}
@@ -97,7 +126,7 @@ export default function TestLayout({ children }) {
       <footer className="site">
         <div className="wrap foot">
           <div className="ab">
-            <span className="brand"><span className="coin">✕</span>Cross<b>Coin</b></span>
+            <span className="brand"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></span>
             <p style={{ marginTop: 13 }}>Everyday essentials, minted to last. Delivered across India with a friendly, honest checkout.</p>
           </div>
           <div><h4>Shop</h4><a onClick={() => go('/test/shop')}>All products</a><a onClick={() => go('/test/shop')}>New arrivals</a><a onClick={() => go('/test/shop')}>Bestsellers</a><a onClick={() => go('/test/shop')}>Sale</a></div>
