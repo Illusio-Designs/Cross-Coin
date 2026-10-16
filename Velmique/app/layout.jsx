@@ -26,6 +26,8 @@ import VisitTracker from '@/components/common/VisitTracker';
    collapsing to the body sans on the deployed site when the variable failed to
    resolve. Plain family names can never collapse that way. */
 export const metadata = {
+  // Absolute base for canonical/OG URLs (matches sitemap.js / robots.js host).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.co.in'),
   title: 'Velmique — Luxury Perfume',
   description: 'Discover Velmique — where luxury meets artistry. Explore our curated fragrance collections crafted from the world\'s rarest ingredients.',
   keywords: 'luxury perfume, niche fragrance, velmique, eau de parfum, extrait de parfum, oud, luxury scent',

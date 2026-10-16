@@ -1,17 +1,18 @@
-'use client';
 import { Suspense } from 'react';
-import SeoWrapper from '@/components/SeoWrapper';
 import ShopView from '@/components/shop/ShopView';
+import { buildMetadata } from '@/lib/api/seo';
 
-// Full catalogue at /shop. The shop view itself lives in components/shop/ShopView
-// so /collections/<slug> can reuse it — a page.jsx may only export a default (+
-// metadata), never a custom component, or the Next build fails.
+// Server component so SEO is server-rendered and dashboard-driven. The full
+// catalogue UI lives in components/shop/ShopView (a client component), reused by
+// /collections/<slug>.
+export async function generateMetadata() {
+  return buildMetadata('products', { title: 'Shop — Velmique' });
+}
+
 export default function ShopPage() {
   return (
-    <SeoWrapper pageName="products">
-      <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
-        <ShopView />
-      </Suspense>
-    </SeoWrapper>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
+      <ShopView />
+    </Suspense>
   );
 }
