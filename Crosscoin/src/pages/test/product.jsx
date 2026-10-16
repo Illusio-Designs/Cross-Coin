@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, colorToCss } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, colorToCss } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
@@ -24,6 +24,8 @@ export default function TestProduct() {
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
   const [prodFaqs, setProdFaqs] = useState([]);
   const [faqOpen, setFaqOpen] = useState(0);
+  const [packTiers, setPackTiers] = useState([]); // admin "Buy More, Save More" ladder
+  const [packSel, setPackSel] = useState(1); // selected number of pairs
 
   useEffect(() => {
     let off = false;
@@ -43,8 +45,10 @@ export default function TestProduct() {
           setQty(1);
           setMainImg(v0?.img || prod.img || prod.images?.[0] || '');
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
+          setPackTiers([]); setPackSel(1);
           fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
+          fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {});
         }
         fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {});
       } catch (_) { if (!off) setP(null); }
@@ -81,10 +85,25 @@ export default function TestProduct() {
   const total = cur.price * qty;
   const thumbs = (p.images && p.images.length ? p.images : variants.map((v) => v.img).filter(Boolean));
 
+  // "CHOOSE YOUR PACK" ladder (Morbix-style) — the admin "Buy More, Save More"
+  // tiers, with a 1-pair option at the product's own price on top.
+  const basePair = cur.pairs === 1 ? cur.price : (variants.find((v) => v.pairs === 1)?.price || p.now);
+  const hasPacks = packTiers.length > 0;
+  const packOptions = hasPacks
+    ? [{ pairs: 1, total: basePair, badge: null }, ...packTiers.map((t) => ({ pairs: t.pairs, total: t.price, badge: t.badge }))]
+    : [];
+  const selOpt = packOptions.find((o) => o.pairs === packSel) || packOptions[0] || null;
+  const payable = hasPacks && selOpt ? selOpt.total : total;
+
   const pickVariant = (v) => { setVariant(v); if (v.img) setMainImg(v.img); if (v.sizes?.length) setSize(v.sizes[0]); };
 
   const add = (buyNow) => {
-    addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
+    if (hasPacks && selOpt) {
+      const perPair = Math.round(selOpt.total / selOpt.pairs);
+      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: selOpt.pairs === 1 ? 'Single' : `${selOpt.pairs} Pairs`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
+    } else {
+      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
+    }
     if (buyNow) router.push('/test/cart');
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
@@ -123,7 +142,32 @@ export default function TestProduct() {
 
             {/* Single pair vs multi-pair packs — each is a real variant with its
                 own price. (Crosscoin models a pack as a multi-colour variation.) */}
-            {variants.length > 1 && (<>
+            {/* CHOOSE YOUR PACK — admin pack-pricing ladder (per-pair + total, badges) */}
+            {hasPacks && (<>
+              <div className="optlabel">Choose your pack</div>
+              <div className="packlad">
+                {packOptions.map((o) => {
+                  const perPair = o.total / o.pairs;
+                  const mrp = basePair * o.pairs;
+                  const on = packSel === o.pairs;
+                  return (
+                    <button type="button" key={o.pairs} className={`packopt${on ? ' on' : ''}`} onClick={() => setPackSel(o.pairs)}>
+                      <span className="packopt__radio" />
+                      <span className="packopt__l">
+                        <b>{o.pairs} Pair{o.pairs > 1 ? 's' : ''}{o.badge ? <em className="packopt__badge">{o.badge}</em> : null}</b>
+                        <span className="packopt__pp">{inr(perPair)} / pair</span>
+                      </span>
+                      <span className="packopt__p">
+                        <span className="packopt__now">{inr(o.total)}</span>
+                        {mrp > o.total ? <span className="packopt__was">{inr(mrp)}</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>)}
+
+            {variants.length > 1 && !hasPacks && (<>
               <div className="optlabel">Choose your option</div>
               <div className="packs">
                 {variants.map((v) => (
@@ -146,8 +190,8 @@ export default function TestProduct() {
             </>)}
 
             <div className="qtyrow">
-              <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>
-              <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(total)}</button>
+              {!hasPacks && <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>}
+              <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
             <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
             <button className="btn btn--block" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }} style={{ marginTop: 8 }}>{isWished(p.id) ? '♥ In your wishlist' : '♡ Save to wishlist'}</button>

@@ -158,6 +158,20 @@ const MOBILE_CSS = `
 .cc-test-root .specrow dt{ font-family:"Space Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
 .cc-test-root .specrow dd{ margin:0; font-size:13.5px; font-weight:600; text-align:right; }
 @media (max-width:760px){ .cc-test-root .pdpdetails{ grid-template-columns:1fr; gap:20px; } }
+/* CHOOSE YOUR PACK ladder (Morbix-style) */
+.cc-test-root .packlad{ display:flex; flex-direction:column; gap:10px; margin:6px 0 4px; }
+.cc-test-root .packopt{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px 16px; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); box-shadow:var(--stamp-sm); cursor:pointer; font:inherit; color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+.cc-test-root .packopt.on{ border-color:var(--crimson); box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 16%,transparent); }
+.cc-test-root .packopt__radio{ flex:0 0 auto; width:18px; height:18px; border-radius:50%; border:2px solid var(--line); position:relative; }
+.cc-test-root .packopt.on .packopt__radio{ border-color:var(--crimson); }
+.cc-test-root .packopt.on .packopt__radio::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--crimson); }
+.cc-test-root .packopt__l{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.cc-test-root .packopt__l b{ font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.cc-test-root .packopt__badge{ font-family:"Space Mono",monospace; font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#fff; background:var(--crimson); padding:3px 7px; border-radius:4px; }
+.cc-test-root .packopt__pp{ font-family:"Space Mono",monospace; font-size:11.5px; color:var(--ink-faint); }
+.cc-test-root .packopt__p{ flex:0 0 auto; text-align:right; display:flex; flex-direction:column; align-items:flex-end; }
+.cc-test-root .packopt__now{ font-family:"Space Mono",monospace; font-weight:700; font-size:15px; }
+.cc-test-root .packopt__was{ font-family:"Space Mono",monospace; font-size:11px; color:var(--ink-faint); text-decoration:line-through; }
 /* Collections grid */
 .cc-test-root .collgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px; }
 .cc-test-root .collcard{ position:relative; min-height:170px; border:2px solid var(--line-ink); border-radius:12px; box-shadow:var(--stamp); color:#fff; text-align:left; padding:18px; cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; transition:transform .18s var(--ease); font:inherit; }
