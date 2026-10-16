@@ -109,7 +109,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .nav__act{ margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .cc-test-root .ibtn{ width: 42px; height: 42px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink); cursor: pointer; border-radius: var(--r); position: relative; transition: background .2s, transform .15s; }
 .cc-test-root .ibtn:hover{ background: var(--paper-2); transform: translateY(-1px); }
-.cc-test-root .ibtn svg{ width: 20px; height: 20px; }
+.cc-test-root .ibtn svg{ width: 23px; height: 23px; }
 .cc-test-root .badge-dot{ position: absolute; top: 6px; right: 6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--crimson); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; font-family: "Space Mono"; border: 2px solid var(--surface); }
 .cc-test-root .burger{ display: none; }
 .cc-test-root main{ display: block; }

@@ -1,29 +1,36 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
+import {
+  ArrowRight, ShoppingCart, Heart, Search, User, Menu, X, Check, Truck,
+  RotateCcw, CreditCard, ShieldCheck, Package, Lock, Trash2, Sun,
+} from 'lucide-react';
 import { addItem } from './store';
 import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
 import { colorToCss } from './real';
 
-/* ---- icons (stroke inherits currentColor) ---- */
-const S = (p) => ({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', ...p });
+/* ---- icons: Lucide (rounded) library set, the same family the rest of the
+   CrossCoin storefront uses. Each entry keeps the I.name(size) call signature
+   so every /test call site is unchanged. A slightly heavier stroke (2.2) gives
+   the bold, round look; strokeLinecap/join are round in Lucide by default. */
+const mk = (Icon, def) => (s = def) => <Icon size={s} strokeWidth={2.2} absoluteStrokeWidth />;
 export const I = {
-  arrow: (s = 16) => <svg {...S()} width={s} height={s}><path d="M5 12h14M13 6l6 6-6 6" /></svg>,
-  cart: (s = 20) => <svg {...S()} width={s} height={s}><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M6 6 5 2H2" /></svg>,
-  heart: (s = 16) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width={s} height={s}><path d="M12 20s-7-4.4-9.2-8.3C1.3 8.9 2.6 5.5 6 5.5c2 0 3.2 1.4 4 2.6.8-1.2 2-2.6 4-2.6 3.4 0 4.7 3.4 3.2 6.2C19 15.6 12 20 12 20z" /></svg>,
-  search: (s = 20) => <svg {...S()} width={s} height={s}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>,
-  user: (s = 20) => <svg {...S()} width={s} height={s}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" /></svg>,
-  menu: (s = 20) => <svg {...S()} width={s} height={s}><path d="M3 6h18M3 12h18M3 18h18" /></svg>,
-  close: (s = 20) => <svg {...S()} width={s} height={s}><path d="M6 6l12 12M18 6 6 18" /></svg>,
-  sun: (s = 20) => <svg {...S()} width={s} height={s}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>,
-  check: (s = 16) => <svg {...S({ strokeWidth: 2.6 })} width={s} height={s}><path d="M20 6 9 17l-5-5" /></svg>,
-  truck: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 7h13v8H3zM16 10h3l2 3v2h-5" /><circle cx="7" cy="18" r="1.6" /><circle cx="17" cy="18" r="1.6" /></svg>,
-  ret: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 12a9 9 0 1 1 3 6.7L3 21" /><path d="M3 21v-4h4" /></svg>,
-  card: (s = 24) => <svg {...S()} width={s} height={s}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18" /></svg>,
-  shield: (s = 24) => <svg {...S()} width={s} height={s}><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /><path d="m9 12 2 2 4-4" /></svg>,
-  box: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10" /></svg>,
-  lock: (s = 20) => <svg {...S()} width={s} height={s}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>,
-  trash: (s = 16) => <svg {...S()} width={s} height={s}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13" /></svg>,
+  arrow: mk(ArrowRight, 16),
+  cart: mk(ShoppingCart, 20),
+  heart: mk(Heart, 16),
+  search: mk(Search, 20),
+  user: mk(User, 20),
+  menu: mk(Menu, 20),
+  close: mk(X, 20),
+  sun: mk(Sun, 20),
+  check: mk(Check, 16),
+  truck: mk(Truck, 24),
+  ret: mk(RotateCcw, 24),
+  card: mk(CreditCard, 24),
+  shield: mk(ShieldCheck, 24),
+  box: mk(Package, 24),
+  lock: mk(Lock, 20),
+  trash: mk(Trash2, 16),
 };
 
 export function toast(msg) {
