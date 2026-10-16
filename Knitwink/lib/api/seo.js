@@ -30,6 +30,24 @@ export async function getSeoByPageName(pageName) {
   }
 }
 
+/* Per-brand Organization structured data (schema.org/Organization) resolved by
+   the shared backend from the X-Brand-Name header. Best-effort: returns the
+   parsed JSON payload ({ success, organization, ogImage, description }) or null
+   on any failure, so the page still renders if the backend is down. Cached at
+   the edge for 5 minutes via Next's `revalidate`. */
+export async function getSeoOrg() {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/public/seo-org`,
+      { headers: { 'X-Brand-Name': BRAND_NAME }, next: { revalidate: 300 } }
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 /* First non-empty value among the candidates — a value counts only when it is
    neither null/undefined nor a blank/whitespace string. Returns `undefined`
    when every candidate is empty, so callers can omit the field entirely rather

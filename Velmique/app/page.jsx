@@ -14,12 +14,19 @@ import { getPublicCategories } from '@/lib/api/categories';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
 import { buildMetadata } from '@/lib/api/seo';
+import { getSeoOrg } from '@/lib/api/seo-org';
 
 // Server-rendered, dashboard-controlled backend SEO ('home'). No hardcoded
 // fallback here, so an empty backend row simply falls back to the root
 // layout's metadata. (SeoWrapper still refreshes these client-side.)
+// The seo-org endpoint's ogImage/description are layered in only as a
+// non-overwriting fallback — buildMetadata still prefers the 'home' SEO row.
 export async function generateMetadata() {
-  return buildMetadata('home', {});
+  const seoOrg = await getSeoOrg();
+  const fallback = {};
+  if (seoOrg?.description) fallback.description = seoOrg.description;
+  if (seoOrg?.ogImage) fallback.openGraph = { images: [seoOrg.ogImage] };
+  return buildMetadata('home', fallback);
 }
 
 // Regenerate the homepage at most every 1 minute (ISR) so it stays fast and
@@ -41,11 +48,16 @@ export default async function HomePage() {
   // Fetch the above/below-the-fold data on the server, in parallel, so the
   // homepage HTML ships with content instead of a client-side waterfall of
   // skeletons. Each falls back to empty so one slow call can't blank the page.
-  const [categories, bestsellers, reviewsData] = await Promise.all([
+  const [categories, bestsellers, reviewsData, seoOrg] = await Promise.all([
     getPublicCategories().catch(() => []),
     getBestsellers(4).catch(() => []),
     getAllReviews({ limit: 24 }).catch(() => ({ reviews: [] })),
+    getSeoOrg().catch(() => null),
   ]);
+
+  // Dashboard-controlled schema.org/Organization. Null when the backend has
+  // none, in which case we keep the hardcoded block below as a fallback.
+  const organization = seoOrg?.organization || null;
 
   // Real store-wide rating for the trust marquee — average from the fetched
   // reviews, exact total from the API. Null when there are no real reviews.
@@ -61,7 +73,9 @@ export default async function HomePage() {
 
   const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velmique.co.in').replace(/\/+$/, '');
   const homeJsonLd = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Velmique', url: SITE_URL, logo: `${SITE_URL}/logo.png` },
+    // Prefer the dashboard-controlled Organization; fall back to the
+    // hardcoded block when the backend returns none.
+    organization ?? { '@context': 'https://schema.org', '@type': 'Organization', name: 'Velmique', url: SITE_URL, logo: `${SITE_URL}/logo.png` },
     {
       '@context': 'https://schema.org', '@type': 'WebSite', name: 'Velmique', url: SITE_URL,
       potentialAction: {

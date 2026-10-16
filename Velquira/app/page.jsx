@@ -7,7 +7,7 @@ import Technologies from '@/components/home/Technologies';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getStoreReviews, getBlogPosts, getSliders } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getTechnologies, getStoreReviews, getBlogPosts, getSliders, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 1 min.
@@ -31,12 +31,13 @@ function heroSrc(src, w = 1600) {
 }
 
 export default async function HomePage() {
-  const [products, categories, storeReviews, posts, slides] = await Promise.all([
+  const [products, categories, storeReviews, posts, slides, seoOrg] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
+    getSeoOrg(),
   ]);
   const reviews = storeReviews.reviews;
 
@@ -70,14 +71,19 @@ export default async function HomePage() {
   const heroMobileSrc = heroSlide && heroSlide.mobileImage ? heroSrc(heroSlide.mobileImage, 820) : null;
 
   const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in').replace(/\/+$/, '');
+  // Prefer the dashboard-controlled Organization object from the backend; fall
+  // back to the hardcoded one when the fetch returns nothing (best-effort).
+  const org = seoOrg && seoOrg.organization && typeof seoOrg.organization === 'object'
+    ? seoOrg.organization
+    : {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Velquira',
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo.png`,
+      };
   const homeJsonLd = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: 'Velquira',
-      url: SITE_URL,
-      logo: `${SITE_URL}/logo.png`,
-    },
+    org,
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',

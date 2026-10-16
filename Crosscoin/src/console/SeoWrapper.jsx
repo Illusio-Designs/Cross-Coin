@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { getSeoByPageName } from '../services/publicApi';
 import Head from 'next/head';
 
-const SeoWrapper = ({ pageName, children, seoData }) => {
+const SeoWrapper = ({ pageName, children, seoData, organizationLd = null, fallbackOgImage = null, fallbackDescription = null }) => {
     const router = useRouter();
     const [seoDataState, setSeoDataState] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -78,15 +78,18 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
         return `${baseUrl}${cleanUrl}`;
     };
     
-    const fullImageUrl = getFullImageUrl(data.meta_image);
+    // Non-overwriting brand fallbacks: only fill in when the page's own
+    // SeoMetadata leaves the field empty. Page data always wins.
+    const metaDescription = data.meta_description || fallbackDescription || undefined;
+    const fullImageUrl = getFullImageUrl(data.meta_image) || getFullImageUrl(fallbackOgImage);
     const canonicalUrl = getAbsoluteCanonicalUrl(data.canonical_url);
     const ogTitle = data.og_title || data.meta_title;
-    const ogDescription = data.og_description || data.meta_description;
+    const ogDescription = data.og_description || metaDescription;
     return (
         <>
             <Head>
                 <title>{data.meta_title || pageName || 'Cross Coin'}</title>
-                <meta name="description" content={data.meta_description} />
+                <meta name="description" content={metaDescription} />
                 <meta name="keywords" content={data.meta_keywords} />
                 <link rel="canonical" href={canonicalUrl} />
                 {/* Open Graph tags */}
@@ -125,7 +128,7 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
                 ) : (pageName === 'home' && (
                     <script
                         type="application/ld+json"
-                        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildHomeDefaultLd(canonicalUrl, fullImageUrl)) }}
+                        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildHomeDefaultLd(canonicalUrl, fullImageUrl, organizationLd)) }}
                     />
                 ))}
             </Head>
@@ -139,17 +142,27 @@ const SeoWrapper = ({ pageName, children, seoData }) => {
  * structured_data in the SEO table. Combines Organization and WebSite —
  * Google uses these for the sitelinks search box and the brand panel in
  * search results.
+ *
+ * When a per-brand Organization object is supplied (fetched server-side from
+ * the backend's /api/public/seo-org), it REPLACES the hardcoded Organization
+ * block while the WebSite block is kept unchanged. Falls back to the default
+ * Organization when `organizationLd` is null (backend down / not configured).
  */
-function buildHomeDefaultLd(canonicalUrl, fullImageUrl) {
+function buildHomeDefaultLd(canonicalUrl, fullImageUrl, organizationLd = null) {
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
-    return [
-        {
+    const organization = organizationLd
+        // Ensure @context is present even if the backend omitted it; the
+        // object's own @context (if any) wins over the default via spread.
+        ? { '@context': 'https://schema.org', ...organizationLd }
+        : {
             '@context': 'https://schema.org',
             '@type': 'Organization',
             name: 'CrossCoin',
             url: baseUrl,
             logo: fullImageUrl || `${baseUrl}/assets/crosscoin_logo.webp`,
-        },
+        };
+    return [
+        organization,
         {
             '@context': 'https://schema.org',
             '@type': 'WebSite',

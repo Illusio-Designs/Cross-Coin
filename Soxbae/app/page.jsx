@@ -7,7 +7,7 @@ import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 60s so dashboard edits (hero slider, featured
@@ -35,13 +35,14 @@ function heroSrc(src, w = 1600) {
 }
 
 export default async function HomePage() {
-  const [products, categories, storeReviews, posts, slides, faqs] = await Promise.all([
+  const [products, categories, storeReviews, posts, slides, faqs, seoOrg] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
     getGlobalFaqs(),
+    getSeoOrg(),
   ]);
   const reviews = storeReviews.reviews;
 
@@ -62,14 +63,18 @@ export default async function HomePage() {
   const heroSlide = slides[0];
 
   const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com').replace(/\/+$/, '');
+  // Prefer the dashboard-managed Organization schema when the brand has filled
+  // its SEO settings; otherwise fall back to the hardcoded one. The WebSite
+  // entry below is always kept as-is.
+  const organizationJsonLd = seoOrg?.organization || {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Soxbae',
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+  };
   const homeJsonLd = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: 'Soxbae',
-      url: SITE_URL,
-      logo: `${SITE_URL}/logo.png`,
-    },
+    organizationJsonLd,
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',

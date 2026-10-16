@@ -17,6 +17,7 @@ import { getBestsellers } from '../services/products';
 import { getAllReviewsWithTotal } from '../services/reviews';
 import { getFaqs } from '../services/faqs';
 import { getPosts } from '../services/blog';
+import { getSeoOrg } from '../services/seo';
 
 /* Home — composes the section components, Knitwink-style.
    Each section is prop-driven. The above-the-fold data (hero slides,
@@ -28,14 +29,18 @@ export async function getServerSideProps({ res }) {
   // swallows its own errors and returns [], so first paint degrades gracefully.
   // Reviews are fetched once here and shared by the Morbix ReviewsSection and
   // TrustStrip so the store-wide reviews request no longer fires twice.
-  const [slides, categories, products, reviewData, posts, faqs] = await Promise.all([
+  const [slides, categories, products, reviewData, posts, faqs, seoOrg] = await Promise.all([
     getPublicSliders(),   // Hero slider — /api/sliders/listing
     getPublicCategories(), // Collections section — /api/categories/listing
     getBestsellers(8),    // Bestseller / exclusive sections — /api/products/best-sellers
     getAllReviewsWithTotal(), // Reviews — /api/reviews/all (Morbix reviews wall)
     getPosts(),           // Journal strip — /api/blogs/listing
     getFaqs('global'),    // FAQ accordion — /api/public/faqs?type=global
+    getSeoOrg(),          // Brand Organization JSON-LD — /api/public/seo-org
   ]);
+
+  // Brand-scoped Organization structured data (schema.org/Organization) or null.
+  const organization = seoOrg?.organization ?? null;
 
   // Store-wide rating derived from the shared review payload — same calc the
   // TrustStrip used to do on the client, now done once on the server.
@@ -60,6 +65,7 @@ export async function getServerSideProps({ res }) {
       initialRating: rating,
       initialPosts: posts || [],
       initialFaqs: faqs || [],
+      organization,
     },
   };
 }
@@ -73,6 +79,7 @@ export default function Home({
   initialRating = null,
   initialPosts = [],
   initialFaqs = [],
+  organization = null,
 }) {
   // Data arrives from the server as props — no post-hydration useEffect fetch.
   const slides = initialSlides;
@@ -96,6 +103,13 @@ export default function Home({
     <SeoWrapper pageName="home">
       <Head>
         <link rel="icon" href="/Gripzusfavicon.jpeg" />
+        {/* Brand Organization JSON-LD from the backend — only when present. */}
+        {organization && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+          />
+        )}
         {heroSlide && heroSlide.mobileImage && (
           <link
             rel="preload"

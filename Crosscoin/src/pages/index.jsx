@@ -2,6 +2,7 @@ import Head from 'next/head';
 import Home from "./home";
 import SeoWrapper from '../console/SeoWrapper';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
+import { getSeoOrg } from '../services/getSeoOrg';
 import { getHeroSrcSet } from '../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -46,26 +47,36 @@ export async function getServerSideProps(ctx) {
   // The homepage does not render any FAQ section (FAQs live on product pages),
   // so we no longer fetch page/global FAQs here — that removed two per-load API
   // round-trips that produced nothing visible.
-  const [seoData, slidersJson, categoriesJson, latestJson] = await Promise.all([
+  const [seoData, slidersJson, categoriesJson, latestJson, seoOrg] = await Promise.all([
     fetchPageSeo('home', ctx),
     fetchJson(`${API_URL}/api/sliders/listing`),
     fetchJson(`${API_URL}/api/categories/listing`),
     fetchJson(`${API_URL}/api/products/catalog?limit=15&sort=newest`),
+    // Per-brand Organization JSON-LD. Best-effort: null when the API is down,
+    // in which case SeoWrapper keeps emitting its default Organization block.
+    getSeoOrg('crosscoin'),
   ]);
 
   const slides = slidersJson?.sliders || (Array.isArray(slidersJson) ? slidersJson : []) || [];
   const categories = categoriesJson?.categories || (Array.isArray(categoriesJson) ? categoriesJson : []) || [];
   const latestProducts = (latestJson?.success && latestJson?.data?.products) ? latestJson.data.products : [];
 
+  const organizationLd = seoOrg?.organization || null;
+
   return {
     props: {
       seoData,
+      organizationLd,
+      // Best-effort brand-level fallbacks; SeoWrapper only uses these when the
+      // page's own SeoMetadata doesn't already supply an image / description.
+      orgOgImage: seoOrg?.ogImage || null,
+      orgDescription: seoOrg?.description || null,
       initialData: { slides, categories, latestProducts },
     },
   };
 }
 
-export default function MainPage({ seoData, initialData = {} }) {
+export default function MainPage({ seoData, organizationLd = null, orgOgImage = null, orgDescription = null, initialData = {} }) {
   // Preload the first hero image (the LCP element). Since the slide markup is
   // now in the SSR HTML, telling the browser to fetch this image at highest
   // priority before it parses the body shaves a big chunk off LCP — the same
@@ -79,7 +90,13 @@ export default function MainPage({ seoData, initialData = {} }) {
   const heroPreloadSrcSet = firstSlide ? getHeroSrcSet(firstSlide) : undefined;
 
   return (
-    <SeoWrapper pageName="home" seoData={seoData}>
+    <SeoWrapper
+      pageName="home"
+      seoData={seoData}
+      organizationLd={organizationLd}
+      fallbackOgImage={orgOgImage}
+      fallbackDescription={orgDescription}
+    >
       {heroPreloadSrcSet && (
         <Head>
           {firstSlide.mobileImage && (

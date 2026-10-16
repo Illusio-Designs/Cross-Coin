@@ -263,6 +263,19 @@ export async function getPolicy(name) {
   } catch { return null; }
 }
 
+// ---- SEO Organization JSON-LD ---------------------------------------------
+
+// Brand-scoped Organization structured data from the shared backend.
+// GET {API_URL}/api/public/seo-org (X-Brand-Name: velquira)
+//   -> { success, organization, ogImage, description }
+// `organization` is a schema.org/Organization object (or null). Best-effort:
+// any failure returns null so the home page renders without the JSON-LD.
+export async function getSeoOrg() {
+  try {
+    return await brandFetch('/api/public/seo-org', 300);
+  } catch { return null; }
+}
+
 // ---- Client-side commerce APIs (re-exported) ------------------------------
 // The purchase/account flows (cart, checkout, payments, orders, addresses,
 // wishlist, auth, reviews submit, contact) live in lib/api/* client modules

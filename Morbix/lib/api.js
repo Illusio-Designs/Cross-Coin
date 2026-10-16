@@ -289,6 +289,21 @@ export async function getPolicy(name) {
   } catch { return null; }
 }
 
+// ---- SEO Organization schema ----------------------------------------------
+// Per-brand schema.org/Organization JSON-LD built by the backend. Returns the
+// parsed response ({ success, organization, ogImage, description }) or null on
+// any error — best-effort, so pages still render when the backend is down.
+export async function getSeoOrg() {
+  try {
+    const res = await fetch(`${API_URL}/api/public/seo-org`, {
+      headers: { 'X-Brand-Name': BRAND },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
 // ---- Client-side commerce APIs (re-exported) ------------------------------
 // The purchase/account flows (cart, checkout, payments, orders, addresses,
 // wishlist, auth, reviews submit, contact) live in lib/api/* client modules

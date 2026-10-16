@@ -7,7 +7,7 @@ import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
 
 // Static/ISR — regenerate every 1 min.
@@ -29,13 +29,14 @@ function heroSrc(src, w = 1200) {
 }
 
 export default async function HomePage() {
-  const [products, categories, storeReviews, posts, slides, faqs] = await Promise.all([
+  const [products, categories, storeReviews, posts, slides, faqs, seoOrg] = await Promise.all([
     getBestsellers(),
     getCategories(),
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
     getFaqs('global'),
+    getSeoOrg(),
   ]);
   const reviews = storeReviews.reviews;
 
@@ -66,14 +67,17 @@ export default async function HomePage() {
   const heroSlide = slides[0];
 
   const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com').replace(/\/+$/, '');
+  // Prefer the backend's per-brand Organization schema when available; fall
+  // back to the hardcoded one otherwise (best-effort — renders if backend down).
+  const orgLd = seoOrg?.organization ?? {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Morbix',
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+  };
   const homeJsonLd = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: 'Morbix',
-      url: SITE_URL,
-      logo: `${SITE_URL}/logo.png`,
-    },
+    orgLd,
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',

@@ -11,7 +11,7 @@ import { getPublicCategories } from '@/lib/api/categories'
 import { getAllReviews } from '@/lib/api/reviews'
 import { getPosts } from '@/lib/api/blog'
 import SeoWrapper from '@/components/SeoWrapper'
-import { buildMetadata } from '@/lib/api/seo'
+import { buildMetadata, getSeoOrg } from '@/lib/api/seo'
 
 // Regenerate at most every 5 minutes (ISR). Combined with the server-cached
 // fetches below, the homepage is served as static HTML from Vercel's edge and
@@ -24,7 +24,18 @@ export const revalidate = 60
 // buildMetadata swallows backend errors and returns {} on a miss, leaving the
 // layout defaults intact.
 export async function generateMetadata() {
-  return buildMetadata('home', {})
+  // Optional, non-overwriting fallback: the brand Organization payload also
+  // carries a description/ogImage. Feed them to buildMetadata ONLY as the
+  // fallback tier, so dashboard page SEO and layout defaults still win — these
+  // merely fill gaps when nothing else provides them. Best-effort: getSeoOrg
+  // returns null on failure, leaving the fallback empty.
+  const seoOrg = await getSeoOrg().catch(() => null)
+  const fallback = {}
+  if (seoOrg?.description) fallback.description = seoOrg.description
+  if (seoOrg?.ogImage) {
+    fallback.openGraph = { images: [seoOrg.ogImage] }
+  }
+  return buildMetadata('home', fallback)
 }
 
 // Fetch the above-the-fold lists on the SERVER and render them into the initial
@@ -39,12 +50,13 @@ export default async function HomePage() {
   // Reviews and posts are fetched once here and shared with the components
   // below, so the store-wide reviews request (previously fired twice: by
   // ReviewBand and TrustStrip) and the blog fetch no longer run on the client.
-  const [slides, categories, bestsellers, reviews, posts] = await Promise.all([
+  const [slides, categories, bestsellers, reviews, posts, seoOrg] = await Promise.all([
     getPublicSliders().catch(() => []),
     getPublicCategories().catch(() => []),
     getBestsellers().catch(() => []),
     getAllReviews().catch(() => null),
     getPosts().catch(() => []),
+    getSeoOrg().catch(() => null),
   ])
 
   // Preload the first slide's hero image (the LCP element). HeroBanner renders
@@ -56,8 +68,13 @@ export default async function HomePage() {
   const heroImage = slides[0]?.image
 
   const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com').replace(/\/+$/, '');
+  // The Organization node now comes from the brand-scoped backend (seoOrg) so
+  // it stays in sync with the dashboard. We keep only the WebSite node here;
+  // the backend Organization is emitted separately below when present. When the
+  // backend is down (seoOrg?.organization null) no Organization JSON-LD is
+  // emitted, but the page still renders.
+  const organization = seoOrg?.organization ?? null;
   const homeJsonLd = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Knitwink', url: SITE_URL, logo: `${SITE_URL}/logo.png` },
     {
       '@context': 'https://schema.org', '@type': 'WebSite', name: 'Knitwink', url: SITE_URL,
       potentialAction: {
@@ -70,6 +87,9 @@ export default async function HomePage() {
 
   return (
     <SeoWrapper pageName="home">
+      {organization && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
+      )}
       {homeJsonLd.map((obj, i) => (
         <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
       ))}

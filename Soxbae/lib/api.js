@@ -244,6 +244,23 @@ export async function getGlobalFaqs() {
   } catch { return []; }
 }
 
+// ---- SEO (per-brand Organization schema) ----------------------------------
+
+// Fetch the brand's ready-made schema.org/Organization object plus optional
+// ogImage/description from the backend. Best-effort: any failure (backend down,
+// non-2xx, bad JSON) returns null so the page still renders. Returns
+// { success, organization, ogImage, description } or null.
+export async function getSeoOrg() {
+  try {
+    const res = await fetch(`${API_URL}/api/public/seo-org`, {
+      headers: { 'X-Brand-Name': BRAND },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
 // ---- Blog -----------------------------------------------------------------
 
 export async function getBlogPosts() {
