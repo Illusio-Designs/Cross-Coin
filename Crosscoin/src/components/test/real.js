@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability, getShippingFees } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability, getShippingFees, createPublicReview } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -169,6 +169,23 @@ export async function fetchCoupons() {
       return { code: c.code, label, min: c.minOrderValue ?? c.min_order_value ?? null };
     }).filter((c) => c.code);
   } catch (_) { return []; }
+}
+
+// Submit a product review to the real store (goes to moderation, like the live
+// site's review form). Returns { ok, message }.
+export async function submitProductReview({ productId, rating, comment, name, email }) {
+  try {
+    const fd = new FormData();
+    fd.append('productId', productId);
+    fd.append('rating', String(rating));
+    fd.append('comment', comment);
+    fd.append('name', name);
+    fd.append('email', email);
+    const res = await createPublicReview(fd);
+    return { ok: res?.success !== false, message: res?.message || 'Thanks! Your review is in for moderation.' };
+  } catch (e) {
+    return { ok: false, message: (e && e.message) || 'Could not submit your review. Please try again.' };
+  }
 }
 
 // Live shipping fees + free-shipping threshold (same source as the real cart).

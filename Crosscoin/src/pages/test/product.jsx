@@ -4,10 +4,11 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
+import { SIZE_GUIDE } from '../../lib/sizeGuide';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -29,6 +30,10 @@ export default function TestProduct() {
   const [pin, setPin] = useState('');
   const [pinRes, setPinRes] = useState(null); // { ok, text }
   const [pinBusy, setPinBusy] = useState(false);
+  const [lightbox, setLightbox] = useState(-1); // index into thumbs, -1 = closed
+  const [sizeChart, setSizeChart] = useState(false);
+  const [sticky, setSticky] = useState(false); // sticky buy bar visibility
+  const [rv, setRv] = useState({ name: '', email: '', rating: 5, comment: '', busy: false, done: false, err: '' });
 
   useEffect(() => {
     let off = false;
@@ -59,6 +64,22 @@ export default function TestProduct() {
     })();
     return () => { off = true; };
   }, [router.query.slug]);
+
+  // Sticky buy bar appears once the main buy panel has scrolled out of view.
+  useEffect(() => {
+    const onScroll = () => setSticky(window.scrollY > 620);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close the lightbox on Escape.
+  useEffect(() => {
+    if (lightbox < 0) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(-1); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   if (loading) return (
     <TestLayout>
@@ -129,7 +150,7 @@ export default function TestProduct() {
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden' }}><Thumb src={mainImg} color={cur.colors?.[0]} /></div>
+            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} color={cur.colors?.[0]} />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
@@ -154,7 +175,7 @@ export default function TestProduct() {
             </div>
 
             {sizeOpts.length > 0 && (<>
-              <div className="optlabel">Size <a onClick={() => toast('Pick the size that matches your usual fit.')}>Size chart</a></div>
+              <div className="optlabel">Size {SIZE_GUIDE.rows?.length > 0 && <a onClick={() => setSizeChart(true)}>Size chart</a>}</div>
               <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </>)}
 
@@ -205,7 +226,7 @@ export default function TestProduct() {
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
 
-            <div className="prepaidchip">≡ PREPAID10 ≡</div>
+            <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
             <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
 
             <div className="pdptrust">
@@ -292,9 +313,40 @@ export default function TestProduct() {
         </section>
 
         {/* Reviews (real) */}
-        {prodReviews.items.length > 0 && (
-          <section className="block">
-            <div className="sechead"><div><span className="eyebrow">Reviews{prodReviews.count ? ` · ${prodReviews.count}` : ''}</span><h2>What buyers say{prodReviews.avg ? ` · ${prodReviews.avg.toFixed(1)}★` : ''}</h2></div></div>
+        <section className="block">
+          <div className="sechead">
+            <div><span className="eyebrow">Reviews{prodReviews.count ? ` · ${prodReviews.count}` : ''}</span><h2>What buyers say{prodReviews.avg ? ` · ${prodReviews.avg.toFixed(1)}★` : ''}</h2></div>
+            {!rv.done && <button className="btn" onClick={() => setRv((s) => ({ ...s, open: !s.open }))}>{rv.open ? 'Close' : 'Write a review'}</button>}
+          </div>
+
+          {/* Write a review — posts to the real store (goes to moderation). */}
+          {rv.open && !rv.done && (
+            <form className="rvform" onSubmit={async (e) => {
+              e.preventDefault();
+              if (rv.busy) return;
+              if (!rv.name.trim() || !rv.email.trim() || !rv.comment.trim()) { setRv((s) => ({ ...s, err: 'Please fill in your name, email and review.' })); return; }
+              setRv((s) => ({ ...s, busy: true, err: '' }));
+              const res = await submitProductReview({ productId: p.id, rating: rv.rating, comment: rv.comment.trim(), name: rv.name.trim(), email: rv.email.trim() });
+              if (res.ok) { setRv((s) => ({ ...s, busy: false, done: true, open: false })); toast(res.message); }
+              else setRv((s) => ({ ...s, busy: false, err: res.message }));
+            }}>
+              <div className="rvform__stars" role="radiogroup" aria-label="Rating">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button type="button" key={n} className={`rvstar${n <= rv.rating ? ' on' : ''}`} aria-label={`${n} star${n > 1 ? 's' : ''}`} onClick={() => setRv((s) => ({ ...s, rating: n }))}>★</button>
+                ))}
+              </div>
+              <div className="rvform__grid">
+                <input placeholder="Your name" value={rv.name} onChange={(e) => setRv((s) => ({ ...s, name: e.target.value }))} />
+                <input type="email" placeholder="Email" value={rv.email} onChange={(e) => setRv((s) => ({ ...s, email: e.target.value }))} />
+              </div>
+              <textarea placeholder="Share what you liked (fit, comfort, quality)…" value={rv.comment} onChange={(e) => setRv((s) => ({ ...s, comment: e.target.value }))} rows={3} />
+              {rv.err && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12 }}>{rv.err}</div>}
+              <button className="btn btn--crimson" type="submit" disabled={rv.busy}>{rv.busy ? 'Submitting…' : 'Submit review'}</button>
+            </form>
+          )}
+          {rv.done && <p className="mono" style={{ color: 'var(--ink-soft)', fontSize: 13, padding: '8px 0 18px' }}>✓ Thanks! Your review is in for moderation.</p>}
+
+          {prodReviews.items.length > 0 ? (
             <div className="revscroll">
               {[0, 1, 2].map((row) => {
                 const base = prodReviews.items;
@@ -317,8 +369,10 @@ export default function TestProduct() {
                 );
               })}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '6px 0 10px' }}>No reviews yet — be the first to write one.</p>
+          )}
+        </section>
 
         {/* Product FAQ (real) */}
         {prodFaqs.length > 0 && (
@@ -342,6 +396,45 @@ export default function TestProduct() {
           </section>
         )}
       </div>
+
+      {/* Sticky buy bar — appears after the main buy panel scrolls away */}
+      <div className={`pdpsticky${sticky ? ' on' : ''}`}>
+        <div className="wrap pdpsticky__in">
+          <div className="pdpsticky__p">
+            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} /></div>
+            <div className="pdpsticky__meta"><b>{p.name}</b><span>{inr(payable)}</span></div>
+          </div>
+          <div className="pdpsticky__btns">
+            <button className="btn" onClick={() => add(false)}>Add to cart</button>
+            <button className="btn btn--buynow" onClick={() => add(true)}>Buy now</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Image lightbox */}
+      {lightbox >= 0 && thumbs.length > 0 && (
+        <div className="lbox" onClick={() => setLightbox(-1)}>
+          <button className="lbox__x" aria-label="Close" onClick={() => setLightbox(-1)}>{I.close(24)}</button>
+          {thumbs.length > 1 && <button className="lbox__nav lbox__prev" aria-label="Previous" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i - 1 + thumbs.length) % thumbs.length); }}>‹</button>}
+          <div className="lbox__img" onClick={(e) => e.stopPropagation()}><Thumb src={thumbs[lightbox]} /></div>
+          {thumbs.length > 1 && <button className="lbox__nav lbox__next" aria-label="Next" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i + 1) % thumbs.length); }}>›</button>}
+        </div>
+      )}
+
+      {/* Size chart modal */}
+      {sizeChart && (
+        <div className="scmodal" onClick={() => setSizeChart(false)}>
+          <div className="scmodal__card" onClick={(e) => e.stopPropagation()}>
+            <div className="scmodal__head"><h3>Size chart</h3><button aria-label="Close" onClick={() => setSizeChart(false)}>{I.close(20)}</button></div>
+            {SIZE_GUIDE.note && <p className="scmodal__note">{SIZE_GUIDE.note}</p>}
+            <table className="sctable">
+              <thead><tr><th>Size</th><th>Fits</th><th>Foot length</th></tr></thead>
+              <tbody>{SIZE_GUIDE.rows.map((r) => <tr key={r.size}><td>{r.size}</td><td>{r.fits}</td><td>{r.foot}</td></tr>)}</tbody>
+            </table>
+            {SIZE_GUIDE.tip && <p className="scmodal__tip">{SIZE_GUIDE.tip}</p>}
+          </div>
+        </div>
+      )}
     </TestLayout>
   );
 }

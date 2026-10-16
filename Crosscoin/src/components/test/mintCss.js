@@ -390,4 +390,49 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .citem .right{ grid-column: 1/-1; flex-direction: row; justify-content: space-between; align-items: center; }
 .cc-test-root .mintform{ flex-direction: column; }}
 @media (max-width: 380px){.cc-test-root .pgrid, .cc-test-root .techgrid{ grid-template-columns: 1fr; }}
+
+/* --- PDP: gallery zoom, lightbox, sticky buy bar, size-chart modal, review form --- */
+.cc-test-root .gmain{ position: relative; }
+.cc-test-root .gzoom{ position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 50%; color: var(--ink); box-shadow: var(--stamp-sm); pointer-events: none; }
+
+.cc-test-root .pdpsticky{ position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; transform: translateY(120%); transition: transform .28s var(--ease); background: var(--surface); border-top: 2px solid var(--line-ink); box-shadow: 0 -6px 20px rgba(24,13,62,.16); padding-bottom: env(safe-area-inset-bottom,0px); }
+.cc-test-root .pdpsticky.on{ transform: translateY(0); }
+.cc-test-root .pdpsticky__in{ display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-block: 10px; }
+.cc-test-root .pdpsticky__p{ display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cc-test-root .pdpsticky__thumb{ width: 46px; height: 46px; border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; flex: 0 0 auto; }
+.cc-test-root .pdpsticky__thumb img{ width: 100%; height: 100%; object-fit: cover; }
+.cc-test-root .pdpsticky__meta{ display: flex; flex-direction: column; min-width: 0; }
+.cc-test-root .pdpsticky__meta b{ font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
+.cc-test-root .pdpsticky__meta span{ font-family: "Space Mono"; color: var(--crimson); font-size: 13px; }
+.cc-test-root .pdpsticky__btns{ display: flex; gap: 8px; flex: 0 0 auto; }
+.cc-test-root .pdpsticky__btns .btn{ padding: 11px 16px; font-size: 12.5px; }
+@media (max-width: 480px){ .cc-test-root .pdpsticky__btns .btn{ padding: 11px 13px; } .cc-test-root .pdpsticky__meta b{ max-width: 34vw; } }
+
+.cc-test-root .lbox{ position: fixed; inset: 0; z-index: 90; background: rgba(10,6,24,.86); display: grid; place-items: center; padding: 24px; }
+.cc-test-root .lbox__img{ max-width: min(92vw,720px); max-height: 84vh; border: 2px solid #fff; border-radius: var(--r); overflow: hidden; background: #fff; }
+.cc-test-root .lbox__img img{ width: 100%; height: auto; max-height: 84vh; object-fit: contain; display: block; }
+.cc-test-root .lbox__x{ position: absolute; top: calc(16px + env(safe-area-inset-top,0px)); right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #fff; background: transparent; color: #fff; display: grid; place-items: center; cursor: pointer; }
+.cc-test-root .lbox__nav{ position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.3); color: #fff; font-size: 30px; line-height: 1; cursor: pointer; }
+.cc-test-root .lbox__prev{ left: 14px; } .cc-test-root .lbox__next{ right: 14px; }
+
+.cc-test-root .scmodal{ position: fixed; inset: 0; z-index: 90; background: rgba(10,6,24,.6); display: grid; place-items: center; padding: 20px; }
+.cc-test-root .scmodal__card{ background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); max-width: 460px; width: 100%; padding: 22px; }
+.cc-test-root .scmodal__head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cc-test-root .scmodal__head h3{ font-size: 18px; }
+.cc-test-root .scmodal__head button{ background: none; border: none; cursor: pointer; color: var(--ink); }
+.cc-test-root .scmodal__note{ color: var(--ink-soft); font-size: 13px; margin: 0 0 14px; }
+.cc-test-root .sctable{ width: 100%; border-collapse: collapse; font-size: 13px; }
+.cc-test-root .sctable th, .cc-test-root .sctable td{ border: 1.5px solid var(--line); padding: 8px 10px; text-align: left; }
+.cc-test-root .sctable th{ background: var(--paper-2); font-family: "Space Mono"; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.cc-test-root .scmodal__tip{ color: var(--ink-faint); font-size: 12px; font-family: "Space Mono"; margin: 12px 0 0; }
+
+.cc-test-root .rvform{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 18px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+.cc-test-root .rvform__stars{ display: flex; gap: 4px; }
+.cc-test-root .rvstar{ background: none; border: none; font-size: 26px; line-height: 1; color: var(--line); cursor: pointer; padding: 0; }
+.cc-test-root .rvstar.on{ color: var(--gold); }
+.cc-test-root .rvform__grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cc-test-root .rvform input, .cc-test-root .rvform textarea{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); color: var(--ink); padding: 11px 12px; font: inherit; font-size: 13.5px; width: 100%; }
+.cc-test-root .rvform textarea{ resize: vertical; }
+@media (max-width: 520px){ .cc-test-root .rvform__grid{ grid-template-columns: 1fr; } }
+
 .cc-test-root{min-height:100vh;}`;
