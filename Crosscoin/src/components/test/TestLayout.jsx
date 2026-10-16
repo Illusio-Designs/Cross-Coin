@@ -127,9 +127,9 @@ const MOBILE_CSS = `
 .cc-test-root .cc-card__img{ max-height:72vh; }
 .cc-test-root .cc-card__img img{ max-width:100%; max-height:100%; }
 /* Real banner/slider image in the hero (stamped frame). */
-.cc-test-root .hero__art--banner{ position:relative; border:2px solid var(--line-ink); border-radius:14px; overflow:hidden; box-shadow:var(--stamp); background:var(--paper-2); aspect-ratio:4/3; width:100%; }
-.cc-test-root .hero__art--banner img{ width:100%; height:100%; object-fit:cover; display:block; }
-@media (max-width:600px){ .cc-test-root .hero__art--banner{ display:block !important; aspect-ratio:16/10; margin-top:6px; } }
+.cc-test-root .hero__art--banner{ position:relative; border:2px solid var(--line-ink); border-radius:14px; overflow:hidden; box-shadow:var(--stamp); background:var(--paper-2); width:100%; height:0 !important; padding-top:75%; aspect-ratio:auto !important; }
+.cc-test-root .hero__art--banner img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; display:block; }
+@media (max-width:600px){ .cc-test-root .hero__art--banner{ display:block !important; padding-top:62%; margin-top:6px; } }
 /* Search bar on the /test/search page. */
 .cc-test-root .searchbar{ display:flex; gap:10px; margin-top:16px; max-width:560px; }
 .cc-test-root .searchbar input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; font-size:15px; box-shadow:var(--stamp-sm); }
@@ -320,8 +320,8 @@ const MOBILE_CSS = `
 .cc-test-root .artmeta{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; color:var(--ink-faint); }
 .cc-test-root .artcat{ background:var(--crimson); color:#fff; font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:4px; letter-spacing:.04em; }
 .cc-test-root .arttitle{ font-size:clamp(28px,5vw,44px); margin:12px 0 16px; }
-.cc-test-root .arthero{ aspect-ratio:16/9; border:2px solid var(--line-ink); border-radius:10px; overflow:hidden; box-shadow:var(--stamp); margin-bottom:22px; }
-.cc-test-root .arthero img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cc-test-root .arthero{ position:relative; height:0; padding-top:56.25%; aspect-ratio:auto !important; border:2px solid var(--line-ink); border-radius:10px; overflow:hidden; box-shadow:var(--stamp); margin-bottom:22px; }
+.cc-test-root .arthero img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; display:block; }
 /* Order tracking */
 .cc-test-root .trackcard{ border:2px solid var(--line-ink); border-radius:10px; box-shadow:var(--stamp); background:var(--surface); padding:20px; margin-top:24px; }
 .cc-test-root .trackcard__top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
