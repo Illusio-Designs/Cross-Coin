@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
+import { validateCouponReal } from '../../components/test/real';
 import { useCart, cartSubtotal, changeQty, removeItem, clearCart } from '../../components/test/store';
 
 const FREE_SHIP = 799;
@@ -12,23 +13,26 @@ export default function TestCart() {
   const router = useRouter();
   const cart = useCart();
   const [step, setStep] = useState(1);         // 1 review · 2 delivery+payment · 'done'
-  const [coupon, setCoupon] = useState(false);
+  const [coupon, setCoupon] = useState(null);  // { code, amount } from live validation
   const [pay, setPay] = useState('cod');
   const [orderNo, setOrderNo] = useState('');
   const formRef = useRef();
   const promoRef = useRef();
 
   const sub = cartSubtotal(cart);
-  const disc = coupon ? Math.round(sub * 0.10) : 0;
+  const disc = coupon ? Math.min(coupon.amount, sub) : 0;
   const afterDisc = Math.max(0, sub - disc);
   const ship = sub === 0 ? 0 : (pay === 'prepaid' ? 0 : (afterDisc >= FREE_SHIP ? 0 : 49));
   const cod = pay === 'cod' ? 30 : 0;
   const total = afterDisc + ship + cod;
   const need = Math.max(0, FREE_SHIP - afterDisc);
 
-  const applyPromo = () => {
+  const applyPromo = async () => {
     const v = (promoRef.current?.value || '').trim().toUpperCase();
-    if (v === 'CROSS10') { setCoupon(true); toast('CROSS10 applied — 10% off'); } else toast('Invalid code');
+    if (!v) return;
+    const res = await validateCouponReal(v, sub, pay);
+    if (res.ok) { setCoupon({ code: res.code, amount: res.amount }); toast(`${res.code} applied — ${inr(res.amount)} off`); }
+    else { setCoupon(null); toast(res.message || 'Invalid code'); }
   };
   const place = () => {
     if (!formRef.current?.reportValidity()) return;
@@ -82,9 +86,9 @@ export default function TestCart() {
                   {sub === 0 ? 'Add items to unlock free shipping' : (need > 0 ? `Add ${inr(need)} more for FREE shipping` : 'You’ve unlocked FREE shipping ✓')}
                 </div>
                 <div className="freebar"><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
-                <div className="promo"><input ref={promoRef} placeholder="PROMO CODE" defaultValue="CROSS10" /><button className="btn" onClick={applyPromo}>Apply</button></div>
+                <div className="promo"><input ref={promoRef} placeholder="PROMO CODE" /><button className="btn" onClick={applyPromo}>Apply</button></div>
                 <div className="srow"><span>Subtotal</span><span>{inr(sub)}</span></div>
-                {coupon && disc > 0 && <div className="srow"><span>Discount (CROSS10)</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+                {coupon && disc > 0 && <div className="srow"><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
                 <div className="srow"><span>Shipping</span><span>{ship === 0 ? (sub ? 'FREE' : '—') : inr(ship)}</span></div>
                 <div className="srow total"><span>Total</span><span>{inr(total)}</span></div>
                 <button className="btn btn--crimson btn--block btn--lg" style={{ marginTop: 16 }} disabled={!cart.length} onClick={() => setStep(2)}>Checkout securely</button>
@@ -147,7 +151,7 @@ export default function TestCart() {
                   ))}
                 </div>
                 <div className="srow"><span>Subtotal</span><span>{inr(sub)}</span></div>
-                {coupon && disc > 0 && <div className="srow"><span>Discount (CROSS10)</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+                {coupon && disc > 0 && <div className="srow"><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
                 <div className="srow"><span>Shipping</span><span>{ship === 0 ? 'FREE' : inr(ship)}</span></div>
                 {cod > 0 && <div className="srow"><span>COD handling</span><span>{inr(cod)}</span></div>}
                 <div className="srow total"><span>Total</span><span>{inr(total)}</span></div>

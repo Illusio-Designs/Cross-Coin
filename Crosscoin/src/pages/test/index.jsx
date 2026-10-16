@@ -4,21 +4,29 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast } from '../../components/test/ui';
 import { FAQS } from '../../components/test/data';
-import { fetchProducts, fetchCategories } from '../../components/test/real';
+import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons } from '../../components/test/real';
 
 const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
+const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
+const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 export default function TestHome() {
   const router = useRouter();
   const [open, setOpen] = useState(0);
   const [rail, setRail] = useState([]);
   const [cats, setCats] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [deal, setDeal] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let off = false;
-    Promise.all([fetchProducts({ limit: 8 }), fetchCategories()])
-      .then(([prods, categories]) => { if (off) return; setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6)); })
+    Promise.all([fetchProducts({ limit: 8 }), fetchCategories(), fetchReviews(6), fetchCoupons()])
+      .then(([prods, categories, revs, coupons]) => {
+        if (off) return;
+        setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6));
+        setReviews(revs.slice(0, 3)); setDeal(coupons[0] || null);
+      })
       .catch(() => {})
       .finally(() => { if (!off) setLoading(false); });
     return () => { off = true; };
@@ -102,23 +110,23 @@ export default function TestHome() {
         </div>
       </section>
 
-      {/* reviews */}
-      <section className="block">
-        <div className="wrap">
-          <div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div><div className="idx">4.8 / 5 · 2,140 reviews</div></div>
-          <div className="revgrid">
-            {[
-              ['Aarav R.', 'MUMBAI · VERIFIED', '#ce1e36', '"Unreasonably comfortable. The arch band is the real deal — ordered four more packs the same week."'],
-              ['Simran I.', 'DELHI · VERIFIED', '#180d3e', '"Quality feels well above the price and the pack deal is great value. Returns were genuinely painless."'],
-              ['Karthik M.', 'BENGALURU · VERIFIED', '#0f766e', '"Clean site, fast COD and the socks actually last. This is my default now."'],
-            ].map(([who, loc, bg, text]) => (
-              <div className="rev" key={who}><div className="stars">★★★★★</div><p>{text}</p>
-                <div className="who"><div className="av" style={{ background: bg }}>{who.slice(0, 2)}</div><div><b>{who}</b><span>{loc}</span></div></div>
-              </div>
-            ))}
+      {/* reviews — real store reviews */}
+      {reviews.length > 0 && (
+        <section className="block">
+          <div className="wrap">
+            <div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div>
+            <div className="revgrid">
+              {reviews.map((r, i) => (
+                <div className="rev" key={i}>
+                  <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
+                  <p>&ldquo;{r.text}&rdquo;</p>
+                  <div className="who"><div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>{r.loc ? `${r.loc} · ` : ''}VERIFIED</span></div></div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* journal */}
       <section className="block" id="journal" style={{ paddingTop: 0 }}>
@@ -154,8 +162,8 @@ export default function TestHome() {
       {/* mint club */}
       <section className="block" style={{ paddingTop: 0 }}>
         <div className="wrap"><div className="mint">
-          <span className="eyebrow" style={{ color: '#ffd3d9' }}>Join the mint club</span>
-          <h2>Get ₹100 off your first strike</h2>
+          <span className="eyebrow" style={{ color: '#ffd3d9' }}>{deal ? 'Live deal' : 'Join the mint club'}</span>
+          <h2>{deal ? <>Use code <span className="mono">{deal.code}</span> — {deal.label}</> : 'Join the mint club'}</h2>
           <p>Early access to drops, members-only prices and the occasional good story. No spam, unsubscribe anytime.</p>
           <form className="mintform" onSubmit={(e) => { e.preventDefault(); toast('You’re in — ₹100 off on its way'); e.currentTarget.reset(); }}>
             <input type="email" placeholder="you@email.com" aria-label="Email" required /><button className="btn" type="submit">Subscribe</button>

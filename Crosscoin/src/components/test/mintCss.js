@@ -69,7 +69,7 @@ export const MINT_CSS = `
   body { margin: 0; background: var(--bg); color: var(--fg);
     font-family: "Inter", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
     -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-  h1,h2,h3,h4,.disp { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
+  h1,h2,h3,h4,.disp { font-family: "Fraunces", system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
   a { color: inherit; text-decoration: none; }
   img { max-width: 100%; display: block; }
   .mono { font-family: "Space Mono", ui-monospace, monospace; }
@@ -96,7 +96,7 @@ export const MINT_CSS = `
   .coin { position: relative; border-radius: 50%; background:
       radial-gradient(circle at 34% 30%, #fff5, transparent 42%),
       conic-gradient(from 210deg, var(--crimson), var(--indigo), var(--crimson));
-    display: grid; place-items: center; color: #fff; font-family: "Bricolage Grotesque"; font-weight: 800;
+    display: grid; place-items: center; color: #fff; font-family: "Fraunces"; font-weight: 800;
     box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 6px rgba(0,0,0,.12); }
   .coin::after { content: ""; position: absolute; inset: 7%; border-radius: 50%; border: 1px dashed rgba(255,255,255,.4); }
 
@@ -112,7 +112,7 @@ export const MINT_CSS = `
   header.site { position: sticky; top: env(safe-area-inset-top,0px); z-index: 50; background: color-mix(in srgb, var(--surface) 86%, transparent);
     backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); border-bottom: 2px solid var(--line-ink); }
   .nav { display: flex; align-items: center; gap: 26px; height: 66px; }
-  .brand { display: flex; align-items: center; gap: 11px; font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; }
+  .brand { display: flex; align-items: center; gap: 11px; font-family: "Fraunces"; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; }
   .brand .coin { width: 30px; height: 30px; font-size: 13px; }
   .brand b { color: var(--crimson); }
   .nav__links { display: flex; gap: 22px; margin-left: 6px; }
@@ -150,7 +150,7 @@ export const MINT_CSS = `
   .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; }
   .hero .denoms { display: flex; gap: 10px; margin-top: 34px; flex-wrap: wrap; }
   .denom { border: 2px solid var(--line-ink); border-radius: var(--r); padding: 9px 13px; background: var(--surface); box-shadow: var(--stamp-sm); }
-  .denom .n { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 20px; }
+  .denom .n { font-family: "Fraunces"; font-weight: 800; font-size: 20px; }
   .denom .l { font-family: "Space Mono"; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
 
   /* hero art: giant spinning coin + stamped tiles */
@@ -161,7 +161,7 @@ export const MINT_CSS = `
       conic-gradient(from 200deg, var(--crimson), var(--indigo) 55%, var(--crimson-700) 85%, var(--crimson));
     box-shadow: var(--stamp), inset 0 0 0 3px rgba(255,255,255,.35), inset 0 0 0 12px rgba(0,0,0,.12); border: 2px solid var(--line-ink); }
   .hero__coin::before { content:""; position:absolute; inset: 9%; border-radius:50%; border: 2px dashed rgba(255,255,255,.4); }
-  .hero__coin span { position:absolute; inset:0; display:grid; place-items:center; color:#fff; font-family:"Bricolage Grotesque"; font-weight:800; font-size: clamp(30px,8vw,64px); letter-spacing:-.04em; animation: spin 26s linear infinite reverse; }
+  .hero__coin span { position:absolute; inset:0; display:grid; place-items:center; color:#fff; font-family:"Fraunces"; font-weight:800; font-size: clamp(30px,8vw,64px); letter-spacing:-.04em; animation: spin 26s linear infinite reverse; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hero__chip { position: absolute; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); padding: 8px 12px; font-family:"Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
   .hero__chip.c1 { top: 4%; left: -2%; } .hero__chip.c2 { bottom: 10%; right: -3%; color: var(--crimson); } .hero__chip.c3 { bottom: -2%; left: 12%; }
@@ -214,7 +214,7 @@ export const MINT_CSS = `
   .techcard:hover { transform: translateY(-4px); background: rgba(255,255,255,.08); }
   .techcard .mk { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); color: var(--gold); display: grid; place-items: center; margin-bottom: 14px; }
   .techcard .mk svg { width: 22px; height: 22px; }
-  .techcard b { color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: "Bricolage Grotesque"; }
+  .techcard b { color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: "Fraunces"; }
   .techcard span { color: #c6bce4; font-size: 13px; }
 
   /* ---------- reviews ---------- */
@@ -222,7 +222,7 @@ export const MINT_CSS = `
   .rev { background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); padding: 22px; box-shadow: var(--stamp-sm); }
   .rev p { margin: 11px 0 16px; font-size: 14.5px; }
   .rev .who { display: flex; align-items: center; gap: 11px; }
-  .rev .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Bricolage Grotesque"; border: 2px solid var(--line-ink); }
+  .rev .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Fraunces"; border: 2px solid var(--line-ink); }
   .rev .who b { font-size: 13.5px; } .rev .who span { font-size: 11.5px; color: var(--ink-faint); font-family: "Space Mono"; }
 
   /* ---------- journal ---------- */
@@ -236,7 +236,7 @@ export const MINT_CSS = `
   /* ---------- faq ---------- */
   .faq { max-width: 820px; margin-inline: auto; }
   .qa { border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); margin-bottom: 12px; box-shadow: var(--stamp-sm); overflow: hidden; }
-  .qa__q { width: 100%; text-align: left; background: none; border: none; padding: 17px 18px; font-size: 15px; font-weight: 650; font-family: "Bricolage Grotesque"; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .qa__q { width: 100%; text-align: left; background: none; border: none; padding: 17px 18px; font-size: 15px; font-weight: 650; font-family: "Fraunces"; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
   .qa__q .pm { width: 26px; height: 26px; border: 2px solid var(--line-ink); border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; transition: transform .25s var(--ease), background .25s, color .25s; }
   .qa.open .qa__q .pm { background: var(--crimson); color: #fff; transform: rotate(45deg); }
   .qa__a { max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
@@ -304,7 +304,7 @@ export const MINT_CSS = `
   .pack:hover { transform: translate(-2px,-2px); } .pack.on { outline: 2px solid var(--crimson); outline-offset: 2px; }
   .pack .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-ink); flex-shrink: 0; display: grid; place-items: center; }
   .pack.on .radio::after { content:""; width: 10px; height: 10px; border-radius: 50%; background: var(--crimson); }
-  .pack b { font-family: "Bricolage Grotesque"; font-size: 15px; } .pack .d { font-size: 12.5px; color: var(--ink-soft); }
+  .pack b { font-family: "Fraunces"; font-size: 15px; } .pack .d { font-size: 12.5px; color: var(--ink-soft); }
   .pack .pp { margin-left: auto; text-align: right; font-family:"Space Mono"; }
   .pack .pp .pnow { font-weight: 700; font-size: 16px; } .pack .pp .psave { font-size: 11px; color: var(--crimson); font-weight: 700; }
   .pack .tagbest { position: absolute; top: -11px; right: 14px; background: var(--indigo); color: #fff; font-family:"Space Mono"; font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 3px; letter-spacing: .06em; }
@@ -317,7 +317,7 @@ export const MINT_CSS = `
   .usp { display: flex; gap: 10px; align-items: center; font-size: 13.5px; } .usp svg { width: 18px; height: 18px; color: var(--crimson); flex-shrink: 0; }
   .acc { margin-top: 24px; border-top: 2px solid var(--line-ink); }
   .acc__i { border-bottom: 2px solid var(--line-ink); }
-  .acc__q { width: 100%; background: none; border: none; padding: 16px 2px; font-family:"Bricolage Grotesque"; font-weight: 650; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; cursor: pointer; }
+  .acc__q { width: 100%; background: none; border: none; padding: 16px 2px; font-family:"Fraunces"; font-weight: 650; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; cursor: pointer; }
   .acc__a { max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); } .acc__a > div { padding: 0 2px 16px; color: var(--ink-soft); font-size: 14px; }
 
   /* ================= CART ================= */
@@ -361,7 +361,7 @@ export const MINT_CSS = `
   .payopt.on .radio::after { content:""; width: 10px; height: 10px; border-radius: 50%; background: var(--crimson); }
   .payopt .pi { width: 40px; height: 40px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; flex-shrink: 0; }
   .payopt .pi svg { width: 20px; height: 20px; }
-  .payopt b { font-family: "Bricolage Grotesque"; font-size: 15px; display: block; } .payopt .d { font-size: 12.5px; color: var(--ink-soft); }
+  .payopt b { font-family: "Fraunces"; font-size: 15px; display: block; } .payopt .d { font-size: 12.5px; color: var(--ink-soft); }
   .payopt .tag { margin-left: auto; font-family:"Space Mono"; font-size: 10px; font-weight: 700; color: var(--crimson); border: 2px solid var(--crimson); border-radius: 3px; padding: 3px 7px; }
   .corow { display: flex; gap: 10px; margin-top: 20px; }
   .coback { background: none; border: none; color: var(--ink-soft); font-family:"Space Mono"; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -382,7 +382,7 @@ export const MINT_CSS = `
   .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); background: var(--surface); border-left: 2px solid var(--line-ink); z-index: 61; transform: translateX(100%); transition: transform .34s var(--ease); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top,0px); }
   .drawer.on { transform: none; }
   .drawer__h { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px; border-bottom: 2px solid var(--line-ink); }
-  .drawer__h b { font-family: "Bricolage Grotesque"; font-size: 18px; }
+  .drawer__h b { font-family: "Fraunces"; font-size: 18px; }
   .drawer__body { flex: 1; overflow-y: auto; padding: 8px 18px; }
   .drawer__foot { border-top: 2px solid var(--line-ink); padding: 16px 18px calc(16px + env(safe-area-inset-bottom,0px)); }
   .ditem { display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; padding: 14px 0; border-bottom: 2px solid var(--line); align-items: center; }
@@ -393,7 +393,7 @@ export const MINT_CSS = `
   /* mobile nav */
   .mnav { position: fixed; inset: 0; z-index: 62; background: var(--surface); transform: translateX(100%); transition: transform .32s var(--ease); display: flex; flex-direction: column; padding: 18px max(20px,env(safe-area-inset-left,0px)); }
   .mnav.on { transform: none; }
-  .mnav a { font-family: "Bricolage Grotesque"; font-size: 24px; font-weight: 700; padding: 16px 0; border-bottom: 2px solid var(--line); cursor: pointer; }
+  .mnav a { font-family: "Fraunces"; font-size: 24px; font-weight: 700; padding: 16px 0; border-bottom: 2px solid var(--line); cursor: pointer; }
 
   /* toast */
   #toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%) translateY(16px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: var(--r); border: 2px solid var(--line-ink); font-family:"Space Mono"; font-size: 12.5px; font-weight: 700; box-shadow: var(--stamp); opacity: 0; pointer-events: none; transition: .28s var(--ease); z-index: 90; }

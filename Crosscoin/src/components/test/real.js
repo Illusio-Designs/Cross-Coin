@@ -1,7 +1,9 @@
 // Real-data layer for the /test preview — pulls actual Crosscoin catalogue from
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug } from '../../services/publicApi';
+import axios from 'axios';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons } from '../../services/publicApi';
+import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
 
@@ -87,4 +89,56 @@ export async function fetchProduct(slug) {
   const r = await getPublicProductBySlug(slug);
   const p = unwrapProduct(r);
   return p ? normalizeProduct(p) : null;
+}
+
+// Real admin-set bundle tiers (the "Buy More, Save More" deal ladder) for a
+// product: [{ pairs, price, label, badge }] with absolute pack prices. Empty
+// when the product has no tiers configured.
+export async function fetchBundleTiers(productId) {
+  if (!productId) return [];
+  try {
+    const { data } = await axios.get(`${API_URL}/api/public/bundle-tiers?product_id=${encodeURIComponent(productId)}`, addBrandHeader());
+    const tiers = Array.isArray(data?.tiers) ? data.tiers : [];
+    return tiers
+      .map((t) => ({ pairs: Number(t.pairs), price: Number(t.price), label: t.label || `${Number(t.pairs)} Pairs`, badge: t.badge || null }))
+      .filter((t) => Number.isFinite(t.pairs) && t.pairs > 1 && Number.isFinite(t.price) && t.price > 0)
+      .sort((a, b) => a.pairs - b.pairs);
+  } catch (_) { return []; }
+}
+
+// Real store reviews for the home "what shoppers say" section.
+export async function fetchReviews(limit = 6) {
+  try {
+    const r = await getAllPublicReviews({ limit });
+    const list = r?.reviews || r?.data?.reviews || (Array.isArray(r) ? r : []);
+    return list.map((v) => ({
+      name: v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
+      rating: Number(v.rating) || 5,
+      text: v.comment || v.review || v.message || v.body || '',
+      loc: (v.city || v.location || '').toString().toUpperCase(),
+      product: v.productName || v.product_name || '',
+    })).filter((v) => v.text);
+  } catch (_) { return []; }
+}
+
+// Real live coupons → the deal ticker + promo hint.
+export async function fetchCoupons() {
+  try {
+    const r = await getPublicCoupons();
+    const list = r?.coupons || r?.data?.coupons || (Array.isArray(r) ? r : []);
+    return list.map((c) => {
+      const type = c.discountType || c.discount_type || c.type;
+      const val = c.discountValue ?? c.discount_value ?? c.value;
+      const label = type === 'percentage' || type === 'percent' ? `${val}% OFF` : (val ? `₹${val} OFF` : 'DEAL');
+      return { code: c.code, label, min: c.minOrderValue ?? c.min_order_value ?? null };
+    }).filter((c) => c.code);
+  } catch (_) { return []; }
+}
+
+// Validate a coupon against the live rules (real discount amount).
+export async function validateCouponReal(code, cartTotal, paymentMode) {
+  const { validateCoupon } = await import('../../services/publicApi');
+  const data = await validateCoupon(code, cartTotal, paymentMode || null, null);
+  if (data?.success && data?.coupon) return { ok: true, code: data.coupon.code, amount: parseFloat(data.discountAmount) || 0 };
+  return { ok: false, message: data?.message || 'Invalid or expired code' };
 }

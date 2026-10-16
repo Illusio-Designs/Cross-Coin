@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { PACKS, inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchBundleTiers } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 
 const ACC = [
@@ -19,7 +19,8 @@ export default function TestProduct() {
   const [also, setAlso] = useState([]);
   const [color, setColor] = useState(null);     // {name,hex,img}
   const [size, setSize] = useState('');
-  const [pack, setPack] = useState(PACKS[0]);
+  const [tiers, setTiers] = useState([]);        // real bundle tiers
+  const [packQ, setPackQ] = useState(1);         // selected pack size (pairs)
   const [qty, setQty] = useState(1);
   const [acc, setAcc] = useState(0);
   const [mainImg, setMainImg] = useState('');
@@ -36,8 +37,9 @@ export default function TestProduct() {
         setP(prod);
         if (prod) {
           const c0 = prod.colors?.[0] || null;
-          setColor(c0); setSize(prod.sizes?.[0] || ''); setPack(PACKS[0]); setQty(1);
+          setColor(c0); setSize(prod.sizes?.[0] || ''); setPackQ(1); setTiers([]); setQty(1);
           setMainImg(c0?.img || prod.img || prod.images?.[0] || '');
+          fetchBundleTiers(prod.id).then((t) => { if (!off) setTiers(t); }).catch(() => {});
         }
         fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {});
       } catch (_) { if (!off) setP(null); }
@@ -49,12 +51,20 @@ export default function TestProduct() {
   if (loading) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ color: 'var(--ink-faint)', padding: '60px 0', fontSize: 13 }}>Loading product…</p></div></TestLayout>;
   if (!p) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Back to shop</a></p></div></TestLayout>;
 
-  const unit = Math.round(p.now * pack.mult);
-  const total = unit * qty;
+  // Pack ladder: real admin-set bundle tiers when present (absolute pack prices),
+  // else the illustrative PACKS fallback. "1 pair" is the product's own price.
+  const packOptions = tiers.length
+    ? [{ q: 1, label: 'Single', total: p.now, best: false }, ...tiers.map((t) => ({ q: t.pairs, label: t.label, total: t.price, best: /best|popular/i.test(t.badge || '') }))]
+    : PACKS.map((pk) => ({ q: pk.q, label: pk.label, total: Math.round(p.now * pk.mult), best: !!pk.best }));
+  const selected = packOptions.find((o) => o.q === packQ) || packOptions[0];
+  const perUnit = Math.round(selected.total / selected.q);
+  const total = selected.total * qty;
   const thumbs = (p.images && p.images.length ? p.images : p.colors.map((c) => c.img).filter(Boolean));
 
   const add = (buyNow) => {
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: color?.name || '', size, pack: pack.label, packq: pack.q, unit, img: color?.img || mainImg || p.img }, qty);
+    // A pack of N pairs adds N units at the per-unit pack price; the qty stepper
+    // multiplies packs. Same group-pricing idea as the live store.
+    addItem({ id: p.id, name: p.name, brand: p.brand, color: color?.name || '', size, pack: selected.label, packq: selected.q, unit: perUnit, img: color?.img || mainImg || p.img }, selected.q * qty);
     if (buyNow) router.push('/test/cart');
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
@@ -101,19 +111,21 @@ export default function TestProduct() {
               <div className="sizes">{p.sizes.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </>)}
 
-            <div className="optlabel">Pack &amp; save</div>
-            <div className="packs">
-              {PACKS.map((pk) => {
-                const price = Math.round(p.now * pk.mult);
-                return (
-                  <div key={pk.q} className={`pack${pk.q === pack.q ? ' on' : ''}`} onClick={() => setPack(pk)}>
-                    {pk.best && <span className="tagbest">MOST POPULAR</span>}
-                    <span className="radio" /><div><b>{pk.label}</b><div className="d">{pk.d}{pk.save ? ` · save ${pk.save}%` : ''}</div></div>
-                    <div className="pp"><div className="pnow">{inr(price)}</div>{pk.save ? <div className="psave">{inr(p.now * pk.q - price)} off</div> : <div className="psave">&nbsp;</div>}</div>
-                  </div>
-                );
-              })}
-            </div>
+            {packOptions.length > 1 && (<>
+              <div className="optlabel">Pack &amp; save{tiers.length ? '' : ' (sample tiers)'}</div>
+              <div className="packs">
+                {packOptions.map((o) => {
+                  const save = Math.max(0, Math.round(p.now * o.q - o.total));
+                  return (
+                    <div key={o.q} className={`pack${o.q === packQ ? ' on' : ''}`} onClick={() => setPackQ(o.q)}>
+                      {o.best && <span className="tagbest">MOST POPULAR</span>}
+                      <span className="radio" /><div><b>{o.label}</b><div className="d">{o.q === 1 ? 'Single pair' : `${o.q} pairs${save > 0 ? ` · ${inr(Math.round(o.total / o.q))}/pair` : ''}`}</div></div>
+                      <div className="pp"><div className="pnow">{inr(o.total)}</div>{save > 0 ? <div className="psave">save {inr(save)}</div> : <div className="psave">&nbsp;</div>}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>)}
 
             <div className="qtyrow">
               <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>
