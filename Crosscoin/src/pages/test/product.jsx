@@ -81,7 +81,7 @@ export default function TestProduct() {
   const add = (buyNow) => {
     // A pack of N pairs adds N units at the per-unit pack price; the qty stepper
     // multiplies packs. Same group-pricing idea as the live store.
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: color?.name || '', size, pack: selected.label, packq: selected.q, unit: perUnit, img: color?.img || mainImg || p.img }, selected.q * qty);
+    addItem({ id: p.id, name: p.name, brand: p.brand, color: color?.name || '', size, pack: selected.label, packq: selected.q, unit: perUnit, was: p.was, base: p.now, img: color?.img || mainImg || p.img }, selected.q * qty);
     if (buyNow) router.push('/test/cart');
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };

@@ -33,12 +33,26 @@ export function useCart() {
 export const cartCount = (c = cart) => c.reduce((n, i) => n + i.qty, 0);
 export const cartSubtotal = (c = cart) => c.reduce((s, i) => s + i.unit * i.qty, 0);
 
-export function addItem({ id, name, brand, color, size, pack, packq, unit, img }, qty = 1) {
+export function addItem({ id, name, brand, color, size, pack, packq, unit, was, base, img }, qty = 1) {
   hydrate();
   const key = [id, color, size, packq].join('|');
   const ex = cart.find((i) => i.key === key);
   if (ex) ex.qty += qty;
-  else cart = [...cart, { key, id, name, brand, color, size, pack, packq, unit, img: img || '', qty }];
+  else cart = [...cart, { key, id, name, brand, color, size, pack, packq, unit, was: was || 0, base: base || unit, img: img || '', qty }];
+  emit();
+}
+
+// Reprice a line to a bundle tier (Buy More, Save More in the cart). Changes the
+// line's pack size, per-unit price and quantity together.
+export function setLinePack(key, { qty, unit, pack, packq }) {
+  hydrate();
+  const i = cart.find((x) => x.key === key);
+  if (!i) return;
+  if (qty != null) i.qty = Math.max(1, qty);
+  if (unit != null) i.unit = unit;
+  if (pack != null) i.pack = pack;
+  if (packq != null) i.packq = packq;
+  cart = [...cart];
   emit();
 }
 export function removeItem(key) { hydrate(); cart = cart.filter((i) => i.key !== key); emit(); }

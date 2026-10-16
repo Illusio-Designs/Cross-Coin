@@ -3,12 +3,48 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
-import { validateCouponReal } from './real';
+import { validateCouponReal, fetchBundleTiers, fetchCoupons } from './real';
 
 const FREE_SHIP = 799;
+
+// Buy More, Save More pair stepper for the primary cart line (Morbix-style).
+function CartPairStepper({ item, tiers, onSet }) {
+  const base = item.base || item.unit;
+  const ms = [{ pairs: 1, total: base }, ...tiers.map((t) => ({ pairs: t.pairs, total: t.price }))];
+  const n = ms.length; const q = item.qty; const maxP = ms[n - 1].pairs;
+  const savedFor = (pairs, total) => Math.max(0, Math.round(base * pairs - total));
+  let reached = 0; for (let k = 0; k < n; k++) { if (q >= ms[k].pairs) reached = k; }
+  let frac = reached;
+  if (reached < n - 1) { const c = ms[reached].pairs, x = ms[reached + 1].pairs; if (x > c) frac += Math.min(1, (q - c) / (x - c)); }
+  const fillPct = n > 1 ? (frac / (n - 1)) * 100 : 0;
+  const next = tiers.find((t) => t.pairs > q) || null;
+  return (
+    <div className="ccps">
+      <div className="ccps__msg"><span style={{ color: 'var(--crimson)' }}>✦</span>
+        <span>{next
+          ? <>Add <b>{next.pairs - q} pair{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pack{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
+          : <span className="hi">🎉 Best value — {maxP}-pack applied!</span>}</span>
+      </div>
+      <div className="ccps__track">
+        <div className="ccps__base" /><div className="ccps__fill" style={{ width: `calc(86% * ${fillPct / 100})` }} />
+        {ms.map((m, i) => {
+          const pct = n > 1 ? 7 + (i / (n - 1)) * 86 : 50;
+          const on = q >= m.pairs; const sel = q === m.pairs; const sv = m.pairs > 1 ? savedFor(m.pairs, m.total) : 0;
+          return (
+            <button type="button" key={i} className={`ccps__dot${on ? ' on' : ''}${sel ? ' sel' : ''}`} style={{ left: `${pct}%` }} onClick={() => onSet(m.pairs, m.total)}>
+              <span className="d">{on ? I.check(11) : ''}</span>
+              <span className="l">{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+              {sv > 0 ? <span className="sv">save {inr(sv)}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'RETURNS 7-DAY', 'COD AVAILABLE', 'SECURE CHECKOUT'];
 const LOGO = '/assets/crosscoin_logo.webp';
@@ -47,6 +83,22 @@ const MOBILE_CSS = `
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
+/* Buy More, Save More pair stepper in the cart drawer. */
+.cc-test-root .ccps{ padding:13px 15px; background:color-mix(in srgb,var(--crimson) 8%,var(--surface)); border:2px solid var(--line-ink); border-radius:6px; margin-bottom:14px; box-shadow:var(--stamp-sm); }
+.cc-test-root .ccps__msg{ display:flex; align-items:center; gap:7px; font-size:12.5px; line-height:1.35; }
+.cc-test-root .ccps__msg b{ font-weight:700; } .cc-test-root .ccps__msg .hi{ color:var(--crimson); font-weight:700; }
+.cc-test-root .ccps__track{ position:relative; height:52px; margin-top:12px; }
+.cc-test-root .ccps__base{ position:absolute; left:7%; right:7%; top:8px; height:4px; border-radius:999px; background:var(--line); }
+.cc-test-root .ccps__fill{ position:absolute; left:7%; top:8px; height:4px; border-radius:999px; background:var(--crimson); transition:width .35s var(--ease); }
+.cc-test-root .ccps__dot{ position:absolute; top:0; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; width:72px; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
+.cc-test-root .ccps__dot .d{ width:18px; height:18px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line); color:#fff; transition:.2s; }
+.cc-test-root .ccps__dot.on .d{ background:var(--crimson); border-color:var(--crimson); }
+.cc-test-root .ccps__dot.sel .d{ box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 18%,transparent); }
+.cc-test-root .ccps__dot .l{ font-family:"Space Mono",monospace; font-size:10px; font-weight:700; margin-top:6px; white-space:nowrap; color:var(--ink); }
+.cc-test-root .ccps__dot.on .l{ color:var(--crimson); }
+.cc-test-root .ccps__dot .sv{ font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--crimson); margin-top:1px; white-space:nowrap; }
+.cc-test-root .offerwrap{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 2px; }
+.cc-test-root .offerwrap .chip{ font-size:11px; padding:6px 11px; cursor:pointer; }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
@@ -94,6 +146,8 @@ export default function TestLayout({ children }) {
   const [coupon, setCoupon] = useState(null);
   const [pay, setPay] = useState('cod');
   const [orderNo, setOrderNo] = useState('');
+  const [offers, setOffers] = useState([]);
+  const [primTiers, setPrimTiers] = useState([]);
   const tt = useRef();
   const rootRef = useRef(null);
   const formRef = useRef(null);
@@ -112,6 +166,18 @@ export default function TestLayout({ children }) {
       window.removeEventListener('cc-test-opencart', onOpen);
     };
   }, []);
+
+  // Live coupons → tappable offers in the cart.
+  useEffect(() => { let off = false; fetchCoupons().then((c) => { if (!off) setOffers(c); }).catch(() => {}); return () => { off = true; }; }, []);
+
+  // Bundle tiers for the primary cart line → the Buy More, Save More stepper.
+  const primId = cart[0]?.id;
+  useEffect(() => {
+    if (!drawer || !primId) { setPrimTiers([]); return; }
+    let off = false;
+    fetchBundleTiers(primId).then((t) => { if (!off) setPrimTiers(t); }).catch(() => {});
+    return () => { off = true; };
+  }, [drawer, primId]);
 
   // Theme is scoped to the preview root (the dark CSS is .cc-test-root[data-theme]),
   // so toggle the attribute on the wrapper, not <html>.
@@ -136,9 +202,17 @@ export default function TestLayout({ children }) {
   const cod = pay === 'cod' ? 30 : 0;
   const total = afterDisc + ship + cod;
   const need = Math.max(0, FREE_SHIP - afterDisc);
+  // Total savings = MRP − price + coupon.
+  const mrp = cart.reduce((s, i) => s + (i.was > i.unit ? i.was : i.unit) * i.qty, 0);
+  const youSave = Math.max(0, mrp - sub) + disc;
 
-  const applyPromo = async () => {
-    const v = (promoRef.current?.value || '').trim().toUpperCase();
+  const setPrimaryPairs = (pairs, total0) => {
+    const i = cart[0]; if (!i) return;
+    setLinePack(i.key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
+  };
+
+  const applyPromo = async (codeArg) => {
+    const v = (typeof codeArg === 'string' ? codeArg : (promoRef.current?.value || '')).trim().toUpperCase();
     if (!v) return;
     const res = await validateCouponReal(v, sub, pay);
     if (res.ok) { setCoupon({ code: res.code, amount: res.amount }); showToast(`${res.code} applied — ${inr(res.amount)} off`); }
@@ -240,9 +314,17 @@ export default function TestLayout({ children }) {
             {cart.length === 0 ? (
               <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '30px 0', textAlign: 'center' }}>Your cart is empty.</p>
             ) : (<>
-              <div className="mono" style={{ fontSize: 11, color: need > 0 ? 'var(--ink-faint)' : 'var(--crimson)', fontWeight: need > 0 ? 400 : 700, marginBottom: 10 }}>
+              {/* free-shipping progress bar */}
+              <div className="mono" style={{ fontSize: 11, color: need > 0 ? 'var(--ink-soft)' : 'var(--crimson)', fontWeight: need > 0 ? 400 : 700, marginBottom: 6 }}>
                 {need > 0 ? `Add ${inr(need)} more for FREE shipping` : 'You’ve unlocked FREE shipping ✓'}
               </div>
+              <div className="freebar" style={{ marginBottom: 14 }}><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
+
+              {/* Buy More, Save More pair stepper for the primary product */}
+              {primTiers.length > 0 && cart[0] && (
+                <CartPairStepper item={cart[0]} tiers={primTiers} onSet={setPrimaryPairs} />
+              )}
+
               {cart.map((i) => (
                 <div className="ditem" key={i.key}>
                   <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
@@ -258,19 +340,32 @@ export default function TestLayout({ children }) {
                       <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontFamily: '"Space Mono",monospace', fontSize: 11, cursor: 'pointer' }}>Remove</button>
                     </div>
                   </div>
-                  <div className="lp">{inr(i.unit * i.qty)}</div>
+                  <div className="lp" style={{ textAlign: 'right' }}>
+                    {inr(i.unit * i.qty)}
+                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 11, color: 'var(--ink-faint)', textDecoration: 'line-through', fontWeight: 400 }}>{inr(i.was * i.qty)}</div>}
+                  </div>
                 </div>
               ))}
+
+              {/* tappable live offers */}
+              {!coupon && offers.length > 0 && (
+                <div className="offerwrap">
+                  {offers.slice(0, 4).map((o) => (
+                    <button key={o.code} className="chip" onClick={() => applyPromo(o.code)}>{o.code} · {o.label}</button>
+                  ))}
+                </div>
+              )}
               {coupon ? (
                 <div className="coupon-applied" style={{ marginTop: 14 }}><span>✓ {coupon.code} · −{inr(disc)}</span><button className="x" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer' }} onClick={() => setCoupon(null)}>✕</button></div>
               ) : (
-                <div className="promo" style={{ marginTop: 14 }}><input ref={promoRef} placeholder="PROMO CODE" /><button className="btn" onClick={applyPromo}>Apply</button></div>
+                <div className="promo" style={{ marginTop: 14 }}><input ref={promoRef} placeholder="PROMO CODE" /><button className="btn" onClick={() => applyPromo()}>Apply</button></div>
               )}
             </>)}
           </div>
           <div className="drawer__foot">
             <div className="srow" style={{ padding: '4px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
-            {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+            {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+            {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
             <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => setStep('checkout')}>Proceed to checkout</button>
           </div>

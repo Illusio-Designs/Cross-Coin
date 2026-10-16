@@ -41,7 +41,7 @@ export function ProductCard({ p }) {
   const open = () => router.push(`/test/product?slug=${encodeURIComponent(p.slug || '')}`);
   const quickAdd = (e) => {
     e.stopPropagation();
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: p.sizes?.[0] || '', pack: 'Single', packq: 1, unit: p.now, img: p.img }, 1);
+    addItem({ id: p.id, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: p.sizes?.[0] || '', pack: 'Single', packq: 1, unit: p.now, was: p.was, base: p.now, img: p.img }, 1);
     toast('Added to cart ✓');
     window.dispatchEvent(new CustomEvent('cc-test-opencart'));
   };
