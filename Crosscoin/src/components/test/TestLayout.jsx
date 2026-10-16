@@ -194,7 +194,7 @@ const MOBILE_CSS = `
 .cc-test-root .cotrust span{ display:inline-flex; align-items:center; gap:5px; }
 .cc-test-root .cotrust svg{ color:#0f766e; }
 /* cart item pack chip */
-.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:999px; padding:2px 8px; }
+.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:4px; padding:2px 8px; }
 /* Buy More, Save More carousel (Morbix) */
 .cc-test-root .bms{ margin:16px 0 4px; border:2px solid var(--line-ink); border-radius:4px; background:color-mix(in srgb,var(--crimson) 5%,var(--surface)); box-shadow:var(--stamp-sm); padding:12px; }
 .cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson); margin-bottom:10px; }
@@ -208,14 +208,14 @@ const MOBILE_CSS = `
 .cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:5px; margin-top:2px; font-family:"Space Mono",monospace; }
 .cc-test-root .bms__pr b{ font-size:12.5px; color:var(--crimson); }
 .cc-test-root .bms__pr s{ font-size:10.5px; color:var(--ink-faint); }
-.cc-test-root .bms__pr em{ font-style:normal; font-size:9.5px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,transparent); border-radius:999px; padding:1px 6px; }
+.cc-test-root .bms__pr em{ font-style:normal; font-size:9.5px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,transparent); border-radius:4px; padding:1px 6px; }
 .cc-test-root .bms__add{ flex-shrink:0; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:7px 11px; cursor:pointer; }
 .cc-test-root .bms__add:hover{ filter:brightness(1.08); }
 /* "Sold in pairs" note at the top of the cart */
 .cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:4px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
 /* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
 .cc-test-root .idealrow{ display:flex; flex-wrap:wrap; gap:10px; }
-.cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:999px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
+.cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
 .cc-test-root .idealchip svg{ color:var(--crimson); }
 .cc-test-root .washbox{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
 .cc-test-root .washitem{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:14px 8px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); }
@@ -230,12 +230,12 @@ const MOBILE_CSS = `
 .cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
 .cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
 /* Buy it now — solid dark button (Morbix), fixed in both themes */
-.cc-test-root .btn--buynow{ background:#201253; color:#fff; border:0; border-radius:18px; box-shadow:0 6px 18px rgba(24,13,62,.28); padding:17px 20px; font-size:15px; }
+.cc-test-root .btn--buynow{ background:#201253; color:#fff; border:0; border-radius:4px; box-shadow:0 6px 18px rgba(24,13,62,.28); padding:17px 20px; font-size:15px; }
 .cc-test-root .btn--buynow:hover{ background:#2c1a6e; transform:none; }
 .cc-test-root .btn--buynow svg{ color:#fff; }
 /* PDP in-stock + free-shipping status row (Morbix-style) */
 .cc-test-root .pdpstatus{ display:flex; flex-wrap:wrap; align-items:center; gap:9px 15px; margin:11px 0 2px; }
-.cc-test-root .instock{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 38%,transparent); border-radius:999px; padding:5px 11px; }
+.cc-test-root .instock{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 38%,transparent); border-radius:4px; padding:5px 11px; }
 .cc-test-root .instock svg{ color:#0f766e; }
 .cc-test-root .freeship{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft); }
 .cc-test-root .freeship svg{ color:var(--crimson); }
@@ -256,7 +256,7 @@ const MOBILE_CSS = `
 .cc-test-root .wishsq:hover{ transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--line-ink); }
 .cc-test-root .wishsq.on{ background:var(--crimson); border-color:var(--crimson); color:#fff; }
 /* PREPAID10 chip above Buy it now */
-.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:999px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
+.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:4px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
 /* button gets a touch more top room so its label clears the overlapping chip */
 .cc-test-root .btn--buynow{ padding-top:20px; }
 /* delivery pincode check */
@@ -325,7 +325,7 @@ const MOBILE_CSS = `
 /* Order tracking */
 .cc-test-root .trackcard{ border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); background:var(--surface); padding:20px; margin-top:24px; }
 .cc-test-root .trackcard__top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:999px; padding:5px 13px; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
+.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:4px; padding:5px 13px; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
 .cc-test-root .trackcard__meta{ display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
 .cc-test-root .trackitems{ margin-top:14px; border-top:2px solid var(--line); padding-top:12px; }
 .cc-test-root .trackitem{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13.5px; }
@@ -348,8 +348,8 @@ const MOBILE_CSS = `
 .cc-test-root .ccps__spark{ color:var(--crimson); flex:0 0 auto; }
 .cc-test-root .ccps__msg b{ font-weight:700; } .cc-test-root .ccps__msg .hi{ color:var(--crimson); font-weight:700; }
 .cc-test-root .ccps__track{ position:relative; margin-top:14px; }
-.cc-test-root .ccps__line{ position:absolute; left:10%; right:10%; top:9px; height:4px; border-radius:999px; background:var(--line); }
-.cc-test-root .ccps__line span{ display:block; height:100%; border-radius:999px; background:var(--crimson); transition:width .35s var(--ease); }
+.cc-test-root .ccps__line{ position:absolute; left:10%; right:10%; top:9px; height:4px; border-radius:4px; background:var(--line); }
+.cc-test-root .ccps__line span{ display:block; height:100%; border-radius:4px; background:var(--crimson); transition:width .35s var(--ease); }
 .cc-test-root .ccps__dots{ position:relative; display:flex; justify-content:space-between; }
 .cc-test-root .ccps__dot{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
 .cc-test-root .ccps__dot .d{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line); color:#fff; transition:.2s; }

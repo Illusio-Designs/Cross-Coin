@@ -121,8 +121,8 @@ export const MINT_CSS = `.cc-test-root{
       radial-gradient(760px 420px at 88% 12%, color-mix(in srgb,var(--crimson) 16%, transparent), transparent 62%),
       radial-gradient(640px 420px at 2% 100%, color-mix(in srgb,var(--indigo) 20%, transparent), transparent 60%); }
 .cc-test-root .hero .wrap{ display: grid; grid-template-columns: 1.08fr .92fr; gap: 40px; align-items: center; padding-block: 60px 72px; }
-.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 999px; padding: 6px 13px 6px 7px; font-family: "Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
-.cc-test-root .hero .tagpill i{ background: var(--crimson); color: #fff; padding: 3px 8px; border-radius: 999px; font-style: normal; }
+.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 4px; padding: 6px 13px 6px 7px; font-family: "Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
+.cc-test-root .hero .tagpill i{ background: var(--crimson); color: #fff; padding: 3px 8px; border-radius: 4px; font-style: normal; }
 .cc-test-root .hero h1{ font-size: clamp(42px, 7.6vw, 86px); font-weight: 800; margin-top: 18px; }
 .cc-test-root .hero h1 em{ font-style: normal; color: var(--crimson); -webkit-text-stroke: 0; position: relative; }
 .cc-test-root .hero h1 .ul{ text-decoration: none; background: linear-gradient(var(--crimson),var(--crimson)) left bottom / 100% 6px no-repeat; }
@@ -238,7 +238,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .crumbs{ font-family:"Space Mono"; font-size: 11.5px; color: var(--ink-faint); }
 .cc-test-root .crumbs span{ color: var(--crimson); }
 .cc-test-root .shopbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 26px; }
-.cc-test-root .chip{ font-family:"Space Mono"; font-size: 12px; font-weight: 700; padding: 8px 14px; border: 2px solid var(--line-ink); border-radius: 999px; background: var(--surface); cursor: pointer; box-shadow: var(--stamp-sm); transition: transform .14s, background .2s, color .2s; }
+.cc-test-root .chip{ font-family:"Space Mono"; font-size: 12px; font-weight: 700; padding: 8px 14px; border: 2px solid var(--line-ink); border-radius: 4px; background: var(--surface); cursor: pointer; box-shadow: var(--stamp-sm); transition: transform .14s, background .2s, color .2s; }
 .cc-test-root .chip:hover{ transform: translate(-2px,-2px); }
 .cc-test-root .chip.on{ background: var(--ink); color: var(--surface); }
 .cc-test-root .sortsel{ margin-left: auto; font-family:"Space Mono"; font-size: 12px; padding: 9px 12px; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); color: var(--ink); box-shadow: var(--stamp-sm); }
