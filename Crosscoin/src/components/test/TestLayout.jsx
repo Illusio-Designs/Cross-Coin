@@ -11,7 +11,7 @@ import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack, addItem } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
-import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees } from './real';
+import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
@@ -435,6 +435,9 @@ export default function TestLayout({ children }) {
   const [suggested, setSuggested] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
   const [shipCfg, setShipCfg] = useState({ threshold: FREE_SHIP, codFee: 49, prepaidFee: 0 });
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [searchRes, setSearchRes] = useState([]);
   const [cookieOpen, setCookieOpen] = useState(false);
   const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
@@ -463,6 +466,16 @@ export default function TestLayout({ children }) {
 
   // Live coupons → tappable offers in the cart.
   useEffect(() => { let off = false; fetchCoupons().then((c) => { if (!off) setOffers(c); }).catch(() => {}); return () => { off = true; }; }, []);
+
+  // Header typeahead — debounced live search against the real catalogue.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const q = searchQ.trim();
+    if (q.length < 2) { setSearchRes([]); return; }
+    let off = false;
+    const t = setTimeout(() => { fetchSearch(q).then((r) => { if (!off) setSearchRes((r || []).slice(0, 6)); }).catch(() => {}); }, 250);
+    return () => { off = true; clearTimeout(t); };
+  }, [searchQ, searchOpen]);
 
   // Live shipping fees + free-shipping threshold (replaces the hard-coded values).
   useEffect(() => {
@@ -618,7 +631,7 @@ export default function TestLayout({ children }) {
           <nav className="nav__links">{navLinks}</nav>
           <div className="nav__act">
             <span className="nav__extra">
-              <button className="ibtn" aria-label="Search" onClick={() => go('/test/search')}>{I.search()}</button>
+              <button className="ibtn" aria-label="Search" onClick={() => setSearchOpen((v) => !v)}>{I.search()}</button>
               <button className="ibtn" aria-label="Wishlist" onClick={() => go('/test/wishlist')}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>
               <button className="ibtn" aria-label="Account" onClick={() => go('/test/account')}>{I.user()}</button>
             </span>
@@ -626,6 +639,33 @@ export default function TestLayout({ children }) {
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
           </div>
         </div>
+        {/* Header typeahead — live results from the real catalogue */}
+        {searchOpen && (
+          <div className="hsearch">
+            <div className="wrap hsearch__in">
+              <form className="hsearch__bar" onSubmit={(e) => { e.preventDefault(); const q = searchQ.trim(); if (q) { setSearchOpen(false); go(`/test/search?q=${encodeURIComponent(q)}`); } }}>
+                {I.search(18)}
+                <input autoFocus value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Search socks, packs, colours…" aria-label="Search products" />
+                <button type="button" className="hsearch__x" aria-label="Close search" onClick={() => { setSearchOpen(false); setSearchQ(''); }}>{I.close(18)}</button>
+              </form>
+              {searchQ.trim().length >= 2 && (
+                <div className="hsearch__res">
+                  {searchRes.length === 0
+                    ? <div className="hsearch__empty mono">No matches for “{searchQ.trim()}”.</div>
+                    : <>
+                        {searchRes.map((r) => (
+                          <button key={r.id} className="hsearch__row" onClick={() => { setSearchOpen(false); go(`/test/product?slug=${encodeURIComponent(r.slug || '')}`); }}>
+                            <span className="hsearch__thumb"><Thumb src={r.img} /></span>
+                            <span className="hsearch__meta"><b>{r.name}</b><span>{inr(r.now)}</span></span>
+                          </button>
+                        ))}
+                        <button className="hsearch__all" onClick={() => { setSearchOpen(false); go(`/test/search?q=${encodeURIComponent(searchQ.trim())}`); }}>View all results →</button>
+                      </>}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       <div className={`mnav${mnav ? ' on' : ''}`}>

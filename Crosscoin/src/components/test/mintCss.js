@@ -435,4 +435,50 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .rvform textarea{ resize: vertical; }
 @media (max-width: 520px){ .cc-test-root .rvform__grid{ grid-template-columns: 1fr; } }
 
+/* --- Header typeahead search --- */
+.cc-test-root .hsearch{ border-top: 2px solid var(--line); background: var(--surface); box-shadow: 0 8px 20px rgba(24,13,62,.1); }
+.cc-test-root .hsearch__in{ padding-block: 14px; }
+.cc-test-root .hsearch__bar{ display: flex; align-items: center; gap: 10px; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); padding: 10px 14px; color: var(--ink-faint); }
+.cc-test-root .hsearch__bar input{ flex: 1; min-width: 0; border: none; background: none; color: var(--ink); font: inherit; font-size: 15px; outline: none; }
+.cc-test-root .hsearch__x{ background: none; border: none; color: var(--ink-faint); cursor: pointer; display: grid; place-items: center; }
+.cc-test-root .hsearch__res{ margin-top: 10px; display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto; }
+.cc-test-root .hsearch__row{ display: flex; align-items: center; gap: 12px; padding: 8px; background: none; border: none; border-radius: var(--r); cursor: pointer; text-align: left; }
+.cc-test-root .hsearch__row:hover{ background: var(--paper-2); }
+.cc-test-root .hsearch__thumb{ width: 44px; height: 44px; border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; flex: 0 0 auto; }
+.cc-test-root .hsearch__thumb img{ width: 100%; height: 100%; object-fit: cover; }
+.cc-test-root .hsearch__meta{ display: flex; flex-direction: column; min-width: 0; }
+.cc-test-root .hsearch__meta b{ font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-test-root .hsearch__meta span{ font-family: "Space Mono"; color: var(--crimson); font-size: 13px; }
+.cc-test-root .hsearch__empty{ color: var(--ink-faint); font-size: 13px; padding: 10px 4px; }
+.cc-test-root .hsearch__all{ margin-top: 6px; background: none; border: none; color: var(--crimson); font-family: "Space Mono"; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; padding: 8px; }
+
+/* --- Shop: facet sidebar + pagination --- */
+.cc-test-root .shoplayout{ display: grid; grid-template-columns: 240px 1fr; gap: 28px; align-items: start; }
+.cc-test-root .shopaside{ position: sticky; top: 90px; }
+.cc-test-root .shopfilters{ display: flex; flex-direction: column; gap: 20px; }
+.cc-test-root .shopfilters__grp{ display: flex; flex-direction: column; gap: 8px; border-bottom: 2px solid var(--line); padding-bottom: 18px; }
+.cc-test-root .shopfilters__h{ font-family: "Space Mono"; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
+.cc-test-root .facetrow{ text-align: left; background: none; border: none; padding: 5px 0; font-size: 13.5px; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+.cc-test-root .facetrow.on{ color: var(--crimson); font-weight: 700; }
+.cc-test-root .pricerow{ display: flex; align-items: center; gap: 8px; }
+.cc-test-root .pricerow input{ width: 100%; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); color: var(--ink); padding: 8px 10px; font: inherit; font-size: 13px; }
+.cc-test-root .pricerange{ width: 100%; accent-color: var(--crimson); }
+.cc-test-root .swatchwrap{ display: flex; flex-direction: column; gap: 6px; }
+.cc-test-root .swatchbtn{ display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink-soft); padding: 3px 0; }
+.cc-test-root .swatchbtn span{ width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-ink); flex: 0 0 auto; }
+.cc-test-root .swatchbtn.on{ color: var(--crimson); font-weight: 700; }
+.cc-test-root .swatchbtn.on span{ box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--crimson); }
+.cc-test-root .sizewrap{ display: flex; flex-wrap: wrap; gap: 8px; }
+.cc-test-root .shopbar__count{ color: var(--ink-faint); font-size: 12px; margin-right: auto; }
+.cc-test-root .shopbar__filter{ display: none; align-items: center; gap: 6px; padding: 9px 14px; font-size: 12.5px; }
+.cc-test-root .pager{ display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin-top: 34px; }
+.cc-test-root .pager .btn{ padding: 9px 14px; font-size: 12.5px; }
+.cc-test-root .pager__n{ width: 38px; height: 38px; border: 2px solid var(--line-ink); background: var(--surface); color: var(--ink); border-radius: var(--r); cursor: pointer; font-family: "Space Mono"; font-size: 13px; }
+.cc-test-root .pager__n.on{ background: var(--crimson); color: #fff; }
+@media (max-width: 820px){
+  .cc-test-root .shoplayout{ grid-template-columns: 1fr; }
+  .cc-test-root .shopaside{ position: static; max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
+  .cc-test-root .shopaside.open{ max-height: 1200px; margin-bottom: 20px; }
+  .cc-test-root .shopbar__filter{ display: inline-flex; }
+}
 .cc-test-root{min-height:100vh;}`;
