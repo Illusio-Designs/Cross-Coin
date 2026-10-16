@@ -28,10 +28,20 @@ const IC = {
 const CATEGORY_LABEL = { general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', social_media: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 const IGNORED_KEY = /fship/i; // deprecated Fship shipping keys — not part of the canonical set
-// SEO_* settings (category 'seo') are owned by the dedicated SEO Settings page
-// (seo → global). Hide them from Brand Settings so there's one place to edit
-// them, not two.
-const SEO_SETTING = (s) => (s.category === 'seo') || /^SEO_/i.test(s.key || '');
+// Settings that must NOT appear in the Brand Settings key/value UI:
+//  • SEO_* (category 'seo')      → owned by the dedicated SEO Settings page.
+//  • company_gstin / 'legal'     → owned by the Policies page's "Company GSTIN".
+//  • internal one-time markers   → cleanup/seed/migration flags the backend
+//    writes to record that a boot task ran (e.g. dpdp_policy_cleanup_done,
+//    *_cleanup_done, seo-init-*, schema_version). Not user-editable config.
+const INTERNAL_MARKER = /cleanup_done|^dpdp_|_seed(_|$)|schema[_-]?version|_migrated|seo-init/i;
+const SEO_SETTING = (s) => {
+  const key = s.key || '';
+  const cat = s.category || '';
+  return cat === 'seo' || /^SEO_/i.test(key)        // SEO Settings page owns these
+      || cat === 'legal' || key === 'company_gstin' // Policies page owns the GSTIN
+      || INTERNAL_MARKER.test(key);                 // internal boot/migration flags
+};
 
 const safeDate = (d) => { const t = d ? new Date(d) : null; return t && !isNaN(t) ? t.toLocaleDateString() : '—'; };
 const cell = { padding: '13px 16px', borderBottom: '1px solid var(--ds-color-border-soft)', fontSize: 13, verticalAlign: 'middle' };
