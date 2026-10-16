@@ -337,8 +337,8 @@ const MOBILE_CSS = `
 .cc-test-root .contactrow a{ color:var(--crimson); }
 .cc-test-root .contactform textarea{ width:100%; padding:12px 14px; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); resize:vertical; }
 @media (max-width:720px){ .cc-test-root .contactgrid{ grid-template-columns:1fr; } }
-.cc-test-root .post__img{ aspect-ratio:auto !important; height:0; padding-top:62%; position:relative; overflow:hidden; }
-.cc-test-root .post__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cc-test-root .post__img{ aspect-ratio:auto !important; height:0 !important; padding-top:60% !important; position:relative !important; overflow:hidden !important; display:block !important; }
+.cc-test-root .post__img img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
