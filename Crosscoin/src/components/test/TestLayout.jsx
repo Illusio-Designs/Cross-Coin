@@ -473,15 +473,22 @@ export default function TestLayout({ children }) {
     return () => { off = true; };
   }, [drawer, suggested.length]);
 
-  // Theme is scoped to the preview root (the dark CSS is .cc-test-root[data-theme]),
-  // so toggle the attribute on the wrapper, not <html>.
-  const toggleTheme = () => {
+  // Theme follows the visitor's local time instead of a manual toggle:
+  // dark in the evening/night (19:00–07:00), light through the day. Theme is
+  // scoped to the preview root (dark CSS is .cc-test-root[data-theme]), so we
+  // set the attribute on the wrapper, not <html>. Re-checked each minute so it
+  // flips over at dusk/dawn without a reload.
+  useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const cur = el.getAttribute('data-theme');
-    const dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    el.setAttribute('data-theme', dark ? 'light' : 'dark');
-  };
+    const apply = () => {
+      const h = new Date().getHours();
+      el.setAttribute('data-theme', (h < 7 || h >= 19) ? 'dark' : 'light');
+    };
+    apply();
+    const id = setInterval(apply, 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const go = (href) => { setMnav(false); setDrawer(false); router.push(href); };
 
@@ -582,7 +589,6 @@ export default function TestLayout({ children }) {
           <Link href="/test" className="brand" aria-label="CrossCoin home"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></Link>
           <nav className="nav__links">{navLinks}</nav>
           <div className="nav__act">
-            <button className="ibtn" onClick={toggleTheme} aria-label="Theme">{I.sun()}</button>
             <span className="nav__extra">
               <button className="ibtn" aria-label="Search" onClick={() => go('/test/search')}>{I.search()}</button>
               <button className="ibtn" aria-label="Wishlist" onClick={() => go('/test/wishlist')}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>

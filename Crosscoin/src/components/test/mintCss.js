@@ -252,8 +252,11 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .gmain{ aspect-ratio: 1/1; border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); position: relative; display: grid; place-items: center; overflow: hidden; }
 .cc-test-root .gmain .mint{ width: 62%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 3px rgba(255,255,255,.3), inset 0 0 0 14px rgba(0,0,0,.08); }
 .cc-test-root .gthumbs{ display: flex; gap: 10px; margin-top: 12px; }
-.cc-test-root .gthumb{ width: 70px; height: 70px; border: 2px solid var(--line-ink); border-radius: var(--r); cursor: pointer; display: grid; place-items: center; transition: transform .15s; box-shadow: var(--stamp-sm); }
-.cc-test-root .gthumb.on{ outline: 2px solid var(--crimson); outline-offset: 2px; }
+.cc-test-root .gthumb{ width: 70px; height: 70px; flex: 0 0 auto; border: 2px solid var(--line-ink); border-radius: var(--r); cursor: pointer; display: grid; place-items: center; transition: transform .15s, border-color .15s; box-shadow: var(--stamp-sm); }
+/* Selected thumb: crimson frame. A border (inside the box) shows reliably even
+   inside the horizontally-scrolling .gthumbs; an outline/offset ring was being
+   clipped by the scroll container. */
+.cc-test-root .gthumb.on{ border-color: var(--crimson); box-shadow: 3px 3px 0 var(--crimson); }
 .cc-test-root .gthumb:hover{ transform: translateY(-2px); }
 .cc-test-root .gthumb .mint{ width: 60%; aspect-ratio: 1; border-radius: 50%; }
 .cc-test-root .buy .kl{ font-family:"Space Mono"; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--crimson); }
