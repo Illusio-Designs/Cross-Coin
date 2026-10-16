@@ -299,7 +299,11 @@
 .ds-btn:active { transform: translateY(1px); }
 .ds-btn--primary {
   background: var(--ds-color-brand);
-  color: #fff;
+  /* Contrast token, NOT a hardcoded #fff: --ds-color-brand is near-black in
+     light mode but flips to near-white in dark mode, so a fixed white text
+     rendered white-on-white (the "invisible Add … button"). --ds-color-bg is
+     light in light mode and dark in dark mode, so it always contrasts. */
+  color: var(--ds-color-bg);
   border-color: var(--ds-color-brand);
 }
 .ds-btn--primary:hover { background: var(--ds-color-brand-strong); }
