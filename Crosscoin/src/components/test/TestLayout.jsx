@@ -35,6 +35,18 @@ const MOBILE_CSS = `
 @keyframes ccRevScroll{ from{ transform:translateX(0);} to{ transform:translateX(-50%);} }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .revscroll__track{ animation:none; } }
 @media (max-width:520px){ .cc-test-root .revscroll .rev{ width:80vw; } }
+/* iOS Safari collapses aspect-ratio boxes that contain percentage-height media,
+   which made product/journal/gallery image boxes shrink to ~0 and the cards
+   float over the next section. Use a robust padding-top ratio box with
+   absolutely-filled media instead (applies at all widths). */
+.cc-test-root .card__img{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
+.cc-test-root .card__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cc-test-root .card__img .mint{ left:20%; top:20%; }
+.cc-test-root .post__img{ aspect-ratio:auto !important; height:0; padding-top:62%; position:relative; overflow:hidden; }
+.cc-test-root .post__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
+.cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
