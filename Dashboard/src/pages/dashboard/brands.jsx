@@ -332,7 +332,6 @@ export function BrandManager() {
               </thead>
               <tbody>
                 {filteredBrands.map(brand => {
-                  const isRef = brand.id === referenceBrand?.id;
                   const pending = pendingFor(brand);
                   const isOpen = expanded === brand.id;
                   const url = feedUrl(brand);
@@ -370,10 +369,8 @@ export function BrandManager() {
                         <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono, monospace)', fontSize: 12 }}>{brand.domain || '—'}</td>
                         <td style={cell}><span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span></td>
                         <td style={cell}>
-                          {isRef ? (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ds-color-text-muted)', border: '1px solid var(--ds-color-border)', borderRadius: 20, padding: '2px 9px', background: 'var(--ds-color-surface-soft)' }}>Reference</span>
-                          ) : pending === null ? (
-                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ds-color-text-muted)' }}>{isOpen ? 'Loading…' : 'View settings →'}</span>
+                          {pending === null ? (
+                            <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>{isOpen ? 'Loading…' : '—'}</span>
                           ) : (
                             <div style={{ minWidth: 128 }}>
                               <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontWeight: 600, marginBottom: 5, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -409,10 +406,10 @@ export function BrandManager() {
                           <td colSpan={7} style={{ padding: 0, background: 'var(--ds-color-surface-soft)', borderBottom: '2px solid var(--ds-color-border)' }}>
                             <div style={{ padding: '10px 16px 16px' }}>
                               <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', margin: '4px 2px 8px', fontWeight: 600 }}>
-                                {isRef ? 'Reference brand — these are the canonical settings.' : `Fill the predefined settings for ${brand.display_name || brand.name}. Keys are fixed; only values are added.`}
+                                {`Settings for ${brand.display_name || brand.name}. Keys are fixed; only values are added.`}
                               </div>
                               {settingRows.length === 0 ? (
-                                <div style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to the Crosscoin reference brand first.</div>
+                                <div style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to Crosscoin first.</div>
                               ) : (
                                 <>
                                   {/* Category cards — click one to edit only its fields */}
