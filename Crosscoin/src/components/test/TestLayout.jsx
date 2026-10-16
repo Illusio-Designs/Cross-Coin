@@ -110,6 +110,8 @@ const MOBILE_CSS = `
 @keyframes ccShimmer{ 100%{ transform:translateX(100%); } }
 .cc-test-root .cc-skelblock{ border-radius:8px; }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel::after{ animation:none; } }
+/* "Sold in pairs" note at the top of the cart */
+.cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:6px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
 /* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
 .cc-test-root .idealrow{ display:flex; flex-wrap:wrap; gap:10px; }
 .cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:999px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
@@ -242,7 +244,7 @@ export default function TestLayout({ children }) {
   const [placing, setPlacing] = useState(false);
   const [orderErr, setOrderErr] = useState('');
   const [offers, setOffers] = useState([]);
-  const [primTiers, setPrimTiers] = useState([]);
+  const [tiersMap, setTiersMap] = useState({});
   const tt = useRef();
   const rootRef = useRef(null);
   const formRef = useRef(null);
@@ -265,14 +267,17 @@ export default function TestLayout({ children }) {
   // Live coupons → tappable offers in the cart.
   useEffect(() => { let off = false; fetchCoupons().then((c) => { if (!off) setOffers(c); }).catch(() => {}); return () => { off = true; }; }, []);
 
-  // Bundle tiers for the primary cart line → the Buy More, Save More stepper.
-  const primId = cart[0]?.id;
+  // Bundle tiers for EVERY distinct product in the cart → a Buy More, Save More
+  // pair stepper on each line (Crosscoin moves every product in pairs).
+  const cartIds = cart.map((i) => i.id).filter(Boolean).join(',');
   useEffect(() => {
-    if (!drawer || !primId) { setPrimTiers([]); return; }
+    if (!drawer || !cartIds) return;
     let off = false;
-    fetchBundleTiers(primId).then((t) => { if (!off) setPrimTiers(t); }).catch(() => {});
+    const ids = Array.from(new Set(cartIds.split(',')));
+    Promise.all(ids.map((id) => fetchBundleTiers(id).then((t) => [id, t]).catch(() => [id, []])))
+      .then((entries) => { if (!off) setTiersMap(Object.fromEntries(entries)); });
     return () => { off = true; };
-  }, [drawer, primId]);
+  }, [drawer, cartIds]);
 
   // Theme is scoped to the preview root (the dark CSS is .cc-test-root[data-theme]),
   // so toggle the attribute on the wrapper, not <html>.
@@ -301,9 +306,9 @@ export default function TestLayout({ children }) {
   const mrp = cart.reduce((s, i) => s + (i.was > i.unit ? i.was : i.unit) * i.qty, 0);
   const youSave = Math.max(0, mrp - sub) + disc;
 
-  const setPrimaryPairs = (pairs, total0) => {
-    const i = cart[0]; if (!i) return;
-    setLinePack(i.key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
+  // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
+  const setLinePairs = (key, pairs, total0) => {
+    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
   };
 
   const applyPromo = async (codeArg) => {
@@ -448,22 +453,25 @@ export default function TestLayout({ children }) {
               </div>
               <div className="freebar" style={{ marginBottom: 14 }}><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
 
-              {/* Buy More, Save More pair stepper for the primary product */}
-              {primTiers.length > 0 && cart[0] && (
-                <CartPairStepper item={cart[0]} tiers={primTiers} onSet={setPrimaryPairs} />
-              )}
+              <div className="pairsnote mono">✦ Sold in pairs — add more pairs to unlock a lower price per pair.</div>
 
               {cart.map((i) => (
                 <div className="ditem" key={i.key}>
                   <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h4>{i.name}</h4>
-                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{i.packq > 1 ? ` · ${i.pack}` : ''}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'} · {i.qty > 1 ? `${i.qty} pairs` : '1 pair'}</div>
+                    {/* Buy More, Save More pair stepper (per product, when it has tiers) */}
+                    {tiersMap[i.id] && tiersMap[i.id].length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <CartPairStepper item={i} tiers={tiersMap[i.id]} onSet={(p, t) => setLinePairs(i.key, p, t)} />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
                       <div className="qty" style={{ boxShadow: 'none' }}>
-                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }}>−</button>
-                        <span style={{ width: 34 }}>{i.qty}</span>
-                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }}>+</button>
+                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }} aria-label="One pair fewer">−</button>
+                        <span style={{ width: 54, fontSize: 12 }}>{i.qty} pr</span>
+                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }} aria-label="One more pair">+</button>
                       </div>
                       <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontFamily: '"Space Mono",monospace', fontSize: 11, cursor: 'pointer' }}>Remove</button>
                     </div>
