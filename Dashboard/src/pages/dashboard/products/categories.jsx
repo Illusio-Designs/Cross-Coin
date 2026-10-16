@@ -10,7 +10,7 @@ import { brandService } from "../../../services";
 import { extractErrorMessage, formatErrorForDisplay } from "../../../utils/errorMessages";
 import { showSuccess, showError } from "../../../utils/toastNotification";
 import { validateForm, isFormValid } from "../../../utils/formValidation";
-import SerpPreview from "../../../components/common/SerpPreview";
+import SerpPreview, { brandSiteName, brandUrl } from "../../../components/common/SerpPreview";
 import SeoLengthMeter from "../../../components/common/SeoLengthMeter";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Add01Icon, PencilEdit02Icon, Delete02Icon, Image02Icon } from '@hugeicons/core-free-icons';
@@ -90,6 +90,10 @@ export default function Categories() {
     const s = search.toLowerCase();
     return item.name?.toLowerCase().includes(s) || item.description?.toLowerCase().includes(s);
   });
+
+  // Brand backing the SERP preview — the category's first assigned brand, so the
+  // preview reflects that brand's domain/name instead of a hardcoded CrossCoin.
+  const previewBrand = brands.find(b => Number(b.id) === Number(formData.brandIds?.[0]));
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const start = (currentPage - 1) * itemsPerPage;
@@ -382,9 +386,10 @@ export default function Categories() {
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ds-color-text-muted)', marginBottom: 6 }}>LIVE SEARCH PREVIEW</div>
                 <SerpPreview
-                  title={formData.metaTitle || `${formData.name || 'Category'} | CrossCoin`}
+                  title={formData.metaTitle || `${formData.name || 'Category'} | ${brandSiteName(previewBrand)}`}
                   description={formData.metaDescription || (formData.description || '').slice(0, 160)}
-                  url={formData.canonicalUrl || `https://crosscoin.in/collections/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || ''}`}
+                  siteName={brandSiteName(previewBrand)}
+                  url={formData.canonicalUrl || brandUrl(previewBrand, 'collections/' + (formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || ''))}
                   variant="both"
                 />
               </div>

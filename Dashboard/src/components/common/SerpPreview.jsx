@@ -16,6 +16,15 @@
 
 const SITE_NAME = 'CrossCoin';
 
+// Brand-aware helpers so SERP previews reflect the SELECTED brand instead of a
+// hardcoded CrossCoin. Brands carry a `domain` field and `display_name`.
+export function brandSiteName(brand) { return brand?.display_name || brand?.name || 'CrossCoin'; }
+export function brandUrl(brand, path = '') {
+  const host = String(brand?.domain || 'crosscoin.in').replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const clean = String(path || '').replace(/^\/+/, '');
+  return `https://${host}/${clean}`;
+}
+
 function truncate(s, n) {
   if (!s) return '';
   if (s.length <= n) return s;

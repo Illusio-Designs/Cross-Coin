@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button, Input, Modal, Pagination } from "../../../components/ui";
+import { Button, Input, Modal, Pagination, Select } from "../../../components/ui";
 import { PageHeader, Panel, FilterBar, ResponsiveTable, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
+import SafeImage from '../../../components/common/SafeImage';
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import { seoService, userService } from "../../../services";
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
-import SerpPreview from '../../../components/common/SerpPreview';
+import SerpPreview, { brandSiteName, brandUrl } from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { PencilEdit02Icon, Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
@@ -19,7 +20,15 @@ const isValidJson = (s) => {
   try { JSON.parse(s); return true; } catch { return false; }
 };
 
-export default function SEO({ brandSlug = 'crosscoin' } = {}) {
+const ROBOTS_OPTIONS = [
+  { value: '', label: 'Default (index, follow)' },
+  { value: 'index, follow', label: 'index, follow' },
+  { value: 'index, follow, max-image-preview:large', label: 'index, follow, max-image-preview:large' },
+  { value: 'noindex, follow', label: 'noindex, follow' },
+  { value: 'noindex, nofollow', label: 'noindex, nofollow' },
+];
+
+export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
@@ -313,13 +322,13 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
         />
 
         <FilterBar hideSearch>
-          <div className="sl-search-wrap">
-            <span className="sl-search-icon">
-              <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
-            </span>
-            <input type="text" className="sl-search-input" placeholder="Search SEO entries..."
-              onChange={handleSearchChange} defaultValue={filterValue} />
-          </div>
+          <Input
+            type="text"
+            placeholder="Search SEO entries..."
+            leftIcon={<HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />}
+            onChange={handleSearchChange}
+            defaultValue={filterValue}
+          />
         </FilterBar>
 
         {/* Table Section */}
@@ -396,50 +405,54 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
               onChange={handleInputChange}
               placeholder="Leave blank to auto-generate from the page name"
             />
-            <div className="input-field">
-              <label className="input-field-label">Robots directive</label>
-              <select
-                name="robots"
-                value={formData.robots}
-                onChange={handleInputChange}
-                className="input-field"
-              >
-                <option value="">Default (index, follow)</option>
-                <option value="index, follow">index, follow</option>
-                <option value="index, follow, max-image-preview:large">index, follow, max-image-preview:large</option>
-                <option value="noindex, follow">noindex, follow</option>
-                <option value="noindex, nofollow">noindex, nofollow</option>
-              </select>
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Structured data (JSON-LD)</label>
-              <textarea
-                name="structured_data"
-                value={formData.structured_data}
-                onChange={handleInputChange}
-                className="input-field"
-                rows={8}
-                placeholder='Optional. Paste a schema.org JSON-LD object, e.g. {"@context":"https://schema.org","@type":"Organization", ...}'
-                style={{ fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 12 }}
-              />
-              {formData.structured_data && !isValidJson(formData.structured_data) && (
-                <span style={{ fontSize: 12, color: 'var(--ds-color-danger, #dc2626)' }}>⚠️ Not valid JSON — this won't be saved until the JSON is fixed.</span>
-              )}
-            </div>
-            <div className="input-field">
-              <label className="input-field-label">Meta Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                className="input-field"
-                onChange={handleImageChange}
-              />
+            <Select
+              label="Robots directive"
+              options={ROBOTS_OPTIONS}
+              value={formData.robots}
+              onChange={(v) => setFormData(prev => ({ ...prev, robots: v }))}
+              placeholder="Default (index, follow)"
+            />
+            <Input
+              label="Structured data (JSON-LD)"
+              multiline
+              rows={8}
+              name="structured_data"
+              value={formData.structured_data}
+              onChange={handleInputChange}
+              placeholder='Optional. Paste a schema.org JSON-LD object, e.g. {"@context":"https://schema.org","@type":"Organization", ...}'
+              style={{ fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', fontSize: 12 }}
+            />
+            {formData.structured_data && !isValidJson(formData.structured_data) && (
+              <span style={{ fontSize: 12, color: 'var(--ds-color-danger, #dc2626)' }}>⚠️ Not valid JSON — this won't be saved until the JSON is fixed.</span>
+            )}
+            <div className="input-container">
+              <label className="input-label">Meta Image</label>
+              <div className="dm-file-upload">
+                <div className="dm-file-upload-text">
+                  <span className="dm-file-upload-title">
+                    {formData.meta_image instanceof File
+                      ? formData.meta_image.name
+                      : formData.meta_image ? 'Current image' : 'Choose image'}
+                  </span>
+                  <span className="dm-file-upload-sub">Recommended 1200 × 630 px · PNG, JPG or WEBP · used as the social/OG preview</span>
+                </div>
+                <input type="file" accept="image/*" onChange={handleImageChange} />
+              </div>
               {formData.meta_image && (
-                <img
-                  src={typeof formData.meta_image === 'string' ? formData.meta_image : URL.createObjectURL(formData.meta_image)}
-                  alt="Meta Preview"
-                  className="seo-image-preview"
-                />
+                formData.meta_image instanceof File ? (
+                  <img
+                    src={URL.createObjectURL(formData.meta_image)}
+                    alt="Meta Preview"
+                    className="seo-image-preview"
+                  />
+                ) : (
+                  <SafeImage
+                    imageData={formData.meta_image}
+                    alt="Meta Preview"
+                    className="seo-image-preview"
+                    fallbackSrc={null}
+                  />
+                )
               )}
             </div>
             <div style={{ marginTop: 24 }}>
@@ -447,7 +460,8 @@ export default function SEO({ brandSlug = 'crosscoin' } = {}) {
               <SerpPreview
                 title={formData.meta_title}
                 description={formData.meta_description}
-                url={`https://crosscoin.in/${formData.page_name || ''}`}
+                siteName={brandSiteName(brand)}
+                url={brandUrl(brand, formData.page_name)}
                 variant="both"
               />
             </div>

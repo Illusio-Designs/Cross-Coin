@@ -14,7 +14,6 @@
 import { useEffect, useState } from 'react';
 import SeoHealth         from './health';
 import GlobalSeoSettings from './global';
-import SeoBulkEditor     from './bulk';
 import SEO               from './seo';
 import FaqsManager       from './faqs';
 import Dropdown          from '../../../components/ui/Dropdown';
@@ -23,7 +22,6 @@ import { brandService }  from '../../../services';
 const TABS = [
   { id: 'overview',  label: 'Overview',        Component: SeoHealth },
   { id: 'pages',     label: 'Pages',           Component: SEO },
-  { id: 'products',  label: 'Products',        Component: SeoBulkEditor },
   { id: 'faqs',      label: 'FAQs',            Component: FaqsManager },
   { id: 'settings',  label: 'Settings',        Component: GlobalSeoSettings },
 ];
@@ -50,6 +48,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
   }, []);
 
   const brandSlug = brands.find(b => b.id === brandId)?.slug || 'crosscoin';
+  const selectedBrand = brands.find(b => b.id === brandId) || null;
   const Current = (TABS.find(t => t.id === active) || TABS[0]).Component;
 
   return (
@@ -119,7 +118,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
         })}
       </nav>
 
-      <Current brandId={brandId} brandSlug={brandSlug} />
+      <Current brandId={brandId} brandSlug={brandSlug} brand={selectedBrand} />
     </div>
   );
 }

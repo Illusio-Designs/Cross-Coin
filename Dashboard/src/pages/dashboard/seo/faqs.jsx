@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { faqService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
+import { Select } from '../../../components/ui';
 import { richHtml } from '../../../utils/sanitizeHtml';
 
 // Lazy-load the rich-text editor — Quill ships a lot of JS we don't want
@@ -169,14 +170,13 @@ export default function FaqsManager({ brandId = 1 }) {
         subtitle="Manage site-wide and per-product FAQs. Global FAQs now show on the storefront home (before the blog) and at the bottom of every product page; answers also emit FAQPage schema for SEO."
         actions={
           <>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              style={{ padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-sm)', fontSize: 14, background: 'var(--ds-color-surface)' }}
-            >
-              <option value="all">All scopes</option>
-              {ATTACH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            <div style={{ minWidth: 180 }}>
+              <Select
+                value={filterType}
+                onChange={(v) => setFilterType(v)}
+                options={[{ value: 'all', label: 'All scopes' }, ...ATTACH_TYPES]}
+              />
+            </div>
             <button onClick={openCreate} className="ds-btn ds-btn--primary">+ New FAQ</button>
           </>
         }
@@ -252,15 +252,14 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
         {editing ? 'Edit FAQ' : 'New FAQ'}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'flex-end' }}>
-        <Field label="Scope" style={{ flex: '1 1 220px' }}>
-          <select
+        <div style={{ flex: '1 1 220px' }}>
+          <Select
+            label="Scope"
             value={form.attached_to_type}
-            onChange={e => setForm({ ...form, attached_to_type: e.target.value, attached_to_id: '', attached_to_slug: '' })}
-            style={inputStyle}
-          >
-            {ATTACH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </Field>
+            onChange={v => setForm({ ...form, attached_to_type: v, attached_to_id: '', attached_to_slug: '' })}
+            options={ATTACH_TYPES}
+          />
+        </div>
         {showId && (
           <Field label={`${form.attached_to_type === 'product' ? 'Product' : 'Category'} ID`} style={{ flex: '1 1 180px' }}>
             <input

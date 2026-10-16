@@ -13,7 +13,7 @@ import AttributeSelector from '../../../components/products/AttributeSelector';
 import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
 import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
-import SerpPreview from '../../../components/common/SerpPreview';
+import SerpPreview, { brandSiteName, brandUrl } from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import dynamic from 'next/dynamic';
@@ -1427,6 +1427,7 @@ const ProductsPage = () => {
             setFormData={setFormData}
             handleInputChange={handleInputChange}
             editingProductId={formData.id}
+            brands={brands}
           />
         );
     }
@@ -1600,11 +1601,12 @@ export default ProductsPage;
  * because there's nothing to regenerate from yet — backend auto-fills on
  * first save.
  */
-function ProductSeoStep({ formData, setFormData, handleInputChange, editingProductId }) {
+function ProductSeoStep({ formData, setFormData, handleInputChange, editingProductId, brands = [] }) {
   const [regenerating, setRegenerating] = useState(false);
 
+  const previewBrand = brands.find(b => Number(b.id) === Number(formData.brandIds?.[0]));
   const previewUrl = formData.seo?.canonicalUrl
-    || `https://crosscoin.in/products/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'product'}`;
+    || brandUrl(previewBrand, `products/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'product'}`);
 
   const handleRegenerate = async () => {
     if (!editingProductId) {
@@ -1758,8 +1760,9 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
       <div style={{ marginTop: 24 }}>
         <h4 style={{ marginBottom: 12, color: 'var(--ds-color-text)' }}>Live Search Preview</h4>
         <SerpPreview
-          title={formData.seo.metaTitle || `${formData.name || 'Product'} | CrossCoin`}
+          title={formData.seo.metaTitle || `${formData.name || 'Product'} | ${brandSiteName(previewBrand)}`}
           description={formData.seo.metaDescription || formData.description?.slice(0, 160) || ''}
+          siteName={brandSiteName(previewBrand)}
           url={previewUrl}
           variant="both"
         />

@@ -5,8 +5,9 @@ import dynamic from "next/dynamic";
 import { Modal, Button, Table, Pagination, Input, Select } from "../../components/ui";
 import { PageHeader, Panel, FilterBar, EmptyState } from "../../components/Dashboard/primitives";
 import Loader from "../../components/common/Loader";
-import { blogService, productService } from "../../services";
+import { blogService, productService, brandService } from "../../services";
 import BrandAssignment from '../../components/Dashboard/BrandAssignment';
+import SerpPreview, { brandSiteName, brandUrl } from '../../components/common/SerpPreview';
 import { showSuccess, showError } from "../../utils/toastNotification";
 import { ConfirmModal } from '../../components/common/AlertModal';
 
@@ -105,6 +106,7 @@ export function Blogs() {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -142,12 +144,22 @@ export function Blogs() {
     } catch { /* non-critical */ }
   }, []);
 
-  useEffect(() => { fetchAll(); fetchProducts(); }, [fetchAll, fetchProducts]);
+  // Brand list backs the brand-aware SERP preview (reflects the post's first
+  // assigned brand's domain/name instead of a hardcoded CrossCoin).
+  const fetchBrands = useCallback(async () => {
+    try {
+      const res = await brandService.getAllBrands(false);
+      setBrands(Array.isArray(res) ? res : (res?.data || []));
+    } catch { /* non-critical */ }
+  }, []);
+
+  useEffect(() => { fetchAll(); fetchProducts(); fetchBrands(); }, [fetchAll, fetchProducts, fetchBrands]);
   useEffect(() => { setCurrentPage(1); }, [search, tab]);
 
   // ── Derived option arrays ──────────────────────────────────────────────────
   const categoryOpts = [{ value: '', label: '— None —' }, ...categories.map(c => ({ value: String(c.id), label: c.name }))];
   const productOpts = [{ value: '', label: '— Select product —' }, ...products.map(p => ({ value: String(p.id), label: p.name }))];
+  const previewBrand = brands.find(b => Number(b.id) === Number(postForm.brand_ids?.[0]));
   const catStatusOpts = [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }];
 
   // ── Post form helpers ──────────────────────────────────────────────────────
@@ -537,6 +549,17 @@ export function Blogs() {
                   placeholder={label}
                 />
               ))}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ds-color-text-muted)', marginBottom: 6 }}>LIVE SEARCH PREVIEW</div>
+              <SerpPreview
+                title={postForm.seo.meta_title || postForm.title}
+                description={postForm.seo.meta_description}
+                siteName={brandSiteName(previewBrand)}
+                url={brandUrl(previewBrand, 'journal/' + (postForm.slug || ''))}
+                variant="both"
+              />
             </div>
 
           </div>
