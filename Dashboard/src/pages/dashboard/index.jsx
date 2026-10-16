@@ -30,7 +30,6 @@ import SeoHub from "./seo/hub";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
-import UTMAnalytics from "./analytics/utmAnalytics";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import AdminLookbooks from "./social/lookbooks";
@@ -261,7 +260,6 @@ function Dashboard() {
       case 'brand-settings':  return <BrandManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
-      case 'utm-analytics':   return <UTMAnalytics />;
       case 'reports':         return <Reports />;
       case 'traffic-report':  return <TrafficReport />;
       case 'revenue-profit':  return <RevenueProfitReport />;

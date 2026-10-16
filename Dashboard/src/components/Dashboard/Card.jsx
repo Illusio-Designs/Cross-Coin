@@ -487,12 +487,18 @@ function CardGrid() {
                 {stats.recentOrders.slice(0, 8).map((o) => {
                   const [tone, label] = orderPill(o.status);
                   const pay = String(o.paymentType || '').toLowerCase();
+                  // Payment label — mirrors the Orders page's formatPaymentType:
+                  // a COD order is always saved as 'cod', so anything non-COD
+                  // (incl. empty — older prepaid orders whose type was saved as
+                  // the invalid enum 'prepaid' and stored as '') is prepaid.
+                  // Prevents a bare "—" on the dashboard for real prepaid orders.
+                  const payText = pay === 'cod' ? 'COD' : 'Prepaid';
                   return (
                     <tr key={o.id}>
                       <td><span className="oid">{o.orderNumber}</span></td>
                       <td><span className="cust"><span className="ca">{initialsOf(o.customerName)}</span>{o.customerName || '—'}</span></td>
                       <td className="num cell-strong">₹{inr(o.amount || 0)}</td>
-                      <td><span className={`pill ${pay === 'cod' ? 'warn' : 'mut'}`}>{(o.paymentType || '—').toUpperCase()}</span></td>
+                      <td><span className={`pill ${pay === 'cod' ? 'warn' : 'mut'}`}>{payText}</span></td>
                       <td><span className={`pill ${tone}`}>{label}</span></td>
                       <td className="mut">{o.date ? new Date(o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}</td>
                     </tr>

@@ -27,7 +27,6 @@ export const getPageTitle = (view) => {
     'brand-settings': 'Brand Settings',
     'slider': 'Slider',
     'media-gallery': 'Media Gallery',
-    'utm-analytics': 'UTM Analytics',
     'reports': 'Reports',
     'revenue-profit': 'Revenue & Profit',
     'traffic-report': 'Traffic & Conversion',

@@ -37,7 +37,8 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
-  const [grievanceOnly, setGrievanceOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');     // all | popup | contact | grievance
+  const [statusFilter, setStatusFilter] = useState('all'); // all | open | in_progress | resolved
   const [savingId, setSavingId] = useState(null);
 
   const load = useCallback(async () => {
@@ -55,10 +56,18 @@ export default function Leads() {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     let rows = leads;
-    if (grievanceOnly) rows = rows.filter((l) => l.kind === 'grievance');
+    if (typeFilter !== 'all') {
+      rows = rows.filter((l) => {
+        const kind = l.kind === 'grievance' ? 'grievance' : l.type === 'contact' ? 'contact' : 'popup';
+        return kind === typeFilter;
+      });
+    }
+    if (statusFilter !== 'all') rows = rows.filter((l) => (l.status || 'open') === statusFilter);
     if (s) rows = rows.filter((l) => `${l.name || ''} ${l.phone || ''} ${l.email || ''} ${l.brand || ''} ${l.message || ''} ${l.type}`.toLowerCase().includes(s));
     return rows;
-  }, [leads, q, grievanceOnly]);
+  }, [leads, q, typeFilter, statusFilter]);
+
+  const isFiltered = q || typeFilter !== 'all' || statusFilter !== 'all';
 
   const setStatus = async (l, status) => {
     if (!l.contactId) return;
@@ -129,13 +138,32 @@ export default function Leads() {
       />
 
       <FilterBar search={q} onSearchChange={setQ} placeholder="Search name / phone / email / message">
-        <Button variant={grievanceOnly ? 'primary' : 'secondary'} onClick={() => setGrievanceOnly((v) => !v)}>
-          {grievanceOnly ? 'All leads' : `Grievances${grievanceCount ? ` (${grievanceCount})` : ''}`}
-        </Button>
+        <Select
+          options={[
+            { value: 'all', label: 'All types' },
+            { value: 'popup', label: 'Popup leads' },
+            { value: 'contact', label: 'Contact' },
+            { value: 'grievance', label: `Grievances${grievanceCount ? ` (${grievanceCount})` : ''}` },
+          ]}
+          value={typeFilter}
+          onChange={setTypeFilter}
+          placeholder="All types"
+        />
+        <Select
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'open', label: 'Open' },
+            { value: 'in_progress', label: 'In progress' },
+            { value: 'resolved', label: 'Resolved' },
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="All statuses"
+        />
       </FilterBar>
 
       {error && <p style={{ ...S.hint, color: 'var(--ds-color-danger,#dc2626)' }}>{error}</p>}
-      <div style={S.count}>{filtered.length} {filtered.length === 1 ? 'row' : 'rows'}{(q || grievanceOnly) && ` (of ${leads.length})`}</div>
+      <div style={S.count}>{filtered.length} {filtered.length === 1 ? 'row' : 'rows'}{isFiltered && ` (of ${leads.length})`}</div>
 
       <Panel flush>
         <ResponsiveTable

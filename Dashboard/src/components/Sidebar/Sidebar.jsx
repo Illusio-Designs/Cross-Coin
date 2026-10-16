@@ -70,7 +70,6 @@ const ALL_MENU = [
       { label: 'Reviews',       view: 'reviews' },
       { label: 'Leads',         view: 'leads', roles: ['admin'] },
       { label: 'Loyalty',       view: 'loyalty' },
-      { label: 'UTM Analytics', view: 'utm-analytics', roles: ['admin'] },
     ],
   },
   {

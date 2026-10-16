@@ -4,7 +4,7 @@ const {
     forgotPassword, resetPassword, verifyEmail,
     getCurrentUser, getProfile, updateProfile, updateUser,
     updatePassword, changePassword, deleteUser, exportMyData,
-    getAllUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
+    getAllUsers, getStaffUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
     checkPhone
 } = require('../controller/userController.js');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
@@ -74,6 +74,7 @@ router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin
 router.get('/all', isAuthenticated, isAdmin, getAllUsers);
+router.get('/staff-list', isAuthenticated, isAdmin, getStaffUsers);
 router.get('/guests', isAuthenticated, isAdmin, getGuestUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);

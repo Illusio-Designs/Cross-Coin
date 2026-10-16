@@ -11,7 +11,7 @@ import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from '../../..
 
 // Brand colours for the 5 headline channels — categorical identity that reads
 // at a glance against the otherwise-monochrome Obzus chrome.
-const CHANNEL_COLORS = { Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335', 'AI chatbot': '#8b5cf6', Other: '#94a3b8' };
+const CHANNEL_COLORS = { Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335', 'AI chatbot': '#8b5cf6', Other: '#94a3b8', 'Direct / untracked': '#64748b' };
 const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-accent, #2563eb)';
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
@@ -160,15 +160,44 @@ export default function TrafficReport() {
               { key: 'channel', label: 'Channel', render: (s) => (
                 <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: chColor(s.channel), marginRight: 8, verticalAlign: 'middle' }} />{s.channel}</span>
               ) },
-              { key: 'sessions', label: 'Visitors', cellStyle: tdNum, render: (s) => num(s.sessions) },
-              { key: 'share', label: 'Share', cellStyle: tdNum, render: (s) => pct(s.share) },
+              { key: 'sessions', label: 'Visitors', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : num(s.sessions)) },
+              { key: 'share', label: 'Share', cellStyle: tdNum, render: (s) => (s.untracked ? '—' : pct(s.share)) },
               { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (s) => num(s.orders) },
-              { key: 'conversion_rate', label: 'Conversion', cellStyle: tdNum, render: (s) => pct(s.conversion_rate) },
+              // Untracked orders have no tracked visit, so a visit→order rate is N/A.
+              { key: 'conversion_rate', label: 'Conversion', cellStyle: tdNum, render: (s) => (s.untracked || s.conversion_rate == null ? '—' : pct(s.conversion_rate)) },
               { key: 'bar', label: 'Share of visits', headerStyle: { width: '30%' }, render: (s) => (
                 <div style={{ background: 'var(--ds-color-border)', borderRadius: 6, height: 14, overflow: 'hidden', minWidth: 120 }}>
-                  <div style={{ width: `${Math.min(100, Math.max(2, s.share))}%`, height: '100%', background: chColor(s.channel), borderRadius: 6 }} />
+                  {!s.untracked && (
+                    <div style={{ width: `${Math.min(100, Math.max(2, s.share))}%`, height: '100%', background: chColor(s.channel), borderRadius: 6 }} />
+                  )}
                 </div>
               ) },
+            ]}
+          />
+        </Panel>
+      ) : null}
+
+      {/* Campaigns (UTM) — folded in from the retired UTM Analytics page.
+          Source / medium / campaign with visits, orders, conversion & revenue,
+          counted the same way as the channel table so the numbers reconcile. */}
+      {data?.campaigns?.length ? (
+        <Panel
+          title="Campaigns (UTM) — source · medium · campaign"
+          subtitle="Tracked-visit attribution only; orders & revenue exclude cancelled orders, so these reconcile with the headline totals."
+          flush
+        >
+          <ResponsiveTable
+            rowKey={(r) => `${r.source}|${r.medium}|${r.campaign}`}
+            data={data.campaigns}
+            emptyMessage="No campaign traffic yet."
+            columns={[
+              { key: 'source', label: 'Source', render: (r) => <span style={S.chip}>{r.source}</span> },
+              { key: 'medium', label: 'Medium', render: (r) => <span style={S.chip}>{r.medium}</span> },
+              { key: 'campaign', label: 'Campaign', render: (r) => (r.campaign && r.campaign !== 'none' ? r.campaign : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
+              { key: 'sessions', label: 'Visits', cellStyle: tdNum, render: (r) => num(r.sessions) },
+              { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (r) => num(r.orders) },
+              { key: 'conversion_rate', label: 'Conv.', cellStyle: tdNum, render: (r) => pct(r.conversion_rate) },
+              { key: 'revenue', label: 'Revenue', cellStyle: tdNum, render: (r) => inr(r.revenue) },
             ]}
           />
         </Panel>

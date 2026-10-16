@@ -82,7 +82,9 @@ export default function StaffUsers() {
     setLoading(true);
     setError(null);
     try {
-      const data = await userService.getAllUsers();
+      // Staff-only endpoint — queries by role server-side so staff aren't
+      // dropped from the capped "all users" list once customers pile up.
+      const data = await userService.getStaffUsers();
       setUsers(Array.isArray(data) ? data : data?.users || data?.data || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch users');

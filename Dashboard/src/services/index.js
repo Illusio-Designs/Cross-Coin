@@ -1171,6 +1171,17 @@ export const userService = {
     }
   },
 
+  // Staff users only — queried server-side by role so they never get pushed off
+  // the capped "all users" list by a large customer base.
+  getStaffUsers: async () => {
+    try {
+      const response = await adminApi.get("/api/users/staff-list");
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
   // Guest (unregistered) customers, mapped into the consumer shape.
   getGuestUsers: async () => {
     try {

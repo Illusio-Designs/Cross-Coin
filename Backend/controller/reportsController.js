@@ -129,6 +129,27 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
+    // Campaign-level breakdown (source / medium / campaign) — replaces the old
+    // standalone UTM Analytics page. Uses the SAME authoritative rules as the
+    // channel/source tables above (DISTINCT tracked sessions, orders & revenue
+    // from NON-CANCELLED orders matched via orders.utm_tracking_id), so these
+    // numbers reconcile with the headline Orders/Revenue instead of the old
+    // UTM page's inflated counts (which included cancelled orders).
+    const campaignRows = await sequelize.query(
+      `SELECT COALESCE(u.utm_source,'direct')   AS source,
+              COALESCE(u.utm_medium,'none')     AS medium,
+              COALESCE(u.utm_campaign,'none')   AS campaign,
+              COUNT(DISTINCT u.session_id)       AS sessions,
+              COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders,
+              COALESCE(SUM(CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END), 0) AS revenue
+       FROM utm_tracking u
+       LEFT JOIN orders o ON o.utm_tracking_id = u.id
+       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}
+       GROUP BY source, medium, campaign
+       ORDER BY revenue DESC, orders DESC, sessions DESC`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+
     const sessMap = new Map(sessions.map((r) => [r.brand_id, Number(r.sessions)]));
     const ordMap = new Map(orders.map((r) => [r.brand_id, r]));
     // Per-brand top channels, rolled up into the 5 headline buckets (readable
@@ -248,6 +269,26 @@ exports.getBrandTraffic = async (req, res) => {
       };
     });
 
+    // Reconciling row: the per-channel orders above only count orders matched to
+    // a tracked visit (orders.utm_tracking_id). Real orders with no tracked
+    // session — direct, untracked, or placed outside a tracked visit — are in
+    // `totals.orders` but belong to no channel, so the channel orders would
+    // otherwise sum to LESS than the headline Orders number and look wrong.
+    // Surface the remainder explicitly so the breakdown always reconciles.
+    const attributedOrders = channelGroups.reduce((n, c) => n + (Number(c.orders) || 0), 0);
+    const untrackedOrders = Math.max(0, (Number(totals.orders) || 0) - attributedOrders);
+    if (untrackedOrders > 0) {
+      channelGroups.push({
+        channel: 'Direct / untracked',
+        sessions: 0,
+        share: 0,
+        orders: untrackedOrders,
+        // No tracked visits for these orders, so a visit→order rate is N/A.
+        conversion_rate: null,
+        untracked: true,
+      });
+    }
+
     // Granular source/medium rows kept for CSV / drill-down.
     const sources = sourceRows.map((r) => {
       const sess = Number(r.sessions) || 0;
@@ -260,6 +301,20 @@ exports.getBrandTraffic = async (req, res) => {
       };
     }).slice(0, 25);
 
+    // Campaign rows (source/medium/campaign) with orders, revenue & conversion —
+    // the data that used to live on the UTM Analytics page, now reconciled.
+    const campaigns = campaignRows.map((r) => {
+      const sess = Number(r.sessions) || 0;
+      const ord = Number(r.orders) || 0;
+      return {
+        source: r.source, medium: r.medium, campaign: r.campaign, sessions: sess,
+        share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
+        orders: ord,
+        revenue: Math.round(Number(r.revenue) || 0),
+        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
+      };
+    }).slice(0, 50);
+
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
@@ -267,6 +322,7 @@ exports.getBrandTraffic = async (req, res) => {
       totals,
       channels: channelGroups,
       sources,
+      campaigns,
     });
   } catch (error) {
     logger.error('getBrandTraffic report failed: ' + error.message);

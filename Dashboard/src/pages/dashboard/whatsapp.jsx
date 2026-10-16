@@ -36,6 +36,9 @@ const IC = {
   dash:    <HugeiconsIcon icon={DashboardSquare01Icon} size={16} strokeWidth={2} />,
   bar:     <HugeiconsIcon icon={Analytics01Icon} size={16} strokeWidth={2} />,
   filter:  <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />,
+  // Recovery nav glyph — the Abandoned Carts item referenced IC.cart_abandon,
+  // which lived only on TPL_ICONS, so the nav icon rendered as undefined.
+  cart_abandon: <HugeiconsIcon icon={ShoppingCartRemove01Icon} size={16} strokeWidth={2} />,
 };
 
 // ─── Template data ────────────────────────────────────────────────────────────
@@ -1630,7 +1633,7 @@ export function WhatsAppManager() {
         <div className="was-nav-logo">
           <div className="was-nav-logo-icon">{IC.wa}</div>
           <div>
-            <div className="was-nav-logo-text">WA Studio</div>
+            <div className="was-nav-logo-text">WhatsApp Studio</div>
             <div className="was-nav-logo-sub">Business Platform</div>
           </div>
         </div>

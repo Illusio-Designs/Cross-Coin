@@ -761,6 +761,28 @@ module.exports.getAllUsers = async (req, res) => {
     }
 };
 
+// Staff users only — queried server-side by staff role. The dashboard's Staff
+// page previously filtered staff out of getAllUsers (the 1000 most-RECENT
+// users), so once enough customers signed up the older staff accounts fell off
+// that list and the page showed "0 staff". Query them directly instead so the
+// page is correct regardless of how many customers exist.
+module.exports.getStaffUsers = async (req, res) => {
+    try {
+        const { Op } = require('sequelize');
+        const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+        const users = await User.findAll({
+            where: { role: { [Op.in]: STAFF_ROLES }, deleted_at: null },
+            attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] },
+            order: [['createdAt', 'DESC']],
+            limit: 500,
+        });
+        res.json({ users });
+    } catch (error) {
+        logger.error('Get staff users error:', error);
+        res.status(500).json({ message: 'Error getting staff users' });
+    }
+};
+
 // Guest (unregistered) customers — mapped into the same shape the consumers
 // list uses, so they can be shown alongside registered customers.
 module.exports.getGuestUsers = async (req, res) => {
