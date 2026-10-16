@@ -640,11 +640,6 @@ export default function TestLayout({ children }) {
             {cart.length === 0 ? (
               <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '30px 0', textAlign: 'center' }}>Your cart is empty.</p>
             ) : (<>
-              {/* free-shipping progress bar */}
-              <div className="mono" style={{ fontSize: 11, color: need > 0 ? 'var(--ink-soft)' : 'var(--crimson)', fontWeight: need > 0 ? 400 : 700, marginBottom: 6 }}>
-                {need > 0 ? `Add ${inr(need)} more for FREE shipping` : 'You’ve unlocked FREE shipping ✓'}
-              </div>
-              <div className="freebar" style={{ marginBottom: 14 }}><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
 
               {/* ONE pair stepper at the top (group-level), like Morbix */}
               {(() => {
