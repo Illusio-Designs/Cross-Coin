@@ -26,24 +26,25 @@ function CartPairStepper({ item, tiers, onSet }) {
   const next = tiers.find((t) => t.pairs > q) || null;
   return (
     <div className="ccps">
-      <div className="ccps__msg"><span style={{ color: 'var(--crimson)' }}>✦</span>
+      <div className="ccps__msg"><span className="ccps__spark">✦</span>
         <span>{next
-          ? <>Add <b>{next.pairs - q} pair{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pack{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
-          : <span className="hi">🎉 Best value — {maxP}-pack applied!</span>}</span>
+          ? <>Add <b>{next.pairs - q} pair{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pair pack{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
+          : <span className="hi">🎉 Best value — {maxP}-pair pack applied!</span>}</span>
       </div>
       <div className="ccps__track">
-        <div className="ccps__base" /><div className="ccps__fill" style={{ width: `calc(86% * ${fillPct / 100})` }} />
-        {ms.map((m, i) => {
-          const pct = n > 1 ? 7 + (i / (n - 1)) * 86 : 50;
-          const on = q >= m.pairs; const sel = q === m.pairs; const sv = m.pairs > 1 ? savedFor(m.pairs, m.total) : 0;
-          return (
-            <button type="button" key={i} className={`ccps__dot${on ? ' on' : ''}${sel ? ' sel' : ''}`} style={{ left: `${pct}%` }} onClick={() => onSet(m.pairs, m.total)}>
-              <span className="d">{on ? I.check(11) : ''}</span>
-              <span className="l">{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
-              {sv > 0 ? <span className="sv">save {inr(sv)}</span> : null}
-            </button>
-          );
-        })}
+        <div className="ccps__line"><span style={{ width: `${fillPct}%` }} /></div>
+        <div className="ccps__dots">
+          {ms.map((m, i) => {
+            const on = q >= m.pairs; const sel = q === m.pairs; const sv = m.pairs > 1 ? savedFor(m.pairs, m.total) : 0;
+            return (
+              <button type="button" key={i} className={`ccps__dot${on ? ' on' : ''}${sel ? ' sel' : ''}`} onClick={() => onSet(m.pairs, m.total)}>
+                <span className="d">{on ? I.check(11) : ''}</span>
+                <span className="l">{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                {sv > 0 ? <span className="sv">save {inr(sv)}</span> : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -154,6 +155,29 @@ const MOBILE_CSS = `
 .cc-test-root .ckrow input[type=checkbox]{ width:20px; height:20px; accent-color:var(--crimson); flex-shrink:0; }
 .cc-test-root .ckmodal__btns{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
 .cc-test-root .ckmodal__btns .btn{ flex:1; min-width:120px; }
+/* clean cart item cards (Morbix) */
+.cc-test-root .citem-sec-title{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); margin:2px 0 8px; }
+.cc-test-root .citem{ display:flex; gap:12px; padding:14px 0; border-bottom:1.5px solid var(--line); }
+.cc-test-root .citem__th{ width:62px; height:62px; flex:0 0 auto; border:2px solid var(--line-ink); border-radius:10px; overflow:hidden; background:var(--paper-2); display:grid; place-items:center; }
+.cc-test-root .citem__main{ flex:1; min-width:0; }
+.cc-test-root .citem__top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.cc-test-root .citem__nm{ font-weight:700; font-size:14px; line-height:1.25; }
+.cc-test-root .citem__rm{ flex:0 0 auto; background:none; border:0; color:var(--ink-faint); cursor:pointer; padding:0; }
+.cc-test-root .citem__rm:hover{ color:var(--crimson); }
+.cc-test-root .citem__var{ font-family:"Space Mono",monospace; font-size:11.5px; color:var(--ink-faint); margin:4px 0 9px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.cc-test-root .citem__bot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.cc-test-root .citem__pr{ display:flex; align-items:baseline; gap:6px; font-family:"Space Mono",monospace; flex-wrap:wrap; }
+.cc-test-root .citem__pr b{ font-size:15px; color:var(--crimson); }
+.cc-test-root .citem__per{ font-size:10px; color:var(--ink-faint); font-weight:400; }
+.cc-test-root .citem__pr s{ font-size:11px; color:var(--ink-faint); }
+.cc-test-root .citem__pr em{ font-style:normal; font-size:10.5px; font-weight:700; color:#0f766e; }
+.cc-test-root .citem__qty{ box-shadow:none !important; flex:0 0 auto; }
+.cc-test-root .citem__qty button{ width:28px; height:28px; }
+.cc-test-root .citem__qty span{ min-width:42px; font-size:12px; text-align:center; }
+/* checkout trust row */
+.cc-test-root .cotrust{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; font-family:"Space Mono",monospace; font-size:11px; color:var(--ink-faint); }
+.cc-test-root .cotrust span{ display:inline-flex; align-items:center; gap:5px; }
+.cc-test-root .cotrust svg{ color:#0f766e; }
 /* cart item pack chip */
 .cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:999px; padding:2px 8px; }
 /* Buy More, Save More carousel (Morbix) */
@@ -304,19 +328,21 @@ const MOBILE_CSS = `
 .cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
 /* Buy More, Save More pair stepper in the cart drawer. */
-.cc-test-root .ccps{ padding:13px 15px; background:color-mix(in srgb,var(--crimson) 8%,var(--surface)); border:2px solid var(--line-ink); border-radius:10px; margin-bottom:14px; box-shadow:var(--stamp-sm); }
+.cc-test-root .ccps{ padding:14px 16px; background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:2px solid var(--line-ink); border-radius:10px; margin-bottom:16px; box-shadow:var(--stamp-sm); }
 .cc-test-root .ccps__msg{ display:flex; align-items:center; gap:7px; font-size:12.5px; line-height:1.35; }
+.cc-test-root .ccps__spark{ color:var(--crimson); flex:0 0 auto; }
 .cc-test-root .ccps__msg b{ font-weight:700; } .cc-test-root .ccps__msg .hi{ color:var(--crimson); font-weight:700; }
-.cc-test-root .ccps__track{ position:relative; height:52px; margin-top:12px; }
-.cc-test-root .ccps__base{ position:absolute; left:7%; right:7%; top:8px; height:4px; border-radius:999px; background:var(--line); }
-.cc-test-root .ccps__fill{ position:absolute; left:7%; top:8px; height:4px; border-radius:999px; background:var(--crimson); transition:width .35s var(--ease); }
-.cc-test-root .ccps__dot{ position:absolute; top:0; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; width:72px; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
-.cc-test-root .ccps__dot .d{ width:18px; height:18px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line); color:#fff; transition:.2s; }
+.cc-test-root .ccps__track{ position:relative; margin-top:14px; }
+.cc-test-root .ccps__line{ position:absolute; left:10%; right:10%; top:9px; height:4px; border-radius:999px; background:var(--line); }
+.cc-test-root .ccps__line span{ display:block; height:100%; border-radius:999px; background:var(--crimson); transition:width .35s var(--ease); }
+.cc-test-root .ccps__dots{ position:relative; display:flex; justify-content:space-between; }
+.cc-test-root .ccps__dot{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; background:none; border:0; padding:0; font:inherit; cursor:pointer; }
+.cc-test-root .ccps__dot .d{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line); color:#fff; transition:.2s; }
 .cc-test-root .ccps__dot.on .d{ background:var(--crimson); border-color:var(--crimson); }
-.cc-test-root .ccps__dot.sel .d{ box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 18%,transparent); }
-.cc-test-root .ccps__dot .l{ font-family:"Space Mono",monospace; font-size:10px; font-weight:700; margin-top:6px; white-space:nowrap; color:var(--ink); }
+.cc-test-root .ccps__dot.sel .d{ box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 20%,transparent); }
+.cc-test-root .ccps__dot .l{ font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700; color:var(--ink); text-align:center; }
 .cc-test-root .ccps__dot.on .l{ color:var(--crimson); }
-.cc-test-root .ccps__dot .sv{ font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--crimson); margin-top:1px; white-space:nowrap; }
+.cc-test-root .ccps__dot .sv{ font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--crimson); text-align:center; }
 .cc-test-root .offerwrap{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 2px; }
 .cc-test-root .offerwrap .chip{ font-size:11px; padding:6px 11px; cursor:pointer; }
 /* PDP: let the grid columns shrink so the buy column (buttons, option rows)
@@ -604,39 +630,35 @@ export default function TestLayout({ children }) {
               </div>
               <div className="freebar" style={{ marginBottom: 14 }}><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
 
-              {cart.some((i) => tiersMap[i.id] && tiersMap[i.id].length > 0) && (
-                <div className="pairsnote mono">✦ Some products are sold in pairs — add more pairs to unlock a lower price per pair.</div>
-              )}
+              {/* ONE pair stepper at the top (group-level), like Morbix */}
+              {(() => {
+                const topLine = cart.find((i) => tiersMap[i.id] && tiersMap[i.id].length > 0);
+                return topLine ? <CartPairStepper item={topLine} tiers={tiersMap[topLine.id]} onSet={(p, t) => setLinePairs(topLine.key, p, t)} /> : null;
+              })()}
 
+              <div className="citem-sec-title mono">Items</div>
               {cart.map((i) => {
                 const hasTiers = !!(tiersMap[i.id] && tiersMap[i.id].length > 0);
+                const off = i.was > i.unit ? Math.round((1 - i.unit / i.was) * 100) : 0;
                 return (
-                <div className="ditem" key={i.key}>
-                  <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
-                  <div style={{ minWidth: 0 }}>
-                    <h4>{i.name}</h4>
-                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pair pack</span> : null}</div>
-                    {/* Buy More, Save More pair stepper — only for products set up as pack-pairs */}
-                    {hasTiers && (
-                      <div style={{ marginTop: 10 }}>
-                        <CartPairStepper item={i} tiers={tiersMap[i.id]} onSet={(p, t) => setLinePairs(i.key, p, t)} />
+                  <div className="citem" key={i.key}>
+                    <div className="citem__th"><Thumb src={i.img} color={i.color} /></div>
+                    <div className="citem__main">
+                      <div className="citem__top">
+                        <span className="citem__nm">{i.name}</span>
+                        <button className="citem__rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} aria-label="Remove">{I.trash(16)}</button>
                       </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                      <div className="qty" style={{ boxShadow: 'none' }}>
-                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }} aria-label={hasTiers ? 'One pair fewer' : 'One fewer'}>−</button>
-                        <span style={{ width: hasTiers ? 54 : 34, fontSize: 12 }}>{hasTiers ? `${i.qty} pr` : i.qty}</span>
-                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
+                      <div className="citem__var">{i.color || i.brand}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pair pack</span> : (i.size ? ` · ${i.size}` : '')}</div>
+                      <div className="citem__bot">
+                        <div className="citem__pr"><b>{inr(i.unit)}{hasTiers ? <span className="citem__per"> / pair</span> : null}</b>{i.was > i.unit && <s>{inr(i.was)}</s>}{off > 0 && <em>{off}% off</em>}</div>
+                        <div className="qty citem__qty">
+                          <button onClick={() => changeQty(i.key, -1)} aria-label={hasTiers ? 'One pair fewer' : 'One fewer'}>−</button>
+                          <span>{hasTiers ? `${i.qty} pr` : i.qty}</span>
+                          <button onClick={() => changeQty(i.key, 1)} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
+                        </div>
                       </div>
-                      <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} aria-label="Remove" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, padding: 0 }}>{I.trash(15)}</button>
                     </div>
                   </div>
-                  <div className="lp" style={{ textAlign: 'right' }}>
-                    <div><b>{inr(i.unit)}</b>{hasTiers ? <small className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 400 }}> / pair</small> : null}</div>
-                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 11, color: 'var(--ink-faint)', textDecoration: 'line-through', fontWeight: 400 }}>{inr(i.was)}</div>}
-                    {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 10.5, color: 'var(--crimson)', fontWeight: 700 }}>{Math.round((1 - i.unit / i.was) * 100)}% off</div>}
-                  </div>
-                </div>
                 );
               })}
 
@@ -688,7 +710,8 @@ export default function TestLayout({ children }) {
             {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => setStep('checkout')}>Proceed to checkout</button>
+            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => setStep('checkout')}>Proceed to checkout · {inr(total)}</button>
+            <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}
 
