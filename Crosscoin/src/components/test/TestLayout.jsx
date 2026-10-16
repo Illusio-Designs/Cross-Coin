@@ -119,6 +119,43 @@ const MOBILE_CSS = `
 .cc-test-root .origin__l{ display:block; font-family:"Space Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
 .cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
 .cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
+/* Collections grid */
+.cc-test-root .collgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px; }
+.cc-test-root .collcard{ position:relative; min-height:170px; border:2px solid var(--line-ink); border-radius:12px; box-shadow:var(--stamp); color:#fff; text-align:left; padding:18px; cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; transition:transform .18s var(--ease); font:inherit; }
+.cc-test-root .collcard:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
+.cc-test-root .collcard__no{ position:absolute; top:14px; left:16px; font-family:"Space Mono",monospace; font-size:12px; opacity:.8; }
+.cc-test-root .collcard__name{ font-family:"Fraunces",serif; font-weight:700; font-size:22px; line-height:1.05; }
+.cc-test-root .collcard__ct{ font-family:"Space Mono",monospace; font-size:11px; opacity:.85; margin-top:4px; }
+@media (max-width:760px){ .cc-test-root .collgrid{ grid-template-columns:1fr 1fr; } }
+@media (max-width:460px){ .cc-test-root .collgrid{ grid-template-columns:1fr; } }
+/* Legal / policy / article rich text */
+.cc-test-root .legal{ font-size:15px; line-height:1.72; color:var(--ink-soft); }
+.cc-test-root .legal h1,.cc-test-root .legal h2,.cc-test-root .legal h3{ color:var(--ink); margin:22px 0 10px; }
+.cc-test-root .legal h2{ font-size:24px; } .cc-test-root .legal h3{ font-size:19px; }
+.cc-test-root .legal p{ margin:0 0 13px; } .cc-test-root .legal ul,.cc-test-root .legal ol{ margin:0 0 13px 20px; }
+.cc-test-root .legal li{ margin:5px 0; } .cc-test-root .legal a{ color:var(--crimson); text-decoration:underline; }
+.cc-test-root .legal img{ border-radius:8px; margin:12px 0; }
+/* Blog article */
+.cc-test-root .artmeta{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; color:var(--ink-faint); }
+.cc-test-root .artcat{ background:var(--crimson); color:#fff; font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:4px; letter-spacing:.04em; }
+.cc-test-root .arttitle{ font-size:clamp(28px,5vw,44px); margin:12px 0 16px; }
+.cc-test-root .arthero{ aspect-ratio:16/9; border:2px solid var(--line-ink); border-radius:12px; overflow:hidden; box-shadow:var(--stamp); margin-bottom:22px; }
+.cc-test-root .arthero img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* Order tracking */
+.cc-test-root .trackcard{ border:2px solid var(--line-ink); border-radius:10px; box-shadow:var(--stamp); background:var(--surface); padding:20px; margin-top:24px; }
+.cc-test-root .trackcard__top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:999px; padding:5px 13px; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
+.cc-test-root .trackcard__meta{ display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
+.cc-test-root .trackitems{ margin-top:14px; border-top:2px solid var(--line); padding-top:12px; }
+.cc-test-root .trackitem{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13.5px; }
+/* Contact */
+.cc-test-root .contactgrid{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:24px; }
+.cc-test-root .contactrow{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); }
+.cc-test-root .contactrow .pi{ color:var(--crimson); flex:0 0 auto; margin-top:2px; }
+.cc-test-root .contactrow b{ display:block; font-size:13px; } .cc-test-root .contactrow a,.cc-test-root .contactrow span{ font-size:13.5px; color:var(--ink-soft); }
+.cc-test-root .contactrow a{ color:var(--crimson); }
+.cc-test-root .contactform textarea{ width:100%; padding:12px 14px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); resize:vertical; }
+@media (max-width:720px){ .cc-test-root .contactgrid{ grid-template-columns:1fr; } }
 .cc-test-root .post__img{ aspect-ratio:auto !important; height:0; padding-top:62%; position:relative; overflow:hidden; }
 .cc-test-root .post__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
@@ -307,9 +344,10 @@ export default function TestLayout({ children }) {
   const navLinks = (
     <>
       <Link href="/test/shop" onClick={() => setMnav(false)}>Shop</Link>
-      <Link href="/test/shop" onClick={() => setMnav(false)}>Socks</Link>
-      <Link href="/test/shop" onClick={() => setMnav(false)}>Knitwear</Link>
+      <Link href="/test/collections" onClick={() => setMnav(false)}>Collections</Link>
       <Link href="/test#journal" onClick={() => setMnav(false)}>Journal</Link>
+      <Link href="/test/about" onClick={() => setMnav(false)}>About</Link>
+      <Link href="/test/contact" onClick={() => setMnav(false)}>Contact</Link>
       <Link href="/test#faq" onClick={() => setMnav(false)}>Help</Link>
     </>
   );
@@ -340,7 +378,7 @@ export default function TestLayout({ children }) {
             <button className="ibtn" onClick={toggleTheme} aria-label="Theme">{I.sun()}</button>
             <span className="nav__extra">
               <button className="ibtn" aria-label="Search" onClick={() => go('/test/search')}>{I.search()}</button>
-              <button className="ibtn" aria-label="Account" onClick={() => showToast('Account & order tracking — coming to the preview')}>{I.user()}</button>
+              <button className="ibtn" aria-label="Track order" onClick={() => go('/test/track')}>{I.user()}</button>
             </span>
             <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
@@ -369,9 +407,9 @@ export default function TestLayout({ children }) {
               <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></a>
             </div>
           </div>
-          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/shop')}>Collections</a><a onClick={() => go('/test#journal')}>Journal</a><a href="https://www.crosscoin.in/About" target="_blank" rel="noopener noreferrer">About Us</a></div>
-          <div><h4>Account</h4><a href="https://www.crosscoin.in/profile" target="_blank" rel="noopener noreferrer">My Account</a><a href="https://www.crosscoin.in/OrderTracking" target="_blank" rel="noopener noreferrer">Track Order</a><a href="https://www.crosscoin.in/Wishlist" target="_blank" rel="noopener noreferrer">Wishlist</a></div>
-          <div><h4>Policies</h4><a href="https://www.crosscoin.in/policy/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a><a href="https://www.crosscoin.in/policy/terms-and-conditions" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="https://www.crosscoin.in/policy/shipping-policy" target="_blank" rel="noopener noreferrer">Shipping Policy</a><a href="https://www.crosscoin.in/policy/cancellation-and-refund" target="_blank" rel="noopener noreferrer">Cancellation &amp; Refund</a></div>
+          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test#journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
+          <div><h4>Account</h4><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/search')}>Search</a><a onClick={() => go('/test/shop')}>Shop</a></div>
+          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>

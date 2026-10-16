@@ -155,7 +155,7 @@ export default function TestHome() {
             <div className="sechead"><div><span className="eyebrow">[ 05 ] The ledger</span><h2>Journal</h2></div></div>
             <div className="jgrid">
               {blogs.map((b, i) => (
-                <a className="post" key={b.slug || i} href={b.slug ? `https://www.crosscoin.in/blog/${b.slug}` : undefined} target="_blank" rel="noopener noreferrer">
+                <a className="post" key={b.slug || i} onClick={() => b.slug && router.push(`/test/blog/${encodeURIComponent(b.slug)}`)} style={{ cursor: b.slug ? 'pointer' : 'default' }}>
                   <div className="post__img" style={{ background: GRADS[i % GRADS.length], overflow: 'hidden' }}>{b.img && <img src={b.img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
                   <div className="post__b"><div className="m">{b.tag}</div><h3>{b.title}</h3></div>
                 </a>

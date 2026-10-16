@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -250,6 +250,52 @@ export async function fetchSearch(q, params = {}) {
     const list = r?.data?.products || r?.products || (Array.isArray(r) ? r : []);
     return list.map(normalizeProduct).filter(Boolean);
   } catch (_) { return []; }
+}
+
+// Real policy page content (privacy, terms, shipping, cancellation). The live
+// endpoint matches by name = lowercased+hyphenated title. Returns { title, html }.
+export async function fetchPolicy(slug) {
+  if (!slug) return null;
+  try {
+    const d = await getPublicPolicyByName(slug);
+    const p = d?.data || d?.policy || d || null;
+    if (!p) return null;
+    return { title: p.title || p.name || '', html: p.content || p.body || p.html || '' };
+  } catch (_) { return null; }
+}
+
+// Real blog post by slug → { title, img, cat, author, date, sections:[{heading,html}] }.
+export async function fetchBlog(slug) {
+  if (!slug) return null;
+  try {
+    const r = await getPublicBlogBySlug(slug);
+    const post = r?.data || r?.post || r || null;
+    if (!post) return null;
+    let secs = [];
+    if (Array.isArray(post.sections)) secs = post.sections;
+    else if (typeof post.sections === 'string') { try { secs = JSON.parse(post.sections); } catch (_) { secs = []; } }
+    const raw = post.hero_image || post.coverImage || post.cover_image || post.image || '';
+    let img = '';
+    try { img = raw ? ikTransform(getDirectImageUrl({ image_url: raw }) || raw, 1600) : ''; } catch (_) { img = ''; }
+    return {
+      title: post.title || '',
+      img,
+      cat: post.BlogCategory?.name || post.category?.name || post.category || 'Journal',
+      author: post.author_name || post.author || '',
+      date: post.published_at || post.publishedAt || post.createdAt || '',
+      content: post.content || post.body || '',
+      sections: secs.map((s) => ({ heading: s.heading || s.title || '', html: s.content || s.body || s.html || '' })).filter((s) => s.heading || s.html),
+    };
+  } catch (_) { return null; }
+}
+
+// Real order tracking by order number → the live tracking payload (or null).
+export async function trackOrder(orderNo) {
+  if (!orderNo || !orderNo.trim()) return null;
+  try {
+    const r = await trackOrderByOrderNumber(orderNo.trim());
+    return r?.data || r?.order || r || null;
+  } catch (_) { return null; }
 }
 
 // Validate a coupon against the live rules (real discount amount).
