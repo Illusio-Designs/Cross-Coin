@@ -1,38 +1,38 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  PiArrowRightBold, PiShoppingCartBold, PiHeartBold, PiMagnifyingGlassBold,
-  PiUserBold, PiListBold, PiXBold, PiCheckBold, PiTruckBold, PiArrowUUpLeftBold,
-  PiCreditCardBold, PiShieldCheckBold, PiPackageBold, PiLockBold, PiTrashBold, PiSunBold,
-} from 'react-icons/pi';
+  ArrowRight01Icon, ShoppingCart01Icon, FavouriteIcon, Search01Icon, UserIcon,
+  Menu01Icon, Cancel01Icon, Tick02Icon, DeliveryTruck01Icon, ArrowTurnBackwardIcon,
+  CreditCardIcon, Shield01Icon, PackageIcon, SquareLock02Icon, Delete02Icon, Sun03Icon,
+} from '@hugeicons/core-free-icons';
 import { addItem } from './store';
 import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
 import { colorToCss } from './real';
 
-/* ---- icons: Phosphor (react-icons/pi), a rounded icon library chosen for the
-   new Mint storefront (distinct from the Lucide set the legacy site uses). The
-   Bold weight gives the big, round, friendly look. Each entry keeps the
-   I.name(size) call signature so every /test call site is unchanged; Phosphor
-   icons inherit currentColor, so they recolour with the surrounding text. */
-const mk = (Icon, def) => (s = def) => <Icon size={s} />;
+/* ---- icons: Hugeicons (free Stroke-Rounded pack via @hugeicons/react), the
+   "huge round" library chosen for the new Mint storefront. Each entry keeps the
+   I.name(size) call signature so every /test call site is unchanged; the icons
+   inherit currentColor, so they recolour with the surrounding text. */
+const mk = (icon, def) => (s = def) => <HugeiconsIcon icon={icon} size={s} color="currentColor" strokeWidth={2} />;
 export const I = {
-  arrow: mk(PiArrowRightBold, 18),
-  cart: mk(PiShoppingCartBold, 22),
-  heart: mk(PiHeartBold, 18),
-  search: mk(PiMagnifyingGlassBold, 22),
-  user: mk(PiUserBold, 22),
-  menu: mk(PiListBold, 24),
-  close: mk(PiXBold, 22),
-  sun: mk(PiSunBold, 22),
-  check: mk(PiCheckBold, 18),
-  truck: mk(PiTruckBold, 26),
-  ret: mk(PiArrowUUpLeftBold, 26),
-  card: mk(PiCreditCardBold, 26),
-  shield: mk(PiShieldCheckBold, 26),
-  box: mk(PiPackageBold, 26),
-  lock: mk(PiLockBold, 20),
-  trash: mk(PiTrashBold, 18),
+  arrow: mk(ArrowRight01Icon, 18),
+  cart: mk(ShoppingCart01Icon, 22),
+  heart: mk(FavouriteIcon, 18),
+  search: mk(Search01Icon, 22),
+  user: mk(UserIcon, 22),
+  menu: mk(Menu01Icon, 24),
+  close: mk(Cancel01Icon, 22),
+  sun: mk(Sun03Icon, 22),
+  check: mk(Tick02Icon, 18),
+  truck: mk(DeliveryTruck01Icon, 26),
+  ret: mk(ArrowTurnBackwardIcon, 26),
+  card: mk(CreditCardIcon, 26),
+  shield: mk(Shield01Icon, 26),
+  box: mk(PackageIcon, 26),
+  lock: mk(SquareLock02Icon, 20),
+  trash: mk(Delete02Icon, 18),
 };
 
 export function toast(msg) {
