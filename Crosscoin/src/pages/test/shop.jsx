@@ -16,7 +16,7 @@ export default function TestShop() {
   // Load the real Crosscoin catalogue once.
   useEffect(() => {
     let off = false;
-    Promise.all([fetchProducts({ limit: 60 }), fetchCategories()])
+    Promise.all([fetchProducts({ page: 1, limit: 100 }), fetchCategories()])
       .then(([prods, categories]) => { if (off) return; setProducts(prods); setCats(categories); })
       .catch(() => {})
       .finally(() => { if (!off) setLoading(false); });

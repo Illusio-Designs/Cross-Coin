@@ -119,15 +119,23 @@ export default function TestHome() {
         <section className="block">
           <div className="wrap"><div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div></div>
           <div className="revscroll">
-            <div className="revscroll__track">
-              {[...reviews, ...reviews].map((r, i) => (
-                <div className="rev" key={i}>
-                  <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
-                  <p>&ldquo;{r.text}&rdquo;</p>
-                  <div className="who"><div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>{r.loc ? `${r.loc} · ` : ''}VERIFIED</span></div></div>
+            {[0, 1, 2].map((row) => {
+              // Rotate each row's start so the three tracks show different
+              // reviews; duplicate the row so the marquee loops seamlessly.
+              const rotated = [...reviews.slice(row), ...reviews.slice(0, row)];
+              const cards = [...rotated, ...rotated];
+              return (
+                <div className={`revscroll__track${row === 1 ? ' revscroll__track--rev' : ''}`} key={row}>
+                  {cards.map((r, i) => (
+                    <div className="rev" key={i}>
+                      <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
+                      <p>&ldquo;{r.text}&rdquo;</p>
+                      <div className="who"><div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>{r.loc ? `${r.loc} · ` : ''}VERIFIED</span></div></div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </section>
       )}

@@ -54,6 +54,12 @@ const MOBILE_CSS = `
 .cc-test-root .cc-logo{ height:30px; width:auto; display:block; }
 .cc-test-root footer.site .cc-logo{ height:34px; }
 .cc-test-root .brand{ gap:0; }
+/* search + account wrapper is a <span>, so make it a flex row — otherwise the
+   grid-display icon buttons stack vertically and collide with the cart icon. */
+.cc-test-root .nav__extra{ display:inline-flex; align-items:center; gap:4px; }
+/* Desktop product rail: fixed card width (no 1fr) so a card never balloons to
+   the full width and spills over the section below. */
+.cc-test-root .prail{ grid-auto-columns:260px; }
 /* The logo artwork is dark, so flip it to white on the dark ("blue") theme
    backgrounds where it would otherwise disappear. */
 .cc-test-root[data-theme="dark"] .cc-logo{ filter: brightness(0) invert(1); }
@@ -64,13 +70,16 @@ const MOBILE_CSS = `
 .cc-test-root .gallery{ align-self: start; z-index: 0; }
 .cc-test-root .pd ~ .block{ position: relative; z-index: 2; background: var(--bg); border-top: 2px solid var(--line); margin-top: 20px; }
 /* Reviews auto-scroller (Morbix-style infinite marquee, pause on hover). */
-.cc-test-root .revscroll{ overflow:hidden; -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); }
-.cc-test-root .revscroll__track{ display:flex; gap:16px; width:max-content; padding:4px 16px; animation:ccRevScroll 46s linear infinite; }
+.cc-test-root .revscroll{ overflow:hidden; display:flex; flex-direction:column; gap:14px; -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); }
+.cc-test-root .revscroll__track{ display:flex; gap:16px; width:max-content; padding:0 8px; animation:ccRevScroll 48s linear infinite; }
+.cc-test-root .revscroll__track--rev{ animation-direction:reverse; }
+.cc-test-root .revscroll__track:nth-child(2){ animation-duration:58s; }
+.cc-test-root .revscroll__track:nth-child(3){ animation-duration:42s; }
 .cc-test-root .revscroll:hover .revscroll__track{ animation-play-state:paused; }
-.cc-test-root .revscroll .rev{ width:330px; flex:0 0 auto; }
+.cc-test-root .revscroll .rev{ width:330px; flex:0 0 auto; align-self:stretch; }
 @keyframes ccRevScroll{ from{ transform:translateX(0);} to{ transform:translateX(-50%);} }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .revscroll__track{ animation:none; } }
-@media (max-width:520px){ .cc-test-root .revscroll .rev{ width:80vw; } }
+@media (max-width:520px){ .cc-test-root .revscroll .rev{ width:78vw; } }
 /* iOS Safari collapses aspect-ratio boxes that contain percentage-height media,
    which made product/journal/gallery image boxes shrink to ~0 and the cards
    float over the next section. Use a robust padding-top ratio box with
