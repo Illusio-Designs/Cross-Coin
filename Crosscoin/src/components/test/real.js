@@ -146,7 +146,9 @@ export async function fetchReviews(limit = 6) {
     const r = await getAllPublicReviews({ limit });
     const list = r?.reviews || r?.data?.reviews || (Array.isArray(r) ? r : []);
     return list.map((v) => ({
-      name: v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
+      // Backend returns the reviewer name as `reviewerName` (= User.username or
+      // guestName); fall back through the raw fields before the generic label.
+      name: v.reviewerName || v.guestName || v.User?.username || v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
       rating: Number(v.rating) || 5,
       text: v.comment || v.review || v.message || v.body || '',
       loc: (v.city || v.location || '').toString().toUpperCase(),
@@ -205,7 +207,9 @@ export async function fetchProductReviews(productId, limit = 8) {
     const r = await getPublicProductReviews(productId, { limit });
     const list = r?.reviews || r?.data?.reviews || (Array.isArray(r) ? r : []);
     const items = list.map((v) => ({
-      name: v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
+      // Backend returns the reviewer name as `reviewerName` (= User.username or
+      // guestName); fall back through the raw fields before the generic label.
+      name: v.reviewerName || v.guestName || v.User?.username || v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
       rating: Number(v.rating) || 5,
       text: v.comment || v.review || v.message || v.body || '',
       date: v.createdAt || v.created_at || '',
