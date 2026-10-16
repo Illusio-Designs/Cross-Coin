@@ -174,6 +174,21 @@ const MOBILE_CSS = `
 .cc-test-root .citem__qty{ box-shadow:none !important; flex:0 0 auto; }
 .cc-test-root .citem__qty button{ width:28px; height:28px; }
 .cc-test-root .citem__qty span{ min-width:42px; font-size:12px; text-align:center; }
+/* coupon input + best offer + see-all (Morbix) */
+.cc-test-root .couponrow{ display:flex; gap:10px; margin-top:16px; }
+.cc-test-root .couponrow input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); }
+.cc-test-root .couponrow input:focus{ outline:none; border-color:var(--crimson); }
+.cc-test-root .couponrow__btn, .cc-test-root .bestoffer__btn{ flex:0 0 auto; background:#201253; color:#fff; border:2px solid var(--line-ink); border-radius:10px; font-family:"Space Mono",monospace; font-weight:700; font-size:12.5px; padding:0 20px; cursor:pointer; }
+.cc-test-root .bestoffer{ display:flex; align-items:center; gap:10px; margin-top:12px; padding:12px 14px; border:1.5px solid color-mix(in srgb,#0f766e 40%,transparent); background:color-mix(in srgb,#0f766e 8%,var(--surface)); border-radius:10px; }
+.cc-test-root .bestoffer__ic{ color:#0f766e; flex:0 0 auto; }
+.cc-test-root .bestoffer__t{ flex:1; min-width:0; }
+.cc-test-root .bestoffer__t b{ display:block; font-size:13.5px; color:var(--ink); }
+.cc-test-root .bestoffer__t span{ font-size:11.5px; color:var(--ink-faint); }
+.cc-test-root .bestoffer__btn{ padding:9px 15px; font-size:11.5px; }
+.cc-test-root .seeoffers{ display:flex; align-items:center; gap:6px; margin-top:12px; background:none; border:0; padding:0; font-family:"Space Mono",monospace; font-size:12px; font-weight:700; color:#0f766e; cursor:pointer; }
+.cc-test-root .offerlist{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+.cc-test-root .offerlist__row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1.5px dashed var(--line); border-radius:10px; font-size:12.5px; }
+.cc-test-root .offerlist__row button{ flex:0 0 auto; background:none; border:0; color:var(--crimson); font-family:"Space Mono",monospace; font-weight:700; font-size:11.5px; cursor:pointer; }
 /* checkout trust row */
 .cc-test-root .cotrust{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; font-family:"Space Mono",monospace; font-size:11px; color:var(--ink-faint); }
 .cc-test-root .cotrust span{ display:inline-flex; align-items:center; gap:5px; }
@@ -407,6 +422,7 @@ export default function TestLayout({ children }) {
   const [offers, setOffers] = useState([]);
   const [tiersMap, setTiersMap] = useState({});
   const [suggested, setSuggested] = useState([]);
+  const [offersOpen, setOffersOpen] = useState(false);
   const [cookieOpen, setCookieOpen] = useState(false);
   const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
@@ -690,19 +706,28 @@ export default function TestLayout({ children }) {
                 );
               })()}
 
-              {/* tappable live offers */}
-              {!coupon && offers.length > 0 && (
-                <div className="offerwrap">
-                  {offers.slice(0, 4).map((o) => (
-                    <button key={o.code} className="chip" onClick={() => applyPromo(o.code)}>{o.code} · {o.label}</button>
-                  ))}
-                </div>
-              )}
               {coupon ? (
                 <div className="coupon-applied" style={{ marginTop: 14 }}><span>✓ {coupon.code} · −{inr(disc)}</span><button className="x" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer' }} onClick={() => setCoupon(null)}>✕</button></div>
-              ) : (
-                <div className="promo" style={{ marginTop: 14 }}><input ref={promoRef} placeholder="PROMO CODE" /><button className="btn" onClick={() => applyPromo()}>Apply</button></div>
-              )}
+              ) : (<>
+                <div className="couponrow"><input ref={promoRef} placeholder="Coupon code" aria-label="Coupon code" /><button className="couponrow__btn" onClick={() => applyPromo()}>Apply</button></div>
+                {offers.length > 0 && (
+                  <div className="bestoffer">
+                    <span className="bestoffer__ic">✦</span>
+                    <div className="bestoffer__t"><b>Apply {offers[0].code} — {offers[0].label}</b><span>Best offer for your cart</span></div>
+                    <button className="bestoffer__btn" onClick={() => applyPromo(offers[0].code)}>APPLY</button>
+                  </div>
+                )}
+                {offers.length > 1 && (<>
+                  <button className="seeoffers" onClick={() => setOffersOpen((o) => !o)}>See all {offers.length} offers <span>{offersOpen ? '▲' : '▾'}</span></button>
+                  {offersOpen && (
+                    <div className="offerlist">
+                      {offers.slice(1).map((o) => (
+                        <div className="offerlist__row" key={o.code}><div><b>{o.code}</b> · {o.label}{o.min ? ` · min ${inr(o.min)}` : ''}</div><button onClick={() => applyPromo(o.code)}>Apply</button></div>
+                      ))}
+                    </div>
+                  )}
+                </>)}
+              </>)}
             </>)}
           </div>
           <div className="drawer__foot">
