@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { faqService, brandService } from '../../../services';
+import { faqService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 import { richHtml } from '../../../utils/sanitizeHtml';
@@ -40,9 +40,7 @@ const emptyForm = {
   is_active: true,
 };
 
-export default function FaqsManager() {
-  const [brands, setBrands] = useState([]);
-  const [brandId, setBrandId] = useState(1);
+export default function FaqsManager({ brandId = 1 }) {
   const [items, setItems] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -64,13 +62,8 @@ export default function FaqsManager() {
     }
   };
 
-  // Load the brand list so FAQs can be managed (published) per brand.
-  useEffect(() => {
-    brandService.getAllBrands(true)
-      .then((res) => { if (res?.success && Array.isArray(res.data)) setBrands(res.data); })
-      .catch(() => {});
-  }, []);
-
+  // Brand comes from the SEO hub's single shared selector (via the brandId
+  // prop) — re-scope FAQs whenever it or the scope filter changes.
   useEffect(() => { reload(); }, [filterType, brandId]);
 
   const groups = useMemo(() => {
@@ -176,15 +169,6 @@ export default function FaqsManager() {
         subtitle="Manage site-wide and per-product FAQs. Global FAQs now show on the storefront home (before the blog) and at the bottom of every product page; answers also emit FAQPage schema for SEO."
         actions={
           <>
-            <select
-              value={brandId}
-              onChange={(e) => setBrandId(Number(e.target.value))}
-              title="Manage FAQs for this brand"
-              style={{ padding: '8px 10px', border: '1px solid var(--ds-color-border)', borderRadius: 'var(--ds-radius-sm)', fontSize: 14, background: 'var(--ds-color-surface)', fontWeight: 600 }}
-            >
-              {brands.length === 0 && <option value={brandId}>Brand #{brandId}</option>}
-              {brands.map(b => <option key={b.id} value={b.id}>{b.name || b.slug || `Brand #${b.id}`}</option>)}
-            </select>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
