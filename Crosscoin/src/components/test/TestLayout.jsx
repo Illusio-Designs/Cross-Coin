@@ -196,7 +196,9 @@ const MOBILE_CSS = `
 .cc-test-root .wishsq:hover{ transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--line-ink); }
 .cc-test-root .wishsq.on{ background:var(--crimson); border-color:var(--crimson); color:#fff; }
 /* PREPAID10 chip above Buy it now */
-.cc-test-root .prepaidchip{ display:block; width:max-content; max-width:100%; margin:14px auto 10px; text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 10%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 28%,transparent); border-radius:999px; padding:8px 18px; }
+.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:999px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
+/* button gets a touch more top room so its label clears the overlapping chip */
+.cc-test-root .btn--buynow{ padding-top:20px; }
 /* delivery pincode check */
 .cc-test-root .pdpdeliv{ margin-top:14px; }
 .cc-test-root .pdpdeliv__l{ display:block; font-family:"Space Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
