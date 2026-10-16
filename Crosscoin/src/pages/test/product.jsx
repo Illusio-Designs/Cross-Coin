@@ -6,6 +6,7 @@ import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, colorToCss } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
+import { richHtml } from '../../utils/sanitizeHtml';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -17,11 +18,6 @@ function Spec({ label, value }) {
     </div>
   );
 }
-
-const ACC = [
-  ['Description', 'Everyday essentials minted to a standard — comfortable, durable and honestly priced. (Full description comes from the product record on the live store.)'],
-  ['Shipping & returns', 'Ships in 24h. Free shipping over ₹799. 7-day easy returns with free pickup, refund to original method or store credit.'],
-];
 
 export default function TestProduct() {
   const router = useRouter();
@@ -79,10 +75,20 @@ export default function TestProduct() {
   const pickVariant = (v) => { setVariant(v); if (v.img) setMainImg(v.img); if (v.sizes?.length) setSize(v.sizes[0]); };
 
   const add = (buyNow) => {
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
+    addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     if (buyNow) router.push('/test/cart');
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
+
+  // Real product description (HTML from the live product record), with a safe
+  // fallback. Shipping/returns stays a static note.
+  const descHtml = (p.raw && (p.raw.description || p.raw.long_description || p.raw.longDescription)) || '';
+  const accItems = [
+    { q: 'Description', node: descHtml
+        ? <div className="pdt-desc-body" {...richHtml(descHtml)} />
+        : <div>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</div> },
+    { q: 'Shipping & returns', node: <div>Ships in 24h. Free shipping over ₹799. 7-day easy returns with free pickup, refund to original method or store credit.</div> },
+  ];
 
   return (
     <TestLayout>
@@ -149,10 +155,10 @@ export default function TestProduct() {
             </div>
 
             <div className="acc">
-              {ACC.map(([q, a], i) => (
+              {accItems.map(({ q, node }, i) => (
                 <div className={`acc__i${acc === i ? ' open' : ''}`} key={q}>
                   <button className="acc__q" onClick={() => setAcc(acc === i ? -1 : i)}>{q}<span className="pm2">{acc === i ? '–' : '+'}</span></button>
-                  <div className="acc__a" style={{ maxHeight: acc === i ? 400 : 0 }}><div>{a}</div></div>
+                  <div className="acc__a" style={{ maxHeight: acc === i ? 1200 : 0, overflow: acc === i ? 'auto' : 'hidden' }}><div>{node}</div></div>
                 </div>
               ))}
             </div>
@@ -176,14 +182,23 @@ export default function TestProduct() {
         {prodReviews.items.length > 0 && (
           <section className="block">
             <div className="sechead"><div><span className="eyebrow">Reviews{prodReviews.count ? ` · ${prodReviews.count}` : ''}</span><h2>What buyers say{prodReviews.avg ? ` · ${prodReviews.avg.toFixed(1)}★` : ''}</h2></div></div>
-            <div className="revgrid">
-              {prodReviews.items.slice(0, 6).map((r, i) => (
-                <div className="rev" key={i}>
-                  <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
-                  <p>&ldquo;{r.text}&rdquo;</p>
-                  <div className="who"><div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>VERIFIED</span></div></div>
-                </div>
-              ))}
+            <div className="revscroll">
+              {[0, 1, 2].map((row) => {
+                const base = prodReviews.items;
+                const rotated = [...base.slice(row), ...base.slice(0, row)];
+                const cards = [...rotated, ...rotated];
+                return (
+                  <div className={`revscroll__track${row === 1 ? ' revscroll__track--rev' : ''}`} key={row}>
+                    {cards.map((r, i) => (
+                      <div className="rev" key={i}>
+                        <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
+                        <p>&ldquo;{r.text}&rdquo;</p>
+                        <div className="who"><div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>VERIFIED</span></div></div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

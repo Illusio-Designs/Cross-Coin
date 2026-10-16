@@ -2,10 +2,11 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
+import { getDirectImageUrl, ikTransform } from '../../utils/imageUtils';
 
 const imgOf = (d) => { try { return getImageUrl(d) || ''; } catch (_) { return ''; } };
 
@@ -175,12 +176,18 @@ export async function fetchBlogs(limit = 3) {
   try {
     const r = await getPublicBlogs({ limit });
     const list = r?.data?.posts || r?.data?.blogs || r?.posts || r?.blogs || (Array.isArray(r?.data) ? r.data : (Array.isArray(r) ? r : []));
-    return list.map((b) => ({
-      title: b.title || b.name || '',
-      slug: b.slug || '',
-      tag: (b.category?.name || b.category || b.tag || 'Journal'),
-      img: imgOf(b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image),
-    })).filter((b) => b.title).slice(0, limit);
+    return list.map((b) => {
+      const raw = b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image || b.banner || b.bannerImage || '';
+      let img = '';
+      try { img = raw ? ikTransform(getDirectImageUrl({ image_url: raw }) || raw, 800) : ''; } catch (_) { img = ''; }
+      if (!img) { try { img = imgOf(raw); } catch (_) { img = ''; } }
+      return {
+        title: b.title || b.name || '',
+        slug: b.slug || '',
+        tag: (b.category?.name || b.category || b.tag || 'Journal'),
+        img,
+      };
+    }).filter((b) => b.title).slice(0, limit);
   } catch (_) { return []; }
 }
 
@@ -209,6 +216,39 @@ export async function fetchProductFaqs(productId) {
     const { data } = await axios.get(`${API_URL}/api/public/faqs?type=product&id=${encodeURIComponent(productId)}`, addBrandHeader());
     const list = Array.isArray(data?.faqs) ? data.faqs : [];
     return list.map((f) => [f.question || f.q || '', f.answer || f.a || '']).filter((x) => x[0] && x[1]);
+  } catch (_) { return []; }
+}
+
+// Real homepage sliders/banners → hero. Returns the real banner image (ImageKit,
+// width-optimised), title, description and CTA target.
+export async function fetchSliders() {
+  try {
+    const r = await getPublicSliders();
+    const list = Array.isArray(r) ? r : (r?.sliders || r?.data?.sliders || r?.data || []);
+    return list.map((s) => {
+      const raw = s.image || s.imageUrl || s.image_url || '';
+      let img = '';
+      try { img = ikTransform(getDirectImageUrl({ image_url: raw }) || raw, 1600); } catch (_) { img = raw; }
+      const slug = s.categorySlug || s.category_slug || s.category?.slug || '';
+      return {
+        img,
+        title: s.title || '',
+        description: s.description || s.subtitle || '',
+        cta: s.buttonText || s.button_text || s.cta || '',
+        catSlug: slug,
+        catName: s.categoryName || s.category_name || s.category?.name || '',
+      };
+    }).filter((s) => s.img);
+  } catch (_) { return []; }
+}
+
+// Real product search (live search endpoint) → normalised products for the grid.
+export async function fetchSearch(q, params = {}) {
+  if (!q || !q.trim()) return [];
+  try {
+    const r = await searchProducts(q.trim(), { page: 1, limit: 60, ...params });
+    const list = r?.data?.products || r?.products || (Array.isArray(r) ? r : []);
+    return list.map(normalizeProduct).filter(Boolean);
   } catch (_) { return []; }
 }
 

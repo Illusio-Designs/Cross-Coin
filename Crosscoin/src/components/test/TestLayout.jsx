@@ -87,6 +87,21 @@ const MOBILE_CSS = `
 .cc-test-root .card__img{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .card__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .card__img .mint{ left:20%; top:20%; }
+/* Defensive: a product-card image can never balloon out of its card/grid cell,
+   on any browser or during image load — the card clips and the ratio box caps. */
+.cc-test-root .pgrid > *, .cc-test-root .prail > *{ min-width:0; }
+.cc-test-root .card{ overflow:hidden; }
+.cc-test-root .card__img{ max-height:72vh; }
+.cc-test-root .card__img img{ max-width:100%; max-height:100%; }
+/* Real banner/slider image in the hero (stamped frame). */
+.cc-test-root .hero__art--banner{ position:relative; border:2px solid var(--line-ink); border-radius:14px; overflow:hidden; box-shadow:var(--stamp); background:var(--paper-2); aspect-ratio:4/3; width:100%; }
+.cc-test-root .hero__art--banner img{ width:100%; height:100%; object-fit:cover; display:block; }
+@media (max-width:600px){ .cc-test-root .hero__art--banner{ display:block !important; aspect-ratio:16/10; margin-top:6px; } }
+/* Search bar on the /test/search page. */
+.cc-test-root .searchbar{ display:flex; gap:10px; margin-top:16px; max-width:560px; }
+.cc-test-root .searchbar input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:15px; box-shadow:var(--stamp-sm); }
+.cc-test-root .searchbar input:focus{ outline:none; border-color:var(--crimson); }
+.cc-test-root .searchbar .btn{ flex:0 0 auto; }
 .cc-test-root .post__img{ aspect-ratio:auto !important; height:0; padding-top:62%; position:relative; overflow:hidden; }
 .cc-test-root .post__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
@@ -276,8 +291,8 @@ export default function TestLayout({ children }) {
           <div className="nav__act">
             <button className="ibtn" onClick={toggleTheme} aria-label="Theme">{I.sun()}</button>
             <span className="nav__extra">
-              <button className="ibtn" aria-label="Search">{I.search()}</button>
-              <button className="ibtn" aria-label="Account">{I.user()}</button>
+              <button className="ibtn" aria-label="Search" onClick={() => go('/test/search')}>{I.search()}</button>
+              <button className="ibtn" aria-label="Account" onClick={() => showToast('Account & order tracking — coming to the preview')}>{I.user()}</button>
             </span>
             <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>

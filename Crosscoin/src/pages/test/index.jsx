@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast } from '../../components/test/ui';
 import { FAQS } from '../../components/test/data';
-import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs } from '../../components/test/real';
+import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 
 const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
@@ -20,16 +20,18 @@ export default function TestHome() {
   const [deal, setDeal] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [faqs, setFaqs] = useState([]);
+  const [slide, setSlide] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let off = false;
-    Promise.all([fetchProducts({ limit: 8 }), fetchCategories(), fetchReviews(12), fetchCoupons(), fetchBlogs(3), fetchFaqs()])
-      .then(([prods, categories, revs, coupons, posts, realFaqs]) => {
+    Promise.all([fetchProducts({ limit: 8 }), fetchCategories(), fetchReviews(12), fetchCoupons(), fetchBlogs(3), fetchFaqs(), fetchSliders()])
+      .then(([prods, categories, revs, coupons, posts, realFaqs, sliders]) => {
         if (off) return;
         setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6));
         setReviews(revs.slice(0, 10)); setDeal(coupons[0] || null);
         setBlogs(posts); setFaqs(realFaqs.length ? realFaqs : FAQS);
+        setSlide(sliders[0] || null);
       })
       .catch(() => { if (!off) setFaqs(FAQS); })
       .finally(() => { if (!off) setLoading(false); });
@@ -40,15 +42,17 @@ export default function TestHome() {
     <TestLayout>
       <Head><title>CrossCoin — Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
 
-      {/* hero */}
+      {/* hero — real banner/slider when the live store has one, else the Mint art */}
       <section className="hero">
         <div className="wrap">
           <div>
-            <span className="tagpill"><i>DROP 04</i> The Winter Mint is live</span>
-            <h1>Everyday<br />essentials, <em className="ul">minted</em><br />to last.</h1>
-            <p className="lede">Honest basics struck like coins — built to a standard, priced without the markup. Socks, knitwear and more, one friendly checkout.</p>
+            <span className="tagpill"><i>DROP 04</i> {slide?.catName || 'The Winter Mint is live'}</span>
+            {slide?.title
+              ? <h1>{slide.title}</h1>
+              : <h1>Everyday<br />essentials, <em className="ul">minted</em><br />to last.</h1>}
+            <p className="lede">{slide?.description || 'Honest basics struck like coins — built to a standard, priced without the markup. Socks, knitwear and more, one friendly checkout.'}</p>
             <div className="cta">
-              <button className="btn btn--crimson btn--lg" onClick={() => router.push('/test/shop')}>Shop the mint {I.arrow()}</button>
+              <button className="btn btn--crimson btn--lg" onClick={() => router.push(slide?.catName ? `/test/shop?cat=${encodeURIComponent(slide.catName)}` : '/test/shop')}>{slide?.cta || 'Shop the mint'} {I.arrow()}</button>
               <button className="btn btn--lg" onClick={() => router.push('/test/shop')}>Bestsellers</button>
             </div>
             <div className="denoms">
@@ -57,12 +61,16 @@ export default function TestHome() {
               <div className="denom"><div className="n">7-day</div><div className="l">Easy returns</div></div>
             </div>
           </div>
-          <div className="hero__art">
-            <div className="hero__coin"><span>₹</span></div>
-            <div className="hero__chip c1">LEGAL TENDER · COMFORT</div>
-            <div className="hero__chip c2">↑ FREE SHIP ₹799+</div>
-            <div className="hero__chip c3">EST. 2021 · INDIA</div>
-          </div>
+          {slide?.img
+            ? <div className="hero__art hero__art--banner"><img src={slide.img} alt={slide.title || 'CrossCoin'} /></div>
+            : (
+              <div className="hero__art">
+                <div className="hero__coin"><span>₹</span></div>
+                <div className="hero__chip c1">LEGAL TENDER · COMFORT</div>
+                <div className="hero__chip c2">↑ FREE SHIP ₹799+</div>
+                <div className="hero__chip c3">EST. 2021 · INDIA</div>
+              </div>
+            )}
         </div>
       </section>
 
