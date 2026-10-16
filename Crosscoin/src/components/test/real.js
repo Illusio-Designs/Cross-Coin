@@ -91,6 +91,8 @@ export function normalizeProduct(p) {
     id: p.id, slug: p.slug, name: p.name,
     brand: String(brand).toUpperCase(),
     cat: p.category?.name || p.categoryName || p.category_name || '',
+    catId: p.categoryId ?? p.category_id ?? p.category?.id ?? null,
+    badge: (p.badge || p.tag || '').toString(),
     now, was, off,
     img: mainImg, images,
     rating: rating != null ? Number(rating).toFixed(1) : null,

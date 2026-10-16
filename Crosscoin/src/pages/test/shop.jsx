@@ -27,7 +27,14 @@ export default function TestShop() {
   useEffect(() => { if (router.query.cat) setFilter(String(router.query.cat)); }, [router.query.cat]);
 
   const list = useMemo(() => {
-    let l = products.filter((p) => filter === 'all' || (p.cat || '').toLowerCase() === filter.toLowerCase());
+    const selCat = cats.find((c) => c.name === filter);
+    let l = products.filter((p) => {
+      if (filter === 'all') return true;
+      // Catalog rows carry categoryId (not a name), so match by id first, then
+      // fall back to a name match.
+      if (selCat && p.catId != null && String(p.catId) === String(selCat.id)) return true;
+      return (p.cat || '').toLowerCase() === filter.toLowerCase();
+    });
     if (sort === 'low') l = [...l].sort((a, b) => a.now - b.now);
     else if (sort === 'high') l = [...l].sort((a, b) => b.now - a.now);
     else if (sort === 'rating') l = [...l].sort((a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0));

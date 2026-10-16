@@ -89,6 +89,13 @@ const MOBILE_CSS = `
 .cc-test-root .cc-card__img{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .cc-card__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .cc-card__img .mint{ left:20%; top:20%; }
+/* badge + sale flag must sit ABOVE the absolutely-filled image, not behind it */
+.cc-test-root .cc-card__img .flags{ position:absolute; top:10px; left:10px; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+.cc-test-root .cc-card__img .flags .flag{ position:static; top:auto; left:auto; }
+.cc-test-root .cc-card__wish{ z-index:3; }
+/* breathing room above the product grids / rail */
+.cc-test-root .pgrid{ padding-top:6px; }
+.cc-test-root .prail{ padding-top:6px; }
 /* Defensive: a product-card image can never balloon out of its card/grid cell,
    on any browser or during image load — the card clips and the ratio box caps. */
 .cc-test-root .pgrid > *, .cc-test-root .prail > *{ min-width:0; }

@@ -56,7 +56,12 @@ export function ProductCard({ p }) {
   return (
     <article className="cc-card">
       <div className="cc-card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer', overflow: 'hidden' }}>
-        {p.off > 0 && <span className="flag sale">−{p.off}%</span>}
+        {(p.badge || p.off > 0) && (
+          <span className="flags">
+            {p.badge ? <span className="flag">{String(p.badge).toUpperCase()}</span> : null}
+            {p.off > 0 ? <span className="flag sale">−{p.off}%</span> : null}
+          </span>
+        )}
         <button className={`cc-card__wish${isWished(p.id) ? ' on' : ''}`} aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(16)}</button>
         {p.img
           ? <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
