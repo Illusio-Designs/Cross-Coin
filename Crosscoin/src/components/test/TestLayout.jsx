@@ -15,6 +15,10 @@ const MOBILE_CSS = `
 .cc-test-root .cc-logo{ height:30px; width:auto; display:block; }
 .cc-test-root footer.site .cc-logo{ height:34px; }
 .cc-test-root .brand{ gap:0; }
+/* The logo artwork is dark, so flip it to white on the dark ("blue") theme
+   backgrounds where it would otherwise disappear. */
+.cc-test-root[data-theme="dark"] .cc-logo{ filter: brightness(0) invert(1); }
+@media (prefers-color-scheme: dark){ .cc-test-root:not([data-theme="light"]) .cc-logo{ filter: brightness(0) invert(1); } }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
