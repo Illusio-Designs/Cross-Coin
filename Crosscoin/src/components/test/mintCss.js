@@ -23,7 +23,7 @@ export const MINT_CSS = `.cc-test-root{
     --stamp-sm: 3px 3px 0 var(--line-ink);
     --maxw: 1180px;
     --ease: cubic-bezier(.22,.68,.24,1);
-    --r: 10px;
+    --r: 4px;
     color-scheme: light;
   }
 @media (prefers-color-scheme: dark){.cc-test-root:not([data-theme="light"]){
