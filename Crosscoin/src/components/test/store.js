@@ -33,12 +33,12 @@ export function useCart() {
 export const cartCount = (c = cart) => c.reduce((n, i) => n + i.qty, 0);
 export const cartSubtotal = (c = cart) => c.reduce((s, i) => s + i.unit * i.qty, 0);
 
-export function addItem({ id, name, brand, color, size, pack, packq, unit }, qty = 1) {
+export function addItem({ id, name, brand, color, size, pack, packq, unit, img }, qty = 1) {
   hydrate();
   const key = [id, color, size, packq].join('|');
   const ex = cart.find((i) => i.key === key);
   if (ex) ex.qty += qty;
-  else cart = [...cart, { key, id, name, brand, color, size, pack, packq, unit, qty }];
+  else cart = [...cart, { key, id, name, brand, color, size, pack, packq, unit, img: img || '', qty }];
   emit();
 }
 export function removeItem(key) { hydrate(); cart = cart.filter((i) => i.key !== key); emit(); }

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty } from './store';
-import { I, mintStyle } from './ui';
+import { I, Thumb } from './ui';
 import { inr } from './data';
 
 const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'CODE CROSS10 −10%', 'RETURNS 7-DAY', 'COD AVAILABLE', 'MERINO · LOW STOCK'];
@@ -107,7 +107,7 @@ export default function TestLayout({ children }) {
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '30px 0', textAlign: 'center' }}>Your cart is empty.</p>
             : cart.map((i) => (
               <div className="ditem" key={i.key}>
-                <div className="th"><span className="mint" style={mintStyle(i.color)} /></div>
+                <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
                 <div>
                   <h4>{i.name}</h4>
                   <div className="m">{i.brand} · {i.color} · {i.size}{i.packq > 1 ? ` · ${i.pack}` : ''}</div>

@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { I, mintStyle, toast } from '../../components/test/ui';
+import { I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { useCart, cartSubtotal, changeQty, removeItem, clearCart } from '../../components/test/store';
 
@@ -62,7 +62,7 @@ export default function TestCart() {
                   </div>
                 ) : cart.map((i) => (
                   <div className="citem" key={i.key}>
-                    <div className="th"><span className="mint" style={mintStyle(i.color)} /></div>
+                    <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
                     <div>
                       <h3>{i.name}</h3>
                       <div className="meta">{i.brand} · {i.color} · Size {i.size}{i.packq > 1 ? ` · ${i.pack}` : ''}</div>
@@ -140,7 +140,7 @@ export default function TestCart() {
                 <div style={{ marginBottom: 12 }}>
                   {cart.map((i) => (
                     <div className="miniitem" key={i.key}>
-                      <div className="th"><span className="mint" style={mintStyle(i.color)} /></div>
+                      <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
                       <div><div className="nm">{i.name} ×{i.qty}</div><div className="mm">{i.color} · {i.size}{i.packq > 1 ? ` · ${i.pack}` : ''}</div></div>
                       <div className="lp">{inr(i.unit * i.qty)}</div>
                     </div>

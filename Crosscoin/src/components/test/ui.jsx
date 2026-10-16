@@ -1,9 +1,8 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
 import { addItem } from './store';
-import { COLOR_HEX, inr, PACKS } from './data';
-
-export const mintStyle = (color) => ({ background: COLOR_HEX[color] || COLOR_HEX.Crimson });
+import { inr } from './data';
+import { colorToCss } from './real';
 
 /* ---- icons (stroke inherits currentColor) ---- */
 const S = (p) => ({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', ...p });
@@ -21,6 +20,7 @@ export const I = {
   ret: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 12a9 9 0 1 1 3 6.7L3 21" /><path d="M3 21v-4h4" /></svg>,
   card: (s = 24) => <svg {...S()} width={s} height={s}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18" /></svg>,
   shield: (s = 24) => <svg {...S()} width={s} height={s}><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /><path d="m9 12 2 2 4-4" /></svg>,
+  box: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10" /></svg>,
 };
 
 export function toast(msg) {
@@ -28,29 +28,41 @@ export function toast(msg) {
   window.dispatchEvent(new CustomEvent('cc-test-toast', { detail: msg }));
 }
 
+// A product thumbnail that shows the real image, falling back to a neutral
+// coin-tile (keeps the look intact when a product has no image).
+export function Thumb({ src, color, className, style }) {
+  if (src) return <img className={className} src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }} />;
+  const bg = color ? colorToCss(color) : 'var(--paper-2)';
+  return <span className={className} style={{ width: '60%', aspectRatio: '1', borderRadius: '50%', background: bg, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08)', ...style }} />;
+}
+
 export function ProductCard({ p }) {
   const router = useRouter();
-  const open = () => router.push(`/test/product?id=${p.id}`);
+  const open = () => router.push(`/test/product?slug=${encodeURIComponent(p.slug || '')}`);
   const quickAdd = (e) => {
     e.stopPropagation();
-    addItem({ id: p.id, name: p.name, brand: p.brand, color: p.colors[0], size: 'M', pack: PACKS[0].label, packq: 1, unit: p.now }, 1);
+    addItem({ id: p.id, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: p.sizes?.[0] || '', pack: 'Single', packq: 1, unit: p.now, img: p.img }, 1);
     toast('Added to cart ✓');
     window.dispatchEvent(new CustomEvent('cc-test-opencart'));
   };
   return (
     <article className="card">
-      <div className="card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer' }}>
-        {p.flag && <span className="flag">{p.flag}</span>}
-        <span className="flag sale" style={p.flag ? { top: 'auto', bottom: 10, left: 10 } : undefined}>−{p.off}%</span>
+      <div className="card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer', overflow: 'hidden' }}>
+        {p.off > 0 && <span className="flag sale">−{p.off}%</span>}
         <button className="card__wish" aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); e.currentTarget.classList.toggle('on'); toast('Saved to wishlist ♥'); }}>{I.heart(16)}</button>
-        <span className="mint" style={mintStyle(p.colors[0])} />
-        <span className="ring" />
+        {p.img
+          ? <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <><span className="mint" style={{ background: 'var(--paper-2)' }} /><span className="ring" /></>}
       </div>
       <div className="card__body">
         <span className="kl">{p.brand}</span>
         <h3 onClick={open} style={{ cursor: 'pointer' }}>{p.name}</h3>
-        <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>
-        <div className="price"><span className="now">{inr(p.now)}</span><span className="was">{inr(p.was)}</span><span className="off">{p.off}% off</span></div>
+        {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
+        <div className="price">
+          <span className="now">{inr(p.now)}</span>
+          {p.was > p.now && <span className="was">{inr(p.was)}</span>}
+          {p.off > 0 && <span className="off">{p.off}% off</span>}
+        </div>
       </div>
       <button className="btn add" onClick={quickAdd}>Quick add</button>
     </article>

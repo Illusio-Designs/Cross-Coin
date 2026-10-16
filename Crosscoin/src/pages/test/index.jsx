@@ -1,14 +1,28 @@
 import Head from 'next/head';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, I, mintStyle, toast } from '../../components/test/ui';
-import { PRODUCTS, CATS, FAQS } from '../../components/test/data';
+import { ProductCard, I, toast } from '../../components/test/ui';
+import { FAQS } from '../../components/test/data';
+import { fetchProducts, fetchCategories } from '../../components/test/real';
+
+const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
 
 export default function TestHome() {
   const router = useRouter();
   const [open, setOpen] = useState(0);
-  const rail = PRODUCTS.slice(0, 6);
+  const [rail, setRail] = useState([]);
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let off = false;
+    Promise.all([fetchProducts({ limit: 8 }), fetchCategories()])
+      .then(([prods, categories]) => { if (off) return; setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6)); })
+      .catch(() => {})
+      .finally(() => { if (!off) setLoading(false); });
+    return () => { off = true; };
+  }, []);
 
   return (
     <TestLayout>
@@ -46,10 +60,11 @@ export default function TestHome() {
           <div className="sechead"><div><span className="eyebrow">[ 01 ] Denominations</span><h2>Shop by category</h2></div>
             <span className="seelink" onClick={() => router.push('/test/shop')}>Browse all →</span></div>
           <div className="catlist">
-            {CATS.map((c, i) => (
-              <div className="catrow" key={c.name} onClick={() => router.push('/test/shop')}>
-                <span className="no">0{i + 1}</span><h3>{c.name}</h3><span className="ct">{c.n} styles</span>
-                <span className="swatch" style={mintStyle(['Crimson', 'Indigo', 'Forest', 'Sand'][i])} />
+            {cats.length === 0 && <div className="catrow" style={{ color: 'var(--ink-faint)' }}><span className="no">—</span><h3 style={{ fontSize: 20 }}>{loading ? 'Loading categories…' : 'No categories'}</h3></div>}
+            {cats.map((c, i) => (
+              <div className="catrow" key={c.id || c.name} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                <span className="no">0{i + 1}</span><h3>{c.name}</h3><span className="ct">{c.count != null ? `${c.count} styles` : ''}</span>
+                <span className="swatch" style={{ background: SWATCH[i % SWATCH.length] }} />
                 <span className="arw">{I.arrow(16)}</span>
               </div>
             ))}
@@ -62,7 +77,11 @@ export default function TestHome() {
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 02 ] In circulation</span><h2>Bestsellers</h2></div>
             <span className="seelink" onClick={() => router.push('/test/shop')}>See all →</span></div>
-          <div className="prail">{rail.map((p) => <ProductCard key={p.id} p={p} />)}</div>
+          <div className="prail">
+            {loading && rail.length === 0
+              ? <div className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '20px 2px' }}>Loading products…</div>
+              : rail.map((p) => <ProductCard key={p.id} p={p} />)}
+          </div>
         </div>
       </section>
 
