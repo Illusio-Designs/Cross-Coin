@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Table, Pagination, Modal, Select, Input } from "../../../components/ui";
-import { PageHeader, FilterBar } from "../../../components/Dashboard/primitives";
+import { PageHeader, FilterBar, Panel, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { userService } from "../../../services";
@@ -37,12 +37,22 @@ const getUserRoles = (u) => {
   return [...set];
 };
 
+// Initials for the avatar chip (e.g. "priya.k" -> "PK", "admin" -> "AD").
+function staffInitials(name) {
+  const s = String(name || '').trim();
+  if (!s) return '—';
+  const parts = s.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+
 function RoleBadge({ role }) {
   const r = ROLES.find(x => x.value === role);
   if (!r) return <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>{role}</span>;
   return (
     <span className="brand-tag" style={{ color: 'var(--ds-color-text)', background: 'var(--ds-color-surface-soft)', borderColor: 'var(--ds-color-border)' }}>
-      <span className="brand-tag-dot" style={{ backgroundColor: 'var(--ds-color-text-faint)' }} />
+      {/* Per-role colour dot so Admin / Product / Order / WhatsApp read apart at a glance. */}
+      <span className="brand-tag-dot" style={{ backgroundColor: r.color }} />
       {r.label}
     </span>
   );
@@ -156,7 +166,12 @@ export default function StaffUsers() {
 
   const columns = [
     { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: '#9ca3af', fontSize: 13 }}>{r._sn}</span> },
-    { header: 'Name',    accessor: 'username',  cell: r => <span style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{r.username}</span> },
+    { header: 'User', accessor: 'username', cell: r => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ds-color-text)', color: 'var(--ds-color-surface)', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{staffInitials(r.username)}</span>
+          <span style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{r.username}</span>
+        </span>
+      ) },
     { header: 'Email',   accessor: 'email',     cell: r => <span style={{ color: '#6b7280', fontSize: 13 }}>{r.email}</span> },
     { header: 'Roles',   accessor: 'role',      cell: r => <RoleBadges roles={getUserRoles(r)} /> },
     { header: 'Joined',  accessor: 'createdAt', cell: r => <span style={{ fontSize: 13, color: '#9ca3af' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '—'}</span> },
@@ -196,27 +211,31 @@ export default function StaffUsers() {
         </FilterBar>
 
         {/* ── Table ── */}
-        <div className="sl-table-wrap">
+        <Panel flush>
           {loading ? (
             <div className="sl-loader-wrap"><Loader /></div>
           ) : error ? (
             <div className="dm-error-banner">{error}</div>
           ) : filtered.length === 0 ? (
-            <div className="sl-empty">
-              <div className="sl-empty-icon">{IC.users}</div>
-              <p>{search ? 'No staff match your search.' : 'No staff users found. Add one to get started.'}</p>
-            </div>
+            <EmptyState
+              icon={IC.users}
+              title={search || filterRole !== 'all' ? 'No staff match' : 'No staff users yet'}
+              message={search || filterRole !== 'all' ? 'Try a different search or role filter.' : 'Add your first staff member to get started.'}
+              action={!search && filterRole === 'all' && (
+                <Button variant="primary" onClick={openCreate}>+ Add Staff</Button>
+              )}
+            />
           ) : (
             <>
               <Table columns={columns} data={pageItems} striped hoverable cardOnMobile />
               {filtered.length > itemsPerPage && (
-                <div className="sl-pagination">
+                <div className="sl-pagination" style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
                   <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* ── Create / Edit Modal ── */}

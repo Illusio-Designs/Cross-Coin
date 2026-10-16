@@ -123,8 +123,23 @@ export function Policies() {
 
   const columns = [
     { key: "serial_number", label: "Sr. No", render: (r) => r.serial_number },
-    { key: "title", label: "Title", render: (r) => <span className="cat-name-cell">{r.title}</span> },
-    { key: "brand_id", label: "Scope", render: (r) => <span className="cat-desc-cell">{r.brand_id == null ? 'Global (all brands)' : (brands.find(b => b.id === r.brand_id)?.display_name || brands.find(b => b.id === r.brand_id)?.name || `Brand #${r.brand_id}`)}</span> },
+    { key: "title", label: "Title", render: (r) => (
+        <span className="cat-name-cell" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: 'var(--ds-color-text-faint)', display: 'inline-flex' }}><HugeiconsIcon icon={File01Icon} size={15} strokeWidth={2} /></span>
+          {r.title}
+        </span>
+      ) },
+    { key: "brand_id", label: "Scope", render: (r) => {
+        const isGlobal = r.brand_id == null;
+        const label = isGlobal ? 'Global' : (brands.find(b => b.id === r.brand_id)?.display_name || brands.find(b => b.id === r.brand_id)?.name || `Brand #${r.brand_id}`);
+        return (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 650, padding: '3px 9px', borderRadius: 6,
+            background: isGlobal ? 'var(--ds-color-info-bg, #e5edfd)' : 'var(--ds-color-surface-soft)',
+            color: isGlobal ? 'var(--ds-color-info, #1d4ed8)' : 'var(--ds-color-text-muted)',
+          }}>{label}</span>
+        );
+      } },
     { key: "content", label: "Content Preview", render: (r) => <span className="cat-desc-cell">{getPlainText(r.content).slice(0, 80)}{getPlainText(r.content).length > 80 ? '...' : ''}</span> },
     {
       key: "actions", label: "Actions",
