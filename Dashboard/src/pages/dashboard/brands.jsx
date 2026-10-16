@@ -11,7 +11,8 @@ import { ConfirmModal } from '../../components/common/AlertModal';
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from '../../components/Dashboard/primitives';
 import { queryKeys } from '../../lib/queryClient';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, PencilEdit02Icon, Delete02Icon, ToggleOnIcon, ToggleOffIcon, Building01Icon, Copy01Icon, ArrowRight01Icon, FloppyDiskIcon } from '@hugeicons/core-free-icons';
+import { Add01Icon, PencilEdit02Icon, Delete02Icon, ToggleOnIcon, ToggleOffIcon, Building01Icon, Copy01Icon, ArrowRight01Icon, FloppyDiskIcon,
+  CreditCardIcon, DeliveryTruck01Icon, Analytics01Icon, Mail01Icon, Message01Icon, Share08Icon, SquareLock02Icon, Key01Icon, Settings01Icon, MetaIcon } from '@hugeicons/core-free-icons';
 
 const IC = {
   add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
@@ -24,6 +25,24 @@ const IC = {
   chevron: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
   save: <HugeiconsIcon icon={FloppyDiskIcon} size={16} strokeWidth={2} />,
 };
+
+// Category cards for the per-brand settings drill-down. Each category opens on
+// click and shows only its own fields. 'meta' is a virtual category for the
+// Meta Conversions API test. Hugeicons, matching the rest of the dashboard.
+const CAT_META = {
+  payment:      { label: 'Payment',   icon: CreditCardIcon },
+  shipping:     { label: 'Shipping',  icon: DeliveryTruck01Icon },
+  analytics:    { label: 'Analytics', icon: Analytics01Icon },
+  email:        { label: 'Email',     icon: Mail01Icon },
+  sms:          { label: 'SMS',       icon: Message01Icon },
+  social:       { label: 'Social',    icon: Share08Icon },
+  social_media: { label: 'Social',    icon: Share08Icon },
+  security:     { label: 'Security',  icon: SquareLock02Icon },
+  api:          { label: 'API Keys',  icon: Key01Icon },
+  general:      { label: 'General',   icon: Settings01Icon },
+};
+const catIcon = (cat, size = 20) => <HugeiconsIcon icon={(CAT_META[cat] || CAT_META.general).icon} size={size} strokeWidth={1.9} />;
+const catLabel = (cat) => (CAT_META[cat] || { label: cat }).label;
 
 const CATEGORY_LABEL = { general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', social_media: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
@@ -58,6 +77,7 @@ export function BrandManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [expanded, setExpanded] = useState(null);   // brand id whose settings are open
+  const [openCat, setOpenCat] = useState(null);     // "<brandId>:<category>" of the open category card
   const [draft, setDraft] = useState({});           // `${brandId}:${key}` -> value being edited
   const [savingKey, setSavingKey] = useState(null);
   const [addRowFor, setAddRowFor] = useState(null); // brand id showing the add-setting row
@@ -319,9 +339,23 @@ export function BrandManager() {
                   const extraSettings = (settingsByBrand[brand.id] || [])
                     .filter(s => !IGNORED_KEY.test(s.key) && !SEO_SETTING(s) && !predefinedKeys.some(k => k.key === s.key))
                     .sort((a, b) => a.key.localeCompare(b.key));
+                  // Drill-down: group this brand's settings by category into cards;
+                  // one category opens at a time (openName). 'meta' is a virtual
+                  // card for the Conversions API test.
+                  const vmap = valueMap(brand.id);
+                  const isSet = (key) => { const s = vmap.get(key); return !!(s && s.value !== '' && s.value != null); };
+                  const settingRows = [
+                    ...predefinedKeys.map(k => ({ key: k.key, category: k.category || 'general', description: k.description || '', custom: false })),
+                    ...extraSettings.map(s => ({ key: s.key, category: s.category || 'general', description: s.description || '', custom: true })),
+                  ];
+                  const byCat = {};
+                  for (const r of settingRows) (byCat[r.category] = byCat[r.category] || []).push(r);
+                  const cats = Object.keys(byCat).sort((a, b) => catLabel(a).localeCompare(catLabel(b)));
+                  const openName = (openCat && openCat.startsWith(brand.id + ':')) ? openCat.slice(String(brand.id).length + 1) : null;
+                  const toggleCat = (cat) => setOpenCat(openName === cat ? null : `${brand.id}:${cat}`);
                   return (
                     <React.Fragment key={brand.id}>
-                      <tr style={{ cursor: 'pointer', background: isOpen ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)' }} onClick={() => setExpanded(isOpen ? null : brand.id)}>
+                      <tr style={{ cursor: 'pointer', background: isOpen ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)' }} onClick={() => { setExpanded(isOpen ? null : brand.id); setOpenCat(null); }}>
                         <td style={{ ...cell, textAlign: 'center' }}><span style={{ display: 'inline-flex', width: 16, height: 16, color: 'var(--ds-color-text-faint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>{IC.chevron}</span></td>
                         <td style={cell}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
@@ -376,53 +410,65 @@ export function BrandManager() {
                               <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', margin: '4px 2px 8px', fontWeight: 600 }}>
                                 {isRef ? 'Reference brand — these are the canonical settings.' : `Fill the predefined settings for ${brand.display_name || brand.name}. Keys are fixed; only values are added.`}
                               </div>
-                              {predefinedKeys.length === 0 ? (
+                              {settingRows.length === 0 ? (
                                 <div style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to the Crosscoin reference brand first.</div>
                               ) : (
-                                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, overflow: 'hidden' }}>
-                                  <thead>
-                                    <tr><th style={th}>Key</th><th style={th}>Category</th><th style={th}>Value</th><th style={{ ...th, width: 110, textAlign: 'right' }}>Actions</th></tr>
-                                  </thead>
-                                  <tbody>
-                                    {predefinedKeys.map(k => {
-                                      const s = valueMap(brand.id).get(k.key);
-                                      const dk = `${brand.id}:${k.key}`;
-                                      const val = draft[dk] ?? s?.value ?? '';
-                                      const missing = !s || s.value === '' || s.value == null;
+                                <>
+                                  {/* Category cards — click one to edit only its fields */}
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                                    {cats.map(cat => {
+                                      const total = byCat[cat].length;
+                                      const setN = byCat[cat].filter(r => isSet(r.key)).length;
+                                      const on = openName === cat;
                                       return (
-                                        <tr key={k.key}>
-                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{k.key}{missing && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-text-faint)', display: 'inline-block' }} title="Not set" />}</td>
-                                          <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{CATEGORY_LABEL[k.category] || k.category}</td>
-                                          <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} placeholder={k.description || 'Enter value…'} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
-                                          <td style={{ ...cell, textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                              <button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, k)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button>
-                                              {s && <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, k)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>}
-                                            </div>
-                                          </td>
-                                        </tr>
+                                        <button key={cat} type="button" onClick={() => toggleCat(cat)}
+                                          style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 13, borderRadius: 10,
+                                            background: on ? 'var(--ds-color-brand-soft)' : 'var(--ds-color-surface)',
+                                            border: `1px solid ${on ? 'var(--ds-color-brand)' : 'var(--ds-color-border)'}` }}>
+                                          <span style={{ display: 'inline-flex', color: 'var(--ds-color-text)' }}>{catIcon(cat)}</span>
+                                          <div style={{ fontWeight: 700, fontSize: 13, marginTop: 7 }}>{catLabel(cat)}</div>
+                                          <div style={{ fontSize: 11, fontWeight: 700, marginTop: 5, color: setN === total ? 'var(--ds-color-success, #16a34a)' : 'var(--ds-color-text-muted)' }}>{setN} / {total} set</div>
+                                        </button>
                                       );
                                     })}
-                                    {extraSettings.map(s => {
-                                      const dk = `${brand.id}:${s.key}`;
-                                      const val = draft[dk] ?? s.value ?? '';
-                                      const keyObj = { key: s.key, category: s.category || 'general', description: s.description || '' };
-                                      return (
-                                        <tr key={s.key}>
-                                          <td style={{ ...cell, fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{s.key} <span style={{ fontSize: 10, color: 'var(--ds-color-text)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', borderRadius: 4, padding: '1px 5px' }}>custom</span></td>
-                                          <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontSize: 12 }}>{CATEGORY_LABEL[s.category] || s.category || '—'}</td>
-                                          <td style={cell}><input className="dm-input" style={{ width: '100%', fontSize: 13 }} value={val} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} /></td>
-                                          <td style={{ ...cell, textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    {/* Meta Conversions API — virtual category card */}
+                                    <button type="button" onClick={() => toggleCat('meta')}
+                                      style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 13, borderRadius: 10,
+                                        background: openName === 'meta' ? 'var(--ds-color-brand-soft)' : 'var(--ds-color-surface)',
+                                        border: `1px solid ${openName === 'meta' ? 'var(--ds-color-brand)' : 'var(--ds-color-border)'}` }}>
+                                      <span style={{ display: 'inline-flex', color: 'var(--ds-color-text)' }}><HugeiconsIcon icon={MetaIcon} size={20} strokeWidth={1.9} /></span>
+                                      <div style={{ fontWeight: 700, fontSize: 13, marginTop: 7 }}>Meta CAPI</div>
+                                      <div style={{ fontSize: 11, fontWeight: 600, marginTop: 5, color: 'var(--ds-color-text-muted)' }}>Conversions API test</div>
+                                    </button>
+                                  </div>
+
+                                  {/* Open category → only its fields */}
+                                  {openName && openName !== 'meta' && byCat[openName] && (
+                                    <div style={{ marginTop: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: 16 }}>
+                                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>{catIcon(openName, 16)} {catLabel(openName)}</div>
+                                      {byCat[openName].map(r => {
+                                        const s = vmap.get(r.key);
+                                        const dk = `${brand.id}:${r.key}`;
+                                        const val = draft[dk] ?? s?.value ?? '';
+                                        const keyObj = { key: r.key, category: r.category, description: r.description };
+                                        return (
+                                          <div key={r.key} style={{ marginBottom: 14 }}>
+                                            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                                              <span style={{ fontFamily: 'monospace' }}>{r.key}</span>
+                                              {r.custom && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, background: 'var(--ds-color-surface-soft)', borderRadius: 4, padding: '1px 5px' }}>custom</span>}
+                                              {!isSet(r.key) && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-text-faint)', display: 'inline-block', verticalAlign: 'middle' }} title="Not set" />}
+                                            </label>
+                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                              <input className="dm-input" style={{ flex: 1, fontSize: 13 }} value={val} placeholder={r.description || 'Enter value…'} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} />
                                               <button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button>
-                                              <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>
+                                              {s && <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>}
                                             </div>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </>
                               )}
 
                               {/* Add a custom setting (a key beyond the predefined set) */}
@@ -442,8 +488,9 @@ export function BrandManager() {
                                 )}
                               </div>
 
-                              {/* Conversions API (Meta) — check config + send a test event */}
-                              <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--ds-color-border)' }}>
+                              {/* Conversions API (Meta) — opens only from the Meta card above */}
+                              {openName === 'meta' && (
+                              <div style={{ marginTop: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: 16 }}>
                                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                                   <span style={{ fontSize: 13, fontWeight: 700 }}>Conversions API (Meta)</span>
                                   <Button type="button" variant="secondary" disabled={capi[brand.id]?.loading} onClick={() => loadCapiStatus(brand)}>
@@ -482,9 +529,10 @@ export function BrandManager() {
                                 )}
 
                                 <div style={{ fontSize: 11, color: 'var(--ds-color-text-faint, #9ca3af)', marginTop: 6 }}>
-                                  Set <b>FB_ACCESS_TOKEN</b> (and <b>FB_PIXEL_ID</b>) above, then “Send test event”. Add <b>FB_TEST_EVENT_CODE</b> to also see it live in Meta → Events Manager → Test Events.
+                                  Set <b>FB_ACCESS_TOKEN</b> (and <b>FB_PIXEL_ID</b>) in the Analytics card, then “Send test event”. Add <b>FB_TEST_EVENT_CODE</b> to also see it live in Meta → Events Manager → Test Events.
                                 </div>
                               </div>
+                              )}
                             </div>
                           </td>
                         </tr>
