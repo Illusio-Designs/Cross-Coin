@@ -102,6 +102,22 @@ const MOBILE_CSS = `
 .cc-test-root .searchbar input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:15px; box-shadow:var(--stamp-sm); }
 .cc-test-root .searchbar input:focus{ outline:none; border-color:var(--crimson); }
 .cc-test-root .searchbar .btn{ flex:0 0 auto; }
+/* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
+.cc-test-root .idealrow{ display:flex; flex-wrap:wrap; gap:10px; }
+.cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:999px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
+.cc-test-root .idealchip svg{ color:var(--crimson); }
+.cc-test-root .washbox{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+.cc-test-root .washitem{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:14px 8px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); box-shadow:var(--stamp-sm); }
+.cc-test-root .washitem svg{ color:var(--ink); }
+.cc-test-root .washitem span{ font-family:"Space Mono",monospace; font-size:10.5px; line-height:1.3; color:var(--ink-soft); }
+@media (max-width:760px){ .cc-test-root .washbox{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:420px){ .cc-test-root .washbox{ grid-template-columns:repeat(2,1fr); } }
+.cc-test-root .mfgrow{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:18px 20px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); box-shadow:var(--stamp-sm); }
+.cc-test-root .mfgaddr{ flex:1 1 320px; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink-soft); }
+.cc-test-root .origin{ flex:0 0 auto; text-align:right; }
+.cc-test-root .origin__l{ display:block; font-family:"Space Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
+.cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
+.cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
 .cc-test-root .post__img{ aspect-ratio:auto !important; height:0; padding-top:62%; position:relative; overflow:hidden; }
 .cc-test-root .post__img img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }

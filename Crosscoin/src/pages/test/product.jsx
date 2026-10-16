@@ -178,6 +178,46 @@ export default function TestProduct() {
           </div>
         </section>
 
+        {/* Ideal for */}
+        <section className="block" style={{ paddingTop: 0 }}>
+          <div className="sechead"><div><span className="eyebrow">Ideal for</span><h2>Where it earns its keep</h2></div></div>
+          <div className="idealrow">
+            {[
+              ['Everyday wear', <svg key="a" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>],
+              ['Work', <svg key="b" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 00-4 0v2" /></svg>],
+              ['Travel', <svg key="c" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg>],
+              ['Sport', <svg key="d" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 000 18M3 12h18" /></svg>],
+            ].map(([lbl, ic]) => <span className="idealchip" key={lbl}>{ic}{lbl}</span>)}
+          </div>
+        </section>
+
+        {/* Washing instructions (same care set as the live store) */}
+        <section className="block" style={{ paddingTop: 0 }}>
+          <div className="sechead"><div><span className="eyebrow">Care</span><h2>Washing instructions</h2></div></div>
+          <div className="washbox">
+            {[
+              ['Gentle wash 40°C', <svg key="1" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10 Q4 8 6 8 H30 Q32 8 32 10 L30 28 Q30 30 28 30 H8 Q6 30 6 28 Z"/><text x="18" y="22" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor">40</text><path d="M8 16 Q11 13 14 16 Q17 19 20 16 Q23 13 26 16 Q29 19 32 16" strokeWidth="1.2"/></svg>],
+              ['Do not bleach', <svg key="2" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 5 L33 30 H3 Z"/><line x1="12" y1="14" x2="24" y2="26"/><line x1="24" y1="14" x2="12" y2="26"/></svg>],
+              ['Do not wring', <svg key="3" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14 C4 14 8 10 12 14 C16 18 20 10 24 14 C28 18 32 14 32 14"/><path d="M4 22 C4 22 8 18 12 22 C16 26 20 18 24 22 C28 26 32 22 32 22"/><line x1="13" y1="11" x2="23" y2="25"/><line x1="23" y1="11" x2="13" y2="25"/></svg>],
+              ['Flat dry in shade', <svg key="4" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="28" height="16" rx="1"/><line x1="8" y1="18" x2="28" y2="18"/></svg>],
+              ['Do not iron', <svg key="5" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 24 H28 Q34 24 34 18 Q34 14 28 14 H12 L8 10 H4 Z"/><line x1="13" y1="15" x2="23" y2="23"/><line x1="23" y1="15" x2="13" y2="23"/></svg>],
+              ['Do not dry clean', <svg key="6" width="34" height="34" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="13"/><line x1="11" y1="11" x2="25" y2="25"/><line x1="25" y1="11" x2="11" y2="25"/></svg>],
+            ].map(([lbl, ic]) => <div className="washitem" key={lbl}>{ic}<span>{lbl}</span></div>)}
+          </div>
+        </section>
+
+        {/* Manufacturing details (same as the live store) */}
+        <section className="block" style={{ paddingTop: 0 }}>
+          <div className="sechead"><div><span className="eyebrow">Manufacturing details</span><h2>Who makes it</h2></div></div>
+          <div className="mfgrow">
+            <div className="mfgaddr">Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)</div>
+            <div className="origin">
+              <span className="origin__l">Country of origin</span>
+              <span className="origin__b"><svg width="24" height="16" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#FF9933"/><rect y="5.33" width="24" height="5.33" fill="#fff"/><rect y="10.67" width="24" height="5.34" fill="#138808"/></svg>India</span>
+            </div>
+          </div>
+        </section>
+
         {/* Reviews (real) */}
         {prodReviews.items.length > 0 && (
           <section className="block">
