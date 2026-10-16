@@ -181,6 +181,7 @@ export function Policies() {
           </div>
         </Panel>
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar
           search={search}
           onSearchChange={setSearch}
@@ -194,6 +195,7 @@ export function Policies() {
             className="bset-brand-select"
           />
         </FilterBar>
+        </Panel>
 
         <Panel flush>
           {loading ? (

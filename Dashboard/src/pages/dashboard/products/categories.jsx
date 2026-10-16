@@ -258,6 +258,7 @@ export default function Categories() {
           <StatTile label="Active" value={activeCount} tone="good" />
         </StatGrid>
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search categories...">
           <div style={{ minWidth: 180 }}>
             <Select
@@ -283,6 +284,7 @@ export default function Categories() {
             />
           </div>
         </FilterBar>
+        </Panel>
 
         <Panel flush>
           {loading ? (

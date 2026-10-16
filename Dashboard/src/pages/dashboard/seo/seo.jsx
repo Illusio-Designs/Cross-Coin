@@ -313,11 +313,13 @@ export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
           }
         />
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar
           search={filterValue}
           onSearchChange={setFilterValue}
           placeholder="Search SEO entries..."
         />
+        </Panel>
 
         {/* Table Section */}
         <Panel flush>

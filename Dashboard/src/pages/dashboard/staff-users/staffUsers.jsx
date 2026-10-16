@@ -211,6 +211,7 @@ export default function StaffUsers() {
           )}
         />
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search...">
           <Select
             options={[{ value: 'all', label: 'All Roles' }, ...ROLES.map(r => ({ value: r.value, label: r.label }))]}
@@ -219,6 +220,7 @@ export default function StaffUsers() {
             placeholder="All Roles"
           />
         </FilterBar>
+        </Panel>
 
         {/* ── Table ── */}
         <Panel flush>

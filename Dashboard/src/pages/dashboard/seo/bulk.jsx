@@ -187,6 +187,7 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
         }
       />
 
+      <Panel style={{ marginBottom: 16 }}>
       <FilterBar
         search={search}
         onSearchChange={(v) => { setSearch(v); setPage(1); }}
@@ -201,6 +202,7 @@ export default function SeoBulkEditor({ brandId = 1 } = {}) {
           Only show products with gaps
         </label>
       </FilterBar>
+      </Panel>
 
       <div style={{
         padding: 'var(--ds-space-3)',

@@ -189,11 +189,13 @@ const MediaGallery = () => {
         }
       />
 
+      <Panel style={{ marginBottom: 16 }}>
       <FilterBar
         search={searchTerm}
         onSearchChange={setSearchTerm}
         placeholder="Search images..."
       />
+      </Panel>
 
       {error && (
         <div className="mg-error-banner">{error}</div>

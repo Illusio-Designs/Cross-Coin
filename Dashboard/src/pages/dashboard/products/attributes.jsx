@@ -140,7 +140,9 @@ export default function Attributes() {
           }
         />
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search attributes..." />
+        </Panel>
 
         <Panel flush>
           {loading ? (

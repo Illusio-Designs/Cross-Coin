@@ -137,6 +137,7 @@ export default function Leads() {
         )}
       />
 
+      <Panel style={{ marginBottom: 16 }}>
       <FilterBar search={q} onSearchChange={setQ} placeholder="Search name / phone / email / message">
         <Select
           options={[
@@ -161,6 +162,7 @@ export default function Leads() {
           placeholder="All statuses"
         />
       </FilterBar>
+      </Panel>
 
       {error && <p style={{ ...S.hint, color: 'var(--ds-color-danger,#dc2626)' }}>{error}</p>}
       <div style={S.count}>{filtered.length} {filtered.length === 1 ? 'row' : 'rows'}{isFiltered && ` (of ${leads.length})`}</div>

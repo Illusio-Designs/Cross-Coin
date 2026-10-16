@@ -102,9 +102,11 @@ export default function AbandonedCarts() {
         <StatTile label="Recovered rate" value={`${stats.recoveredRate || 0}%`} tone="good" icon={kpi(Analytics01Icon)} />
       </StatGrid>
 
+      <Panel style={{ marginBottom: 16 }}>
       <FilterBar search={q} onSearchChange={setQ} placeholder="Search name / phone / brand / item">
         <Select value={status} onChange={(v) => setStatus(v || '')} options={STATUS_OPTIONS} placeholder="All statuses" />
       </FilterBar>
+      </Panel>
 
       {error && <p style={{ margin: 0, fontSize: 13, color: 'var(--ds-color-danger, #dc2626)' }}>{error}</p>}
 

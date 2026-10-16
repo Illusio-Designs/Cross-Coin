@@ -1477,6 +1477,7 @@ const ProductsPage = () => {
         }
       />
 
+      <Panel style={{ marginBottom: 16 }}>
       <FilterBar hideSearch>
         <div className="obz-search">
           <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
@@ -1495,6 +1496,7 @@ const ProductsPage = () => {
           />
         </div>
       </FilterBar>
+      </Panel>
       {/* Table Section */}
       <Panel flush>
         {loading ? (

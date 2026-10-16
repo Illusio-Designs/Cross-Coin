@@ -126,7 +126,9 @@ export default function ShippingFees() {
           }
         />
 
+        <Panel style={{ marginBottom: 16 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search fees..." />
+        </Panel>
 
         {loading ? (
           <div className="sl-loader-wrap"><Loader /></div>

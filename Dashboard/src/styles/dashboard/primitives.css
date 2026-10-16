@@ -153,6 +153,15 @@
   flex-wrap: wrap;
   margin-bottom: var(--ds-space-5);
 }
+/* When the FilterBar is the ONLY/last thing in its card (a dedicated filter
+   card, not a filter-above-a-table card), drop its trailing hairline + spacing
+   so it sits cleanly inside the card instead of leaving a divider with a gap
+   below it. The divider is only wanted when a table follows in the same card. */
+.ds-card > .ds-filterbar:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
 .ds-filterbar__search {
   flex: 1;
   min-width: 220px;
