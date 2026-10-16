@@ -18,6 +18,8 @@ Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /test
+Disallow: /test-preview.html
 
 # ---------------------------------------------------------------------------
 # AI crawlers — explicitly allowed to crawl public content

@@ -57,6 +57,15 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   
+  // Hidden design preview — the CrossCoin "Mint" revamp sample served as a
+  // static page at /test. It's unlinked from the site and noindexed, so real
+  // shoppers never reach it; only someone with the direct URL can view it.
+  async rewrites() {
+    return [
+      { source: '/test', destination: '/test-preview.html' },
+    ];
+  },
+
   async headers() {
     return [
       {
