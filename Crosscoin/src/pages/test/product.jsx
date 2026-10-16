@@ -53,7 +53,24 @@ export default function TestProduct() {
     return () => { off = true; };
   }, [router.query.slug]);
 
-  if (loading) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ color: 'var(--ink-faint)', padding: '60px 0', fontSize: 13 }}>Loading product…</p></div></TestLayout>;
+  if (loading) return (
+    <TestLayout>
+      <Head><meta name="robots" content="noindex, nofollow" /></Head>
+      <div className="wrap">
+        <div className="pd" style={{ paddingTop: 24 }}>
+          <div className="gallery"><div className="cc-skel cc-skelblock" style={{ aspectRatio: '1/1', width: '100%' }} aria-hidden="true" /></div>
+          <div className="buy">
+            <div className="cc-skel cc-skelblock" style={{ height: 14, width: '35%', marginBottom: 14 }} aria-hidden="true" />
+            <div className="cc-skel cc-skelblock" style={{ height: 30, width: '85%', marginBottom: 16 }} aria-hidden="true" />
+            <div className="cc-skel cc-skelblock" style={{ height: 24, width: '50%', marginBottom: 22 }} aria-hidden="true" />
+            <div className="cc-skel cc-skelblock" style={{ height: 48, marginBottom: 10 }} aria-hidden="true" />
+            <div className="cc-skel cc-skelblock" style={{ height: 48, marginBottom: 10 }} aria-hidden="true" />
+            <div className="cc-skel cc-skelblock" style={{ height: 48 }} aria-hidden="true" />
+          </div>
+        </div>
+      </div>
+    </TestLayout>
+  );
   if (!p) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Back to shop</a></p></div></TestLayout>;
 
   // The selected variant (single pair or a pack) drives price + image. Fall back
