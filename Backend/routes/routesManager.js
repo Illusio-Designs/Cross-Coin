@@ -144,6 +144,74 @@ router.get('/public/tracking-config', optionalBrand, async (req, res) => {
   }
 });
 
+// ── Public Organization schema + OG defaults ──────────────────────────────
+// Builds schema.org/Organization JSON-LD from the brand's Global SEO Settings
+// (name, logo, phone, socials, postal address) so each storefront can emit it
+// on its homepage, plus OG image / fallback description. Resolves the brand from
+// the X-Brand-Name header (optionalBrand), ?brandId, then brand 1.
+router.get('/public/seo-org', optionalBrand, async (req, res) => {
+  try {
+    const brandId = req.brandId || parseInt(req.query.brandId, 10) || 1;
+    const settingsHelper = require('../services/settingsHelper');
+    const Brand = require('../model/brandModel.js');
+    const [s, brand] = await Promise.all([
+      settingsHelper.getSettings(brandId, [
+        'SEO_ORGANIZATION_NAME', 'SEO_ORGANIZATION_LOGO', 'SEO_PHONE',
+        'SEO_DEFAULT_OG_IMAGE', 'SEO_DEFAULT_DESCRIPTION',
+        'SEO_SOCIAL_FACEBOOK', 'SEO_SOCIAL_INSTAGRAM', 'SEO_SOCIAL_TWITTER', 'SEO_SOCIAL_YOUTUBE',
+        'SEO_ADDRESS_STREET', 'SEO_ADDRESS_CITY', 'SEO_ADDRESS_REGION', 'SEO_ADDRESS_POSTAL', 'SEO_ADDRESS_COUNTRY',
+      ]),
+      Brand.findByPk(brandId).catch(() => null),
+    ]);
+
+    const host = String(brand?.domain || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    const siteUrl = host ? `https://${host}` : undefined;
+    const name = s.SEO_ORGANIZATION_NAME || brand?.display_name || brand?.name || undefined;
+
+    // Normalise a Twitter/X value that may be a bare @handle into a URL.
+    const twitter = s.SEO_SOCIAL_TWITTER
+      ? (/^https?:\/\//i.test(s.SEO_SOCIAL_TWITTER) ? s.SEO_SOCIAL_TWITTER : `https://twitter.com/${String(s.SEO_SOCIAL_TWITTER).replace(/^@/, '')}`)
+      : null;
+    const sameAs = [s.SEO_SOCIAL_FACEBOOK, s.SEO_SOCIAL_INSTAGRAM, twitter, s.SEO_SOCIAL_YOUTUBE].filter(Boolean);
+
+    const contactPoint = s.SEO_PHONE
+      ? [{ '@type': 'ContactPoint', telephone: s.SEO_PHONE, contactType: 'customer service' }]
+      : undefined;
+    const address = (s.SEO_ADDRESS_STREET || s.SEO_ADDRESS_CITY || s.SEO_ADDRESS_POSTAL || s.SEO_ADDRESS_REGION)
+      ? {
+          '@type': 'PostalAddress',
+          streetAddress: s.SEO_ADDRESS_STREET || undefined,
+          addressLocality: s.SEO_ADDRESS_CITY || undefined,
+          addressRegion: s.SEO_ADDRESS_REGION || undefined,
+          postalCode: s.SEO_ADDRESS_POSTAL || undefined,
+          addressCountry: s.SEO_ADDRESS_COUNTRY || undefined,
+        }
+      : undefined;
+
+    // Only return an Organization object when there's real content beyond name.
+    const hasContent = s.SEO_ORGANIZATION_LOGO || sameAs.length || contactPoint || address;
+    const organization = (hasContent && name)
+      ? {
+          '@context': 'https://schema.org', '@type': 'Organization',
+          name, url: siteUrl,
+          logo: s.SEO_ORGANIZATION_LOGO || undefined,
+          sameAs: sameAs.length ? sameAs : undefined,
+          contactPoint, address,
+        }
+      : null;
+
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return res.json({
+      success: true,
+      organization,
+      ogImage: s.SEO_DEFAULT_OG_IMAGE || null,
+      description: s.SEO_DEFAULT_DESCRIPTION || null,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ── Serviceability ────────────────────────────────────────────────────────
 router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
     // Never let a CDN/browser cache a serviceability result — it's per-PIN,
