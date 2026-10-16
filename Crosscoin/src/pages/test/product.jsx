@@ -202,7 +202,7 @@ export default function TestProduct() {
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
 
-            <div className="prepaidchip">≡ PREPAID10 — extra 10% off on prepaid orders ≡</div>
+            <div className="prepaidchip">≡ PREPAID10 ≡</div>
             <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
 
             <div className="pdptrust">
