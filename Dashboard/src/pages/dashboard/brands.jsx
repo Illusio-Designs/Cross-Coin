@@ -68,6 +68,31 @@ const safeDate = (d) => { const t = d ? new Date(d) : null; return t && !isNaN(t
 const cell = { padding: '13px 16px', borderBottom: '1px solid var(--ds-color-border-soft)', fontSize: 13, verticalAlign: 'middle' };
 const th = { padding: '11px 16px', textAlign: 'left', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ds-color-text-muted)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', borderBottom: '1px solid var(--ds-color-border)' };
 const brandMono = (b) => (b.display_name || b.name || '?').trim().slice(0, 2).toUpperCase();
+
+// Normalise a brand's domain into a bare host for favicon lookup.
+const brandHost = (d) => (d || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
+const faviconUrl = (b) => {
+  if (b.logo_url) return b.logo_url;
+  const host = brandHost(b.domain);
+  return host ? `https://${host}/favicon.ico` : null;
+};
+
+// Brand mark: shows the brand's favicon (its own logo_url, else the site's
+// /favicon.ico), falling back to the monogram initials if the image can't load.
+function BrandFavicon({ brand }) {
+  const [broken, setBroken] = useState(false);
+  const src = faviconUrl(brand);
+  const showImg = src && !broken;
+  const dot = { position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: brand.primary_color || 'var(--ds-color-text-faint)' };
+  return (
+    <span style={{ position: 'relative', width: 38, height: 38, borderRadius: 9, overflow: 'hidden', background: showImg ? 'var(--ds-color-surface)' : 'var(--ds-color-brand)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0, border: showImg ? '1px solid var(--ds-color-border)' : 'none' }}>
+      {showImg
+        ? <img src={src} alt="" width={24} height={24} loading="lazy" onError={() => setBroken(true)} style={{ width: 24, height: 24, objectFit: 'contain', display: 'block' }} />
+        : brandMono(brand)}
+      <span style={dot} title={brand.primary_color || ''} />
+    </span>
+  );
+}
 const feedChip = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: 'var(--ds-color-text-muted)', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer' };
 
 export function BrandManager() {
@@ -359,10 +384,7 @@ export function BrandManager() {
                         <td style={{ ...cell, textAlign: 'center' }}><span style={{ display: 'inline-flex', width: 16, height: 16, color: 'var(--ds-color-text-faint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>{IC.chevron}</span></td>
                         <td style={cell}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                            <span style={{ position: 'relative', width: 38, height: 38, borderRadius: 9, background: 'var(--ds-color-brand)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
-                              {brandMono(brand)}
-                              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: 'var(--ds-color-text-faint)' }} title={brand.primary_color || ''} />
-                            </span>
+                            <BrandFavicon brand={brand} />
                             <div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{brand.display_name || brand.name}</div><div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', fontFamily: 'var(--ds-font-mono, monospace)' }}>{brand.slug}</div></div>
                           </div>
                         </td>
