@@ -91,13 +91,23 @@ export default function StaffUsers() {
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
+    const pick = (data) => (Array.isArray(data) ? data : data?.users || data?.data || []);
     try {
       // Staff-only endpoint — queries by role server-side so staff aren't
       // dropped from the capped "all users" list once customers pile up.
       const data = await userService.getStaffUsers();
-      setUsers(Array.isArray(data) ? data : data?.users || data?.data || []);
+      setUsers(pick(data));
     } catch (err) {
-      setError(err.message || 'Failed to fetch users');
+      // The dedicated /staff-list endpoint ships with the frontend but only goes
+      // live once the backend restarts. Until then it 404s, so fall back to the
+      // old "all users" endpoint (the page still filters to staff roles
+      // client-side) instead of showing an error.
+      try {
+        const data = await userService.getAllUsers();
+        setUsers(pick(data));
+      } catch (err2) {
+        setError(err2.message || err.message || 'Failed to fetch users');
+      }
     } finally {
       setLoading(false);
     }
