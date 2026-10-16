@@ -96,6 +96,18 @@ const MOBILE_CSS = `
 /* breathing room above the product grids / rail */
 .cc-test-root .pgrid{ padding-top:6px; }
 .cc-test-root .prail{ padding-top:6px; }
+/* Shop-by-category coin tiles (Concept B) */
+.cc-test-root .cgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.cc-test-root .ctile{ position:relative; border:2px solid var(--line-ink); border-radius:var(--r); background:var(--surface); box-shadow:var(--stamp); padding:20px; min-height:190px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; overflow:hidden; text-align:left; font:inherit; color:var(--ink); transition:transform .2s var(--ease), box-shadow .2s var(--ease); }
+.cc-test-root .ctile:hover{ transform:translate(-4px,-4px); box-shadow:8px 8px 0 var(--line-ink); }
+.cc-test-root .ctile__coin{ position:absolute; right:-26px; top:-26px; width:110px; height:110px; border-radius:50%; border:2px dashed color-mix(in srgb, var(--c,var(--crimson)) 40%, transparent); }
+.cc-test-root .ctile__coin::after{ content:''; position:absolute; inset:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%, var(--c,var(--crimson)), transparent 70%); opacity:.5; }
+.cc-test-root .ctile__no{ font-family:"Space Mono",monospace; font-size:12px; color:var(--ink-faint); }
+.cc-test-root .ctile__nm{ font-family:"Fraunces",serif; font-weight:700; font-size:19px; line-height:1.1; max-width:76%; margin-top:4px; }
+.cc-test-root .ctile__go{ font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:var(--crimson); display:inline-flex; align-items:center; gap:7px; }
+.cc-test-root .ctile__dot{ width:12px; height:12px; border-radius:50%; background:var(--c,var(--crimson)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.4); }
+@media (max-width:820px){ .cc-test-root .cgrid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:480px){ .cc-test-root .cgrid{ grid-template-columns:1fr; } }
 /* huge round feature icons */
 .cc-test-root .techcard .mk{ width:66px; height:66px; margin-bottom:16px; background:color-mix(in srgb,var(--gold) 16%,transparent); }
 .cc-test-root .techcard .mk svg{ width:30px; height:30px; }

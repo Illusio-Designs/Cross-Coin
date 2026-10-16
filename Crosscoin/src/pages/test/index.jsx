@@ -90,15 +90,16 @@ export default function TestHome() {
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 01 ] Denominations</span><h2>Shop by category</h2></div>
             <span className="seelink" onClick={() => router.push('/test/shop')}>Browse all →</span></div>
-          <div className="catlist">
-            {cats.length === 0 && <div className="catrow" style={{ color: 'var(--ink-faint)' }}><span className="no">—</span><h3 style={{ fontSize: 20 }}>{loading ? 'Loading categories…' : 'No categories'}</h3></div>}
-            {cats.map((c, i) => (
-              <div className="catrow" key={c.id || c.name} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
-                <span className="no">0{i + 1}</span><h3>{c.name}</h3><span className="ct">{c.count != null ? `${c.count} styles` : ''}</span>
-                <span className="swatch" style={{ background: SWATCH[i % SWATCH.length] }} />
-                <span className="arw">{I.arrow(16)}</span>
-              </div>
-            ))}
+          <div className="cgrid">
+            {loading && cats.length === 0
+              ? Array.from({ length: 6 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 190 }} key={i} aria-hidden="true" />)
+              : cats.map((c, i) => (
+                <button className="ctile" key={c.id || c.name} style={{ '--c': SWATCH[i % SWATCH.length] }} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                  <span className="ctile__coin" />
+                  <div><div className="ctile__no">0{i + 1}</div><div className="ctile__nm">{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</div></div>
+                  <span className="ctile__go"><span className="ctile__dot" />{c.count != null ? `${c.count} styles` : 'Shop'} {I.arrow(14)}</span>
+                </button>
+              ))}
           </div>
         </div>
       </section>
