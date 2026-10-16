@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+
+// Apply the theme before the browser paints on the client (so the night-time
+// light→dark flip is never briefly visible), while falling back to useEffect
+// during SSR to avoid React's layout-effect warning.
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -67,7 +72,6 @@ const MOBILE_CSS = `
 /* The logo artwork is dark, so flip it to white on the dark ("blue") theme
    backgrounds where it would otherwise disappear. */
 .cc-test-root[data-theme="dark"] .cc-logo{ filter: brightness(0) invert(1); }
-@media (prefers-color-scheme: dark){ .cc-test-root:not([data-theme="light"]) .cc-logo{ filter: brightness(0) invert(1); } }
 /* PDP: keep the sticky gallery confined to the product block and make sure the
    "You may also like" section below always paints above it (fixes overlap). */
 .cc-test-root .pd{ position: relative; align-items: start; }
@@ -478,7 +482,7 @@ export default function TestLayout({ children }) {
   // scoped to the preview root (dark CSS is .cc-test-root[data-theme]), so we
   // set the attribute on the wrapper, not <html>. Re-checked each minute so it
   // flips over at dusk/dawn without a reload.
-  useEffect(() => {
+  useIsoLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return;
     const apply = () => {

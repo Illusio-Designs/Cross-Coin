@@ -27,26 +27,12 @@ export const MINT_CSS = `.cc-test-root{
     --r: 4px;
     color-scheme: light;
   }
-@media (prefers-color-scheme: dark){.cc-test-root:not([data-theme="light"]){
-      --paper: #100b1f;
-      --paper-2: #16102a;
-      --surface: #1a1430;
-      --ink: #f4eede;
-      --ink-soft: #c5bcce;
-      --ink-faint: #8f85a0;
-      --line: #2e2650;
-      --line-ink: #40366a;
-      --crimson: #ff485f;
-      --crimson-700: #ff6b7e;
-      --indigo: #cbc0f0;
-      --gold: #e3bd74;
-      --teal: #0d9488;
-      --bg: var(--paper);
-      --fg: var(--ink);
-      --stamp: 4px 4px 0 #000;
-      --stamp-sm: 3px 3px 0 #000;
-      color-scheme: dark;
-    }}
+/* The /test theme is driven ONLY by the time-based data-theme attribute set in
+   TestLayout (dark 19:00-07:00, light by day). We deliberately do NOT key the
+   dark palette off @media (prefers-color-scheme: dark): having both the OS
+   preference and the clock control the palette made a dark-OS device render a
+   mix of light and dark tokens during the day. Baseline (no attribute) = light
+   on every device; the clock flips data-theme to "dark"/"light". */
 .cc-test-root[data-theme="dark"]{
     --paper: #100b1f; --paper-2: #16102a; --surface: #1a1430;
     --ink: #f4eede; --ink-soft: #c5bcce; --ink-faint: #8f85a0;

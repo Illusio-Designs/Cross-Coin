@@ -1,36 +1,38 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
 import {
-  ArrowRight, ShoppingCart, Heart, Search, User, Menu, X, Check, Truck,
-  RotateCcw, CreditCard, ShieldCheck, Package, Lock, Trash2, Sun,
-} from 'lucide-react';
+  PiArrowRightBold, PiShoppingCartBold, PiHeartBold, PiMagnifyingGlassBold,
+  PiUserBold, PiListBold, PiXBold, PiCheckBold, PiTruckBold, PiArrowUUpLeftBold,
+  PiCreditCardBold, PiShieldCheckBold, PiPackageBold, PiLockBold, PiTrashBold, PiSunBold,
+} from 'react-icons/pi';
 import { addItem } from './store';
 import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
 import { colorToCss } from './real';
 
-/* ---- icons: Lucide (rounded) library set, the same family the rest of the
-   CrossCoin storefront uses. Each entry keeps the I.name(size) call signature
-   so every /test call site is unchanged. A slightly heavier stroke (2.2) gives
-   the bold, round look; strokeLinecap/join are round in Lucide by default. */
-const mk = (Icon, def) => (s = def) => <Icon size={s} strokeWidth={2.2} absoluteStrokeWidth />;
+/* ---- icons: Phosphor (react-icons/pi), a rounded icon library chosen for the
+   new Mint storefront (distinct from the Lucide set the legacy site uses). The
+   Bold weight gives the big, round, friendly look. Each entry keeps the
+   I.name(size) call signature so every /test call site is unchanged; Phosphor
+   icons inherit currentColor, so they recolour with the surrounding text. */
+const mk = (Icon, def) => (s = def) => <Icon size={s} />;
 export const I = {
-  arrow: mk(ArrowRight, 16),
-  cart: mk(ShoppingCart, 20),
-  heart: mk(Heart, 16),
-  search: mk(Search, 20),
-  user: mk(User, 20),
-  menu: mk(Menu, 20),
-  close: mk(X, 20),
-  sun: mk(Sun, 20),
-  check: mk(Check, 16),
-  truck: mk(Truck, 24),
-  ret: mk(RotateCcw, 24),
-  card: mk(CreditCard, 24),
-  shield: mk(ShieldCheck, 24),
-  box: mk(Package, 24),
-  lock: mk(Lock, 20),
-  trash: mk(Trash2, 16),
+  arrow: mk(PiArrowRightBold, 18),
+  cart: mk(PiShoppingCartBold, 22),
+  heart: mk(PiHeartBold, 18),
+  search: mk(PiMagnifyingGlassBold, 22),
+  user: mk(PiUserBold, 22),
+  menu: mk(PiListBold, 24),
+  close: mk(PiXBold, 22),
+  sun: mk(PiSunBold, 22),
+  check: mk(PiCheckBold, 18),
+  truck: mk(PiTruckBold, 26),
+  ret: mk(PiArrowUUpLeftBold, 26),
+  card: mk(PiCreditCardBold, 26),
+  shield: mk(PiShieldCheckBold, 26),
+  box: mk(PiPackageBold, 26),
+  lock: mk(PiLockBold, 20),
+  trash: mk(PiTrashBold, 18),
 };
 
 export function toast(msg) {
