@@ -369,6 +369,9 @@ const MOBILE_CSS = `
 .cc-test-root .optlabel{ gap:10px; }
 .cc-test-root .optlabel span, .cc-test-root .optlabel a{ white-space:nowrap; }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
+.cc-test-root .mnav__util{ margin-top:14px; padding-top:14px; border-top:2px solid var(--line); display:flex; flex-direction:column; gap:4px; }
+.cc-test-root .mnav__util button{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:0; padding:12px 4px; font:inherit; font-size:16px; font-weight:600; color:var(--ink); cursor:pointer; }
+.cc-test-root .mnav__util button svg{ color:var(--crimson); }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
   .cc-test-root .sechead{ flex-direction:column; align-items:flex-start; }
@@ -597,6 +600,11 @@ export default function TestLayout({ children }) {
           <button className="ibtn" onClick={() => setMnav(false)} aria-label="Close">{I.close()}</button>
         </div>
         {navLinks}
+        <div className="mnav__util">
+          <button onClick={() => go('/test/search')}>{I.search(18)} Search</button>
+          <button onClick={() => go('/test/wishlist')}>{I.heart(18)} Wishlist{wishN > 0 ? ` (${wishN})` : ''}</button>
+          <button onClick={() => go('/test/account')}>{I.user(18)} Account</button>
+        </div>
       </div>
 
       {children}
