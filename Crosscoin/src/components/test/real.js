@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -298,6 +298,21 @@ export async function trackOrder(orderNo) {
     const r = await trackOrderByOrderNumber(orderNo.trim());
     return r?.data || r?.order || r || null;
   } catch (_) { return null; }
+}
+
+// Real pincode serviceability check (live /api/serviceability). Returns a
+// friendly { ok, text } for the PDP delivery-details box.
+export async function checkPincode(pin) {
+  if (!pin || !/^\d{6}$/.test(String(pin))) return { ok: false, text: 'Enter a valid 6-digit pincode.' };
+  try {
+    const r = await checkPincodeServiceability(pin);
+    const d = r?.data || r || {};
+    const serviceable = (d.serviceable ?? d.is_serviceable ?? d.available ?? (r?.success !== false)) !== false;
+    if (!serviceable) return { ok: false, text: `Sorry, we don't deliver to ${pin} yet.` };
+    const eta = d.etd || d.eta || d.estimated_delivery_days || d.delivery_days || d.days || null;
+    const place = [d.city, d.state].filter(Boolean).join(', ');
+    return { ok: true, text: `Delivers to ${place || pin}${eta ? ` · ~${eta} day${String(eta) === '1' ? '' : 's'}` : ' · ships in 24h'}` };
+  } catch (_) { return { ok: false, text: `Sorry, we don't deliver to ${pin} yet.` }; }
 }
 
 // Validate a coupon against the live rules (real discount amount).

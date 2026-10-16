@@ -144,9 +144,25 @@ const MOBILE_CSS = `
 .cc-test-root .pdptrust__free{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); }
 .cc-test-root .pdptrust__free svg{ color:var(--crimson); }
 .cc-test-root .pdptrust__free strong{ color:var(--ink); }
-.cc-test-root .pdptrust__row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-.cc-test-root .pdptrust__row > div{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:8px 12px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); box-shadow:var(--stamp-sm); }
-.cc-test-root .pdptrust__row svg{ color:var(--crimson); }
+.cc-test-root .pdptrust__row{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+.cc-test-root .pdptrust__i{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; font-size:11px; font-weight:600; color:var(--ink-soft); padding:10px 6px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); box-shadow:var(--stamp-sm); }
+.cc-test-root .pdptrust__i svg{ color:var(--crimson); }
+@media (max-width:420px){ .cc-test-root .pdptrust__row{ grid-template-columns:repeat(2,1fr); } }
+/* square wishlist by the title */
+.cc-test-root .titlerow{ display:flex; align-items:flex-start; gap:12px; justify-content:space-between; }
+.cc-test-root .titlerow h1{ flex:1; min-width:0; }
+.cc-test-root .wishsq{ flex:0 0 auto; width:46px; height:46px; border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); box-shadow:var(--stamp-sm); color:var(--ink); display:grid; place-items:center; cursor:pointer; transition:.15s; }
+.cc-test-root .wishsq:hover{ transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--line-ink); }
+.cc-test-root .wishsq.on{ background:var(--crimson); border-color:var(--crimson); color:#fff; }
+/* PREPAID10 chip above Buy it now */
+.cc-test-root .prepaidchip{ text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 8%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 45%,var(--line)); border-radius:8px; padding:9px 12px; margin:10px 0; }
+/* delivery pincode check */
+.cc-test-root .pdpdeliv{ margin-top:14px; }
+.cc-test-root .pdpdeliv__l{ display:block; font-family:"Space Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
+.cc-test-root .pdpdeliv__row{ display:flex; gap:8px; max-width:340px; }
+.cc-test-root .pdpdeliv__row input{ flex:1; min-width:0; padding:10px 13px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); }
+.cc-test-root .pdpdeliv__row input:focus{ outline:none; border-color:var(--crimson); }
+.cc-test-root .pdpdeliv__msg{ font-size:12.5px; margin-top:8px; font-weight:600; }
 .cc-test-root .pdpdetails{ display:grid; grid-template-columns:1.6fr 1fr; gap:28px; align-items:start; }
 .cc-test-root .pdpabout .eyebrow{ display:block; margin-bottom:6px; }
 .cc-test-root .pdpabout h2{ font-size:clamp(24px,3.2vw,34px); margin-bottom:12px; }

@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, colorToCss } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
@@ -26,6 +26,9 @@ export default function TestProduct() {
   const [faqOpen, setFaqOpen] = useState(0);
   const [packTiers, setPackTiers] = useState([]); // admin "Buy More, Save More" ladder
   const [packSel, setPackSel] = useState(1); // selected number of pairs
+  const [pin, setPin] = useState('');
+  const [pinRes, setPinRes] = useState(null); // { ok, text }
+  const [pinBusy, setPinBusy] = useState(false);
 
   useEffect(() => {
     let off = false;
@@ -45,7 +48,7 @@ export default function TestProduct() {
           setQty(1);
           setMainImg(v0?.img || prod.img || prod.images?.[0] || '');
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
-          setPackTiers([]); setPackSel(1);
+          setPackTiers([]); setPackSel(1); setPin(''); setPinRes(null);
           fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
           fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {});
@@ -135,13 +138,19 @@ export default function TestProduct() {
 
           <div className="buy">
             <div className="kl">{p.brand}</div>
-            <h1>{p.name}</h1>
+            <div className="titlerow">
+              <h1>{p.name}</h1>
+              <button className={`wishsq${isWished(p.id) ? ' on' : ''}`} aria-label="Save to wishlist" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(18)}</button>
+            </div>
             {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">Inclusive of all taxes · Free shipping over ₹799</div>
 
-            {/* Single pair vs multi-pair packs — each is a real variant with its
-                own price. (Crosscoin models a pack as a multi-colour variation.) */}
+            {sizeOpts.length > 0 && (<>
+              <div className="optlabel">Size <a onClick={() => toast('Pick the size that matches your usual fit.')}>Size chart</a></div>
+              <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
+            </>)}
+
             {/* CHOOSE YOUR PACK — admin pack-pricing ladder (per-pair + total, badges) */}
             {hasPacks && (<>
               <div className="optlabel">Choose your pack</div>
@@ -184,24 +193,29 @@ export default function TestProduct() {
               </div>
             </>)}
 
-            {sizeOpts.length > 0 && (<>
-              <div className="optlabel">Size <a onClick={() => toast('Pick the size that matches your usual fit.')}>Size chart</a></div>
-              <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
-            </>)}
-
             <div className="qtyrow">
               {!hasPacks && <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>}
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
+
+            <div className="prepaidchip">≡ PREPAID10 — extra 10% off on prepaid orders ≡</div>
             <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
-            <button className="btn btn--block" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }} style={{ marginTop: 8 }}>{isWished(p.id) ? '♥ In your wishlist' : '♡ Save to wishlist'}</button>
 
             <div className="pdptrust">
               <span className="pdptrust__free">{I.truck(16)} <strong>Free shipping</strong> over ₹799 · ships in 24h</span>
               <div className="pdptrust__row">
-                <div>{I.card(18)} Cash on Delivery</div>
-                <div>{I.ret(18)} 7-Day Returns</div>
-                <div>{I.shield(18)} 100% Genuine</div>
+                <div className="pdptrust__i">{I.lock(20)}<span>Secure Checkout</span></div>
+                <div className="pdptrust__i">{I.card(20)}<span>Cash on Delivery</span></div>
+                <div className="pdptrust__i">{I.ret(20)}<span>7-Day Returns</span></div>
+                <div className="pdptrust__i">{I.shield(20)}<span>100% Genuine</span></div>
+              </div>
+              <div className="pdpdeliv">
+                <span className="pdpdeliv__l">Delivery details</span>
+                <form className="pdpdeliv__row" onSubmit={async (e) => { e.preventDefault(); setPinBusy(true); setPinRes(null); const r = await checkPincode(pin); setPinRes(r); setPinBusy(false); }}>
+                  <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter pincode" inputMode="numeric" aria-label="Pincode" />
+                  <button className="btn" type="submit" disabled={pinBusy}>{pinBusy ? '…' : 'Check'}</button>
+                </form>
+                {pinRes && <div className="pdpdeliv__msg" style={{ color: pinRes.ok ? 'var(--ink-soft)' : 'var(--crimson)' }}>{pinRes.ok ? '✓ ' : ''}{pinRes.text}</div>}
               </div>
             </div>
           </div>
