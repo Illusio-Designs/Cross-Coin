@@ -4,10 +4,10 @@ import TestLayout from '../../components/test/TestLayout';
 import { I } from '../../components/test/ui';
 
 const VALUES = [
-  ['Quality promise', 'Every product is tested for durability, comfort and consistency before it ships.'],
-  ['Built different, by design', 'We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials.'],
-  ['A growing community', 'People who refuse to settle for uncomfortable basics — and keep coming back.'],
-  ['Pan-India delivery', 'Shipping to every corner of India with real-time tracking on every order.'],
+  ['Quality promise', 'Every product is tested for durability, comfort and consistency before it ships.', I.shield],
+  ['Built different, by design', 'We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials.', I.box],
+  ['A growing community', 'People who refuse to settle for uncomfortable basics — and keep coming back.', I.user],
+  ['Pan-India delivery', 'Shipping to every corner of India with real-time tracking on every order.', I.truck],
 ];
 
 export default function TestAbout() {

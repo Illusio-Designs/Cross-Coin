@@ -110,12 +110,12 @@ export default function TestHome() {
           <div className="sechead" style={{ marginBottom: 0 }}><div><span className="eyebrow" style={{ color: 'var(--gold)' }}>[ 03 ] The standard</span><h2>Struck to spec</h2></div></div>
           <div className="techgrid">
             {[
-              ['Combed cotton', 'Long-staple yarn that stays soft wash after wash.'],
-              ['Arch support', 'Knit-in compression band that hugs the mid-foot.'],
-              ['Breathable mesh', 'Ventilated instep keeps feet dry all day.'],
-              ['Seamless toe', 'Hand-linked toe seam — no rub, no blisters.'],
-            ].map(([t, d]) => (
-              <div className="techcard" key={t}><div className="mk">{I.shield(22)}</div><b>{t}</b><span>{d}</span></div>
+              ['Combed cotton', 'Long-staple yarn that stays soft wash after wash.', I.box],
+              ['Arch support', 'Knit-in compression band that hugs the mid-foot.', I.shield],
+              ['Breathable mesh', 'Ventilated instep keeps feet dry all day.', I.ret],
+              ['Seamless toe', 'Hand-linked toe seam — no rub, no blisters.', I.check],
+            ].map(([t, d, ic]) => (
+              <div className="techcard" key={t}><div className="mk">{ic(24)}</div><b>{t}</b><span>{d}</span></div>
             ))}
           </div>
         </div>
