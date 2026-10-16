@@ -28,6 +28,10 @@ const IC = {
 const CATEGORY_LABEL = { general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', social_media: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
 const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
 const IGNORED_KEY = /fship/i; // deprecated Fship shipping keys — not part of the canonical set
+// SEO_* settings (category 'seo') are owned by the dedicated SEO Settings page
+// (seo → global). Hide them from Brand Settings so there's one place to edit
+// them, not two.
+const SEO_SETTING = (s) => (s.category === 'seo') || /^SEO_/i.test(s.key || '');
 
 const safeDate = (d) => { const t = d ? new Date(d) : null; return t && !isNaN(t) ? t.toLocaleDateString() : '—'; };
 const cell = { padding: '13px 16px', borderBottom: '1px solid var(--ds-color-border-soft)', fontSize: 13, verticalAlign: 'middle' };
@@ -110,7 +114,7 @@ export function BrandManager() {
   // Fship keys). Every brand is filled against this same set of names.
   const predefinedKeys = referenceBrand
     ? (settingsByBrand[referenceBrand.id] || [])
-        .filter(s => !IGNORED_KEY.test(s.key))
+        .filter(s => !IGNORED_KEY.test(s.key) && !SEO_SETTING(s))
         .map(s => ({ key: s.key, category: s.category || 'general', description: s.description || '' }))
         .sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.key.localeCompare(b.key))
     : [];
@@ -302,7 +306,7 @@ export function BrandManager() {
                   const url = feedUrl(brand);
                   // Settings this brand has that aren't in the predefined set (custom-added keys).
                   const extraSettings = (settingsByBrand[brand.id] || [])
-                    .filter(s => !IGNORED_KEY.test(s.key) && !predefinedKeys.some(k => k.key === s.key))
+                    .filter(s => !IGNORED_KEY.test(s.key) && !SEO_SETTING(s) && !predefinedKeys.some(k => k.key === s.key))
                     .sort((a, b) => a.key.localeCompare(b.key));
                   return (
                     <React.Fragment key={brand.id}>
