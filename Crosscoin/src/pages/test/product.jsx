@@ -144,7 +144,11 @@ export default function TestProduct() {
             </div>
             {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
-            <div className="tax">Inclusive of all taxes · Free shipping over ₹799</div>
+            <div className="tax">MRP incl. of all taxes</div>
+            <div className="pdpstatus">
+              <span className="instock">{I.check(13)} In stock</span>
+              <span className="freeship">{I.truck(15)} <strong>Free shipping</strong> on all orders</span>
+            </div>
 
             {sizeOpts.length > 0 && (<>
               <div className="optlabel">Size <a onClick={() => toast('Pick the size that matches your usual fit.')}>Size chart</a></div>
@@ -202,7 +206,6 @@ export default function TestProduct() {
             <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
 
             <div className="pdptrust">
-              <span className="pdptrust__free">{I.truck(16)} <strong>Free shipping</strong> over ₹799 · ships in 24h</span>
               <div className="pdptrust__row">
                 <div className="pdptrust__i">{I.lock(20)}<span>Secure Checkout</span></div>
                 <div className="pdptrust__i">{I.card(20)}<span>Cash on Delivery</span></div>

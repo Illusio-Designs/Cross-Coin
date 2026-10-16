@@ -151,6 +151,13 @@ const MOBILE_CSS = `
 .cc-test-root .origin__l{ display:block; font-family:"Space Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
 .cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
 .cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
+/* PDP in-stock + free-shipping status row (Morbix-style) */
+.cc-test-root .pdpstatus{ display:flex; flex-wrap:wrap; align-items:center; gap:9px 15px; margin:11px 0 2px; }
+.cc-test-root .instock{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 38%,transparent); border-radius:999px; padding:5px 11px; }
+.cc-test-root .instock svg{ color:#0f766e; }
+.cc-test-root .freeship{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft); }
+.cc-test-root .freeship svg{ color:var(--crimson); }
+.cc-test-root .freeship strong{ color:var(--ink); font-weight:700; }
 /* PDP trust row + About/Specs (Morbix-style layout, Mint styling) */
 .cc-test-root .pdptrust{ margin-top:16px; border-top:2px solid var(--line); padding-top:14px; }
 .cc-test-root .pdptrust__free{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); }
