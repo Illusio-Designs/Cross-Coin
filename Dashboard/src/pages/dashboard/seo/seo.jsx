@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button, Input, Modal, Pagination, Select } from "../../../components/ui";
 import { PageHeader, Panel, FilterBar, ResponsiveTable, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
@@ -10,7 +10,7 @@ import { useRouter } from 'next/router';
 import SerpPreview, { brandSiteName, brandUrl } from '../../../components/common/SerpPreview';
 import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { PencilEdit02Icon, Search01Icon, Add01Icon } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, Add01Icon } from '@hugeicons/core-free-icons';
 
 // True when the string is empty (allowed) or parses as JSON. Used to gate the
 // JSON-LD field so we never POST a broken structured_data blob (the backend
@@ -65,14 +65,6 @@ export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
     };
     checkAdminAccess();
   }, [router]);
-
-  // Debounced search — one memoized lodash debouncer so rapid typing issues a
-  // single filter update. The previous version created a fresh setTimeout per
-  // keystroke and discarded its cancel, so nothing was actually debounced.
-  const debouncedSetFilter = useMemo(() => debounce((v) => setFilterValue(v), 300), []);
-  useEffect(() => () => debouncedSetFilter.cancel(), [debouncedSetFilter]);
-
-  const handleSearchChange = (e) => debouncedSetFilter(e.target.value);
 
   // Fetch SEO data
   const fetchSEOData = async () => {
@@ -321,15 +313,11 @@ export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
           }
         />
 
-        <FilterBar hideSearch>
-          <Input
-            type="text"
-            placeholder="Search SEO entries..."
-            leftIcon={<HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />}
-            onChange={handleSearchChange}
-            defaultValue={filterValue}
-          />
-        </FilterBar>
+        <FilterBar
+          search={filterValue}
+          onSearchChange={setFilterValue}
+          placeholder="Search SEO entries..."
+        />
 
         {/* Table Section */}
         <Panel flush>
