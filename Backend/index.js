@@ -1663,17 +1663,22 @@ const startServer = async () => {
             logger.error('[perf-index] boot hook failed: ' + err.message);
         }
 
-        // Initialize SEO data — only runs once, skipped on subsequent boots
-        // Piggybacks on the schema_version table to avoid a DB query every start
+        // Initialize SEO data — runs once per seeder version, skipped afterwards.
+        // Piggybacks on the schema_version table to avoid a DB query every start.
+        // The version marker is BUMPED whenever the seeder changes, so the new
+        // logic runs once on the next boot: 'seo-init-v2-perbrand' seeds default
+        // page SEO for EVERY brand (not just crosscoin) and cleans up legacy
+        // brand_id=null rows. initializeSeoData is idempotent (findOrCreate), so
+        // re-running never overwrites admin edits.
         try {
-            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-done' LIMIT 1`);
+            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-v2-perbrand' LIMIT 1`);
             if (!seoRows.length) {
-                logger.info('Initializing SEO data (first time only)...');
+                logger.info('Initializing SEO data (per-brand seed v2)...');
                 await initializeSeoData();
-                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-done')`);
-                logger.info('✓ SEO data initialized');
+                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-v2-perbrand')`);
+                logger.info('✓ SEO data initialized (per-brand)');
             } else {
-                logger.info('✓ SEO data already initialized, skipping');
+                logger.info('✓ SEO data already initialized (v2), skipping');
             }
         } catch {
             // Fallback: run it anyway if the check fails
