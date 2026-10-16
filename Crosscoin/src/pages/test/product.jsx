@@ -203,7 +203,7 @@ export default function TestProduct() {
             </div>
 
             <div className="prepaidchip">≡ PREPAID10 — extra 10% off on prepaid orders ≡</div>
-            <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
+            <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
 
             <div className="pdptrust">
               <div className="pdptrust__row">
