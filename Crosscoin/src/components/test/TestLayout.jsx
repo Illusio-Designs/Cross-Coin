@@ -477,25 +477,29 @@ export default function TestLayout({ children }) {
               </div>
               <div className="freebar" style={{ marginBottom: 14 }}><span style={{ width: `${Math.min(100, (afterDisc / FREE_SHIP) * 100)}%` }} /></div>
 
-              <div className="pairsnote mono">✦ Sold in pairs — add more pairs to unlock a lower price per pair.</div>
+              {cart.some((i) => tiersMap[i.id] && tiersMap[i.id].length > 0) && (
+                <div className="pairsnote mono">✦ Some products are sold in pairs — add more pairs to unlock a lower price per pair.</div>
+              )}
 
-              {cart.map((i) => (
+              {cart.map((i) => {
+                const hasTiers = !!(tiersMap[i.id] && tiersMap[i.id].length > 0);
+                return (
                 <div className="ditem" key={i.key}>
                   <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
                   <div style={{ minWidth: 0 }}>
                     <h4>{i.name}</h4>
-                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'} · {i.qty > 1 ? `${i.qty} pairs` : '1 pair'}</div>
-                    {/* Buy More, Save More pair stepper (per product, when it has tiers) */}
-                    {tiersMap[i.id] && tiersMap[i.id].length > 0 && (
+                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{hasTiers ? ` · ${i.qty > 1 ? `${i.qty} pairs` : '1 pair'}` : (i.packq > 1 ? ` · ${i.pack}` : '')}</div>
+                    {/* Buy More, Save More pair stepper — only for products set up as pack-pairs */}
+                    {hasTiers && (
                       <div style={{ marginTop: 10 }}>
                         <CartPairStepper item={i} tiers={tiersMap[i.id]} onSet={(p, t) => setLinePairs(i.key, p, t)} />
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
                       <div className="qty" style={{ boxShadow: 'none' }}>
-                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }} aria-label="One pair fewer">−</button>
-                        <span style={{ width: 54, fontSize: 12 }}>{i.qty} pr</span>
-                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }} aria-label="One more pair">+</button>
+                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }} aria-label={hasTiers ? 'One pair fewer' : 'One fewer'}>−</button>
+                        <span style={{ width: hasTiers ? 54 : 34, fontSize: 12 }}>{hasTiers ? `${i.qty} pr` : i.qty}</span>
+                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
                       </div>
                       <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontFamily: '"Space Mono",monospace', fontSize: 11, cursor: 'pointer' }}>Remove</button>
                     </div>
@@ -505,7 +509,8 @@ export default function TestLayout({ children }) {
                     {i.was > i.unit && <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 11, color: 'var(--ink-faint)', textDecoration: 'line-through', fontWeight: 400 }}>{inr(i.was * i.qty)}</div>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* tappable live offers */}
               {!coupon && offers.length > 0 && (
