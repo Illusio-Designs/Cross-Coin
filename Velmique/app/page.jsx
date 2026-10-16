@@ -13,6 +13,14 @@ import {
 import { getPublicCategories } from '@/lib/api/categories';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
+import { buildMetadata } from '@/lib/api/seo';
+
+// Server-rendered, dashboard-controlled backend SEO ('home'). No hardcoded
+// fallback here, so an empty backend row simply falls back to the root
+// layout's metadata. (SeoWrapper still refreshes these client-side.)
+export async function generateMetadata() {
+  return buildMetadata('home', {});
+}
 
 // Regenerate the homepage at most every 1 minute (ISR) so it stays fast and
 // fresh without re-fetching on every request.

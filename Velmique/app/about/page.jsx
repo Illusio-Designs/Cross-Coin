@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import SeoWrapper from '@/components/SeoWrapper';
+import { buildMetadata } from '@/lib/api/seo';
+
+// Server-rendered, dashboard-controlled backend SEO ('about'); empty backend
+// values fall back to the root layout. (SeoWrapper refreshes client-side too.)
+export async function generateMetadata() {
+  return buildMetadata('about', {});
+}
 
 const milestones = [
   { year: '2018', event: 'Velmique founded in Morbi, Gujarat by Obzus India Private Limited — grounded in Grasse technique and the attar heritage of Kannauj.' },

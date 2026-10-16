@@ -1,4 +1,5 @@
 import ClientPage from './ClientPage';
+import { buildMetadata } from '@/lib/api/seo';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.com';
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -18,17 +19,21 @@ async function fetchCollections() {
   } catch { return []; }
 }
 
-export const metadata = {
-  title: 'Collections — Velmique',
-  description: 'Discover Velmique\'s curated fragrance collections — each a study in rare ingredients and editorial restraint.',
-  alternates: { canonical: `${SITE}/collections` },
-  openGraph: {
+// Dashboard-controlled backend SEO ('categories') merged OVER these hardcoded
+// values — backend wins per-field when non-empty, else these are kept.
+export async function generateMetadata() {
+  return buildMetadata('categories', {
     title: 'Collections — Velmique',
-    description: 'Discover Velmique\'s curated fragrance collections.',
-    url: `${SITE}/collections`,
-    type: 'website',
-  },
-};
+    description: 'Discover Velmique\'s curated fragrance collections — each a study in rare ingredients and editorial restraint.',
+    alternates: { canonical: `${SITE}/collections` },
+    openGraph: {
+      title: 'Collections — Velmique',
+      description: 'Discover Velmique\'s curated fragrance collections.',
+      url: `${SITE}/collections`,
+      type: 'website',
+    },
+  });
+}
 
 export default async function Page() {
   const collections = await fetchCollections();
