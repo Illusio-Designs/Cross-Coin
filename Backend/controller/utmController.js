@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
+const { isOwnHost } = require('../utils/ownHosts');
 
 // Classify a visit that carries no UTM parameters by its referrer so the
 // traffic report can still bucket organic / social / direct / referral.
@@ -14,6 +15,11 @@ function hostOf(url) {
 function deriveSource(referrer) {
   const h = hostOf(referrer);
   if (!h) return 'direct';
+  // Self-referral: a hop from one of our own storefronts is NOT a new traffic
+  // source (Shopify excludes these). Treat it as direct so the original source
+  // that actually brought the visitor in is what the report keeps — and so our
+  // own domains never show up as a "source".
+  if (isOwnHost(h)) return 'direct';
   // AI assistants first — some live on google/bing/microsoft subdomains, so
   // they must be matched before the search-engine checks below.
   if (/(chatgpt|openai)/.test(h)) return 'chatgpt';
@@ -36,6 +42,7 @@ function deriveSource(referrer) {
 function deriveMedium(referrer) {
   const h = hostOf(referrer);
   if (!h) return 'none'; // direct
+  if (isOwnHost(h)) return 'none'; // self-referral → treated as direct
   if (/(google|bing|duckduckgo|yahoo)\./.test(h)) return 'organic';
   if (/(facebook|fb|instagram|youtube|youtu\.be|twitter|t\.co|x\.com|linkedin|whatsapp|wa\.me)/.test(h)) return 'social';
   return 'referral';

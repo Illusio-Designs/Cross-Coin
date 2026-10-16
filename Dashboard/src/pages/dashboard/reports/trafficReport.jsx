@@ -9,9 +9,13 @@ import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from '../../..
  * (source/medium) breakdown. Themed via --ds tokens (light/dark).
  */
 
-// Brand colours for the 5 headline channels — categorical identity that reads
-// at a glance against the otherwise-monochrome Obzus chrome.
-const CHANNEL_COLORS = { Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335', 'AI chatbot': '#8b5cf6', Other: '#94a3b8', 'Direct / untracked': '#64748b' };
+// Brand colours for the Shopify-style marketing channels — categorical identity
+// that reads at a glance against the otherwise-monochrome Obzus chrome.
+const CHANNEL_COLORS = {
+  Direct: '#0f766e', Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335',
+  'AI chatbot': '#8b5cf6', Email: '#d97706', SMS: '#16a34a', Referral: '#6366f1',
+  Other: '#94a3b8', 'Direct / untracked': '#64748b',
+};
 const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-accent, #2563eb)';
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
@@ -149,9 +153,13 @@ export default function TrafficReport() {
         </Panel>
       ) : null}
 
-      {/* Traffic sources — grouped into the 5 headline channels */}
+      {/* Traffic sources — grouped into Shopify-style marketing channels */}
       {data?.channels?.length ? (
-        <Panel title="Traffic sources — where visitors come from" flush>
+        <Panel
+          title="Traffic sources — where visitors come from"
+          subtitle="Grouped the way Shopify does: Direct (no referrer or a hop within our own sites), Facebook/Instagram/Google, AI chatbots, Email, SMS and Referral. Self-referrals from our own domains roll into Direct. Orders here are only those we can tie to a tracked visit; orders with no visit are shown as the Direct / untracked row so the totals always reconcile."
+          flush
+        >
           <ResponsiveTable
             rowKey={(r) => r.channel}
             data={data.channels}

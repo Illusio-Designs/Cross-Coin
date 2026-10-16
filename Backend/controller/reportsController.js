@@ -3,22 +3,42 @@ const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
 const { BOT_SQL_REGEXP } = require('../utils/botDetect');
 const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
+const { isOwnHost } = require('../utils/ownHosts');
 
 // Excludes bot/crawler user agents from a utm_tracking scan (belt-and-suspenders
 // for rows recorded before ingestion-time bot filtering existed).
 const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
 
-// Roll a raw source/medium up into the 5 headline channels the business tracks.
-function channelOf(source, medium) {
+// Roll a raw source/medium up into Shopify-style marketing channels. Shopify
+// buckets every session into Direct, Social, Search, Email, SMS and Referral,
+// never leaving your own domain showing up as a "source". We keep the three
+// social/search names the business actually buys ads on (Facebook, Instagram,
+// Google) plus an AI-chatbot bucket, and otherwise follow Shopify's grouping.
+//
+// `selfHosts` is the set of our own storefront domains (brand `domain` values);
+// a session whose source is one of them is a self-referral → Direct, exactly
+// like Shopify, so an internal page-to-page hop is never counted as traffic
+// from an external site.
+function channelOf(source, medium, selfHosts) {
   const s = String(source || '').toLowerCase().trim();
-  const m = String(medium || '').toLowerCase();
+  const m = String(medium || '').toLowerCase().trim();
+  // Direct: no source, an explicit direct marker, or a self-referral host.
+  if (!s || s === 'direct' || s === '(direct)' || s === 'none' || s === '(none)') return 'Direct';
+  if (isOwnHost(s, selfHosts)) return 'Direct';
+  // Email / SMS — owned channels, keyed off source or medium.
+  if (/^e[-]?mail$|newsletter|klaviyo|mailchimp|sendgrid/.test(s) || /^e[-]?mail$|newsletter/.test(m)) return 'Email';
+  if (/^sms$|textmessage|text-message/.test(s) || /^sms$|^text$/.test(m)) return 'SMS';
+  // Social / search the business buys ads on — matched by name (covers both the
+  // paid utm_source and the organic referrer host, e.g. "l.facebook.com").
   if (/facebook|(^|[^a-z])fb([^a-z]|$)|meta$|meta\b/.test(s) || /facebook/.test(m)) return 'Facebook';
   if (s === 'instagram' || s === 'ig' || /instagram/.test(s)) return 'Instagram';
   if (/google/.test(s)) return 'Google';
   if (/chatgpt|openai|perplexity|gemini|bard|copilot|claude|anthropic|poe|phind|deepseek|you\.com|grok|meta\.ai|(^|[^a-z])ai([^a-z]|$)/.test(s)) return 'AI chatbot';
-  return 'Other';
+  // Any other real external site → Referral (Shopify's catch-all for a known
+  // referring domain), rather than a vague "Other".
+  return 'Referral';
 }
-const CHANNEL_ORDER = ['Facebook', 'Instagram', 'Google', 'AI chatbot', 'Other'];
+const CHANNEL_ORDER = ['Direct', 'Facebook', 'Instagram', 'Google', 'AI chatbot', 'Email', 'SMS', 'Referral'];
 
 // Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Day
 // boundaries are anchored to the business timezone (IST, +05:30) — the SAME
@@ -53,10 +73,18 @@ exports.getBrandTraffic = async (req, res) => {
     const { start, end } = parseRange(req.query);
     const repl = { start, end, bot: BOT_SQL_REGEXP };
 
-    // Brands
+    // Brands (incl. domain so we can recognise self-referrals from the live
+    // store domains, not just the hard-coded fallback list in utils/ownHosts).
     const brands = await sequelize.query(
-      `SELECT id, name, COALESCE(display_name, name) AS display_name FROM brands ORDER BY id`,
+      `SELECT id, name, COALESCE(display_name, name) AS display_name, domain FROM brands ORDER BY id`,
       { type: QueryTypes.SELECT }
+    );
+    // Set of our own storefront hosts → any session "sourced" from one of these
+    // is a self-referral and rolls into Direct (Shopify behaviour).
+    const selfHosts = new Set(
+      brands
+        .map((b) => String(b.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/:?#].*$/, '').replace(/^www\./, ''))
+        .filter(Boolean)
     );
 
     // Sessions per brand (one utm_tracking row = one session/visit)
@@ -158,7 +186,7 @@ exports.getBrandTraffic = async (req, res) => {
     for (const c of channels) {
       if (!chanByBrand.has(c.brand_id)) chanByBrand.set(c.brand_id, new Map());
       const m = chanByBrand.get(c.brand_id);
-      const name = channelOf(c.source, c.medium);
+      const name = channelOf(c.source, c.medium, selfHosts);
       m.set(name, (m.get(name) || 0) + Number(c.sessions));
     }
     // brand_id -> { view_item, add_to_cart, begin_checkout }
@@ -252,7 +280,7 @@ exports.getBrandTraffic = async (req, res) => {
     const totalSrcSessions = sourceRows.reduce((n, r) => n + Number(r.sessions), 0) || 1;
     const groups = new Map();
     for (const r of sourceRows) {
-      const name = channelOf(r.source, r.medium);
+      const name = channelOf(r.source, r.medium, selfHosts);
       const g = groups.get(name) || { sessions: 0, orders: 0 };
       g.sessions += Number(r.sessions) || 0;
       g.orders += Number(r.orders) || 0;
@@ -267,7 +295,10 @@ exports.getBrandTraffic = async (req, res) => {
         orders: g.orders,
         conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : 0,
       };
-    });
+    })
+      // Show only channels that actually have data in the window (Shopify hides
+      // empty channels) — but always keep Direct as the anchor row.
+      .filter((c) => c.channel === 'Direct' || c.sessions > 0 || c.orders > 0);
 
     // Reconciling row: the per-channel orders above only count orders matched to
     // a tracked visit (orders.utm_tracking_id). Real orders with no tracked
@@ -289,12 +320,17 @@ exports.getBrandTraffic = async (req, res) => {
       });
     }
 
+    // A self-referral host stored as the source (e.g. "soxbaesocks.com") is
+    // relabelled "direct" for display, so our own domains never show up as a
+    // traffic source in the drill-down — same rule the channel roll-up uses.
+    const cleanSource = (src) => (isOwnHost(src, selfHosts) ? 'direct' : src);
+
     // Granular source/medium rows kept for CSV / drill-down.
     const sources = sourceRows.map((r) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
       return {
-        source: r.source, medium: r.medium, sessions: sess,
+        source: cleanSource(r.source), medium: r.medium, sessions: sess,
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
         conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
@@ -307,7 +343,7 @@ exports.getBrandTraffic = async (req, res) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
       return {
-        source: r.source, medium: r.medium, campaign: r.campaign, sessions: sess,
+        source: cleanSource(r.source), medium: r.medium, campaign: r.campaign, sessions: sess,
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
         revenue: Math.round(Number(r.revenue) || 0),
