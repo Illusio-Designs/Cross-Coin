@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
-import { PACKS, inr } from '../../components/test/data';
+import { inr } from '../../components/test/data';
 import { fetchProduct, fetchProducts, fetchBundleTiers } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 
@@ -51,11 +51,11 @@ export default function TestProduct() {
   if (loading) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ color: 'var(--ink-faint)', padding: '60px 0', fontSize: 13 }}>Loading product…</p></div></TestLayout>;
   if (!p) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Back to shop</a></p></div></TestLayout>;
 
-  // Pack ladder: real admin-set bundle tiers when present (absolute pack prices),
-  // else the illustrative PACKS fallback. "1 pair" is the product's own price.
+  // Pack ladder from REAL admin-set bundle tiers only. Products with no tiers
+  // show a normal single-price product (the pack selector is hidden).
   const packOptions = tiers.length
     ? [{ q: 1, label: 'Single', total: p.now, best: false }, ...tiers.map((t) => ({ q: t.pairs, label: t.label, total: t.price, best: /best|popular/i.test(t.badge || '') }))]
-    : PACKS.map((pk) => ({ q: pk.q, label: pk.label, total: Math.round(p.now * pk.mult), best: !!pk.best }));
+    : [{ q: 1, label: 'Single', total: p.now, best: false }];
   const selected = packOptions.find((o) => o.q === packQ) || packOptions[0];
   const perUnit = Math.round(selected.total / selected.q);
   const total = selected.total * qty;
@@ -112,7 +112,7 @@ export default function TestProduct() {
             </>)}
 
             {packOptions.length > 1 && (<>
-              <div className="optlabel">Pack &amp; save{tiers.length ? '' : ' (sample tiers)'}</div>
+              <div className="optlabel">Pack &amp; save</div>
               <div className="packs">
                 {packOptions.map((o) => {
                   const save = Math.max(0, Math.round(p.now * o.q - o.total));

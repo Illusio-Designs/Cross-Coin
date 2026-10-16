@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -132,6 +132,29 @@ export async function fetchCoupons() {
       const label = type === 'percentage' || type === 'percent' ? `${val}% OFF` : (val ? `₹${val} OFF` : 'DEAL');
       return { code: c.code, label, min: c.minOrderValue ?? c.min_order_value ?? null };
     }).filter((c) => c.code);
+  } catch (_) { return []; }
+}
+
+// Real global FAQs (admin-managed) → [question, answer] pairs.
+export async function fetchFaqs() {
+  try {
+    const { data } = await axios.get(`${API_URL}/api/public/faqs?type=global`, addBrandHeader());
+    const list = Array.isArray(data?.faqs) ? data.faqs : [];
+    return list.map((f) => [f.question || f.q || '', f.answer || f.a || '']).filter((x) => x[0] && x[1]);
+  } catch (_) { return []; }
+}
+
+// Real journal / blog posts for the home "ledger" section.
+export async function fetchBlogs(limit = 3) {
+  try {
+    const r = await getPublicBlogs({ limit });
+    const list = r?.data?.posts || r?.data?.blogs || r?.posts || r?.blogs || (Array.isArray(r?.data) ? r.data : (Array.isArray(r) ? r : []));
+    return list.map((b) => ({
+      title: b.title || b.name || '',
+      slug: b.slug || '',
+      tag: (b.category?.name || b.category || b.tag || 'Journal'),
+      img: imgOf(b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image),
+    })).filter((b) => b.title).slice(0, limit);
   } catch (_) { return []; }
 }
 

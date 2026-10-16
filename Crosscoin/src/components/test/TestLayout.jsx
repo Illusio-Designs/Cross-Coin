@@ -24,6 +24,14 @@ const MOBILE_CSS = `
 .cc-test-root .pd{ position: relative; align-items: start; }
 .cc-test-root .gallery{ align-self: start; z-index: 0; }
 .cc-test-root .pd ~ .block{ position: relative; z-index: 2; background: var(--bg); border-top: 2px solid var(--line); margin-top: 20px; }
+/* Reviews auto-scroller (Morbix-style infinite marquee, pause on hover). */
+.cc-test-root .revscroll{ overflow:hidden; -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); }
+.cc-test-root .revscroll__track{ display:flex; gap:16px; width:max-content; padding:4px 16px; animation:ccRevScroll 46s linear infinite; }
+.cc-test-root .revscroll:hover .revscroll__track{ animation-play-state:paused; }
+.cc-test-root .revscroll .rev{ width:330px; flex:0 0 auto; }
+@keyframes ccRevScroll{ from{ transform:translateX(0);} to{ transform:translateX(-50%);} }
+@media (prefers-reduced-motion: reduce){ .cc-test-root .revscroll__track{ animation:none; } }
+@media (max-width:520px){ .cc-test-root .revscroll .rev{ width:80vw; } }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
@@ -152,13 +160,23 @@ export default function TestLayout({ children }) {
         <div className="wrap foot">
           <div className="ab">
             <span className="brand"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></span>
-            <p style={{ marginTop: 13 }}>Everyday essentials, minted to last. Delivered across India with a friendly, honest checkout.</p>
+            <p style={{ marginTop: 13 }}>Premium quality socks designed for comfort and style. Join our community for exclusive deals.</p>
+            <div className="soc">
+              <a href="https://www.facebook.com/people/Cross-Coin/61577195743730/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2 0-3 1.3-3 3v2H8v3h3v7h3v-7h3l1-3h-4V9c0-.6.4-1 1-1z"/></svg></a>
+              <a href="https://www.instagram.com/crosscoin99/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+              <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></a>
+            </div>
           </div>
-          <div><h4>Shop</h4><a onClick={() => go('/test/shop')}>All products</a><a onClick={() => go('/test/shop')}>New arrivals</a><a onClick={() => go('/test/shop')}>Bestsellers</a><a onClick={() => go('/test/shop')}>Sale</a></div>
-          <div><h4>Help</h4><a onClick={() => go('/test#faq')}>Track order</a><a onClick={() => go('/test#faq')}>Returns</a><a onClick={() => go('/test#faq')}>Shipping</a><a onClick={() => go('/test#faq')}>Contact</a></div>
-          <div><h4>Company</h4><a>About</a><a onClick={() => go('/test#journal')}>Journal</a><a>Careers</a><a>Privacy</a></div>
+          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/shop')}>Collections</a><a onClick={() => go('/test#journal')}>Journal</a><a href="https://www.crosscoin.in/About" target="_blank" rel="noopener noreferrer">About Us</a></div>
+          <div><h4>Account</h4><a href="https://www.crosscoin.in/profile" target="_blank" rel="noopener noreferrer">My Account</a><a href="https://www.crosscoin.in/OrderTracking" target="_blank" rel="noopener noreferrer">Track Order</a><a href="https://www.crosscoin.in/Wishlist" target="_blank" rel="noopener noreferrer">Wishlist</a></div>
+          <div><h4>Policies</h4><a href="https://www.crosscoin.in/policy/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a><a href="https://www.crosscoin.in/policy/terms-and-conditions" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="https://www.crosscoin.in/policy/shipping-policy" target="_blank" rel="noopener noreferrer">Shipping Policy</a><a href="https://www.crosscoin.in/policy/cancellation-and-refund" target="_blank" rel="noopener noreferrer">Cancellation &amp; Refund</a></div>
         </div>
-        <div className="wrap footend"><span>© 2026 CROSSCOIN · /test preview</span><span>PRIVACY · TERMS · MADE IN INDIA 🇮🇳</span></div>
+        <div className="wrap" style={{ paddingBottom: 18 }}>
+          <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
+            Contact: <a href="tel:+919712891700" style={{ color: 'var(--crimson)' }}>+91 97128 91700</a> · <a href="mailto:obzusindia@gmail.com" style={{ color: 'var(--crimson)' }}>obzusindia@gmail.com</a>
+          </div>
+        </div>
+        <div className="wrap footend"><span>© {new Date().getFullYear()} CROSSCOIN. All rights reserved.</span><span>PRIVACY · TERMS · MADE IN INDIA 🇮🇳</span></div>
       </footer>
 
       {/* cart drawer */}

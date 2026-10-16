@@ -4,10 +4,11 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast } from '../../components/test/ui';
 import { FAQS } from '../../components/test/data';
-import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons } from '../../components/test/real';
+import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs } from '../../components/test/real';
 
 const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
+const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 export default function TestHome() {
@@ -17,17 +18,20 @@ export default function TestHome() {
   const [cats, setCats] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [deal, setDeal] = useState(null);
+  const [blogs, setBlogs] = useState([]);
+  const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let off = false;
-    Promise.all([fetchProducts({ limit: 8 }), fetchCategories(), fetchReviews(6), fetchCoupons()])
-      .then(([prods, categories, revs, coupons]) => {
+    Promise.all([fetchProducts({ limit: 8 }), fetchCategories(), fetchReviews(12), fetchCoupons(), fetchBlogs(3), fetchFaqs()])
+      .then(([prods, categories, revs, coupons, posts, realFaqs]) => {
         if (off) return;
         setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6));
-        setReviews(revs.slice(0, 3)); setDeal(coupons[0] || null);
+        setReviews(revs.slice(0, 10)); setDeal(coupons[0] || null);
+        setBlogs(posts); setFaqs(realFaqs.length ? realFaqs : FAQS);
       })
-      .catch(() => {})
+      .catch(() => { if (!off) setFaqs(FAQS); })
       .finally(() => { if (!off) setLoading(false); });
     return () => { off = true; };
   }, []);
@@ -110,13 +114,13 @@ export default function TestHome() {
         </div>
       </section>
 
-      {/* reviews — real store reviews */}
+      {/* reviews — real store reviews, auto-scrolling marquee (Morbix-style) */}
       {reviews.length > 0 && (
         <section className="block">
-          <div className="wrap">
-            <div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div>
-            <div className="revgrid">
-              {reviews.map((r, i) => (
+          <div className="wrap"><div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div></div>
+          <div className="revscroll">
+            <div className="revscroll__track">
+              {[...reviews, ...reviews].map((r, i) => (
                 <div className="rev" key={i}>
                   <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
                   <p>&ldquo;{r.text}&rdquo;</p>
@@ -128,28 +132,29 @@ export default function TestHome() {
         </section>
       )}
 
-      {/* journal */}
-      <section className="block" id="journal" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="sechead"><div><span className="eyebrow">[ 05 ] The ledger</span><h2>Journal</h2></div><span className="seelink">Read more →</span></div>
-          <div className="jgrid">
-            {[
-              ['Guide', 'How to build a sock drawer that actually lasts', 'linear-gradient(150deg,#ffd7dd,#ffbac4)'],
-              ['Materials', 'Merino vs cotton: what to wear this winter', 'linear-gradient(150deg,#d7cff2,#bcb0e8)'],
-              ['Care', 'Five habits that double the life of your knits', 'linear-gradient(150deg,#cdeee6,#aee0d3)'],
-            ].map(([m, t, bg]) => (
-              <a className="post" key={t}><div className="post__img" style={{ background: bg }} /><div className="post__b"><div className="m">{m}</div><h3>{t}</h3></div></a>
-            ))}
+      {/* journal — real blog posts */}
+      {blogs.length > 0 && (
+        <section className="block" id="journal" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="sechead"><div><span className="eyebrow">[ 05 ] The ledger</span><h2>Journal</h2></div></div>
+            <div className="jgrid">
+              {blogs.map((b, i) => (
+                <a className="post" key={b.slug || i} href={b.slug ? `https://www.crosscoin.in/blog/${b.slug}` : undefined} target="_blank" rel="noopener noreferrer">
+                  <div className="post__img" style={{ background: GRADS[i % GRADS.length], overflow: 'hidden' }}>{b.img && <img src={b.img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div className="post__b"><div className="m">{b.tag}</div><h3>{b.title}</h3></div>
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* faq */}
       <section className="block" id="faq" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="sechead" style={{ justifyContent: 'center', textAlign: 'center' }}><div><span className="eyebrow">[ 06 ] Fine print</span><h2>Questions, answered</h2></div></div>
           <div className="faq">
-            {FAQS.map(([q, a], i) => (
+            {faqs.map(([q, a], i) => (
               <div className={`qa${open === i ? ' open' : ''}`} key={q}>
                 <button className="qa__q" onClick={() => setOpen(open === i ? -1 : i)}>{q}<span className="pm"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span></button>
                 <div className="qa__a" style={{ maxHeight: open === i ? 300 : 0 }}><div>{a}</div></div>
