@@ -31,12 +31,18 @@ const MOBILE_CSS = `
   .cc-test-root .denoms{ gap:8px; }
   .cc-test-root .denom{ padding:8px 11px; flex:1 1 auto; }
 }
+/* The hero's decorative coin + floating chips are absolutely positioned and
+   collide with the headline/pill on phones — drop them for a clean,
+   headline-first hero (the copy, CTAs and stat tiles carry it). */
+@media (max-width:600px){
+  .cc-test-root .hero__art{ display:none; }
+  .cc-test-root .hero .wrap{ grid-template-columns:1fr; padding-block:30px 44px; }
+  .cc-test-root .hero .tagpill{ white-space:nowrap; }
+}
 @media (max-width:480px){
   .cc-test-root .nav{ gap:8px; height:60px; }
   .cc-test-root .nav__extra{ display:none; }
   .cc-test-root .ibtn{ width:40px; height:40px; }
-  .cc-test-root .hero .wrap{ padding-block:34px 44px; }
-  .cc-test-root .hero__art{ max-width:290px; }
   .cc-test-root .cc-logo{ height:24px; }
   .cc-test-root .cowrap{ gap:18px; }
   .cc-test-root .citem{ gap:12px; }
