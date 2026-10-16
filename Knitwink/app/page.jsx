@@ -11,11 +11,21 @@ import { getPublicCategories } from '@/lib/api/categories'
 import { getAllReviews } from '@/lib/api/reviews'
 import { getPosts } from '@/lib/api/blog'
 import SeoWrapper from '@/components/SeoWrapper'
+import { buildMetadata } from '@/lib/api/seo'
 
 // Regenerate at most every 5 minutes (ISR). Combined with the server-cached
 // fetches below, the homepage is served as static HTML from Vercel's edge and
 // re-rendered every 60s so dashboard edits (hero slider etc.) reflect promptly.
 export const revalidate = 60
+
+// Server-rendered page SEO from the dashboard-controlled backend. The home page
+// carries no hardcoded metadata of its own (the layout supplies the site-wide
+// defaults and SeoWrapper handles client-side tags), so the fallback is empty:
+// buildMetadata swallows backend errors and returns {} on a miss, leaving the
+// layout defaults intact.
+export async function generateMetadata() {
+  return buildMetadata('home', {})
+}
 
 // Fetch the above-the-fold lists on the SERVER and render them into the initial
 // HTML. Previously this page was a 'use client' component that fetched sliders,

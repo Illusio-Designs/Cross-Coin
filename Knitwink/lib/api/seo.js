@@ -29,3 +29,66 @@ export async function getSeoByPageName(pageName) {
     return null;
   }
 }
+
+/* First non-empty value among the candidates — a value counts only when it is
+   neither null/undefined nor a blank/whitespace string. Returns `undefined`
+   when every candidate is empty, so callers can omit the field entirely rather
+   than blanking it out. */
+function firstNonEmpty(...vals) {
+  for (const v of vals) {
+    if (v != null && String(v).trim() !== '') return v;
+  }
+  return undefined;
+}
+
+/* Build a Next.js Metadata object for a static page by overlaying the
+   dashboard-controlled backend SEO (via getSeoByPageName) ON TOP OF the page's
+   existing hardcoded metadata (`fallback`). Backend wins per-field, but only
+   when its value is non-empty — otherwise the page keeps its current value, so
+   a missing dashboard entry never blanks out good defaults. Empty fields are
+   omitted. Errors are swallowed (getSeoByPageName already returns null on any
+   failure; the extra guard keeps the page rendering even on an unexpected
+   throw) so a backend hiccup degrades to the fallback instead of breaking the
+   render. */
+export async function buildMetadata(pageName, fallback = {}) {
+  let seo = null;
+  try {
+    seo = await getSeoByPageName(pageName);
+  } catch {
+    seo = null;
+  }
+  seo = seo || {};
+
+  const metadata = {};
+
+  const title = firstNonEmpty(seo.meta_title, fallback.title);
+  if (title !== undefined) metadata.title = title;
+
+  const description = firstNonEmpty(seo.meta_description, fallback.description);
+  if (description !== undefined) metadata.description = description;
+
+  const keywords = firstNonEmpty(seo.meta_keywords, fallback.keywords);
+  if (keywords !== undefined) metadata.keywords = keywords;
+
+  const canonical = firstNonEmpty(seo.canonical_url, fallback?.alternates?.canonical);
+  if (canonical !== undefined) metadata.alternates = { canonical };
+
+  const robots = firstNonEmpty(seo.robots, fallback.robots);
+  if (robots !== undefined) metadata.robots = robots;
+
+  // Preserve the fallback's openGraph block as-is, updating only its title and
+  // description from the backend when those are provided.
+  if (fallback.openGraph) {
+    const openGraph = { ...fallback.openGraph };
+
+    const ogTitle = firstNonEmpty(seo.og_title, seo.meta_title, fallback.openGraph.title);
+    if (ogTitle !== undefined) openGraph.title = ogTitle;
+
+    const ogDescription = firstNonEmpty(seo.og_description, seo.meta_description, fallback.openGraph.description);
+    if (ogDescription !== undefined) openGraph.description = ogDescription;
+
+    metadata.openGraph = openGraph;
+  }
+
+  return metadata;
+}
