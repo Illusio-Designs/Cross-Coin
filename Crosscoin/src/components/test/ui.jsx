@@ -23,6 +23,7 @@ export const I = {
   shield: (s = 24) => <svg {...S()} width={s} height={s}><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /><path d="m9 12 2 2 4-4" /></svg>,
   box: (s = 24) => <svg {...S()} width={s} height={s}><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10" /></svg>,
   lock: (s = 20) => <svg {...S()} width={s} height={s}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>,
+  trash: (s = 16) => <svg {...S()} width={s} height={s}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13" /></svg>,
 };
 
 export function toast(msg) {

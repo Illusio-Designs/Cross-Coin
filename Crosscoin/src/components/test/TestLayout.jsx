@@ -3,10 +3,10 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack, addItem } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
-import { validateCouponReal, fetchBundleTiers, fetchCoupons } from './real';
+import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
 
@@ -133,6 +133,24 @@ const MOBILE_CSS = `
 @keyframes ccShimmer{ 100%{ transform:translateX(100%); } }
 .cc-test-root .cc-skelblock{ border-radius:10px; }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel::after{ animation:none; } }
+/* cart item pack chip */
+.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:999px; padding:2px 8px; }
+/* Buy More, Save More carousel (Morbix) */
+.cc-test-root .bms{ margin:16px 0 4px; border:2px solid var(--line-ink); border-radius:10px; background:color-mix(in srgb,var(--crimson) 5%,var(--surface)); box-shadow:var(--stamp-sm); padding:12px; }
+.cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson); margin-bottom:10px; }
+.cc-test-root .bms__scroll{ display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.cc-test-root .bms__scroll::-webkit-scrollbar{ display:none; }
+.cc-test-root .bms__card{ flex:0 0 auto; width:236px; display:flex; align-items:center; gap:10px; background:var(--surface); border:2px solid var(--line-ink); border-radius:10px; padding:8px; box-shadow:var(--stamp-sm); }
+.cc-test-root .bms__img{ width:48px; height:48px; border-radius:8px; overflow:hidden; background:var(--paper-2); flex-shrink:0; display:grid; place-items:center; }
+.cc-test-root .bms__img img{ width:100%; height:100%; object-fit:cover; }
+.cc-test-root .bms__info{ min-width:0; flex:1; }
+.cc-test-root .bms__nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:5px; margin-top:2px; font-family:"Space Mono",monospace; }
+.cc-test-root .bms__pr b{ font-size:12.5px; color:var(--crimson); }
+.cc-test-root .bms__pr s{ font-size:10.5px; color:var(--ink-faint); }
+.cc-test-root .bms__pr em{ font-style:normal; font-size:9.5px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,transparent); border-radius:999px; padding:1px 6px; }
+.cc-test-root .bms__add{ flex-shrink:0; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:8px; padding:7px 11px; cursor:pointer; }
+.cc-test-root .bms__add:hover{ filter:brightness(1.08); }
 /* "Sold in pairs" note at the top of the cart */
 .cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:10px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
 /* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
@@ -339,6 +357,7 @@ export default function TestLayout({ children }) {
   const [orderErr, setOrderErr] = useState('');
   const [offers, setOffers] = useState([]);
   const [tiersMap, setTiersMap] = useState({});
+  const [suggested, setSuggested] = useState([]);
   const tt = useRef();
   const rootRef = useRef(null);
   const formRef = useRef(null);
@@ -372,6 +391,14 @@ export default function TestLayout({ children }) {
       .then((entries) => { if (!off) setTiersMap(Object.fromEntries(entries)); });
     return () => { off = true; };
   }, [drawer, cartIds]);
+
+  // "Buy More, Save More" suggestions — products not already in the cart.
+  useEffect(() => {
+    if (!drawer || suggested.length) return;
+    let off = false;
+    fetchProducts({ limit: 10 }).then((list) => { if (!off) setSuggested(list); }).catch(() => {});
+    return () => { off = true; };
+  }, [drawer, suggested.length]);
 
   // Theme is scoped to the preview root (the dark CSS is .cc-test-root[data-theme]),
   // so toggle the attribute on the wrapper, not <html>.
@@ -560,7 +587,7 @@ export default function TestLayout({ children }) {
                   <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
                   <div style={{ minWidth: 0 }}>
                     <h4>{i.name}</h4>
-                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{hasTiers ? ` · ${i.qty > 1 ? `${i.qty} pairs` : '1 pair'}` : (i.packq > 1 ? ` · ${i.pack}` : '')}</div>
+                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pair pack</span> : null}</div>
                     {/* Buy More, Save More pair stepper — only for products set up as pack-pairs */}
                     {hasTiers && (
                       <div style={{ marginTop: 10 }}>
@@ -573,7 +600,7 @@ export default function TestLayout({ children }) {
                         <span style={{ width: hasTiers ? 54 : 34, fontSize: 12 }}>{hasTiers ? `${i.qty} pr` : i.qty}</span>
                         <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
                       </div>
-                      <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontFamily: '"Space Mono",monospace', fontSize: 11, cursor: 'pointer' }}>Remove</button>
+                      <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} aria-label="Remove" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, padding: 0 }}>{I.trash(15)}</button>
                     </div>
                   </div>
                   <div className="lp" style={{ textAlign: 'right' }}>
@@ -584,6 +611,34 @@ export default function TestLayout({ children }) {
                 </div>
                 );
               })}
+
+              {/* Buy More, Save More — add another product to build toward a pack */}
+              {(() => {
+                const inCart = new Set(cart.map((i) => String(i.id)));
+                const rows = suggested.filter((p) => !inCart.has(String(p.id))).slice(0, 8);
+                if (rows.length === 0) return null;
+                return (
+                  <div className="bms">
+                    <div className="bms__h mono">✦ Buy more, save more — add one &amp; unlock bundle prices</div>
+                    <div className="bms__scroll">
+                      {rows.map((p) => {
+                        const v = (p.variants || []).find((x) => x.pairs === 1) || (p.variants || [])[0] || null;
+                        const save = p.was > p.now ? Math.round(p.was - p.now) : 0;
+                        return (
+                          <div className="bms__card" key={p.id}>
+                            <div className="bms__img">{p.img ? <img src={p.img} alt="" loading="lazy" /> : <Thumb color={p.colors?.[0]?.name} />}</div>
+                            <div className="bms__info">
+                              <div className="bms__nm">{p.name}</div>
+                              <div className="bms__pr"><b>{inr(p.now)}</b>{p.was > p.now && <s>{inr(p.was)}</s>}{save > 0 && <em>Save {inr(save)}</em>}</div>
+                            </div>
+                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* tappable live offers */}
               {!coupon && offers.length > 0 && (
