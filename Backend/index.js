@@ -1116,6 +1116,10 @@ const startServer = async () => {
         };
         await ensureEnumValue('orders', 'payment_status', 'partial_refund');
         await ensureEnumValue('payments', 'status', 'partial_refund');
+        // The Global SEO Settings page saves SEO_* keys under category 'seo', but
+        // the ENUM never listed it, so every save silently failed and the form
+        // read back empty. Add it so the page can store and reload its values.
+        await ensureEnumValue('brand_settings', 'category', 'seo');
 
         // ── Idempotent migration: shipment_webhook_events (raw + dedup) ───────
         // Stores every inbound shipping webhook verbatim for audit, and its

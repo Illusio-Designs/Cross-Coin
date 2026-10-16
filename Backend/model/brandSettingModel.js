@@ -48,7 +48,8 @@ const BrandSetting = sequelize.define('BrandSetting', {
             'shipping',
             'email',
             'sms',
-            'general'
+            'general',
+            'seo'
         ),
         defaultValue: 'general',
         comment: 'Setting category for organization'
