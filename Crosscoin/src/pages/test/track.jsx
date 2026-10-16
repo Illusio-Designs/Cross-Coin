@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { trackOrder } from '../../components/test/real';
+import { trackOrder, trackByAwb } from '../../components/test/real';
 import { inr } from '../../components/test/data';
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
@@ -10,6 +10,7 @@ const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { 
 export default function TestTrack() {
   const router = useRouter();
   const [term, setTerm] = useState('');
+  const [mode, setMode] = useState('order'); // 'order' | 'awb'
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -20,8 +21,8 @@ export default function TestTrack() {
     if (!v) return;
     setErr(''); setLoading(true); setOrder(null);
     try {
-      const o = await trackOrder(v);
-      if (o) setOrder(o); else setErr('No order found for that number. Check and try again.');
+      const o = mode === 'awb' ? await trackByAwb(v) : await trackOrder(v);
+      if (o) setOrder(o); else setErr(mode === 'awb' ? 'No shipment found for that AWB / tracking number.' : 'No order found for that number. Check and try again.');
     } catch (_) { setErr('Could not look up that order right now.'); }
     finally { setLoading(false); }
   };
@@ -39,8 +40,12 @@ export default function TestTrack() {
         <div className="wrap">
           <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Track order</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Track your order</h2>
+          <div className="trackmode" style={{ display: 'flex', gap: 8, margin: '14px 0 10px' }}>
+            <button className={`chip${mode === 'order' ? ' on' : ''}`} onClick={() => { setMode('order'); setErr(''); }}>By order number</button>
+            <button className={`chip${mode === 'awb' ? ' on' : ''}`} onClick={() => { setMode('awb'); setErr(''); }}>By AWB / tracking no.</button>
+          </div>
           <form className="searchbar" onSubmit={submit}>
-            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Order number e.g. CC-123456" aria-label="Order number" />
+            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder={mode === 'awb' ? 'AWB / tracking number' : 'Order number e.g. CC-123456'} aria-label={mode === 'awb' ? 'AWB number' : 'Order number'} />
             <button className="btn btn--crimson" type="submit">Track</button>
           </form>
         </div>

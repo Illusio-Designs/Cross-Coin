@@ -435,6 +435,16 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .rvform textarea{ resize: vertical; }
 @media (max-width: 520px){ .cc-test-root .rvform__grid{ grid-template-columns: 1fr; } }
 
+/* --- Home coupon strip (real live coupons, tap to copy) --- */
+.cc-test-root .coupstrip{ overflow: hidden; border-block: 2px solid var(--line-ink); background: var(--indigo); }
+.cc-test-root .coupstrip__track{ display: flex; gap: 0; width: max-content; animation: cccoup 32s linear infinite; }
+.cc-test-root .coupstrip:hover .coupstrip__track{ animation-play-state: paused; }
+.cc-test-root .coupstrip__item{ display: inline-flex; align-items: center; gap: 10px; padding: 13px 26px; background: none; border: none; border-right: 1px dashed rgba(255,255,255,.22); color: #efe9ff; cursor: pointer; font-family: "Space Mono", monospace; white-space: nowrap; }
+.cc-test-root .coupstrip__tag{ font-size: 12px; opacity: .85; }
+.cc-test-root .coupstrip__code{ font-weight: 700; font-size: 13px; letter-spacing: .08em; color: var(--gold); border: 1.5px dashed var(--gold); border-radius: var(--r); padding: 3px 9px; }
+.cc-test-root .coupstrip__min{ font-size: 11px; opacity: .7; }
+@keyframes cccoup{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
+
 /* --- Header typeahead search --- */
 .cc-test-root .hsearch{ border-top: 2px solid var(--line); background: var(--surface); box-shadow: 0 8px 20px rgba(24,13,62,.1); }
 .cc-test-root .hsearch__in{ padding-block: 14px; }

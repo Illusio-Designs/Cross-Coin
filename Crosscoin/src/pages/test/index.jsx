@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards } from '../../components/test/ui';
+import { inr } from '../../components/test/data';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 
 const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
@@ -17,6 +18,7 @@ export default function TestHome() {
   const [cats, setCats] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [deal, setDeal] = useState(null);
+  const [couponList, setCouponList] = useState([]);
   const [blogs, setBlogs] = useState([]);
   const [faqs, setFaqs] = useState([]);
   const [slide, setSlide] = useState(null);
@@ -28,7 +30,7 @@ export default function TestHome() {
       .then(([prods, categories, revs, coupons, posts, realFaqs, sliders]) => {
         if (off) return;
         setRail(prods.slice(0, 6)); setCats(categories.slice(0, 6));
-        setReviews(revs.slice(0, 10)); setDeal(coupons[0] || null);
+        setReviews(revs.slice(0, 10)); setDeal(coupons[0] || null); setCouponList(coupons || []);
         setBlogs(posts); setFaqs(realFaqs);
         setSlide(sliders[0] || null);
       })
@@ -84,6 +86,25 @@ export default function TestHome() {
             )}
         </div>
       </section>
+
+      {/* coupon strip — real live coupons, auto-scrolling; tap to copy the code */}
+      {couponList.length > 0 && (
+        <div className="coupstrip" aria-label="Current offers">
+          <div className="coupstrip__track">
+            {[...couponList, ...couponList].map((c, i) => (
+              <button
+                key={i}
+                className="coupstrip__item"
+                onClick={() => { try { navigator.clipboard?.writeText(c.code); } catch (_) {} window.dispatchEvent(new CustomEvent('cc-test-toast', { detail: `Copied ${c.code}` })); }}
+              >
+                <span className="coupstrip__tag">{c.label}</span>
+                <span className="coupstrip__code">{c.code}</span>
+                {c.min ? <span className="coupstrip__min">min {inr(c.min)}</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* category index */}
       <section className="block" id="categories">

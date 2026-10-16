@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, checkPincodeServiceability, getShippingFees, createPublicReview } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, trackOrderByAWB, checkPincodeServiceability, getShippingFees, createPublicReview } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -340,6 +340,15 @@ export async function trackOrder(orderNo) {
   if (!orderNo || !orderNo.trim()) return null;
   try {
     const r = await trackOrderByOrderNumber(orderNo.trim());
+    return r?.data || r?.order || r || null;
+  } catch (_) { return null; }
+}
+
+// Track by AWB / tracking number (live /api/orders/track/awb).
+export async function trackByAwb(awb) {
+  if (!awb || !awb.trim()) return null;
+  try {
+    const r = await trackOrderByAWB(awb.trim());
     return r?.data || r?.order || r || null;
   } catch (_) { return null; }
 }
