@@ -38,6 +38,7 @@ Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /test
 
 # Perplexity AI
 User-agent: PerplexityBot
@@ -53,6 +54,7 @@ Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /test
 
 # Anthropic (Claude)
 User-agent: ClaudeBot
@@ -68,6 +70,7 @@ Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /test
 
 # Google AI (Gemini / Vertex AI training signal)
 User-agent: Google-Extended
@@ -83,6 +86,7 @@ Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /auth/
 Disallow: /api/
+Disallow: /test
 
 # ---------------------------------------------------------------------------
 # Sitemap
