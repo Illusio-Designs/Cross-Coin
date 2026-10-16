@@ -285,7 +285,13 @@ class ProductService {
         // builds products × variations × images rows then dedupes — a big row
         // explosion. Data returned is identical; limit/offset apply cleanly to
         // the parent. Only valid for hasMany (not the Brands belongsToMany).
-        { model: ProductVariation, as: 'ProductVariations', separate: true },
+        // Nest VariationImages so each variation carries its OWN image — the
+        // Google/Facebook product feed emits one item per variation and needs
+        // the per-variation image, not the shared product image.
+        {
+          model: ProductVariation, as: 'ProductVariations', separate: true,
+          include: [{ model: ProductImage, as: 'VariationImages', separate: true }],
+        },
         { model: ProductImage, as: 'ProductImages', separate: true },
         { model: ProductSEO, as: 'ProductSEO' },
         {
