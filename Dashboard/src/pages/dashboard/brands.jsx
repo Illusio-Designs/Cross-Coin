@@ -40,6 +40,7 @@ const SEO_SETTING = (s) => {
   const cat = s.category || '';
   return cat === 'seo' || /^SEO_/i.test(key)        // SEO Settings page owns these
       || cat === 'legal' || key === 'company_gstin' // Policies page owns the GSTIN
+      || /^WHATSAPP_/i.test(key)                    // WhatsApp config — set once on Crosscoin, used globally
       || INTERNAL_MARKER.test(key);                 // internal boot/migration flags
 };
 
