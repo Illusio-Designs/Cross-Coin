@@ -11,14 +11,6 @@ import { richHtml } from '../../utils/sanitizeHtml';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-function Spec({ label, value }) {
-  return (
-    <div style={{ border: '2px solid var(--line-ink)', borderRadius: 6, padding: '13px 15px', background: 'var(--surface)', boxShadow: 'var(--stamp-sm)' }}>
-      <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--ink-faint)' }}>{label}</div>
-      <div style={{ fontSize: 14.5, fontWeight: 600, marginTop: 4 }}>{value}</div>
-    </div>
-  );
-}
 
 export default function TestProduct() {
   const router = useRouter();
@@ -28,7 +20,6 @@ export default function TestProduct() {
   const [variant, setVariant] = useState(null); // selected variant (single pair or pack)
   const [size, setSize] = useState('');
   const [qty, setQty] = useState(1);
-  const [acc, setAcc] = useState(0);
   const [mainImg, setMainImg] = useState('');
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
   const [prodFaqs, setProdFaqs] = useState([]);
@@ -84,12 +75,6 @@ export default function TestProduct() {
   // Real product description (HTML from the live product record), with a safe
   // fallback. Shipping/returns stays a static note.
   const descHtml = (p.raw && (p.raw.description || p.raw.long_description || p.raw.longDescription)) || '';
-  const accItems = [
-    { q: 'Description', node: descHtml
-        ? <div className="pdt-desc-body" {...richHtml(descHtml)} />
-        : <div>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</div> },
-    { q: 'Shipping & returns', node: <div>Ships in 24h. Free shipping over ₹799. 7-day easy returns with free pickup, refund to original method or store credit.</div> },
-  ];
 
   return (
     <TestLayout>
@@ -150,33 +135,38 @@ export default function TestProduct() {
             <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
             <button className="btn btn--block" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }} style={{ marginTop: 8 }}>{isWished(p.id) ? '♥ In your wishlist' : '♡ Save to wishlist'}</button>
 
-            <div className="usps">
-              <div className="usp">{I.truck(18)} Free shipping over ₹799 · ships in 24h</div>
-              <div className="usp">{I.ret(18)} 7-day easy returns with free pickup</div>
-              <div className="usp">{I.card(18)} UPI, cards &amp; cash on delivery</div>
-            </div>
-
-            <div className="acc">
-              {accItems.map(({ q, node }, i) => (
-                <div className={`acc__i${acc === i ? ' open' : ''}`} key={q}>
-                  <button className="acc__q" onClick={() => setAcc(acc === i ? -1 : i)}>{q}<span className="pm2">{acc === i ? '–' : '+'}</span></button>
-                  <div className="acc__a" style={{ maxHeight: acc === i ? 1200 : 0, overflow: acc === i ? 'auto' : 'hidden' }}><div>{node}</div></div>
-                </div>
-              ))}
+            <div className="pdptrust">
+              <span className="pdptrust__free">{I.truck(16)} <strong>Free shipping</strong> over ₹799 · ships in 24h</span>
+              <div className="pdptrust__row">
+                <div>{I.card(18)} Cash on Delivery</div>
+                <div>{I.ret(18)} 7-Day Returns</div>
+                <div>{I.shield(18)} 100% Genuine</div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Specifications */}
+        {/* About + Specifications — Morbix-style (description left, spec list right) */}
         <section className="block">
-          <div className="sechead"><div><span className="eyebrow">Specifications</span><h2>The details</h2></div></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-            <Spec label="Brand" value={p.brand} />
-            {p.cat ? <Spec label="Category" value={p.cat} /> : null}
-            <Spec label="Colours" value={p.colors.length ? p.colors.map((c) => c.name).join(', ') : '—'} />
-            <Spec label="Sizes" value={p.sizes.length ? p.sizes.join(', ') : 'One size'} />
-            <Spec label="Shipping" value="Free over ₹799 · 24h dispatch" />
-            <Spec label="Returns" value="7-day easy returns" />
+          <div className="pdpdetails">
+            <div className="pdpabout">
+              <span className="eyebrow">Details</span>
+              <h2>About this product</h2>
+              {descHtml
+                ? <div className="legal" {...richHtml(descHtml)} />
+                : <p className="muted" style={{ color: 'var(--ink-soft)', lineHeight: 1.7 }}>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</p>}
+            </div>
+            <aside className="pdpspecs">
+              <h3>Specifications</h3>
+              <dl>
+                <div className="specrow"><dt>Brand</dt><dd>{p.brand}</dd></div>
+                {p.cat ? <div className="specrow"><dt>Category</dt><dd>{p.cat}</dd></div> : null}
+                <div className="specrow"><dt>Colours</dt><dd>{p.colors.length ? p.colors.map((c) => c.name).join(', ') : '—'}</dd></div>
+                <div className="specrow"><dt>Sizes</dt><dd>{p.sizes.length ? p.sizes.join(', ') : 'One size'}</dd></div>
+                <div className="specrow"><dt>Shipping</dt><dd>Free over ₹799 · 24h dispatch</dd></div>
+                <div className="specrow"><dt>Returns</dt><dd>7-day easy returns</dd></div>
+              </dl>
+            </aside>
           </div>
         </section>
 

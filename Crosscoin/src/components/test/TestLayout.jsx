@@ -129,6 +129,25 @@ const MOBILE_CSS = `
 .cc-test-root .origin__l{ display:block; font-family:"Space Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
 .cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
 .cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
+/* PDP trust row + About/Specs (Morbix-style layout, Mint styling) */
+.cc-test-root .pdptrust{ margin-top:16px; border-top:2px solid var(--line); padding-top:14px; }
+.cc-test-root .pdptrust__free{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); }
+.cc-test-root .pdptrust__free svg{ color:var(--crimson); }
+.cc-test-root .pdptrust__free strong{ color:var(--ink); }
+.cc-test-root .pdptrust__row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.cc-test-root .pdptrust__row > div{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:8px 12px; border:2px solid var(--line-ink); border-radius:8px; background:var(--surface); box-shadow:var(--stamp-sm); }
+.cc-test-root .pdptrust__row svg{ color:var(--crimson); }
+.cc-test-root .pdpdetails{ display:grid; grid-template-columns:1.6fr 1fr; gap:28px; align-items:start; }
+.cc-test-root .pdpabout .eyebrow{ display:block; margin-bottom:6px; }
+.cc-test-root .pdpabout h2{ font-size:clamp(24px,3.2vw,34px); margin-bottom:12px; }
+.cc-test-root .pdpabout .legal{ font-size:14.5px; }
+.cc-test-root .pdpspecs{ border:2px solid var(--line-ink); border-radius:10px; background:var(--surface); box-shadow:var(--stamp); padding:6px 16px; }
+.cc-test-root .pdpspecs h3{ font-size:16px; padding:12px 0 4px; }
+.cc-test-root .pdpspecs dl{ margin:0; }
+.cc-test-root .specrow{ display:flex; justify-content:space-between; gap:14px; padding:11px 0; border-top:1px solid var(--line); }
+.cc-test-root .specrow dt{ font-family:"Space Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
+.cc-test-root .specrow dd{ margin:0; font-size:13.5px; font-weight:600; text-align:right; }
+@media (max-width:760px){ .cc-test-root .pdpdetails{ grid-template-columns:1fr; gap:20px; } }
 /* Collections grid */
 .cc-test-root .collgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px; }
 .cc-test-root .collcard{ position:relative; min-height:170px; border:2px solid var(--line-ink); border-radius:12px; box-shadow:var(--stamp); color:#fff; text-align:left; padding:18px; cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; transition:transform .18s var(--ease); font:inherit; }

@@ -34,7 +34,15 @@ export default function PackPricingManager() {
     productService.getAllProducts(1, 1000, '', null, false, brandSlug, true)
       .then((res) => {
         const list = res?.products || res?.data?.products || res?.data || (Array.isArray(res) ? res : []);
-        if (alive) setProducts(Array.isArray(list) ? list : []);
+        // Only offer ACTIVE products for pack pricing — hide inactive ones
+        // (inactive globally, or disabled for the selected brand).
+        const active = (Array.isArray(list) ? list : []).filter((p) => {
+          if (String(p.status ?? 'active').toLowerCase() === 'inactive') return false;
+          const b = Array.isArray(p.brands) ? p.brands.find((x) => String(x.slug) === String(brandSlug)) : null;
+          if (b && String(b.status ?? 'active').toLowerCase() === 'inactive') return false;
+          return true;
+        });
+        if (alive) setProducts(active);
       })
       .catch(() => { if (alive) setProducts([]); });
     return () => { alive = false; };
