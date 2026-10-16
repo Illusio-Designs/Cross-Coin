@@ -4,8 +4,19 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
-import { fetchProduct, fetchProducts, fetchBundleTiers } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchBundleTiers, fetchProductReviews, fetchProductFaqs } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
+
+const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
+const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+function Spec({ label, value }) {
+  return (
+    <div style={{ border: '2px solid var(--line-ink)', borderRadius: 6, padding: '13px 15px', background: 'var(--surface)', boxShadow: 'var(--stamp-sm)' }}>
+      <div style={{ fontFamily: '"Space Mono",monospace', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--ink-faint)' }}>{label}</div>
+      <div style={{ fontSize: 14.5, fontWeight: 600, marginTop: 4 }}>{value}</div>
+    </div>
+  );
+}
 
 const ACC = [
   ['Description', 'Everyday essentials minted to a standard — comfortable, durable and honestly priced. (Full description comes from the product record on the live store.)'],
@@ -24,6 +35,9 @@ export default function TestProduct() {
   const [qty, setQty] = useState(1);
   const [acc, setAcc] = useState(0);
   const [mainImg, setMainImg] = useState('');
+  const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
+  const [prodFaqs, setProdFaqs] = useState([]);
+  const [faqOpen, setFaqOpen] = useState(0);
 
   useEffect(() => {
     let off = false;
@@ -39,7 +53,10 @@ export default function TestProduct() {
           const c0 = prod.colors?.[0] || null;
           setColor(c0); setSize(prod.sizes?.[0] || ''); setPackQ(1); setTiers([]); setQty(1);
           setMainImg(c0?.img || prod.img || prod.images?.[0] || '');
+          setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
           fetchBundleTiers(prod.id).then((t) => { if (!off) setTiers(t); }).catch(() => {});
+          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});
+          fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
         }
         fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {});
       } catch (_) { if (!off) setP(null); }
@@ -149,6 +166,50 @@ export default function TestProduct() {
             </div>
           </div>
         </div>
+
+        {/* Specifications */}
+        <section className="block">
+          <div className="sechead"><div><span className="eyebrow">Specifications</span><h2>The details</h2></div></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+            <Spec label="Brand" value={p.brand} />
+            {p.cat ? <Spec label="Category" value={p.cat} /> : null}
+            <Spec label="Colours" value={p.colors.length ? p.colors.map((c) => c.name).join(', ') : '—'} />
+            <Spec label="Sizes" value={p.sizes.length ? p.sizes.join(', ') : 'One size'} />
+            <Spec label="Shipping" value="Free over ₹799 · 24h dispatch" />
+            <Spec label="Returns" value="7-day easy returns" />
+          </div>
+        </section>
+
+        {/* Reviews (real) */}
+        {prodReviews.items.length > 0 && (
+          <section className="block">
+            <div className="sechead"><div><span className="eyebrow">Reviews{prodReviews.count ? ` · ${prodReviews.count}` : ''}</span><h2>What buyers say{prodReviews.avg ? ` · ${prodReviews.avg.toFixed(1)}★` : ''}</h2></div></div>
+            <div className="revgrid">
+              {prodReviews.items.slice(0, 6).map((r, i) => (
+                <div className="rev" key={i}>
+                  <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
+                  <p>&ldquo;{r.text}&rdquo;</p>
+                  <div className="who"><div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div><div><b>{r.name}</b><span>VERIFIED</span></div></div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Product FAQ (real) */}
+        {prodFaqs.length > 0 && (
+          <section className="block">
+            <div className="sechead"><div><span className="eyebrow">FAQ</span><h2>Questions, answered</h2></div></div>
+            <div className="faq" style={{ marginInline: 0, maxWidth: 'none' }}>
+              {prodFaqs.map(([q, a], i) => (
+                <div className={`qa${faqOpen === i ? ' open' : ''}`} key={i}>
+                  <button className="qa__q" onClick={() => setFaqOpen(faqOpen === i ? -1 : i)}>{q}<span className="pm"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span></button>
+                  <div className="qa__a" style={{ maxHeight: faqOpen === i ? 400 : 0 }}><div>{a}</div></div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {also.length > 0 && (
           <section className="block" style={{ paddingTop: 20 }}>

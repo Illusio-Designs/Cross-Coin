@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -155,6 +155,34 @@ export async function fetchBlogs(limit = 3) {
       tag: (b.category?.name || b.category || b.tag || 'Journal'),
       img: imgOf(b.coverImage || b.cover_image || b.image || b.thumbnail || b.featuredImage || b.featured_image),
     })).filter((b) => b.title).slice(0, limit);
+  } catch (_) { return []; }
+}
+
+// Real reviews for one product → list + average + count.
+export async function fetchProductReviews(productId, limit = 8) {
+  if (!productId) return { items: [], avg: null, count: 0 };
+  try {
+    const r = await getPublicProductReviews(productId, { limit });
+    const list = r?.reviews || r?.data?.reviews || (Array.isArray(r) ? r : []);
+    const items = list.map((v) => ({
+      name: v.name || v.customerName || v.customer_name || v.user?.name || 'Verified buyer',
+      rating: Number(v.rating) || 5,
+      text: v.comment || v.review || v.message || v.body || '',
+      date: v.createdAt || v.created_at || '',
+    })).filter((v) => v.text);
+    const count = r?.total ?? r?.count ?? r?.data?.total ?? items.length;
+    const avg = items.length ? items.reduce((s, x) => s + x.rating, 0) / items.length : null;
+    return { items, avg, count };
+  } catch (_) { return { items: [], avg: null, count: 0 }; }
+}
+
+// Real FAQs attached to one product.
+export async function fetchProductFaqs(productId) {
+  if (!productId) return [];
+  try {
+    const { data } = await axios.get(`${API_URL}/api/public/faqs?type=product&id=${encodeURIComponent(productId)}`, addBrandHeader());
+    const list = Array.isArray(data?.faqs) ? data.faqs : [];
+    return list.map((f) => [f.question || f.q || '', f.answer || f.a || '']).filter((x) => x[0] && x[1]);
   } catch (_) { return []; }
 }
 

@@ -3,9 +3,12 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
+import { validateCouponReal } from './real';
+
+const FREE_SHIP = 799;
 
 const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'RETURNS 7-DAY', 'COD AVAILABLE', 'SECURE CHECKOUT'];
 const LOGO = '/assets/crosscoin_logo.webp';
@@ -74,14 +77,22 @@ export default function TestLayout({ children }) {
   const [drawer, setDrawer] = useState(false);
   const [mnav, setMnav] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  // In-drawer checkout (Morbix-style): 'cart' → 'checkout' → 'done'.
+  const [step, setStep] = useState('cart');
+  const [coupon, setCoupon] = useState(null);
+  const [pay, setPay] = useState('cod');
+  const [orderNo, setOrderNo] = useState('');
   const tt = useRef();
   const rootRef = useRef(null);
+  const formRef = useRef(null);
+  const promoRef = useRef(null);
+
+  const openDrawer = () => { setStep('cart'); setDrawer(true); };
 
   // Inject the Mint design system CSS only while a /test page is mounted.
-  // Theme toggle writes data-theme on <html>; cleaned up on unmount.
   useEffect(() => {
     const onToast = (e) => { setToastMsg(e.detail || ''); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
-    const onOpen = () => setDrawer(true);
+    const onOpen = () => { setStep('cart'); setDrawer(true); };
     window.addEventListener('cc-test-toast', onToast);
     window.addEventListener('cc-test-opencart', onOpen);
     return () => {
@@ -101,6 +112,31 @@ export default function TestLayout({ children }) {
   };
 
   const go = (href) => { setMnav(false); setDrawer(false); router.push(href); };
+
+  const showToast = (m) => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
+
+  // Order math (same rules as the live cart): free COD shipping ≥ ₹799, ₹30 COD
+  // handling, prepaid ships free, coupon discount from live validation.
+  const sub = cartSubtotal(cart);
+  const disc = coupon ? Math.min(coupon.amount, sub) : 0;
+  const afterDisc = Math.max(0, sub - disc);
+  const ship = sub === 0 ? 0 : (pay === 'prepaid' ? 0 : (afterDisc >= FREE_SHIP ? 0 : 49));
+  const cod = pay === 'cod' ? 30 : 0;
+  const total = afterDisc + ship + cod;
+  const need = Math.max(0, FREE_SHIP - afterDisc);
+
+  const applyPromo = async () => {
+    const v = (promoRef.current?.value || '').trim().toUpperCase();
+    if (!v) return;
+    const res = await validateCouponReal(v, sub, pay);
+    if (res.ok) { setCoupon({ code: res.code, amount: res.amount }); showToast(`${res.code} applied — ${inr(res.amount)} off`); }
+    else { setCoupon(null); showToast(res.message || 'Invalid code'); }
+  };
+  const placeOrder = () => {
+    if (!formRef.current || !formRef.current.reportValidity()) return;
+    setOrderNo('#CC-' + String(Math.floor(10000 + Math.random() * 89999)));
+    setStep('done'); clearCart(); setCoupon(null);
+  };
 
   const navLinks = (
     <>
@@ -140,7 +176,7 @@ export default function TestLayout({ children }) {
               <button className="ibtn" aria-label="Search">{I.search()}</button>
               <button className="ibtn" aria-label="Account">{I.user()}</button>
             </span>
-            <button className="ibtn" aria-label="Cart" onClick={() => setDrawer(true)}>{I.cart()}<span className="badge-dot">{count}</span></button>
+            <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
           </div>
         </div>
@@ -179,33 +215,98 @@ export default function TestLayout({ children }) {
         <div className="wrap footend"><span>© {new Date().getFullYear()} CROSSCOIN. All rights reserved.</span><span>PRIVACY · TERMS · MADE IN INDIA 🇮🇳</span></div>
       </footer>
 
-      {/* cart drawer */}
+      {/* cart drawer — full cart + 2-step checkout, Morbix-style */}
       <div className={`scrim${drawer ? ' on' : ''}`} onClick={() => setDrawer(false)} />
       <aside className={`drawer${drawer ? ' on' : ''}`} aria-label="Cart">
-        <div className="drawer__h"><b>Your cart ({count})</b><button className="ibtn" onClick={() => setDrawer(false)} aria-label="Close">{I.close()}</button></div>
-        <div className="drawer__body">
-          {cart.length === 0
-            ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '30px 0', textAlign: 'center' }}>Your cart is empty.</p>
-            : cart.map((i) => (
-              <div className="ditem" key={i.key}>
-                <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
-                <div>
-                  <h4>{i.name}</h4>
-                  <div className="m">{i.brand} · {i.color} · {i.size}{i.packq > 1 ? ` · ${i.pack}` : ''}</div>
-                  <div className="qty" style={{ marginTop: 6, boxShadow: 'none' }}>
-                    <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }}>−</button>
-                    <span style={{ width: 34 }}>{i.qty}</span>
-                    <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }}>+</button>
-                  </div>
-                </div>
-                <div className="lp">{inr(i.unit * i.qty)}</div>
+        <div className="drawer__h">
+          <b>{step === 'done' ? 'Order confirmed' : step === 'checkout' ? 'Checkout · delivery & payment' : `Your cart (${count})`}</b>
+          <button className="ibtn" onClick={() => setDrawer(false)} aria-label="Close">{I.close()}</button>
+        </div>
+
+        {step === 'cart' && (<>
+          <div className="drawer__body">
+            {cart.length === 0 ? (
+              <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '30px 0', textAlign: 'center' }}>Your cart is empty.</p>
+            ) : (<>
+              <div className="mono" style={{ fontSize: 11, color: need > 0 ? 'var(--ink-faint)' : 'var(--crimson)', fontWeight: need > 0 ? 400 : 700, marginBottom: 10 }}>
+                {need > 0 ? `Add ${inr(need)} more for FREE shipping` : 'You’ve unlocked FREE shipping ✓'}
               </div>
-            ))}
-        </div>
-        <div className="drawer__foot">
-          <div className="srow total" style={{ border: 'none', padding: '0 0 12px' }}><span>Subtotal</span><span>{inr(cartSubtotal(cart))}</span></div>
-          <button className="btn btn--crimson btn--block btn--lg" onClick={() => go('/test/cart')}>View cart &amp; checkout</button>
-        </div>
+              {cart.map((i) => (
+                <div className="ditem" key={i.key}>
+                  <div className="th" style={{ overflow: 'hidden' }}><Thumb src={i.img} color={i.color} /></div>
+                  <div>
+                    <h4>{i.name}</h4>
+                    <div className="m">{i.brand} · {i.color || '—'} · {i.size || 'OS'}{i.packq > 1 ? ` · ${i.pack}` : ''}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                      <div className="qty" style={{ boxShadow: 'none' }}>
+                        <button onClick={() => changeQty(i.key, -1)} style={{ width: 30, height: 30 }}>−</button>
+                        <span style={{ width: 34 }}>{i.qty}</span>
+                        <button onClick={() => changeQty(i.key, 1)} style={{ width: 30, height: 30 }}>+</button>
+                      </div>
+                      <button className="rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontFamily: '"Space Mono",monospace', fontSize: 11, cursor: 'pointer' }}>Remove</button>
+                    </div>
+                  </div>
+                  <div className="lp">{inr(i.unit * i.qty)}</div>
+                </div>
+              ))}
+              {coupon ? (
+                <div className="coupon-applied" style={{ marginTop: 14 }}><span>✓ {coupon.code} · −{inr(disc)}</span><button className="x" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer' }} onClick={() => setCoupon(null)}>✕</button></div>
+              ) : (
+                <div className="promo" style={{ marginTop: 14 }}><input ref={promoRef} placeholder="PROMO CODE" /><button className="btn" onClick={applyPromo}>Apply</button></div>
+              )}
+            </>)}
+          </div>
+          <div className="drawer__foot">
+            <div className="srow" style={{ padding: '4px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
+            {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+            <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
+            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => setStep('checkout')}>Proceed to checkout</button>
+          </div>
+        </>)}
+
+        {step === 'checkout' && (<>
+          <div className="drawer__body">
+            <button type="button" className="coback" onClick={() => setStep('cart')} style={{ background: 'none', border: 'none', color: 'var(--ink-soft)', fontFamily: '"Space Mono",monospace', fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>{I.arrow(14)} Back to cart</button>
+            <form ref={formRef}>
+              <div className="optlabel">Delivery details</div>
+              <div className="ffield"><label>Full name</label><input name="name" required placeholder="Aarav Sharma" /></div>
+              <div className="ffield"><label>Phone</label><input name="phone" required inputMode="tel" placeholder="+91 98765 43210" /></div>
+              <div className="ffield"><label>Address</label><input name="addr" required placeholder="Flat, street, area" /></div>
+              <div className="frow"><div className="ffield"><label>City</label><input name="city" required placeholder="Mumbai" /></div><div className="ffield"><label>Pincode</label><input name="pin" required inputMode="numeric" placeholder="400001" /></div></div>
+              <div className="optlabel">Payment</div>
+              <div className="pay">
+                <label className={`payopt${pay === 'cod' ? ' on' : ''}`} onClick={() => setPay('cod')}>
+                  <span className="radio" /><span className="pi">{I.card(20)}</span>
+                  <span><b>Cash on Delivery</b><span className="d">Pay in cash when it arrives</span></span><span className="tag">POPULAR</span>
+                </label>
+                <label className={`payopt${pay === 'prepaid' ? ' on' : ''}`} onClick={() => setPay('prepaid')}>
+                  <span className="radio" /><span className="pi">{I.shield(20)}</span>
+                  <span><b>Pay online (UPI / Card)</b><span className="d">GPay, PhonePe, cards &amp; net-banking</span></span>
+                </label>
+              </div>
+            </form>
+          </div>
+          <div className="drawer__foot">
+            <div className="srow" style={{ padding: '3px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
+            {coupon && disc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
+            <div className="srow" style={{ padding: '3px 0' }}><span>Shipping</span><span>{ship === 0 ? 'FREE' : inr(ship)}</span></div>
+            {cod > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>COD handling</span><span>{inr(cod)}</span></div>}
+            <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
+            <button className="btn btn--crimson btn--block btn--lg" onClick={placeOrder}>Place order · {inr(total)}</button>
+          </div>
+        </>)}
+
+        {step === 'done' && (
+          <div className="drawer__body" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div className="cosuccess">
+              <div className="seal">{I.check(40)}</div>
+              <h3 style={{ fontSize: 22 }}>Order placed!</h3>
+              <p className="muted" style={{ margin: '8px 0 2px' }}>Order <b className="mono">{orderNo}</b> is confirmed.</p>
+              <p className="muted mono" style={{ fontSize: 12 }}>{pay === 'cod' ? 'Cash on Delivery · pay when it arrives' : 'Paid online · prepaid'}</p>
+              <button className="btn btn--crimson btn--lg" style={{ marginTop: 18 }} onClick={() => setDrawer(false)}>Continue shopping</button>
+            </div>
+          </div>
+        )}
       </aside>
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
