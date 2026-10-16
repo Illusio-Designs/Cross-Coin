@@ -1,6 +1,7 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
 import { addItem } from './store';
+import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
 import { colorToCss } from './real';
 
@@ -56,7 +57,7 @@ export function ProductCard({ p }) {
     <article className="cc-card">
       <div className="cc-card__img" onClick={open} style={{ background: 'var(--paper-2)', cursor: 'pointer', overflow: 'hidden' }}>
         {p.off > 0 && <span className="flag sale">−{p.off}%</span>}
-        <button className="cc-card__wish" aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); e.currentTarget.classList.toggle('on'); toast('Saved to wishlist ♥'); }}>{I.heart(16)}</button>
+        <button className={`cc-card__wish${isWished(p.id) ? ' on' : ''}`} aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(16)}</button>
         {p.img
           ? <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <><span className="mint" style={{ background: 'var(--paper-2)' }} /><span className="ring" /></>}

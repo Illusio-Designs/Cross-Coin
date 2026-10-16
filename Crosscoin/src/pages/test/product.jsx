@@ -6,6 +6,7 @@ import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, colorToCss } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
+import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
@@ -147,6 +148,7 @@ export default function TestProduct() {
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(total)}</button>
             </div>
             <button className="btn btn--indigo btn--block" onClick={() => add(true)}>Buy it now</button>
+            <button className="btn btn--block" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }} style={{ marginTop: 8 }}>{isWished(p.id) ? '♥ In your wishlist' : '♡ Save to wishlist'}</button>
 
             <div className="usps">
               <div className="usp">{I.truck(18)} Free shipping over ₹799 · ships in 24h</div>
