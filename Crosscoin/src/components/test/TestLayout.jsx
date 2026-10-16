@@ -19,6 +19,11 @@ const MOBILE_CSS = `
    backgrounds where it would otherwise disappear. */
 .cc-test-root[data-theme="dark"] .cc-logo{ filter: brightness(0) invert(1); }
 @media (prefers-color-scheme: dark){ .cc-test-root:not([data-theme="light"]) .cc-logo{ filter: brightness(0) invert(1); } }
+/* PDP: keep the sticky gallery confined to the product block and make sure the
+   "You may also like" section below always paints above it (fixes overlap). */
+.cc-test-root .pd{ position: relative; align-items: start; }
+.cc-test-root .gallery{ align-self: start; z-index: 0; }
+.cc-test-root .pd ~ .block{ position: relative; z-index: 2; background: var(--bg); border-top: 2px solid var(--line); margin-top: 20px; }
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
