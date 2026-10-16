@@ -41,7 +41,6 @@ export default function TestShop() {
     return l;
   }, [products, filter, sort]);
 
-  const chips = ['all', ...cats.map((c) => c.name)];
 
   return (
     <TestLayout>
@@ -52,9 +51,7 @@ export default function TestShop() {
           <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Shop / {filter === 'all' ? 'All' : filter}</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>The full mint</h2>
           <div className="shopbar">
-            {chips.map((f) => (
-              <button key={f} className={`chip${filter === f ? ' on' : ''}`} onClick={() => setFilter(f)}>{f === 'all' ? 'All' : f}</button>
-            ))}
+            {filter !== 'all' && <button className="chip on" onClick={() => setFilter('all')}>✕ {filter}</button>}
             <select className="sortsel" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="feat">Sort — Featured</option>
               <option value="low">Price ↑</option>
