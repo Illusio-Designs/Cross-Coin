@@ -284,6 +284,13 @@ const handleProductAttributes = async (variation, transaction) => {
   if (variation.attributes) {
     for (const attributeName in variation.attributes) {
       const normalizedAttributeName = attributeName.toLowerCase();
+      // `_images` is a reserved key inside the variation attributes JSON that
+      // maps attribute values → an uploaded image URL. It is NOT a real
+      // attribute type, so it must never be registered in the Attribute /
+      // AttributeValue catalog (otherwise it would appear as a selectable
+      // attribute group in the admin's AttributeSelector). The URL map is still
+      // persisted verbatim in the variation `attributes` JSON column below.
+      if (normalizedAttributeName === '_images') continue;
       let attributeValues = variation.attributes[attributeName];
 
       // Ensure attributeValues is an array

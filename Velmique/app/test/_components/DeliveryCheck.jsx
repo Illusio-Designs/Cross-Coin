@@ -20,6 +20,13 @@ export default function DeliveryCheck() {
 
   return (
     <>
+      <div className="m-minitrust">
+        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" /><circle cx="7" cy="17" r="2" /><circle cx="17.5" cy="17" r="2" /></svg>Free Shipping</div>
+        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></svg>COD Available</div>
+        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 5 2 10 7 10" /><path d="M4 15a9 9 0 1 0 2-9.3L2 10" /></svg>Easy 7-Day Returns</div>
+        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z" /><polyline points="9 12 11 14 15 10" /></svg>Secure Payments</div>
+      </div>
+
       <div className="m-pin">
         <span className="m-pin__label">Check delivery</span>
         <div className="m-pin__row">
@@ -53,13 +60,6 @@ export default function DeliveryCheck() {
             )}
           </div>
         )}
-      </div>
-
-      <div className="m-minitrust">
-        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" /><circle cx="7" cy="17" r="2" /><circle cx="17.5" cy="17" r="2" /></svg>Free Shipping</div>
-        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></svg>COD Available</div>
-        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 5 2 10 7 10" /><path d="M4 15a9 9 0 1 0 2-9.3L2 10" /></svg>Easy 7-Day Returns</div>
-        <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z" /><polyline points="9 12 11 14 15 10" /></svg>Secure Payments</div>
       </div>
     </>
   );

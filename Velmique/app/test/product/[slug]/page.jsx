@@ -58,8 +58,14 @@ export default async function MaisonProduct({ params }) {
   const attrs = defVar?.attributes || {};
 
   const accords = tokens(attrs['main accords'] || attrs['accords']);
-  const noteNames = product.notes?.length ? [] : tokens(attrs['notes']);
-  const notesWithImg = product.notes || [];
+  // Accord orbs, image-aware: each accord may carry an uploaded image via the
+  // variation's reserved `_images` map (falls back to the tinted orb when absent).
+  const accordItems = (defVar?.accordItems?.length ? defVar.accordItems : accords.map((a) => ({ name: a, image: '' }))).slice(0, 5);
+  // Fragrance notes, image-aware. Prefer the per-VARIATION notes (name + optional
+  // image from attributes._images.notes); fall back to product-level notes
+  // ({name,image}) for older products, then to plain variation note names.
+  const notesWithImg = defVar?.noteItems?.length ? defVar.noteItems : (product.notes || []);
+  const noteNames = notesWithImg.length ? [] : tokens(attrs['notes']);
 
   const spec = [
     ['Longevity', tokens(attrs['longevity (hrs)'] || attrs['longevity']).map((h) => `${h} hrs`).join(', ')],
@@ -118,7 +124,9 @@ export default async function MaisonProduct({ params }) {
         <div className="m-about">
           <span className="m-eyebrow">Details</span>
           <h2>About this fragrance</h2>
-          {product.description ? <p>{product.description}</p> : <p className="m-muted">No description available for this fragrance yet.</p>}
+          {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
+            ? <div className="m-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+            : product.description ? <p>{product.description}</p> : <p className="m-muted">No description available for this fragrance yet.</p>}
         </div>
         {spec.length ? (
           <aside className="m-specs">
@@ -136,12 +144,17 @@ export default async function MaisonProduct({ params }) {
             <p>A composition built around {accords.slice(0, 3).join(', ').toLowerCase()} — unmistakable the moment you walk in, and lasting all day.</p>
           </div>
           <div className="m-profilegrid">
-            {accords.slice(0, 5).map((a, i) => {
+            {accordItems.map((a, i) => {
               const v = Math.max(3, 5 - i);
               return (
-                <div className="m-prof" key={a}>
-                  <div className="ring" style={{ background: `radial-gradient(circle at 35% 30%,#ffffffcc,${PROF_TINTS[i % PROF_TINTS.length]})` }} />
-                  <b>{a}</b>
+                <div className="m-prof" key={a.name + i}>
+                  <div
+                    className="ring"
+                    style={a.image ? { overflow: 'hidden' } : { background: `radial-gradient(circle at 35% 30%,#ffffffcc,${PROF_TINTS[i % PROF_TINTS.length]})` }}
+                  >
+                    {a.image ? <img src={a.image} alt={a.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                  </div>
+                  <b>{a.name}</b>
                   <div className="dots">{'●'.repeat(v)}{'○'.repeat(5 - v)}</div>
                 </div>
               );

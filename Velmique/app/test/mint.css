@@ -15,7 +15,7 @@
   --m-band:#231811; --m-band-2:#2E2016; --m-on-band:#F0E4D3; --m-on-band-soft:#B6A286; --m-band-line:rgba(240,228,211,.14);
   --m-ok:#4f7a52;
   --m-shadow:0 18px 44px -24px rgba(42,30,22,.5);
-  --m-maxw:1180px; --m-radius:4px;
+  --m-maxw:1180px; --m-radius:8px;
   --m-d:'Bodoni Moda',Georgia,'Times New Roman',serif;
   --m-b:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
@@ -102,7 +102,7 @@
 .m-card__fig{position:relative;aspect-ratio:4/4.3;overflow:hidden;background:radial-gradient(120% 95% at 50% 18%,#efe2d1,#e3cdb3);display:block}
 .m-card__fig img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .m-card:hover .m-card__fig img{transform:scale(1.04)}
-.m-card__tag{position:absolute;top:12px;left:12px;background:var(--m-band);color:var(--m-on-band);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:2px;z-index:2}
+.m-card__tag{position:absolute;top:12px;left:12px;background:var(--m-band);color:var(--m-on-band);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:8px;z-index:2}
 .m-card__wish{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:color-mix(in srgb,var(--m-surface) 82%,transparent);color:var(--m-ink);display:grid;place-items:center;backdrop-filter:blur(4px);z-index:2}
 .m-card__wish.on{color:var(--m-rose)}
 .m-card__save{position:absolute;bottom:12px;left:12px;background:var(--m-rose);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;padding:5px 11px;border-radius:30px;z-index:2}
@@ -260,9 +260,9 @@
 .m-pin{background:var(--m-bg-tint);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:15px 16px;margin-top:26px}
 .m-pin__label{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--m-accent);margin-bottom:11px}
 .m-pin__row{display:flex;gap:8px}
-.m-pin__input{flex:1;min-width:0;border:1.5px solid var(--m-line);border-radius:4px;padding:12px 14px;font:inherit;font-weight:600;letter-spacing:.06em;color:var(--m-ink);background:var(--m-surface);outline:0}
+.m-pin__input{flex:1;min-width:0;border:1.5px solid var(--m-line);border-radius:8px;padding:12px 14px;font:inherit;font-weight:600;letter-spacing:.06em;color:var(--m-ink);background:var(--m-surface);outline:0}
 .m-pin__input:focus{border-color:var(--m-accent)}
-.m-pin__btn{border:0;border-radius:4px;background:var(--m-band);color:var(--m-on-band);font-family:var(--m-b);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:0 22px;cursor:pointer;white-space:nowrap;transition:background .2s}
+.m-pin__btn{border:0;border-radius:8px;background:var(--m-band);color:var(--m-on-band);font-family:var(--m-b);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:0 22px;cursor:pointer;white-space:nowrap;transition:background .2s}
 .m-pin__btn:hover{background:#000}
 .m-pin__btn:disabled{opacity:.55;cursor:default}
 .m-pin__result{margin-top:11px;font-size:13px;color:var(--m-ink-soft);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
@@ -278,6 +278,13 @@
 .m-about h2{font-size:clamp(26px,3.6vw,38px);margin-top:10px}
 .m-about p{color:var(--m-ink-soft);margin-top:14px;white-space:pre-line;max-width:62ch;line-height:1.75}
 .m-muted{color:var(--m-ink-faint)}
+.m-desc-rich{color:var(--m-ink-soft);line-height:1.75}
+.m-desc-rich p{margin:12px 0}
+.m-desc-rich h2,.m-desc-rich h3,.m-desc-rich h4{font-family:var(--m-d);color:var(--m-ink);font-weight:600;margin:22px 0 8px}
+.m-desc-rich ul,.m-desc-rich ol{margin:12px 0;padding-left:20px}
+.m-about img,.m-desc-rich img{max-width:100%;height:auto;display:block;border-radius:8px;margin:18px 0}
+.m-prepaidchip{position:relative;z-index:3;display:block;width:max-content;max-width:94%;margin:14px auto -14px;text-align:center;font-family:var(--m-b);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-accent-deep);background:color-mix(in srgb,var(--m-accent) 15%,var(--m-surface));border:1.5px solid color-mix(in srgb,var(--m-accent) 38%,transparent);border-radius:8px;padding:8px 18px}
+.m-buynow{padding-top:20px}
 .m-specs{background:var(--m-bg-tint);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:22px 24px}
 .m-specs h3{font-family:var(--m-d);font-size:22px;font-weight:600;margin:0 0 6px}
 .m-specs dl{margin:0}

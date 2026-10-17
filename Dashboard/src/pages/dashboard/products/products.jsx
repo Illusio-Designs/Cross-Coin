@@ -443,6 +443,16 @@ const ProductsPage = () => {
           if (attributes) {
             Object.entries(attributes).forEach(([key, value]) => {
               const formattedKey = key.toLowerCase();
+              // `_images` is the reserved value→image URL map, not an attribute
+              // value list — carry it through as-is so existing images show when
+              // editing (and survive a re-save). Everything else stays a string
+              // array exactly as before.
+              if (formattedKey === '_images') {
+                formattedAttributes._images = (value && typeof value === 'object' && !Array.isArray(value))
+                  ? value
+                  : {};
+                return;
+              }
               formattedAttributes[formattedKey] = Array.isArray(value) ? value : [String(value)];
             });
           }
@@ -826,8 +836,29 @@ const ProductsPage = () => {
             if (variation.attributes) {
                 Object.entries(variation.attributes).forEach(([key, value]) => {
                     // Normalize key to lowercase to ensure consistency
-                    const normalizedKey = key.toLowerCase(); 
-                    
+                    const normalizedKey = key.toLowerCase();
+
+                    // `_images` is the reserved value→image URL map. Carry it
+                    // through unchanged (prune empty) — it is persisted inside
+                    // the same variation attributes JSON and must NOT be coerced
+                    // into a string-value array like the real attributes.
+                    if (normalizedKey === '_images') {
+                        if (value && typeof value === 'object' && !Array.isArray(value)) {
+                            const imgMap = {};
+                            Object.entries(value).forEach(([k, group]) => {
+                                if (group && typeof group === 'object') {
+                                    const kept = {};
+                                    Object.entries(group).forEach(([val, url]) => {
+                                        if (url) kept[val] = url;
+                                    });
+                                    if (Object.keys(kept).length) imgMap[k.toLowerCase()] = kept;
+                                }
+                            });
+                            if (Object.keys(imgMap).length) processedAttributes._images = imgMap;
+                        }
+                        return;
+                    }
+
                     let cleanedValues = [];
                     if (typeof value === 'string' && value.trim() !== '') {
                         cleanedValues = value.split(',').map(v => v.trim()).filter(v => v !== '');
@@ -1282,7 +1313,8 @@ const ProductsPage = () => {
                 const isOpen = openVariations[index] === true; // default closed (keeps the step compact)
                 const skuLabel = variation.sku ? ` — ${variation.sku}` : '';
                 const priceLabel = variation.price ? ` · ₹${variation.price}` : '';
-                const attrEntries = Object.entries(variation.attributes || {}).filter(([, v]) => {
+                const attrEntries = Object.entries(variation.attributes || {}).filter(([k, v]) => {
+                  if (String(k).toLowerCase() === '_images') return false; // reserved image map, not a displayable attribute
                   const val = Array.isArray(v) ? v.join('') : String(v || '');
                   return val.trim() !== '';
                 });

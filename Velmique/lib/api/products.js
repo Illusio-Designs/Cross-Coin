@@ -55,10 +55,35 @@ function pickImage(i) {
 function mapVariation(v) {
   if (!v) return null;
   const attrs = typeof v.attributes === 'string' ? safeJson(v.attributes) : (v.attributes || {});
+
+  // `_images` is a reserved key the admin uses to attach an optional image to an
+  // individual attribute VALUE: attributes._images = { <attrKeyLower>: { <value>: <url> } }.
+  // Pull it out BEFORE building `norm` so it never surfaces as a normal
+  // attribute / chip / tag, and so the existing string-array parsing of real
+  // attributes stays byte-for-byte unchanged for products that have no images.
+  const attrImages = (attrs._images && typeof attrs._images === 'object' && !Array.isArray(attrs._images))
+    ? attrs._images
+    : {};
+
   const norm = {};
   Object.entries(attrs).forEach(([k, val]) => {
+    if (String(k).toLowerCase() === '_images') return;
     norm[k] = Array.isArray(val) ? val : (val == null ? [] : [val]);
   });
+
+  // Build an image-aware [{name, image}] list for an attribute key: the comma-
+  // split values (the backend stores "Musk, Peach" as one string) paired with
+  // their uploaded image from `_images` when one exists. Absent images → ''.
+  const itemsFor = (...keys) => {
+    const key = keys.find((k) => norm[k]?.length);
+    if (!key) return [];
+    const imgMap = attrImages[key] || attrImages[String(key).toLowerCase()] || {};
+    return (norm[key] || [])
+      .flatMap((s) => String(s).split(','))
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, image: cleanUrl(imgMap[name] || '') }));
+  };
   const images = (v.images || v.ProductImages || []).map(i => ({
     id: i.id,
     url: pickImage(i),
@@ -75,6 +100,9 @@ function mapVariation(v) {
     stock:         Number(v.stock ?? 0),
     inStock:       Number(v.stock ?? 0) > 0,
     attributes:    norm,
+    attrImages,                        // reserved value→image map (not a displayed attribute)
+    noteItems:     itemsFor('notes'),  // [{name, image}] fragrance notes (image optional)
+    accordItems:   itemsFor('main accords', 'accords'), // [{name, image}] accords (image optional)
     size:          norm.size?.[0] || '',
     sizes:         norm.size || [],
     colors:        norm.color || [],
