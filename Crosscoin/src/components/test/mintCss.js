@@ -636,4 +636,34 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .addr__tag{ position: absolute; top: 12px; right: 12px; font-family: "Space Mono"; font-size: 9.5px; font-weight: 700; color: #fff; background: var(--crimson); border-radius: 999px; padding: 2px 9px; }
 .cc-test-root .addr b{ font-size: 14px; } .cc-test-root .addr p{ margin: 6px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
 
+/* --- Mobile refinements for the newer components (phone ≤ 560px) --- */
+@media (max-width: 560px){
+  .cc-test-root .authsplit__brand{ padding: 22px; }
+  .cc-test-root .authsplit__brand h1{ font-size: 25px; }
+  .cc-test-root .authsplit__brand p{ font-size: 13.5px; }
+  .cc-test-root .authsplit__stats{ gap: 14px; }
+  .cc-test-root .authsplit__form{ padding: 22px; }
+  .cc-test-root .otpbox{ max-width: 46px; font-size: 18px; }
+  .cc-test-root .mkmodal__card{ padding: 24px 18px; }
+  .cc-test-root .mkmodal__h{ font-size: 21px; }
+  .cc-test-root .phead{ padding: 16px; gap: 12px; }
+  .cc-test-root .phead__av{ width: 48px; height: 48px; font-size: 18px; }
+  .cc-test-root .phead__who{ flex: 1 1 60%; }
+  .cc-test-root .phead__who b{ font-size: 18px; }
+  .cc-test-root .phead__stats{ order: 3; }
+  .cc-test-root .pstat{ padding: 7px 12px; }
+  .cc-test-root .order{ padding: 14px; }
+  .cc-test-root .order__acts{ flex-wrap: wrap; }
+  .cc-test-root .grievance{ padding: 18px; }
+  .cc-test-root .grievance__dl > div{ flex-direction: column; gap: 2px; }
+  .cc-test-root .grievance__dl dt{ min-width: 0; }
+  .cc-test-root .bms__card{ width: 180px; }
+  .cc-test-root .perpair__row{ flex-wrap: wrap; gap: 8px; }
+  .cc-test-root .citem--pack .packstep{ margin: 8px 0 2px; }
+}
+@media (max-width: 380px){
+  .cc-test-root .otpboxes{ gap: 6px; }
+  .cc-test-root .otpbox{ max-width: 42px; }
+  .cc-test-root .accttab{ padding: 8px 11px; font-size: 11.5px; }
+}
 .cc-test-root{min-height:100vh;}`;
