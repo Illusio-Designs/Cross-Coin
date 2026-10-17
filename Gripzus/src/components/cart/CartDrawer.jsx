@@ -100,7 +100,7 @@ function _xsFetch() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, open, closeCart, clearCart, removeItem, updateQty, lineKey, addItem } = useCart();
+  const { items, open, openCart, closeCart, clearCart, removeItem, updateQty, lineKey, addItem } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const [guestInfo, setGuestInfo] = useState({ email: '', fullName: '', phone: '' });
@@ -710,6 +710,54 @@ export default function CartDrawer() {
     setCouponError('');
     setCouponInput('');
   };
+
+  /* ── Abandoned-cart recovery (?recover=1[&coupon=CODE]) ───────────────
+     When a shopper returns via a recovery link, reopen the cart drawer and
+     (best-effort) auto-apply the coupon from the link. The cart still lives
+     in the shopper's browser localStorage, so we only reopen it — never
+     rebuild. The remembered code is applied by a second effect once the cart
+     total is known, so minimum-cart rules pass. All best-effort / guarded so
+     a bad URL never breaks the page. */
+  const recoverCouponRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+      openCart();
+      const coupon = String(params.get('coupon') || '').trim().toUpperCase();
+      if (coupon) {
+        recoverCouponRef.current = coupon;
+        // Pre-fill the input immediately so the code is visible even if the
+        // auto-apply can't run (empty cart / min-cart rule not met yet).
+        setCouponInput(coupon);
+      }
+      // Strip the recovery params so a refresh / reshare doesn't re-trigger it.
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState(null, '', clean);
+    } catch { /* best-effort — never break the page */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Auto-apply the remembered recovery coupon once the cart total is known
+     (so minimum-cart rules pass) and nothing is applied yet. Routes through
+     the same validate-and-apply path as the manual Apply button. Runs once —
+     the ref is cleared on the attempt, so handleApplyCoupon owns the result
+     (applied discount or its own couponError). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!recoverCouponRef.current) return;
+    if (appliedCoupon || couponLoading) return;
+    if (cartTotal <= 0) return;
+    const code = recoverCouponRef.current;
+    recoverCouponRef.current = null;
+    try { handleApplyCoupon(code); } catch { /* best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartTotal, appliedCoupon, couponLoading]);
 
   /* ── order placement ──────────────────────────────────────────── */
   const itemsPayload = () => items
