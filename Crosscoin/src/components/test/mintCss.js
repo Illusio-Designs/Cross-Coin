@@ -2,20 +2,23 @@
 // site stylesheet cannot bleed into the /test preview (and vice-versa). Injected
 // globally by TestLayout while a /test page is mounted. Display face: Fraunces.
 export const MINT_CSS = `.cc-test-root{
-    --crimson: #ce1e36;
-    --crimson-700: #99122a;
-    --indigo: #180d3e;
-    --indigo-600: #2b1c63;
-    --paper: #f5efe3;
-    --paper-2: #efe7d6;
-    --surface: #fffdf8;
-    --ink: #17110b;
-    --ink-soft: #544c41;
-    --ink-faint: #8f8676;
-    --line: #e4dac6;
-    --line-ink: #231b12;
-    --gold: #c9a25a;
-    --teal: #0f766e;
+    /* Brand palette "Bold Active Comfort": Midnight #140C38, Soft Beige #F4F1EA,
+       Ice Blue #E8F2F3, Vibrant Red #E3274C, Near Black #171525. Only the color
+       tokens change — every component reads these, so the UI/layout is unchanged. */
+    --crimson: #e3274c;      /* Vibrant Red — primary accent */
+    --crimson-700: #b81f3c;  /* darker red for hovers */
+    --indigo: #140c38;       /* Midnight — dark bands (ticker, tech, footer) */
+    --indigo-600: #2a1e5e;   /* lighter midnight */
+    --paper: #f4f1ea;        /* Soft Beige — page background */
+    --paper-2: #e8f2f3;      /* Ice Blue — secondary surface / media panels */
+    --surface: #fffdf8;      /* card surface (kept light so cards lift off beige) */
+    --ink: #171525;          /* Near Black — text */
+    --ink-soft: #514c5e;     /* muted near-black */
+    --ink-faint: #8c879b;    /* faint near-black */
+    --line: #e5dfd3;         /* hairline on the beige ground */
+    --line-ink: #171525;     /* Near Black — bold stamp borders */
+    --gold: #e3274c;         /* no gold in this palette → use the red accent */
+    --teal: #0f766e;         /* semantic success (in-stock) — kept for meaning */
 
     --bg: var(--paper);
     --fg: var(--ink);
