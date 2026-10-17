@@ -219,6 +219,31 @@
 .m-cart__foot{border-top:1px solid var(--m-line-soft);padding:20px;display:grid;gap:14px}
 .m-cart__tot{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
 .m-cart__tot b{font-family:var(--m-d);font-size:24px;font-weight:600}
+/* urgency bar */
+.m-curg{display:flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;letter-spacing:.04em;
+  color:var(--m-accent-soft);background:color-mix(in srgb,var(--m-accent) 10%,var(--m-surface));
+  border:1px solid var(--m-band-line);border-radius:8px;padding:8px 12px;font-weight:600}
+.m-curg b{font-variant-numeric:tabular-nums;color:var(--m-ink)}
+.m-curg svg{flex:none}
+/* in-cart build-a-pack */
+.m-cpack{border:1px solid color-mix(in srgb,var(--m-accent) 40%,transparent);border-radius:10px;
+  background:color-mix(in srgb,var(--m-accent) 10%,var(--m-surface));padding:13px}
+.m-cpack__h{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.m-cpack__h svg{color:var(--m-accent-deep);flex:none}
+.m-cpack__h b{font-family:var(--m-d);font-size:15px;font-weight:600;display:block}
+.m-cpack__h small{font-size:11.5px;color:var(--m-ink-soft)}
+.m-cprow{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.m-cprow::-webkit-scrollbar{height:5px}.m-cprow::-webkit-scrollbar-thumb{background:var(--m-line);border-radius:999px}
+.m-cprod{flex:0 0 100px;border:1px solid var(--m-line-soft);border-radius:8px;overflow:hidden;background:var(--m-bg);display:flex;flex-direction:column}
+.m-cprod__img{aspect-ratio:1;display:block;background:radial-gradient(120% 95% at 50% 18%,#201f24,#121216)}
+.m-cprod__img img{width:100%;height:100%;object-fit:cover}
+.m-cprod__n{font-family:var(--m-d);font-size:12.5px;font-weight:600;line-height:1.05;padding:7px 8px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-cprod__pr{font-size:11px;font-weight:800;padding:2px 8px 7px;color:var(--m-ink)}
+.m-cprod__add{margin:0 8px 8px;background:var(--m-accent);color:#17120a;border:0;border-radius:6px;padding:5px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+/* trust row */
+.m-ctrust{display:flex;justify-content:center;gap:16px;color:var(--m-ink-faint);font-size:10.5px;letter-spacing:.03em}
+.m-ctrust span{position:relative}
+.m-ctrust span+span::before{content:"·";position:absolute;left:-9px;color:var(--m-ink-faint)}
 
 /* ── Product detail ── */
 .m-pdpwrap{padding-top:clamp(20px,3vw,32px)}
