@@ -14,7 +14,7 @@ const I = {
 
 const NAV = [
   { label: 'Shop', href: '/test/shop' },
-  { label: 'Collections', href: '/test/shop' },
+  { label: 'Build a Pack', href: '/test/pack' },
   { label: 'About', href: '/test/about' },
   { label: 'Journal', href: '/test/journal' },
 ];

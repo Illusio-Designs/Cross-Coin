@@ -711,6 +711,9 @@ export default function CartDrawer() {
       product_id:   Number(i.productId),
       variation_id: i.variationId ? Number(i.variationId) : null,
       quantity:     Number(i.quantity) || 1,
+      // "Build Your Pack" lines carry a shared pack_group so the backend can
+      // apply the store-wide mix discount, server-authoritatively.
+      ...(i.packGroup ? { pack_group: String(i.packGroup) } : {}),
     }));
 
   // Meta Purchase custom_data — captured from the cart BEFORE it is cleared.

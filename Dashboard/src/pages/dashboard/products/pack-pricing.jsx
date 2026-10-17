@@ -163,6 +163,11 @@ export default function PackPricingManager() {
         }
       />
 
+      {/* Build Your Pack — store-wide mix tiers */}
+      <BuildYourPackPanel brandId={brandId} />
+
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)', margin: '8px 0 10px' }}>Per-product packs</div>
+
       {/* Product picker */}
       <div className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)', maxWidth: 880 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search products by name…">
@@ -238,6 +243,106 @@ export default function PackPricingManager() {
           </Panel>
         </>
       )}
+    </div>
+  );
+}
+
+// ── Build Your Pack: store-wide mix tiers (product_id = null + discount_percent) ──
+const emptyMix = { id: null, pairs: 2, discount_percent: '', label: '', badge: '', display_order: 0, is_active: true };
+function BuildYourPackPanel({ brandId }) {
+  const [tiers, setTiers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState(emptyMix);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const res = await bundleService.list({ brand_id: brandId });
+      // store-wide tiers only (no product attached)
+      setTiers((res.tiers || []).filter((t) => t.product_id == null));
+    } catch (err) {
+      showError('loadFailed', typeof err === 'string' ? err : err.message);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openEdit = (t) => { setEditing(t); setForm({ id: t.id, pairs: t.pairs, discount_percent: t.discount_percent != null ? String(Number(t.discount_percent)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active }); };
+
+  const save = async (e) => {
+    e?.preventDefault();
+    const pairs = parseInt(form.pairs, 10);
+    const pct = parseFloat(form.discount_percent);
+    if (!Number.isFinite(pairs) || pairs < 2) { showError('validation', 'Min items must be at least 2'); return; }
+    if (!Number.isFinite(pct) || pct <= 0 || pct > 90) { showError('validation', 'Discount % must be between 1 and 90'); return; }
+    setSaving(true);
+    try {
+      const payload = {
+        brand_id: brandId, scope: 'store', product_id: null,
+        pairs, discount_percent: pct,
+        label: form.label || `Any ${pairs}`, badge: form.badge || null,
+        display_order: parseInt(form.display_order, 10) || 0, is_active: !!form.is_active,
+      };
+      if (form.id) { await bundleService.update(form.id, payload); showSuccess('saved', 'Pack tier updated'); }
+      else { await bundleService.create(payload); showSuccess('saved', 'Pack tier created'); }
+      setForm(emptyMix); setEditing(null); reload();
+    } catch (err) {
+      showError('saveFailed', typeof err === 'string' ? err : err.message);
+    } finally { setSaving(false); }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm('Delete this pack tier?')) return;
+    try { await bundleService.remove(id); showSuccess('deleted', 'Pack tier deleted'); reload(); }
+    catch (err) { showError('deleteFailed', typeof err === 'string' ? err : err.message); }
+  };
+
+  const dim = (t) => ({ opacity: t.is_active ? 1 : 0.5 });
+  const sorted = tiers.slice().sort((a, b) => a.pairs - b.pairs || a.display_order - b.display_order);
+  const columns = [
+    { key: 'label', label: 'Tier', render: (t) => <span style={dim(t)}>{t.label || `Any ${t.pairs}`}</span> },
+    { key: 'pairs', label: 'Min items', render: (t) => <b style={dim(t)}>{t.pairs}+</b> },
+    { key: 'pct', label: 'Discount', render: (t) => <span style={{ ...dim(t), color: 'var(--ds-color-success, #15803d)', fontWeight: 700 }}>{Number(t.discount_percent)}% off</span> },
+    { key: 'badge', label: 'Badge', render: (t) => <span style={dim(t)}>{t.badge || '—'}</span> },
+    { key: 'active', label: 'Active', render: (t) => <Badge variant={t.is_active ? 'success' : 'default'}>{t.is_active ? 'Yes' : 'No'}</Badge> },
+    { key: 'actions', label: '', headerStyle: { textAlign: 'right' }, cellStyle: { textAlign: 'right', whiteSpace: 'nowrap' },
+      render: (t) => (<span style={dim(t)}><button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}<button onClick={() => remove(t.id)} style={btnDanger}>Delete</button></span>) },
+  ];
+
+  return (
+    <div style={{ marginBottom: 'var(--ds-space-5)' }}>
+      <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-3)', maxWidth: 880 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 4 }}>Build Your Pack — store-wide tiers</div>
+        <div style={{ fontSize: 12.5, color: 'var(--ds-color-text-muted)', marginBottom: 12 }}>Mix-and-match ANY products: the whole pack gets a % off once it reaches the item count. Highest matching tier wins (5 items uses your 4-item tier). Leave empty to disable the feature.</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'flex-end' }}>
+          <Field label="Min items" style={{ flex: '0 0 100px' }}>
+            <Input type="number" min="2" value={form.pairs} onChange={(e) => setForm({ ...form, pairs: e.target.value })} required />
+          </Field>
+          <Field label="Discount %" style={{ flex: '0 0 110px' }}>
+            <Input type="number" min="1" max="90" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} placeholder="10" required />
+          </Field>
+          <Field label="Label" style={{ flex: '1 1 150px' }}>
+            <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={`Any ${form.pairs || 2}`} />
+          </Field>
+          <Field label="Badge (optional)" style={{ flex: '1 1 150px' }}>
+            <Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="Best value" />
+          </Field>
+          <Field label="Order" style={{ flex: '0 0 80px' }}>
+            <Input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} />
+          </Field>
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Switch checked={!!form.is_active} onChange={(checked) => setForm({ ...form, is_active: checked })} label="Active" />
+          <div style={{ flex: 1 }} />
+          {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyMix); }} className="cd-btn-ghost" style={{ padding: '8px 14px' }}>Cancel</button>}
+          <button type="submit" disabled={saving} className="cd-btn-primary" style={{ padding: '8px 16px' }}>{saving ? 'Saving…' : (editing ? 'Update tier' : 'Add tier')}</button>
+        </div>
+      </form>
+      <Panel>
+        <ResponsiveTable columns={columns} data={loading ? [] : sorted} rowKey="id"
+          emptyMessage={loading ? 'Loading…' : 'No pack tiers yet. Add e.g. 2 items → 10%, 3 → 15%, 4 → 20%.'} />
+      </Panel>
     </div>
   );
 }
