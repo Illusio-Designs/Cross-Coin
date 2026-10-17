@@ -10,13 +10,14 @@ export default function TestLogin() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [resend, setResend] = useState(0);
   const otpRefs = useRef([]);
   const pollRef = useRef(null);
   const digits = phone.replace(/\D/g, '');
+  const OTP_LEN = 4;
 
   useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
   useEffect(() => {
@@ -28,14 +29,14 @@ export default function TestLogin() {
   const setDigit = (i, v) => {
     const d = v.replace(/\D/g, '').slice(-1);
     setOtp((prev) => { const n = [...prev]; n[i] = d; return n; });
-    if (d && i < 5) otpRefs.current[i + 1]?.focus();
+    if (d && i < OTP_LEN - 1) otpRefs.current[i + 1]?.focus();
   };
   const onOtpKey = (i, e) => { if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus(); };
   const onOtpPaste = (e) => {
-    const t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    const t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, OTP_LEN);
     if (!t) return; e.preventDefault();
-    setOtp(Array.from({ length: 6 }, (_, i) => t[i] || ''));
-    otpRefs.current[Math.min(t.length, 5)]?.focus();
+    setOtp(Array.from({ length: OTP_LEN }, (_, i) => t[i] || ''));
+    otpRefs.current[Math.min(t.length, OTP_LEN - 1)]?.focus();
   };
 
   const sendCode = async (e) => {
@@ -62,7 +63,7 @@ export default function TestLogin() {
   const verify = (e) => {
     e && e.preventDefault();
     const code = otp.join('');
-    if (code.length < 4) { setErr('Enter the code you received'); return; }
+    if (code.length < OTP_LEN) { setErr('Enter the code you received'); return; }
     if (typeof window.verifyOtp !== 'function') { setErr('OTP service not ready — please refresh.'); return; }
     setErr(''); setBusy(true);
     window.verifyOtp(
@@ -77,7 +78,7 @@ export default function TestLogin() {
     );
   };
 
-  const resendCode = () => { if (resend <= 0) { setOtp(['', '', '', '', '', '']); sendCode(); } };
+  const resendCode = () => { if (resend <= 0) { setOtp(['', '', '', '']); sendCode(); } };
 
   return (
     <TestLayout>
@@ -113,8 +114,8 @@ export default function TestLogin() {
             ) : (
               <form onSubmit={verify}>
                 <h2>Enter code</h2>
-                <p className="authsplit__d">We sent a 6-digit code to +91 {digits}. <button type="button" className="authlink" onClick={() => { setStep('phone'); setErr(''); }}>Change</button></p>
-                <div className="ffield"><label>6-digit code</label>
+                <p className="authsplit__d">We sent a 4-digit code to +91 {digits}. <button type="button" className="authlink" onClick={() => { setStep('phone'); setErr(''); }}>Change</button></p>
+                <div className="ffield"><label>4-digit code</label>
                   <div className="otpboxes" onPaste={onOtpPaste}>
                     {otp.map((d, i) => (
                       <input key={i} ref={(el) => { otpRefs.current[i] = el; }} className="otpbox" inputMode="numeric" maxLength={1} value={d} autoFocus={i === 0} aria-label={`Digit ${i + 1}`} onChange={(e) => setDigit(i, e.target.value)} onKeyDown={(e) => onOtpKey(i, e)} />
