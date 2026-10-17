@@ -113,7 +113,7 @@ function _xsFetch() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, subtotal, count, setQty, remove, clear, open, closeCart, add } = useCart();
+  const { items, subtotal, count, setQty, remove, clear, open, openCart, closeCart, add } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
@@ -153,6 +153,12 @@ export default function CartDrawer() {
   const [coStep, setCoStep] = useState(1);
   // Abandoned-cart capture: the last phone we recorded, so we fire once per phone.
   const capturedPhoneRef = useRef('');
+
+  // Abandoned-cart RECOVERY link (?recover=1&coupon=CODE): the coupon code we
+  // should auto-apply once the cart total is known, and a guard so we only try
+  // it once per recovery visit.
+  const recoverCouponRef = useRef('');
+  const recoverAppliedRef = useRef(false);
 
   // Cross-sell "You may also like" — fetched from the bestsellers service when
   // the drawer opens; excludes items already in the cart.
@@ -267,6 +273,39 @@ export default function CartDrawer() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Abandoned-cart recovery: a shopper arriving via ?recover=1 (optionally
+  // &coupon=CART10) should land with the cart drawer already open and, if a
+  // coupon was passed, have it auto-applied once the total is known. The cart
+  // itself lives in the shopper's own localStorage, so we only REOPEN it here —
+  // we never rebuild it. Best-effort throughout: a failure must never break the
+  // page, so everything is wrapped in try/catch and SSR-guarded.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+      const coupon = (params.get('coupon') || '').trim();
+      // Open the drawer via the store's own mechanism.
+      openCart();
+      // Remember + pre-fill the coupon so the auto-apply effect can run it (and
+      // so the shopper sees it in the input even if auto-apply doesn't fire).
+      if (coupon) {
+        recoverCouponRef.current = coupon;
+        setCouponInput(coupon);
+      }
+      // Strip the recovery params from the URL so a refresh/share is clean.
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState(window.history.state, '', clean);
+    } catch {
+      /* never break the page over a recovery link */
+    }
+    // Run once on mount — the drawer is always mounted at the app root.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
      checkout intent, not drawer open. */
@@ -597,6 +636,25 @@ export default function CartDrawer() {
     setCouponError('');
     setCouponInput('');
   };
+
+  // Auto-apply the recovery coupon (from ?recover=1&coupon=CODE) once the cart
+  // total is known (total > 0) and none has been applied yet. Uses the SAME
+  // applyCoupon path as typing a code and tapping Apply, so server validation
+  // still governs the real discount. Defined here so `total` and `applyCoupon`
+  // are already in scope. Best-effort; the code stays pre-filled as a fallback.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const code = recoverCouponRef.current;
+    if (!code || recoverAppliedRef.current) return;
+    if (!open || total <= 0 || appliedCoupon || couponLoading) return;
+    recoverAppliedRef.current = true;
+    try {
+      applyCoupon(code);
+    } catch {
+      /* the code is still pre-filled in the input as a fallback */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, total, appliedCoupon, couponLoading]);
 
   // GA4 funnel: shipping + payment chosen — fired at order placement (after
   // validation, before the order API call) so GA4 records them ahead of
