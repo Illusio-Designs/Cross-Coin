@@ -8,6 +8,7 @@ import Gallery from '../../_components/Gallery';
 import PdpBuy from '../../_components/PdpBuy';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
+import PdpPackRow from '../../_components/PdpPackRow';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -61,6 +62,7 @@ export default async function MaisonProduct({ params }) {
   ]);
   const packMaxOff = packTiers.reduce((a, t) => Math.max(a, t.off), 0);
   const packMinItems = packTiers[0]?.pairs || 2;
+  const packPicks = (bestsellers || []).filter((p) => String(p.id) !== String(product.id)).slice(0, 8);
   // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
   // "all products") FAQs, fall back to the site-wide global set.
   const faqs = productFaqs.length ? productFaqs : globalFaqs;
@@ -139,13 +141,7 @@ export default async function MaisonProduct({ params }) {
               <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
             </div>
 
-            {packTiers.length ? (
-              <Link href="/test/pack" className="m-packcta">
-                <span className="m-packcta__ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
-                <span className="m-packcta__t"><b>Build your own pack</b><small>Mix any {packMinItems}+ scents &amp; save up to {packMaxOff}%</small></span>
-                <span className="m-packcta__ar">→</span>
-              </Link>
-            ) : null}
+            {packTiers.length ? <PdpPackRow products={packPicks} maxOff={packMaxOff} /> : null}
 
             <PdpBuy product={product} />
 
