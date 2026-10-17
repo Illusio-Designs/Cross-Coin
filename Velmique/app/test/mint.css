@@ -257,6 +257,17 @@
 .m-qty button{width:44px;align-self:stretch;background:none;border:0;font-size:18px;color:var(--m-ink);cursor:pointer}
 .m-qty span{min-width:30px;text-align:center;font-weight:700}
 .m-addbtn{flex:1;justify-content:center}
+/* Build-Your-Pack CTA on the PDP, just above Add to cart. */
+.m-packcta{display:flex;align-items:center;gap:13px;margin:4px 0 18px;padding:13px 16px;border-radius:8px;
+  border:1px solid color-mix(in srgb,var(--m-accent) 42%,transparent);
+  background:color-mix(in srgb,var(--m-accent) 12%,var(--m-surface));transition:.2s}
+.m-packcta:hover{background:color-mix(in srgb,var(--m-accent) 18%,var(--m-surface));transform:translateY(-1px)}
+.m-packcta__ic{flex:none;color:var(--m-accent-deep);display:grid;place-items:center}
+.m-packcta__t{flex:1;min-width:0}
+.m-packcta__t b{display:block;font-family:var(--m-d);font-size:16px;font-weight:600;color:var(--m-ink)}
+.m-packcta__t small{display:block;font-size:12px;color:var(--m-ink-soft);margin-top:1px}
+.m-packcta__ar{flex:none;color:var(--m-accent-deep);font-size:18px}
+
 /* Stock + free-shipping row (Morbix-style), under the price. */
 .m-ship{display:flex;align-items:center;gap:16px 20px;flex-wrap:wrap;margin:16px 0 20px}
 .m-stockbadge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;

@@ -67,7 +67,7 @@ export default function PdpBuy({ product }) {
           Add to cart · {inr(opt.price * qty)}
         </button>
       </div>
-      <div className="m-prepaidchip">PREPAID10 · Extra 10% off on prepaid</div>
+      <div className="m-prepaidchip">PREPAID10</div>
       <button type="button" className="m-btn m-buynow" onClick={buy}>Buy now</button>
     </>
   );
