@@ -6,7 +6,7 @@
 import { useSyncExternalStore } from 'react';
 import axios from 'axios';
 import { API_URL, addBrandHeader } from '../../services/api/config';
-import { loginUser, registerUser, getCurrentUser, getUserOrders, getUserShippingAddresses } from '../../services/publicApi';
+import { loginUser, getCurrentUser, getUserOrders, getUserShippingAddresses } from '../../services/publicApi';
 
 const TKEY = 'token';
 const subs = new Set();
@@ -45,14 +45,27 @@ export async function loginOtp({ phone, access_token }) {
   } catch (e) { return { ok: false, message: (e && (e.message || e.error)) || 'Login failed. Please try again.' }; }
 }
 
-// Register (real) then sign in with the same MSG91 token.
+// Register — mirrors the live flow exactly: best-effort create (random password
+// + placeholder email), then phone-OTP login (stores token), then persist the
+// chosen name/email via the profile endpoint.
 export async function registerOtp({ name, email, phone, access_token }) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  const nm = (name || '').trim();
+  const em = (email || '').trim();
   try {
-    const data = await registerUser({ name, email: email || `${phone}@phone.crosscoin.in`, phone, access_token });
-    const t = tokenOf(data);
-    if (t) { setToken(t); return { ok: true }; }
-    // Some backends register without returning a token — follow up with login.
-    return await loginOtp({ phone, access_token });
+    await axios.post(`${API_URL}/api/users/register`, {
+      username: nm, email: em || `${digits}@phone.crosscoin.in`, phone: digits,
+      age_confirmed: true, password: Math.random().toString(36).slice(-12) + 'Cc1!',
+    }, addBrandHeader()).catch(() => {});
+    const res = await loginOtp({ phone: digits, access_token });
+    if (!res.ok) return res;
+    const token = getToken();
+    if (token) {
+      const base = addBrandHeader();
+      await axios.put(`${API_URL}/api/users/profile`, { username: nm, ...(em ? { email: em } : {}) },
+        { headers: { ...(base.headers || {}), Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
+    return { ok: true };
   } catch (e) { return { ok: false, message: (e && (e.message || e.error)) || 'Could not create your account.' }; }
 }
 
@@ -68,12 +81,16 @@ export async function fetchMyOrders() {
       number: o.order_number || o.orderNumber || o.number || `#${o.id ?? ''}`,
       date: o.createdAt || o.created_at || o.placed_at || '',
       status: o.status || o.order_status || o.current_status || 'pending',
-      total: Number(o.total || o.total_amount || o.grand_total || o.amount || 0),
-      items: (o.items || o.order_items || o.OrderItems || []).map((it) => ({
-        name: it.product_name || it.name || it.productName || it.title || 'Item',
-        variant: [it.color, it.size, it.pack].filter(Boolean).join(' · '),
-        qty: it.quantity ?? it.qty ?? 1,
-      })),
+      total: Number(o.final_amount ?? o.total_amount ?? o.total ?? o.grand_total ?? o.amount ?? 0),
+      items: (o.OrderItems || o.items || o.order_items || []).map((it) => {
+        const attrs = it.ProductVariation?.attributes || it.attributes || {};
+        const pick = (k) => (Array.isArray(attrs?.[k]) ? attrs[k].join('/') : attrs?.[k]);
+        return {
+          name: it.product_name || it.Product?.name || it.name || it.productName || it.title || 'Item',
+          variant: [pick('color') || it.color, pick('size') || it.size].filter(Boolean).join(' · '),
+          qty: it.quantity ?? it.qty ?? 1,
+        };
+      }),
     }));
   } catch (_) { return []; }
 }
