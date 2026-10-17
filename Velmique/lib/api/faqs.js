@@ -17,6 +17,7 @@ export async function getFaqs(type = 'global', id) {
     const q = id ? `&id=${encodeURIComponent(id)}` : '';
     const res = await fetch(`${API_URL}/api/public/faqs?type=${type}${q}`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
+      next: { revalidate: 300 },
     });
     if (!res.ok) throw new Error('Failed to fetch FAQs');
     const data = await res.json();

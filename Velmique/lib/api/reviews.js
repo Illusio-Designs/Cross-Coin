@@ -24,7 +24,7 @@ export async function getProductReviews(productId, { page = 1, limit = 10 } = {}
   try {
     const res = await fetch(
       `${API_URL}/api/reviews/product/${productId}?page=${page}&limit=${limit}`,
-      { headers: baseHeaders }
+      { headers: baseHeaders, next: { revalidate: 120 } }
     );
     if (!res.ok) throw new Error('Failed to fetch product reviews');
     const data = await res.json();
@@ -43,7 +43,7 @@ export async function getAllReviews({ page = 1, limit = 24 } = {}) {
   try {
     const res = await fetch(
       `${API_URL}/api/reviews/all?page=${page}&limit=${limit}`,
-      { headers: baseHeaders }
+      { headers: baseHeaders, next: { revalidate: 120 } }
     );
     if (!res.ok) throw new Error('Failed to fetch reviews');
     const data = await res.json();

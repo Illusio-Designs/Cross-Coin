@@ -63,9 +63,10 @@
 .m-brand{font-family:var(--m-d);font-weight:600;font-size:clamp(17px,4.2vw,26px);letter-spacing:.3em;text-align:center;line-height:1;color:var(--m-ink)}
 .m-brand small{display:block;font-family:var(--m-b);font-weight:600;font-size:8.5px;letter-spacing:.42em;color:var(--m-ink-faint);margin-top:5px}
 .m-icons{display:flex;gap:16px;align-items:center;justify-content:flex-end;flex:1}
-.m-icons button{background:none;border:0;color:var(--m-ink);cursor:pointer;padding:4px;display:grid;place-items:center}
+.m-icons a,.m-icons button{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;background:none;border:0;color:var(--m-ink);cursor:pointer;line-height:0}
+.m-icons a svg,.m-icons button svg{display:block;width:21px;height:21px}
 .m-bag{position:relative}
-.m-bag b{position:absolute;top:-6px;right:-8px;background:var(--m-accent);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:9px;display:grid;place-items:center;padding:0 3px}
+.m-bag b{position:absolute;top:-2px;right:-2px;background:var(--m-accent);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:9px;display:grid;place-items:center;padding:0 3px}
 .m-burger{display:none}
 
 /* ── Hero ── */
@@ -405,8 +406,9 @@
   .m-foot{grid-template-columns:1fr}
   .m-card__name{font-size:20px}
   .m-pnotegrid{grid-template-columns:repeat(2,1fr)}
-  .m-nav .m-icons{gap:12px}
-  .m-icons svg{width:19px;height:19px}
+  .m-nav .m-icons{gap:6px}
+  .m-icons a,.m-icons button{width:32px;height:32px}
+  .m-icons a svg,.m-icons button svg{width:20px;height:20px}
 }
 
 /* ─────────────────────────── Phase 2 — inner pages ─────────────────────── */

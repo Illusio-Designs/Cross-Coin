@@ -28,8 +28,13 @@ function cleanUrl(url) {
 }
 
 async function brandFetch(path) {
+  // Next 14 caches fetch() with force-cache by default, which froze the product
+  // payload at build/first-request time — so admin edits (new description or
+  // attribute images, price, stock) never appeared. Revalidate every 60s so the
+  // storefront picks up dashboard changes without a redeploy.
   const res = await fetch(`${API_URL}${path}`, {
     headers: { 'X-Brand-Name': BRAND_NAME },
+    next: { revalidate: 60 },
   });
   if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return res.json();
