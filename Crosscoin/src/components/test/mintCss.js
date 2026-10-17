@@ -176,6 +176,19 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root[data-theme="dark"] .tech, .cc-test-root:not([data-theme="light"]) .tech{ background: #0b0718; }
 .cc-test-root .tech .wrap{ padding-block: 60px; }
 .cc-test-root .tech h2{ color: #fff; }
+/* "The standard" — image-based benefit grid (real product photos in gold rings) */
+.cc-test-root .benefithead{ text-align: center; max-width: 60ch; margin: 0 auto 36px; }
+.cc-test-root .benefithead .eyebrow{ display: block; }
+.cc-test-root .benefithead h2{ color: #fff; font-family: "Fraunces"; font-weight: 700; font-size: clamp(26px,4vw,38px); margin: 10px 0 10px; }
+.cc-test-root .benefithead p{ color: #c7bfe6; font-size: 15px; line-height: 1.6; margin: 0; }
+.cc-test-root .benefitgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 40px 32px; }
+.cc-test-root .benefit{ text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cc-test-root .benefit__img{ width: 118px; height: 118px; border-radius: 50%; overflow: hidden; border: 3px solid var(--gold); background: rgba(255,255,255,.05); display: grid; place-items: center; }
+.cc-test-root .benefit__img img{ width: 100%; height: 100%; object-fit: cover; }
+.cc-test-root .benefit b{ color: #fff; font-family: "Fraunces"; font-weight: 700; font-size: 18px; }
+.cc-test-root .benefit__d{ color: #b7aed6; font-size: 13.5px; line-height: 1.55; max-width: 30ch; }
+@media (max-width: 820px){ .cc-test-root .benefitgrid{ grid-template-columns: 1fr 1fr; gap: 30px 20px; } }
+@media (max-width: 440px){ .cc-test-root .benefitgrid{ grid-template-columns: 1fr; } .cc-test-root .benefit__img{ width: 104px; height: 104px; } }
 .cc-test-root .techgrid{ display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-top: 30px; }
 .cc-test-root .techcard{ border: 2px solid rgba(255,255,255,.18); border-radius: var(--r); padding: 20px; background: rgba(255,255,255,.04); transition: transform .2s var(--ease); }
 .cc-test-root .techcard:hover{ transform: translateY(-4px); background: rgba(255,255,255,.08); }
