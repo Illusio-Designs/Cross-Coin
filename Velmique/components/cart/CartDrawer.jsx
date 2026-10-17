@@ -159,6 +159,10 @@ export default function CartDrawer() {
   // Last phone we captured an abandoned cart for — guards the capture effect so
   // it fires at most once per distinct 10-digit phone.
   const capturedPhoneRef = useRef('');
+  // Abandoned-cart recovery deep link: the coupon remembered from `?coupon=`
+  // and a one-shot guard so it is auto-applied at most once per mount.
+  const recoverCouponRef = useRef(null);
+  const recoverAppliedRef = useRef(false);
 
   // ── Reset on close ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -632,6 +636,62 @@ export default function CartDrawer() {
     setAppliedCoupon(null);
     setCouponMsg({ type: '', text: '' });
   };
+
+  // ── Abandoned-cart recovery deep link ───────────────────────────────────
+  // A recovery email/SMS links back with `?recover=1` (optionally
+  // `&coupon=CART10`). On the shopper's own device the bag still lives in the
+  // browser, so we only reopen the drawer — never rebuild it — and, once the
+  // total is known, auto-apply the coupon down the same path as typing a code
+  // + clicking Apply. Best-effort and SSR-guarded: it must never break the
+  // page, and an empty bag is fine (the code is still pre-filled).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+
+      // 1) Reopen the bag via the store's own open mechanism.
+      setCartOpen(true);
+
+      // 2) Remember + pre-fill the coupon so the code is visible immediately,
+      //    even if clean auto-apply can't run yet (e.g. total not known).
+      const coupon = String(params.get('coupon') || '').trim().toUpperCase();
+      if (coupon) {
+        recoverCouponRef.current = coupon;
+        setCouponCode(coupon);
+      }
+
+      // 3) Strip the recovery params so a refresh / share doesn't re-trigger.
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState(null, '', clean);
+    } catch (err) {
+      console.warn('[recover] deep-link handling failed:', err?.message);
+    }
+    // Mount-only — reads the URL once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-apply the remembered recovery coupon once the cart total is known and
+  // nothing is applied yet — same validation path as a manual Apply.
+  useEffect(() => {
+    if (recoverAppliedRef.current) return;
+    const code = recoverCouponRef.current;
+    if (!code) return;
+    // Something already applied (or user acted): stand down for good.
+    if (appliedCoupon) { recoverAppliedRef.current = true; return; }
+    // Wait until the bag has a real total and no apply is in flight.
+    if (!(subtotal > 0) || couponLoading) return;
+    recoverAppliedRef.current = true;
+    try {
+      onApplyCoupon(code);
+    } catch (err) {
+      console.warn('[recover] coupon auto-apply failed:', err?.message);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, appliedCoupon, couponLoading]);
 
   // ── Razorpay loader ───────────────────────────────────────────────────
   const loadRazorpay = () => new Promise(resolve => {
