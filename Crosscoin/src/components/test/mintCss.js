@@ -435,6 +435,21 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .rvform textarea{ resize: vertical; }
 @media (max-width: 520px){ .cc-test-root .rvform__grid{ grid-template-columns: 1fr; } }
 
+/* --- Custom open/close dropdown (Stamped "A" style) --- */
+.cc-test-root .dd{ position: relative; }
+.cc-test-root .dd.sort{ width: 210px; max-width: 100%; }
+.cc-test-root .dd__btn{ display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; cursor: pointer; text-align: left; font-family: "Space Mono", monospace; font-size: 14px; color: var(--ink); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 13px 15px; }
+.cc-test-root .dd.open .dd__btn, .cc-test-root .dd__btn:focus-visible{ outline: none; box-shadow: var(--stamp-sm), 0 0 0 3px color-mix(in srgb, var(--crimson) 45%, transparent); }
+.cc-test-root .dd__chev{ flex: 0 0 auto; transition: transform .2s ease; font-size: 12px; line-height: 1; color: var(--ink-soft); }
+.cc-test-root .dd.open .dd__chev{ transform: rotate(180deg); }
+.cc-test-root .dd__panel{ position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); padding: 5px; opacity: 0; transform: translateY(-6px) scaleY(.98); transform-origin: top; pointer-events: none; transition: opacity .16s ease, transform .16s ease; max-height: 280px; overflow: auto; }
+.cc-test-root .dd.open .dd__panel{ opacity: 1; transform: none; pointer-events: auto; }
+.cc-test-root .dd__opt{ display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: none; border: none; font-family: "Space Mono", monospace; font-size: 13.5px; color: var(--ink); padding: 10px 12px; border-radius: 2px; cursor: pointer; }
+.cc-test-root .dd__opt:hover{ background: var(--paper-2); }
+.cc-test-root .dd__opt.sel{ color: var(--crimson); font-weight: 700; }
+.cc-test-root .dd__opt .tick{ opacity: 0; font-size: 12px; }
+.cc-test-root .dd__opt.sel .tick{ opacity: 1; }
+
 /* --- Home coupon strip (real live coupons, tap to copy) --- */
 .cc-test-root .coupstrip{ overflow: hidden; border-block: 2px solid var(--line-ink); background: var(--indigo); }
 .cc-test-root .coupstrip__track{ display: flex; gap: 0; width: max-content; animation: cccoup 32s linear infinite; }
@@ -470,6 +485,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .shopfilters__h{ font-family: "Space Mono"; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
 .cc-test-root .facetrow{ text-align: left; background: none; border: none; padding: 5px 0; font-size: 13.5px; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
 .cc-test-root .facetrow.on{ color: var(--crimson); font-weight: 700; }
+.cc-test-root .facetcheck{ display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--ink-soft); cursor: pointer; padding: 4px 0; }
+.cc-test-root .facetcheck input{ width: 17px; height: 17px; accent-color: var(--crimson); cursor: pointer; flex: 0 0 auto; }
+.cc-test-root .facetcheck span{ min-width: 0; }
 .cc-test-root .pricerow{ display: flex; align-items: center; gap: 8px; }
 .cc-test-root .pricerow input{ width: 100%; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); color: var(--ink); padding: 8px 10px; font: inherit; font-size: 13px; }
 .cc-test-root .pricerange{ width: 100%; accent-color: var(--crimson); }

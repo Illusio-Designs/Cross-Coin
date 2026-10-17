@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ProductCard, toast } from '../../components/test/ui';
+import { ProductCard, toast, Dropdown } from '../../components/test/ui';
 import TestLayout from '../../components/test/TestLayout';
 import { useWishlist, clearWishlist } from '../../components/test/wishlist';
 import { addItem } from '../../components/test/store';
@@ -55,11 +55,7 @@ export default function TestWishlist() {
             <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Your wishlist</h2>
             {items.length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <select className="sortsel" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort wishlist">
-                  <option value="new">Newest</option>
-                  <option value="low">Price ↑</option>
-                  <option value="high">Price ↓</option>
-                </select>
+                <Dropdown className="sort" value={sort} onChange={setSort} ariaLabel="Sort wishlist" options={[{ value: 'new', label: 'Newest' }, { value: 'low', label: 'Price — low to high' }, { value: 'high', label: 'Price — high to low' }]} />
                 <button className="btn btn--crimson" onClick={addAll}>Add all to bag</button>
                 <button className="chip" onClick={() => clearWishlist()}>Clear all</button>
               </div>

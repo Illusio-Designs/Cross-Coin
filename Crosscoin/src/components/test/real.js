@@ -54,6 +54,16 @@ export function normalizeProduct(p) {
   const sizes = [];
   vars.forEach((v) => listVals(attrsOf(v).size).forEach((s) => { if (s && !sizes.includes(String(s))) sizes.push(String(s)); }));
 
+  // Material + gender from variation attributes (same source the live /Products
+  // facet sidebar uses). Deduped, first-seen order.
+  const materials = [];
+  const genders = [];
+  vars.forEach((v) => {
+    const a = attrsOf(v);
+    listVals(a.material).forEach((m) => { const s = String(m).trim(); if (s && !materials.includes(s)) materials.push(s); });
+    listVals(a.gender).forEach((g) => { const s = String(g).trim(); if (s && !genders.includes(s)) genders.push(s); });
+  });
+
   // Buyable variants (how Crosscoin models single pair vs multi-pair packs: a
   // variation whose colour attribute has >1 colour IS a "Pack of N"). Each
   // variant carries its own price, compare-at, image, colours and sizes.
@@ -97,7 +107,7 @@ export function normalizeProduct(p) {
     img: mainImg, images,
     rating: rating != null ? Number(rating).toFixed(1) : null,
     revs: p.reviewCount ?? p.review_count ?? 0,
-    colors, sizes, variants,
+    colors, sizes, materials, genders, variants,
     raw: p,
   };
 }

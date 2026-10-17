@@ -1,5 +1,6 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
+import { useEffect, useRef, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   ArrowRight01Icon, ShoppingCart01Icon, FavouriteIcon, Search01Icon, UserIcon,
@@ -52,6 +53,36 @@ export function Thumb({ src, color, className, style }) {
   if (src) return <img className={className} src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }} />;
   const bg = color ? colorToCss(color) : 'var(--paper-2)';
   return <span className={className} style={{ width: '60%', aspectRatio: '1', borderRadius: '50%', background: bg, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08)', ...style }} />;
+}
+
+// Custom open/close dropdown (the "Stamped" A treatment) — replaces native
+// <select> so the open state is designed. options: [{ value, label }].
+export function Dropdown({ value, options, onChange, ariaLabel, className = '' }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('click', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('click', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const cur = options.find((o) => o.value === value) || options[0];
+  return (
+    <div className={`dd dd--a${open ? ' open' : ''}${className ? ` ${className}` : ''}`} ref={ref}>
+      <button type="button" className="dd__btn" aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>
+        <span className="dd__label">{cur?.label}</span><span className="dd__chev" aria-hidden="true">▾</span>
+      </button>
+      <div className="dd__panel" role="listbox">
+        {options.map((o) => (
+          <button type="button" key={o.value} role="option" aria-selected={o.value === value} className={`dd__opt${o.value === value ? ' sel' : ''}`} onClick={(e) => { e.stopPropagation(); onChange(o.value); setOpen(false); }}>
+            {o.label}<span className="tick">✓</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function ProductCard({ p }) {
