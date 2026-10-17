@@ -112,8 +112,13 @@ export const MINT_CSS = `.cc-test-root{
       radial-gradient(760px 420px at 88% 12%, color-mix(in srgb,var(--crimson) 16%, transparent), transparent 62%),
       radial-gradient(640px 420px at 2% 100%, color-mix(in srgb,var(--indigo) 20%, transparent), transparent 60%); }
 .cc-test-root .hero .wrap{ display: grid; grid-template-columns: 1.08fr .92fr; gap: 40px; align-items: center; padding-block: 60px 72px; }
-.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 4px; padding: 6px 13px 6px 7px; font-family: "Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
-.cc-test-root .hero .tagpill i{ background: var(--crimson); color: #fff; padding: 3px 8px; border-radius: 4px; font-style: normal; }
+.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; max-width: 100%; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 4px; padding: 6px 13px 6px 7px; font-family: "Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
+.cc-test-root .hero .tagpill i{ flex: 0 0 auto; background: var(--crimson); color: #fff; padding: 3px 8px; border-radius: 4px; font-style: normal; }
+/* The category label can be long (real slide data). Truncate it with an
+   ellipsis so the pill never forces the hero grid column wider than the
+   viewport — which (with .hero overflow:hidden) was clipping the copy. */
+.cc-test-root .hero .tagpill__t{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-test-root .hero__copy{ min-width: 0; }
 .cc-test-root .hero h1{ font-size: clamp(42px, 7.6vw, 86px); font-weight: 800; margin-top: 18px; }
 .cc-test-root .hero h1 em{ font-style: normal; color: var(--crimson); -webkit-text-stroke: 0; position: relative; }
 .cc-test-root .hero h1 .ul{ text-decoration: none; background: linear-gradient(var(--crimson),var(--crimson)) left bottom / 100% 6px no-repeat; }

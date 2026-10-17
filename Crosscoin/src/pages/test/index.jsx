@@ -67,7 +67,7 @@ export default function TestHome({ preview = true, initialData = null }) {
       {/* hero — real banner/slider when the live store has one, else the Mint art */}
       <section className="hero">
         <div className="wrap">
-          <div>
+          <div className="hero__copy">
             {loading ? (
               <>
                 <div className="cc-skel cc-skelblock" style={{ height: 24, width: 220, marginBottom: 18 }} aria-hidden="true" />
@@ -77,7 +77,7 @@ export default function TestHome({ preview = true, initialData = null }) {
                 <div className="cc-skel cc-skelblock" style={{ height: 16, width: '60%', marginBottom: 22 }} aria-hidden="true" />
               </>
             ) : (<>
-            <span className="tagpill"><i>DROP 04</i> {slide?.catName || 'The Winter Mint is live'}</span>
+            <span className="tagpill"><i>DROP 04</i> <span className="tagpill__t">{slide?.catName || 'The Winter Mint is live'}</span></span>
             {slide?.title
               ? <h1>{slide.title}</h1>
               : <h1>Everyday<br />essentials, <em className="ul">minted</em><br />to last.</h1>}
