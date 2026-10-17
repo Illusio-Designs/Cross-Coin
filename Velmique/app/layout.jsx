@@ -10,6 +10,7 @@ import SentryInit from '@/components/SentryInit';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import Analytics from '@/components/layout/Analytics';
 import HeaderShell from '@/components/layout/HeaderShell';
+import ChromeGate from '@/components/layout/ChromeGate';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
 import ExitIntentModal from '@/components/cart/ExitIntentModal';
@@ -111,15 +112,17 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <StoreProvider>
               <ScrollProgress />
-              <HeaderShell />
+              <ChromeGate><HeaderShell /></ChromeGate>
               <main id="main">{children}</main>
-              <Footer />
-              <CartDrawer />
-              <ExitIntentModal />
-              <SearchOverlay />
-              <CookieBanner />
-              <ScrollToTop />
-              <WhatsAppChat />
+              <ChromeGate>
+                <Footer />
+                <CartDrawer />
+                <ExitIntentModal />
+                <SearchOverlay />
+                <CookieBanner />
+                <ScrollToTop />
+                <WhatsAppChat />
+              </ChromeGate>
               {/* Analytics calls useSearchParams() for route-change tracking;
                   it must live inside a Suspense boundary or Next 14 bails
                   static prerendering on every page. */}
