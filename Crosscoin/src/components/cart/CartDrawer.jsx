@@ -1234,7 +1234,19 @@ const CartDrawer = ({ isOpen, onClose }) => {
             : await initiateGuestCheckout({
                 ...checkoutData,
                 shipping_address_id: undefined,
-                phone: selectedAddress.phone_number || selectedAddress.phoneNumber,
+                // The backend guest schema (validateBody(guestInitiateSchema))
+                // REQUIRES the nested guest_info object; without it the request
+                // is rejected before the controller runs with
+                // { path: "guest_info", code: "invalid_type", message: "Required" }.
+                // Flat fields are kept alongside for the controller's backward-
+                // compat path, matching the other storefronts (e.g. Morbix).
+                guest_info: {
+                  email: guestInfo.email,
+                  firstName: guestInfo.firstName,
+                  lastName: guestInfo.lastName,
+                  phone: guestInfo.phone,
+                },
+                phone: guestInfo.phone,
                 email: guestInfo.email,
                 firstName: guestInfo.firstName,
                 lastName: guestInfo.lastName,
