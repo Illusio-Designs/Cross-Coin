@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import Home from "./home";
+import TestHome from './test/index';
 import SeoWrapper from '../console/SeoWrapper';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { getSeoOrg } from '../services/getSeoOrg';
@@ -119,7 +119,13 @@ export default function MainPage({ seoData, organizationLd = null, orgOgImage = 
           />
         </Head>
       )}
-      <Home initialData={initialData} />
+      {/* Mint storefront home. SSR here supplies SEO meta + Organization
+          JSON-LD (via SeoWrapper) and the hero preload; the Mint home fetches
+          its own above-the-fold content client-side. */}
+      <TestHome preview={false} />
     </SeoWrapper>
   );
 }
+
+// Render with the Mint chrome (bare — no legacy Header/Footer/Breadcrumb).
+MainPage.mintChrome = true;

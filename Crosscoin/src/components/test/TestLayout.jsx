@@ -11,6 +11,7 @@ import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
+import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
@@ -647,13 +648,13 @@ export default function TestLayout({ children }) {
 
   const navLinks = (
     <>
-      <Link href="/test/shop" onClick={() => setMnav(false)}>Shop</Link>
-      <Link href="/test/collections" onClick={() => setMnav(false)}>Collections</Link>
-      <Link href="/test/journal" onClick={() => setMnav(false)}>Journal</Link>
-      <Link href="/test/about" onClick={() => setMnav(false)}>About</Link>
-      <Link href="/test/contact" onClick={() => setMnav(false)}>Contact</Link>
-      <Link href="/test/wishlist" onClick={() => setMnav(false)}>Wishlist</Link>
-      <Link href="/test#faq" onClick={() => setMnav(false)}>Help</Link>
+      <Link href={R.shop} onClick={() => setMnav(false)}>Shop</Link>
+      <Link href={R.collections} onClick={() => setMnav(false)}>Collections</Link>
+      <Link href={R.journal} onClick={() => setMnav(false)}>Journal</Link>
+      <Link href={R.about} onClick={() => setMnav(false)}>About</Link>
+      <Link href={R.contact} onClick={() => setMnav(false)}>Contact</Link>
+      <Link href={R.wishlist} onClick={() => setMnav(false)}>Wishlist</Link>
+      <Link href={`${R.home}#faq`} onClick={() => setMnav(false)}>Help</Link>
     </>
   );
 
@@ -677,13 +678,13 @@ export default function TestLayout({ children }) {
 
       <header className="site">
         <div className="wrap nav">
-          <Link href="/test" className="brand" aria-label="CrossCoin home"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></Link>
+          <Link href={R.home} className="brand" aria-label="CrossCoin home"><img className="cc-logo" src={LOGO} alt="CrossCoin" /></Link>
           <nav className="nav__links">{navLinks}</nav>
           <div className="nav__act">
             <span className="nav__extra">
               <button className="ibtn" aria-label="Search" onClick={() => setSearchOpen((v) => !v)}>{I.search()}</button>
-              <button className="ibtn" aria-label="Wishlist" onClick={() => go('/test/wishlist')}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>
-              <button className="ibtn" aria-label="Account" onClick={() => go('/test/account')}>{I.user()}</button>
+              <button className="ibtn" aria-label="Wishlist" onClick={() => go(R.wishlist)}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>
+              <button className="ibtn" aria-label="Account" onClick={() => go(R.account)}>{I.user()}</button>
             </span>
             <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
@@ -693,7 +694,7 @@ export default function TestLayout({ children }) {
         {searchOpen && (
           <div className="hsearch">
             <div className="wrap hsearch__in">
-              <form className="hsearch__bar" onSubmit={(e) => { e.preventDefault(); const q = searchQ.trim(); if (q) { setSearchOpen(false); go(`/test/search?q=${encodeURIComponent(q)}`); } }}>
+              <form className="hsearch__bar" onSubmit={(e) => { e.preventDefault(); const q = searchQ.trim(); if (q) { setSearchOpen(false); go(`${R.search}?q=${encodeURIComponent(q)}`); } }}>
                 {I.search(18)}
                 <input autoFocus value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Search socks, packs, colours…" aria-label="Search products" />
                 <button type="button" className="hsearch__x" aria-label="Close search" onClick={() => { setSearchOpen(false); setSearchQ(''); }}>{I.close(18)}</button>
@@ -704,12 +705,12 @@ export default function TestLayout({ children }) {
                     ? <div className="hsearch__empty mono">No matches for “{searchQ.trim()}”.</div>
                     : <>
                         {searchRes.map((r) => (
-                          <button key={r.id} className="hsearch__row" onClick={() => { setSearchOpen(false); go(`/test/product?slug=${encodeURIComponent(r.slug || '')}`); }}>
+                          <button key={r.id} className="hsearch__row" onClick={() => { setSearchOpen(false); go(R.product(r.slug || '')); }}>
                             <span className="hsearch__thumb"><Thumb src={r.img} /></span>
                             <span className="hsearch__meta"><b>{r.name}</b><span>{inr(r.now)}</span></span>
                           </button>
                         ))}
-                        <button className="hsearch__all" onClick={() => { setSearchOpen(false); go(`/test/search?q=${encodeURIComponent(searchQ.trim())}`); }}>View all results →</button>
+                        <button className="hsearch__all" onClick={() => { setSearchOpen(false); go(`${R.search}?q=${encodeURIComponent(searchQ.trim())}`); }}>View all results →</button>
                       </>}
                 </div>
               )}
@@ -725,9 +726,9 @@ export default function TestLayout({ children }) {
         </div>
         {navLinks}
         <div className="mnav__util">
-          <button onClick={() => go('/test/search')}>{I.search(18)} Search</button>
-          <button onClick={() => go('/test/wishlist')}>{I.heart(18)} Wishlist{wishN > 0 ? ` (${wishN})` : ''}</button>
-          <button onClick={() => go('/test/account')}>{I.user(18)} Account</button>
+          <button onClick={() => go(R.search)}>{I.search(18)} Search</button>
+          <button onClick={() => go(R.wishlist)}>{I.heart(18)} Wishlist{wishN > 0 ? ` (${wishN})` : ''}</button>
+          <button onClick={() => go(R.account)}>{I.user(18)} Account</button>
         </div>
       </div>
 
@@ -744,9 +745,9 @@ export default function TestLayout({ children }) {
               <a href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg></a>
             </div>
           </div>
-          <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test/journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
-          <div><h4>Account</h4><a onClick={() => go('/test/account')}>My Account</a><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/returns')}>Returns</a><a onClick={() => go('/test/wishlist')}>Wishlist</a></div>
-          <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
+          <div><h4>Quick Links</h4><a onClick={() => go(R.shop)}>All Products</a><a onClick={() => go(R.collections)}>Collections</a><a onClick={() => go(R.journal)}>Journal</a><a onClick={() => go(R.about)}>About Us</a><a onClick={() => go(R.contact)}>Contact</a></div>
+          <div><h4>Account</h4><a onClick={() => go(R.account)}>My Account</a><a onClick={() => go(R.track)}>Track Order</a><a onClick={() => go(R.returns)}>Returns</a><a onClick={() => go(R.wishlist)}>Wishlist</a></div>
+          <div><h4>Policies</h4><a onClick={() => go(R.policy('privacy-policy'))}>Privacy Policy</a><a onClick={() => go(R.contact)}>Grievance</a><a onClick={() => go(R.policy('terms-and-conditions'))}>Terms &amp; Conditions</a><a onClick={() => go(R.policy('shipping-policy'))}>Shipping Policy</a><a onClick={() => go(R.policy('cancellation-and-refund'))}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
@@ -977,7 +978,7 @@ export default function TestLayout({ children }) {
             ) : (
               <>
                 <p className="mkmodal__d">Free shipping over ₹799 and 7-day returns on everything.</p>
-                <button className="btn btn--crimson btn--block btn--lg" onClick={() => { setExitShow(false); go('/test/shop'); }}>Keep shopping</button>
+                <button className="btn btn--crimson btn--block btn--lg" onClick={() => { setExitShow(false); go(R.shop); }}>Keep shopping</button>
               </>
             )}
           </div>

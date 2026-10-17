@@ -5,12 +5,13 @@ import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards, Thumb } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 import { BENEFITS } from '../../components/test/data';
+import { R, shopUrl } from '../../components/test/routes';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-export default function TestHome() {
+export default function TestHome({ preview = true }) {
   const router = useRouter();
   const [open, setOpen] = useState(0);
   const [rail, setRail] = useState([]);
@@ -39,7 +40,7 @@ export default function TestHome() {
 
   return (
     <TestLayout>
-      <Head><title>CrossCoin — Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>CrossCoin — Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       {/* hero — real banner/slider when the live store has one, else the Mint art */}
       <section className="hero">
@@ -61,8 +62,8 @@ export default function TestHome() {
             <p className="lede">{slide?.description || 'Honest basics struck like coins — built to a standard, priced without the markup. Socks, knitwear and more, one friendly checkout.'}</p>
             </>)}
             <div className="cta">
-              <button className="btn btn--crimson btn--lg" onClick={() => router.push(slide?.catName ? `/test/shop?cat=${encodeURIComponent(slide.catName)}` : '/test/shop')}>{slide?.cta || 'Shop the mint'} {I.arrow()}</button>
-              <button className="btn btn--lg" onClick={() => router.push('/test/shop')}>Bestsellers</button>
+              <button className="btn btn--crimson btn--lg" onClick={() => router.push(slide?.catName ? shopUrl(slide.catName) : R.shop)}>{slide?.cta || 'Shop the mint'} {I.arrow()}</button>
+              <button className="btn btn--lg" onClick={() => router.push(R.shop)}>Bestsellers</button>
             </div>
             <div className="denoms">
               <div className="denom"><div className="n">60k+</div><div className="l">Minted orders</div></div>
@@ -89,12 +90,12 @@ export default function TestHome() {
       <section className="block" id="categories">
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 01 ] Denominations</span><h2>Shop by category</h2></div>
-            <span className="seelink" onClick={() => router.push('/test/shop')}>Browse all →</span></div>
+            <span className="seelink" onClick={() => router.push(R.shop)}>Browse all →</span></div>
           <div className="catgrid">
             {loading && cats.length === 0
               ? Array.from({ length: 8 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 220 }} key={i} aria-hidden="true" />)
               : cats.map((c) => (
-                <button className="cattile" key={c.id || c.name} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                <button className="cattile" key={c.id || c.name} onClick={() => router.push(shopUrl(c.name))}>
                   <span className="cattile__img"><Thumb src={c.img} /></span>
                   <span className="cattile__bar"><b>{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</b><span className="cattile__ar">{I.arrow(16)}</span></span>
                 </button>
@@ -107,7 +108,7 @@ export default function TestHome() {
       <section className="block" id="bestsellers" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 02 ] In circulation</span><h2>Bestsellers</h2></div>
-            <span className="seelink" onClick={() => router.push('/test/shop')}>See all →</span></div>
+            <span className="seelink" onClick={() => router.push(R.shop)}>See all →</span></div>
           <div className="prail">
             {loading && rail.length === 0
               ? <SkeletonCards n={6} />
@@ -173,7 +174,7 @@ export default function TestHome() {
             <div className="sechead"><div><span className="eyebrow">[ 05 ] The ledger</span><h2>Journal</h2></div></div>
             <div className="jgrid">
               {blogs.map((b, i) => (
-                <a className="post" key={b.slug || i} onClick={() => b.slug && router.push(`/test/blog/${encodeURIComponent(b.slug)}`)} style={{ cursor: b.slug ? 'pointer' : 'default' }}>
+                <a className="post" key={b.slug || i} onClick={() => b.slug && router.push(R.blog(b.slug))} style={{ cursor: b.slug ? 'pointer' : 'default' }}>
                   <div className="post__img" style={{ background: GRADS[i % GRADS.length], overflow: 'hidden' }}>{b.img && <img src={b.img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
                   <div className="post__b"><div className="m">{b.tag}</div><h3>{b.title}</h3></div>
                 </a>

@@ -117,7 +117,11 @@ function AppContent({ Component, pageProps, progressRef }) {
   // The /test design-preview routes ship their own full chrome (header, footer,
   // cart drawer). Render them bare so the live site's Header/Footer/Breadcrumb
   // don't stack on top. (Providers above still apply — harmless.)
-  const isTestPreview = router.pathname === '/test' || router.pathname.startsWith('/test/');
+  // Render bare (Mint chrome) for the /test preview routes AND for any live
+  // route a page opts into during the Mint cutover via `Page.mintChrome = true`.
+  // This lets real routes migrate to the Mint design one at a time without the
+  // old Header/Footer/Breadcrumb stacking on top.
+  const isTestPreview = router.pathname === '/test' || router.pathname.startsWith('/test/') || Component?.mintChrome === true;
 
   // Start every fresh page load at the top. The browser's default scroll
   // restoration re-applies the previous scroll position on reload, which in an

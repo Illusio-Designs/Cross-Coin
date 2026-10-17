@@ -10,6 +10,7 @@ import {
 import { addItem } from './store';
 import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
+import { R } from './routes';
 import { colorToCss } from './real';
 
 /* ---- icons: Hugeicons (free Stroke-Rounded pack via @hugeicons/react), the
@@ -89,7 +90,7 @@ export function Dropdown({ value, options, onChange, ariaLabel, className = '' }
 
 export function ProductCard({ p }) {
   const router = useRouter();
-  const open = () => router.push(`/test/product?slug=${encodeURIComponent(p.slug || '')}`);
+  const open = () => router.push(R.product(p.slug || ''));
   const quickAdd = (e) => {
     e.stopPropagation();
     const v = (p.variants || []).find((x) => x.pairs === 1) || (p.variants || [])[0] || null;
