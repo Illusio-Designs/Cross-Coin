@@ -705,7 +705,7 @@ export default function TestLayout({ children }) {
             </div>
           </div>
           <div><h4>Quick Links</h4><a onClick={() => go('/test/shop')}>All Products</a><a onClick={() => go('/test/collections')}>Collections</a><a onClick={() => go('/test/journal')}>Journal</a><a onClick={() => go('/test/about')}>About Us</a><a onClick={() => go('/test/contact')}>Contact</a></div>
-          <div><h4>Account</h4><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/wishlist')}>Wishlist</a><a onClick={() => go('/test/search')}>Search</a><a onClick={() => go('/test/shop')}>Shop</a></div>
+          <div><h4>Account</h4><a onClick={() => go('/test/account')}>My Account</a><a onClick={() => go('/test/track')}>Track Order</a><a onClick={() => go('/test/returns')}>Returns</a><a onClick={() => go('/test/wishlist')}>Wishlist</a></div>
           <div><h4>Policies</h4><a onClick={() => go('/test/policy/privacy-policy')}>Privacy Policy</a><a onClick={() => go('/test/contact')}>Grievance</a><a onClick={() => go('/test/policy/terms-and-conditions')}>Terms &amp; Conditions</a><a onClick={() => go('/test/policy/shipping-policy')}>Shipping Policy</a><a onClick={() => go('/test/policy/cancellation-and-refund')}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>

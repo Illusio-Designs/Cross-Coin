@@ -514,4 +514,33 @@ export const MINT_CSS = `.cc-test-root{
   .cc-test-root .shopaside.open{ max-height: 1200px; margin-bottom: 20px; }
   .cc-test-root .shopbar__filter{ display: inline-flex; }
 }
+/* --- Auth (login/register), thank-you, account hub (preview pages) --- */
+.cc-test-root .authwrap{ display: grid; grid-template-columns: minmax(0,420px) 1fr; gap: 34px; align-items: start; max-width: 860px; margin: 0 auto; padding-block: 36px 70px; }
+@media (max-width: 760px){ .cc-test-root .authwrap{ grid-template-columns: 1fr; gap: 20px; } }
+.cc-test-root .authcard{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp); padding: 26px; }
+.cc-test-root .authcard__h{ font-family: "Fraunces", serif; font-weight: 700; font-size: 26px; margin: 8px 0 6px; }
+.cc-test-root .authcard__d{ color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
+.cc-test-root .authcard__alt{ margin-top: 18px; font-size: 13.5px; color: var(--ink-soft); }
+.cc-test-root .authcard__alt a, .cc-test-root .authlink{ color: var(--crimson); font-weight: 600; cursor: pointer; background: none; border: none; font: inherit; padding: 0; }
+.cc-test-root .authcard__note{ margin-top: 14px; font-size: 11px; color: var(--ink-faint); border-top: 1.5px solid var(--line); padding-top: 12px; }
+.cc-test-root .authcard .ffield textarea{ width: 100%; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); color: var(--ink); padding: 11px 12px; font: inherit; font-size: 13.5px; resize: vertical; }
+.cc-test-root .phoneinput{ display: flex; align-items: stretch; border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; background: var(--bg); }
+.cc-test-root .phoneinput__cc{ display: grid; place-items: center; padding: 0 12px; font-family: "Space Mono", monospace; font-size: 13px; color: var(--ink-soft); background: var(--paper-2); border-right: 2px solid var(--line-ink); }
+.cc-test-root .phoneinput input{ flex: 1; min-width: 0; border: none !important; background: transparent !important; box-shadow: none !important; padding: 12px 13px; font: inherit; font-size: 14px; color: var(--ink); }
+.cc-test-root .agecheck{ display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+.cc-test-root .agecheck input{ width: 17px; height: 17px; accent-color: var(--crimson); flex: 0 0 auto; }
+.cc-test-root .filefield{ font-family: "Space Mono", monospace; font-size: 12px; width: 100%; }
+.cc-test-root .authperks{ list-style: none; margin: 0; padding: 18px 0 0; display: flex; flex-direction: column; gap: 14px; }
+.cc-test-root .authperks li{ display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-soft); }
+.cc-test-root .authperks svg{ color: var(--crimson); flex: 0 0 auto; }
+.cc-test-root .tyseal{ width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--crimson); border: 2px solid var(--line-ink); box-shadow: var(--stamp); }
+.cc-test-root .acctsignin{ display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 18px; margin-top: 18px; }
+.cc-test-root .acctsignin__ic{ width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--paper-2); border: 2px solid var(--line-ink); color: var(--crimson); flex: 0 0 auto; }
+.cc-test-root .acctsignin__t{ flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cc-test-root .acctsignin__t b{ font-size: 15px; }
+.cc-test-root .acctsignin__t span{ font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+.cc-test-root .acctsignin__btns{ display: flex; gap: 8px; flex-wrap: wrap; }
+.cc-test-root .acctorders{ margin-top: 24px; }
+.cc-test-root .acctempty{ border: 2px dashed var(--line); border-radius: var(--r); padding: 18px; font-size: 13px; color: var(--ink-faint); }
+
 .cc-test-root{min-height:100vh;}`;

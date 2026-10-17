@@ -6,10 +6,12 @@ import { I } from '../../components/test/ui';
 export default function TestAccount() {
   const router = useRouter();
   const tiles = [
-    ['Track an order', 'See live status with your order number.', '/test/track'],
+    ['Track an order', 'Live status by order number or AWB.', '/test/track'],
+    ['Returns', 'Start a return within 7 days.', '/test/returns'],
     ['Your wishlist', 'Everything you saved to buy later.', '/test/wishlist'],
     ['Shop the mint', 'Browse the full catalogue.', '/test/shop'],
     ['Help & FAQ', 'Shipping, returns and sizing answered.', '/test#faq'],
+    ['Contact us', 'WhatsApp, email and office hours.', '/test/contact'],
   ];
   return (
     <TestLayout>
@@ -22,9 +24,27 @@ export default function TestAccount() {
         </div>
       </div>
 
-      <div className="wrap" style={{ paddingBottom: 60, maxWidth: 820 }}>
-        <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, padding: '18px 0 4px' }}>Sign-in isn&rsquo;t enabled in this preview — you can still track orders and manage your wishlist below.</p>
-        <div className="collgrid" style={{ marginTop: 16 }}>
+      <div className="wrap" style={{ paddingBottom: 60, maxWidth: 860 }}>
+        {/* Sign-in card */}
+        <div className="acctsignin">
+          <div className="acctsignin__ic">{I.user(26)}</div>
+          <div className="acctsignin__t">
+            <b>Sign in to CrossCoin</b>
+            <span>Track orders, save addresses and get member offers. You can also check out as a guest.</span>
+          </div>
+          <div className="acctsignin__btns">
+            <button className="btn btn--crimson" onClick={() => router.push('/test/login')}>Sign in</button>
+            <button className="btn" onClick={() => router.push('/test/register')}>Create account</button>
+          </div>
+        </div>
+
+        {/* Orders empty state */}
+        <div className="acctorders">
+          <div className="optlabel" style={{ marginBottom: 10 }}>Recent orders</div>
+          <div className="acctempty mono">No orders to show here yet — track a guest order by its number on the <a onClick={() => router.push('/test/track')} style={{ color: 'var(--crimson)', cursor: 'pointer' }}>Track order</a> page.</div>
+        </div>
+
+        <div className="collgrid" style={{ marginTop: 22 }}>
           {tiles.map(([t, d, href]) => (
             <button className="acctile" key={t} onClick={() => router.push(href)}>
               <span className="acctile__ic">{I.arrow(18)}</span>
