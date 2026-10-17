@@ -116,13 +116,9 @@ export function ProductCard({ p }) {
         <span className="kl">{p.brand}</span>
         <h3 onClick={open} style={{ cursor: 'pointer' }}>{p.name}</h3>
         {p.rating && (
-          <div className="ratechip" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
-            <span className="ratechip__stars">
-              <span className="ratechip__fill" style={{ width: `${(Math.max(0, Math.min(5, Number(p.rating))) / 5) * 100}%` }}>★★★★★</span>
-              ★★★★★
-            </span>
-            <b>{p.rating}</b>
-            {p.revs > 0 && <span className="ratechip__n">{p.revs} review{p.revs > 1 ? 's' : ''}</span>}
+          <div className="rc-box" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
+            <span className="rc-box__s">{p.rating}★</span>
+            {p.revs > 0 && <span className="rc-box__n">({p.revs})</span>}
           </div>
         )}
         <div className="price">

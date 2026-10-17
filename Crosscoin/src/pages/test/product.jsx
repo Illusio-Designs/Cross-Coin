@@ -192,7 +192,12 @@ export default function TestProduct({ preview = true }) {
               <h1>{p.name}</h1>
               <button className={`wishsq${isWished(p.id) ? ' on' : ''}`} aria-label="Save to wishlist" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(18)}</button>
             </div>
-            {p.rating && <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(Number(p.rating)))))} <small>{p.rating}{p.revs ? ` (${p.revs})` : ''}</small></div>}
+            {p.rating && (
+              <div className="rc-box" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
+                <span className="rc-box__s">{p.rating}★</span>
+                {p.revs > 0 && <span className="rc-box__n">({p.revs} review{p.revs > 1 ? 's' : ''})</span>}
+              </div>
+            )}
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">MRP incl. of all taxes</div>
             <div className="pdpstatus">

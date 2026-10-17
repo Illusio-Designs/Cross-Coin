@@ -175,14 +175,11 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .cc-card__body h3{ font-family: "Inter"; font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
 .cc-test-root .stars{ color: var(--crimson); font-size: 12px; letter-spacing: 1px; }
 .cc-test-root .stars small{ color: var(--ink-faint); font-family: "Space Mono"; margin-left: 5px; }
-/* Product-card rating chip — gold filled stars over faint empties (accurate
-   fractional fill), bold rating and a readable review count (the old count
-   used --ink-faint and was barely visible). */
-.cc-test-root .ratechip{ display: inline-flex; align-items: center; gap: 7px; }
-.cc-test-root .ratechip__stars{ position: relative; display: inline-block; font-size: 12.5px; letter-spacing: 1.5px; color: color-mix(in srgb, var(--ink) 20%, transparent); line-height: 1; white-space: nowrap; }
-.cc-test-root .ratechip__fill{ position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: var(--gold); }
-.cc-test-root .ratechip b{ font-family: "Space Mono"; font-weight: 700; font-size: 11.5px; color: var(--ink); }
-.cc-test-root .ratechip__n{ font-family: "Space Mono"; font-size: 11px; color: var(--ink-soft); }
+/* Rating chip (Option C) — brand-crimson score chip + short review count.
+   Shown on product cards and the product page. */
+.cc-test-root .rc-box{ display: inline-flex; align-items: center; gap: 8px; }
+.cc-test-root .rc-box__s{ background: var(--crimson); color: #fff; font-family: "Space Mono"; font-weight: 700; font-size: 12px; line-height: 1.35; padding: 3px 9px; border-radius: 5px; }
+.cc-test-root .rc-box__n{ font-family: "Space Mono"; font-size: 11.5px; color: var(--ink-soft); }
 .cc-test-root .price{ display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 8px; font-family: "Space Mono"; }
 .cc-test-root .price .now{ font-weight: 700; font-size: 16px; }
 .cc-test-root .price .was{ color: var(--ink-faint); text-decoration: line-through; font-size: 12px; }
