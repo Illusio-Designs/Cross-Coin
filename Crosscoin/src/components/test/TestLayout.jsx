@@ -434,6 +434,9 @@ const MOBILE_CSS = `
 .cc-test-root .ccfab--top{ bottom:calc(80px + env(safe-area-inset-bottom,0px)); background:var(--surface); color:var(--ink); opacity:0; pointer-events:none; transform:translateY(8px); }
 .cc-test-root .ccfab--top.on{ opacity:1; pointer-events:auto; transform:none; }
 .cc-test-root .ccfab--top svg{ width:22px; height:22px; }
+/* On the product page, lift the floats above the sticky buy bar. */
+.cc-test-root .ccfab--wa.ccfab--pdp{ bottom:calc(84px + env(safe-area-inset-bottom,0px)); }
+.cc-test-root .ccfab--top.ccfab--pdp{ bottom:calc(146px + env(safe-area-inset-bottom,0px)); }
 /* 404 — not found */
 .cc-test-root .nf{ padding-block:72px 92px; border-bottom:2px solid var(--line); }
 .cc-test-root .nf__in{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; }
@@ -710,7 +713,7 @@ export default function TestLayout({ children }) {
               <button className="ibtn" aria-label="Wishlist" onClick={() => go(R.wishlist)}>{I.heart(20)}{wishN > 0 && <span className="badge-dot">{wishN}</span>}</button>
               <button className="ibtn" aria-label="Account" onClick={() => go(R.account)}>{I.user()}</button>
             </span>
-            <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}<span className="badge-dot">{count}</span></button>
+            <button className="ibtn" aria-label="Cart" onClick={openDrawer}>{I.cart()}{count > 0 && <span className="badge-dot">{count > 99 ? '99+' : count}</span>}</button>
             <button className="ibtn burger" aria-label="Menu" onClick={() => setMnav(true)}>{I.menu()}</button>
           </div>
         </div>
@@ -986,13 +989,16 @@ export default function TestLayout({ children }) {
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
 
-      {/* Floating actions — WhatsApp chat + back-to-top */}
-      <a className="ccfab ccfab--wa" href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+      {/* Floating actions — WhatsApp chat + back-to-top. On the product page
+          they lift above the sticky buy bar so they never overlap it. */}
+      {(() => { const pdp = router.pathname === '/products/[slug]' || router.pathname === '/test/product'; return (<>
+      <a className={`ccfab ccfab--wa${pdp ? ' ccfab--pdp' : ''}`} href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg>
       </a>
-      <button className={`ccfab ccfab--top${showTop ? ' on' : ''}`} aria-label="Back to top" onClick={() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); } }}>
+      <button className={`ccfab ccfab--top${pdp ? ' ccfab--pdp' : ''}${showTop ? ' on' : ''}`} aria-label="Back to top" onClick={() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); } }}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
       </button>
+      </>); })()}
 
       {/* Exit-intent coupon modal (desktop, once per session) */}
       {exitShow && (
