@@ -23,6 +23,16 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN
 const inr = (v) => `₹${num(Math.round(Number(v) || 0))}`;
 const pct = (v) => `${(Number(v) || 0).toFixed(2)}%`;
 
+// Colours for the Paid / Organic / Direct split (blue / green / slate).
+const SPLIT_COLORS = { Paid: '#2f6fed', Organic: '#16a34a', Direct: '#64748b' };
+// Normalise provider short-codes for display: fb → facebook, ig → instagram.
+const srcLabel = (s) => {
+  const k = String(s || '').toLowerCase().trim();
+  if (k === 'fb' || k === 'facebook') return 'facebook';
+  if (k === 'ig' || k === 'instagram') return 'instagram';
+  return s;
+};
+
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -145,6 +155,38 @@ export default function TrafficReport() {
         <StatTile label="AOV" value={t ? inr(t.aov) : '—'} />
       </StatGrid>
 
+      {/* Paid vs Organic vs Direct — the hero split, right under the KPIs so
+          spend is managed at a glance: a stacked revenue bar + colour-coded
+          rows. Paid = utm_medium=paid/cpc; Direct includes untracked orders. */}
+      {data?.trafficSplit?.length ? (() => {
+        const totRev = data.trafficSplit.reduce((n, r) => n + (Number(r.revenue) || 0), 0) || 1;
+        return (
+          <Panel
+            title="Paid vs Organic vs Direct"
+            subtitle="Where your revenue came from. Paid = ads tagged utm_medium=paid/cpc; Direct includes untracked orders; everything else (organic search, social, referral, email) is Organic. Reconciles with the headline Orders."
+          >
+            <div style={{ display: 'flex', height: 14, borderRadius: 8, overflow: 'hidden', margin: '2px 0 16px', background: 'var(--ds-color-border)' }}>
+              {data.trafficSplit.map((r) => (
+                <div key={r.type} title={`${r.type}: ${inr(r.revenue)}`}
+                  style={{ width: `${Math.max(0, (Number(r.revenue) || 0) / totRev * 100)}%`, background: SPLIT_COLORS[r.type] || '#94a3b8' }} />
+              ))}
+            </div>
+            <div style={{ display: 'grid', gap: 11 }}>
+              {data.trafficSplit.map((r) => (
+                <div key={r.type} style={{ display: 'grid', gridTemplateColumns: '13px 1fr auto auto', gap: 12, alignItems: 'center' }}>
+                  <span style={{ width: 11, height: 11, borderRadius: 3, background: SPLIT_COLORS[r.type] || '#94a3b8' }} />
+                  <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ds-color-text)' }}>{r.type}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {num(r.sessions)} visits · {num(r.orders)} orders{r.conversion_rate != null ? ` · ${pct(r.conversion_rate)}` : ''}
+                  </span>
+                  <span style={{ fontWeight: 700, textAlign: 'right', minWidth: 84, fontVariantNumeric: 'tabular-nums', color: 'var(--ds-color-text)' }}>{inr(r.revenue)}</span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        );
+      })() : null}
+
       {/* Funnel (all brands combined) */}
       {t?.stages?.length ? (
         <Panel title={`Funnel — ${brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name || 'brand') : 'all brands'}`}>
@@ -209,29 +251,6 @@ export default function TrafficReport() {
         </Panel>
       ) : null}
 
-      {/* Paid vs Organic vs Direct — the top-level split to manage spend
-          against. Paid = any paid medium (utm_medium=paid/cpc/…); Direct =
-          no/own source + untracked orders; everything else = Organic. */}
-      {data?.trafficSplit?.length ? (
-        <Panel
-          title="Paid vs Organic vs Direct"
-          subtitle="Paid = ads tagged utm_medium=paid/cpc. Direct includes untracked orders. Everything else (organic search, social, referral, email) is Organic. Orders reconcile with the headline total."
-          flush
-        >
-          <ResponsiveTable
-            rowKey={(r) => r.type}
-            data={data.trafficSplit}
-            columns={[
-              { key: 'type', label: 'Type', render: (r) => <span style={{ ...S.chip, fontWeight: 'var(--ds-weight-semi)' }}>{r.type}</span> },
-              { key: 'sessions', label: 'Visits', cellStyle: tdNum, render: (r) => num(r.sessions) },
-              { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (r) => num(r.orders) },
-              { key: 'conversion_rate', label: 'Conv.', cellStyle: tdNum, render: (r) => (r.conversion_rate == null ? '—' : pct(r.conversion_rate)) },
-              { key: 'revenue', label: 'Revenue', cellStyle: tdNum, render: (r) => inr(r.revenue) },
-            ]}
-          />
-        </Panel>
-      ) : null}
-
       {/* Campaigns (UTM) — folded in from the retired UTM Analytics page.
           Source / medium / campaign with visits, orders, conversion & revenue,
           counted the same way as the channel table so the numbers reconcile. */}
@@ -246,7 +265,7 @@ export default function TrafficReport() {
             data={data.campaigns}
             emptyMessage="No campaign traffic yet."
             columns={[
-              { key: 'source', label: 'Source', render: (r) => <span style={S.chip}>{r.source}</span> },
+              { key: 'source', label: 'Source', render: (r) => <span style={S.chip}>{srcLabel(r.source)}</span> },
               { key: 'campaign', label: 'Campaign', render: (r) => (r.campaign && r.campaign !== 'none' ? r.campaign : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
               { key: 'adset', label: 'Ad set', render: (r) => (r.adset && r.adset !== 'none' ? r.adset : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
               { key: 'ad', label: 'Ad', render: (r) => (r.ad && r.ad !== 'none' ? r.ad : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
