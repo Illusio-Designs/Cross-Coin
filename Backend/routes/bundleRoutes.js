@@ -5,6 +5,8 @@ const { authenticate, isAdmin } = require('../middleware/authMiddleware.js');
 
 // ── Public ──────────────────────────────────────────────────────────────────
 router.get('/public/bundle-tiers', bundleController.getPublicBundleTiers);
+// Store-wide "Build Your Pack" tiers (mix any products, % off by item count).
+router.get('/public/pack-tiers', bundleController.getPublicPackTiers);
 
 // ── Admin ───────────────────────────────────────────────────────────────────
 router.get('/admin/bundle-tiers',        authenticate, isAdmin, bundleController.listBundleTiers);

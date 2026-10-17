@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { BundleTier } = require('../model/bundleTierModel.js');
 const { logger } = require('../config/logging.js');
 
@@ -19,6 +20,27 @@ module.exports.getPublicBundleTiers = async (req, res) => {
     return res.json({ success: true, tiers: rows });
   } catch (err) {
     logger.error('getPublicBundleTiers failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/public/pack-tiers   (brand from X-Brand-Name header)
+// Store-wide "Build Your Pack" tiers: mix ANY products, the whole pack gets a
+// percentage off scaled by total item count. These are the rows with
+// product_id = NULL and a discount_percent (kept separate from per-product
+// exact-price packs above). 1 item = no discount (implicit).
+module.exports.getPublicPackTiers = async (req, res) => {
+  try {
+    const brandId = req.brandId || parseInt(req.query.brand_id, 10) || 1;
+    const rows = await BundleTier.findAll({
+      where: { brand_id: brandId, product_id: null, is_active: true },
+      order: [['pairs', 'ASC']],
+      attributes: ['id', 'pairs', 'discount_percent', 'label', 'badge', 'display_order'],
+    });
+    res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=300');
+    return res.json({ success: true, tiers: rows });
+  } catch (err) {
+    logger.error('getPublicPackTiers failed:', err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -47,6 +69,29 @@ module.exports.createBundleTier = async (req, res) => {
     const productId = parseInt(req.body.product_id, 10);
     const pairs = parseInt(req.body.pairs, 10);
     const price = parseFloat(req.body.price);
+
+    // Store-wide "Build Your Pack" tier: product_id omitted/null + a percentage.
+    // Mix any products; the pack gets `discount_percent` off once it reaches
+    // `pairs` items. Stored with product_id = NULL and price = NULL.
+    const isStoreWide = req.body.scope === 'store' || req.body.product_id == null || req.body.product_id === '';
+    if (isStoreWide) {
+      const pct = parseFloat(req.body.discount_percent);
+      if (!Number.isFinite(pairs) || pairs < 2) return res.status(400).json({ success: false, message: 'pairs must be an integer ≥ 2 for a pack tier' });
+      if (!Number.isFinite(pct) || pct <= 0 || pct > 90) return res.status(400).json({ success: false, message: 'discount_percent must be between 1 and 90' });
+      const row = await BundleTier.create({
+        brand_id: brandId,
+        product_id: null,
+        pairs,
+        price: null,
+        discount_percent: pct,
+        label: (req.body.label || `Any ${pairs}`).toString().slice(0, 80),
+        badge: req.body.badge ? req.body.badge.toString().slice(0, 40) : null,
+        display_order: parseInt(req.body.display_order, 10) || 0,
+        is_active: req.body.is_active !== false && req.body.is_active !== 'false',
+      });
+      return res.status(201).json({ success: true, tier: row });
+    }
+
     if (!Number.isFinite(productId)) return res.status(400).json({ success: false, message: 'product_id is required' });
     if (!Number.isFinite(pairs) || pairs < 1) return res.status(400).json({ success: false, message: 'pairs must be a positive integer' });
     if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ success: false, message: 'price must be greater than 0' });
@@ -74,6 +119,7 @@ module.exports.updateBundleTier = async (req, res) => {
     const patch = {};
     if (req.body.pairs != null) { const p = parseInt(req.body.pairs, 10); if (Number.isFinite(p) && p >= 1) patch.pairs = p; }
     if (req.body.price != null) { const pr = parseFloat(req.body.price); if (Number.isFinite(pr) && pr > 0) patch.price = pr; }
+    if (req.body.discount_percent != null) { const pc = parseFloat(req.body.discount_percent); if (Number.isFinite(pc) && pc >= 0 && pc <= 90) patch.discount_percent = pc; }
     if (req.body.product_id != null) { const pid = parseInt(req.body.product_id, 10); if (Number.isFinite(pid)) patch.product_id = pid; }
     if (typeof req.body.label === 'string') patch.label = req.body.label.slice(0, 80);
     if ('badge' in req.body) patch.badge = req.body.badge ? req.body.badge.toString().slice(0, 40) : null;
@@ -123,4 +169,26 @@ module.exports.bundlePerUnit = async (brandId, productId, qty) => {
   }
   _packCache.byKey.set(key, perUnit);
   return perUnit;
+};
+
+// Server-authoritative "Build Your Pack" discount: the percentage off for a
+// mix pack of `count` items, from the store-wide tiers (product_id = NULL).
+// Picks the highest tier whose `pairs` <= count (so 5 items still gets the
+// 4-item tier). Returns 0 when no tier qualifies, so it's inert until the
+// brand configures tiers. Short in-process cache like bundlePerUnit.
+let _mixCache = { at: 0, byKey: new Map() };
+module.exports.packDiscountPercent = async (brandId, count) => {
+  const c = parseInt(count, 10);
+  if (!Number.isFinite(c) || c < 1) return 0;
+  if (Date.now() - _mixCache.at > 30000) _mixCache = { at: Date.now(), byKey: new Map() };
+  const key = `${brandId || 1}:${c}`;
+  if (_mixCache.byKey.has(key)) return _mixCache.byKey.get(key);
+  const row = await BundleTier.findOne({
+    where: { brand_id: brandId || 1, product_id: null, is_active: true, pairs: { [Op.lte]: c } },
+    order: [['pairs', 'DESC']],
+    attributes: ['discount_percent', 'pairs'],
+  });
+  const pct = row && row.discount_percent != null && Number(row.discount_percent) > 0 ? Number(row.discount_percent) : 0;
+  _mixCache.byKey.set(key, pct);
+  return pct;
 };

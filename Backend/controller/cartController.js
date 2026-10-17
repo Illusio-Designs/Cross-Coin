@@ -123,6 +123,7 @@ module.exports.getCart = async (req, res) => {
                 size: item.selected_size || null,
                 color: attributes.color || null,
                 packId: item.packId || null,
+                packGroup: item.packGroup || null,
                 packSize: item.packSize || null,
                 stock: variation ? variation.stock : (product ? product.stock_quantity : 0),
                 weight: product ? product.weight : null,
@@ -136,16 +137,25 @@ module.exports.getCart = async (req, res) => {
         // the drawer matches what checkout charges. Inert until the brand has
         // configured tiers; brand comes from each line's product.
         try {
-            const { bundlePerUnit } = require('./bundleController.js');
+            const { bundlePerUnit, packDiscountPercent } = require('./bundleController.js');
             // Pack lines (sharing a packId) price by the group's TOTAL quantity so
             // a mixed-colour pack shows the pack rate; loose lines use their own qty.
             const packQty = {};
             for (const fc of formattedCart) { if (fc.packId) packQty[fc.packId] = (packQty[fc.packId] || 0) + (fc.quantity || 0); }
+            // "Build Your Pack" mix groups: % off the whole group by total count.
+            const mixQty = {};
+            for (const fc of formattedCart) { if (fc.packGroup) mixQty[fc.packGroup] = (mixQty[fc.packGroup] || 0) + (fc.quantity || 0); }
+            const mixPct = {};
+            for (const g of Object.keys(mixQty)) { mixPct[g] = await packDiscountPercent(formattedCart[0]?.brand_id || 1, mixQty[g]); }
             let bundleSubtotal = 0;
             for (const fc of formattedCart) {
-                const qtyForTier = (fc.packId && packQty[fc.packId]) ? packQty[fc.packId] : fc.quantity;
-                const bu = await bundlePerUnit(fc.brand_id || 1, fc.productId, qtyForTier);
-                if (bu != null) fc.price = bu;
+                if (fc.packGroup && mixPct[fc.packGroup] > 0) {
+                    fc.price = Math.round((Number(fc.price) || 0) * (1 - mixPct[fc.packGroup] / 100) * 100) / 100;
+                } else {
+                    const qtyForTier = (fc.packId && packQty[fc.packId]) ? packQty[fc.packId] : fc.quantity;
+                    const bu = await bundlePerUnit(fc.brand_id || 1, fc.productId, qtyForTier);
+                    if (bu != null) fc.price = bu;
+                }
                 bundleSubtotal += (Number(fc.price) || 0) * (fc.quantity || 1);
             }
             subtotal = bundleSubtotal;

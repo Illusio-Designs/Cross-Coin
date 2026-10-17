@@ -295,6 +295,16 @@ exports.initiateCheckout = async (req, res) => {
     for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
     const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
 
+    // "Build Your Pack" (cross-product mix): lines sharing a `pack_group` get a
+    // percentage off the whole group, scaled by the group's TOTAL item count —
+    // computed server-side from the store-wide tiers so the client can't fake
+    // the discount. Inert when no line carries a pack_group.
+    const _bundleCtrl = require('./bundleController.js');
+    const mixQtyByGroup = {};
+    for (const it of items) { if (it.pack_group) mixQtyByGroup[it.pack_group] = (mixQtyByGroup[it.pack_group] || 0) + (Number(it.quantity) || 0); }
+    const mixPctByGroup = {};
+    for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(brandId, mixQtyByGroup[g]); }
+
     for (const item of items) {
       const { product_id, quantity } = item;
       let { variation_id } = item;
@@ -321,7 +331,14 @@ exports.initiateCheckout = async (req, res) => {
       }
 
       let price = parseFloat(variation.price);
-      { const _bu = await require('./bundleController.js').bundlePerUnit(brandId, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
+      if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
+        // Build-Your-Pack line: apply the group's % off (mutually exclusive with
+        // the per-product exact-price pack path below).
+        price = Math.round(price * (1 - mixPctByGroup[item.pack_group] / 100) * 100) / 100;
+      } else {
+        const _bu = await _bundleCtrl.bundlePerUnit(brandId, product_id, pricingQty(item));
+        if (_bu != null) price = _bu;
+      }
       const subtotal = price * quantity;
       totalAmount += subtotal;
       validatedItems.push({ product_id, variation_id: variation.id, quantity, price, discount: 0, subtotal, pack_id: item.pack_id || null });
