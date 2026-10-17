@@ -7,6 +7,7 @@ import { inr, BENEFITS } from '../../components/test/data';
 import { R } from '../../components/test/routes';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
 import { addItem, addPack } from '../../components/test/store';
+import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
@@ -60,6 +61,13 @@ export default function TestProduct({ preview = true }) {
           setSize((v0?.sizes?.length ? v0.sizes[0] : prod.sizes?.[0]) || '');
           setQty(1);
           setMainImg(v0?.img || prod.img || prod.images?.[0] || '');
+          // Meta Pixel + CAPI ViewContent (also GA4 + first-party funnel).
+          try {
+            fbqTrack('ViewContent', {
+              content_ids: [String(prod.id)], content_type: 'product', content_name: prod.name,
+              value: Number(v0?.price || prod.now || 0), currency: 'INR',
+            });
+          } catch (_) { /* analytics never blocks the page */ }
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
           setPackTiers([]); setPackSel(1); setPin(''); setPinRes(null);
           fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});

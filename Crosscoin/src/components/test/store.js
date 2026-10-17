@@ -3,6 +3,19 @@
 // and the drawer (each route mounts its own TestLayout, so a plain React context
 // would reset on nav — this persists instead). PREVIEW ONLY — not the real cart.
 import { useSyncExternalStore } from 'react';
+import { fbqTrack } from '@/utils/fbqTrack';
+
+// Meta Pixel + CAPI AddToCart (also GA4 + first-party funnel). Fired from the
+// add helpers so every add path (PDP, quick-add, buy-more-save-more) is covered.
+function fireAddToCart({ id, name, unit, qty }) {
+  try {
+    fbqTrack('AddToCart', {
+      content_ids: [String(id)], content_type: 'product', content_name: name || '',
+      contents: [{ id: String(id), quantity: qty || 1 }],
+      value: Number(unit || 0) * (qty || 1), currency: 'INR',
+    });
+  } catch (_) { /* analytics never blocks the cart */ }
+}
 
 const KEY = 'cc_test_cart_v1';
 // Line: { key, id, vid, name, brand, color, size, pack, packq, unit, was, base,
@@ -43,6 +56,7 @@ export function addItem({ id, vid, name, brand, color, size, pack, packq, unit, 
   if (ex) ex.qty += qty;
   else cart = [...cart, { key, id, vid: vid || null, name, brand, color, size, pack, packq, unit, was: was || 0, base: base || unit, img: img || '', qty, packId: packId || null, packSize: packSize || null }];
   emit();
+  fireAddToCart({ id, name, unit, qty });
 }
 
 // Add a multi-pair pack as one bundle group: mint a packId and create one line
@@ -65,6 +79,7 @@ export function addPack({ id, vid, name, brand, size, img, perPair, was, base, p
   });
   cart = [...cart, ...lines];
   emit();
+  fireAddToCart({ id, name, unit: perPair, qty: packSize });
 }
 
 // Group the cart for display: plain lines pass through; lines sharing a packId

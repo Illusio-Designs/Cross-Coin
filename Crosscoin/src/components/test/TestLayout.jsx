@@ -14,6 +14,7 @@ import { inr } from './data';
 import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
+import { fbqTrack } from '@/utils/fbqTrack';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
 
@@ -655,7 +656,18 @@ export default function TestLayout({ children }) {
       pin: (fd.get('pin') || '').toString().trim(),
     };
     setOrderErr(''); setPlacing(true);
-    const done = (no) => { setOrderNo(no); setStep('done'); clearCart(); setCoupon(null); setPlacing(false); };
+    const done = (no) => {
+      // Meta Pixel + CAPI Purchase (deduped by Purchase_<order>) + GA4 + first-
+      // party funnel. Fire BEFORE clearCart so the cart contents are still here.
+      try {
+        fbqTrack('Purchase', {
+          content_ids: cart.map((i) => String(i.id)), content_type: 'product',
+          contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })),
+          num_items: count, value: total, currency: 'INR',
+        }, { eventID: 'Purchase_' + no });
+      } catch (_) { /* analytics never blocks the order */ }
+      setOrderNo(no); setStep('done'); clearCart(); setCoupon(null); setPlacing(false);
+    };
     const fail = (msg) => { setOrderErr(msg || 'Something went wrong. Please try again.'); setPlacing(false); };
     try {
       if (pay === 'prepaid') {
@@ -928,7 +940,7 @@ export default function TestLayout({ children }) {
             {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => setStep('checkout')}>Proceed to checkout · {inr(total)}</button>
+            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { try { fbqTrack('InitiateCheckout', { content_ids: cart.map((i) => String(i.id)), content_type: 'product', contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })), num_items: count, value: total, currency: 'INR' }); } catch (_) { /* never blocks */ } setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
             <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}
