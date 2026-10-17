@@ -21,6 +21,33 @@ Disallow: /api/
 Disallow: /test
 
 # ---------------------------------------------------------------------------
+# Google Shopping / Merchant Center
+# Google crawls product landing pages (quality & policy checks) as "Googlebot"
+# and product images as "Googlebot-Image". Merchant Center's check wants these
+# user-agents named explicitly — it warns "Unable to do quality & policy checks
+# on product pages" when only the wildcard group is present — so give each its
+# own group that allows the public site (product pages + images included) while
+# still protecting the private account/checkout paths.
+# ---------------------------------------------------------------------------
+User-agent: Googlebot
+Allow: /
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /test
+
+User-agent: Googlebot-Image
+Allow: /
+
+# ---------------------------------------------------------------------------
 # AI crawlers — explicitly allowed to crawl public content
 # ---------------------------------------------------------------------------
 
