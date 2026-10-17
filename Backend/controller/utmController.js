@@ -17,6 +17,7 @@ exports.trackUTM = async (req, res) => {
       utm_campaign,
       utm_term,
       utm_content,
+      utm_creative,
       landing_page,
       referrer
     } = req.body;
@@ -79,6 +80,7 @@ exports.trackUTM = async (req, res) => {
         utm_campaign,
         utm_term,
         utm_content,
+        utm_creative,
         landing_page,
         referrer,
         ip_address: ipAddress,

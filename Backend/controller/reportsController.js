@@ -181,13 +181,16 @@ exports.getBrandTraffic = async (req, res) => {
       `SELECT COALESCE(u.utm_source,'direct')   AS source,
               COALESCE(u.utm_medium,'none')     AS medium,
               COALESCE(u.utm_campaign,'none')   AS campaign,
+              COALESCE(u.utm_term,'none')       AS adset,
+              COALESCE(u.utm_content,'none')    AS ad,
+              COALESCE(u.utm_creative,'none')   AS creative,
               COUNT(DISTINCT u.session_id)       AS sessions,
               COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders,
               COALESCE(SUM(CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END), 0) AS revenue
        FROM utm_tracking u
        LEFT JOIN orders o ON o.utm_tracking_id = u.id
        WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFiltU}
-       GROUP BY source, medium, campaign
+       GROUP BY source, medium, campaign, adset, ad, creative
        ORDER BY revenue DESC, orders DESC, sessions DESC`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -363,13 +366,17 @@ exports.getBrandTraffic = async (req, res) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
       return {
-        source: cleanSource(r.source), medium: r.medium, campaign: r.campaign, sessions: sess,
+        source: cleanSource(r.source), medium: r.medium, campaign: r.campaign,
+        // Ad set (utm_term), ad (utm_content) and the operator's creative code
+        // (utm_creative) so the report mirrors Meta's campaign → ad set → ad.
+        adset: r.adset, ad: r.ad, creative: r.creative,
+        sessions: sess,
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
         revenue: Math.round(Number(r.revenue) || 0),
         conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
       };
-    }).slice(0, 50);
+    }).slice(0, 200);
 
     res.json({
       success: true,

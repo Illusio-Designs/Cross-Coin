@@ -8,6 +8,7 @@ export const captureUTMParameters = () => {
     utm_campaign: urlParams.get('utm_campaign'),
     utm_term: urlParams.get('utm_term'),
     utm_content: urlParams.get('utm_content'),
+    utm_creative: urlParams.get('utm_creative'),
     landing_page: window.location.href,
     referrer: document.referrer,
     timestamp: new Date().toISOString()

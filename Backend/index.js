@@ -494,7 +494,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v11';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v12';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -609,6 +609,24 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('utm_tracking.brand_id migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: utm_tracking.utm_creative ────────────────
+        // Operator-defined creative code (utm_creative=…) captured from the ad
+        // URL so the Traffic report can show which creative drove each order.
+        // Guarded by information_schema; production doesn't run sequelize sync.
+        try {
+            const [crCol] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utm_tracking' AND COLUMN_NAME = 'utm_creative'`
+            );
+            if (!crCol.length) {
+                logger.info('Migrating: adding utm_tracking.utm_creative column…');
+                await sequelize.query(`ALTER TABLE utm_tracking ADD COLUMN utm_creative VARCHAR(255) NULL AFTER utm_content`);
+                logger.info('✓ utm_tracking.utm_creative column added');
+            }
+        } catch (err) {
+            logger.error('utm_tracking.utm_creative migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: funnel_events table ──────────────────────

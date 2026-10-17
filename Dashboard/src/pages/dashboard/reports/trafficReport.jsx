@@ -214,18 +214,20 @@ export default function TrafficReport() {
           counted the same way as the channel table so the numbers reconcile. */}
       {data?.campaigns?.length ? (
         <Panel
-          title="Campaigns (UTM) — source · medium · campaign"
-          subtitle="Tracked-visit attribution only; orders & revenue exclude cancelled orders, so these reconcile with the headline totals."
+          title="Campaigns (UTM) — campaign · ad set · ad · creative"
+          subtitle="Attributed from the ad URL's utm_* tags (source/medium/campaign = {{campaign.name}}, ad set = utm_term, ad = utm_content, creative = utm_creative). Orders & revenue exclude cancelled orders, so these reconcile with the headline totals."
           flush
         >
           <ResponsiveTable
-            rowKey={(r) => `${r.source}|${r.medium}|${r.campaign}`}
+            rowKey={(r) => `${r.source}|${r.medium}|${r.campaign}|${r.adset}|${r.ad}|${r.creative}`}
             data={data.campaigns}
             emptyMessage="No campaign traffic yet."
             columns={[
               { key: 'source', label: 'Source', render: (r) => <span style={S.chip}>{r.source}</span> },
-              { key: 'medium', label: 'Medium', render: (r) => <span style={S.chip}>{r.medium}</span> },
               { key: 'campaign', label: 'Campaign', render: (r) => (r.campaign && r.campaign !== 'none' ? r.campaign : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
+              { key: 'adset', label: 'Ad set', render: (r) => (r.adset && r.adset !== 'none' ? r.adset : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
+              { key: 'ad', label: 'Ad', render: (r) => (r.ad && r.ad !== 'none' ? r.ad : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
+              { key: 'creative', label: 'Creative', render: (r) => (r.creative && r.creative !== 'none' ? <span style={S.chip}>{r.creative}</span> : <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>) },
               { key: 'sessions', label: 'Visits', cellStyle: tdNum, render: (r) => num(r.sessions) },
               { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (r) => num(r.orders) },
               { key: 'conversion_rate', label: 'Conv.', cellStyle: tdNum, render: (r) => pct(r.conversion_rate) },

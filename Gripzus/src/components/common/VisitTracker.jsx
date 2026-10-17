@@ -34,6 +34,7 @@ export default function VisitTracker() {
         utm_campaign: params.get('utm_campaign'),
         utm_term:     params.get('utm_term'),
         utm_content:  params.get('utm_content'),
+        utm_creative: params.get('utm_creative'),
         landing_page: window.location.href,
         referrer:     document.referrer,
       }

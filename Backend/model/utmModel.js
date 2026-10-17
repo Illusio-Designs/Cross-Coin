@@ -52,6 +52,12 @@ const UTMTracking = sequelize.define('UTMTracking', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  // Operator-defined creative code (utm_creative=…) — lets the Traffic report
+  // show which creative drove an order, independent of Meta's ad id/name.
+  utm_creative: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
   landing_page: {
     type: DataTypes.STRING(500),
     allowNull: true
