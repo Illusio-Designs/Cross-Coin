@@ -51,7 +51,7 @@ export default function TestLogin() {
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
         window.sendOtp(
-          digits,
+          '91' + digits,
           () => { setStep('otp'); setBusy(false); setResend(30); },
           (e2) => { setErr(typeof e2 === 'string' ? e2 : (e2?.message || 'Could not send code.')); setBusy(false); },
         );

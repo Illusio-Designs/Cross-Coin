@@ -44,7 +44,7 @@ export default function TestRegister() {
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {
-        window.sendOtp(digits, () => { setStep('otp'); setBusy(false); }, (e2) => { setErr(typeof e2 === 'string' ? e2 : (e2?.message || 'Could not send code.')); setBusy(false); });
+        window.sendOtp('91' + digits, () => { setStep('otp'); setBusy(false); }, (e2) => { setErr(typeof e2 === 'string' ? e2 : (e2?.message || 'Could not send code.')); setBusy(false); });
       } else if (attempts < 12) { attempts += 1; pollRef.current = setTimeout(trySend, 500); }
       else { setErr('OTP service is still loading — please try again in a moment.'); setBusy(false); }
     };
