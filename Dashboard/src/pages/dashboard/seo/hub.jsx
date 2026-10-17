@@ -34,17 +34,36 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
   // (used by the X-Brand-Name header on the Pages endpoints), so switching
   // brand here re-scopes Overview, Pages, FAQs and Settings in one place.
   const [brands, setBrands] = useState([]);
-  const [brandId, setBrandId] = useState(1);
+  // Remember the last brand the admin picked so a browser refresh keeps the
+  // same brand selected. Without this the hub reset to the first brand on every
+  // reload, so an SEO page saved under (say) CrossCoin appeared to "vanish" —
+  // it was really still there, just scoped to a brand the selector no longer
+  // showed. Persist the choice across refreshes.
+  const BRAND_LS_KEY = 'seoHubBrandId';
+  const readStoredBrandId = () => {
+    try {
+      const v = parseInt(localStorage.getItem(BRAND_LS_KEY), 10);
+      return Number.isFinite(v) ? v : 1;
+    } catch { return 1; }
+  };
+  const [brandId, setBrandIdRaw] = useState(readStoredBrandId);
+  const setBrandId = (id) => {
+    setBrandIdRaw(id);
+    try { localStorage.setItem(BRAND_LS_KEY, String(id)); } catch { /* storage blocked */ }
+  };
 
   useEffect(() => {
     brandService.getAllBrands(true)
       .then(r => {
         if (r?.success && Array.isArray(r.data) && r.data.length) {
           setBrands(r.data);
-          setBrandId(prev => (r.data.some(b => b.id === prev) ? prev : r.data[0].id));
+          // Keep the remembered/selected brand if it still exists; otherwise
+          // fall back to the first brand (and persist that fallback).
+          setBrandId(r.data.some(b => b.id === brandId) ? brandId : r.data[0].id);
         }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const brandSlug = brands.find(b => b.id === brandId)?.slug || 'crosscoin';

@@ -444,6 +444,16 @@ const MOBILE_CSS = `
 .cc-test-root .nf h1{ font-size:clamp(26px,4vw,40px); }
 .cc-test-root .nf p{ color:var(--ink-soft); max-width:46ch; font-size:15px; line-height:1.6; }
 .cc-test-root .nf__cta{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
+
+/* About — value cards on the light (cream) surface. The old markup reused
+   .techcard, whose white heading + lavender body are styled for the dark
+   .tech band and are unreadable here. These use ink text on a light card. */
+.cc-test-root .valgrid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+@media(max-width:560px){ .cc-test-root .valgrid{ grid-template-columns:1fr; } }
+.cc-test-root .valcard{ border:2px solid var(--line-ink); border-radius:var(--r); background:var(--surface); box-shadow:var(--stamp-sm); padding:20px 20px 22px; display:flex; flex-direction:column; gap:8px; }
+.cc-test-root .valcard__ic{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--gold); color:var(--gold); margin-bottom:4px; }
+.cc-test-root .valcard b{ font-family:"Fraunces",serif; font-weight:700; font-size:17px; color:var(--ink); line-height:1.25; }
+.cc-test-root .valcard__d{ color:var(--ink-soft); font-size:13.5px; line-height:1.55; }
 `;
 
 export default function TestLayout({ children }) {

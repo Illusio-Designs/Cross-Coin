@@ -31,9 +31,9 @@ export default function TestAbout({ preview = true }) {
           <p>Our mission is to engineer everyday essentials that perform as hard as you do. Whether you are running a marathon, sitting through back-to-back meetings, or just going about your day — your socks should never be the problem.</p>
           <p>We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Cross Coin&reg; promise.</p>
         </div>
-        <div className="techgrid" style={{ marginTop: 28 }}>
-          {VALUES.map(([t, d]) => (
-            <div className="techcard" key={t}><div className="mk">{I.shield(22)}</div><b>{t}</b><span>{d}</span></div>
+        <div className="valgrid" style={{ marginTop: 28 }}>
+          {VALUES.map(([t, d, ico]) => (
+            <div className="valcard" key={t}><span className="valcard__ic">{(ico || I.shield)(24)}</span><b>{t}</b><span className="valcard__d">{d}</span></div>
           ))}
         </div>
         <div style={{ marginTop: 28 }}>

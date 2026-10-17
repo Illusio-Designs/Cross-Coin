@@ -1730,6 +1730,15 @@ export const seoService = {
       data.append("meta_description", formData.get("meta_description"));
       data.append("meta_keywords", formData.get("meta_keywords"));
 
+      // Carry the SEO fields the backend's /create accepts. These used to be
+      // dropped here, so renaming a page (delete old + create new) silently
+      // lost its canonical URL, robots directive and JSON-LD. Only append when
+      // present so we never overwrite with empty strings on a bare create.
+      ["canonical_url", "robots", "structured_data"].forEach((k) => {
+        const v = formData.get(k);
+        if (v !== null && v !== undefined && String(v).length) data.append(k, v);
+      });
+
       const image = formData.get("meta_image");
       if (image && image instanceof File) {
         data.append("meta_image", image);
