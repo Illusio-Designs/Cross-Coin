@@ -159,7 +159,15 @@ async function createSetting(data) {
         description: data.description || null,
         updated_by: data.updated_by || null
     });
-    
+
+    // Invalidate caches so a newly-created setting takes effect immediately —
+    // without this, create (unlike update/delete) left the storefront reading a
+    // stale value for up to settingsHelper's TTL, which looked like "didn't save".
+    const cacheKey = `${data.brand_id}:${data.key}`;
+    settingsCache.delete(cacheKey);
+    try { require('./settingsHelper').clearCache(data.brand_id); } catch (_) {}
+    if (String(data.key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(data.brand_id); } catch (_) {} }
+
     return setting;
 }
 

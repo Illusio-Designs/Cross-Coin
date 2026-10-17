@@ -115,24 +115,21 @@ export default function GlobalSeoSettings({ brandId = 1 } = {}) {
     for (const key of dirtyKeys) {
       const value = values[key] || '';
       try {
-        // Upsert: create if absent, otherwise update. The brand-settings
-        // API returns 409 on duplicate-create, so we try update first
-        // when the key already existed.
-        if (originals[key] !== undefined && originals[key] !== '') {
+        // Upsert that doesn't depend on our in-memory view of what exists:
+        // try UPDATE first (idempotent, returns 404 when the row is absent),
+        // and only CREATE when the key genuinely doesn't exist yet. This fixes
+        // the case where a row exists with an empty value (our old code took
+        // the create branch and the 409 fallback could be missed).
+        try {
           await brandSettingsService.updateSetting(brandId, key, { value });
-        } else {
-          try {
-            await brandSettingsService.createSetting({
-              brand_id: brandId,
-              key,
-              value,
-              category: 'seo',
-              is_encrypted: false,
-            });
-          } catch (err) {
-            // Already exists from a previous run with empty value — fall back to update.
-            await brandSettingsService.updateSetting(brandId, key, { value });
-          }
+        } catch (err) {
+          await brandSettingsService.createSetting({
+            brand_id: brandId,
+            key,
+            value,
+            category: 'seo',
+            is_encrypted: false,
+          });
         }
         saved++;
       } catch (err) {
