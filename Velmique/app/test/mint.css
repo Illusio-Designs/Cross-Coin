@@ -403,7 +403,21 @@
 .m-faq__a img{max-width:100%;height:auto;border-radius:8px;margin:10px 0}
 
 /* ── Build Your Pack ── */
-.m-packladder{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 18px}
+.m-packhero{text-align:center;max-width:640px;margin:0 auto}
+.m-packhero h1{font-size:clamp(32px,6vw,56px);font-weight:600;margin:12px 0 10px;line-height:1.02}
+.m-packhero h1 em{font-style:italic;color:var(--m-accent-deep)}
+.m-packhero p{color:var(--m-ink-soft);font-size:15px;margin:0 auto}
+.m-packsteps{display:flex;justify-content:center;gap:clamp(12px,4vw,36px);flex-wrap:wrap;margin:24px 0 6px}
+.m-packsteps>div{display:flex;align-items:center;gap:9px;color:var(--m-ink-soft);font-size:13px}
+.m-packsteps i{width:26px;height:26px;border-radius:999px;border:1px solid var(--m-accent);color:var(--m-accent-deep);display:grid;place-items:center;font-family:var(--m-d);font-size:13px;font-style:normal;flex:none}
+.m-packshead{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--m-ink-faint);font-weight:800;margin:36px 0 16px;text-align:center}
+.m-packgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media (max-width:860px){.m-packgrid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:620px){.m-packgrid{grid-template-columns:repeat(2,1fr);gap:12px}}
+.m-packcard__badge{position:absolute;top:10px;left:10px;z-index:2;background:var(--m-accent);color:#17120a;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:4px 8px;border-radius:7px}
+.m-packcard__save{position:absolute;bottom:10px;left:10px;z-index:2;background:var(--m-rose);color:#17120a;font-size:9px;font-weight:800;letter-spacing:.05em;padding:4px 8px;border-radius:7px}
+.m-packcard__pr s{color:var(--m-ink-faint);font-weight:500;font-size:12px;margin-left:5px}
+.m-packladder{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:24px 0 0}
 .m-rung{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--m-line);border-radius:8px;background:var(--m-surface);padding:9px 16px;min-width:84px;transition:.25s}
 .m-rung.on{border-color:var(--m-accent);background:color-mix(in srgb,var(--m-accent) 14%,var(--m-surface))}
 .m-rung b{font-family:var(--m-d);font-size:19px;font-weight:600}
