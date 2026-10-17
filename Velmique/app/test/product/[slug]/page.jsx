@@ -85,13 +85,6 @@ export default async function MaisonProduct({ params }) {
 
   const related = (bestsellers || []).filter((p) => String(p.id) !== String(product.id)).slice(0, 4);
 
-  const WHY = [];
-  const longev = tokens(attrs['longevity (hrs)']).join('');
-  if (longev) WHY.push(['Long-lasting', `${longev}-hour longevity from a single application.`]);
-  if (tokens(attrs['sillage']).length) WHY.push([`${tokens(attrs['sillage'])[0]} Sillage`, 'Projects boldly — noticed the moment you arrive.']);
-  if (tokens(attrs['best for']).length) WHY.push(['Day & Night', `Made for ${tokens(attrs['best for']).join(' & ').toLowerCase()}.`]);
-  if (tokens(attrs['gender']).length) WHY.push([tokens(attrs['gender'])[0], 'Crafted to be worn and loved by everyone.']);
-  while (WHY.length < 4) WHY.push(['Handcrafted', 'Blended in India with rare, responsibly sourced ingredients.']);
 
   return (
     <>
@@ -179,37 +172,6 @@ export default async function MaisonProduct({ params }) {
           </div>
         </div></section>
       ) : null}
-
-      {/* Why you'll love it */}
-      <section className="m-section"><div className="m-wrap">
-        <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 32px', maxWidth: 620 }}><span className="m-eyebrow">Why you&rsquo;ll love it</span><h2>Made to be remembered.</h2></div>
-        <div className="m-whytiles">
-          {WHY.slice(0, 4).map(([t, s], i) => (
-            <div className="m-why" key={i}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 7v5l3 2"/></svg>
-              <b>{t}</b><small>{s}</small>
-            </div>
-          ))}
-        </div>
-      </div></section>
-
-      {/* Deeper luxury */}
-      <section className="m-section m-atelier"><div className="m-wrap"><div className="m-luxgrid">
-        <div>
-          <span className="m-eyebrow">Our craftsmanship</span>
-          <h2 style={{ fontSize: 'clamp(28px,4vw,44px)', color: '#F3E7D5', marginTop: 10 }}>A Deeper Kind of Luxury.</h2>
-          <p className="lede" style={{ color: 'var(--m-on-band-soft)', marginTop: 16, maxWidth: '38ch' }}>{product.name} is handcrafted with the finest ingredients, designed for exceptional longevity and a signature trail that stays with you.</p>
-          <div style={{ marginTop: 24 }}><Link className="m-btn m-btn--on-band" href="/about">Our craftsmanship <span className="m-arrow">→</span></Link></div>
-        </div>
-        <div className="m-luxrow">
-          {[['Long-lasting', 'A fragrance that stays with you through the day.'], ['Premium Ingredients', 'Finest global ingredients, responsibly sourced.'], ['IFRA-Certified & Skin Safe', 'Gentle, safe and made for everyday wear.'], ['Cruelty Free & Vegan', 'Because beauty should be kind.']].map(([t, s]) => (
-            <div className="m-luxitem" key={t}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              <b>{t}</b><small>{s}</small>
-            </div>
-          ))}
-        </div>
-      </div></div></section>
 
       {/* Reviews */}
       {reviews.length ? (
