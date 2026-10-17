@@ -277,7 +277,7 @@ const MOBILE_CSS = `
 .cc-test-root .pdpdeliv{ margin-top:14px; }
 .cc-test-root .pdpdeliv__l{ display:block; font-family:"Space Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
 /* Delivery check — "B": joined input + indigo Check button in one bordered strip. */
-.cc-test-root .pdpdeliv__row{ display:flex; gap:0; max-width:360px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
+.cc-test-root .pdpdeliv__row{ display:flex; gap:0; width:100%; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
 .cc-test-root .pdpdeliv__row input{ flex:1; min-width:0; padding:12px 14px; border:none; background:transparent; color:var(--ink); font:inherit; font-size:14px; }
 .cc-test-root .pdpdeliv__row input:focus{ outline:none; }
 .cc-test-root .pdpdeliv__row .btn{ border:none; border-left:2px solid var(--line-ink); border-radius:0; background:var(--indigo); color:#fff; box-shadow:none; padding:12px 22px; }
