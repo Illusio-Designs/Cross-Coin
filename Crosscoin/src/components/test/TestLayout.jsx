@@ -1011,7 +1011,12 @@ export default function TestLayout({ children }) {
 
       {/* Floating actions — WhatsApp chat + back-to-top. On the product page
           they lift above the sticky buy bar so they never overlap it. */}
-      {(() => { const pdp = router.pathname === '/products/[slug]' || router.pathname === '/test/product'; return (<>
+      {(() => {
+      // Cart has its own sticky checkout bar — the floating buttons collide
+      // with it, so hide both WhatsApp and back-to-top on the cart page.
+      const isCart = router.pathname === '/cart' || router.pathname === '/test/cart';
+      if (isCart) return null;
+      const pdp = router.pathname === '/products/[slug]' || router.pathname === '/test/product'; return (<>
       <a className={`ccfab ccfab--wa${pdp ? ' ccfab--pdp' : ''}`} href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg>
       </a>
