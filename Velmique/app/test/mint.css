@@ -232,6 +232,14 @@
 .m-cpack__h svg{color:var(--m-accent-deep);flex:none}
 .m-cpack__h b{font-family:var(--m-d);font-size:15px;font-weight:600;display:block}
 .m-cpack__h small{font-size:11.5px;color:var(--m-ink-soft)}
+.m-cpack__ladder{display:flex;gap:7px;margin:0 0 8px}
+.m-cpack__ladder .m-rung{flex:1;min-width:0;padding:7px 4px;gap:1px}
+.m-cpack__ladder .m-rung b{font-size:16px}
+.m-cpack__ladder .m-rung span{font-size:9px}
+.m-cpack__hint{font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--m-accent-deep);margin:0 0 12px}
+.m-cartline{display:flex;justify-content:space-between;font-size:13px;color:var(--m-ink-soft)}
+.m-cartline.save{color:var(--m-ok);font-weight:700}
+.m-cart__tot span{color:var(--m-ink)}
 .m-cprow{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 .m-cprow::-webkit-scrollbar{height:5px}.m-cprow::-webkit-scrollbar-thumb{background:var(--m-line);border-radius:999px}
 .m-cprod{flex:0 0 100px;border:1px solid var(--m-line-soft);border-radius:8px;overflow:hidden;background:var(--m-bg);display:flex;flex-direction:column}

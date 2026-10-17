@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getBestsellers } from '@/lib/api/products';
+import { getPackTiers } from '@/lib/api/bundles';
 
 const I = {
   menu: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
@@ -57,17 +58,18 @@ export default function MintShell({ children }) {
   const { cart, cartOpen, setCartOpen, cartCount, cartTotal, updateQuantity, removeFromCart, addToCart } = useStore();
   const [menu, setMenu] = useState(false);
   const [recs, setRecs] = useState([]);
+  const [tiers, setTiers] = useState([]);
   const [secs, setSecs] = useState(600);
   const packGroup = useRef(null);
 
-  // Lazy-load a few products for the in-cart "Build a pack" row the first time
-  // the bag opens.
+  // Lazy-load products + pack tiers the first time the bag opens.
   useEffect(() => {
-    if (!cartOpen || recs.length) return;
+    if (!cartOpen) return;
     let alive = true;
-    getBestsellers(8).then((list) => { if (alive) setRecs(Array.isArray(list) ? list : []); }).catch(() => {});
+    if (!recs.length) getBestsellers(8).then((list) => { if (alive) setRecs(Array.isArray(list) ? list : []); }).catch(() => {});
+    if (!tiers.length) getPackTiers().then((t) => { if (alive) setTiers(Array.isArray(t) ? t : []); }).catch(() => {});
     return () => { alive = false; };
-  }, [cartOpen, recs.length]);
+  }, [cartOpen, recs.length, tiers.length]);
 
   // Urgency countdown while the bag is open.
   useEffect(() => {
@@ -96,6 +98,22 @@ export default function MintShell({ children }) {
 
   const inCart = new Set(cart.map((c) => String(c.productId ?? c.id)));
   const recPool = recs.filter((p) => !inCart.has(String(p.id))).slice(0, 6);
+
+  // Build-Your-Pack pricing, mirrored from the backend tiers so the drawer
+  // total matches what checkout charges (the server re-verifies it).
+  const discountFor = (c) => tiers.filter((t) => c >= t.pairs).reduce((a, t) => Math.max(a, t.off), 0);
+  const nextTier = tiers.find((t) => {
+    const packQty = cart.filter((c) => c.packGroup).reduce((a, c) => a + (c.quantity || 0), 0);
+    return packQty < t.pairs;
+  });
+  const packQty = cart.filter((c) => c.packGroup).reduce((a, c) => a + (c.quantity || 0), 0);
+  const packSubtotal = cart.filter((c) => c.packGroup).reduce((a, c) => a + Number(c.price || 0) * (c.quantity || 0), 0);
+  const packPct = discountFor(packQty);
+  const packDiscount = Math.round(packSubtotal * packPct / 100);
+  const grandTotal = Math.max(0, Number(cartTotal || 0) - packDiscount);
+  const packHint = tiers.length === 0 ? '' : packQty === 0
+    ? `Add ${tiers[0].pairs} scents to save ${tiers[0].off}%`
+    : (nextTier ? `Add ${nextTier.pairs - packQty} more to save ${nextTier.off}%` : `${packPct}% pack discount applied`);
 
   return (
     <>
@@ -220,6 +238,16 @@ export default function MintShell({ children }) {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                     <span><b>Build a pack &amp; save</b><small>Add any 2+ scents — the more you add, the more you save</small></span>
                   </div>
+                  {tiers.length ? (
+                    <>
+                      <div className="m-cpack__ladder">
+                        {tiers.map((t) => (
+                          <div key={t.pairs} className={`m-rung ${packQty >= t.pairs ? 'on' : ''}`}><b>{t.pairs}</b><span>{t.off}% off</span></div>
+                        ))}
+                      </div>
+                      {packHint ? <div className="m-cpack__hint">{packHint}</div> : null}
+                    </>
+                  ) : null}
                   <div className="m-cprow">
                     {recPool.map((p) => (
                       <div className="m-cprod" key={p.id}>
@@ -234,7 +262,9 @@ export default function MintShell({ children }) {
               ) : null}
             </div>
             <div className="m-cart__foot">
-              <div className="m-cart__tot"><span>Subtotal</span><b>{inr(cartTotal)}</b></div>
+              <div className="m-cartline"><span>Subtotal</span><span>{inr(cartTotal)}</span></div>
+              {packPct > 0 ? <div className="m-cartline save"><span>Pack discount ({packPct}%)</span><span>−{inr(packDiscount)}</span></div> : null}
+              <div className="m-cart__tot"><span>Total</span><b>{inr(grandTotal)}</b></div>
               <Link className="m-btn m-btn--fill" href="/checkout" onClick={() => setCartOpen(false)} style={{ justifyContent: 'center' }}>Checkout</Link>
               <button className="m-btn m-btn--ghost" onClick={() => setCartOpen(false)} style={{ justifyContent: 'center' }}>Continue shopping</button>
               <div className="m-ctrust"><span>Secure payments</span><span>7-day returns</span><span>100% genuine</span></div>
