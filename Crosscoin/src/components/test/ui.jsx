@@ -115,7 +115,16 @@ export function ProductCard({ p }) {
       <div className="cc-card__body">
         <span className="kl">{p.brand}</span>
         <h3 onClick={open} style={{ cursor: 'pointer' }}>{p.name}</h3>
-        {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
+        {p.rating && (
+          <div className="ratechip" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
+            <span className="ratechip__stars">
+              <span className="ratechip__fill" style={{ width: `${(Math.max(0, Math.min(5, Number(p.rating))) / 5) * 100}%` }}>★★★★★</span>
+              ★★★★★
+            </span>
+            <b>{p.rating}</b>
+            {p.revs > 0 && <span className="ratechip__n">{p.revs} review{p.revs > 1 ? 's' : ''}</span>}
+          </div>
+        )}
         <div className="price">
           <span className="now">{inr(p.now)}</span>
           {p.was > p.now && <span className="was">{inr(p.was)}</span>}

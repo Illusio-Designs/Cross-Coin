@@ -99,7 +99,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .ibtn{ width: 42px; height: 42px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink); cursor: pointer; border-radius: var(--r); position: relative; transition: background .2s, transform .15s; }
 .cc-test-root .ibtn:hover{ background: var(--paper-2); transform: translateY(-1px); }
 .cc-test-root .ibtn svg{ width: 23px; height: 23px; }
-.cc-test-root .badge-dot{ position: absolute; top: 6px; right: 6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--crimson); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; font-family: "Space Mono"; border: 2px solid var(--surface); }
+.cc-test-root .badge-dot{ position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--crimson); color: #fff; font-size: 10.5px; font-weight: 700; line-height: 1; display: grid; place-items: center; font-family: "Space Mono"; border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line-ink); }
 .cc-test-root .burger{ display: none; }
 .cc-test-root main{ display: block; }
 .cc-test-root section.block{ padding-block: 66px; }
@@ -175,6 +175,14 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .cc-card__body h3{ font-family: "Inter"; font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
 .cc-test-root .stars{ color: var(--crimson); font-size: 12px; letter-spacing: 1px; }
 .cc-test-root .stars small{ color: var(--ink-faint); font-family: "Space Mono"; margin-left: 5px; }
+/* Product-card rating chip — gold filled stars over faint empties (accurate
+   fractional fill), bold rating and a readable review count (the old count
+   used --ink-faint and was barely visible). */
+.cc-test-root .ratechip{ display: inline-flex; align-items: center; gap: 7px; }
+.cc-test-root .ratechip__stars{ position: relative; display: inline-block; font-size: 12.5px; letter-spacing: 1.5px; color: color-mix(in srgb, var(--ink) 20%, transparent); line-height: 1; white-space: nowrap; }
+.cc-test-root .ratechip__fill{ position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: var(--gold); }
+.cc-test-root .ratechip b{ font-family: "Space Mono"; font-weight: 700; font-size: 11.5px; color: var(--ink); }
+.cc-test-root .ratechip__n{ font-family: "Space Mono"; font-size: 11px; color: var(--ink-soft); }
 .cc-test-root .price{ display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 8px; font-family: "Space Mono"; }
 .cc-test-root .price .now{ font-weight: 700; font-size: 16px; }
 .cc-test-root .price .was{ color: var(--ink-faint); text-decoration: line-through; font-size: 12px; }
