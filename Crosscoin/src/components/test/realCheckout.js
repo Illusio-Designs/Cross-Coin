@@ -99,6 +99,13 @@ export async function placePrepaidGuest({ cart, form, couponId, discount, onSucc
     discount_amount: discount || 0,
     coupon_id: couponId || null,
     idempotency_key: uid(),
+    // The backend guest schema (validateBody(guestInitiateSchema)) REQUIRES the
+    // nested guest_info object; without it the request is rejected before the
+    // controller runs with { path:'guest_info', code:'invalid_type',
+    // message:'Required' } and the prepaid (Razorpay) flow can't start. Flat
+    // fields are kept for the controller's backward-compat path (the COD path
+    // here already sends guest_info via buildGuestInfo).
+    guest_info: buildGuestInfo(form),
     phone: form.phone,
     email: form.email,
     firstName,

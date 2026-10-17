@@ -77,65 +77,15 @@ const nextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=()' },
-          // CSP header — allow the analytics/marketing trackers we mount in
-          // src/components/common/Analytics.jsx (FB Pixel, GA4, Clarity).
-          // Without these origins the inline init runs but the external
-          // library never loads, so Meta Pixel Helper reports the pixel as
-          // "installed but hasn't fired" and GA receives zero hits.
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              // Tracker libraries are served from their own CDNs.
-              // Razorpay Checkout / Magic Checkout is served from checkout.razorpay.com
-              // (+ *.razorpay.com for its sub-scripts). Without these the payment
-              // script is blocked by CSP → "Failed to load Razorpay script" and
-              // prepaid checkout can't open.
-              // blob: — Razorpay checkout.js spins up a Web Worker from a blob:
-              // URL during init; with default-src 'self' and no blob: the worker
-              // is refused and `new Razorpay().open()` throws, so the modal never
-              // opens (the symptom: "Razorpay doesn't open"). See worker-src/
-              // child-src below, which also need blob:.
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://connect.facebook.net https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://*.clarity.ms https://*.msg91.com https://checkout.razorpay.com https://*.razorpay.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              // Tracking beacons (1x1 pixels) and FB / GA pixel images.
-              "img-src 'self' data: blob: https:",
-              // Razorpay checkout loads its UI font from checkout.razorpay.com.
-              "font-src 'self' data: https://fonts.gstatic.com https://checkout.razorpay.com",
-              // Razorpay renders its checkout / Magic modal inside an iframe
-              // (api/checkout.razorpay.com) and routes some payment methods —
-              // UPI intent, bank/UPI redirects — through *.rzp.io frames, which
-              // are NOT under *.razorpay.com, so they must be listed too.
-              // Facebook's fbevents.js injects a hidden iframe to
-              // www.facebook.com for cookie syncing / Advanced Matching; without
-              // it the browser blocks the frame ("violates frame-src").
-              "frame-src 'self' https://www.facebook.com https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com https://*.rzp.io",
-              // Razorpay checkout.js creates a Web Worker / child browsing
-              // context from a blob: URL; without blob: here (default-src falls
-              // back to 'self') the worker is blocked and the modal fails to open.
-              "worker-src 'self' blob:",
-              "child-src 'self' blob: https://*.razorpay.com https://*.rzp.io",
-              // Beacon endpoints the trackers POST to.
-              // GA4 sends collect beacons to www.google-analytics.com AND (for
-              // Google Signals) to analytics.google.com and www.google.com, so
-              // all three host forms must be allowed or the hits are refused.
-              // stats.g.doubleclick.net is GA4's Google Signals / remarketing
-              // beacon (demographics + audiences); without it those features
-              // are refused even though basic page_view hits succeed.
-              // The MSG91 OTP widget (phone login + checkout, incl. WhatsApp
-              // OTP) loads its library from *.msg91.com but then opens a
-              // real-time MPC events channel (SSE/fetch) to a Google Cloud Run
-              // host — e.g. https://mpc2-prod-25-is5qnl632q-wl.a.run.app/events.
-              // That host is NOT under *.msg91.com, so without *.a.run.app the
-              // browser refuses the connection ("violates connect-src") and the
-              // widget keeps retrying — which is what stalls the OTP/WhatsApp
-              // flow. MSG91 rotates these generated Cloud Run hostnames across
-              // their deploys (the prod-NN / hash segments change), so we allow
-              // the *.a.run.app host for connect-src only (never script/frame).
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://ad.doubleclick.net https://www.googleadservices.com https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.a.run.app https://*.razorpay.com https://*.rzp.io https://lumberjack.razorpay.com",
-              "frame-ancestors 'none'",
-            ].join('; ') + ';'
-          },
+          // NOTE: no Content-Security-Policy is set here, by design.
+          // CrossCoin was the ONLY storefront shipping a strict CSP; the
+          // other stores (Morbix, Soxbae, …) ship none, so third-party
+          // widgets load freely there. The allowlist kept blocking those
+          // same widgets on CrossCoin — the MSG91 OTP/WhatsApp SSE channel
+          // (its Cloud Run host), the Facebook cookie-sync iframe, and
+          // Razorpay Checkout's blob: worker — so it was removed to match
+          // the other stores. If a CSP is re-added, it must carry the full
+          // third-party allowlist (see git history for the last version).
         ],
       },
     ];

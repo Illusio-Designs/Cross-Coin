@@ -52,7 +52,6 @@ import '../styles/pages/NotFound.css';
 // Components - Layout
 import "../styles/components/Header.css";
 import "../styles/components/Footer.css";
-import "../styles/components/CookieBanner.css";
 import "../styles/components/Breadcrumb.css";
 
 // Components - Products
@@ -104,7 +103,6 @@ import PhonePopupModal from "../components/common/PhonePopupModal";
 import ExitIntentModal from "../components/common/ExitIntentModal";
 import "../styles/components/PhonePopupModal.css";
 import ConsentSpeedInsights from "../components/common/ConsentSpeedInsights";
-import CookieBanner from "../components/ui/CookieBanner";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 
@@ -307,7 +305,10 @@ function App({ Component, pageProps }) {
       {/* Msg91Loader moved to the login page — the 351 KiB OTP widget is only
           used for phone login, so it no longer loads on every other page. */}
       <ConsentSpeedInsights />
-      <CookieBanner />
+      {/* Cookie consent is handled by the Mint storefront's own modal in
+          TestLayout (it auto-opens on first visit and writes the same
+          vlm-consent-v1 choice). The old global CookieBanner was removed so the
+          site shows a single, consistent consent UI. */}
       <VercelAnalytics />
       <ErrorBoundary>
         <AppWrapper

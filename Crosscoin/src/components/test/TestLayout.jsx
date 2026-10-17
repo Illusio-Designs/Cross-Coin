@@ -498,6 +498,11 @@ export default function TestLayout({ children }) {
 
   const openCookie = () => { const c = getConsent(); setConsentUI({ analytics: c.analytics, marketing: c.marketing }); setCookieOpen(true); };
   const saveCookie = (vals, msg) => { try { setConsent(vals, { action: 'custom', source: 'preview' }); } catch (_) {} setConsentUI(vals); setCookieOpen(false); showToast(msg || 'Cookie preferences saved'); };
+  // First-visit consent (DPDP): this Mint modal is now the single cookie UI
+  // (the old global CookieBanner was removed from _app), so auto-open it until
+  // the visitor records a choice. Nothing in analytics/marketing runs until
+  // getConsent().set is true, so the toggles start from the stored (denied) state.
+  useEffect(() => { try { if (!getConsent().set) openCookie(); } catch (_) {} }, []);
   const rootRef = useRef(null);
   const formRef = useRef(null);
   const promoRef = useRef(null);
