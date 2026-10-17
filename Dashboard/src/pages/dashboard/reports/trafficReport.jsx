@@ -209,6 +209,29 @@ export default function TrafficReport() {
         </Panel>
       ) : null}
 
+      {/* Paid vs Organic vs Direct — the top-level split to manage spend
+          against. Paid = any paid medium (utm_medium=paid/cpc/…); Direct =
+          no/own source + untracked orders; everything else = Organic. */}
+      {data?.trafficSplit?.length ? (
+        <Panel
+          title="Paid vs Organic vs Direct"
+          subtitle="Paid = ads tagged utm_medium=paid/cpc. Direct includes untracked orders. Everything else (organic search, social, referral, email) is Organic. Orders reconcile with the headline total."
+          flush
+        >
+          <ResponsiveTable
+            rowKey={(r) => r.type}
+            data={data.trafficSplit}
+            columns={[
+              { key: 'type', label: 'Type', render: (r) => <span style={{ ...S.chip, fontWeight: 'var(--ds-weight-semi)' }}>{r.type}</span> },
+              { key: 'sessions', label: 'Visits', cellStyle: tdNum, render: (r) => num(r.sessions) },
+              { key: 'orders', label: 'Orders', cellStyle: tdNum, render: (r) => num(r.orders) },
+              { key: 'conversion_rate', label: 'Conv.', cellStyle: tdNum, render: (r) => (r.conversion_rate == null ? '—' : pct(r.conversion_rate)) },
+              { key: 'revenue', label: 'Revenue', cellStyle: tdNum, render: (r) => inr(r.revenue) },
+            ]}
+          />
+        </Panel>
+      ) : null}
+
       {/* Campaigns (UTM) — folded in from the retired UTM Analytics page.
           Source / medium / campaign with visits, orders, conversion & revenue,
           counted the same way as the channel table so the numbers reconcile. */}

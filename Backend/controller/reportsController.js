@@ -406,6 +406,35 @@ exports.getBrandTraffic = async (req, res) => {
       });
     }
 
+    // Paid vs Organic vs Direct — the top-level split operators manage against.
+    // Paid = any paid medium (paid/cpc/ppc/display/retargeting/sem). Direct =
+    // no/own source. Everything else (organic search, social, referral, email,
+    // sms) rolls into Organic. Untracked orders fold into Direct so the three
+    // buckets reconcile with the headline Orders.
+    const isPaidMedium = (m) => /^(paid|cpc|ppc|paid[_-]?social|paidsocial|display|retargeting|remarketing|cpm|sem|ppe)$/i.test(String(m || '').trim());
+    const splitBucket = (source, medium) => {
+      const s = String(source || '').toLowerCase().trim();
+      if (!s || s === 'direct' || s === '(direct)' || s === 'none' || s === '(none)' || s === '(untracked)' || isOwnHost(s, selfHosts)) return 'Direct';
+      return isPaidMedium(medium) ? 'Paid' : 'Organic';
+    };
+    const splitAcc = { Paid: { sessions: 0, orders: 0, revenue: 0 }, Organic: { sessions: 0, orders: 0, revenue: 0 }, Direct: { sessions: 0, orders: 0, revenue: 0 } };
+    campaignRows.forEach((r) => {
+      const b = splitAcc[splitBucket(r.source, r.medium)];
+      b.sessions += Number(r.sessions) || 0;
+      b.orders += Number(r.orders) || 0;
+      b.revenue += Number(r.revenue) || 0;
+    });
+    // Orders with no tracked session are unattributed → count them as Direct.
+    splitAcc.Direct.orders += campUntracked;
+    splitAcc.Direct.revenue += campUntrackedRev;
+    const trafficSplit = ['Paid', 'Organic', 'Direct'].map((type) => {
+      const a = splitAcc[type];
+      return {
+        type, sessions: a.sessions, orders: a.orders, revenue: Math.round(a.revenue),
+        conversion_rate: a.sessions > 0 ? Number(((a.orders / a.sessions) * 100).toFixed(2)) : null,
+      };
+    });
+
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
@@ -414,6 +443,7 @@ exports.getBrandTraffic = async (req, res) => {
       totals,
       channels: channelGroups,
       sources,
+      trafficSplit,
       campaigns,
     });
   } catch (error) {
