@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getConsent, CONSENT_EVENT } from '@/lib/consent';
+import { CONSENT_EVENT } from '@/lib/consent';
 
 /**
  * First-party VISIT tracker — fires once per browser session.
@@ -38,7 +38,10 @@ export default function VisitTracker() {
       // Anonymous, cookieless pageview — fires for EVERY visitor (no consent
       // needed; nothing identifying is stored server-side). Guarded to once per load.
       if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/public/pageview`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
-      if (!getConsent().analytics) return;
+      // First-party campaign attribution runs for EVERY visitor (minimal,
+      // non-identifying: utm_* + fbclid + a first-party session id) so paid
+      // traffic is attributable regardless of cookie choice. GA4, Meta Pixel
+      // and Clarity stay consent-gated where they are initialised.
     if (typeof window === 'undefined') return;
 
     try {
