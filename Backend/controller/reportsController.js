@@ -346,7 +346,19 @@ exports.getBrandTraffic = async (req, res) => {
     // A self-referral host stored as the source (e.g. "soxbaesocks.com") is
     // relabelled "direct" for display, so our own domains never show up as a
     // traffic source in the drill-down — same rule the channel roll-up uses.
-    const cleanSource = (src) => (isOwnHost(src, selfHosts) ? 'direct' : src);
+    // Normalise common provider aliases so the same channel isn't split across
+    // rows (e.g. utm_source=fb and =facebook, or ig and instagram).
+    const SRC_ALIAS = {
+      fb: 'facebook', 'facebook.com': 'facebook', 'm.facebook.com': 'facebook',
+      'l.facebook.com': 'facebook', 'lm.facebook.com': 'facebook', meta: 'facebook',
+      ig: 'instagram', 'instagram.com': 'instagram', 'l.instagram.com': 'instagram',
+      'google.com': 'google', 'g': 'google',
+    };
+    const cleanSource = (src) => {
+      if (isOwnHost(src, selfHosts)) return 'direct';
+      const k = String(src || '').trim().toLowerCase();
+      return SRC_ALIAS[k] || src;
+    };
 
     // Granular source/medium rows kept for CSV / drill-down.
     const sources = sourceRows.map((r) => {
@@ -377,6 +389,22 @@ exports.getBrandTraffic = async (req, res) => {
         conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
       };
     }).slice(0, 200);
+
+    // Reconciliation row: the campaign rows above only count orders matched to
+    // a tracked visit (utm_tracking_id). Surface the remainder — real orders
+    // with no tracked session — as one "(untracked)" row so this table sums to
+    // the headline Orders instead of silently dropping sales. Computed from the
+    // FULL campaignRows (not the sliced display set) so the math is exact.
+    const campAttrOrders = campaignRows.reduce((n, r) => n + (Number(r.orders) || 0), 0);
+    const campAttrRev = campaignRows.reduce((n, r) => n + (Number(r.revenue) || 0), 0);
+    const campUntracked = Math.max(0, (Number(totals.orders) || 0) - campAttrOrders);
+    const campUntrackedRev = Math.max(0, Math.round(Number(totals.revenue) || 0) - campAttrRev);
+    if (campUntracked > 0) {
+      campaigns.push({
+        source: '(untracked)', medium: 'none', campaign: 'none', adset: 'none', ad: 'none', creative: 'none',
+        sessions: 0, share: 0, orders: campUntracked, revenue: campUntrackedRev, conversion_rate: null,
+      });
+    }
 
     res.json({
       success: true,
