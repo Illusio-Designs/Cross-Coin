@@ -257,6 +257,16 @@
 .m-qty button{width:44px;align-self:stretch;background:none;border:0;font-size:18px;color:var(--m-ink);cursor:pointer}
 .m-qty span{min-width:30px;text-align:center;font-weight:700}
 .m-addbtn{flex:1;justify-content:center}
+/* Stock + free-shipping row (Morbix-style), under the price. */
+.m-ship{display:flex;align-items:center;gap:16px 20px;flex-wrap:wrap;margin:16px 0 20px}
+.m-stockbadge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;
+  color:var(--m-ok);background:color-mix(in srgb,var(--m-ok) 16%,var(--m-surface));border:1px solid color-mix(in srgb,var(--m-ok) 36%,transparent);
+  border-radius:8px;padding:6px 11px}
+.m-stockbadge.out{color:#e08b82;background:color-mix(in srgb,#e08b82 16%,var(--m-surface));border-color:color-mix(in srgb,#e08b82 36%,transparent)}
+.m-stockbadge svg{flex:none}
+.m-shipfree{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--m-ink-soft)}
+.m-shipfree svg{color:var(--m-accent);flex:none}
+.m-shipfree strong{color:var(--m-ink);font-weight:700}
 .m-buynow{width:100%;margin-top:12px;justify-content:center;background:transparent;border-color:var(--m-accent);color:var(--m-accent-deep)}
 .m-buynow:hover{background:var(--m-accent);color:#17120a}
 .m-pin{background:var(--m-bg-tint);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:15px 16px;margin-top:26px}

@@ -63,6 +63,8 @@ export default async function MaisonProduct({ params }) {
 
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
   const attrs = defVar?.attributes || {};
+  const stock = defVar?.stock;
+  const inStock = product.inStock !== false && (stock == null || stock > 0);
 
   const accords = tokens(attrs['main accords'] || attrs['accords']);
   // Accord orbs, image-aware: each accord may carry an uploaded image via the
@@ -126,11 +128,12 @@ export default async function MaisonProduct({ params }) {
             <div className="m-pdp__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}{savePct ? <span className="m-save">SAVE {savePct}%</span> : null}</div>
             <p className="m-tax">Inclusive of all taxes</p>
 
-            {accords.length ? (
-              <div className="m-opt"><div className="m-opt__h">Main Accords</div>
-                <div className="m-accords">{accords.map((a) => <span className="m-accord" key={a}>{a}</span>)}</div>
-              </div>
-            ) : null}
+            <div className="m-ship">
+              {inStock
+                ? <span className="m-stockbadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>{stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
+                : <span className="m-stockbadge out"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Out of stock</span>}
+              <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
+            </div>
 
             <PdpBuy product={product} />
 
