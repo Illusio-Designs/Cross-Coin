@@ -1708,16 +1708,16 @@ const startServer = async () => {
         // Initialize SEO data — runs once per seeder version, skipped afterwards.
         // Piggybacks on the schema_version table to avoid a DB query every start.
         // The version marker is BUMPED whenever the seeder changes, so the new
-        // logic runs once on the next boot: 'seo-init-v3-perbrand' seeds default
+        // logic runs once on the next boot: 'seo-init-v4-cc-home' seeds default
         // page SEO for EVERY active brand (not just crosscoin) and cleans up
         // legacy brand_id=null rows. initializeSeoData is idempotent (findOrCreate
         // per row), so re-running never overwrites admin edits.
         try {
-            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-v3-perbrand' LIMIT 1`);
+            const [seoRows] = await sequelize.query(`SELECT version FROM schema_version WHERE version = 'seo-init-v4-cc-home' LIMIT 1`);
             if (!seoRows.length) {
                 logger.info('Initializing SEO data (per-brand seed v3)...');
                 await initializeSeoData();
-                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-v3-perbrand')`);
+                await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES ('seo-init-v4-cc-home')`);
                 logger.info('✓ SEO data initialized (per-brand)');
             } else {
                 logger.info('✓ SEO data already initialized (v3), skipping');

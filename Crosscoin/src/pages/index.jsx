@@ -122,7 +122,7 @@ export default function MainPage({ seoData, organizationLd = null, orgOgImage = 
       {/* Mint storefront home. SSR here supplies SEO meta + Organization
           JSON-LD (via SeoWrapper) and the hero preload; the Mint home fetches
           its own above-the-fold content client-side. */}
-      <TestHome preview={false} />
+      <TestHome preview={false} initialData={initialData} />
     </SeoWrapper>
   );
 }

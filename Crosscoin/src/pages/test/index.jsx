@@ -11,17 +11,39 @@ const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-export default function TestHome({ preview = true }) {
+// Map the server-fetched home payload (raw API shape, passed from the live
+// route's getServerSideProps) into the shapes the Mint home renders, so the
+// hero + category tiles ship in the SSR HTML instead of only after a client
+// fetch. Everything else still hydrates/refreshes client-side.
+const seedHome = (d) => {
+  const s = d?.slides?.[0];
+  const slide = s ? {
+    img: s.image || s.imageUrl || s.image_url || '',
+    title: s.title || '',
+    description: s.description || s.subtitle || '',
+    cta: s.buttonText || s.button_text || s.cta || '',
+    catName: s.categoryName || s.category_name || (s.category && s.category.name) || '',
+  } : null;
+  const cats = (d?.categories || []).slice(0, 6).map((c) => ({
+    id: c.id, name: c.name, img: c.image || c.imageUrl || c.image_url || '',
+  }));
+  return { slide, cats };
+};
+
+export default function TestHome({ preview = true, initialData = null }) {
   const router = useRouter();
+  const seed = seedHome(initialData);
   const [open, setOpen] = useState(0);
   const [rail, setRail] = useState([]);
-  const [cats, setCats] = useState([]);
+  const [cats, setCats] = useState(seed.cats);
   const [reviews, setReviews] = useState([]);
   const [deal, setDeal] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [faqs, setFaqs] = useState([]);
-  const [slide, setSlide] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [slide, setSlide] = useState(seed.slide);
+  // When the live route seeded SSR data, render the hero/categories straight
+  // away; otherwise (the /test preview) start in the loading state as before.
+  const [loading, setLoading] = useState(!seed.slide);
 
   useEffect(() => {
     let off = false;
@@ -110,7 +132,7 @@ export default function TestHome({ preview = true }) {
           <div className="sechead"><div><span className="eyebrow">[ 02 ] In circulation</span><h2>Bestsellers</h2></div>
             <span className="seelink" onClick={() => router.push(R.shop)}>See all →</span></div>
           <div className="prail">
-            {loading && rail.length === 0
+            {rail.length === 0
               ? <SkeletonCards n={6} />
               : rail.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>

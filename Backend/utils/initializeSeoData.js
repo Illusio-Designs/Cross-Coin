@@ -74,6 +74,36 @@ const initializeSeoData = async () => {
         }
         if (failed) console.error(`SEO seed: ${failed} row(s) failed (see above)`);
         console.log(`SEO seed: ensured ${DEFAULT_PAGES.length} pages × ${brands.length} brand(s); created ${created} new row(s), left the rest untouched`);
+
+        // ── 3. One-time correction of CrossCoin's placeholder home SEO ───────
+        // The home row was seeded long ago with generic boilerplate ("Welcome
+        // to Our Store…") and findOrCreate never overwrites it. Replace it with
+        // real brand copy — but ONLY while it still matches a known placeholder,
+        // so an admin's own edit is never clobbered. Idempotent: once corrected
+        // (or customised) the title no longer matches and this is a no-op.
+        try {
+            const STALE_HOME_TITLES = [
+                'Welcome to Our Store - Your One-Stop Shopping Destination',
+                'Cross Coin - Your Trusted Shopping Partner',
+                'CrossCoin — Online Store',
+                'Cross Coin — Online Store',
+            ];
+            const cc = brands.find((b) => (b.slug || '').toLowerCase() === 'crosscoin'
+                || (b.name || '').toLowerCase().replace(/\s+/g, '') === 'crosscoin');
+            if (cc) {
+                const home = await SeoMetadata.findOne({ where: { page_name: 'home', brand_id: cc.id } });
+                if (home && STALE_HOME_TITLES.includes((home.meta_title || '').trim())) {
+                    await home.update({
+                        meta_title: 'CrossCoin — Everyday Performance Socks | Free Shipping ₹799+',
+                        meta_description: "Shop CrossCoin's premium performance & everyday socks — breathable, built to last, honestly priced. COD, 7-day returns & fast Pan-India delivery.",
+                        meta_keywords: 'crosscoin socks, ankle socks, performance socks, mens socks, womens socks, buy socks online india',
+                    });
+                    console.log('SEO: corrected CrossCoin placeholder home meta → real brand copy');
+                }
+            }
+        } catch (fixErr) {
+            console.error('SEO home-meta correction skipped:', fixErr.message);
+        }
     } catch (error) {
         console.error('Error initializing SEO data:', error);
     }
