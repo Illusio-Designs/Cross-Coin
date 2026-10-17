@@ -283,6 +283,14 @@
 .m-desc-rich h2,.m-desc-rich h3,.m-desc-rich h4{font-family:var(--m-d);color:var(--m-ink);font-weight:600;margin:22px 0 8px}
 .m-desc-rich ul,.m-desc-rich ol{margin:12px 0;padding-left:20px}
 .m-about img,.m-desc-rich img,.m-desc-rich figure img{max-width:100%;height:auto;display:block;border-radius:8px;margin:18px 0}
+/* Responsive description images — the admin tags an <img> "only-desktop" /
+   "only-mobile" in the editor to show a different image per breakpoint (same
+   behaviour as the live .vq-desc-rich storefront). */
+.m-desc-rich .only-mobile{display:none}
+@media (max-width:767px){
+  .m-desc-rich .only-desktop{display:none}
+  .m-desc-rich .only-mobile{display:block}
+}
 .m-desc-rich figure{margin:18px 0}
 .m-desc-rich a{color:var(--m-accent);text-decoration:underline}
 .m-prepaidchip{position:relative;z-index:3;display:block;width:max-content;max-width:94%;margin:14px auto -14px;text-align:center;font-family:var(--m-b);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-accent-deep);background:color-mix(in srgb,var(--m-accent) 15%,var(--m-surface));border:1.5px solid color-mix(in srgb,var(--m-accent) 38%,transparent);border-radius:8px;padding:8px 18px}
