@@ -4,6 +4,7 @@ import { getProductReviews } from '@/lib/api/reviews';
 import ProductCard from '../../_components/ProductCard';
 import Gallery from '../../_components/Gallery';
 import PdpBuy from '../../_components/PdpBuy';
+import DeliveryCheck from '../../_components/DeliveryCheck';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -111,12 +112,7 @@ export default async function MaisonProduct({ params }) {
               <div className="m-spec">{spec.map(([k, v]) => <div key={k}><dt>{k}</dt><b>{v}</b></div>)}</div>
             ) : null}
 
-            <div className="m-minitrust">
-              <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/></svg>Free Shipping</div>
-              <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 7h18v10H3zM3 11h18"/></svg>COD Available</div>
-              <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>Easy 7-Day Returns</div>
-              <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 10V7a6 6 0 0 1 12 0v3M5 10h14v10H5z"/></svg>Secure Payments</div>
-            </div>
+            <DeliveryCheck />
           </div>
         </div>
       </div></div>
