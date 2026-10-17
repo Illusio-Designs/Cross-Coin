@@ -75,34 +75,66 @@ const initializeSeoData = async () => {
         if (failed) console.error(`SEO seed: ${failed} row(s) failed (see above)`);
         console.log(`SEO seed: ensured ${DEFAULT_PAGES.length} pages × ${brands.length} brand(s); created ${created} new row(s), left the rest untouched`);
 
-        // ── 3. One-time correction of CrossCoin's placeholder home SEO ───────
-        // The home row was seeded long ago with generic boilerplate ("Welcome
-        // to Our Store…") and findOrCreate never overwrites it. Replace it with
-        // real brand copy — but ONLY while it still matches a known placeholder,
-        // so an admin's own edit is never clobbered. Idempotent: once corrected
-        // (or customised) the title no longer matches and this is a no-op.
+        // ── 3. One-time correction of CrossCoin's placeholder page SEO ───────
+        // Several rows were seeded long ago with generic boilerplate ("Welcome
+        // to Our Store…", "Browse Our Products…") and findOrCreate never
+        // overwrites them. Replace each with real brand copy — but ONLY while it
+        // still matches a KNOWN placeholder title, so an admin's own edit is
+        // never clobbered. Idempotent: once corrected (or customised) the title
+        // no longer matches and this is a no-op.
         try {
-            const STALE_HOME_TITLES = [
-                'Welcome to Our Store - Your One-Stop Shopping Destination',
-                'Cross Coin - Your Trusted Shopping Partner',
-                'CrossCoin — Online Store',
-                'Cross Coin — Online Store',
+            const CC_SEO = [
+                {
+                    page: 'home',
+                    stale: ['Welcome to Our Store - Your One-Stop Shopping Destination', 'Cross Coin - Your Trusted Shopping Partner', 'CrossCoin — Online Store', 'Cross Coin — Online Store'],
+                    title: 'CrossCoin — Everyday Performance Socks | Free Shipping ₹799+',
+                    desc: "Shop CrossCoin's premium performance & everyday socks — breathable, built to last, honestly priced. COD, 7-day returns & fast Pan-India delivery.",
+                    kw: 'crosscoin socks, ankle socks, performance socks, mens socks, womens socks, buy socks online india',
+                },
+                {
+                    page: 'products',
+                    stale: ['Browse Our Products - Quality Products at Great Prices', 'All Products — CrossCoin', 'All Products — Cross Coin'],
+                    title: 'Shop All Socks — CrossCoin',
+                    desc: "Browse CrossCoin's full range of performance & everyday socks — ankle, crew, no-show and more. Filter by category and price. Free shipping ₹799+.",
+                    kw: 'crosscoin socks, shop socks online, ankle socks, crew socks, no-show socks, buy socks india',
+                },
+                {
+                    page: 'categories',
+                    stale: ['Shop by Category - Find What You Need', 'Shop by Collection — CrossCoin', 'Shop by Collection — Cross Coin'],
+                    title: 'Shop Socks by Collection — CrossCoin',
+                    desc: 'Explore CrossCoin sock collections — performance, everyday, printed and more. Find your pair with free shipping and easy returns.',
+                    kw: 'crosscoin collections, sock collections, performance socks, everyday socks india',
+                },
+                {
+                    page: 'about',
+                    stale: ['About Us - Your One-Stop Shopping Destination', 'About CrossCoin', 'About Cross Coin'],
+                    title: 'About CrossCoin — Everyday Socks, Minted to Last',
+                    desc: 'CrossCoin makes honest, everyday performance socks — comfortable, durable and fairly priced. Learn the story behind the brand.',
+                    kw: 'about crosscoin, crosscoin brand, sock brand india',
+                },
+                {
+                    page: 'contact',
+                    stale: ["Contact Us - We're Here to Help", 'Contact CrossCoin', 'Contact Cross Coin'],
+                    title: 'Contact CrossCoin — Support & Help',
+                    desc: "Questions about orders, returns or sizing? Reach the CrossCoin team — we're here to help across India.",
+                    kw: 'contact crosscoin, crosscoin support, socks customer service india',
+                },
             ];
             const cc = brands.find((b) => (b.slug || '').toLowerCase() === 'crosscoin'
                 || (b.name || '').toLowerCase().replace(/\s+/g, '') === 'crosscoin');
             if (cc) {
-                const home = await SeoMetadata.findOne({ where: { page_name: 'home', brand_id: cc.id } });
-                if (home && STALE_HOME_TITLES.includes((home.meta_title || '').trim())) {
-                    await home.update({
-                        meta_title: 'CrossCoin — Everyday Performance Socks | Free Shipping ₹799+',
-                        meta_description: "Shop CrossCoin's premium performance & everyday socks — breathable, built to last, honestly priced. COD, 7-day returns & fast Pan-India delivery.",
-                        meta_keywords: 'crosscoin socks, ankle socks, performance socks, mens socks, womens socks, buy socks online india',
-                    });
-                    console.log('SEO: corrected CrossCoin placeholder home meta → real brand copy');
+                let fixed = 0;
+                for (const row of CC_SEO) {
+                    const rec = await SeoMetadata.findOne({ where: { page_name: row.page, brand_id: cc.id } });
+                    if (rec && row.stale.includes((rec.meta_title || '').trim())) {
+                        await rec.update({ meta_title: row.title, meta_description: row.desc, meta_keywords: row.kw });
+                        fixed += 1;
+                    }
                 }
+                if (fixed) console.log(`SEO: corrected ${fixed} CrossCoin placeholder page meta row(s) → real brand copy`);
             }
         } catch (fixErr) {
-            console.error('SEO home-meta correction skipped:', fixErr.message);
+            console.error('SEO page-meta correction skipped:', fixErr.message);
         }
     } catch (error) {
         console.error('Error initializing SEO data:', error);

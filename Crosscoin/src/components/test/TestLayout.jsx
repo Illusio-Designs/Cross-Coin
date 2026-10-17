@@ -426,6 +426,14 @@ const MOBILE_CSS = `
   .cc-test-root .cowrap{ gap:18px; }
   .cc-test-root .citem{ gap:12px; }
 }
+/* Floating actions — WhatsApp chat + back-to-top */
+.cc-test-root .ccfab{ position:fixed; right:max(16px,env(safe-area-inset-right,0px)); z-index:70; width:52px; height:52px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--line-ink); box-shadow:var(--stamp); cursor:pointer; transition:transform .15s var(--ease), box-shadow .15s var(--ease); }
+.cc-test-root .ccfab:hover{ transform:translateY(-2px); box-shadow:5px 5px 0 var(--line-ink); }
+.cc-test-root .ccfab--wa{ bottom:calc(18px + env(safe-area-inset-bottom,0px)); background:#25D366; color:#fff; }
+.cc-test-root .ccfab--wa svg{ width:28px; height:28px; }
+.cc-test-root .ccfab--top{ bottom:calc(80px + env(safe-area-inset-bottom,0px)); background:var(--surface); color:var(--ink); opacity:0; pointer-events:none; transform:translateY(8px); }
+.cc-test-root .ccfab--top.on{ opacity:1; pointer-events:auto; transform:none; }
+.cc-test-root .ccfab--top svg{ width:22px; height:22px; }
 `;
 
 export default function TestLayout({ children }) {
@@ -657,6 +665,15 @@ export default function TestLayout({ children }) {
       <Link href={`${R.home}#faq`} onClick={() => setMnav(false)}>Help</Link>
     </>
   );
+
+  // Floating "back to top" — appears once the viewer scrolls down.
+  const [showTop, setShowTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 500);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="cc-test-root" ref={rootRef}>
@@ -961,6 +978,14 @@ export default function TestLayout({ children }) {
       </div>
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
+
+      {/* Floating actions — WhatsApp chat + back-to-top */}
+      <a className="ccfab ccfab--wa" href="https://wa.me/917434834000" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3c-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1 0-.1-.2-.2-.4-.3z"/></svg>
+      </a>
+      <button className={`ccfab ccfab--top${showTop ? ' on' : ''}`} aria-label="Back to top" onClick={() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); } }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+      </button>
 
       {/* Exit-intent coupon modal (desktop, once per session) */}
       {exitShow && (

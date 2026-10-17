@@ -149,6 +149,18 @@ const nextConfig = {
         destination: '/journal/:slug',
         permanent: true,
       },
+      // Mint cutover: catch the BARE legacy routes (no query → old design)
+      // AFTER their slug variants above, so the old pages are never served.
+      {
+        source: '/ProductDetails',
+        destination: '/Products',
+        permanent: true,
+      },
+      {
+        source: '/blog-details',
+        destination: '/journal',
+        permanent: true,
+      },
       // Journal was formerly served at /blog — keep old links + indexed URLs
       // working by 301-ing the listing and every post to their /journal path.
       {
