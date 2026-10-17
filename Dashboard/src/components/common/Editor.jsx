@@ -61,7 +61,7 @@ function extractUploadedPath(result) {
  * Drop-in API (unchanged): `value` (HTML string) and `onChange(html)`. Kept the
  * rte-* class names so every existing usage keeps working.
  */
-const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) => {
+const Editor = ({ value, onChange, placeholder = 'Start typing...', allowImages = true, ...props }) => {
   // Source (HTML) mode — lets an admin paste raw HTML and have it render as
   // real formatting instead of literal <p>/<li> tags (Tiptap keeps pasted
   // content as plain text when the clipboard has no HTML flavour).
@@ -109,6 +109,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
     // bloat the saved `sections` JSON and were causing 413 "save failed" errors.
     editorProps: {
       handlePaste: (view, event) => {
+        if (!allowImages) return false; // text-only editor: let the default paste run
         const file = imageFileFromEvent(event.clipboardData?.items);
         if (file) {
           event.preventDefault();
@@ -118,6 +119,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
         return false;
       },
       handleDrop: (view, event) => {
+        if (!allowImages) return false;
         const file = imageFileFromEvent(event.dataTransfer?.files);
         if (file) {
           event.preventDefault();
@@ -258,14 +260,18 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', ...props }) 
     { t: 'Quote', l: '❝', on: () => editor.chain().focus().toggleBlockquote().run(), a: editor.isActive('blockquote') },
     { sep: true },
     { t: 'Insert Link', l: '🔗', on: setLink, a: editor.isActive('link') },
-    { t: uploading ? 'Uploading…' : 'Upload image (shows on all devices)', l: uploading ? '⏳' : '🖼️', on: () => pickImage('rte-img') },
-    { t: 'Upload a DESKTOP-only image', l: '🖥️', on: () => pickImage('rte-img only-desktop') },
-    { t: 'Upload a MOBILE-only image', l: '📱', on: () => pickImage('rte-img only-mobile') },
-    { t: 'Image by URL', l: '🌐', on: insertImageByUrl },
-    { sep: true },
-    { t: 'Tag the SELECTED image as desktop-only', l: '🖥–', on: () => tagSelectedImage('desktop') },
-    { t: 'Tag the SELECTED image as mobile-only', l: '📱–', on: () => tagSelectedImage('mobile') },
-    { t: 'Show the SELECTED image on all devices', l: '⇋', on: () => tagSelectedImage('both') },
+    // Image controls — hidden when the host passes allowImages={false} (e.g. the
+    // FAQ answer editor, which is text/links only).
+    ...(allowImages ? [
+      { t: uploading ? 'Uploading…' : 'Upload image (shows on all devices)', l: uploading ? '⏳' : '🖼️', on: () => pickImage('rte-img') },
+      { t: 'Upload a DESKTOP-only image', l: '🖥️', on: () => pickImage('rte-img only-desktop') },
+      { t: 'Upload a MOBILE-only image', l: '📱', on: () => pickImage('rte-img only-mobile') },
+      { t: 'Image by URL', l: '🌐', on: insertImageByUrl },
+      { sep: true },
+      { t: 'Tag the SELECTED image as desktop-only', l: '🖥–', on: () => tagSelectedImage('desktop') },
+      { t: 'Tag the SELECTED image as mobile-only', l: '📱–', on: () => tagSelectedImage('mobile') },
+      { t: 'Show the SELECTED image on all devices', l: '⇋', on: () => tagSelectedImage('both') },
+    ] : []),
     { t: 'Clear Formatting', l: '✕', on: () => editor.chain().focus().unsetAllMarks().clearNodes().run() },
     { sep: true },
     { t: 'Undo', l: '↺', on: () => editor.chain().focus().undo().run() },

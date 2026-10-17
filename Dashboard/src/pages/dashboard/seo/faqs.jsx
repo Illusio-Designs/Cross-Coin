@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { faqService } from '../../../services';
+import { faqService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel } from '../../../components/Dashboard/primitives';
 import { Select } from '../../../components/ui';
@@ -20,34 +20,46 @@ const ATTACH_TYPES = [
   { value: 'page',     label: 'Specific page' },
 ];
 
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [3, 4, false] }],
-    ['bold', 'italic', 'underline'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link'],
-    ['clean'],
-  ],
-};
+// Sentinel value for the "All products (brand-wide)" choice in the product
+// picker — saved as a FAQ with attached_to_id = null that the storefront shows
+// on every product page of the brand.
+const ALL_PRODUCTS = '__all_products__';
 
 const emptyForm = {
   id: null,
   attached_to_type: 'global',
   attached_to_id: '',
   attached_to_slug: '',
+  product_ids: [],   // product scope: array of product ids, or [ALL_PRODUCTS]
   question: '',
   answer: '',
   display_order: 0,
   is_active: true,
 };
 
-export default function FaqsManager({ brandId = 1 }) {
+export default function FaqsManager({ brandId = 1, brandSlug = 'crosscoin' }) {
   const [items, setItems] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  // Brand-scoped product list for the "Specific product" picker. Lean list
+  // mode keeps the payload small; one generous page covers a sock catalogue.
+  useEffect(() => {
+    let off = false;
+    productService.getAllProducts(1, 500, '', null, false, brandSlug, true)
+      .then((res) => { if (!off) setProducts(res.products || res.data || []); })
+      .catch(() => { if (!off) setProducts([]); });
+    return () => { off = true; };
+  }, [brandSlug]);
+
+  const productName = (id) => {
+    const p = products.find((x) => String(x.id) === String(id));
+    return p ? (p.name || p.title || `#${id}`) : `#${id}`;
+  };
 
   const reload = async () => {
     setLoading(true);
@@ -94,6 +106,11 @@ export default function FaqsManager({ brandId = 1 }) {
       attached_to_type: faq.attached_to_type,
       attached_to_id: faq.attached_to_id || '',
       attached_to_slug: faq.attached_to_slug || '',
+      // Seed the product picker: a specific id, or the brand-wide marker when
+      // the row has no id (attached_to_type product + null id = all products).
+      product_ids: faq.attached_to_type === 'product'
+        ? (faq.attached_to_id ? [faq.attached_to_id] : [ALL_PRODUCTS])
+        : [],
       question: faq.question,
       answer: faq.answer,
       display_order: faq.display_order,
@@ -107,23 +124,46 @@ export default function FaqsManager({ brandId = 1 }) {
       showError('validation', 'Question and answer are required');
       return;
     }
+    const isProduct = form.attached_to_type === 'product';
+    if (isProduct && (!form.product_ids || form.product_ids.length === 0)) {
+      showError('validation', 'Pick at least one product (or choose “All products”)');
+      return;
+    }
     setSaving(true);
     try {
-      const payload = {
+      const base = {
         brand_id: brandId,
         attached_to_type: form.attached_to_type,
-        attached_to_id: form.attached_to_id || null,
-        attached_to_slug: form.attached_to_slug || null,
+        attached_to_slug: form.attached_to_type === 'page' ? (form.attached_to_slug || null) : null,
         question: form.question.trim(),
         answer: form.answer,
         display_order: parseInt(form.display_order, 10) || 0,
         is_active: !!form.is_active,
       };
+
       if (form.id) {
-        await faqService.update(form.id, payload);
+        // Editing an existing row updates that one row. For a product FAQ the
+        // row targets a single product (or brand-wide when "All products").
+        const attached_to_id = isProduct
+          ? (form.product_ids.includes(ALL_PRODUCTS) ? null : (form.product_ids[0] || null))
+          : (form.attached_to_id || null);
+        await faqService.update(form.id, { ...base, attached_to_id });
         showSuccess('saved', 'FAQ updated');
+      } else if (isProduct) {
+        // Create: "All products" → one brand-wide row (null id); otherwise one
+        // row per selected product so the same Q&A attaches to each.
+        if (form.product_ids.includes(ALL_PRODUCTS)) {
+          await faqService.create({ ...base, attached_to_id: null });
+        } else {
+          for (const pid of form.product_ids) {
+            await faqService.create({ ...base, attached_to_id: pid });
+          }
+        }
+        showSuccess('saved', form.product_ids.includes(ALL_PRODUCTS)
+          ? 'Brand-wide product FAQ created'
+          : `FAQ added to ${form.product_ids.length} product${form.product_ids.length === 1 ? '' : 's'}`);
       } else {
-        await faqService.create(payload);
+        await faqService.create({ ...base, attached_to_id: form.attached_to_id || null });
         showSuccess('saved', 'FAQ created');
       }
       setForm(emptyForm);
@@ -220,6 +260,7 @@ export default function FaqsManager({ brandId = 1 }) {
         cancel={() => { setEditing(null); setForm(emptyForm); }}
         saving={saving}
         editing={!!editing}
+        products={products}
       />
 
       <Panel>
@@ -233,7 +274,7 @@ export default function FaqsManager({ brandId = 1 }) {
           <div key={`${g.type}:${g.ref}`} style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {g.type === 'global'   && 'Global site FAQs'}
-              {g.type === 'product'  && `Product #${g.ref}`}
+              {g.type === 'product'  && (g.ref ? productName(g.ref) : 'All products (brand-wide)')}
               {g.type === 'category' && `Category #${g.ref}`}
               {g.type === 'page'     && `Page: ${g.ref}`}
             </div>
@@ -274,9 +315,14 @@ export default function FaqsManager({ brandId = 1 }) {
   );
 }
 
-function FaqForm({ form, setForm, save, cancel, saving, editing }) {
-  const showId = form.attached_to_type === 'product' || form.attached_to_type === 'category';
+function FaqForm({ form, setForm, save, cancel, saving, editing, products = [] }) {
+  const isProduct = form.attached_to_type === 'product';
+  const showCatId = form.attached_to_type === 'category';
   const showSlug = form.attached_to_type === 'page';
+  const productOptions = [
+    { value: ALL_PRODUCTS, label: '★ All products (brand-wide)' },
+    ...products.map((p) => ({ value: p.id, label: p.name || p.title || `#${p.id}` })),
+  ];
   return (
     <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)', maxWidth: 880 }}>
       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 12 }}>
@@ -287,12 +333,32 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
           <Select
             label="Scope"
             value={form.attached_to_type}
-            onChange={v => setForm({ ...form, attached_to_type: v, attached_to_id: '', attached_to_slug: '' })}
+            onChange={v => setForm({ ...form, attached_to_type: v, attached_to_id: '', attached_to_slug: '', product_ids: [] })}
             options={ATTACH_TYPES}
           />
         </div>
-        {showId && (
-          <Field label={`${form.attached_to_type === 'product' ? 'Product' : 'Category'} ID`} style={{ flex: '1 1 180px' }}>
+        {isProduct && (
+          <div style={{ flex: '1 1 320px' }}>
+            <Select
+              label={editing ? 'Product' : 'Products (choose one or more)'}
+              multiple={!editing}
+              searchable
+              value={editing ? (form.product_ids[0] ?? null) : form.product_ids}
+              onChange={(v) => setForm({
+                ...form,
+                // When "All products" is picked, make it exclusive so it
+                // doesn't mix with specific products.
+                product_ids: editing
+                  ? [v]
+                  : (Array.isArray(v) && v.includes(ALL_PRODUCTS) ? [ALL_PRODUCTS] : (Array.isArray(v) ? v : [v])),
+              })}
+              options={productOptions}
+              placeholder={products.length ? 'Select product(s)…' : 'Loading products…'}
+            />
+          </div>
+        )}
+        {showCatId && (
+          <Field label="Category ID" style={{ flex: '1 1 180px' }}>
             <input
               type="number"
               value={form.attached_to_id}
@@ -341,10 +407,9 @@ function FaqForm({ form, setForm, save, cancel, saving, editing }) {
         <Field label="Answer">
           <div style={{ background: 'var(--ds-color-surface)' }}>
             <Editor
-              theme="snow"
+              allowImages={false}
               value={form.answer}
               onChange={(html) => setForm({ ...form, answer: html })}
-              modules={QUILL_MODULES}
               placeholder="Type your answer. You can use lists, links and formatting…"
             />
           </div>

@@ -35,7 +35,15 @@ module.exports.getPublicFaqs = async (req, res) => {
     const type = ATTACH_TYPES.includes(req.query.type) ? req.query.type : 'global';
     const where = { brand_id: brandId, attached_to_type: type, is_active: true };
 
-    if (type === 'product' || type === 'category') {
+    if (type === 'product') {
+      const id = parseInt(req.query.id, 10);
+      if (!Number.isFinite(id)) return res.json({ success: true, faqs: [] });
+      // Match this product's own FAQs plus any brand-wide product FAQs
+      // (attached_to_id = null) that the admin marked "All products" — those
+      // show on every product page of the brand, but not on the home page
+      // (which only fetches global + page FAQs).
+      where.attached_to_id = { [Op.or]: [id, null] };
+    } else if (type === 'category') {
       const id = parseInt(req.query.id, 10);
       if (!Number.isFinite(id)) return res.json({ success: true, faqs: [] });
       where.attached_to_id = id;
