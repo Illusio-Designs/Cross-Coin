@@ -58,10 +58,19 @@ const uploadFileToImageKit = async (file) => {
 };
 
 // Parse + sanitize the product `attributes` payload from the admin form (a JSON
-// string) into { notes:[{name,image}] }. Storefront attribute CHIPS are derived
-// from each variation's own attributes (gender/longevity/projection/…), so this
-// product-level field only carries fragrance notes, which need an image the
-// attribute system can't hold. Returns null when nothing usable was sent.
+// string) into named value groups, each of shape [{name,image}]. The primary
+// group is `notes` (fragrance notes), which the storefront reads from
+// `product.attributes.notes`. Additional groups (e.g. `accords`) are passed
+// through using the SAME {name,image} shape so merchandising values that carry
+// imagery — which the per-variation attribute system can't hold — can live here
+// too. Storefront attribute CHIPS are still derived from each variation's own
+// attributes (gender/longevity/projection/…), not from this field.
+//
+// Backward compatibility: `notes` is always present (possibly empty), exactly as
+// before; any other group is only emitted when it has at least one usable value,
+// so a payload carrying only notes yields the identical { notes:[...] } output
+// older products/storefront already expect. Returns null when nothing usable was
+// sent.
 const parseProductAttributes = (raw) => {
   if (raw === undefined || raw === null || raw === '') return null;
   let obj = raw;
@@ -70,15 +79,31 @@ const parseProductAttributes = (raw) => {
   }
   if (!obj || typeof obj !== 'object') return null;
 
-  const notes = Array.isArray(obj.notes) ? obj.notes
+  // Sanitize one group into [{name,image}]. Tolerates legacy bare-string values
+  // (maps them to { name, image:'' }) without rejecting them.
+  const sanitizeGroup = (arr) => Array.isArray(arr) ? arr
     .map((n) => ({
-      name: String(n?.name ?? '').trim().slice(0, 40),
+      name: String(n?.name ?? n ?? '').trim().slice(0, 40),
       image: String(n?.image ?? '').trim().slice(0, 500),
     }))
     .filter((n) => n.name)
-    .slice(0, 20) : [];
+    .slice(0, 50) : [];
 
-  return { notes };
+  const result = {};
+  // `notes` first and always present — preserves the existing storefront contract.
+  result.notes = sanitizeGroup(obj.notes);
+
+  // Pass through any additional named groups (same {name,image} shape). Keys are
+  // lowercased for consistency with how variation attributes are normalized;
+  // non-array values are ignored defensively.
+  for (const [key, val] of Object.entries(obj)) {
+    const k = String(key || '').trim().toLowerCase();
+    if (!k || k === 'notes' || !Array.isArray(val)) continue;
+    const group = sanitizeGroup(val);
+    if (group.length) result[k] = group;
+  }
+
+  return result;
 };
 
 // Helper function to format product response

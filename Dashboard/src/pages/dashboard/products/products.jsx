@@ -10,6 +10,7 @@ import { attributeService } from "../../../services";
 import { brandService } from "../../../services";
 import { debounce } from 'lodash';
 import AttributeSelector from '../../../components/products/AttributeSelector';
+import ProductAttributesEditor from '../../../components/products/ProductAttributesEditor';
 import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
 import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
@@ -70,7 +71,7 @@ const ProductsPage = () => {
     dimensions: { length: "", width: "", height: "" },
     dimensionUnit: "cm",
     gst_rate: "5",
-    attributes: { notes: [] },
+    attributes: [{ key: 'notes', values: [] }],
     brandIds: [], // Will be set by BrandAssignment component
     variations: [{
       price: "",
@@ -402,17 +403,31 @@ const ProductsPage = () => {
         dimensionUnit: product.dimensionUnit || 'cm',
         gst_rate: product.gst_rate != null ? String(product.gst_rate) : '5',
         attributes: (() => {
+          // Product-level attributes arrive as { <key>: [{name,image}] } (older
+          // products only carry `notes`). Convert to the editor's array-of-groups
+          // shape, tolerating legacy bare-string values. Always surface a `notes`
+          // group so it shows even when empty.
           let parsed;
           try {
             parsed = typeof product.attributes === 'string'
               ? JSON.parse(product.attributes || '{}')
               : (product.attributes || {});
           } catch (e) {
-            parsed = { notes: [] };
+            parsed = {};
           }
-          return {
-            notes: Array.isArray(parsed?.notes) ? parsed.notes : []
-          };
+          if (!parsed || typeof parsed !== 'object') parsed = {};
+          const groups = Object.entries(parsed)
+            .filter(([, v]) => Array.isArray(v))
+            .map(([key, arr]) => ({
+              key,
+              values: arr.map((item) => (item && typeof item === 'object')
+                ? { name: String(item.name ?? ''), image: String(item.image ?? '') }
+                : { name: String(item ?? ''), image: '' })
+            }));
+          if (!groups.some((g) => String(g.key).toLowerCase() === 'notes')) {
+            groups.unshift({ key: 'notes', values: [] });
+          }
+          return groups;
         })(),
         variations: product.variations?.map(variation => {
           // Parse attributes if it's a string and ensure proper object structure
@@ -534,7 +549,7 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
-      attributes: { notes: [] },
+      attributes: [{ key: 'notes', values: [] }],
       brandIds: [],
       variations: [{
         price: "",
@@ -581,7 +596,7 @@ const ProductsPage = () => {
       dimensions: { length: "", width: "", height: "" },
       dimensionUnit: "cm",
       gst_rate: "5",
-      attributes: { notes: [] },
+      attributes: [{ key: 'notes', values: [] }],
       variations: [{
         price: "",
         comparePrice: "",
@@ -768,33 +783,11 @@ const ProductsPage = () => {
     }));
   };
 
-  // --- Fragrance attributes: notes ---
-  const addAttributeNote = () => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: {
-        ...prev.attributes,
-        notes: [...(prev.attributes?.notes || []), { name: '', image: '' }]
-      }
-    }));
-  };
-
-  const updateAttributeNote = (index, field, value) => {
-    setFormData(prev => {
-      const notes = [...(prev.attributes?.notes || [])];
-      notes[index] = { ...notes[index], [field]: value };
-      return { ...prev, attributes: { ...prev.attributes, notes } };
-    });
-  };
-
-  const removeAttributeNote = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: {
-        ...prev.attributes,
-        notes: (prev.attributes?.notes || []).filter((_, i) => i !== index)
-      }
-    }));
+  // Product-level attributes (named value groups with optional per-value images,
+  // e.g. notes/accords) are edited via <ProductAttributesEditor>, which emits the
+  // whole array back here. Serialization to the backend happens in handleSubmit.
+  const handleProductAttributesChange = (nextAttributes) => {
+    setFormData(prev => ({ ...prev, attributes: nextAttributes }));
   };
 
   const handleNextStep = () => {
@@ -918,10 +911,25 @@ const ProductsPage = () => {
         formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
         formDataToSend.append('gst_rate', formData.gst_rate ?? '5');
 
-        // Fragrance notes — named notes with imagery. Drop empty rows and trim
-        // so the saved shape is always { notes: [{name, image}] }.
-        const cleanNotes = (formData.attributes?.notes || []).filter(n => n && n.name && n.name.trim()).map(n => ({ name: n.name.trim(), image: (n.image || '').trim() }));
-        formDataToSend.append('attributes', JSON.stringify({ notes: cleanNotes }));
+        // Product-level attributes — named value groups with optional imagery
+        // (e.g. notes, accords). Collapse the editor's array-of-groups into the
+        // backend/storefront shape { <key>: [{name,image}] }. Keys are lowercased
+        // for consistency with the storefront (which reads attributes.notes); empty
+        // names/groups are dropped, and values from duplicate keys are merged.
+        // `notes` is always included (possibly empty) so the saved shape stays
+        // backward compatible with existing products and the PDP contract.
+        const attributesObj = {};
+        (Array.isArray(formData.attributes) ? formData.attributes : []).forEach(group => {
+          const key = String(group?.key || '').trim().toLowerCase();
+          if (!key) return;
+          const cleanedValues = (group?.values || [])
+            .filter(v => v && v.name && v.name.trim())
+            .map(v => ({ name: v.name.trim(), image: (v.image || '').trim() }));
+          if (cleanedValues.length === 0) return;
+          attributesObj[key] = (attributesObj[key] || []).concat(cleanedValues);
+        });
+        if (!attributesObj.notes) attributesObj.notes = [];
+        formDataToSend.append('attributes', JSON.stringify(attributesObj));
         
         // Add brand IDs
         formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
@@ -1249,49 +1257,17 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Fragrance notes — named notes with imagery shown on the storefront */}
+            {/* Product attributes — named value groups with optional imagery
+                (e.g. fragrance notes, accords) shown on the storefront PDP. The
+                `notes` group serializes to attributes.notes = [{name,image}],
+                the exact shape the storefront already reads. */}
             <div className="attributes-section">
-              <h6>Fragrance notes</h6>
-              <p className="dm-help">Named notes with imagery, shown on the product page</p>
-
-              {/* Notes */}
-              <div className="dm-field">
-                <label className="dm-label">Notes</label>
-                {(formData.attributes?.notes || []).map((note, index) => (
-                  <div key={index} className="attr-row">
-                    <Input
-                      type="text"
-                      value={note.name || ''}
-                      onChange={(e) => updateAttributeNote(index, 'name', e.target.value)}
-                      placeholder="Note name (e.g. Cinnamon)"
-                    />
-                    <Input
-                      type="text"
-                      value={note.image || ''}
-                      onChange={(e) => updateAttributeNote(index, 'image', e.target.value)}
-                      placeholder="Image URL (https://ik.imagekit.io/...)"
-                    />
-                    {note.image ? (
-                      <img
-                        src={note.image}
-                        alt={note.name || 'Note'}
-                        className="attr-note-thumb"
-                        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--ds-color-border)' }}
-                      />
-                    ) : null}
-                    <button
-                      type="button"
-                      className="variation-remove-btn"
-                      onClick={() => removeAttributeNote(index)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <Button variant="secondary" size="small" onClick={addAttributeNote}>
-                  + Add note
-                </Button>
-              </div>
+              <h6>Product attributes</h6>
+              <p className="dm-help">Named values with optional imagery (e.g. fragrance notes, accords), shown on the product page</p>
+              <ProductAttributesEditor
+                value={Array.isArray(formData.attributes) ? formData.attributes : []}
+                onChange={handleProductAttributesChange}
+              />
             </div>
           </>
         );
