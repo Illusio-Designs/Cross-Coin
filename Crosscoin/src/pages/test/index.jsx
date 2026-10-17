@@ -4,20 +4,11 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards, Thumb } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
+import { BENEFITS } from '../../components/test/data';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-
-// Everyday-sock benefits for "The standard" section (image-based grid).
-const BENEFITS = [
-  { t: 'Combed-cotton soft', d: 'Long-staple combed yarn that stays soft and keeps its colour wash after wash.' },
-  { t: 'All-day breathable', d: 'A ventilated mesh instep lets feet breathe, so they stay cool and dry.' },
-  { t: 'Stays fresh', d: 'Moisture-wicking, odour-fighting fibres keep a full day smelling clean.' },
-  { t: 'Stay-up cuff', d: 'A ribbed arch-and-cuff band grips gently — no slipping, no digging in.' },
-  { t: 'Built to last', d: 'Reinforced heel and toe hold their shape, pair after pair.' },
-  { t: 'Seamless toe', d: 'A hand-linked toe seam sits flat against your foot — no rub, no blisters.' },
-];
 
 export default function TestHome() {
   const router = useRouter();

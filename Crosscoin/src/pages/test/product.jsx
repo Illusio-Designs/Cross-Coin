@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
-import { inr } from '../../components/test/data';
+import { inr, BENEFITS } from '../../components/test/data';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
 import { addItem, addPack } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
@@ -116,6 +116,9 @@ export default function TestProduct() {
   const sizeOpts = (cur.sizes && cur.sizes.length) ? cur.sizes : p.sizes;
   const total = cur.price * qty;
   const thumbs = (p.images && p.images.length ? p.images : variants.map((v) => v.img).filter(Boolean));
+  // Images for the "Comfort you feel every day" benefit circles — this product's
+  // own gallery first, topped up with related products so all six rings fill.
+  const benefitImgs = [...thumbs, ...also.map((x) => x.img), mainImg, p.img].filter(Boolean);
 
   // "CHOOSE YOUR PACK" ladder (Morbix-style) — the admin "Buy More, Save More"
   // tiers, with a 1-pair option at the product's own price on top.
@@ -349,7 +352,29 @@ export default function TestProduct() {
             </div>
           </div>
         </section>
+      </div>
 
+      {/* the standard — image-based benefit grid (full-bleed dark band, same as home) */}
+      <section className="tech">
+        <div className="wrap">
+          <div className="benefithead">
+            <span className="eyebrow" style={{ color: 'var(--gold)' }}>The standard</span>
+            <h2>Comfort you feel every day</h2>
+            <p>Everyday essentials, minted to a standard — soft, breathable and built to last, at an honest price.</p>
+          </div>
+          <div className="benefitgrid">
+            {BENEFITS.map((b, i) => (
+              <div className="benefit" key={b.t}>
+                <span className="benefit__img"><Thumb src={benefitImgs.length ? benefitImgs[i % benefitImgs.length] : ''} color={cur.colors?.[0]} /></span>
+                <b>{b.t}</b>
+                <span className="benefit__d">{b.d}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="wrap">
         {/* Reviews (real) */}
         <section className="block">
           <div className="sechead">

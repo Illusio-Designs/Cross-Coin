@@ -46,5 +46,16 @@ export const FAQS = [
   ['Are the sizes true to fit?', 'Our socks are knit with a stretch band and fit true to the stated shoe size. For knitwear, check the size chart on each product — if in doubt, size up for a relaxed fit.'],
 ];
 
+// Everyday-sock benefits for the "Comfort you feel every day" image-based grid
+// (shared by the home "The standard" band and the product detail page).
+export const BENEFITS = [
+  { t: 'Combed-cotton soft', d: 'Long-staple combed yarn that stays soft and keeps its colour wash after wash.' },
+  { t: 'All-day breathable', d: 'A ventilated mesh instep lets feet breathe, so they stay cool and dry.' },
+  { t: 'Stays fresh', d: 'Moisture-wicking, odour-fighting fibres keep a full day smelling clean.' },
+  { t: 'Stay-up cuff', d: 'A ribbed arch-and-cuff band grips gently — no slipping, no digging in.' },
+  { t: 'Built to last', d: 'Reinforced heel and toe hold their shape, pair after pair.' },
+  { t: 'Seamless toe', d: 'A hand-linked toe seam sits flat against your foot — no rub, no blisters.' },
+];
+
 export const inr = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
 export const productById = (id) => PRODUCTS.find((p) => p.id === id) || PRODUCTS[0];
