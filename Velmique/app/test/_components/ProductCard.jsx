@@ -15,7 +15,15 @@ export default function ProductCard({ product }) {
   if (!product) return null;
 
   const img = product.images?.[0] || '';
-  const noteLine = (product.tags?.slice(0, 3).map((t) => t.label).join(' · ')) || product.category || 'Eau de Parfum';
+  // Card subtitle: show ONLY the fragrance notes (from the default variation's
+  // `notes` attribute), e.g. "Venilla · Musk". Falls back to product-level
+  // notes for older payloads; shows nothing when a product has no notes.
+  const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
+  const noteNames = (defVar?.noteItems?.length
+    ? defVar.noteItems.map((n) => n.name)
+    : (product.notes || []).map((n) => (typeof n === 'string' ? n : n?.name))
+  ).filter(Boolean);
+  const noteLine = noteNames.slice(0, 4).join(' · ');
   const wished = isWishlisted(product.id);
   const savePct = (product.originalPrice && product.price && product.price < product.originalPrice)
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -51,7 +59,7 @@ export default function ProductCard({ product }) {
       </Link>
       <div className="m-card__body">
         <Link className="m-card__name" href={`/test/product/${product.slug}`}>{product.name}</Link>
-        <div className="m-card__notes">{noteLine}</div>
+        {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
         <div className="m-card__rate"><span className="m-stars">{stars(product.rating)}</span> {Number(product.rating || 0).toFixed(1)} ({(product.reviews || 0).toLocaleString('en-IN')})</div>
         <div className="m-card__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}</div>
         <button className="m-btn m-btn--fill" onClick={add}>Add to cart</button>
