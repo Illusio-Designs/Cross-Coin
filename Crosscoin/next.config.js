@@ -117,6 +117,13 @@ const nextConfig = {
   // Redirects for old URLs
   async redirects() {
     return [
+      // Mint cutover: the homepage is now served at /. The legacy /home route
+      // (old design) is retired — 301 it to the canonical root.
+      {
+        source: '/home',
+        destination: '/',
+        permanent: true,
+      },
       // Thank-you page renamed to the kebab-case slug convention (/thank-you).
       // Keep the old /ThankYou path working — it's used by the backend
       // payment-success redirect and any existing links. Query params such as
