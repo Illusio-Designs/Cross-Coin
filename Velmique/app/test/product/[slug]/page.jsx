@@ -5,6 +5,7 @@ import ProductCard from '../../_components/ProductCard';
 import Gallery from '../../_components/Gallery';
 import PdpBuy from '../../_components/PdpBuy';
 import DeliveryCheck from '../../_components/DeliveryCheck';
+import { richHtml } from '@/lib/richHtml';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -118,7 +119,7 @@ export default async function MaisonProduct({ params }) {
           <span className="m-eyebrow">Details</span>
           <h2>About this fragrance</h2>
           {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-            ? <div className="m-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+            ? <div className="m-desc-rich" {...richHtml(product.descriptionHtml)} />
             : product.description ? <p>{product.description}</p> : <p className="m-muted">No description available for this fragrance yet.</p>}
         </div>
         {spec.length ? (
