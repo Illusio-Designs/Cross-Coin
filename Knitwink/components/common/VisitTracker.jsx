@@ -37,7 +37,7 @@ export default function VisitTracker() {
     const fire = () => {
       // Anonymous, cookieless pageview — fires for EVERY visitor (no consent
       // needed; nothing identifying is stored server-side). Guarded to once per load.
-      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/public/pageview`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
+      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/i/pv`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
       // First-party campaign attribution runs for EVERY visitor (minimal,
       // non-identifying: utm_* + fbclid + a first-party session id) so paid
       // traffic is attributable regardless of cookie choice. GA4, Meta Pixel
@@ -53,7 +53,7 @@ export default function VisitTracker() {
     const _fbclid = params.get('fbclid');
     if (_fbclid) { try { localStorage.setItem('fbclid', _fbclid); } catch { /* ignore */ } }
 
-    fetch(`${API_URL}/api/utm/track`, {
+    fetch(`${API_URL}/api/i/s`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export default function VisitTracker() {
         utm_campaign: params.get('utm_campaign'),
         utm_term: params.get('utm_term'),
         utm_content: params.get('utm_content'),
-        utm_creative: params.get('utm_creative'),
+        utm_creative: params.get('utm_creative') || [...params.keys()].find((k) => !params.get(k) && /^[A-Za-z0-9._-]{5,40}$/.test(k) && !/^utm_/i.test(k) && !['fbclid','gclid','gbraid','wbraid','sfnsn','mibextid','igshid','ttclid','twclid','msclkid','yclid','_ga','_gl'].includes(k.toLowerCase())) || null,
         landing_page: window.location.href,
         referrer: document.referrer,
       }),

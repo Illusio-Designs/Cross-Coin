@@ -8,7 +8,7 @@ export const captureUTMParameters = () => {
     utm_campaign: urlParams.get('utm_campaign'),
     utm_term: urlParams.get('utm_term'),
     utm_content: urlParams.get('utm_content'),
-    utm_creative: urlParams.get('utm_creative'),
+    utm_creative: urlParams.get('utm_creative') || [...urlParams.keys()].find((k) => !urlParams.get(k) && /^[A-Za-z0-9._-]{5,40}$/.test(k) && !/^utm_/i.test(k) && !['fbclid','gclid','gbraid','wbraid','sfnsn','mibextid','igshid','ttclid','twclid','msclkid','yclid','_ga','_gl'].includes(k.toLowerCase())) || null,
     landing_page: window.location.href,
     referrer: document.referrer,
     timestamp: new Date().toISOString()
@@ -50,7 +50,7 @@ export const clearUTMData = () => {
 export const sendUTMToBackend = async (utmData) => {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-    const url = `${apiUrl}/api/utm/track`;
+    const url = `${apiUrl}/api/i/s`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -89,7 +89,7 @@ export const sendPageviewPing = () => {
     window.__ccPv = true;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
     const p = new URLSearchParams(window.location.search);
-    fetch(`${apiUrl}/api/public/pageview`, {
+    fetch(`${apiUrl}/api/i/pv`, {
       method: 'POST',
       keepalive: true,
       credentials: 'omit',

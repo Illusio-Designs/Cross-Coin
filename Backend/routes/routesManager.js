@@ -79,6 +79,14 @@ router.use('/', require('./seoAdminRoutes.js'));
 // real visit volume next to the consent-gated utm_tracking funnel.
 router.post('/public/pageview', optionalBrand, require('../controller/pageviewController.js').recordPageview);
 
+// ── Neutral-path aliases for the first-party trackers ──────────────────────
+// Ad-blockers / privacy extensions block request paths containing "utm",
+// "track" and "pageview", which silently drops desktop attribution. These
+// opaque paths carry the SAME handlers so blocked visitors are still captured.
+// Old paths (/api/utm/track, /api/public/pageview) stay for backward compat.
+router.post('/i/s', optionalBrand, require('../controller/utmController.js').trackUTM);
+router.post('/i/pv', optionalBrand, require('../controller/pageviewController.js').recordPageview);
+
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the
 // public site's <Analytics> component can mount gtag / fbq / Clarity with
