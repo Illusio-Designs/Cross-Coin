@@ -122,8 +122,7 @@ const MOBILE_CSS = `
 .cc-test-root .techcard .mk{ width:72px; height:72px; margin-bottom:16px; background:color-mix(in srgb,var(--gold) 16%,transparent); }
 .cc-test-root .techcard .mk svg{ width:34px; height:34px; }
 /* bigger icons across every /test section (overrides inline svg sizes) */
-.cc-test-root .pdptrust__i{ padding:14px 6px; }
-.cc-test-root .pdptrust__i svg{ width:30px !important; height:30px !important; }
+.cc-test-root .pdptrust__i svg{ width:22px !important; height:22px !important; }
 .cc-test-root .idealchip svg{ width:22px !important; height:22px !important; }
 .cc-test-root .contactrow .pi svg{ width:28px !important; height:28px !important; }
 .cc-test-root .washitem svg{ width:40px !important; height:40px !important; }
@@ -208,16 +207,17 @@ const MOBILE_CSS = `
 .cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson); margin-bottom:10px; }
 .cc-test-root .bms__scroll{ display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
 .cc-test-root .bms__scroll::-webkit-scrollbar{ display:none; }
-.cc-test-root .bms__card{ flex:0 0 auto; width:236px; display:flex; align-items:center; gap:10px; background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; padding:8px; box-shadow:var(--stamp-sm); }
-.cc-test-root .bms__img{ width:48px; height:48px; border-radius:4px; overflow:hidden; background:var(--paper-2); flex-shrink:0; display:grid; place-items:center; }
+.cc-test-root .bms__card{ flex:0 0 auto; width:210px; display:flex; flex-direction:column; gap:10px; background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; padding:10px; box-shadow:var(--stamp-sm); }
+.cc-test-root .bms__top{ display:flex; align-items:center; gap:10px; min-width:0; }
+.cc-test-root .bms__img{ width:52px; height:52px; border-radius:4px; overflow:hidden; background:var(--paper-2); flex-shrink:0; display:grid; place-items:center; }
 .cc-test-root .bms__img img{ width:100%; height:100%; object-fit:cover; }
 .cc-test-root .bms__info{ min-width:0; flex:1; }
-.cc-test-root .bms__nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:5px; margin-top:2px; font-family:"Space Mono",monospace; }
-.cc-test-root .bms__pr b{ font-size:12.5px; color:var(--crimson); }
-.cc-test-root .bms__pr s{ font-size:10.5px; color:var(--ink-faint); }
-.cc-test-root .bms__pr em{ font-style:normal; font-size:9.5px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,transparent); border-radius:4px; padding:1px 6px; }
-.cc-test-root .bms__add{ flex-shrink:0; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:7px 11px; cursor:pointer; }
+.cc-test-root .bms__nm{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:6px; margin-top:3px; font-family:"Space Mono",monospace; }
+.cc-test-root .bms__pr b{ font-size:13px; color:var(--crimson); }
+.cc-test-root .bms__pr s{ font-size:11px; color:var(--ink-faint); }
+.cc-test-root .bms__save{ display:inline-block; margin-top:6px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--teal); background:color-mix(in srgb,var(--teal) 14%,transparent); border-radius:4px; padding:2px 8px; }
+.cc-test-root .bms__add{ width:100%; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:9px; cursor:pointer; }
 .cc-test-root .bms__add:hover{ filter:brightness(1.08); }
 /* "Sold in pairs" note at the top of the cart */
 .cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:4px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
@@ -253,10 +253,16 @@ const MOBILE_CSS = `
 .cc-test-root .pdptrust__free{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); }
 .cc-test-root .pdptrust__free svg{ color:var(--crimson); }
 .cc-test-root .pdptrust__free strong{ color:var(--ink); }
-.cc-test-root .pdptrust__row{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
-.cc-test-root .pdptrust__i{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; font-size:11px; font-weight:600; color:var(--ink-soft); padding:10px 6px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); }
+/* Trust row — "B": one bordered strip, four icon-over-label cells, hairline dividers. */
+.cc-test-root .pdptrust__row{ display:grid; grid-template-columns:repeat(4,1fr); margin-top:14px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
+.cc-test-root .pdptrust__i{ display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-soft); padding:14px 8px; border-right:1.5px solid var(--line); line-height:1.25; }
+.cc-test-root .pdptrust__i:last-child{ border-right:none; }
 .cc-test-root .pdptrust__i svg{ color:var(--crimson); }
-@media (max-width:420px){ .cc-test-root .pdptrust__row{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:420px){
+  .cc-test-root .pdptrust__row{ grid-template-columns:repeat(2,1fr); }
+  .cc-test-root .pdptrust__i:nth-child(2){ border-right:none; }
+  .cc-test-root .pdptrust__i:nth-child(1),.cc-test-root .pdptrust__i:nth-child(2){ border-bottom:1.5px solid var(--line); }
+}
 /* square wishlist by the title */
 .cc-test-root .titlerow{ display:flex; align-items:flex-start; gap:12px; justify-content:space-between; }
 .cc-test-root .titlerow h1{ flex:1; min-width:0; }
@@ -270,9 +276,13 @@ const MOBILE_CSS = `
 /* delivery pincode check */
 .cc-test-root .pdpdeliv{ margin-top:14px; }
 .cc-test-root .pdpdeliv__l{ display:block; font-family:"Space Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
-.cc-test-root .pdpdeliv__row{ display:flex; gap:8px; max-width:340px; }
-.cc-test-root .pdpdeliv__row input{ flex:1; min-width:0; padding:10px 13px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); }
-.cc-test-root .pdpdeliv__row input:focus{ outline:none; border-color:var(--crimson); }
+/* Delivery check — "B": joined input + indigo Check button in one bordered strip. */
+.cc-test-root .pdpdeliv__row{ display:flex; gap:0; max-width:360px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
+.cc-test-root .pdpdeliv__row input{ flex:1; min-width:0; padding:12px 14px; border:none; background:transparent; color:var(--ink); font:inherit; font-size:14px; }
+.cc-test-root .pdpdeliv__row input:focus{ outline:none; }
+.cc-test-root .pdpdeliv__row .btn{ border:none; border-left:2px solid var(--line-ink); border-radius:0; background:var(--indigo); color:#fff; box-shadow:none; padding:12px 22px; }
+.cc-test-root[data-theme="dark"] .pdpdeliv__row .btn{ color:var(--paper); }
+.cc-test-root .pdpdeliv__row .btn:hover{ transform:none; box-shadow:none; filter:brightness(1.08); }
 .cc-test-root .pdpdeliv__msg{ font-size:12.5px; margin-top:8px; font-weight:600; }
 .cc-test-root .pdpdetails{ display:grid; grid-template-columns:1.6fr 1fr; gap:28px; align-items:start; }
 .cc-test-root .pdpabout .eyebrow{ display:block; margin-bottom:6px; }
@@ -769,12 +779,15 @@ export default function TestLayout({ children }) {
                         const save = p.was > p.now ? Math.round(p.was - p.now) : 0;
                         return (
                           <div className="bms__card" key={p.id}>
-                            <div className="bms__img">{p.img ? <img src={p.img} alt="" loading="lazy" /> : <Thumb color={p.colors?.[0]?.name} />}</div>
-                            <div className="bms__info">
-                              <div className="bms__nm">{p.name}</div>
-                              <div className="bms__pr"><b>{inr(p.now)}</b>{p.was > p.now && <s>{inr(p.was)}</s>}{save > 0 && <em>Save {inr(save)}</em>}</div>
+                            <div className="bms__top">
+                              <div className="bms__img">{p.img ? <img src={p.img} alt="" loading="lazy" /> : <Thumb color={p.colors?.[0]?.name} />}</div>
+                              <div className="bms__info">
+                                <div className="bms__nm">{p.name}</div>
+                                <div className="bms__pr"><b>{inr(p.now)}</b>{p.was > p.now && <s>{inr(p.was)}</s>}</div>
+                                {save > 0 && <span className="bms__save">Save {inr(save)}</span>}
+                              </div>
                             </div>
-                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add</button>
+                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add to cart</button>
                           </div>
                         );
                       })}

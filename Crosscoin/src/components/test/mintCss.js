@@ -229,6 +229,8 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .crumbs{ font-family:"Space Mono"; font-size: 11.5px; color: var(--ink-faint); }
 .cc-test-root .crumbs span{ color: var(--crimson); }
 .cc-test-root .shopbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 26px; }
+.cc-test-root .shopbar .dd.sort{ margin-left: auto; }
+@media (max-width: 560px){ .cc-test-root .shopbar .dd.sort{ margin-left: 0; } }
 .cc-test-root .chip{ font-family:"Space Mono"; font-size: 12px; font-weight: 700; padding: 8px 14px; border: 2px solid var(--line-ink); border-radius: 4px; background: var(--surface); cursor: pointer; box-shadow: var(--stamp-sm); transition: transform .14s, background .2s, color .2s; }
 .cc-test-root .chip:hover{ transform: translate(-2px,-2px); }
 .cc-test-root .chip.on{ background: var(--ink); color: var(--surface); }
@@ -442,9 +444,12 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .dd.open .dd__btn, .cc-test-root .dd__btn:focus-visible{ outline: none; box-shadow: var(--stamp-sm), 0 0 0 3px color-mix(in srgb, var(--crimson) 45%, transparent); }
 .cc-test-root .dd__chev{ flex: 0 0 auto; transition: transform .2s ease; font-size: 12px; line-height: 1; color: var(--ink-soft); }
 .cc-test-root .dd.open .dd__chev{ transform: rotate(180deg); }
-.cc-test-root .dd__panel{ position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); padding: 5px; opacity: 0; transform: translateY(-6px) scaleY(.98); transform-origin: top; pointer-events: none; transition: opacity .16s ease, transform .16s ease; max-height: 280px; overflow: auto; }
+/* Panel grows to fit the longest option on one line (full category names on PC),
+   never narrower than its button, capped so it can't overflow the viewport. */
+.cc-test-root .dd__panel{ position: absolute; top: calc(100% + 6px); left: 0; right: auto; min-width: 100%; width: max-content; max-width: min(92vw, 520px); z-index: 20; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); padding: 5px; opacity: 0; transform: translateY(-6px) scaleY(.98); transform-origin: top; pointer-events: none; transition: opacity .16s ease, transform .16s ease; max-height: 320px; overflow: auto; }
+.cc-test-root .dd.sort .dd__panel{ left: auto; right: 0; }
 .cc-test-root .dd.open .dd__panel{ opacity: 1; transform: none; pointer-events: auto; }
-.cc-test-root .dd__opt{ display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: none; border: none; font-family: "Space Mono", monospace; font-size: 13.5px; color: var(--ink); padding: 10px 12px; border-radius: 2px; cursor: pointer; }
+.cc-test-root .dd__opt{ display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; white-space: nowrap; text-align: left; background: none; border: none; font-family: "Space Mono", monospace; font-size: 13.5px; color: var(--ink); padding: 10px 12px; border-radius: 2px; cursor: pointer; }
 .cc-test-root .dd__opt:hover{ background: var(--paper-2); }
 .cc-test-root .dd__opt.sel{ color: var(--crimson); font-weight: 700; }
 .cc-test-root .dd__opt .tick{ opacity: 0; font-size: 12px; }
