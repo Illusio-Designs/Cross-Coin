@@ -26,6 +26,11 @@ export default function robots() {
   return {
     rules: [
       { userAgent: '*', allow: '/', disallow: DISALLOW },
+      // Google Shopping / Merchant Center crawls product pages as "Googlebot"
+      // and product images as "Googlebot-Image"; name them explicitly so
+      // Merchant Center's "quality & policy checks" pass.
+      { userAgent: 'Googlebot', allow: '/', disallow: DISALLOW },
+      { userAgent: 'Googlebot-Image', allow: '/' },
       ...AI_BOTS.map((userAgent) => ({ userAgent, allow: '/', disallow: DISALLOW })),
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
