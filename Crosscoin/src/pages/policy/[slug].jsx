@@ -17,7 +17,7 @@
  * existing policy.
  */
 
-import Policy from '../policy';
+import TestPolicy from '../test/policy/[slug]';
 import SeoWrapper from '../../console/SeoWrapper';
 import { fetchPageSeo } from '../../utils/fetchPageSeo';
 
@@ -56,10 +56,13 @@ export async function getServerSideProps(ctx) {
   return { props: { slug, initialPolicy: policy, seoData } };
 }
 
-export default function PolicySlugPage({ slug, initialPolicy, seoData }) {
+export default function PolicySlugPage({ slug, seoData }) {
   return (
     <SeoWrapper pageName={`policy-${slug}`} seoData={seoData}>
-      <Policy initialPolicy={initialPolicy} initialSlug={slug} />
+      <TestPolicy preview={false} />
     </SeoWrapper>
   );
 }
+
+// Render with the Mint chrome (bare — no legacy Header/Footer/Breadcrumb).
+PolicySlugPage.mintChrome = true;

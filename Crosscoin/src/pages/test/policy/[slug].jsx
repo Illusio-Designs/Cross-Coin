@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../../components/test/TestLayout';
@@ -12,7 +13,7 @@ const TITLES = {
   'cancellation-and-refund': 'Cancellation & Refund',
 };
 
-export default function TestPolicy() {
+export default function TestPolicy({ preview = true }) {
   const router = useRouter();
   const slug = typeof router.query.slug === 'string' ? router.query.slug : '';
   const [policy, setPolicy] = useState(null);
@@ -33,11 +34,11 @@ export default function TestPolicy() {
 
   return (
     <TestLayout>
-      <Head><title>{title} — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>{title} — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / {title}</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / {title}</div>
           <h2 style={{ fontSize: 'clamp(26px,4.5vw,42px)', marginTop: 10 }}>{title}</h2>
         </div>
       </div>

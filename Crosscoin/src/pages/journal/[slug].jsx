@@ -10,7 +10,7 @@
  */
 
 import Head from 'next/head';
-import BlogDetails from '../blog-details';
+import TestBlog from '../test/blog/[slug]';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
@@ -160,7 +160,10 @@ export default function BlogSlugPage({ slug, initialPost, globalFaqs }) {
         )}
       </Head>
 
-      <BlogDetails initialPost={initialPost} initialSlug={slug} />
+      <TestBlog preview={false} />
     </>
   );
 }
+
+// Render with the Mint chrome (bare — no legacy Header/Footer/Breadcrumb).
+BlogSlugPage.mintChrome = true;

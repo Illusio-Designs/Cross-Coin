@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -42,10 +43,10 @@ export default function TestAccount() {
   const doSignOut = () => { signOut(); toast('Signed out'); };
 
   const tiles = useMemo(() => ([
-    ['Track an order', 'Live status by order number or AWB.', '/test/track'],
-    ['Returns', 'Start a return within 7 days.', '/test/returns'],
-    ['Your wishlist', 'Everything you saved to buy later.', '/test/wishlist'],
-    ['Shop the mint', 'Browse the full catalogue.', '/test/shop'],
+    ['Track an order', 'Live status by order number or AWB.', R.track],
+    ['Returns', 'Start a return within 7 days.', R.returns],
+    ['Your wishlist', 'Everything you saved to buy later.', R.wishlist],
+    ['Shop the mint', 'Browse the full catalogue.', R.shop],
   ]), []);
 
   return (
@@ -54,7 +55,7 @@ export default function TestAccount() {
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Account</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Account</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Your account</h2>
         </div>
       </div>
@@ -66,8 +67,8 @@ export default function TestAccount() {
               <div className="acctsignin__ic">{I.user(26)}</div>
               <div className="acctsignin__t"><b>Sign in to CrossCoin</b><span>Track orders, save addresses and get member offers. You can also check out as a guest.</span></div>
               <div className="acctsignin__btns">
-                <button className="btn btn--crimson" onClick={() => router.push('/test/login')}>Sign in</button>
-                <button className="btn" onClick={() => router.push('/test/register')}>Create account</button>
+                <button className="btn btn--crimson" onClick={() => router.push(R.login)}>Sign in</button>
+                <button className="btn" onClick={() => router.push(R.register)}>Create account</button>
               </div>
             </div>
             <div className="collgrid" style={{ marginTop: 22 }}>
@@ -99,7 +100,7 @@ export default function TestAccount() {
 
             {!loading && tab === 'orders' && (
               orders.length === 0
-                ? <div className="acctempty mono">No orders yet. <a onClick={() => router.push('/test/shop')} style={{ color: 'var(--crimson)', cursor: 'pointer' }}>Start shopping</a></div>
+                ? <div className="acctempty mono">No orders yet. <a onClick={() => router.push(R.shop)} style={{ color: 'var(--crimson)', cursor: 'pointer' }}>Start shopping</a></div>
                 : orders.map((o) => (
                   <div className="order" key={o.id || o.number}>
                     <div className="order__top">
@@ -109,7 +110,7 @@ export default function TestAccount() {
                     {o.items.length > 0 && <div className="order__items2">{o.items.map((it, i) => <span key={i} className="oitem2"><b>{it.name}</b>{it.variant ? ` · ${it.variant}` : ''} ×{it.qty}</span>)}</div>}
                     <div className="order__bot">
                       <div className="order__total">Total <b>{inr(o.total)}</b></div>
-                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`/test/track?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button><button className="btn btn--sm" onClick={() => router.push('/test/returns')}>Return</button></div>
+                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`${R.track}?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button><button className="btn btn--sm" onClick={() => router.push(R.returns)}>Return</button></div>
                     </div>
                   </div>
                 ))

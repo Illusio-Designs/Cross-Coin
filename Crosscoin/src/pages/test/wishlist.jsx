@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { ProductCard, toast, Dropdown } from '../../components/test/ui';
@@ -50,7 +51,7 @@ export default function TestWishlist() {
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Wishlist</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Wishlist</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Your wishlist</h2>
             {items.length > 0 && (
@@ -69,7 +70,7 @@ export default function TestWishlist() {
           ? (
             <div style={{ padding: '46px 0', textAlign: 'center' }}>
               <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, marginBottom: 16 }}>Nothing saved yet — tap the ♥ on any product to keep it here.</p>
-              <button className="btn btn--crimson btn--lg" onClick={() => router.push('/test/shop')}>Browse the mint</button>
+              <button className="btn btn--crimson btn--lg" onClick={() => router.push(R.shop)}>Browse the mint</button>
             </div>
           )
           : <div className="pgrid">{sorted.map((p) => <ProductCard key={p.id} p={p} />)}</div>}

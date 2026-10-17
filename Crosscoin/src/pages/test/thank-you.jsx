@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useMemo } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -25,8 +26,8 @@ export default function TestThankYou() {
           A confirmation has been sent to your email. Estimated delivery by <b>{eta}</b>.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 26 }}>
-          <button className="btn btn--crimson btn--lg" onClick={() => router.push('/test/shop')}>Continue shopping</button>
-          <button className="btn btn--lg" onClick={() => router.push(orderNo ? `/test/track?order=${encodeURIComponent(orderNo)}` : '/test/track')}>Track your order</button>
+          <button className="btn btn--crimson btn--lg" onClick={() => router.push(R.shop)}>Continue shopping</button>
+          <button className="btn btn--lg" onClick={() => router.push(orderNo ? `${R.track}?order=${encodeURIComponent(orderNo)}` : R.track)}>Track your order</button>
         </div>
       </div>
     </TestLayout>

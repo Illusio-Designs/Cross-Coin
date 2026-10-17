@@ -1,27 +1,13 @@
 /**
  * Clean-slug collection route: /collections/<slug>
  *
- * Server-renders the category landing page with:
- *   - The right <title>, meta description, OG, canonical (admin can
- *     override via Category SEO fields).
- *   - schema.org CollectionPage + ItemList JSON-LD (so Google can
- *     show the category in product carousels).
- *   - BreadcrumbList JSON-LD: Home → Collections → <Category>.
- *   - Optional global FAQs at the bottom (FAQPage schema).
- *
- * The visible UI is intentionally minimal — a heading + product grid —
- * because Crosscoin's existing Products.jsx is heavy and the goal here
- * is SEO. Admin can adjust styling later; the schema and meta are what
- * matter for Google Ads landing-page quality and organic rank.
+ * Server-renders the category's SEO (title/meta/canonical + CollectionPage,
+ * ItemList and BreadcrumbList JSON-LD) so crawlers get it in the initial HTML.
+ * The visible UI is the Mint shop, which resolves the active category from the
+ * [slug] param and renders the filtered grid.
  */
-
 import Head from 'next/head';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
-import ProductCard from '../../components/products/ProductCard';
-import ProductFaqSection from '../../components/common/ProductFaqSection';
-import { useBreadcrumb } from '../../components/common/Breadcrumb';
+import TestShop from '../test/shop';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
@@ -40,26 +26,12 @@ export async function getServerSideProps({ params, res }) {
   const slug = params?.slug;
   if (!slug) return { notFound: true };
 
-  const [catResp, faqResp] = await Promise.all([
-    fetchJson(`${API_URL}/api/categories/by-slug/${encodeURIComponent(slug)}`),
-    fetchJson(`${API_URL}/api/public/faqs?type=global`),
-  ]);
-
+  const catResp = await fetchJson(`${API_URL}/api/categories/by-slug/${encodeURIComponent(slug)}`);
   const category = catResp?.data || null;
   if (!category) return { notFound: true };
 
-  res?.setHeader?.(
-    'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=86400'
-  );
-
-  return {
-    props: {
-      slug,
-      category,
-      globalFaqs: faqResp?.faqs || [],
-    },
-  };
+  res?.setHeader?.('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+  return { props: { slug, category } };
 }
 
 function stripHtml(s) { return String(s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim(); }
@@ -73,29 +45,7 @@ function safeJson(value) {
   try { return JSON.parse(value); } catch { return null; }
 }
 
-export default function CollectionSlugPage({ slug, category, globalFaqs }) {
-  // Set the breadcrumb to the precise category name so the dynamic
-  // [slug] segment becomes "Cross Coin® Professional Performance Ankle Socks"
-  // instead of the literal placeholder.
-  const { setCustomBreadcrumbs } = useBreadcrumb();
-  const router = useRouter();
-  // ProductCard navigates via this callback — every other page passes it, but
-  // this collection page was missing it, so clicking a product here did
-  // nothing (onProductClick was undefined). Route to the clean product slug.
-  const handleProductClick = (product) => {
-    if (product?.slug) router.push(`/products/${product.slug}`);
-  };
-  useEffect(() => {
-    if (category?.name) {
-      setCustomBreadcrumbs([
-        { label: 'Home', path: '/' },
-        { label: 'Collections', path: '/collections' },
-        { label: category.name, path: `/collections/${slug}`, isLast: true },
-      ]);
-    }
-    return () => setCustomBreadcrumbs(null);
-  }, [category?.name, slug, setCustomBreadcrumbs]);
-
+export default function CollectionSlugPage({ slug, category }) {
   const seo = category.seo || {};
   const title = seo.metaTitle || `${category.name} | CrossCoin`;
   const description = truncate(
@@ -103,15 +53,9 @@ export default function CollectionSlugPage({ slug, category, globalFaqs }) {
     160,
   );
   const canonical = seo.canonicalUrl || `${SITE_URL}/collections/${slug}`;
-  const ogImage = seo.ogImage
-    || category.image
-    || `${SITE_URL}/crosscoin-icon.png`;
-  const robots = seo.seoIndex === false
-    ? 'noindex, follow'
-    : 'index, follow, max-image-preview:large';
+  const ogImage = seo.ogImage || category.image || `${SITE_URL}/crosscoin-icon.png`;
+  const robots = seo.seoIndex === false ? 'noindex, follow' : 'index, follow, max-image-preview:large';
 
-  // ItemList schema — Google uses this to show category pages in their
-  // shopping carousels. Each item points to its product page.
   const products = category.products || [];
   const itemList = {
     '@context': 'https://schema.org',
@@ -131,9 +75,7 @@ export default function CollectionSlugPage({ slug, category, globalFaqs }) {
       })),
     },
   };
-  // Admin-supplied override wins.
-  const structuredOverride = safeJson(seo.structuredData);
-  const collectionLd = structuredOverride || itemList;
+  const collectionLd = safeJson(seo.structuredData) || itemList;
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
@@ -165,70 +107,15 @@ export default function CollectionSlugPage({ slug, category, globalFaqs }) {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image"       content={ogImage} />
 
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       </Head>
 
-      <main className="collection-page" style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-        <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
-          <Link href="/" style={{ color: '#6b7280' }}>Home</Link>
-          {' › '}
-          <Link href="/Collections" style={{ color: '#6b7280' }}>Collections</Link>
-          {' › '}
-          <span style={{ color: '#180D3E' }}>{category.name}</span>
-        </nav>
-
-        <header style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 28, color: '#180D3E' }}>{category.name}</h1>
-          {category.description && (
-            <p style={{ marginTop: 8, color: '#4b5563', maxWidth: 720 }}>{stripHtml(category.description)}</p>
-          )}
-          <div style={{ marginTop: 6, fontSize: 13, color: '#6b7280' }}>
-            {products.length} product{products.length === 1 ? '' : 's'}
-          </div>
-        </header>
-
-        {products.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-            No products in this collection yet.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 16,
-            }}
-          >
-            {products.map(p => (
-              <ProductCard
-                key={p.id}
-                onProductClick={handleProductClick}
-                product={{
-                  id: p.id,
-                  slug: p.slug,
-                  name: p.name,
-                  title: p.name,
-                  price: p.price,
-                  comparePrice: p.comparePrice,
-                  image: p.image,
-                  images: p.image ? [p.image] : [],
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {globalFaqs?.length > 0 && (
-          <ProductFaqSection productFaqs={[]} globalFaqs={globalFaqs} />
-        )}
-      </main>
+      {/* Mint shop UI — resolves the active category from the [slug] param. */}
+      <TestShop preview={false} />
     </>
   );
 }
+
+// Render with the Mint chrome (bare — no legacy Header/Footer/Breadcrumb).
+CollectionSlugPage.mintChrome = true;

@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { I } from '../../components/test/ui';
@@ -10,15 +11,15 @@ const VALUES = [
   ['Pan-India delivery', 'Shipping to every corner of India with real-time tracking on every order.', I.truck],
 ];
 
-export default function TestAbout() {
+export default function TestAbout({ preview = true }) {
   const router = useRouter();
   return (
     <TestLayout>
-      <Head><title>About — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>About — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / About</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / About</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Comfort is not a luxury</h2>
         </div>
       </div>
@@ -36,7 +37,7 @@ export default function TestAbout() {
           ))}
         </div>
         <div style={{ marginTop: 28 }}>
-          <button className="btn btn--crimson btn--lg" onClick={() => router.push('/test/shop')}>Shop the mint {I.arrow()}</button>
+          <button className="btn btn--crimson btn--lg" onClick={() => router.push(R.shop)}>Shop the mint {I.arrow()}</button>
         </div>
       </div>
     </TestLayout>

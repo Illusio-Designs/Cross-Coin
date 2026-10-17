@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -30,7 +31,7 @@ export default function TestSearch() {
   const submit = (e) => {
     e.preventDefault();
     const v = term.trim();
-    router.push(v ? `/test/search?q=${encodeURIComponent(v)}` : '/test/search');
+    router.push(v ? `${R.search}?q=${encodeURIComponent(v)}` : R.search);
   };
 
   return (
@@ -39,7 +40,7 @@ export default function TestSearch() {
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Search</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Search</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Find your mint</h2>
           <form className="searchbar" onSubmit={submit}>
             <input

@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -61,7 +62,7 @@ export default function TestRegister() {
       async (data) => {
         const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || data?.accessToken || JSON.stringify(data));
         const res = await registerOtp({ name: form.name.trim(), email: form.email.trim(), phone: digits, access_token: accessToken });
-        if (res.ok) { toast('Account created ✓'); router.push('/test/account'); }
+        if (res.ok) { toast('Account created ✓'); router.push(R.account); }
         else { setErr(res.message); setBusy(false); }
       },
       () => { setErr('Invalid code. Please try again.'); setBusy(false); },
@@ -100,7 +101,7 @@ export default function TestRegister() {
                 <label className="agecheck"><input type="checkbox" checked={form.age} onChange={(e) => set('age', e.target.checked)} /><span>I am 18 years or older.</span></label>
                 {err && <div className="autherr mono">{err}</div>}
                 <button className="btn btn--crimson btn--block btn--lg" type="submit" disabled={busy} style={{ marginTop: 14 }}>{busy ? 'Sending…' : 'Send code →'}</button>
-                <div className="authsplit__alt">Already have an account? <a onClick={() => router.push('/test/login')}>Sign in</a></div>
+                <div className="authsplit__alt">Already have an account? <a onClick={() => router.push(R.login)}>Sign in</a></div>
               </form>
             ) : (
               <form onSubmit={verify}>

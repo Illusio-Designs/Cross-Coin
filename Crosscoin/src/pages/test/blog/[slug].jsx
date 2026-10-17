@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../../components/test/TestLayout';
@@ -9,7 +10,7 @@ import { richHtml } from '../../../utils/sanitizeHtml';
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
 const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
-export default function TestBlog() {
+export default function TestBlog({ preview = true }) {
   const router = useRouter();
   const slug = typeof router.query.slug === 'string' ? router.query.slug : '';
   const [post, setPost] = useState(null);
@@ -48,17 +49,17 @@ export default function TestBlog() {
 
   return (
     <TestLayout>
-      <Head><title>{post?.title ? `${post.title} — CrossCoin` : 'Journal — CrossCoin Mint preview'}</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>{post?.title ? `${post.title} — CrossCoin` : 'Journal — CrossCoin Mint preview'}</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="wrap" style={{ paddingBottom: 70, maxWidth: 820 }}>
         <div className="crumbs" style={{ paddingTop: 20 }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push('/test#journal')}>Journal</span> / {post?.title || '…'}
+          <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Journal</span> / {post?.title || '…'}
         </div>
 
         {loading
           ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Loading article…</p>
           : !post
-            ? <p className="mono" style={{ fontSize: 13, padding: '30px 0' }}>Article not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test#journal')}>Back to journal</a></p>
+            ? <p className="mono" style={{ fontSize: 13, padding: '30px 0' }}>Article not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Back to journal</a></p>
             : (<>
                 <div className="artmeta" style={{ marginTop: 14 }}>
                   <span className="artcat">{post.cat}</span>

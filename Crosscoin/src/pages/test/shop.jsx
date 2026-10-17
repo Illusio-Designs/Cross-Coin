@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -12,7 +13,7 @@ const SORTS = [
   { value: 'rating', label: 'Top rated' },
 ];
 
-export default function TestShop() {
+export default function TestShop({ preview = true }) {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [cats, setCats] = useState([]);
@@ -30,8 +31,18 @@ export default function TestShop() {
     return () => { off = true; };
   }, []);
 
-  // Preselect a category from ?cat= (set by the home category index).
-  useEffect(() => { if (router.query.cat) setFilter(String(router.query.cat)); }, [router.query.cat]);
+  // Preselect a category from the URL. Supports ?category= (live /Products),
+  // ?cat= (home category index) and the /collections/[slug] path param,
+  // matching by category name, slug, or a slugified name.
+  useEffect(() => {
+    const q = router.query.category || router.query.cat || router.query.slug;
+    if (!q) return;
+    const qs = String(q).toLowerCase();
+    if (!cats.length) { setFilter(String(q)); return; }
+    const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const hit = cats.find((c) => String(c.name).toLowerCase() === qs || String(c.slug || '').toLowerCase() === qs || slugify(c.name) === qs);
+    setFilter(hit ? hit.name : String(q));
+  }, [router.query.category, router.query.cat, router.query.slug, cats]);
 
   const catOptions = useMemo(() => [{ value: 'all', label: 'All categories' }, ...cats.map((c) => ({ value: c.name, label: c.name }))], [cats]);
 
@@ -50,11 +61,11 @@ export default function TestShop() {
 
   return (
     <TestLayout>
-      <Head><title>Shop — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>Shop — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Shop / {filter === 'all' ? 'All' : filter}</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Shop / {filter === 'all' ? 'All' : filter}</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>The full mint</h2>
           <div className="shopbar">
             <Dropdown value={filter} options={catOptions} onChange={setFilter} ariaLabel="Filter by category" />

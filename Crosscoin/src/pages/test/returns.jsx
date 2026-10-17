@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -39,7 +40,7 @@ export default function TestReturns() {
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Returns</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Returns</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Request a return</h2>
           <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, marginTop: 8 }}>Returns accepted within 7 days of delivery.</p>
         </div>
@@ -50,7 +51,7 @@ export default function TestReturns() {
           <div className="authcard" style={{ textAlign: 'center' }}>
             <h3 style={{ fontFamily: 'Fraunces,serif', fontSize: 22, marginBottom: 8 }}>Request received</h3>
             <p style={{ color: 'var(--ink-soft)', fontSize: 14, lineHeight: 1.6 }}>We&rsquo;ve noted your return for <b>{order}</b>. Our team will confirm pickup and your refund over WhatsApp and email.</p>
-            <button className="btn btn--crimson btn--lg" style={{ marginTop: 18 }} onClick={() => router.push('/test/shop')}>Continue shopping</button>
+            <button className="btn btn--crimson btn--lg" style={{ marginTop: 18 }} onClick={() => router.push(R.shop)}>Continue shopping</button>
             <p className="authcard__note mono">Preview note — this is a UI demo; no live return is created.</p>
           </div>
         ) : (

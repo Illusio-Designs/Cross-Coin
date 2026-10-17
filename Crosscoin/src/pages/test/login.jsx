@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -71,7 +72,7 @@ export default function TestLogin() {
       async (data) => {
         const accessToken = typeof data === 'string' ? data : (data?.message || data?.token || data?.accessToken || JSON.stringify(data));
         const res = await loginOtp({ phone: digits, access_token: accessToken });
-        if (res.ok) { toast('Signed in ✓'); router.push('/test/account'); }
+        if (res.ok) { toast('Signed in ✓'); router.push(R.account); }
         else { setErr(res.message); setBusy(false); }
       },
       () => { setErr('Invalid code. Please try again.'); setBusy(false); },
@@ -109,7 +110,7 @@ export default function TestLogin() {
                 </div>
                 {err && <div className="autherr mono">{err}</div>}
                 <button className="btn btn--crimson btn--block btn--lg" type="submit" disabled={busy} style={{ marginTop: 14 }}>{busy ? 'Sending…' : 'Send code →'}</button>
-                <div className="authsplit__alt">New to CrossCoin? <a onClick={() => router.push('/test/register')}>Create an account</a></div>
+                <div className="authsplit__alt">New to CrossCoin? <a onClick={() => router.push(R.register)}>Create an account</a></div>
               </form>
             ) : (
               <form onSubmit={verify}>

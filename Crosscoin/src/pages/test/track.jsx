@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -38,7 +39,7 @@ export default function TestTrack() {
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Track order</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Track order</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Track your order</h2>
           <div className="trackmode" style={{ display: 'flex', gap: 8, margin: '14px 0 10px' }}>
             <button className={`chip${mode === 'order' ? ' on' : ''}`} onClick={() => { setMode('order'); setErr(''); }}>By order number</button>

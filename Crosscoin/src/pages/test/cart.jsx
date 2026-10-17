@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
@@ -9,7 +10,7 @@ import TestLayout from '../../components/test/TestLayout';
 export default function TestCartRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/test');
+    router.replace(R.home);
     const t = setTimeout(() => { try { window.dispatchEvent(new CustomEvent('cc-test-opencart')); } catch (_) {} }, 250);
     return () => clearTimeout(t);
   }, []);

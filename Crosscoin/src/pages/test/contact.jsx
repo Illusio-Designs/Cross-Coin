@@ -1,17 +1,18 @@
 import Head from 'next/head';
+import { R } from '@/components/test/routes';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { I, toast } from '../../components/test/ui';
 
-export default function TestContact() {
+export default function TestContact({ preview = true }) {
   const router = useRouter();
   return (
     <TestLayout>
-      <Head><title>Contact — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>Contact — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="shophead">
         <div className="wrap">
-          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / Contact</div>
+          <div className="crumbs"><span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / Contact</div>
           <h2 style={{ fontSize: 'clamp(28px,5vw,46px)', marginTop: 10 }}>Get in touch</h2>
         </div>
       </div>
