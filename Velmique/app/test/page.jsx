@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
-import { getPublicSliders } from '@/lib/api/sliders';
 import { getAllReviews } from '@/lib/api/reviews';
 import ProductCard from './_components/ProductCard';
 
@@ -34,13 +33,13 @@ const FALLBACK_REVIEWS = [
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
 
 export default async function MaisonHome() {
-  const [sliders, featured, reviewsRes] = await Promise.all([
-    getPublicSliders(),
+  const [featured, reviewsRes] = await Promise.all([
     getBestsellers(8),
     getAllReviews({ limit: 9 }),
   ]);
 
-  const heroImg = sliders?.[0]?.image || featured?.[0]?.images?.[0] || '';
+  // Hero image comes from a featured product (slider API intentionally unused).
+  const heroImg = featured?.[0]?.images?.[0] || '';
   const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 6);
 
   return (

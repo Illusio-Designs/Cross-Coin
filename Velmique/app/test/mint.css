@@ -51,7 +51,7 @@
 .m-lnk{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--m-ink-soft);position:relative;padding:4px 0}
 .m-lnk::after{content:"";position:absolute;left:0;right:100%;bottom:-2px;height:1px;background:var(--m-accent);transition:right .3s}
 .m-lnk:hover{color:var(--m-ink)}.m-lnk:hover::after{right:0}
-.m-brand{font-family:var(--m-d);font-weight:600;font-size:26px;letter-spacing:.3em;text-align:center;line-height:1;color:var(--m-ink)}
+.m-brand{font-family:var(--m-d);font-weight:600;font-size:clamp(17px,4.2vw,26px);letter-spacing:.3em;text-align:center;line-height:1;color:var(--m-ink)}
 .m-brand small{display:block;font-family:var(--m-b);font-weight:600;font-size:8.5px;letter-spacing:.42em;color:var(--m-ink-faint);margin-top:5px}
 .m-icons{display:flex;gap:16px;align-items:center;justify-content:flex-end;flex:1}
 .m-icons button{background:none;border:0;color:var(--m-ink);cursor:pointer;padding:4px;display:grid;place-items:center}
