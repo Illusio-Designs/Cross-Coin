@@ -17,8 +17,8 @@
   --m-ok:#79a46b;
   --m-shadow:0 20px 48px -24px rgba(0,0,0,.75);
   --m-maxw:1180px; --m-radius:8px;
-  --m-d:'Bodoni Moda',Georgia,'Times New Roman',serif;
-  --m-b:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --m-d:'Playfair Display',Georgia,'Times New Roman',serif;
+  --m-b:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
   background:var(--m-bg);color:var(--m-ink);font-family:var(--m-b);font-weight:400;line-height:1.6;
   color-scheme:dark;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;
