@@ -13,10 +13,10 @@ const I = {
 };
 
 const NAV = [
-  { label: 'Shop', href: '/shop' },
-  { label: 'Collections', href: '/collections' },
-  { label: 'About', href: '/test#m-about' },
-  { label: 'Journal', href: '/blog' },
+  { label: 'Shop', href: '/test/shop' },
+  { label: 'Collections', href: '/test/shop' },
+  { label: 'About', href: '/test/about' },
+  { label: 'Journal', href: '/test/journal' },
 ];
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
@@ -43,8 +43,8 @@ export default function MintShell({ children }) {
           </nav>
           <Brand />
           <div className="m-icons">
-            <Link href="/search" aria-label="Search">{I.search}</Link>
-            <Link href="/account" aria-label="Account">{I.user}</Link>
+            <Link href="/test/search" aria-label="Search">{I.search}</Link>
+            <Link href="/test/account" aria-label="Account">{I.user}</Link>
             <button className="m-bag" aria-label="Cart" onClick={() => setCartOpen(true)}>{I.bag}<b>{cartCount}</b></button>
           </div>
         </div>
@@ -74,19 +74,19 @@ export default function MintShell({ children }) {
             <div>
               <h4>Shop</h4>
               <ul>
-                <li><Link href="/shop">All Fragrances</Link></li>
-                <li><Link href="/shop">Best Sellers</Link></li>
-                <li><Link href="/collections">Collections</Link></li>
-                <li><Link href="/shop">Gift Sets</Link></li>
+                <li><Link href="/test/shop">All Fragrances</Link></li>
+                <li><Link href="/test/shop">Best Sellers</Link></li>
+                <li><Link href="/test/shop">Collections</Link></li>
+                <li><Link href="/test/shop">Gift Sets</Link></li>
               </ul>
             </div>
             <div>
               <h4>About</h4>
               <ul>
-                <li><Link href="/about">Our Story</Link></li>
-                <li><Link href="/about">Craftsmanship</Link></li>
-                <li><Link href="/blog">Journal</Link></li>
-                <li><Link href="/contact">Contact</Link></li>
+                <li><Link href="/test/about">Our Story</Link></li>
+                <li><Link href="/test/about">Craftsmanship</Link></li>
+                <li><Link href="/test/journal">Journal</Link></li>
+                <li><Link href="/test/contact">Contact</Link></li>
               </ul>
             </div>
             <div>
@@ -98,9 +98,9 @@ export default function MintShell({ children }) {
               </form>
               <h4 style={{ marginTop: 22 }}>Customer Care</h4>
               <ul>
-                <li><Link href="/track-order">Track Order</Link></li>
+                <li><Link href="/test/track-order">Track Order</Link></li>
                 <li><Link href="/shipping-returns">Shipping &amp; Returns</Link></li>
-                <li><Link href="/contact">FAQs</Link></li>
+                <li><Link href="/test/contact">Contact</Link></li>
               </ul>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function MintShell({ children }) {
             <div className="m-cart__empty">
               <span style={{ opacity: .5 }}>{I.bag}</span>
               <p>Your bag is waiting to be filled with something unforgettable.</p>
-              <Link className="m-btn m-btn--fill" href="/test" onClick={() => setCartOpen(false)}>Discover scents</Link>
+              <Link className="m-btn m-btn--fill" href="/test/shop" onClick={() => setCartOpen(false)}>Discover scents</Link>
             </div>
           </div>
         ) : (

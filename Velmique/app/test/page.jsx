@@ -92,7 +92,7 @@ export default async function MaisonHome() {
         <p className="m-sublabel">Shop by scent profile</p>
         <div className="m-chips">
           {PROFILES.map((c) => (
-            <Link key={c.label} className="m-chip" href="/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
+            <Link key={c.label} className="m-chip" href="/test/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
               <span>{c.label} <span className="m-arrow">→</span></span>
             </Link>
           ))}
@@ -100,7 +100,7 @@ export default async function MaisonHome() {
         <p className="m-sublabel" style={{ marginTop: 46 }}>Shop by occasion</p>
         <div className="m-chips occ">
           {OCCASIONS.map((c) => (
-            <Link key={c.label} className="m-chip" href="/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
+            <Link key={c.label} className="m-chip" href="/test/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
               <span>{c.label} <span className="m-arrow">→</span></span>
             </Link>
           ))}
@@ -113,7 +113,7 @@ export default async function MaisonHome() {
           <span className="m-eyebrow">Our philosophy</span>
           <h2>A Deeper<br />Kind of Luxury.</h2>
           <p className="lede">At VELMIQUE, we believe a fragrance is more than a scent — it&rsquo;s a memory in the making. Each perfume is crafted in India with rare ingredients, timeless techniques and a modern sensibility, for those who live with intention.</p>
-          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--ghost" href="/about">Our story <span className="m-arrow">→</span></Link></div>
+          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--ghost" href="/test/about">Our story <span className="m-arrow">→</span></Link></div>
         </div>
         <div className="m-pillars">
           <div className="m-pillar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 3v4M12 21a6 6 0 0 0 6-6c0-4-6-9-6-9s-6 5-6 9a6 6 0 0 0 6 6Z"/></svg><div><b>Rare Ingredients</b><small>Sourced from around the world.</small></div></div>
@@ -129,7 +129,7 @@ export default async function MaisonHome() {
           <span className="m-eyebrow">The olfactive world</span>
           <h2>Layers of a Lasting Impression.</h2>
           <p className="lede">Every VELMIQUE fragrance is a balanced composition of top, heart and base notes — designed to evolve with you through the day.</p>
-          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--on-band" href="/shop">Explore the collection <span className="m-arrow">→</span></Link></div>
+          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--on-band" href="/test/shop">Explore the collection <span className="m-arrow">→</span></Link></div>
         </div>
         <div className="m-notes">
           <div className="m-note"><span className="m-note__t" style={{ background: 'radial-gradient(circle at 35% 30%,#f2d08a,#c98f3d)' }} /><div><div className="m-note__k">Top Notes</div><div className="m-note__d">Citrus, fruits, fresh spices</div></div><div className="m-note__time">0 – 15 min</div></div>
@@ -173,7 +173,7 @@ export default async function MaisonHome() {
             <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M20 12v7H4v-7M2 7h20v5H2zM12 22V7"/></svg>Perfect gifting option</span>
             <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Explore before you commit</span>
           </div>
-          <Link className="m-btn m-btn--fill" href="/shop">Shop the collection <span className="m-arrow">→</span></Link>
+          <Link className="m-btn m-btn--fill" href="/test/shop">Shop the collection <span className="m-arrow">→</span></Link>
         </div>
       </div></div></section>
     </>
