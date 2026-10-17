@@ -93,9 +93,8 @@ export default async function MaisonProduct({ params }) {
         <div className="m-pdp">
           <Gallery images={product.images} name={product.name} />
           <div>
-            {product.badge ? <span className="m-eyebrow">{product.badge} · {product.category || 'Signature Collection'}</span> : <span className="m-eyebrow">{product.category || 'Signature Collection'}</span>}
+            {product.badge ? <span className="m-eyebrow">{product.badge}</span> : null}
             <h1 className="m-pdp__title">{product.name}<span>Eau de Parfum{defVar?.size ? ` · ${defVar.size}` : ''}</span></h1>
-            <p className="m-pdp__sub">{product.description}</p>
             <div className="m-pdp__rate"><span className="m-stars">{stars(rating)}</span> <b>{Number(rating).toFixed(1)}</b> <span>{reviewCount.toLocaleString('en-IN')} reviews</span></div>
             <div className="m-pdp__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}{savePct ? <span className="m-save">SAVE {savePct}%</span> : null}</div>
             <p className="m-tax">Inclusive of all taxes</p>
