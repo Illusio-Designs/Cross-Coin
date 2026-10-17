@@ -25,11 +25,33 @@
 const crypto = require('crypto');
 const { logger } = require('../config/logging.js');
 
+// Constant-time string compare that also tolerates unequal lengths (timingSafeEqual
+// throws if the buffers differ in length).
+const safeEqual = (a, b) => {
+  const ab = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+};
+
+// Extract a static token from the request: `Authorization: Bearer <token>`
+// (iThink "Bearer Token" option) or an `X-Webhook-Token` header (iThink
+// "API Key" option, Key = X-Webhook-Token).
+const presentedToken = (req) => {
+  const auth = (req.headers['authorization'] || '').toString();
+  if (/^bearer\s+/i.test(auth)) return auth.replace(/^bearer\s+/i, '').trim();
+  return (req.headers['x-webhook-token'] || '').toString().trim();
+};
+
 const SOURCES = {
   whatsapp: { header: 'x-hub-signature-256', envKey: 'WHATSAPP_WEBHOOK_SECRET', algo: 'sha256', prefix: 'sha256=' },
   // Per-provider entries (use one of these if the route is provider-specific).
-  fship:    { header: 'x-fship-signature',   envKey: 'FSHIP_WEBHOOK_SECRET',    algo: 'sha256', prefix: '' },
-  ithink:   { header: 'x-ithink-signature',  envKey: 'ITHINK_WEBHOOK_SECRET',   algo: 'sha256', prefix: '' },
+  // tokenEnvKey: an OPTIONAL static shared token the provider sends as
+  // `Authorization: Bearer <token>` or the `X-Webhook-Token` header. iThink's
+  // webhook panel can only attach a static credential (No Auth / API Key /
+  // Bearer / Basic) — it cannot compute the HMAC signature below — so a static
+  // token is the only secure option its panel can satisfy.
+  fship:    { header: 'x-fship-signature',   envKey: 'FSHIP_WEBHOOK_SECRET',   tokenEnvKey: 'FSHIP_WEBHOOK_TOKEN',  algo: 'sha256', prefix: '' },
+  ithink:   { header: 'x-ithink-signature',  envKey: 'ITHINK_WEBHOOK_SECRET',  tokenEnvKey: 'ITHINK_WEBHOOK_TOKEN', algo: 'sha256', prefix: '' },
   // Provider-agnostic alias — accepts whichever signature header matches
   // the secret currently in env. Useful when a brand toggles
   // SHIPPING_PROVIDER and the inbound webhook header changes accordingly.
@@ -69,6 +91,20 @@ function verifyWebhookSignature(source) {
   }
 
   return function webhookSignatureMiddleware(req, res, next) {
+    // Static shared-token path (checked first). If a token is configured for
+    // this source and the request presents a matching one, accept it — this is
+    // what iThink's panel can send (Bearer or X-Webhook-Token). A configured
+    // token that doesn't match is NOT a hard reject here: fall through to the
+    // HMAC check so a provider can use either scheme.
+    const token = cfg.tokenEnvKey ? process.env[cfg.tokenEnvKey] : null;
+    if (token) {
+      const got = presentedToken(req);
+      if (got && safeEqual(got, token)) {
+        req.webhookVerified = true;
+        return next();
+      }
+    }
+
     const secret = process.env[cfg.envKey];
 
     // No secret configured. By default we log + pass through (so webhook
