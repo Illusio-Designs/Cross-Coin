@@ -204,7 +204,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .techcard .mk svg{ width: 22px; height: 22px; }
 .cc-test-root .techcard b{ color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: "Fraunces"; }
 .cc-test-root .techcard span{ color: #c6bce4; font-size: 13px; }
-.cc-test-root .revgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.cc-test-root .revgrid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .cc-test-root .rev{ border: 2px solid var(--line-ink); border-radius: var(--r); background: linear-gradient(160deg, color-mix(in srgb, var(--crimson) 8%, var(--surface)), var(--surface)); padding: 20px; box-shadow: var(--stamp-sm); }
 .cc-test-root .rev__top{ display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .cc-test-root .rev .stars{ margin-bottom: 8px; }

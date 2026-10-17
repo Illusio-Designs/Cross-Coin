@@ -13,6 +13,12 @@ import { SIZE_GUIDE } from '../../lib/sizeGuide';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+// Format a review's timestamp as "Mon YYYY" (e.g. "Oct 2026"); blank if unparseable.
+const fmtReviewDate = (d) => {
+  if (!d) return '';
+  const t = new Date(d);
+  return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+};
 
 export default function TestProduct({ preview = true }) {
   const router = useRouter();
@@ -186,7 +192,7 @@ export default function TestProduct({ preview = true }) {
               <h1>{p.name}</h1>
               <button className={`wishsq${isWished(p.id) ? ' on' : ''}`} aria-label="Save to wishlist" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(18)}</button>
             </div>
-            {p.rating && <div className="stars">★★★★★ <small>{p.rating} ({p.revs})</small></div>}
+            {p.rating && <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(Number(p.rating)))))} <small>{p.rating}{p.revs ? ` (${p.revs})` : ''}</small></div>}
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">MRP incl. of all taxes</div>
             <div className="pdpstatus">
@@ -411,27 +417,20 @@ export default function TestProduct({ preview = true }) {
           {rv.done && <p className="mono" style={{ color: 'var(--ink-soft)', fontSize: 13, padding: '8px 0 18px' }}>✓ Thanks! Your review is in for moderation.</p>}
 
           {prodReviews.items.length > 0 ? (
-            <div className="revscroll">
-              {[0, 1, 2].map((row) => {
-                const base = prodReviews.items;
-                const rotated = [...base.slice(row), ...base.slice(0, row)];
-                const cards = [...rotated, ...rotated];
-                return (
-                  <div className={`revscroll__track${row === 1 ? ' revscroll__track--rev' : ''}`} key={row}>
-                    {cards.map((r, i) => (
-                      <div className="rev" key={i}>
-                        <div className="rev__top">
-                          <div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div>
-                          <div className="who"><b>{r.name}</b>{r.loc ? <span>{r.loc}</span> : null}</div>
-                          <span className="vbadge">VERIFIED</span>
-                        </div>
-                        <div className="stars">{'★★★★★'.slice(0, Math.max(1, Math.round(r.rating)))}</div>
-                        <p>&ldquo;{r.text}&rdquo;</p>
-                      </div>
-                    ))}
+            // Show the ACTUAL reviews once each, in a tidy grid. (Previously
+            // these were rotated across 3 rows and doubled, which turned a
+            // couple of real reviews into a wall of repeats that read as fake.)
+            <div className="revgrid">
+              {prodReviews.items.map((r, i) => (
+                <div className="rev" key={i}>
+                  <div className="rev__top">
+                    <div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div>
+                    <div className="who"><b>{r.name}</b>{r.date ? <span>{fmtReviewDate(r.date)}</span> : null}</div>
                   </div>
-                );
-              })}
+                  <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}<small> {Number(r.rating).toFixed(1)}</small></div>
+                  <p>&ldquo;{r.text}&rdquo;</p>
+                </div>
+              ))}
             </div>
           ) : (
             <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '6px 0 10px' }}>No reviews yet — be the first to write one.</p>
