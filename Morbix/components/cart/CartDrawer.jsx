@@ -110,7 +110,7 @@ function _xsFetch() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, subtotal, count, setQty, remove, clear, open, closeCart, add } = useCart();
+  const { items, subtotal, count, setQty, remove, clear, open, openCart, closeCart, add } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
@@ -534,6 +534,46 @@ export default function CartDrawer() {
     setCouponError('');
     setCouponInput('');
   };
+
+  // ── Abandoned-cart recovery (?recover=1 &optional coupon=CODE) ────────────
+  // A shopper returning from a WhatsApp recovery link lands with ?recover=1.
+  // Their cart still lives in THIS browser's localStorage, so we only reopen
+  // the drawer (if the cart is empty — e.g. a different device — opening it is
+  // still fine). A passed coupon is stashed + pre-filled, then the effect below
+  // auto-applies it once the cart total is known so any minimum-cart rule passes.
+  const [recoverCoupon, setRecoverCoupon] = useState(null);
+
+  // Mount: read the URL, reopen the cart, stash/pre-fill the coupon, then strip
+  // the recovery params so a refresh doesn't re-trigger. Best-effort (SSR-guarded,
+  // wrapped in try/catch) — it must never break the page.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+      openCart();
+      const code = (params.get('coupon') || '').trim().toUpperCase();
+      if (code) { setRecoverCoupon(code); setCouponInput(code); }
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash);
+    } catch { /* best-effort — never throw */ }
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-apply the stashed recovery coupon via the SAME validate/apply path as
+  // the Apply button, once the cart total is known (> 0) and no coupon is applied
+  // yet. Clears recoverCoupon up-front so it fires once — an invalid code won't
+  // loop, and the pre-filled input stays for a one-tap manual apply.
+  useEffect(() => {
+    if (!recoverCoupon || appliedCoupon || couponLoading || total <= 0) return;
+    const code = recoverCoupon;
+    setRecoverCoupon(null);
+    try { applyCoupon(code); } catch { /* best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoverCoupon, appliedCoupon, couponLoading, total]);
 
   const sortedFees = useMemo(() => {
     const arr = [...fees];

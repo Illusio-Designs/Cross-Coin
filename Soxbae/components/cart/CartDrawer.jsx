@@ -113,7 +113,7 @@ function _xsFetch() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, subtotal, count, setQty, remove, clear, open, closeCart, add } = useCart();
+  const { items, subtotal, count, setQty, remove, clear, open, openCart, closeCart, add } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
@@ -147,6 +147,10 @@ export default function CartDrawer() {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
   const offersRef = useRef(null);
+  // Abandoned-cart recovery deep link (?recover=1&coupon=CODE): the coupon code
+  // pulled off the URL, waiting to be auto-applied once the cart total is known.
+  const [recoverCoupon, setRecoverCoupon] = useState('');
+  const recoverHandledRef = useRef(false);
   // Two-step checkout: 1 = review cart, 2 = delivery + payment.
   const [coStep, setCoStep] = useState(1);
   // Guards the abandoned-cart capture so it fires at most once per phone number.
@@ -677,6 +681,49 @@ export default function CartDrawer() {
     setCouponError('');
     setCouponInput('');
   };
+
+  // ── Abandoned-cart recovery deep link ──────────────────────────────────────
+  // A WhatsApp "recover your cart" link opens the store with ?recover=1 (and an
+  // optional &coupon=CODE). On the shopper's own device the cart still lives in
+  // localStorage, so we only reopen the drawer — and, when a coupon is passed,
+  // auto-apply it through the SAME validate/apply path used when a code is typed
+  // and "Apply" is clicked. Best-effort: wrapped in try/catch, SSR-guarded, and
+  // never breaks the page.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (recoverHandledRef.current) return;
+    recoverHandledRef.current = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+      openCart();
+      const code = String(params.get('coupon') || '').trim().toUpperCase();
+      if (code) {
+        // Remember it for the apply-once-total-known effect below, and pre-fill
+        // the coupon input so it's visible (and a fallback if auto-apply can't run).
+        setRecoverCoupon(code);
+        setCouponInput(code);
+      }
+      // Strip recover+coupon from the URL so a refresh doesn't re-trigger it.
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      const url = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState(null, '', url);
+    } catch { /* best-effort — never break the page */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apply the recovery coupon once the cart total is known (subtotal > 0) and no
+  // coupon is applied yet, so any minimum-cart rule validates against the real
+  // total. Goes through applyCoupon() — the exact path the "Apply" button uses.
+  useEffect(() => {
+    if (!recoverCoupon || !open || subtotal <= 0) return;
+    if (appliedCoupon || couponLoading) return;
+    applyCoupon(recoverCoupon);
+    setRecoverCoupon('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoverCoupon, open, subtotal, appliedCoupon, couponLoading]);
 
   // Compact one-line summary for an available offer, e.g. "10% off, min ₹499".
   const couponSummary = (c) => {
