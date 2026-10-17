@@ -30,6 +30,34 @@ function extractUploadedUrl(result) {
 // images keep working unchanged.
 const IMAGES_KEY = '_images';
 
+// Explicit, high-contrast react-select styling. Without this the menu options
+// inherited a near-white text colour from the dark admin theme and were almost
+// invisible on the white dropdown. Portalling the menu to <body> also keeps it
+// above the modal so long option lists aren't clipped.
+const selectStyles = {
+  menuPortal: (base) => ({ ...base, zIndex: 100000 }),
+  menu: (base) => ({ ...base, zIndex: 100000, backgroundColor: '#ffffff', overflow: 'hidden' }),
+  menuList: (base) => ({ ...base, backgroundColor: '#ffffff' }),
+  option: (base, state) => ({
+    ...base,
+    color: '#1f2937',
+    backgroundColor: state.isSelected ? '#dbe4ff' : state.isFocused ? '#f1f5f9' : '#ffffff',
+    cursor: 'pointer',
+  }),
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: '#ffffff',
+    borderColor: state.isFocused ? '#6366f1' : '#cbd5e1',
+    boxShadow: 'none',
+  }),
+  singleValue: (base) => ({ ...base, color: '#1f2937' }),
+  input: (base) => ({ ...base, color: '#1f2937' }),
+  placeholder: (base) => ({ ...base, color: '#64748b' }),
+  multiValue: (base) => ({ ...base, backgroundColor: '#eef2ff' }),
+  multiValueLabel: (base) => ({ ...base, color: '#1f2937' }),
+  noOptionsMessage: (base) => ({ ...base, color: '#64748b' }),
+};
+
 const AttributeSelector = ({
   variationIndex,
   attributes, // All attribute types (e.g., Size, Color) with their values
@@ -115,6 +143,8 @@ const AttributeSelector = ({
             <label>{attributeName}</label>
             <CreatableSelect
               isMulti
+              styles={selectStyles}
+              menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
               options={values.map(value => ({ value, label: value }))}
               value={selectedValues.map(value => ({ value, label: value }))}
               onChange={(selected) => handleAttributeChange(attributeName, selected)}
