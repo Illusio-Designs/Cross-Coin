@@ -27,14 +27,16 @@ function cleanUrl(url) {
   return url;
 }
 
-async function brandFetch(path) {
+async function brandFetch(path, { fresh = false } = {}) {
   // Next 14 caches fetch() with force-cache by default, which froze the product
   // payload at build/first-request time — so admin edits (new description or
-  // attribute images, price, stock) never appeared. Revalidate every 60s so the
-  // storefront picks up dashboard changes without a redeploy.
+  // attribute images, price, stock) never appeared. List pages revalidate every
+  // 60s; the single-product detail uses `fresh` → no-store so a just-edited
+  // product (new description / attribute images) always renders immediately,
+  // regardless of any stale cache entry carried over a deploy.
   const res = await fetch(`${API_URL}${path}`, {
     headers: { 'X-Brand-Name': BRAND_NAME },
-    next: { revalidate: 60 },
+    ...(fresh ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
   });
   if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return res.json();
@@ -336,7 +338,7 @@ export async function getProductsByCategory(categoryId, { page = 1, limit = 50 }
 export async function getProductBySlug(slug) {
   if (!slug) return null;
   try {
-    const data = await brandFetch(`/api/products/by-slug/${encodeURIComponent(slug)}`);
+    const data = await brandFetch(`/api/products/by-slug/${encodeURIComponent(slug)}`, { fresh: true });
     return mapProduct(data?.data || data);
   } catch {
     return null;
