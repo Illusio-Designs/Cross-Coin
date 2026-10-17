@@ -423,7 +423,14 @@ async function deleteTemplate(name, brandId = 1) {
 // The seeder (buildTemplates) AND every sender resolve names through tName() so
 // they can never drift apart.
 const TEMPLATE_VERSION = '_v2';
-const tName = (base) => `${base}${TEMPLATE_VERSION}`;
+// Per-template version overrides. A template whose SHAPE changed (new button,
+// new variable set) can't be updated in place — Meta has no edit API here and
+// locks a deleted name for ~4 weeks — so we give it a NEW name instead. A plain
+// "Seed Templates" then creates it cleanly (Seed skips names that already
+// exist). cart_abandoned went to _v3 when it gained the "Complete Order"
+// cart-recovery button. Everything else stays on TEMPLATE_VERSION.
+const TEMPLATE_VERSION_OVERRIDES = { cart_abandoned: '_v3' };
+const tName = (base) => `${base}${TEMPLATE_VERSION_OVERRIDES[base] || TEMPLATE_VERSION}`;
 
 // ─── Build the canonical template list ────────────────────────────────────────
 // Used by both seedDefaultTemplates and updateTemplate / updateAllTemplates
@@ -1139,8 +1146,27 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 // approved template, so Meta rejected/garbled the send.) The "Complete Order"
 // button carries the brand id; /api/cart-recover/:brandId reopens the cart with
 // the coupon pre-applied. Coupon defaults to CART10.
+// Pick the abandoned-cart template that is actually APPROVED right now: the new
+// versioned one (with the Complete Order button) once Meta approves it, else the
+// previous version, so sends never break during the review window. Both accept
+// the same 4 body params [name, product, brand, coupon].
+async function _resolveAbandonedTemplate(brandId = 1) {
+  const current = tName('cart_abandoned');              // e.g. cart_abandoned_v3 (has the button)
+  const previous = `cart_abandoned${TEMPLATE_VERSION}`; // e.g. cart_abandoned_v2 (no button yet)
+  if (current === previous) return current;
+  try {
+    const data = await listTemplates(brandId);
+    const list = data?.data || [];
+    const approved = (n) => list.some(t => t.name === n && String(t.status).toUpperCase() === 'APPROVED');
+    if (approved(current)) return current;
+    if (approved(previous)) return previous;
+  } catch (_) { /* fall through to newest */ }
+  return current;
+}
+
 async function sendAbandonedCart(phone, data, brandId = 1) {
-  return sendTemplate(phone, tName('cart_abandoned'), [
+  const templateName = await _resolveAbandonedTemplate(brandId);
+  return sendTemplate(phone, templateName, [
     data.customerName || 'there',
     data.itemsSummary || data.productName || 'your items',
     await _brandName(brandId),
