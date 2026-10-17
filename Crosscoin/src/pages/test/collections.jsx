@@ -2,10 +2,8 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { I } from '../../components/test/ui';
+import { I, Thumb } from '../../components/test/ui';
 import { fetchCategories } from '../../components/test/real';
-
-const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9', '#7a1f32'];
 
 export default function TestCollections() {
   const router = useRouter();
@@ -34,14 +32,13 @@ export default function TestCollections() {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && cats.length === 0
-          ? <div className="cgrid" style={{ marginTop: 24 }}>{Array.from({ length: 6 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 190 }} key={i} aria-hidden="true" />)}</div>
+          ? <div className="catgrid" style={{ marginTop: 24 }}>{Array.from({ length: 8 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 220 }} key={i} aria-hidden="true" />)}</div>
           : (
-            <div className="cgrid" style={{ marginTop: 24 }}>
-              {cats.map((c, i) => (
-                <button className="ctile" key={c.id || c.name} style={{ '--c': SWATCH[i % SWATCH.length] }} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
-                  <span className="ctile__coin" />
-                  <div><div className="ctile__no">0{i + 1}</div><div className="ctile__nm">{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</div></div>
-                  <span className="ctile__go"><span className="ctile__dot" />{c.count != null ? `${c.count} styles` : 'Shop'} {I.arrow(14)}</span>
+            <div className="catgrid" style={{ marginTop: 24 }}>
+              {cats.map((c) => (
+                <button className="cattile" key={c.id || c.name} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                  <span className="cattile__img"><Thumb src={c.img} /></span>
+                  <span className="cattile__bar"><b>{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</b><span className="cattile__ar">{I.arrow(16)}</span></span>
                 </button>
               ))}
             </div>

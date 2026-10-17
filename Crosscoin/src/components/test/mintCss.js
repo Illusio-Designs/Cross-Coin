@@ -509,6 +509,18 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .dd__opt .tick{ opacity: 0; font-size: 12px; }
 .cc-test-root .dd__opt.sel .tick{ opacity: 1; }
 
+/* --- Image-based category tiles (B: image + caption bar) --- */
+.cc-test-root .catgrid{ display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+@media (max-width: 820px){ .cc-test-root .catgrid{ grid-template-columns: 1fr 1fr; } }
+.cc-test-root .cattile{ display: flex; flex-direction: column; text-align: left; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); overflow: hidden; cursor: pointer; padding: 0; transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
+.cc-test-root .cattile:hover{ transform: translate(-2px,-2px); box-shadow: 5px 5px 0 var(--line-ink); }
+.cc-test-root .cattile__img{ position: relative; height: 0; padding-top: 100%; background: var(--paper-2); overflow: hidden; }
+.cc-test-root .cattile__img img{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cc-test-root .cattile__img > span{ position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
+.cc-test-root .cattile__bar{ display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 2px solid var(--line-ink); }
+.cc-test-root .cattile__bar b{ font-family: "Fraunces"; font-weight: 700; font-size: 15px; color: var(--ink); }
+.cc-test-root .cattile__ar{ color: var(--crimson); display: grid; place-items: center; flex: 0 0 auto; }
+
 /* --- Home coupon strip (real live coupons, tap to copy) --- */
 .cc-test-root .coupstrip{ overflow: hidden; border-block: 2px solid var(--line-ink); background: var(--indigo); }
 .cc-test-root .coupstrip__track{ display: flex; gap: 0; width: max-content; animation: cccoup 32s linear infinite; }

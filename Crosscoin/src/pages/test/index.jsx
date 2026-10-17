@@ -5,7 +5,6 @@ import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards, Thumb } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 
-const SWATCH = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a'];
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -100,14 +99,13 @@ export default function TestHome() {
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 01 ] Denominations</span><h2>Shop by category</h2></div>
             <span className="seelink" onClick={() => router.push('/test/shop')}>Browse all →</span></div>
-          <div className="cgrid">
+          <div className="catgrid">
             {loading && cats.length === 0
-              ? Array.from({ length: 6 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 190 }} key={i} aria-hidden="true" />)
-              : cats.map((c, i) => (
-                <button className="ctile" key={c.id || c.name} style={{ '--c': SWATCH[i % SWATCH.length] }} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
-                  <span className="ctile__coin" />
-                  <div><div className="ctile__no">0{i + 1}</div><div className="ctile__nm">{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</div></div>
-                  <span className="ctile__go"><span className="ctile__dot" />{c.count != null ? `${c.count} styles` : 'Shop'} {I.arrow(14)}</span>
+              ? Array.from({ length: 8 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 220 }} key={i} aria-hidden="true" />)
+              : cats.map((c) => (
+                <button className="cattile" key={c.id || c.name} onClick={() => router.push(`/test/shop?cat=${encodeURIComponent(c.name)}`)}>
+                  <span className="cattile__img"><Thumb src={c.img} /></span>
+                  <span className="cattile__bar"><b>{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</b><span className="cattile__ar">{I.arrow(16)}</span></span>
                 </button>
               ))}
           </div>
