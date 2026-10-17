@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { getProductReviews } from '@/lib/api/reviews';
+import { getFaqs } from '@/lib/api/faqs';
 import ProductCard from '../../_components/ProductCard';
 import Gallery from '../../_components/Gallery';
 import PdpBuy from '../../_components/PdpBuy';
 import DeliveryCheck from '../../_components/DeliveryCheck';
+import ReviewRow from '../../_components/ReviewRow';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -49,10 +51,15 @@ export default async function MaisonProduct({ params }) {
     );
   }
 
-  const [reviewsRes, bestsellers] = await Promise.all([
-    getProductReviews(product.id, { limit: 12 }),
+  const [reviewsRes, bestsellers, productFaqs, globalFaqs] = await Promise.all([
+    getProductReviews(product.id, { limit: 30 }),
     getBestsellers(5),
+    getFaqs('product', product.id),
+    getFaqs('global'),
   ]);
+  // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
+  // "all products") FAQs, fall back to the site-wide global set.
+  const faqs = productFaqs.length ? productFaqs : globalFaqs;
 
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
   const attrs = defVar?.attributes || {};
@@ -77,9 +84,6 @@ export default async function MaisonProduct({ params }) {
   ].filter(([, v]) => v);
   if (defVar?.size) spec.push(['Size', defVar.size]);
 
-  // Longevity hours for the FAQ copy (used in "How long does it last?").
-  const longev = tokens(attrs['longevity (hrs)'] || attrs['longevity'])[0] || '';
-
   const reviews = reviewsRes?.reviews || [];
   const reviewCount = reviewsRes?.pagination?.total || product.reviews || reviews.length;
   const rating = product.rating || reviewsRes?.stats?.average || 0;
@@ -87,6 +91,26 @@ export default async function MaisonProduct({ params }) {
     ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
 
   const related = (bestsellers || []).filter((p) => String(p.id) !== String(product.id)).slice(0, 4);
+
+  // Reviews wall (Morbix pattern): split the sample into three rows that scroll
+  // in alternating directions for a moving "wall of reviews" look.
+  const rList = reviews.slice(0, 30);
+  const rPer = Math.ceil(rList.length / 3) || 1;
+  const reviewRows = [rList.slice(0, rPer), rList.slice(rPer, rPer * 2), rList.slice(rPer * 2)].filter((r) => r.length);
+  const reviewDirs = ['left', 'right', 'left'];
+  const renderReview = (v, i) => {
+    const name = v.reviewerName || v.name || 'Verified Buyer';
+    return (
+      <div className="m-rev" key={v.id || i}>
+        <div className="m-stars">{stars(v.rating)}</div>
+        <q>{v.review || v.comment}</q>
+        <div className="m-rev__by">
+          <span className="m-rev__av" style={{ background: AV[(typeof i === 'number' ? i : 0) % AV.length] }}>{name[0]}</span>
+          <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg>Verified Buyer</small></span>
+        </div>
+      </div>
+    );
+  };
 
 
   return (
@@ -183,34 +207,35 @@ export default async function MaisonProduct({ params }) {
             <div><span className="m-eyebrow">Customer reviews</span><h2 style={{ fontSize: 'clamp(28px,4vw,42px)', marginTop: 8 }}>Loved &amp; Verified.</h2></div>
             <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars">{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
           </div>
-          <div className="m-revs">
-            {reviews.slice(0, 6).map((v, i) => {
-              const name = v.reviewerName || v.name || 'Verified Buyer';
-              return (
-                <div className="m-rev" key={v.id || i}>
-                  <div className="m-stars">{stars(v.rating)}</div>
-                  <q>{v.review || v.comment}</q>
-                  <div className="m-rev__by">
-                    <span className="m-rev__av" style={{ background: AV[i % AV.length] }}>{name[0]}</span>
-                    <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg>Verified Buyer</small></span>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="m-rvwall">
+            {reviewRows.map((row, idx) => (
+              <ReviewRow
+                key={idx}
+                items={row}
+                staticClassName="m-revs"
+                min={4}
+                direction={reviewDirs[idx]}
+                render={renderReview}
+              />
+            ))}
           </div>
         </div></section>
       ) : null}
 
-      {/* FAQ */}
-      <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
-        <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
-        <div className="m-faq">
-          <details><summary>How long does {product.name} last?</summary><p>{product.name} is an Eau de Parfum{longev ? ` with around ${longev} hours of longevity on skin` : ''}. Projection is strong, so one or two sprays is plenty.</p></details>
-          <details><summary>What does it smell like?</summary><p>{product.description}</p></details>
-          <details><summary>Is it suitable for daily wear?</summary><p>Yes — {product.name} is versatile and refined, balanced enough for the office and elegant enough for an evening out{tokens(attrs['gender'])[0] ? `. It is a ${tokens(attrs['gender'])[0].toLowerCase()} fragrance` : ''}.</p></details>
-          <details><summary>Is it vegan and cruelty-free?</summary><p>Yes. Every VELMIQUE fragrance is vegan, cruelty-free and IFRA-certified for skin safety, with easy 7-day returns.</p></details>
-        </div>
-      </div></section>
+      {/* FAQ — admin-managed, from the backend */}
+      {faqs.length ? (
+        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
+          <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
+          <div className="m-faq">
+            {faqs.map((f) => (
+              <details key={f.id}>
+                <summary>{f.question}</summary>
+                <div className="m-faq__a" dangerouslySetInnerHTML={{ __html: f.answer || '' }} />
+              </details>
+            ))}
+          </div>
+        </div></section>
+      ) : null}
 
       {/* You may also like */}
       {related.length ? (
