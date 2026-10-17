@@ -85,6 +85,7 @@ export function normalizeProduct(p) {
       off: vcompare > vprice && vcompare > 0 ? Math.round((1 - vprice / vcompare) * 100) : 0,
       img: imgOf(selectProductImage(p, v)),
       pairs, isPack,
+      stock: Number(v.stock ?? v.quantity ?? v.inventory ?? v.available_quantity ?? v.stock_quantity ?? 0) || 0,
       label: isPack ? `Pack of ${pairs}` : (vcolors[0] || 'Single'),
       swatch: colorToCss(vcolors[0] || ''),
     };

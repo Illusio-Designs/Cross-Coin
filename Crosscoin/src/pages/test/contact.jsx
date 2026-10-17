@@ -33,6 +33,21 @@ export default function TestContact() {
             <button className="btn btn--crimson btn--block" type="submit">Send message</button>
           </form>
         </div>
+
+        {/* Grievance officer (DPDP) */}
+        <div className="wrap" id="grievance" style={{ maxWidth: 820, paddingBottom: 60, scrollMarginTop: 90 }}>
+          <div className="grievance">
+            <span className="eyebrow">Grievance &amp; data privacy</span>
+            <h3>Grievance Officer</h3>
+            <p>For complaints, data-privacy requests or escalations under the DPDP Act, contact our Grievance Officer. We acknowledge every request within 48 hours and resolve within the statutory timeline.</p>
+            <dl className="grievance__dl">
+              <div><dt>Officer</dt><dd>Grievance Officer, Obzus India Pvt. Ltd.</dd></div>
+              <div><dt>Email</dt><dd>obzusindia@gmail.com</dd></div>
+              <div><dt>Phone</dt><dd>+91 97128 91700</dd></div>
+              <div><dt>Address</dt><dd>Survey No. 1288, Vajepar, Royal Plaza, Panchasar Road, Morbi 363641, Gujarat (India)</dd></div>
+            </dl>
+          </div>
+        </div>
       </div>
     </TestLayout>
   );

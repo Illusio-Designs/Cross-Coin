@@ -455,6 +455,24 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .perpair__dot{ width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-ink); cursor: pointer; padding: 0; }
 .cc-test-root .perpair__dot.on{ box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--crimson); }
 
+.cc-test-root .lowstock{ display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--crimson); }
+.cc-test-root .grievance{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 22px; margin-top: 14px; }
+.cc-test-root .grievance h3{ font-family: "Fraunces", serif; font-weight: 700; font-size: 20px; margin: 8px 0 8px; }
+.cc-test-root .grievance p{ color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; max-width: 64ch; }
+.cc-test-root .grievance__dl{ display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0; }
+.cc-test-root .grievance__dl > div{ display: flex; gap: 12px; font-size: 13.5px; }
+.cc-test-root .grievance__dl dt{ font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); min-width: 72px; }
+.cc-test-root .grievance__dl dd{ margin: 0; color: var(--ink-soft); }
+.cc-test-root .artbar{ display: flex; gap: 10px; margin: 14px 0 4px; }
+.cc-test-root .artbtn{ display: inline-flex; align-items: center; gap: 7px; font-family: "Space Mono", monospace; font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 8px 14px; cursor: pointer; }
+.cc-test-root .artbtn.on{ color: var(--crimson); border-color: var(--crimson); }
+.cc-test-root .arttoc{ border: 2px solid var(--line); border-radius: var(--r); background: var(--paper-2); padding: 16px 18px; margin: 18px 0; }
+.cc-test-root .arttoc__h{ font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+.cc-test-root .arttoc ol{ margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.cc-test-root .arttoc a{ color: var(--ink-soft); font-size: 14px; text-decoration: none; }
+.cc-test-root .arttoc a:hover{ color: var(--crimson); }
+.cc-test-root .packstep{ margin: 10px 0 2px; }
+
 /* --- Cart bundle-pack group card --- */
 .cc-test-root .packcolors{ display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 6px 0; }
 .cc-test-root .packcolors__c{ display: inline-flex; align-items: center; gap: 6px; font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-soft); }

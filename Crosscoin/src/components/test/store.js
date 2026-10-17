@@ -90,6 +90,25 @@ export function cartGroups(c = cart) {
   });
 }
 
+// Change a whole pack group to a bundle tier (in-cart): reprice every colour
+// line at the tier's per-pair rate and nudge the largest line so the group's
+// total pairs lands on the tier. Mirrors Morbix's group stepper.
+export function setPackTier(packId, tierPairs, tierTotal) {
+  hydrate();
+  const lines = cart.filter((i) => i.packId === packId);
+  if (!lines.length || !tierPairs) return;
+  const perPair = Math.round(tierTotal / tierPairs);
+  const curTotal = lines.reduce((s, l) => s + l.qty, 0);
+  const anchor = lines.reduce((a, b) => (b.qty > a.qty ? b : a));
+  const others = curTotal - anchor.qty;
+  const newAnchorQty = Math.max(1, tierPairs - others);
+  cart = cart.map((i) => {
+    if (i.packId !== packId) return i;
+    return { ...i, qty: i.key === anchor.key ? newAnchorQty : i.qty, unit: perPair, packSize: tierPairs, pack: `${tierPairs} Pairs` };
+  });
+  emit();
+}
+
 // Reprice a line to a bundle tier (Buy More, Save More in the cart).
 export function setLinePack(key, { qty, unit, pack, packq }) {
   hydrate();

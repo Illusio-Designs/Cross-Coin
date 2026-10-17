@@ -186,7 +186,9 @@ export default function TestProduct() {
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">MRP incl. of all taxes</div>
             <div className="pdpstatus">
-              <span className="instock">{I.check(13)} In stock</span>
+              {cur.stock > 0 && cur.stock <= 5
+                ? <span className="lowstock">⚠ Only {cur.stock} left</span>
+                : <span className="instock">{I.check(13)} In stock</span>}
               <span className="freeship">{I.truck(15)} <strong>Free shipping</strong> on all orders</span>
             </div>
 

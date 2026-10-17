@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, addItem, cartGroups } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
@@ -790,6 +790,9 @@ export default function TestLayout({ children }) {
                         </div>
                         <div className="citem__var"><span className="packchip">{g.packSize}-pair pack</span>{g.size ? ` · ${g.size}` : ''}</div>
                         <div className="packcolors">{g.lines.map((l) => <span className="packcolors__c" key={l.key}><i style={{ background: colorToCss(l.color) }} />{l.qty}× {l.color || '—'}</span>)}</div>
+                        {tiersMap[g.lines[0].id] && tiersMap[g.lines[0].id].length > 0 && (
+                          <div className="packstep"><CartPairStepper item={{ base: g.lines[0].base, unit: g.perPair, qty: g.pairs }} tiers={tiersMap[g.lines[0].id]} onSet={(p, t) => setPackTier(g.packId, p, t)} /></div>
+                        )}
                         <div className="citem__bot">
                           <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pair</span></div>
                         </div>
