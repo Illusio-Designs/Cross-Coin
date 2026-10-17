@@ -77,6 +77,9 @@ export default async function MaisonProduct({ params }) {
   ].filter(([, v]) => v);
   if (defVar?.size) spec.push(['Size', defVar.size]);
 
+  // Longevity hours for the FAQ copy (used in "How long does it last?").
+  const longev = tokens(attrs['longevity (hrs)'] || attrs['longevity'])[0] || '';
+
   const reviews = reviewsRes?.reviews || [];
   const reviewCount = reviewsRes?.pagination?.total || product.reviews || reviews.length;
   const rating = product.rating || reviewsRes?.stats?.average || 0;
