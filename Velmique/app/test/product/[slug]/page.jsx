@@ -186,7 +186,7 @@ export default async function MaisonProduct({ params }) {
       {/* Fragrance notes */}
       {(notesWithImg.length || noteNames.length) ? (
         <section className="m-section m-atelier"><div className="m-wrap">
-          <div style={{ marginBottom: 32 }}><span className="m-eyebrow">Fragrance notes</span><h2 style={{ fontSize: 'clamp(28px,4vw,44px)', color: '#F3E7D5', marginTop: 10 }}>The Composition.</h2></div>
+          <div style={{ marginBottom: 32, textAlign: 'center' }}><span className="m-eyebrow">Fragrance notes</span><h2 style={{ fontSize: 'clamp(28px,4vw,44px)', color: '#F3E7D5', marginTop: 10 }}>The Composition</h2></div>
           <div className="m-pnotegrid">
             {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
               <div className="m-pn" key={n.name + i}>

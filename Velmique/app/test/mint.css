@@ -7,20 +7,21 @@
    so nothing collides with the live storefront's globals.css.
    ───────────────────────────────────────────────────────────────────────── */
 .m-root{
-  --m-bg:#F4ECE0; --m-bg-tint:#EDE1D1; --m-surface:#FBF6EF;
-  --m-ink:#2A1E16; --m-ink-soft:#6E5C4C; --m-ink-faint:#9A8771;
-  --m-line:rgba(42,30,22,.14); --m-line-soft:rgba(42,30,22,.08);
-  --m-accent:#A77C3E; --m-accent-deep:#866027; --m-accent-soft:#C9A463;
-  --m-rose:#C58C84;
-  --m-band:#231811; --m-band-2:#2E2016; --m-on-band:#F0E4D3; --m-on-band-soft:#B6A286; --m-band-line:rgba(240,228,211,.14);
-  --m-ok:#4f7a52;
-  --m-shadow:0 18px 44px -24px rgba(42,30,22,.5);
+  /* Onyx & Gold — black ground, gold foil accent (sampled from the logo). */
+  --m-bg:#0d0d0f; --m-bg-tint:#141417; --m-surface:#17171a;
+  --m-ink:#f3ead6; --m-ink-soft:#c7c0b2; --m-ink-faint:#938d82;
+  --m-line:rgba(255,255,255,.13); --m-line-soft:rgba(255,255,255,.06);
+  --m-accent:#d9a43b; --m-accent-deep:#e8c877; --m-accent-soft:#ffe78f;
+  --m-rose:#cf8d86;
+  --m-band:#000000; --m-band-2:#17141a; --m-on-band:#f3ead6; --m-on-band-soft:#9a9488; --m-band-line:rgba(217,164,59,.24);
+  --m-ok:#79a46b;
+  --m-shadow:0 20px 48px -24px rgba(0,0,0,.75);
   --m-maxw:1180px; --m-radius:8px;
   --m-d:'Bodoni Moda',Georgia,'Times New Roman',serif;
   --m-b:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
   background:var(--m-bg);color:var(--m-ink);font-family:var(--m-b);font-weight:400;line-height:1.6;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;
+  color-scheme:dark;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;
 }
 .m-root *{box-sizing:border-box}
 .m-root img{max-width:100%;display:block}
@@ -33,7 +34,7 @@
 .m-btn{display:inline-flex;align-items:center;gap:.6em;font-family:var(--m-b);font-weight:700;font-size:12px;
   letter-spacing:.16em;text-transform:uppercase;padding:15px 26px;border-radius:var(--m-radius);cursor:pointer;
   border:1.5px solid var(--m-ink);background:transparent;color:var(--m-ink);transition:.25s;text-align:center}
-.m-btn--fill{background:var(--m-accent);border-color:var(--m-accent);color:#fff}
+.m-btn--fill{background:var(--m-accent);border-color:var(--m-accent);color:#17120a}
 .m-btn--fill:hover{background:var(--m-accent-deep);border-color:var(--m-accent-deep)}
 .m-btn--ghost:hover{background:var(--m-ink);color:var(--m-bg)}
 .m-btn--on-band{border-color:var(--m-on-band);color:var(--m-on-band)}
@@ -70,7 +71,7 @@
 .m-burger{display:none}
 
 /* ── Hero ── */
-.m-hero{position:relative;background:radial-gradient(120% 80% at 78% 30%,#3a271a 0%,#241810 46%,#1c130c 100%);color:var(--m-on-band);overflow:hidden;isolation:isolate}
+.m-hero{position:relative;background:radial-gradient(120% 80% at 78% 30%,#25222a 0%,#131216 46%,#0a0a0c 100%);color:var(--m-on-band);overflow:hidden;isolation:isolate}
 .m-hero__grid{display:grid;grid-template-columns:1.02fr .98fr;gap:30px;align-items:center;padding-block:clamp(40px,7vw,84px);min-height:clamp(420px,60vw,600px)}
 .m-hero .m-eyebrow{color:var(--m-accent-soft)}
 .m-hero h1{font-size:clamp(50px,9vw,100px);font-weight:400;color:#F4E7D4;margin:14px 0 0;letter-spacing:0}
@@ -100,7 +101,7 @@
 .m-pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
 .m-card{background:var(--m-surface);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);overflow:hidden;display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s}
 .m-card:hover{transform:translateY(-6px);box-shadow:var(--m-shadow)}
-.m-card__fig{position:relative;aspect-ratio:4/4.3;overflow:hidden;background:radial-gradient(120% 95% at 50% 18%,#efe2d1,#e3cdb3);display:block}
+.m-card__fig{position:relative;aspect-ratio:4/4.3;overflow:hidden;background:radial-gradient(120% 95% at 50% 18%,#201f24,#121216);display:block}
 .m-card__fig img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .m-card:hover .m-card__fig img{transform:scale(1.04)}
 .m-card__tag{position:absolute;top:12px;left:12px;background:var(--m-band);color:var(--m-on-band);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:8px;z-index:2}
@@ -256,8 +257,8 @@
 .m-qty button{width:44px;align-self:stretch;background:none;border:0;font-size:18px;color:var(--m-ink);cursor:pointer}
 .m-qty span{min-width:30px;text-align:center;font-weight:700}
 .m-addbtn{flex:1;justify-content:center}
-.m-buynow{width:100%;margin-top:12px;justify-content:center;background:var(--m-band);border-color:var(--m-band);color:var(--m-on-band)}
-.m-buynow:hover{background:#000;color:#fff}
+.m-buynow{width:100%;margin-top:12px;justify-content:center;background:transparent;border-color:var(--m-accent);color:var(--m-accent-deep)}
+.m-buynow:hover{background:var(--m-accent);color:#17120a}
 .m-pin{background:var(--m-bg-tint);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:15px 16px;margin-top:26px}
 .m-pin__label{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:var(--m-accent);margin-bottom:11px}
 .m-pin__row{display:flex;gap:8px}
@@ -269,7 +270,7 @@
 .m-pin__result{margin-top:11px;font-size:13px;color:var(--m-ink-soft);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .m-pin__result svg{flex:none}
 .m-pin__result.ok{color:var(--m-ok)}
-.m-pin__result.fail{color:#b0493f}
+.m-pin__result.fail{color:#e08b82}
 .m-pin__result strong{color:var(--m-ink);font-weight:700}
 .m-cod{background:color-mix(in srgb,var(--m-accent) 15%,var(--m-surface));color:var(--m-accent-deep);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:8px;margin-left:6px}
 .m-minitrust{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:22px;border-top:1px solid var(--m-line-soft);padding-top:22px}
@@ -307,15 +308,19 @@
 .m-spec{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--m-line-soft);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);overflow:hidden;margin-top:26px}
 .m-spec div{background:var(--m-surface);padding:13px 15px;display:flex;justify-content:space-between;gap:12px;font-size:13px;align-items:center}
 .m-spec dt{color:var(--m-ink-faint);margin:0}.m-spec b{color:var(--m-ink);font-weight:600}
-.m-profilegrid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
-.m-prof{text-align:center}.m-prof .ring{width:82px;height:82px;border-radius:8px;margin:0 auto 12px}
-.m-prof b{font-family:var(--m-d);font-size:19px;font-weight:600;display:block}
+/* Scent Profile — tile grid, three tiles per row (Option 2). */
+.m-profilegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,3vw,26px);max-width:760px;margin:0 auto}
+.m-prof{text-align:center}
+.m-prof .ring{width:100%;aspect-ratio:1;height:auto;border-radius:8px;margin:0 auto 12px}
+.m-prof b{font-family:var(--m-d);font-size:clamp(17px,2.4vw,21px);font-weight:600;display:block}
 .m-prof .dots{margin-top:7px;color:var(--m-accent);letter-spacing:4px;font-size:9px}
-.m-pnotegrid{display:grid;grid-template-columns:repeat(6,1fr);gap:18px}
-.m-pn{text-align:center}
-.m-pn .orb{aspect-ratio:1;border-radius:8px;margin-bottom:10px;border:1px solid var(--m-band-line);overflow:hidden}
+/* Composition — centred framed note cards (Option B). */
+.m-pnotegrid{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(16px,3vw,28px)}
+.m-pn{text-align:center;width:clamp(130px,26vw,172px)}
+.m-pn .orb{position:relative;aspect-ratio:1;border-radius:8px;margin-bottom:13px;border:1px solid var(--m-band-line);overflow:hidden;box-shadow:0 18px 36px -20px rgba(0,0,0,.72)}
+.m-pn .orb::after{content:"";position:absolute;inset:7px;border:1px solid rgba(246,236,217,.34);border-radius:4px;pointer-events:none}
 .m-pn .orb img{width:100%;height:100%;object-fit:cover}
-.m-pn b{font-family:var(--m-d);font-size:16px;font-weight:600;color:#F3E7D5;display:block}
+.m-pn b{font-family:var(--m-d);font-size:19px;font-weight:600;color:#F3E7D5;display:block}
 .m-whytiles{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .m-why{border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:24px;background:var(--m-surface)}
 .m-why svg{color:var(--m-accent)}
@@ -396,7 +401,7 @@
   .m-gthumbs{flex-direction:row;order:2;overflow-x:auto}
   .m-gthumb{width:56px;flex:none}
   .m-minitrust{grid-template-columns:1fr 1fr;gap:18px}
-  .m-profilegrid{grid-template-columns:1fr 1fr}
+  .m-profilegrid{grid-template-columns:repeat(3,1fr);gap:12px}
   .m-whytiles{grid-template-columns:1fr}
   .m-luxrow{grid-template-columns:1fr}
 }
