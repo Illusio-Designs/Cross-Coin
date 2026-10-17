@@ -16,24 +16,26 @@ import { colorToCss } from './real';
    "huge round" library chosen for the new Mint storefront. Each entry keeps the
    I.name(size) call signature so every /test call site is unchanged; the icons
    inherit currentColor, so they recolour with the surrounding text. */
-const mk = (icon, def) => (s = def) => <HugeiconsIcon icon={icon} size={s} color="currentColor" strokeWidth={2} />;
+function HIcon({ icon, size }) {
+  return <HugeiconsIcon icon={icon} size={size} color="currentColor" strokeWidth={2} />;
+}
 export const I = {
-  arrow: mk(ArrowRight01Icon, 18),
-  cart: mk(ShoppingCart01Icon, 22),
-  heart: mk(FavouriteIcon, 18),
-  search: mk(Search01Icon, 22),
-  user: mk(UserIcon, 22),
-  menu: mk(Menu01Icon, 24),
-  close: mk(Cancel01Icon, 22),
-  sun: mk(Sun03Icon, 22),
-  check: mk(Tick02Icon, 18),
-  truck: mk(DeliveryTruck01Icon, 26),
-  ret: mk(ArrowTurnBackwardIcon, 26),
-  card: mk(CreditCardIcon, 26),
-  shield: mk(Shield01Icon, 26),
-  box: mk(PackageIcon, 26),
-  lock: mk(SquareLock02Icon, 20),
-  trash: mk(Delete02Icon, 18),
+  arrow: (s = 18) => <HIcon icon={ArrowRight01Icon} size={s} />,
+  cart: (s = 22) => <HIcon icon={ShoppingCart01Icon} size={s} />,
+  heart: (s = 18) => <HIcon icon={FavouriteIcon} size={s} />,
+  search: (s = 22) => <HIcon icon={Search01Icon} size={s} />,
+  user: (s = 22) => <HIcon icon={UserIcon} size={s} />,
+  menu: (s = 24) => <HIcon icon={Menu01Icon} size={s} />,
+  close: (s = 22) => <HIcon icon={Cancel01Icon} size={s} />,
+  sun: (s = 22) => <HIcon icon={Sun03Icon} size={s} />,
+  check: (s = 18) => <HIcon icon={Tick02Icon} size={s} />,
+  truck: (s = 26) => <HIcon icon={DeliveryTruck01Icon} size={s} />,
+  ret: (s = 26) => <HIcon icon={ArrowTurnBackwardIcon} size={s} />,
+  card: (s = 26) => <HIcon icon={CreditCardIcon} size={s} />,
+  shield: (s = 26) => <HIcon icon={Shield01Icon} size={s} />,
+  box: (s = 26) => <HIcon icon={PackageIcon} size={s} />,
+  lock: (s = 20) => <HIcon icon={SquareLock02Icon} size={s} />,
+  trash: (s = 18) => <HIcon icon={Delete02Icon} size={s} />,
 };
 
 export function toast(msg) {
