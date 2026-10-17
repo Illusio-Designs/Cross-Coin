@@ -194,6 +194,12 @@ const nextConfig = {
         destination: '/policy/:slug',
         permanent: true,
       },
+      // Bare /policy (old page retired) → the privacy policy by default.
+      {
+        source: '/policy',
+        destination: '/policy/privacy-policy',
+        permanent: false,
+      },
     ];
   },
 

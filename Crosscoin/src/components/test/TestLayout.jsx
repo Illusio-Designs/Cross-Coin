@@ -434,6 +434,13 @@ const MOBILE_CSS = `
 .cc-test-root .ccfab--top{ bottom:calc(80px + env(safe-area-inset-bottom,0px)); background:var(--surface); color:var(--ink); opacity:0; pointer-events:none; transform:translateY(8px); }
 .cc-test-root .ccfab--top.on{ opacity:1; pointer-events:auto; transform:none; }
 .cc-test-root .ccfab--top svg{ width:22px; height:22px; }
+/* 404 — not found */
+.cc-test-root .nf{ padding-block:72px 92px; border-bottom:2px solid var(--line); }
+.cc-test-root .nf__in{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; }
+.cc-test-root .nf__coin{ width:138px; height:138px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--line-ink); box-shadow:var(--stamp); margin-bottom:10px; color:#fff; font-family:"Fraunces",serif; font-weight:800; font-size:38px; letter-spacing:-.02em; background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.34),transparent 42%),conic-gradient(from 210deg,var(--crimson),var(--indigo) 55%,var(--crimson)); }
+.cc-test-root .nf h1{ font-size:clamp(26px,4vw,40px); }
+.cc-test-root .nf p{ color:var(--ink-soft); max-width:46ch; font-size:15px; line-height:1.6; }
+.cc-test-root .nf__cta{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
 `;
 
 export default function TestLayout({ children }) {
