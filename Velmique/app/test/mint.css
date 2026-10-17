@@ -96,6 +96,7 @@
 .m-card__tag{position:absolute;top:12px;left:12px;background:var(--m-band);color:var(--m-on-band);font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:2px;z-index:2}
 .m-card__wish{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:color-mix(in srgb,var(--m-surface) 82%,transparent);color:var(--m-ink);display:grid;place-items:center;backdrop-filter:blur(4px);z-index:2}
 .m-card__wish.on{color:var(--m-rose)}
+.m-card__save{position:absolute;bottom:12px;left:12px;background:var(--m-rose);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;padding:5px 11px;border-radius:30px;z-index:2}
 .m-card__body{padding:18px 18px 20px;display:flex;flex-direction:column;gap:7px;text-align:center}
 .m-card__name{font-family:var(--m-d);font-size:23px;font-weight:600;letter-spacing:.04em}
 .m-card__notes{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--m-ink-faint);min-height:1em}

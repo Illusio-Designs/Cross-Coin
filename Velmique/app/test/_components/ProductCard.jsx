@@ -17,6 +17,9 @@ export default function ProductCard({ product }) {
   const img = product.images?.[0] || '';
   const noteLine = (product.tags?.slice(0, 3).map((t) => t.label).join(' · ')) || product.category || 'Eau de Parfum';
   const wished = isWishlisted(product.id);
+  const savePct = (product.originalPrice && product.price && product.price < product.originalPrice)
+    ? Math.round((1 - product.price / product.originalPrice) * 100)
+    : 0;
 
   const add = (e) => {
     e.preventDefault();
@@ -44,6 +47,7 @@ export default function ProductCard({ product }) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6"><path d="M12 21s-7-4-7-10a7 7 0 0 1 14 0c0 6-7 10-7 10Z"/></svg>
         </button>
         {img ? <img src={img} alt={product.name} loading="lazy" /> : null}
+        {savePct ? <span className="m-card__save">Save {savePct}%</span> : null}
       </Link>
       <div className="m-card__body">
         <Link className="m-card__name" href={`/test/product/${product.slug}`}>{product.name}</Link>
