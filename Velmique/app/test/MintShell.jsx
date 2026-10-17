@@ -21,9 +21,34 @@ const NAV = [
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-function Brand({ className = '' }) {
+const ANNO = [
+  { t: 'Free shipping on all orders', d: 'M3 7h11v8H3zM14 10h4l3 3v2h-7z' },
+  { t: 'Crafted in India', d: 'M12 3c-3 3-6 3-6 3v6c0 5 6 9 6 9s6-4 6-9V6s-3 0-6-3Z' },
+  { t: 'Easy 7-day returns', d: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4' },
+  { t: '100% genuine fragrances', d: 'M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z' },
+  { t: 'Cash on delivery available', d: 'M2.5 6h19v12h-19zM2.5 10h19' },
+];
+function AnnoSeq({ hidden = false }) {
   return (
-    <Link href="/test" className={`m-brand ${className}`}>VELMIQUE<small>MAISON DE PARFUM</small></Link>
+    <div className="m-anno__seq" aria-hidden={hidden}>
+      {ANNO.map((a, i) => (
+        <span className="m-anno__i" key={i}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={a.d} /></svg>{a.t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Brand({ className = '', text = false }) {
+  if (text) {
+    return <Link href="/test" className={`m-brand ${className}`}>VELMIQUE<small>MAISON DE PARFUM</small></Link>;
+  }
+  return (
+    <Link href="/test" className={`m-logo-link ${className}`} aria-label="Velmique">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.webp" alt="Velmique" className="m-logo" />
+    </Link>
   );
 }
 
@@ -33,7 +58,7 @@ export default function MintShell({ children }) {
 
   return (
     <>
-      <div className="m-anno"><span>Free shipping on all orders</span><i>·</i><span>Crafted in India</span><i>·</i><span>A fragrance for every you</span></div>
+      <div className="m-anno"><div className="m-anno__track"><AnnoSeq /><AnnoSeq hidden /></div></div>
 
       <header className="m-header">
         <div className="m-wrap m-nav">
@@ -63,7 +88,7 @@ export default function MintShell({ children }) {
         <div className="m-wrap">
           <div className="m-foot">
             <div className="m-foot__brand">
-              <Brand />
+              <Brand text />
               <p>Fragrances for a more intentional you.</p>
               <div className="m-social" aria-label="Social links">
                 <a href="#" aria-label="Instagram"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>

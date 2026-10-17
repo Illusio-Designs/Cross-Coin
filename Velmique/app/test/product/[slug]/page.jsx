@@ -108,14 +108,25 @@ export default async function MaisonProduct({ params }) {
 
             <PdpBuy product={product} />
 
-            {spec.length ? (
-              <div className="m-spec">{spec.map(([k, v]) => <div key={k}><dt>{k}</dt><b>{v}</b></div>)}</div>
-            ) : null}
-
             <DeliveryCheck />
           </div>
         </div>
       </div></div>
+
+      {/* About + Specifications (Morbix-style) */}
+      <section className="m-section m-details"><div className="m-wrap m-details__grid">
+        <div className="m-about">
+          <span className="m-eyebrow">Details</span>
+          <h2>About this fragrance</h2>
+          {product.description ? <p>{product.description}</p> : <p className="m-muted">No description available for this fragrance yet.</p>}
+        </div>
+        {spec.length ? (
+          <aside className="m-specs">
+            <h3>Specifications</h3>
+            <dl>{spec.map(([k, v]) => <div className="m-spec-row" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+          </aside>
+        ) : null}
+      </div></section>
 
       {/* Scent Profile */}
       {accords.length ? (
