@@ -437,6 +437,29 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .rvform textarea{ resize: vertical; }
 @media (max-width: 520px){ .cc-test-root .rvform__grid{ grid-template-columns: 1fr; } }
 
+/* --- Marketing modals: exit-intent + phone lead popup --- */
+.cc-test-root .mkmodal{ position: fixed; inset: 0; z-index: 95; background: rgba(10,6,24,.62); display: grid; place-items: center; padding: 20px; }
+.cc-test-root .mkmodal__card{ position: relative; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); max-width: 400px; width: 100%; padding: 28px 24px 24px; }
+.cc-test-root .mkmodal__x{ position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line-ink); background: var(--surface); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.cc-test-root .mkmodal__h{ font-family: "Fraunces", serif; font-weight: 700; font-size: 24px; margin: 8px 0 8px; text-wrap: balance; }
+.cc-test-root .mkmodal__d{ color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 0 0 16px; }
+.cc-test-root .mkcode{ display: flex; align-items: center; justify-content: center; gap: 10px; font-family: "Space Mono", monospace; font-weight: 700; font-size: 18px; letter-spacing: .1em; color: var(--crimson); border: 2px dashed var(--crimson); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
+.cc-test-root .mkcode span{ font-size: 10.5px; letter-spacing: .05em; color: var(--ink-faint); border-left: 1.5px solid var(--line); padding-left: 10px; }
+.cc-test-root .mklater{ display: block; width: 100%; margin-top: 10px; background: none; border: none; color: var(--ink-faint); font-family: "Space Mono", monospace; font-size: 11.5px; cursor: pointer; }
+
+/* --- PDP per-pair colour picker (multi-pair packs) --- */
+.cc-test-root .perpair{ margin-top: 6px; border: 2px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: color-mix(in srgb, var(--gold) 6%, var(--surface)); }
+.cc-test-root .perpair__row{ display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.cc-test-root .perpair__n{ font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-faint); min-width: 54px; }
+.cc-test-root .perpair__sw{ display: flex; flex-wrap: wrap; gap: 7px; }
+.cc-test-root .perpair__dot{ width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-ink); cursor: pointer; padding: 0; }
+.cc-test-root .perpair__dot.on{ box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--crimson); }
+
+/* --- Cart bundle-pack group card --- */
+.cc-test-root .packcolors{ display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 6px 0; }
+.cc-test-root .packcolors__c{ display: inline-flex; align-items: center; gap: 6px; font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-soft); }
+.cc-test-root .packcolors__c i{ width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-ink); display: inline-block; }
+
 /* --- Custom open/close dropdown (Stamped "A" style) --- */
 .cc-test-root .dd{ position: relative; }
 .cc-test-root .dd.sort{ width: 210px; max-width: 100%; }
@@ -527,6 +550,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .phoneinput{ display: flex; align-items: stretch; border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; background: var(--bg); }
 .cc-test-root .phoneinput__cc{ display: grid; place-items: center; padding: 0 12px; font-family: "Space Mono", monospace; font-size: 13px; color: var(--ink-soft); background: var(--paper-2); border-right: 2px solid var(--line-ink); }
 .cc-test-root .phoneinput input{ flex: 1; min-width: 0; border: none !important; background: transparent !important; box-shadow: none !important; padding: 12px 13px; font: inherit; font-size: 14px; color: var(--ink); }
+.cc-test-root .otpboxes{ display: flex; gap: 8px; }
+.cc-test-root .otpbox{ flex: 1; min-width: 0; aspect-ratio: 1 / 1; max-width: 52px; text-align: center; font-family: "Space Mono", monospace; font-size: 20px; font-weight: 700; color: var(--ink); border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); box-shadow: var(--stamp-sm); }
+.cc-test-root .otpbox:focus{ outline: none; border-color: var(--crimson); box-shadow: var(--stamp-sm), 0 0 0 3px color-mix(in srgb, var(--crimson) 35%, transparent); }
 .cc-test-root .agecheck{ display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
 .cc-test-root .agecheck input{ width: 17px; height: 17px; accent-color: var(--crimson); flex: 0 0 auto; }
 .cc-test-root .filefield{ font-family: "Space Mono", monospace; font-size: 12px; width: 100%; }

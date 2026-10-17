@@ -2,7 +2,7 @@
 // the live public API and normalises each product into the shape the Mint UI
 // uses (real name, price, compare-at, images, variation colours & sizes).
 import axios from 'axios';
-import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, trackOrderByAWB, checkPincodeServiceability, getShippingFees, createPublicReview } from '../../services/publicApi';
+import { getAllPublicProducts, getPublicCategories, getPublicProductBySlug, getAllPublicReviews, getPublicCoupons, getPublicBlogs, getPublicProductReviews, getPublicSliders, searchProducts, getPublicPolicyByName, getPublicBlogBySlug, trackOrderByOrderNumber, trackOrderByAWB, checkPincodeServiceability, getShippingFees, createPublicReview, captureAbandonedCart } from '../../services/publicApi';
 import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
@@ -196,6 +196,29 @@ export async function submitProductReview({ productId, rating, comment, name, em
   } catch (e) {
     return { ok: false, message: (e && e.message) || 'Could not submit your review. Please try again.' };
   }
+}
+
+// Phone lead capture (live /api/leads/phone) — used by the lead popup. The real
+// store returns an exclusive coupon; we just need the call to succeed.
+export async function submitPhoneLead(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length !== 10) return { ok: false, message: 'Enter a valid 10-digit mobile number.' };
+  try {
+    const { data } = await axios.post(`${API_URL}/api/leads/phone`, { phone: digits }, addBrandHeader());
+    return { ok: true, coupon: data?.coupon || data?.code || null };
+  } catch (_) { return { ok: false, message: 'Could not submit right now. Please try again.' }; }
+}
+
+// Abandoned-cart capture (live /api/abandoned-cart) — best-effort, for WhatsApp
+// recovery, exactly like the real cart drawer.
+export function captureCart({ phone, name, cart, total }) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length !== 10) return;
+  const items = Array.isArray(cart) ? cart : [];
+  const summary = items.map((i) => `${i.name}${i.color ? ` (${i.color})` : ''} ×${i.qty}`).join(', ').slice(0, 250);
+  try {
+    captureAbandonedCart({ phone: digits, name: name || '', cartSummary: summary, itemCount: items.reduce((s, i) => s + (i.qty || 0), 0), cartValue: Math.round(total || 0) });
+  } catch (_) {}
 }
 
 // Live shipping fees + free-shipping threshold (same source as the real cart).

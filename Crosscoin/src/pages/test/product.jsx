@@ -5,7 +5,7 @@ import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
-import { addItem } from '../../components/test/store';
+import { addItem, addPack } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
@@ -27,6 +27,7 @@ export default function TestProduct() {
   const [faqOpen, setFaqOpen] = useState(0);
   const [packTiers, setPackTiers] = useState([]); // admin "Buy More, Save More" ladder
   const [packSel, setPackSel] = useState(1); // selected number of pairs
+  const [packColors, setPackColors] = useState([]); // one colour name per pair (multi-pair packs)
   const [pin, setPin] = useState('');
   const [pinRes, setPinRes] = useState(null); // { ok, text }
   const [pinBusy, setPinBusy] = useState(false);
@@ -81,6 +82,13 @@ export default function TestProduct() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox]);
 
+  // Default a colour for each pair when a multi-pair pack is selected.
+  useEffect(() => {
+    const names = (p?.colors || []).map((c) => c.name).filter(Boolean);
+    if (packSel > 1 && names.length) setPackColors((prev) => Array.from({ length: packSel }, (_, i) => prev[i] || names[0]));
+    else setPackColors([]);
+  }, [packSel, p]);
+
   if (loading) return (
     <TestLayout>
       <Head><meta name="robots" content="noindex, nofollow" /></Head>
@@ -121,10 +129,18 @@ export default function TestProduct() {
 
   const pickVariant = (v) => { setVariant(v); if (v.img) setMainImg(v.img); if (v.sizes?.length) setSize(v.sizes[0]); };
 
+  const colourNames = (p.colors || []).map((c) => c.name).filter(Boolean);
+  const perPairPackers = hasPacks && selOpt && selOpt.pairs > 1 && colourNames.length > 0;
+
   const add = (buyNow) => {
     if (hasPacks && selOpt) {
       const perPair = Math.round(selOpt.total / selOpt.pairs);
-      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: selOpt.pairs === 1 ? 'Single' : `${selOpt.pairs} Pairs`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
+      if (perPairPackers && packColors.length === selOpt.pairs) {
+        // Multi-pair pack with a colour chosen per pair → one bundle group.
+        addPack({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, size, img: cur.img || mainImg || p.img, perPair, was: cur.comparePrice || basePair, base: basePair, packSize: selOpt.pairs, colors: packColors });
+      } else {
+        addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: selOpt.pairs === 1 ? 'Single' : `${selOpt.pairs} Pairs`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
+      }
     } else {
       addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     }
@@ -203,6 +219,26 @@ export default function TestProduct() {
                 })}
               </div>
             </>)}
+
+            {/* Per-pair colour picker — Morbix-style: choose a colour for each pair */}
+            {perPairPackers && (
+              <div className="perpair">
+                <div className="optlabel">Choose a colour for each pair</div>
+                {Array.from({ length: selOpt.pairs }).map((_, i) => (
+                  <div className="perpair__row" key={i}>
+                    <span className="perpair__n">Pair {i + 1}</span>
+                    <div className="perpair__sw">
+                      {(p.colors || []).map((c) => (
+                        <button type="button" key={c.name} title={c.name} aria-label={c.name}
+                          className={`perpair__dot${packColors[i] === c.name ? ' on' : ''}`}
+                          style={{ background: c.hex || colorToCss(c.name) }}
+                          onClick={() => setPackColors((prev) => { const n = [...prev]; n[i] = c.name; return n; })} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {variants.length > 1 && !hasPacks && (<>
               <div className="optlabel">Choose your option</div>

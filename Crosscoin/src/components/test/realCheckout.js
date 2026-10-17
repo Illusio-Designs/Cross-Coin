@@ -36,6 +36,9 @@ export function buildItems(cart) {
     product_id: i.id,
     variation_id: i.vid || null,
     quantity: i.qty,
+    // Bundle-pack lines carry pack_id + pack_size so the backend reprices the
+    // whole group at the matching tier (same contract as the live cart).
+    ...(i.packId ? { pack_id: i.packId, pack_size: i.packSize || null } : {}),
   }));
 }
 

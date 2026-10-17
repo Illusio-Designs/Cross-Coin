@@ -8,10 +8,10 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty, removeItem, clearCart, setLinePack, addItem } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, addItem, cartGroups } from './store';
 import { I, Thumb } from './ui';
 import { inr } from './data';
-import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch } from './real';
+import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
@@ -448,6 +448,9 @@ export default function TestLayout({ children }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [searchRes, setSearchRes] = useState([]);
+  const [exitShow, setExitShow] = useState(false);
+  const [lead, setLead] = useState({ open: false, phone: '', busy: false, done: false, msg: '' });
+  const abCaptured = useRef(false);
   const [cookieOpen, setCookieOpen] = useState(false);
   const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
@@ -476,6 +479,40 @@ export default function TestLayout({ children }) {
 
   // Live coupons → tappable offers in the cart.
   useEffect(() => { let off = false; fetchCoupons().then((c) => { if (!off) setOffers(c); }).catch(() => {}); return () => { off = true; }; }, []);
+
+  // Exit-intent coupon modal — desktop only, once per session, when the pointer
+  // leaves the top of the viewport (same trigger as the live store).
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.matchMedia('(pointer:coarse)').matches) return;
+    try { if (sessionStorage.getItem('cc_test_exit') === '1') return; } catch (_) {}
+    const onLeave = (e) => {
+      if (e.clientY > 0 || drawer) return;
+      try { sessionStorage.setItem('cc_test_exit', '1'); } catch (_) {}
+      setExitShow(true);
+      document.removeEventListener('mouseleave', onLeave);
+    };
+    document.addEventListener('mouseleave', onLeave);
+    return () => document.removeEventListener('mouseleave', onLeave);
+  }, [drawer]);
+
+  // Phone lead popup — timed, once per visitor (localStorage).
+  useEffect(() => {
+    try { if (localStorage.getItem('cc_test_lead') === '1') return; } catch (_) {}
+    const t = setTimeout(() => setLead((s) => ({ ...s, open: true })), 18000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const submitLead = async (e) => {
+    e && e.preventDefault();
+    if (lead.busy) return;
+    setLead((s) => ({ ...s, busy: true, msg: '' }));
+    const res = await submitPhoneLead(lead.phone);
+    if (res.ok) {
+      try { localStorage.setItem('cc_test_lead', '1'); } catch (_) {}
+      setLead((s) => ({ ...s, busy: false, done: true, coupon: res.coupon }));
+    } else setLead((s) => ({ ...s, busy: false, msg: res.message || 'Please try again.' }));
+  };
+  const closeLead = () => { try { localStorage.setItem('cc_test_lead', '1'); } catch (_) {} setLead((s) => ({ ...s, open: false })); };
 
   // Header typeahead — debounced live search against the real catalogue.
   useEffect(() => {
@@ -740,7 +777,27 @@ export default function TestLayout({ children }) {
               })()}
 
               <div className="citem-sec-title mono">Items</div>
-              {cart.map((i) => {
+              {cartGroups(cart).map((g) => {
+                // Bundle pack group — several colour lines priced as one pack.
+                if (g.type === 'pack') {
+                  return (
+                    <div className="citem citem--pack" key={g.packId}>
+                      <div className="citem__th"><Thumb src={g.img} color={g.lines[0]?.color} /></div>
+                      <div className="citem__main">
+                        <div className="citem__top">
+                          <span className="citem__nm">{g.name}</span>
+                          <button className="citem__rm" onClick={() => { removePack(g.packId); showToast('Pack removed'); }} aria-label="Remove pack">{I.trash(16)}</button>
+                        </div>
+                        <div className="citem__var"><span className="packchip">{g.packSize}-pair pack</span>{g.size ? ` · ${g.size}` : ''}</div>
+                        <div className="packcolors">{g.lines.map((l) => <span className="packcolors__c" key={l.key}><i style={{ background: colorToCss(l.color) }} />{l.qty}× {l.color || '—'}</span>)}</div>
+                        <div className="citem__bot">
+                          <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pair</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                const i = g.item;
                 const hasTiers = !!(tiersMap[i.id] && tiersMap[i.id].length > 0);
                 const off = i.was > i.unit ? Math.round((1 - i.unit / i.was) * 100) : 0;
                 return (
@@ -836,7 +893,7 @@ export default function TestLayout({ children }) {
             <form ref={formRef}>
               <div className="optlabel">Delivery details</div>
               <div className="ffield"><label>Full name</label><input name="name" required placeholder="Aarav Sharma" /></div>
-              <div className="frow"><div className="ffield"><label>Email</label><input name="email" required type="email" inputMode="email" placeholder="you@email.com" /></div><div className="ffield"><label>Phone</label><input name="phone" required inputMode="tel" placeholder="9876543210" /></div></div>
+              <div className="frow"><div className="ffield"><label>Email</label><input name="email" required type="email" inputMode="email" placeholder="you@email.com" /></div><div className="ffield"><label>Phone</label><input name="phone" required inputMode="tel" placeholder="9876543210" onBlur={(e) => { const ph = e.target.value.replace(/\D/g, ''); if (ph.length === 10 && !abCaptured.current) { abCaptured.current = true; const nm = formRef.current?.elements?.name?.value || ''; captureCart({ phone: ph, name: nm, cart, total }); } }} /></div></div>
               <div className="ffield"><label>Address</label><input name="addr" required placeholder="Flat, street, area" /></div>
               <div className="frow"><div className="ffield"><label>City</label><input name="city" required placeholder="Mumbai" /></div><div className="ffield"><label>State</label><input name="state" required placeholder="Maharashtra" /></div></div>
               <div className="ffield"><label>Pincode</label><input name="pin" required inputMode="numeric" placeholder="400001" /></div>
@@ -897,6 +954,56 @@ export default function TestLayout({ children }) {
       </div>
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
+
+      {/* Exit-intent coupon modal (desktop, once per session) */}
+      {exitShow && (
+        <div className="mkmodal" onClick={() => setExitShow(false)}>
+          <div className="mkmodal__card" onClick={(e) => e.stopPropagation()}>
+            <button className="mkmodal__x" aria-label="Close" onClick={() => setExitShow(false)}>{I.close(20)}</button>
+            <span className="eyebrow">Wait — before you go</span>
+            <h3 className="mkmodal__h">Here&rsquo;s a code for your cart</h3>
+            {offers[0] ? (
+              <>
+                <p className="mkmodal__d">Use this at checkout to save on your order.</p>
+                <div className="mkcode">{offers[0].code}<span>{offers[0].label}</span></div>
+                <button className="btn btn--crimson btn--block btn--lg" onClick={() => { try { navigator.clipboard?.writeText(offers[0].code); } catch (_) {} showToast(`Copied ${offers[0].code}`); setExitShow(false); }}>Copy code &amp; continue</button>
+              </>
+            ) : (
+              <>
+                <p className="mkmodal__d">Free shipping over ₹799 and 7-day returns on everything.</p>
+                <button className="btn btn--crimson btn--block btn--lg" onClick={() => { setExitShow(false); go('/test/shop'); }}>Keep shopping</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Phone lead popup (timed, once per visitor) */}
+      {lead.open && (
+        <div className="mkmodal" onClick={closeLead}>
+          <div className="mkmodal__card" onClick={(e) => e.stopPropagation()}>
+            <button className="mkmodal__x" aria-label="Close" onClick={closeLead}>{I.close(20)}</button>
+            {lead.done ? (
+              <>
+                <span className="eyebrow">You&rsquo;re in</span>
+                <h3 className="mkmodal__h">Check WhatsApp for your code</h3>
+                <p className="mkmodal__d">{lead.coupon ? <>Your exclusive code <b style={{ color: 'var(--crimson)' }}>{lead.coupon}</b> is on its way.</> : 'Your exclusive offer is on its way to WhatsApp.'}</p>
+                <button className="btn btn--crimson btn--block btn--lg" onClick={closeLead}>Start shopping</button>
+              </>
+            ) : (
+              <form onSubmit={submitLead}>
+                <span className="eyebrow">Members save more</span>
+                <h3 className="mkmodal__h">Get 10% off your first order</h3>
+                <p className="mkmodal__d">Drop your mobile number — we&rsquo;ll send an exclusive code on WhatsApp.</p>
+                <div className="phoneinput"><span className="phoneinput__cc">+91</span><input inputMode="numeric" maxLength={10} value={lead.phone} onChange={(e) => setLead((s) => ({ ...s, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="98XXXXXXXX" /></div>
+                {lead.msg && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12, marginTop: 8 }}>{lead.msg}</div>}
+                <button className="btn btn--crimson btn--block btn--lg" type="submit" style={{ marginTop: 12 }} disabled={lead.busy}>{lead.busy ? 'Sending…' : 'Get my code'}</button>
+                <button type="button" className="mklater" onClick={closeLead}>No thanks</button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { I, toast } from '../../components/test/ui';
@@ -8,7 +8,24 @@ export default function TestLogin() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const otpRefs = useRef([]);
+
+  const setDigit = (i, v) => {
+    const d = v.replace(/\D/g, '').slice(-1);
+    setOtp((prev) => { const n = [...prev]; n[i] = d; return n; });
+    if (d && i < 5) otpRefs.current[i + 1]?.focus();
+  };
+  const onOtpKey = (i, e) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
+  };
+  const onOtpPaste = (e) => {
+    const t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    if (!t) return;
+    e.preventDefault();
+    setOtp(Array.from({ length: 6 }, (_, i) => t[i] || ''));
+    otpRefs.current[Math.min(t.length, 5)]?.focus();
+  };
 
   const sendCode = (e) => {
     e.preventDefault();
@@ -48,7 +65,22 @@ export default function TestLogin() {
           ) : (
             <form onSubmit={verify}>
               <div className="ffield"><label>6-digit code</label>
-                <input inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="••••••" autoFocus style={{ letterSpacing: '.4em', fontFamily: '"Space Mono",monospace' }} />
+                <div className="otpboxes" onPaste={onOtpPaste}>
+                  {otp.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { otpRefs.current[i] = el; }}
+                      className="otpbox"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      autoFocus={i === 0}
+                      aria-label={`Digit ${i + 1}`}
+                      onChange={(e) => setDigit(i, e.target.value)}
+                      onKeyDown={(e) => onOtpKey(i, e)}
+                    />
+                  ))}
+                </div>
               </div>
               <button className="btn btn--crimson btn--block btn--lg" type="submit" style={{ marginTop: 14 }}>Verify &amp; continue</button>
               <button type="button" className="authlink" onClick={() => setStep('phone')} style={{ marginTop: 12 }}>← Change number</button>
