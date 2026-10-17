@@ -357,8 +357,9 @@ async function listTemplates(brandId = 1, { force = false } = {}) {
 // brands, so a template button can only carry ONE domain; this backend URL
 // 302-redirects to the customer's own store (see routes/trackRedirectRoutes.js).
 const WA_API_BASE = (process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
-const WA_TRACK_BASE = `${WA_API_BASE}/api/track`;   // + /{{orderNumber}}
-const WA_SHOP_BASE  = `${WA_API_BASE}/api/shop`;    // + /{{brandId}}
+const WA_TRACK_BASE = `${WA_API_BASE}/api/track`;        // + /{{orderNumber}}
+const WA_SHOP_BASE  = `${WA_API_BASE}/api/shop`;         // + /{{brandId}}
+const WA_CART_BASE  = `${WA_API_BASE}/api/cart-recover`; // + /{{brandId}} → store ?recover=1&coupon=CART10
 
 // Inspect the LIVE approved template so a sender only attaches a header-image or
 // button component when the template actually has one. This lets us re-shape
@@ -450,6 +451,17 @@ function buildTemplates(storeName, storeUrl) {
       type: 'URL', text: 'Shop Now',
       url: `${WA_SHOP_BASE}/{{1}}`,
       example: [`${WA_SHOP_BASE}/1`],
+    }],
+  };
+  // "Complete Order" button for the abandoned-cart message. The variable is the
+  // brand id; /api/cart-recover/:brandId 302-redirects to the brand store with
+  // ?recover=1&coupon=CART10 so the store reopens the cart and pre-fills the code.
+  const cartButton = {
+    type: 'BUTTONS',
+    buttons: [{
+      type: 'URL', text: 'Complete Order',
+      url: `${WA_CART_BASE}/{{1}}`,
+      example: [`${WA_CART_BASE}/1`],
     }],
   };
 
@@ -653,14 +665,15 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // Variable order MUST match the live approved template (and the admin
+      // Dashboard definition): {{1}}=name, {{2}}=product, {{3}}=brand,
+      // {{4}}=coupon. The sender (sendAbandonedCart) passes them in this order.
       name: tName('cart_abandoned'), category: 'MARKETING', language: 'en',
       components: [
-        // Header becomes an IMAGE (product photo) via the by-name pass below.
-        { type: 'HEADER', format: 'TEXT', text: 'Your Cart Is Waiting!' },
         {
           type: 'BODY',
-          text: `Hi {{1}}! 🛒\n\nYour *{{2}}* cart is still saved for you:\n\n🛍️ {{3}}\n💰 *Cart total:* ₹{{4}}\n\nComplete your order now and enjoy an *extra 10% OFF* with code *{{5}}* — valid for the next 24 hours only.\n\nDon't let your favourites sell out!`,
-          example: { body_text: [['Rushikesh', storeName, 'Ankle Socks – Pack of 3 ×2 (+1 more)', '899', 'CART10']] },
+          text: `Hi {{1}}!\n\nIt looks like you left something behind — your *{{2}}* is still waiting in your *{{3}}* cart.\n\nComplete your purchase now with an extra *10% OFF* using code *{{4}}* — valid for the next 24 hours only!`,
+          example: { body_text: [['Rushikesh', 'Ankle Socks – Pack of 3 ×1', storeName, 'CART10']] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -676,10 +689,13 @@ function buildTemplates(storeName, storeUrl) {
     'order_confirmation', 'order_packed', 'order_shipped',
     'order_out_for_delivery', 'order_delivered', 'prepaid_rto',
   ].map(tName));
-  const withShop = new Set(['cod_rto', 'cart_abandoned'].map(tName));
+  const withShop = new Set(['cod_rto'].map(tName));
+  // cart_abandoned gets the dedicated "Complete Order" cart-recovery button.
+  const withCart = new Set(['cart_abandoned'].map(tName));
 
   for (const t of templates) {
     if (withTrack.has(t.name)) t.components.push(trackButton);
+    else if (withCart.has(t.name)) t.components.push(cartButton);
     else if (withShop.has(t.name)) t.components.push(shopButton);
   }
 
@@ -913,6 +929,7 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
   // Dynamic URL button — attach the variable only when the live template has one.
   if (shape.urlButtonIndex >= 0) {
     const btnParam = opts.trackOrder != null ? opts.trackOrder
+                   : opts.cartRecover != null ? opts.cartRecover
                    : opts.shopBrandId != null ? opts.shopBrandId
                    : null;
     if (btnParam != null) {
@@ -1115,18 +1132,20 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 
 // ─── New ecommerce notification helpers ──────────────────────────────────────
 
-// data: { customerName, itemsSummary|productName, total, couponCode, productImage }
-// New cart_abandoned params: name, brand, items, total, coupon. The product image
-// (when supplied) rides the IMAGE header; it falls back to the brand logo so the
-// send never fails for lack of media, and a "Shop Now" button links to the store.
+// data: { customerName, itemsSummary|productName, couponCode }
+// cart_abandoned template variables, in the LIVE order:
+//   {{1}}=name, {{2}}=product/items, {{3}}=brand, {{4}}=coupon.
+// (The previous order — name, brand, items, total, coupon — did NOT match the
+// approved template, so Meta rejected/garbled the send.) The "Complete Order"
+// button carries the brand id; /api/cart-recover/:brandId reopens the cart with
+// the coupon pre-applied. Coupon defaults to CART10.
 async function sendAbandonedCart(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('cart_abandoned'), [
     data.customerName || 'there',
-    await _brandName(brandId),
     data.itemsSummary || data.productName || 'your items',
-    String(data.total ?? data.cartValue ?? '—'),
+    await _brandName(brandId),
     data.couponCode || 'CART10',
-  ], brandId, { shopBrandId: brandId, headerImage: data.productImage });
+  ], brandId, { cartRecover: brandId, headerImage: data.productImage });
 }
 
 async function sendReviewRequest(phone, data, brandId = 1) {

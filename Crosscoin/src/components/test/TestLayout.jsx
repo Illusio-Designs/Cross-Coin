@@ -645,6 +645,30 @@ export default function TestLayout({ children }) {
     if (res.ok) { setCoupon({ id: res.id, code: res.code, amount: res.amount }); showToast(`${res.code} applied — ${inr(res.amount)} off`); }
     else { setCoupon(null); showToast(res.message || 'Invalid code'); }
   };
+
+  // ── WhatsApp "Complete Order" cart-recovery link ──────────────────────────
+  // The abandoned-cart message's button goes to /?recover=1&coupon=CART10 (via
+  // the backend /api/cart-recover redirect). On the shopper's own device the
+  // cart is still in localStorage, so we reopen it and auto-apply the coupon.
+  const [recoverCode, setRecoverCode] = useState(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let sp; try { sp = new URLSearchParams(window.location.search); } catch (_) { return; }
+    if (sp.get('recover') !== '1') return;
+    setStep('cart'); setDrawer(true);
+    const code = (sp.get('coupon') || '').trim().toUpperCase();
+    if (code) setRecoverCode(code);
+    // Clean the URL so a refresh doesn't re-trigger the recovery.
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('recover'); u.searchParams.delete('coupon');
+      window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash);
+    } catch (_) {}
+  }, []);
+  useEffect(() => {
+    // Apply once the cart total is known so min-cart coupon rules pass.
+    if (recoverCode && !coupon && sub > 0) { applyPromo(recoverCode); setRecoverCode(null); }
+  }, [recoverCode, coupon, sub]);
   // Real order placement (guest). COD creates the order directly; prepaid opens
   // real Razorpay and the order is created server-side on successful verify.
   const placeOrder = async () => {

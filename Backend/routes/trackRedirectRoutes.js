@@ -54,4 +54,23 @@ router.get('/shop/:brandId', async (req, res) => {
   }
 });
 
+// GET /api/cart-recover/:brandId → the brand storefront with a recovery flag so
+// the store reopens the shopper's (localStorage) cart and pre-applies the
+// abandoned-cart coupon. Used by the "Complete Order" button on the
+// cart_abandoned WhatsApp template. One shared WABA number can't carry a
+// per-brand domain in the button, so the button points here and we 302 to the
+// right store. ?recover=1 tells the storefront to open the cart drawer; the
+// coupon (default CART10) is pre-filled so the shopper doesn't have to type it.
+router.get('/cart-recover/:brandId', async (req, res) => {
+  const brandId = Number(req.params.brandId) || 1;
+  const coupon = String(req.query.coupon || 'CART10').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || 'CART10';
+  try {
+    const domain = await whatsappService.getBrandDomain(brandId);
+    return res.redirect(302, `https://${domain}/?recover=1&coupon=${encodeURIComponent(coupon)}`);
+  } catch (e) {
+    logger.warn('[cart-recover-redirect] failed for brand %s: %s', brandId, e.message);
+    return res.redirect(302, `https://crosscoin.in/?recover=1&coupon=${encodeURIComponent(coupon)}`);
+  }
+});
+
 module.exports = router;
