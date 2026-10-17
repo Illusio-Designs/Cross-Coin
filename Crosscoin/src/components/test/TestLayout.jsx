@@ -598,21 +598,13 @@ export default function TestLayout({ children }) {
     return () => { off = true; };
   }, [drawer, suggested.length]);
 
-  // Theme follows the visitor's local time instead of a manual toggle:
-  // dark in the evening/night (19:00–07:00), light through the day. Theme is
-  // scoped to the preview root (dark CSS is .cc-test-root[data-theme]), so we
-  // set the attribute on the wrapper, not <html>. Re-checked each minute so it
-  // flips over at dusk/dawn without a reload.
+  // CrossCoin is light-only. (The theme used to flip to dark between 19:00 and
+  // 07:00; dark mode has been removed per request.) Pin the wrapper to the
+  // light palette so the dark CSS (.cc-test-root[data-theme="dark"]) never
+  // applies, regardless of time of day or OS preference.
   useIsoLayoutEffect(() => {
     const el = rootRef.current;
-    if (!el) return;
-    const apply = () => {
-      const h = new Date().getHours();
-      el.setAttribute('data-theme', (h < 7 || h >= 19) ? 'dark' : 'light');
-    };
-    apply();
-    const id = setInterval(apply, 60 * 1000);
-    return () => clearInterval(id);
+    if (el) el.setAttribute('data-theme', 'light');
   }, []);
 
   const go = (href) => { setMnav(false); setDrawer(false); router.push(href); };
