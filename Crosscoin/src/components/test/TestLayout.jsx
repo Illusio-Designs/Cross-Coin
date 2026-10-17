@@ -60,7 +60,15 @@ function CartPairStepper({ item, tiers, onSet }) {
   );
 }
 
-const TICKER = ['CROSSCOIN ESSENTIALS', 'FREE SHIP ₹799+', 'RETURNS 7-DAY', 'COD AVAILABLE', 'SECURE CHECKOUT'];
+// Each ticker item pairs a small icon with its label so the strip reads as
+// benefit chips rather than dot-separated text.
+const TICKER = [
+  [I.shield, 'CROSSCOIN ESSENTIALS'],
+  [I.truck, 'FREE SHIP ₹799+'],
+  [I.ret, 'RETURNS 7-DAY'],
+  [I.card, 'COD AVAILABLE'],
+  [I.lock, 'SECURE CHECKOUT'],
+];
 const LOGO = '/assets/crosscoin_logo.webp';
 
 // Mobile polish, scoped like the rest of the preview.
@@ -709,7 +717,9 @@ export default function TestLayout({ children }) {
 
       <div className="ticker" aria-hidden="true">
         <div className="ticker__track">
-          {[...TICKER, ...TICKER].map((t, i) => <span key={i}>{t}&nbsp;&nbsp;·&nbsp;&nbsp;</span>)}
+          {[...TICKER, ...TICKER].map(([ico, label], i) => (
+            <span key={i} className="ticker__item"><span className="ticker__ic">{ico(13)}</span>{label}</span>
+          ))}
         </div>
       </div>
 

@@ -78,6 +78,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .ticker__track{ display: flex; gap: 40px; width: max-content; white-space: nowrap; padding: 8px 0; animation: tick 30s linear infinite; font-family: "Space Mono", monospace; font-size: 12px; letter-spacing: .04em; }
 .cc-test-root .ticker:hover .ticker__track{ animation-play-state: paused; }
 .cc-test-root .ticker__track b{ color: #fff; }
+.cc-test-root .ticker__item{ display: inline-flex; align-items: center; gap: 8px; }
+.cc-test-root .ticker__ic{ display: inline-flex; color: var(--gold); flex: 0 0 auto; }
+.cc-test-root .ticker__ic svg{ display: block; }
 .cc-test-root .up{ color: #74e39a; }
 .cc-test-root .down{ color: #ff8da0; }
 @keyframes tick{ to { transform: translateX(-50%); } }
