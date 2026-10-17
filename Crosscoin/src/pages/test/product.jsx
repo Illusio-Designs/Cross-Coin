@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
 import { inr, BENEFITS } from '../../components/test/data';
+import { R } from '../../components/test/routes';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
 import { addItem, addPack } from '../../components/test/store';
 import { toggleWish, isWished } from '../../components/test/wishlist';
@@ -13,7 +14,7 @@ import { SIZE_GUIDE } from '../../lib/sizeGuide';
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-export default function TestProduct() {
+export default function TestProduct({ preview = true }) {
   const router = useRouter();
   const [p, setP] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ export default function TestProduct() {
 
   if (loading) return (
     <TestLayout>
-      <Head><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}
       <div className="wrap">
         <div className="pd" style={{ paddingTop: 24 }}>
           <div className="gallery"><div className="cc-skel cc-skelblock" style={{ aspectRatio: '1/1', width: '100%' }} aria-hidden="true" /></div>
@@ -107,7 +108,7 @@ export default function TestProduct() {
       </div>
     </TestLayout>
   );
-  if (!p) return <TestLayout><Head><meta name="robots" content="noindex, nofollow" /></Head><div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Back to shop</a></p></div></TestLayout>;
+  if (!p) return <TestLayout>{preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}<div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Back to shop</a></p></div></TestLayout>;
 
   // The selected variant (single pair or a pack) drives price + image. Fall back
   // to the product's own price when a product has no structured variants.
@@ -160,11 +161,11 @@ export default function TestProduct() {
 
   return (
     <TestLayout>
-      <Head><title>{p.name} — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>
+      {preview && <Head><title>{p.name} — CrossCoin Mint preview</title><meta name="robots" content="noindex, nofollow" /></Head>}
 
       <div className="wrap">
         <div className="crumbs" style={{ paddingTop: 20 }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => router.push('/test')}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push('/test/shop')}>Shop</span> / {p.name}
+          <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Shop</span> / {p.name}
         </div>
 
         <div className="pd">

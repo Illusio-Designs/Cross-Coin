@@ -15,7 +15,7 @@
  */
 
 import Head from 'next/head';
-import ProductDetails from '../ProductDetails';
+import TestProduct from '../test/product';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
@@ -178,15 +178,13 @@ export default function ProductSlugPage({ slug, initialProduct, productFaqs, glo
         )}
       </Head>
 
-      {/* The interactive product UI. SeoWrapper inside ProductDetails will
-          duplicate-set some tags; Next.js Head merges by id/key so this is
-          safe. The Head above is what crawlers see first. */}
-      <ProductDetails
-        initialProduct={initialProduct}
-        initialSlug={slug}
-        productFaqs={productFaqs}
-        globalFaqs={globalFaqs}
-      />
+      {/* Mint product UI. The Head above (server-rendered) is the SEO source
+          of truth — meta, canonical, Product/Breadcrumb/FAQ JSON-LD. The Mint
+          page fetches the product client-side from the slug in the URL. */}
+      <TestProduct preview={false} />
     </>
   );
 }
+
+// Render with the Mint chrome (bare — no legacy Header/Footer/Breadcrumb).
+ProductSlugPage.mintChrome = true;
