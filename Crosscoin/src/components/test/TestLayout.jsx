@@ -400,7 +400,10 @@ const MOBILE_CSS = `
    collide with the headline/pill on phones — drop them for a clean,
    headline-first hero (the copy, CTAs and stat tiles carry it). */
 @media (max-width:600px){
-  .cc-test-root .hero__art{ display:none; }
+  /* Hide ONLY the decorative coin/chips art on phones — never the real
+     slider/banner image, which stays full-width (no 400px cap). */
+  .cc-test-root .hero__art:not(.hero__art--banner){ display:none; }
+  .cc-test-root .hero__art--banner{ display:block !important; max-width:none; margin:10px 0 0; }
   .cc-test-root .hero .wrap{ grid-template-columns:1fr; padding-block:30px 44px; }
   .cc-test-root .hero .tagpill{ white-space:nowrap; }
 }
