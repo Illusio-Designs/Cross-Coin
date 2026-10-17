@@ -246,6 +246,10 @@ export function CartDrawer() {
   // Available offers: public coupon list + the collapsed dropdown's open state.
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [offersOpen, setOffersOpen] = useState(false);
+  // Abandoned-cart recovery deep link ("?recover=1&coupon=CODE"): the coupon
+  // we still need to auto-apply, and a guard so we only apply it once.
+  const recoverCouponRef = useRef(null);
+  const recoverAppliedRef = useRef(false);
 
   // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
   // fees) each resolve separately and used to pop in one by one. We reset these
@@ -853,6 +857,53 @@ export function CartDrawer() {
     setCouponError('');
     setCouponCode('');
   };
+
+  // ── Abandoned-cart recovery deep link ────────────────────────────────────
+  // Shoppers returning via a "?recover=1" link (e.g. from a recovery email)
+  // get their cart drawer reopened automatically; an optional "&coupon=CODE"
+  // is remembered and auto-applied once the cart total is known. The cart
+  // itself still lives in localStorage on the shopper's own device — we only
+  // reopen it, never rebuild it. Runs once on mount, then strips the params
+  // so a refresh or shared URL doesn't re-trigger. Best-effort throughout.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('recover') !== '1') return;
+      setIsDrawerOpen(true);
+      const code = params.get('coupon');
+      if (code) {
+        const clean = String(code).trim().toUpperCase();
+        if (clean) {
+          recoverCouponRef.current = clean;
+          // Pre-fill immediately so the shopper sees the code even if the
+          // async auto-apply below can't complete (e.g. empty cart).
+          setCouponCode(clean);
+        }
+      }
+      params.delete('recover');
+      params.delete('coupon');
+      const qs = params.toString();
+      const url = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState(null, '', url);
+    } catch { /* best-effort — never break the page */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-apply the recovery coupon once the cart total is known. Uses the same
+  // validate/apply path as typing a code + clicking Apply, so all the normal
+  // coupon rules still hold. Fires at most once; the prefill above remains as
+  // a fallback if there's nothing to apply it against.
+  useEffect(() => {
+    if (recoverAppliedRef.current) return;
+    const code = recoverCouponRef.current;
+    if (!code) return;
+    if (appliedCoupon) { recoverAppliedRef.current = true; return; }
+    if (couponLoading || cartTotal <= 0) return;
+    recoverAppliedRef.current = true;
+    try { handleApplyCoupon(code); } catch { /* best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartTotal, appliedCoupon, couponLoading]);
 
   // ── Razorpay ────────────────────────────────────────────────────────────
   const loadRazorpay = () => new Promise(resolve => {
