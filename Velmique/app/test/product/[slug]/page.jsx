@@ -5,6 +5,7 @@ import { getFaqs } from '@/lib/api/faqs';
 import { getPackTiers, getBundleTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
+import PdpGallery from '../../_components/PdpGallery';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
 
@@ -126,13 +127,7 @@ export default async function MaisonProduct({ params }) {
           {/* Stacked scroll gallery: each image pins at the top of the column,
               and the next one slides up OVER it as the right content scrolls.
               Falls back to a horizontal swipe strip on small screens. */}
-          <div className="m-gstack">
-            {(product.images || []).slice(0, 6).map((src, i) => (
-              <div className="m-gshot" key={i}>
-                <img src={src} alt={`${product.name} — view ${i + 1}`} loading={i ? 'lazy' : 'eager'} />
-              </div>
-            ))}
-          </div>
+          <PdpGallery images={(product.images || []).slice(0, 6)} name={product.name} />
           <div>
             {product.badge ? <span className="m-eyebrow">{product.badge}</span> : null}
             <h1 className="m-pdp__title">{product.name}<span>Eau de Parfum{defVar?.size ? ` · ${defVar.size}` : ''}</span></h1>

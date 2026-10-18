@@ -88,13 +88,16 @@ export default function MintShell({ children }) {
         <div className="m-wrap">
           <div className="m-foot">
             <div className="m-foot__brand">
-              <Brand text />
-              <p>Fragrances for a more intentional you.</p>
+              <Brand className="m-foot__logo" />
+              <p>Maison de Parfum — fragrances for a more intentional you.</p>
               <div className="m-social" aria-label="Social links">
-                <a href="#" aria-label="Instagram"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
-                <a href="#" aria-label="Facebook"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2 0-3 1-3 3v2H9v3h2v6h3v-6h2.5l.5-3H14V9Z"/></svg></a>
-                <a href="#" aria-label="YouTube"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M22 8s-.2-1.5-.8-2.1c-.8-.8-1.6-.8-2-.9C16.4 4.7 12 4.7 12 4.7s-4.4 0-7.2.3c-.4.1-1.2.1-2 .9C2.2 6.5 2 8 2 8S1.8 9.8 1.8 11.5v1c0 1.7.2 3.5.2 3.5s.2 1.5.8 2.1c.8.8 1.8.8 2.3.9 1.7.2 7 .3 7 .3s4.4 0 7.2-.3c.4-.1 1.2-.1 2-.9.6-.6.8-2.1.8-2.1s.2-1.8.2-3.5v-1C22.2 9.8 22 8 22 8ZM10 14.6V9.4l4.2 2.6L10 14.6Z"/></svg></a>
+                <a href="https://www.instagram.com/velmique_perfume/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+                <a href="https://www.facebook.com/profile.php?id=61589512171604" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2 0-3 1-3 3v2H9v3h2v6h3v-6h2.5l.5-3H14V9Z"/></svg></a>
               </div>
+              <ul className="m-foot__contact">
+                <li><a href="mailto:obzusindia@gmail.com">obzusindia@gmail.com</a></li>
+                <li><a href="tel:+919712891700">+91 97128 91700</a></li>
+              </ul>
             </div>
             <div>
               <h4>Shop</h4>
@@ -125,13 +128,15 @@ export default function MintShell({ children }) {
               <ul>
                 <li><Link href="/test/track-order">Track Order</Link></li>
                 <li><Link href="/shipping-returns">Shipping &amp; Returns</Link></li>
+                <li><Link href="/cancellation-refund">Cancellation &amp; Refund</Link></li>
                 <li><Link href="/test/contact">Contact</Link></li>
               </ul>
             </div>
           </div>
           <div className="m-legal">
             <span>© {new Date().getFullYear()} VELMIQUE. All rights reserved.</span>
-            <span><Link href="/terms">Terms</Link><Link href="/privacy-policy">Privacy Policy</Link></span>
+            <span><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms">Terms Of Use</Link><Link href="/contact#grievance">Grievance</Link></span>
+            <span className="m-legal__by">Made with <em>❤</em> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           </div>
         </div>
       </footer>
