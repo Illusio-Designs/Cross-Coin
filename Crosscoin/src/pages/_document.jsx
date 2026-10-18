@@ -119,6 +119,10 @@ export default function Document({ tracking }) {
                 "var AN=false,MK=false;try{var _C=JSON.parse(localStorage.getItem('vlm-consent-v1')||'{}');AN=!!_C.analytics;MK=!!_C.marketing;}catch(e){}" +
                 // dataLayer + gtag stub (queues into dataLayer) — gated on analytics consent
                 "window.dataLayer=window.dataLayer||[];" +
+                // Apply Google Consent Mode before either GTM or gtag initializes.
+                "function consentCommand(){dataLayer.push(arguments);}" +
+                "consentCommand('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});" +
+                "consentCommand('consent','update',{analytics_storage:AN?'granted':'denied',ad_storage:MK?'granted':'denied',ad_user_data:MK?'granted':'denied',ad_personalization:MK?'granted':'denied'});" +
                 "window.gtag=function(){if(BLOCK||!AN)return;dataLayer.push(arguments);};" +
                 (gtmId ? "dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});" : "") +
                 ((gaId || adsId) ? "gtag('js',new Date());" : "") +

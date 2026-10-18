@@ -1,6 +1,7 @@
 'use client';
 
 import Script from 'next/script';
+import GoogleTagManager from '../GoogleTagManager';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useConsent } from '@/lib/consent';
@@ -30,6 +31,7 @@ export default function Analytics() {
       .then((d) => {
         if (aborted || !d?.success) return;
         setCfg({
+          gtmId: d.gtm_id || null,
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
@@ -47,10 +49,11 @@ export default function Analytics() {
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   if (!cfg) return null;
-  const { gaId, fbId, clarityId } = cfg;
+  const { gaId, fbId, clarityId, gtmId } = cfg;
 
   return (
     <>
+      <GoogleTagManager containerId={gtmId} />
       {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="lazyOnload"

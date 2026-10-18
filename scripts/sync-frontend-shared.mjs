@@ -41,12 +41,12 @@ const FILES = [
   {
     source: 'shared/frontend/GoogleTagManager.jsx',
     dest: (base) => `${base}components/GoogleTagManager.jsx`,
-    brands: ['Morbix'],
+    brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
   },
   {
     source: 'shared/frontend/googleTagManager.mjs',
     dest: (base) => `${base}utils/googleTagManager.mjs`,
-    brands: ['Morbix'],
+    brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
   },
   {
     source: 'shared/frontend/pixel.js',

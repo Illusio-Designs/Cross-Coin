@@ -33,8 +33,8 @@ fails if any copy has drifted (useful in CI).
 
 ## Google Tag Manager
 
-`GoogleTagManager.jsx` and `googleTagManager.mjs` are currently copied into Morbix
-for the first rollout. Other storefronts retain their existing tracking. Crosscoin keeps
+`GoogleTagManager.jsx` and `googleTagManager.mjs` are copied into Morbix, Gripzus,
+Soxbae, Knitwink, Velmique and Velquira. Crosscoin keeps
 its existing server-rendered GTM bootstrap in `src/pages/_document.jsx`.
 
 Set each brand's own `GTM_ID` (`GTM-…`) in Brand Settings. Missing IDs leave

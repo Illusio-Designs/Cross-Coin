@@ -1,6 +1,7 @@
 'use client';
 
 import Script from 'next/script';
+import GoogleTagManager from '../GoogleTagManager';
 import { useEffect, useState } from 'react';
 import { prefersReducedData } from '@/lib/netinfo';
 import { useConsent } from '@/lib/consent';
@@ -53,12 +54,14 @@ export default function Analytics() {
     return () => { cancelled = true; };
   }, []);
 
+  const gtmId = cfg?.gtm_id;
   const ga4Id = cfg?.ga_measurement_id;
   const fbPixelId = cfg?.fb_pixel_id;
   const clarityId = cfg?.clarity_id;
 
   return (
     <>
+      <GoogleTagManager containerId={gtmId} />
       {ga4Id && consent.analytics && (
         <>
           <Script
