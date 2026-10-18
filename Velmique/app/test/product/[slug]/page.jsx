@@ -90,6 +90,27 @@ export default async function MaisonProduct({ params }) {
   ].filter(([, v]) => v);
   if (defVar?.size) spec.push(['Size', defVar.size]);
 
+  // Editorial sections (reference style) from any NEW attribute key the admin
+  // adds — e.g. "Smells Like", "Makes You Feel", "Inspiration". A single long
+  // value renders as prose over its image; short values render as word pills
+  // (each with its uploaded image when one exists). Keys already shown in
+  // their own sections are excluded.
+  const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration']);
+  const attrImgs = defVar?.attrImages || {};
+  const editorial = Object.entries(attrs)
+    .filter(([k, v]) => !KNOWN_ATTRS.has(String(k).toLowerCase()) && Array.isArray(v) && v.length)
+    .map(([k, v]) => {
+      const imgMap = attrImgs[k] || attrImgs[String(k).toLowerCase()] || {};
+      const raw = v.map((s) => String(s).trim()).filter(Boolean);
+      if (raw.length === 1 && raw[0].length > 50) {
+        return { key: k, prose: raw[0], image: imgMap[raw[0]] || Object.values(imgMap)[0] || '' };
+      }
+      const items = raw.flatMap((s) => s.split(',')).map((s) => s.trim()).filter(Boolean)
+        .map((name) => ({ name, image: imgMap[name] || '' }));
+      return items.length ? { key: k, items } : null;
+    })
+    .filter(Boolean);
+
   const reviews = reviewsRes?.reviews || [];
   const reviewCount = reviewsRes?.pagination?.total || product.reviews || reviews.length;
   const rating = product.rating || reviewsRes?.stats?.average || 0;
@@ -190,6 +211,29 @@ export default async function MaisonProduct({ params }) {
                 </div>
               </div>
             ) : null}
+
+            {/* Editorial attribute sections — one per extra admin attribute */}
+            {editorial.map((sec) => (
+              <div className="m-rsec" key={sec.key}>
+                <span className="m-eyebrow">The experience</span>
+                <h2 className="m-rsec__h">{sec.key}</h2>
+                {sec.prose ? (
+                  <div className="m-edit m-edit--prose">
+                    {sec.image ? <img src={sec.image} alt={sec.key} loading="lazy" /> : null}
+                    <p>{sec.prose}</p>
+                  </div>
+                ) : (
+                  <div className="m-edit m-edit--words">
+                    {sec.items.map((it, i) => (
+                      <span className="m-eword" key={it.name + i}>
+                        {it.image ? <img src={it.image} alt="" loading="lazy" /> : null}
+                        {it.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
 
             {/* Composition — in the right column, dark card */}
             {(notesWithImg.length || noteNames.length) ? (
