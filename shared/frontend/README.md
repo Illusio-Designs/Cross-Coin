@@ -30,3 +30,22 @@ Crosscoin uses its own tracking layer, so it is excluded from `pixel.js`.
 Do **not** hand-edit the generated `pixel.js` / `SentryInit.jsx` in a brand
 folder — the next sync overwrites it. `node scripts/sync-frontend-shared.mjs --check`
 fails if any copy has drifted (useful in CI).
+
+## Google Tag Manager
+
+`GoogleTagManager.jsx` and `googleTagManager.mjs` are currently copied into Morbix
+for the first rollout. Other storefronts retain their existing tracking. Crosscoin keeps
+its existing server-rendered GTM bootstrap in `src/pages/_document.jsx`.
+
+Set each brand's own `GTM_ID` (`GTM-…`) in Brand Settings. Missing IDs leave
+GTM off. The container loads after analytics consent; Consent Mode sets ad
+storage, ad user data and ad personalization according to marketing consent.
+Custom tags in each GTM container must have appropriate consent checks.
+
+Direct GA4, Meta and Clarity initialization is retained. Do not install the
+same destinations again inside GTM without migrating their direct setup, or
+events may be duplicated. No unconditional noscript iframe is added to the
+client-loaded containers, since it cannot respect the stored consent choice.
+
+Validate after deployment with Tag Assistant: accept analytics consent, check
+the brand's own container ID, then check GA4 events and marketing consent.
