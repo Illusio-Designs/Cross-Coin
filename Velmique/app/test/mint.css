@@ -472,6 +472,8 @@
 .m-foot__contact a{font-size:12.5px;color:var(--m-ink-soft)}
 .m-foot__contact a:hover{color:var(--m-accent-deep)}
 .m-legal__by em{font-style:normal;color:var(--m-accent-deep)}
+.m-legal__cookie{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;margin-left:18px}
+.m-legal__cookie:hover{color:var(--m-accent-deep)}
 .m-legal__by a{font-weight:700;text-decoration:underline;text-underline-offset:2px}
 
 /* Build-Your-Pack CTA on the PDP, just above Add to cart. */

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
 
 const I = {
   menu: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
@@ -130,7 +131,7 @@ export default function MintShell({ children }) {
           </div>
           <div className="m-legal">
             <span>© {new Date().getFullYear()} VELMIQUE. All rights reserved.</span>
-            <span><Link href="/test/privacy-policy">Privacy Policy</Link><Link href="/test/terms">Terms Of Use</Link><Link href="/test/contact#grievance">Grievance</Link></span>
+            <span><Link href="/test/privacy-policy">Privacy Policy</Link><Link href="/test/terms">Terms Of Use</Link><Link href="/test/contact#grievance">Grievance</Link><CookieSettingsButton className="m-legal__cookie" /></span>
             <span className="m-legal__by">Made with <em>❤</em> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           </div>
         </div>

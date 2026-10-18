@@ -119,10 +119,12 @@ export default function RootLayout({ children }) {
                 <Footer />
                 <ExitIntentModal />
                 <SearchOverlay />
-                <CookieBanner />
                 <ScrollToTop />
                 <WhatsAppChat />
               </ChromeGate>
+              {/* Consent must exist on every route (incl. /test), so the
+                  cookie banner renders outside the live-chrome gate. */}
+              <CookieBanner />
               {/* Cart drawer renders on every route (incl. the Maison /test
                   preview, which skins it to onyx via data-maison) so /test
                   gets the full live checkout. */}
