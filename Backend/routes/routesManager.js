@@ -92,6 +92,9 @@ router.post('/i/pv', optionalBrand, require('../controller/pageviewController.js
 // public site's <Analytics> component can mount gtag / fbq / Clarity with
 // the real IDs (instead of a build-time env var that has to be redeployed
 // whenever the admin updates them in the dashboard).
+router.get('/public/home-bundles', require('../middleware/brandMiddleware.js').identifyBrand,
+  require('../controller/homeContentController.js').getHomeBundleContent);
+
 router.get('/public/tracking-config', require('../middleware/brandMiddleware.js').identifyBrand,
   require('../controller/trackingConfigController.js').getTrackingConfig);
 

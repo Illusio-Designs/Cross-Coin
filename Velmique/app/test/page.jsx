@@ -4,6 +4,8 @@ import { getAllReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
 import ProductCard from './_components/ProductCard';
 import ReviewRow from './_components/ReviewRow';
+import BundleSection from './_components/BundleSection';
+import { getPackTiers, getHomeBundleImages } from '@/lib/api/bundles';
 
 export const metadata = {
   title: 'Velmique — Maison de Parfum',
@@ -12,21 +14,6 @@ export const metadata = {
 
 const stars = (r) => { const n = Math.round(Number(r) || 5); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
 
-const PROFILES = [
-  { label: 'Woody', a: '#6b4a2e', b: '#3a2616' },
-  { label: 'Floral', a: '#d98f94', b: '#a1545f' },
-  { label: 'Oud', a: '#5a3f27', b: '#2c1d10' },
-  { label: 'Fresh', a: '#7fa070', b: '#3f5a36' },
-  { label: 'Sweet', a: '#c79a5a', b: '#7e5a2c' },
-  { label: 'Amber', a: '#c9803a', b: '#7a431d' },
-];
-const OCCASIONS = [
-  { label: 'Office', a: '#4a4035', b: '#241c14' },
-  { label: 'Evening', a: '#5a3a52', b: '#271726' },
-  { label: 'Date Night', a: '#7a3b3f', b: '#2e1518' },
-  { label: 'Festive', a: '#9a7338', b: '#4a3317' },
-  { label: 'Daily Wear', a: '#8a7a63', b: '#453b2d' },
-];
 const FALLBACK_REVIEWS = [
   { reviewerName: 'Riya Sharma', rating: 5, review: 'Absolutely in love — elegant, long-lasting and so premium. Finally an Indian maison that gets it.' },
   { reviewerName: 'Arjun Mehta', rating: 5, review: 'Rich, sophisticated and long-lasting. This has become my signature scent — incredible value.' },
@@ -35,10 +22,12 @@ const FALLBACK_REVIEWS = [
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
 
 export default async function MaisonHome() {
-  const [featured, reviewsRes, faqs] = await Promise.all([
+  const [featured, reviewsRes, faqs, packTiers, bundleImages] = await Promise.all([
     getBestsellers(8),
     getAllReviews({ limit: 30 }),
     getFaqs('global'),
+    getPackTiers(),
+    getHomeBundleImages(),
   ]);
 
   // Hero image comes from a featured product (slider API intentionally unused).
@@ -108,25 +97,7 @@ export default async function MaisonHome() {
         )}
       </div></section>
 
-      {/* Scent profile + occasion */}
-      <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
-        <p className="m-sublabel">Shop by scent profile</p>
-        <div className="m-chips">
-          {PROFILES.map((c) => (
-            <Link key={c.label} className="m-chip" href="/test/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
-              <span>{c.label} <span className="m-arrow">→</span></span>
-            </Link>
-          ))}
-        </div>
-        <p className="m-sublabel" style={{ marginTop: 46 }}>Shop by occasion</p>
-        <div className="m-chips occ">
-          {OCCASIONS.map((c) => (
-            <Link key={c.label} className="m-chip" href="/test/shop" style={{ background: `linear-gradient(150deg,${c.a},${c.b})` }}>
-              <span>{c.label} <span className="m-arrow">→</span></span>
-            </Link>
-          ))}
-        </div>
-      </div></section>
+      <BundleSection tiers={packTiers} images={bundleImages} products={featured} />
 
       {/* Philosophy */}
       <section className="m-section m-philo" id="m-about"><div className="m-wrap m-philo__grid">

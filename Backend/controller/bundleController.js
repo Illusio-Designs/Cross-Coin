@@ -37,7 +37,8 @@ module.exports.getPublicPackTiers = async (req, res) => {
       order: [['pairs', 'ASC']],
       attributes: ['id', 'pairs', 'discount_percent', 'label', 'badge', 'display_order'],
     });
-    res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=300');
+    res.vary('X-Brand-Name');
+    res.set('Cache-Control', 'no-store');
     return res.json({ success: true, tiers: rows });
   } catch (err) {
     logger.error('getPublicPackTiers failed:', err.message);
@@ -89,6 +90,7 @@ module.exports.createBundleTier = async (req, res) => {
         display_order: parseInt(req.body.display_order, 10) || 0,
         is_active: req.body.is_active !== false && req.body.is_active !== 'false',
       });
+      _mixCache.byKey.clear();
       return res.status(201).json({ success: true, tier: row });
     }
 
@@ -126,6 +128,8 @@ module.exports.updateBundleTier = async (req, res) => {
     if (req.body.display_order != null) patch.display_order = parseInt(req.body.display_order, 10) || 0;
     if (req.body.is_active != null) patch.is_active = req.body.is_active !== false && req.body.is_active !== 'false';
     await row.update(patch);
+    _mixCache.byKey.clear();
+    _packCache.byKey.clear();
     return res.json({ success: true, tier: row });
   } catch (err) {
     logger.error('updateBundleTier failed:', err.message);
@@ -138,6 +142,8 @@ module.exports.deleteBundleTier = async (req, res) => {
     const row = await BundleTier.findByPk(parseInt(req.params.id, 10));
     if (!row) return res.status(404).json({ success: false, message: 'Pack not found' });
     await row.destroy();
+    _mixCache.byKey.clear();
+    _packCache.byKey.clear();
     return res.json({ success: true });
   } catch (err) {
     logger.error('deleteBundleTier failed:', err.message);

@@ -1118,6 +1118,7 @@ export default function CartDrawer() {
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)}>
                         <h4 className="font-serif text-sm md:text-base text-[#11100E] hover:text-[#8F7548] transition-colors line-clamp-2">{item.name}</h4>
+                        {item.packDiscount > 0 && <p className="text-xs text-[#8F7548] mt-1">Build your pack · {item.packDiscount}% off applied</p>}
                       </Link>
                       {(item.size || item.color) && (
                         <p className="text-[#777168] text-[10px] tracking-[0.2em] uppercase font-body mt-1">

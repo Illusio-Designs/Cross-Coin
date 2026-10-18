@@ -17,10 +17,11 @@ export default function PdpPackRow({ products = [], maxOff = 0 }) {
   const add = (p) => {
     if (!pg.current) pg.current = `byp-${Date.now()}`;
     addToCart({
-      id: `${p.id}:${p.defaultVariationId || 'v'}:pack`,
+      id: `${p.id}:${p.defaultVariationId || 'v'}:${pg.current}`,
       productId: p.id,
       variationId: p.defaultVariationId || null,
       name: p.name,
+      slug: p.slug,
       price: Number(p.price || 0),
       size: p.sizes?.[0] || '',
       image: p.images?.[0] || '',

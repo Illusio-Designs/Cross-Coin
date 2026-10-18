@@ -300,10 +300,8 @@ exports.initiateCheckout = async (req, res) => {
     // computed server-side from the store-wide tiers so the client can't fake
     // the discount. Inert when no line carries a pack_group.
     const _bundleCtrl = require('./bundleController.js');
-    const mixQtyByGroup = {};
-    for (const it of items) { if (it.pack_group) mixQtyByGroup[it.pack_group] = (mixQtyByGroup[it.pack_group] || 0) + (Number(it.quantity) || 0); }
-    const mixPctByGroup = {};
-    for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(brandId, mixQtyByGroup[g]); }
+    const { getMixPackDiscounts, mixPackUnitPrice } = require('../utils/mixPackPricing.js');
+    const mixDiscounts = await getMixPackDiscounts(items, brandId);
 
     for (const item of items) {
       const { product_id, quantity } = item;
@@ -331,10 +329,9 @@ exports.initiateCheckout = async (req, res) => {
       }
 
       let price = parseFloat(variation.price);
-      if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
-        // Build-Your-Pack line: apply the group's % off (mutually exclusive with
-        // the per-product exact-price pack path below).
-        price = Math.round(price * (1 - mixPctByGroup[item.pack_group] / 100) * 100) / 100;
+      const mixPrice = mixPackUnitPrice(price, item, mixDiscounts);
+      if (mixPrice != null) {
+        price = mixPrice;
       } else {
         const _bu = await _bundleCtrl.bundlePerUnit(brandId, product_id, pricingQty(item));
         if (_bu != null) price = _bu;

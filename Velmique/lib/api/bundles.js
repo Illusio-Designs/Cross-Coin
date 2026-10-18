@@ -11,7 +11,7 @@ export async function getPackTiers() {
   try {
     const res = await fetch(`${API_URL}/api/public/pack-tiers`, {
       headers: { 'X-Brand-Name': BRAND_NAME },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to fetch pack tiers');
     const data = await res.json();
@@ -27,4 +27,16 @@ export async function getPackTiers() {
   } catch {
     return [];
   }
+}
+
+// Only the two public banner URLs are exposed; private Brand Settings stay private.
+export async function getHomeBundleImages() {
+  try {
+    const res = await fetch(`${API_URL}/api/public/home-bundles`, {
+      headers: { 'X-Brand-Name': BRAND_NAME }, cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.images) ? data.images : [];
+  } catch (_) { return []; }
 }
