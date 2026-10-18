@@ -112,6 +112,15 @@
 [data-maison] [class*="bg-[#11100E]"], [data-maison] [class*="bg-[#11100E]"] *{color:#17120a!important}
 [data-maison] .bg-white input, [data-maison] input.bg-white, [data-maison] [class*="bg-[#F7F4EF]"] input, [data-maison] [class*="bg-[#F7F4EF]"] select, [data-maison] [class*="bg-[#F7F4EF]"] textarea{background:#1d1d21;color:#f3ead6}
 [data-maison] [class*="bg-[#F7F4EF]"] input::placeholder, [data-maison] [class*="bg-[#F7F4EF]"] textarea::placeholder{color:#8b857a}
+/* Pill CTAs build on var(--ink) as a dark fill; with --ink remapped to
+   champagne they'd render cream-on-cream, so on /test they become the gold
+   primary button with dark labels. */
+[data-maison] .pill-cta{background:var(--gold);border-color:var(--gold);color:#17120a}
+[data-maison] .pill-cta:hover{background:var(--gold-deep);border-color:var(--gold-deep);color:#17120a}
+[data-maison] .pill-cta-light{background:transparent;color:var(--ink);border-color:var(--border)}
+[data-maison] .pill-cta-light:hover{background:var(--gold);color:#17120a;border-color:var(--gold)}
+[data-maison] .pill-cta-dark{background:var(--gold);color:#17120a;border-color:var(--gold)}
+[data-maison] .pill-cta-dark:hover{background:var(--gold-deep);color:#17120a;border-color:var(--gold-deep)}
 
 * {
   box-sizing: border-box;
