@@ -16,7 +16,7 @@ function run(consent, pathname = '/') {
     location: { pathname, reload() {} },
     localStorage: { getItem: () => JSON.stringify(consent) },
     document: { createElement: () => ({}), head: { appendChild: s => scripts.push(s.src) } },
-    addEventListener() {}, requestIdleCallback: fn => fn(),
+    addEventListener() {}, dispatchEvent() {}, Event: class { constructor(type) { this.type = type; } }, requestIdleCallback: fn => fn(),
   };
   ctx.window = ctx;
   vm.runInNewContext(bootstrap, ctx);

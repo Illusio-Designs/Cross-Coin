@@ -1,6 +1,7 @@
 'use client';
 
 import Script from 'next/script';
+import { trackPageView } from '@/utils/pixel';
 import GoogleTagManager from '../GoogleTagManager';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -44,7 +45,7 @@ export default function Analytics() {
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
     if (!cfg || typeof window === 'undefined') return;
-    if (cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
+    if (cfg.gaId) trackPageView(pathname);
     if (consent.marketing && cfg.fbId && window.fbq) window.fbq('track', 'PageView');
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
@@ -87,7 +88,6 @@ export default function Analytics() {
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', '${gaId}', { send_page_view: false });
-              gtag('event', 'page_view', { page_path: window.location.pathname });
               window.__brandGa4Ready = true;
               window.dispatchEvent(new Event('brand-ga4-ready'));
             ` }}

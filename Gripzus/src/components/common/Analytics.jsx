@@ -1,4 +1,5 @@
 import Script from 'next/script';
+import { trackPageView } from '@/utils/pixel';
 import GoogleTagManager from '../GoogleTagManager';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -44,12 +45,16 @@ export default function Analytics() {
   useEffect(() => {
     const onRouteChange = (url) => {
       if (typeof window === 'undefined') return;
-      if (window.gtag) window.gtag('event', 'page_view', { page_path: url });
+      if (cfg?.gaId) trackPageView(url);
       if (consent.marketing && window.fbq) window.fbq('track', 'PageView');
     };
     router.events.on('routeChangeComplete', onRouteChange);
     return () => router.events.off('routeChangeComplete', onRouteChange);
-  }, [router.events, consent.analytics, consent.marketing]);
+  }, [router.events, cfg?.gaId, consent.analytics, consent.marketing]);
+
+  useEffect(() => {
+    if (cfg?.gaId && router.isReady) trackPageView(router.asPath);
+  }, [cfg?.gaId, router.isReady, router.asPath]);
 
   if (!cfg) return null;
   const { gaId, fbId, clarityId, gtmId } = cfg;
@@ -90,7 +95,6 @@ export default function Analytics() {
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', '${gaId}', { send_page_view: false });
-              gtag('event', 'page_view', { page_path: window.location.pathname });
               window.__brandGa4Ready = true;
               window.dispatchEvent(new Event('brand-ga4-ready'));
             ` }}

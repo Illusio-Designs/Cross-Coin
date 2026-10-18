@@ -128,6 +128,7 @@ export default function Document({ tracking }) {
                 ((gaId || adsId) ? "gtag('js',new Date());" : "") +
                 (gaId ? `gtag('config','${gaId}');` : "") +
                 (adsId ? `gtag('config','${adsId}');` : "") +
+                (gaId ? "window.__brandGa4Ready=true;window.dispatchEvent(new Event('brand-ga4-ready'));" : "") +
                 (adsId ? `window.__gAdsId='${adsId}';` : "") +
                 (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
                 (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : "") +

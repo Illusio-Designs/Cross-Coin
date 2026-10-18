@@ -368,7 +368,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       num_items: activeItems.reduce((s, i) => s + (i.quantity || 1), 0),
       value: activeTotal,
       currency: 'INR',
-    });
+    }, { ga4: false });
     const ga4Items = activeItems.map(i => ({
       item_id: String(i.productId || i.id),
       item_name: i.name || i.title || '',
