@@ -43,6 +43,22 @@ export default async function MaisonHome() {
 
   // Hero spotlights the #1 bestseller as a live product card.
   const best = featured?.[0] || null;
+
+  // Unique fragrance NOTES (name + image) across the catalog — note
+  // attributes only, no accords. Fed by the per-variation attribute images
+  // managed in the dashboard, so new notes appear here automatically.
+  const NOTE_TINTS = ['#e5a84f', '#f0b98a', '#cdd79a', '#c0455f', '#7fa05a', '#e7ddc9', '#d9a0c4', '#8a6a46'];
+  const noteMap = new Map();
+  for (const p of featured) {
+    for (const v of (p.variations || [])) {
+      for (const n of (v.noteItems || [])) {
+        if (!n?.name) continue;
+        const k = n.name.toLowerCase().trim();
+        if (!noteMap.has(k) || (!noteMap.get(k).image && n.image)) noteMap.set(k, { name: n.name, image: n.image || '' });
+      }
+    }
+  }
+  const homeNotes = [...noteMap.values()].slice(0, 12);
   const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 30);
 
   // Reviews wall (same 3-row auto-scroll as the PDP).
@@ -103,6 +119,27 @@ export default async function MaisonHome() {
           <p style={{ textAlign: 'center', color: 'var(--m-ink-soft)' }}>Our collection is being bottled. Please check back shortly.</p>
         )}
       </div></section>
+
+      {/* Notes — fragrance note attributes with their images */}
+      {homeNotes.length ? (
+        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
+          <div className="m-shead">
+            <span className="m-eyebrow">Inside our fragrances</span>
+            <h2>Notes You&rsquo;ll Fall For.</h2>
+            <p>The real ingredients behind every Velmique scent.</p>
+          </div>
+          <div className="m-pnotegrid">
+            {homeNotes.map((n, i) => (
+              <div className="m-pn" key={n.name}>
+                <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
+                  {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                </div>
+                <b>{n.name}</b>
+              </div>
+            ))}
+          </div>
+        </div></section>
+      ) : null}
 
       {/* Scent profile + occasion */}
       <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
