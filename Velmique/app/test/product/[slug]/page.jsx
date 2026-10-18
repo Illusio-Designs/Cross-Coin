@@ -7,7 +7,6 @@ import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
-import PdpPackRow from '../../_components/PdpPackRow';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -60,8 +59,6 @@ export default async function MaisonProduct({ params }) {
     getPackTiers(),
     getBundleTiers(product.id),
   ]);
-  const packMaxOff = packTiers.reduce((a, t) => Math.max(a, t.off), 0);
-  const packMinItems = packTiers[0]?.pairs || 2;
   const packPicks = (bestsellers || []).filter((p) => String(p.id) !== String(product.id)).slice(0, 8);
   // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
   // "all products") FAQs, fall back to the site-wide global set.
@@ -150,9 +147,7 @@ export default async function MaisonProduct({ params }) {
               <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
             </div>
 
-            {packTiers.length ? <PdpPackRow products={packPicks} tiers={packTiers} maxOff={packMaxOff} /> : null}
-
-            <PdpBuy product={product} packs={productPacks} mixTiers={packTiers} />
+            <PdpBuy product={product} packs={productPacks} mixTiers={packTiers} scents={packPicks} />
 
             <DeliveryCheck />
 

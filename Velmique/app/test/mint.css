@@ -358,6 +358,43 @@
 .m-packopt__savepill{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);background:var(--m-accent);color:#17120a;
   font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;z-index:2}
 @media (max-width:360px){.m-packsel{gap:7px}.m-packopt{padding:13px 5px 14px}}
+/* ── PDP "Build Your Pack" checkbox builder ── */
+.m-byph{display:flex;align-items:baseline;gap:8px}
+.m-byph small{font-size:10px;letter-spacing:.04em;text-transform:none;color:var(--m-ink-faint);font-weight:600}
+.m-byph__all{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--m-accent-deep);white-space:nowrap}
+.m-bypgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:10px 0 2px}
+@media (max-width:420px){.m-bypgrid{grid-template-columns:repeat(2,1fr)}}
+.m-byp{position:relative;border:1.5px solid var(--m-line-soft);border-radius:11px;background:var(--m-surface);padding:8px 8px 9px;
+  text-align:center;cursor:pointer;color:inherit;font:inherit;transition:.2s;display:flex;flex-direction:column;gap:2px}
+.m-byp:hover{border-color:color-mix(in srgb,var(--m-accent) 50%,var(--m-line))}
+.m-byp.on{border-color:var(--m-accent);background:color-mix(in srgb,var(--m-accent) 10%,var(--m-surface));box-shadow:0 0 0 1px var(--m-accent) inset}
+.m-byp__img{display:block;width:100%;aspect-ratio:1/0.82;border-radius:8px;margin-bottom:5px;overflow:hidden;background:radial-gradient(120% 95% at 50% 18%,#201f24,#121216)}
+.m-byp__img img{width:100%;height:100%;object-fit:cover}
+.m-byp__n{font-family:var(--m-d);font-size:13.5px;font-weight:600;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-byp__p{font-size:10.5px;font-weight:800;color:var(--m-ink-soft)}
+.m-byp__box{position:absolute;top:7px;right:7px;z-index:2;width:21px;height:21px;border-radius:6px;border:1.5px solid rgba(255,255,255,.55);
+  background:rgba(0,0,0,.32);backdrop-filter:blur(3px);display:grid;place-items:center;color:#17120a;transition:.2s}
+.m-byp__box svg{opacity:0;transition:.15s}
+.m-byp.on .m-byp__box{background:var(--m-accent);border-color:var(--m-accent)}
+.m-byp.on .m-byp__box svg{opacity:1}
+.m-byp__this{position:absolute;top:7px;left:7px;z-index:2;background:var(--m-accent);color:#17120a;font-size:7.5px;font-weight:800;
+  letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;border-radius:999px}
+.m-bypbox{border:1.5px solid color-mix(in srgb,var(--m-accent) 35%,transparent);border-radius:12px;
+  background:color-mix(in srgb,var(--m-accent) 5%,transparent);padding:14px 14px 16px;margin:12px 0 0}
+.m-bypbox__row{display:flex;align-items:center;gap:14px}
+.m-bypcnt{flex:0 0 auto;width:54px;height:54px;border:1.5px solid var(--m-accent);border-radius:10px;background:var(--m-surface);display:grid;place-items:center;text-align:center;line-height:1}
+.m-bypcnt b{font-family:var(--m-d);font-size:22px;font-weight:600;display:block}
+.m-bypcnt em{display:block;font-style:normal;font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--m-ink-faint);font-weight:800;margin-top:2px}
+.m-bypinfo{flex:1;min-width:0}
+.m-bypoff{font-size:16px;font-weight:800;color:var(--m-accent-deep)}
+.m-bypoff small{display:inline-block;vertical-align:2px;margin-left:7px;background:var(--m-accent);color:#17120a;font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.m-bypnext{font-size:11.5px;color:var(--m-ink-soft);margin-top:2px}
+.m-ttrack--pdp{height:42px;margin:16px 6px 0;max-width:none}
+.m-bypsum{display:flex;align-items:baseline;gap:10px;margin:12px 0 2px;flex-wrap:wrap}
+.m-bypsum b{font-family:var(--m-d);font-size:24px;font-weight:600}
+.m-bypsum s{color:var(--m-ink-faint);font-size:14px}
+.m-bypsave{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:color-mix(in srgb,var(--m-accent) 16%,transparent);color:var(--m-accent-soft);border:1px solid var(--m-line);border-radius:8px;padding:3px 9px}
+.m-addbtn:disabled{opacity:.45;cursor:not-allowed}
 
 /* Build-Your-Pack CTA on the PDP, just above Add to cart. */
 .m-packcta{display:flex;align-items:center;gap:13px;margin:4px 0 18px;padding:13px 16px;border-radius:8px;

@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useStore } from '@/lib/store';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
+const check = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+);
 
 export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [] }) {
   const { addToCart, setCartOpen } = useStore();
@@ -25,62 +29,95 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     }));
   }, [product]);
 
-  const [sel, setSel] = useState(0);
+  const [selVar, setSelVar] = useState(0);
   const [qty, setQty] = useState(1);
   const [packIdx, setPackIdx] = useState(0);
-  const opt = options[sel] || options[0];
+  const opt = options[selVar] || options[0];
 
-  // "Build Your Pack" choices from two sources:
-  //  • per-product packs (exact totals; checkout re-prices via bundlePerUnit)
-  //  • store-wide mix tiers (% off by item count; checkout applies the % to
-  //    lines sharing a pack_group) — used when the product has no packs of
-  //    its own, so every product still gets the tier cards.
-  const isMix = !packs.length && mixTiers.length > 0;
+  // "Select Pack" choices for products with their own admin packs (exact
+  // totals; checkout re-prices a qty-N line via bundlePerUnit server-side).
   const packChoices = useMemo(() => {
+    if (!packs.length) return [];
     const base = Number(opt.price) || 0;
-    if (packs.length) {
-      return [
-        { pairs: 1, total: base, label: 'Pack of 1', badge: '' },
-        ...packs.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label, badge: t.badge })),
-      ];
-    }
-    if (mixTiers.length) {
-      return [
-        { pairs: 1, total: base, label: '1 Bottle', badge: '', off: 0 },
-        ...mixTiers.map((t) => ({
-          pairs: t.pairs,
-          total: Math.round(base * t.pairs * (1 - t.off / 100)),
-          label: `${t.pairs} Bottles`,
-          badge: t.badge,
-          off: t.off,
-        })),
-      ];
-    }
-    return [];
-  }, [packs, mixTiers, opt.price]);
+    return [
+      { pairs: 1, total: base, label: 'Pack of 1', badge: '' },
+      ...packs.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label, badge: t.badge })),
+    ];
+  }, [packs, opt.price]);
   const pack = packChoices.length ? (packChoices[packIdx] || packChoices[0]) : null;
+
+  // "Build Your Pack" (store-wide mix tiers): checkbox scent cards — the
+  // checked count drives the tier % the server applies to the shared group.
+  const isMix = !packs.length && mixTiers.length > 0;
+  const scentOpts = useMemo(() => {
+    if (!isMix) return [];
+    return [
+      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label },
+      ...scents.filter((s) => String(s.id) !== String(product.id)).slice(0, 8).map((s) => ({
+        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '',
+      })),
+    ];
+  }, [isMix, product.id, product.name, opt, scents]);
+  const [picked, setPicked] = useState(() => new Set([0]));
+  const togglePick = (i) => setPicked((prev) => {
+    const n = new Set(prev);
+    n.has(i) ? n.delete(i) : n.add(i);
+    return n;
+  });
+
+  const mixCount = isMix ? picked.size : 0;
+  const mixOff = isMix ? mixTiers.reduce((a, t) => (mixCount >= t.pairs ? Math.max(a, t.off) : a), 0) : 0;
+  const mixSub = isMix ? [...picked].reduce((a, i) => a + (scentOpts[i]?.price || 0), 0) : 0;
+  const mixTotal = mixSub * (1 - mixOff / 100);
+  const nextT = isMix ? mixTiers.find((t) => mixCount < t.pairs) : null;
+  const mixHint = mixCount === 0
+    ? `Tick ${mixTiers[0]?.pairs || 2} scents to unlock ${mixTiers[0]?.off || 0}% off`
+    : nextT ? `Tick ${nextT.pairs - mixCount} more to unlock ${nextT.off}% off`
+      : 'Maximum saving unlocked on your pack';
+  const nodes = isMix ? [{ pairs: 1, off: 0 }, ...mixTiers] : [];
+  const reachedIdx = nodes.reduce((a, t, i) => (mixCount >= t.pairs ? i : a), -1);
+  const fill = nodes.length > 1 ? (Math.max(0, reachedIdx) / (nodes.length - 1)) * 100 : 0;
 
   const unitPrice = pack ? pack.total / pack.pairs : Number(opt.price) || 0;
   const lineQty = pack ? pack.pairs : qty;
   const lineTotal = pack && pack.pairs > 1 ? pack.total : unitPrice * lineQty;
 
-  // Mix packs submit the FULL unit price and a shared pack_group — the server
-  // applies the tier % to the group, so a pre-discounted price would double-dip.
-  const mixSel = isMix && pack && pack.pairs > 1;
   const line = () => ({
-    id: mixSel ? `${product.id}:${opt.id}:pack` : `${product.id}:${opt.id}`,
+    id: `${product.id}:${opt.id}`,
     productId: product.id,
     variationId: opt.id,
     name: product.name,
-    price: Math.round((mixSel ? Number(opt.price) || 0 : unitPrice) * 100) / 100,
+    price: Math.round(unitPrice * 100) / 100,
     size: opt.label,
     image: opt.image,
     quantity: lineQty,
-    ...(mixSel ? { packGroup: 'byp' } : {}),
   });
 
-  const add = () => { addToCart(line()); };
-  const buy = () => { addToCart(line()); setCartOpen(false); router.push('/checkout'); };
+  // Mix picks submit FULL unit prices with a shared pack_group — the server
+  // applies the tier % to the group, so pre-discounted prices would double-dip.
+  const addMix = () => {
+    [...picked].forEach((i) => {
+      const o = scentOpts[i];
+      if (!o) return;
+      addToCart({
+        id: mixCount > 1 ? `${o.pid}:${o.vid || 'v'}:pack` : `${o.pid}:${o.vid || 'v'}`,
+        productId: o.pid,
+        variationId: o.vid,
+        name: o.name,
+        price: Math.round(o.price * 100) / 100,
+        size: o.size || '',
+        image: o.image,
+        quantity: 1,
+        ...(mixCount > 1 ? { packGroup: 'byp' } : {}),
+      });
+    });
+  };
+  const add = () => { if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line()); };
+  const buy = () => {
+    if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line());
+    setCartOpen(false);
+    router.push('/checkout');
+  };
 
   return (
     <>
@@ -89,7 +126,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           <div className="m-opt__h">Select Size</div>
           <div className="m-sizes">
             {options.map((o, i) => (
-              <button key={o.id} type="button" className={`m-size ${i === sel ? 'on' : ''}`} onClick={() => setSel(i)}>
+              <button key={o.id} type="button" className={`m-size ${i === selVar ? 'on' : ''}`} onClick={() => setSelVar(i)}>
                 <b>{o.label}</b><span>{inr(o.price)}</span>
               </button>
             ))}
@@ -99,7 +136,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
       {packChoices.length > 1 && (
         <div className="m-opt">
-          <div className="m-opt__h">Build Your Pack</div>
+          <div className="m-opt__h">Select Pack</div>
           <div className="m-packsel">
             {packChoices.map((p, i) => {
               const saveAmt = Math.max(0, Math.round((Number(opt.price) || 0) * p.pairs - p.total));
@@ -125,16 +162,64 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         </div>
       )}
 
+      {isMix && scentOpts.length > 1 && (
+        <div className="m-opt">
+          <div className="m-opt__h m-byph">Build Your Pack <small>— tick any scents</small><Link href="/test/pack" className="m-byph__all">View all →</Link></div>
+          <div className="m-bypgrid">
+            {scentOpts.map((o, i) => {
+              const on = picked.has(i);
+              return (
+                <button key={`${o.pid}`} type="button" role="checkbox" aria-checked={on} className={`m-byp ${on ? 'on' : ''}`} onClick={() => togglePick(i)}>
+                  {i === 0 ? <span className="m-byp__this">This page</span> : null}
+                  <span className="m-byp__box">{check}</span>
+                  <span className="m-byp__img">{o.image ? <img src={o.image} alt={o.name} loading="lazy" /> : null}</span>
+                  <span className="m-byp__n">{o.name}</span>
+                  <span className="m-byp__p">{inr(o.price)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="m-bypbox">
+            <div className="m-bypbox__row">
+              <div className="m-bypcnt"><span><b>{mixCount}</b><em>in pack</em></span></div>
+              <div className="m-bypinfo">
+                <div className="m-bypoff">{mixOff > 0 ? <>{mixOff}% OFF <small>applied</small></> : 'Full price'}</div>
+                <div className="m-bypnext">{mixHint}</div>
+              </div>
+            </div>
+            <div className="m-ttrack m-ttrack--pdp">
+              <div className="m-ttrack__line" style={{ left: `${50 / nodes.length}%`, right: `${50 / nodes.length}%` }}>
+                <i style={{ width: `${fill}%` }} />
+              </div>
+              {nodes.map((t, i) => (
+                <div key={t.pairs} className={`m-tnode ${mixCount >= t.pairs ? 'on' : ''}`} style={{ left: `${((i + 0.5) / nodes.length) * 100}%` }}>
+                  <b>{t.pairs}</b><span>{t.off ? `${t.off}% off` : 'Start'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="m-bypsum">
+            <b>{inr(mixCount ? mixTotal : 0)}</b>
+            {mixOff > 0 ? <s>{inr(mixSub)}</s> : null}
+            {mixOff > 0 ? <span className="m-bypsave">You save {inr(mixSub - mixTotal)}</span> : null}
+          </div>
+        </div>
+      )}
+
       <div className="m-buybar">
-        {!pack && (
+        {!pack && !isMix && (
           <div className="m-qty">
             <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
             <span>{qty}</span>
             <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => q + 1)}>+</button>
           </div>
         )}
-        <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add}>
-          Add to cart · {inr(lineTotal)}
+        <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add} disabled={isMix && !mixCount}>
+          {isMix
+            ? (mixCount ? `Add ${mixCount} to cart · ${inr(mixTotal)}` : 'Tick a scent to start')
+            : `Add to cart · ${inr(lineTotal)}`}
         </button>
       </div>
       <div className="m-prepaidchip">PREPAID10</div>
