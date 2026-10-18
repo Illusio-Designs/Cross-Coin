@@ -432,6 +432,16 @@ const TEMPLATE_VERSION = '_v2';
 const TEMPLATE_VERSION_OVERRIDES = { cart_abandoned: '_v3' };
 const tName = (base) => `${base}${TEMPLATE_VERSION_OVERRIDES[base] || TEMPLATE_VERSION}`;
 
+// Per-brand abandoned-cart template name, derived from the brand domain so the
+// template's URL button can show the brand's real domain. Bump the suffix if
+// the shape ever changes (Meta locks deleted names for ~4 weeks).
+const CART_DOMAIN_TEMPLATE_SUFFIX = '_v1';
+const cleanDomain = (u) => String(u || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '') || 'crosscoin.in';
+const cartDomainTemplateName = (domainOrUrl) => {
+  const slug = cleanDomain(domainOrUrl).split('.')[0].replace(/[^a-z0-9]/gi, '').toLowerCase() || 'store';
+  return `cart_abandoned_${slug}${CART_DOMAIN_TEMPLATE_SUFFIX}`;
+};
+
 // ─── Build the canonical template list ────────────────────────────────────────
 // Used by both seedDefaultTemplates and updateTemplate / updateAllTemplates
 function buildTemplates(storeName, storeUrl) {
@@ -683,6 +693,32 @@ function buildTemplates(storeName, storeUrl) {
           example: { body_text: [['Rushikesh', 'Ankle Socks – Pack of 3 ×1', storeName, 'CART10']] },
         },
         { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      // Per-brand abandoned-cart template: one template PER BRAND NAME on the
+      // shared WABA, so the Complete Order button can carry the brand's OWN
+      // domain (WhatsApp previews that domain instead of the api redirect
+      // host). Body is kept short so WhatsApp doesn't collapse it behind
+      // "Read more". Same 4 body variables/order as cart_abandoned; the
+      // button variable is the COUPON (the domain is already the brand's).
+      // The sender auto-switches to this the moment Meta approves it.
+      name: cartDomainTemplateName(storeUrl), category: 'MARKETING', language: 'en',
+      components: [
+        {
+          type: 'BODY',
+          text: `Hi {{1}}! Your *{{2}}* is still in your {{3}} cart.\n\nFinish checkout with *10% OFF* — code *{{4}}*, valid for the next 24 hours.`,
+          example: { body_text: [['Rushikesh', 'Velour ×1', storeName, 'CART10']] },
+        },
+        { type: 'FOOTER', text: footer },
+        {
+          type: 'BUTTONS',
+          buttons: [{
+            type: 'URL', text: 'Complete Order',
+            url: `https://${cleanDomain(storeUrl)}/?recover=1&coupon={{1}}`,
+            example: [`https://${cleanDomain(storeUrl)}/?recover=1&coupon=CART10`],
+          }],
+        },
       ],
     },
   ];
@@ -1153,25 +1189,39 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 async function _resolveAbandonedTemplate(brandId = 1) {
   const current = tName('cart_abandoned');              // e.g. cart_abandoned_v3 (has the button)
   const previous = `cart_abandoned${TEMPLATE_VERSION}`; // e.g. cart_abandoned_v2 (no button yet)
-  if (current === previous) return current;
   try {
     const data = await listTemplates(brandId);
     const list = data?.data || [];
     const approved = (n) => list.some(t => t.name === n && String(t.status).toUpperCase() === 'APPROVED');
+    // Best: the per-brand template whose button shows the brand's own domain
+    // and whose short body avoids WhatsApp's "Read more" collapse.
+    try {
+      const domainName = cartDomainTemplateName(await _brandDomain(brandId));
+      if (approved(domainName)) return domainName;
+    } catch (_) { /* no domain — fall through */ }
     if (approved(current)) return current;
-    if (approved(previous)) return previous;
+    if (current !== previous && approved(previous)) return previous;
   } catch (_) { /* fall through to newest */ }
   return current;
 }
 
 async function sendAbandonedCart(phone, data, brandId = 1) {
   const templateName = await _resolveAbandonedTemplate(brandId);
+  // The generic template's button URL ends in the brand id (api redirect); the
+  // per-brand domain template's button already carries the brand domain, so its
+  // URL variable is the coupon code instead.
+  let btnParam = brandId;
+  try {
+    if (templateName === cartDomainTemplateName(await _brandDomain(brandId))) {
+      btnParam = data.couponCode || 'CART10';
+    }
+  } catch (_) { /* keep brandId */ }
   return sendTemplate(phone, templateName, [
     data.customerName || 'there',
     data.itemsSummary || data.productName || 'your items',
     await _brandName(brandId),
     data.couponCode || 'CART10',
-  ], brandId, { cartRecover: brandId, headerImage: data.productImage });
+  ], brandId, { cartRecover: btnParam, headerImage: data.productImage });
 }
 
 async function sendReviewRequest(phone, data, brandId = 1) {
