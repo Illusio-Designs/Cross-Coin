@@ -130,12 +130,13 @@ export default async function MaisonHome() {
           </div>
           <div className="m-pnotegrid">
             {homeNotes.map((n, i) => (
-              <div className="m-pn" key={n.name}>
+              <Link className="m-pn m-pn--link" key={n.name} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                 <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
                   {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
                 </div>
                 <b>{n.name}</b>
-              </div>
+                <span className="m-pn__go">Shop this note →</span>
+              </Link>
             ))}
           </div>
         </div></section>
