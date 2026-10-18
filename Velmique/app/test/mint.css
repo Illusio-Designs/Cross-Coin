@@ -95,7 +95,12 @@
   @keyframes m-herofloat{0%,100%{transform:translateY(0) rotate(1.5deg)}50%{transform:translateY(-9px) rotate(1.5deg)}}
   .m-herocard:hover{animation-play-state:paused}
 }
-@media (max-width:980px){.m-herocard{width:min(300px,84%);margin-top:8px}}
+@media (max-width:980px){
+  /* the card hero sizes itself — never the old fixed image height, which
+     made the card spill over the headline on phones */
+  .m-hero__figure.m-hero__figure--card{height:auto;padding:16px 0 8px}
+  .m-herocard{width:min(300px,84%);margin-top:8px}
+}
 .m-hero__bottle{width:clamp(150px,22vw,250px);height:auto;filter:drop-shadow(0 30px 44px rgba(0,0,0,.55));animation:m-float 7s ease-in-out infinite}
 @keyframes m-float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-16px) rotate(1deg)}}
 @media (prefers-reduced-motion:reduce){.m-hero__bottle{animation:none}}

@@ -122,15 +122,15 @@ export default function MintShell({ children }) {
               <h4>Customer Care</h4>
               <ul>
                 <li><Link href="/test/track-order">Track Order</Link></li>
-                <li><Link href="/shipping-returns">Shipping &amp; Returns</Link></li>
-                <li><Link href="/cancellation-refund">Cancellation &amp; Refund</Link></li>
+                <li><Link href="/test/shipping-returns">Shipping &amp; Returns</Link></li>
+                <li><Link href="/test/cancellation-refund">Cancellation &amp; Refund</Link></li>
                 <li><Link href="/test/contact">Contact</Link></li>
               </ul>
             </div>
           </div>
           <div className="m-legal">
             <span>© {new Date().getFullYear()} VELMIQUE. All rights reserved.</span>
-            <span><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms">Terms Of Use</Link><Link href="/contact#grievance">Grievance</Link></span>
+            <span><Link href="/test/privacy-policy">Privacy Policy</Link><Link href="/test/terms">Terms Of Use</Link><Link href="/test/contact#grievance">Grievance</Link></span>
             <span className="m-legal__by">Made with <em>❤</em> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           </div>
         </div>
