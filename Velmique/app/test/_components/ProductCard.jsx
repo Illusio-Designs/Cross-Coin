@@ -5,35 +5,41 @@ import { useStore } from '@/lib/store';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-function stars(r) {
-  const n = Math.round(Number(r) || 0);
-  return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
-}
+const Heart = ({ filled }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg>
+);
+const Star = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>
+);
+const Bag = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8h12l-1 12H7L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg>
+);
 
 export default function ProductCard({ product }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
 
   const img = product.images?.[0] || '';
-  // Card subtitle: show ONLY the fragrance notes (from the default variation's
-  // `notes` attribute), e.g. "Venilla · Musk". Falls back to product-level
-  // notes for older payloads; shows nothing when a product has no notes.
+  const href = `/test/product/${product.slug}`;
+  // Fragrance notes (from the default variation) as the subtitle.
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
   const noteNames = (defVar?.noteItems?.length
     ? defVar.noteItems.map((n) => n.name)
     : (product.notes || []).map((n) => (typeof n === 'string' ? n : n?.name))
   ).filter(Boolean);
-  const noteLine = noteNames.slice(0, 4).join(' · ');
+  const noteLine = noteNames.slice(0, 3).join(' · ');
+
   const wished = isWishlisted(product.id);
-  const savePct = (product.originalPrice && product.price && product.price < product.originalPrice)
-    ? Math.round((1 - product.price / product.originalPrice) * 100)
-    : 0;
+  const rating = Number(product.rating || 0);
+  const reviews = Number(product.reviews || 0);
+  const orig = product.originalPrice && product.originalPrice > product.price ? product.originalPrice : 0;
 
   const add = (e) => {
     e.preventDefault();
     addToCart({
       id: `${product.id}:${product.defaultVariationId}`,
       productId: product.id,
+      variationId: product.defaultVariationId,
       name: product.name,
       price: product.price,
       size: product.sizes?.[0] || '',
@@ -41,7 +47,6 @@ export default function ProductCard({ product }) {
       quantity: 1,
     });
   };
-
   const wish = (e) => {
     e.preventDefault();
     toggleWishlist({ id: product.id, name: product.name, price: product.price, image: img, slug: product.slug });
@@ -49,20 +54,24 @@ export default function ProductCard({ product }) {
 
   return (
     <article className="m-card">
-      <Link className="m-card__fig" href={`/test/product/${product.slug}`} aria-label={product.name}>
+      <div className="m-card__fig">
+        <Link className="m-card__imglink" href={href} aria-label={product.name}>
+          <span className="m-card__tile">{img ? <img src={img} alt={product.name} loading="lazy" /> : null}</span>
+          <span className="m-card__shade" />
+        </Link>
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
-        <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label="Toggle wishlist" onClick={wish}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill={wished ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6"><path d="M12 21s-7-4-7-10a7 7 0 0 1 14 0c0 6-7 10-7 10Z"/></svg>
-        </button>
-        {img ? <img src={img} alt={product.name} loading="lazy" /> : null}
-        {savePct ? <span className="m-card__save">Save {savePct}%</span> : null}
-      </Link>
+        <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label="Toggle wishlist" onClick={wish}><Heart filled={wished} /></button>
+        {rating > 0 ? <span className="m-card__rbadge"><Star />{rating.toFixed(1)}/5</span> : null}
+        <button className="m-card__add" aria-label="Add to bag" onClick={add}><Bag />Add to bag</button>
+      </div>
       <div className="m-card__body">
-        <Link className="m-card__name" href={`/test/product/${product.slug}`}>{product.name}</Link>
+        <div className="m-card__top">
+          <Link className="m-card__name" href={href}>{product.name}</Link>
+          <span className="m-card__price"><b>{inr(product.price)}</b>{orig ? <s>{inr(orig)}</s> : null}</span>
+        </div>
         {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
-        <div className="m-card__rate"><span className="m-stars">{stars(product.rating)}</span> {Number(product.rating || 0).toFixed(1)} ({(product.reviews || 0).toLocaleString('en-IN')})</div>
-        <div className="m-card__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}</div>
-        <button className="m-btn m-btn--fill" onClick={add}>Add to cart</button>
+        {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} reviews</div> : null}
+        <button className="m-card__addbody" aria-label="Add to bag" onClick={add}><Bag />Add to bag</button>
       </div>
     </article>
   );
