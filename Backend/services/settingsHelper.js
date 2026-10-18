@@ -16,9 +16,10 @@ class SettingsHelper {
      * @param {number} brandId - Brand ID
      * @param {string} key - Setting key
      * @param {string} defaultValue - Default value if not found
+     * @param {object} options - brandOnly disables shared environment fallbacks
      * @returns {Promise<string>} Setting value
      */
-    async getSetting(brandId, key, defaultValue = null) {
+    async getSetting(brandId, key, defaultValue = null, { brandOnly = false } = {}) {
         const cacheKey = `${brandId}:${key}`;
         
         // Check cache
@@ -54,7 +55,7 @@ class SettingsHelper {
             }
 
             // Fallback to environment variable
-            const envValue = process.env[key];
+            const envValue = brandOnly ? null : process.env[key];
             if (envValue) {
                 const { logger } = require('../config/logging');
                 logger.debug(`Using environment variable for ${key} (not found in brand settings)`);
@@ -66,7 +67,7 @@ class SettingsHelper {
             console.error(`Error getting setting ${key}:`, error.message);
             
             // Fallback to environment variable on error
-            const envValue = process.env[key];
+            const envValue = brandOnly ? null : process.env[key];
             if (envValue) {
                 return envValue;
             }

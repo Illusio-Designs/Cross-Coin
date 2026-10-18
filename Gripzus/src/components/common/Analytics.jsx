@@ -13,7 +13,7 @@ import { useConsent } from '../../lib/consent';
  * load — no redeploy or build-time env var required.
  */
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'gripzus';
 
 export default function Analytics() {
   const router = useRouter();
