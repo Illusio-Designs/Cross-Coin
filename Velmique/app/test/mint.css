@@ -303,6 +303,29 @@
 .m-qty button{width:44px;align-self:stretch;background:none;border:0;font-size:18px;color:var(--m-ink);cursor:pointer}
 .m-qty span{min-width:30px;text-align:center;font-weight:700}
 .m-addbtn{flex:1;justify-content:center}
+/* ── Stacked scroll gallery (PDP left column) ──
+   Every image pins at the same top, so as the right-side content scrolls the
+   NEXT image slides up and covers the previous one. The grid stretches the
+   column to the full row height, so the last image stays pinned to the end. */
+.m-gstack{display:block;height:100%}
+.m-gshot{position:sticky;top:14px;aspect-ratio:4/4.8;border-radius:14px;overflow:hidden;border:1px solid var(--m-line-soft);
+  background:var(--m-surface);box-shadow:0 -22px 48px -26px rgba(0,0,0,.9);margin-bottom:clamp(18px,3vw,32px)}
+.m-gshot img{width:100%;height:100%;object-fit:cover;display:block}
+.m-gshot:last-child{margin-bottom:0}
+@media (max-width:980px){
+  .m-gstack{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;height:auto;padding-bottom:6px;scrollbar-width:thin}
+  .m-gstack::-webkit-scrollbar{height:5px}.m-gstack::-webkit-scrollbar-thumb{background:var(--m-line);border-radius:999px}
+  .m-gshot{position:static;flex:0 0 84%;scroll-snap-align:center;box-shadow:none;margin-bottom:0}
+}
+
+/* In-column PDP sections (About / Specs / Scent Profile / Composition). */
+.m-rsec{margin-top:34px;padding-top:28px;border-top:1px solid var(--m-line-soft)}
+.m-rsec__h{font-size:clamp(22px,2.6vw,30px);margin-top:8px}
+.m-rsec__p{color:var(--m-ink-soft);font-size:14.5px;margin-top:10px;line-height:1.75}
+.m-rsec .m-profilegrid{max-width:none}
+.m-rcompo{background:radial-gradient(120% 120% at 15% 0%,var(--m-band-2),var(--m-band));border:1px solid rgba(0,0,0,.6);border-radius:14px;padding:24px 18px;text-align:center}
+.m-rcompo .m-pn{width:clamp(110px,22vw,140px)}
+
 /* "Select Pack" tier cards on the PDP (per-product packs, reference style). */
 .m-packsel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-top:10px}
 .m-packopt{position:relative;border:1.5px solid var(--m-line);border-radius:10px;background:var(--m-surface);
