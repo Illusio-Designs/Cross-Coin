@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { getProductReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
-import { getPackTiers } from '@/lib/api/bundles';
+import { getPackTiers, getBundleTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import Gallery from '../../_components/Gallery';
 import PdpBuy from '../../_components/PdpBuy';
@@ -53,12 +53,13 @@ export default async function MaisonProduct({ params }) {
     );
   }
 
-  const [reviewsRes, bestsellers, productFaqs, globalFaqs, packTiers] = await Promise.all([
+  const [reviewsRes, bestsellers, productFaqs, globalFaqs, packTiers, productPacks] = await Promise.all([
     getProductReviews(product.id, { limit: 30 }),
     getBestsellers(5),
     getFaqs('product', product.id),
     getFaqs('global'),
     getPackTiers(),
+    getBundleTiers(product.id),
   ]);
   const packMaxOff = packTiers.reduce((a, t) => Math.max(a, t.off), 0);
   const packMinItems = packTiers[0]?.pairs || 2;
@@ -143,7 +144,7 @@ export default async function MaisonProduct({ params }) {
 
             {packTiers.length ? <PdpPackRow products={packPicks} maxOff={packMaxOff} /> : null}
 
-            <PdpBuy product={product} />
+            <PdpBuy product={product} packs={productPacks} />
 
             <DeliveryCheck />
           </div>
