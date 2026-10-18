@@ -41,8 +41,8 @@ export default async function MaisonHome() {
     getFaqs('global'),
   ]);
 
-  // Hero image comes from a featured product (slider API intentionally unused).
-  const heroImg = featured?.[0]?.images?.[0] || '';
+  // Hero spotlights the #1 bestseller as a live product card.
+  const best = featured?.[0] || null;
   const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 30);
 
   // Reviews wall (same 3-row auto-scroll as the PDP).
@@ -78,8 +78,13 @@ export default async function MaisonHome() {
               <Link className="m-btn m-btn--on-band" href="#m-about">Our story</Link>
             </div>
           </div>
-          <div className="m-hero__figure">
-            {heroImg ? <img className="m-hero__img" src={heroImg} alt="Velmique signature fragrance" /> : null}
+          <div className="m-hero__figure m-hero__figure--card">
+            {best ? (
+              <div className="m-herocard">
+                <span className="m-herocard__no1">★ #1 Bestseller</span>
+                <ProductCard product={best} />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="m-hero__aside">More than a fragrance.<br />A feeling.</div>
