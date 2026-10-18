@@ -21,7 +21,7 @@ export const OPEN_SETTINGS_EVENT = 'vlm-open-cookie-settings';
 const POLICY_VERSION = 1;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
 
 // Fire-and-forget: record each consent decision on the server (DPDP S6). Never
 // throws; a logging failure must not affect the storefront. credentials:'include'
@@ -51,9 +51,12 @@ function postConsent(val, action, source) {
 }
 
 const DENIED = { essential: true, analytics: false, marketing: false, set: false };
+// Retain the current choice when browser storage is unavailable.
+let sessionConsent = null;
 
 export function getConsent() {
   if (typeof window === 'undefined') return { ...DENIED };
+  if (sessionConsent) return { ...sessionConsent };
   try {
     const raw = localStorage.getItem(CONSENT_KEY);
     if (!raw) return { ...DENIED };
@@ -72,6 +75,7 @@ export function setConsent({ analytics, marketing }, meta = {}) {
     v: POLICY_VERSION,
     ts: new Date().toISOString(),
   };
+  sessionConsent = { ...val, set: true };
   try { localStorage.setItem(CONSENT_KEY, JSON.stringify(val)); } catch {}
   try { window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: val })); } catch {}
   postConsent(val, meta.action || 'custom', meta.source || 'banner');
@@ -92,11 +96,16 @@ export function useConsent() {
   useEffect(() => {
     const sync = () => setC(getConsent());
     window.addEventListener(CONSENT_EVENT, sync);
-    window.addEventListener('storage', sync);
+    const onStorage = (event) => {
+      if (event.key !== CONSENT_KEY && event.key !== null) return;
+      sessionConsent = null;
+      sync();
+    };
+    window.addEventListener('storage', onStorage);
     sync(); // pick up any value written before hydration
     return () => {
       window.removeEventListener(CONSENT_EVENT, sync);
-      window.removeEventListener('storage', sync);
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
   return c;

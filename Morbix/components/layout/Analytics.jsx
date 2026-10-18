@@ -26,7 +26,7 @@ export default function Analytics() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return;
     let aborted = false;
-    fetch(`${API_URL}/api/public/tracking-config`, { headers: { 'X-Brand-Name': BRAND } })
+    fetch(`${API_URL}/api/public/tracking-config`, { cache: 'no-store', headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
       .then((d) => {
         if (aborted || !d?.success) return;
@@ -39,7 +39,7 @@ export default function Analytics() {
       })
       .catch(() => {});
     return () => { aborted = true; };
-  }, []);
+  }, [consent.analytics, consent.marketing]);
 
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
