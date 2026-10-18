@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
@@ -113,6 +113,17 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     });
   };
   const add = () => { if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line()); };
+
+  // Sticky buy-now bar: appears once the main buy area scrolls out of view.
+  const buyRef = useRef(null);
+  const [barOn, setBarOn] = useState(false);
+  useEffect(() => {
+    const el = buyRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => setBarOn(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const buy = () => {
     if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line());
     setCartOpen(false);
@@ -208,7 +219,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         </div>
       )}
 
-      <div className="m-buybar">
+      <div className="m-buybar" ref={buyRef}>
         {!pack && !isMix && (
           <div className="m-qty">
             <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
@@ -224,6 +235,16 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
       </div>
       <div className="m-prepaidchip">PREPAID10</div>
       <button type="button" className="m-btn m-buynow" onClick={buy}>Buy now</button>
+
+      {barOn && (
+        <div className="m-buynowbar">
+          <div className="m-wrap m-buynowbar__in">
+            <span className="m-buynowbar__n"><b>{product.name}</b><small>{opt.label}</small></span>
+            <span className="m-buynowbar__p">{inr(isMix ? (mixCount ? mixTotal : Number(opt.price) || 0) : lineTotal)}</span>
+            <button type="button" className="m-btn m-btn--fill m-buynowbar__cta" onClick={add} disabled={isMix && !mixCount}>Add to cart</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
