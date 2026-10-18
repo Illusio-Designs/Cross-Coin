@@ -90,15 +90,6 @@ export default async function MaisonHome() {
         <div className="m-hero__aside">More than a fragrance.<br />A feeling.</div>
       </section>
 
-      {/* Trust */}
-      <section className="m-trust"><div className="m-wrap m-trust__row">
-        <div className="m-trust__i"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7Z"/></svg><span>Rated <b>4.6★</b> by 5,514+ shoppers</span></div>
-        <div className="m-trust__i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 3c-3 3-6 3-6 3v6c0 5 6 9 6 9s6-4 6-9V6s-3 0-6-3Z"/></svg><span><b>Crafted</b> in India</span></div>
-        <div className="m-trust__i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><b>100%</b> secure payments</span></div>
-        <div className="m-trust__i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><span><b>Free</b> shipping on all orders</span></div>
-        <div className="m-trust__i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg><span><b>Easy</b> 7-day returns</span></div>
-      </div></section>
-
       {/* Featured */}
       <section className="m-section" id="m-featured"><div className="m-wrap">
         <div className="m-shead">
