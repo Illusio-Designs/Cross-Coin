@@ -438,11 +438,15 @@
 .m-packhint{display:flex;align-items:center;gap:8px;justify-content:center;color:var(--m-ink-faint);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:0 0 14px}
 .m-packrail{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 2px 16px;scrollbar-width:thin}
 .m-packrail::-webkit-scrollbar{height:6px}.m-packrail::-webkit-scrollbar-thumb{background:var(--m-line);border-radius:999px}
-.m-packcard{flex:0 0 210px;scroll-snap-align:start;text-align:left;border:1px solid var(--m-line-soft);border-radius:12px;overflow:hidden;background:var(--m-surface);cursor:pointer;color:inherit;font:inherit;padding:0;transition:transform .2s,border-color .2s,box-shadow .2s;display:flex;flex-direction:column}
-.m-packcard:hover{transform:translateY(-3px);box-shadow:var(--m-shadow)}
+.m-packcard{flex:0 0 210px;scroll-snap-align:start;text-align:left;border:1px solid var(--m-line-soft);border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#18181d,#141418);cursor:pointer;color:inherit;font:inherit;padding:0;transition:transform .25s,border-color .25s,box-shadow .25s;display:flex;flex-direction:column}
+.m-packcard:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--m-accent) 42%,transparent);box-shadow:0 26px 52px -30px rgba(0,0,0,.9)}
 .m-packcard.sel{border-color:var(--m-accent);box-shadow:0 0 0 1.5px var(--m-accent) inset}
-.m-packcard__img{position:relative;aspect-ratio:1/1.1;display:block;background:radial-gradient(120% 95% at 50% 18%,#201f24,#121216)}
-.m-packcard__img img{width:100%;height:100%;object-fit:cover}
+.m-packcard__img{position:relative;aspect-ratio:1/1.1;display:block;overflow:hidden;background:radial-gradient(120% 95% at 50% 18%,#201f24,#121216)}
+.m-packcard__img img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+.m-packcard:hover .m-packcard__img img{transform:scale(1.04)}
+.m-packcard__rbadge{position:absolute;bottom:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.52);backdrop-filter:blur(5px);color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+.m-packcard__rbadge svg{color:var(--m-accent-soft)}
+.m-packcard.sel .m-packcard__rbadge{opacity:0}
 .m-packcard__check{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:8px;border:1.5px solid #fff;background:rgba(255,255,255,.22);backdrop-filter:blur(3px);display:grid;place-items:center;color:#fff;transition:.2s}
 .m-packcard__check svg{opacity:0;transition:.2s}
 .m-packcard.sel .m-packcard__check{background:var(--m-accent);border-color:var(--m-accent);color:#17120a}

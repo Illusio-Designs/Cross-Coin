@@ -83,18 +83,20 @@ export default function PackBuilder({ products = [], tiers = [] }) {
               const on = sel.has(String(p.id));
               const img = p.images?.[0] || '';
               const sp = savePct(p);
+              const rating = Number(p.rating || 0);
               return (
                 <button type="button" key={p.id} className={`m-packcard ${on ? 'sel' : ''}`} onClick={() => toggle(p.id)}>
                   <span className="m-packcard__img">
                     {img ? <img src={img} alt={p.name} loading="lazy" /> : null}
                     {p.badge ? <span className="m-packcard__badge">{p.badge}</span> : null}
                     {sp ? <span className="m-packcard__save">Save {sp}%</span> : null}
+                    {rating > 0 ? <span className="m-packcard__rbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>{rating.toFixed(1)}/5</span> : null}
                     <span className="m-packcard__check">{check}</span>
                   </span>
                   <span className="m-packcard__b">
                     <span className="m-packcard__n">{p.name}</span>
                     <span className="m-packcard__pr">{inr(p.price)}{p.originalPrice && p.originalPrice > p.price ? <s>{inr(p.originalPrice)}</s> : null}</span>
-                    <span className="m-packcard__add">{on ? 'In pack ✓' : 'Add to pack'}</span>
+                    <span className="m-packcard__add">{on ? `In pack ✓ · ${inr(p.price)}` : 'Add to pack'}</span>
                   </span>
                 </button>
               );
