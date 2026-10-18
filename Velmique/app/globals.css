@@ -89,6 +89,30 @@
   --border:rgba(255,255,255,.12); --dark:#000; --dark-soft:#17141a;
 }
 
+/* The live CartDrawer (and other global chrome) hardcodes the light palette
+   as Tailwind arbitrary-value classes, so on /test we remap each hex to its
+   onyx counterpart via class-substring selectors. Order matters: a solid
+   color rule first, then its /opacity tint variants re-override after. */
+[data-maison] [class*="bg-[#F7F4EF]"]{background-color:#121214!important}
+[data-maison] .bg-white{background-color:#1d1d21!important}
+[data-maison] [class*="bg-[#EFEAE2]"]{background-color:#1a1a1e!important}
+[data-maison] [class*="bg-[#D8D3C9]"]{background-color:rgba(255,255,255,.14)!important}
+[data-maison] [class*="border-[#D8D3C9]"]{border-color:rgba(255,255,255,.14)!important}
+[data-maison] [class*="border-[#EFEAE2]"]{border-color:rgba(255,255,255,.1)!important}
+[data-maison] [class*="text-[#11100E]"]{color:#f3ead6!important}
+[data-maison] [class*="text-[#49423A]"]{color:#c7c0b2!important}
+[data-maison] [class*="text-[#777168]"]{color:#938d82!important}
+[data-maison] [class*="text-[#8F7548]"]{color:#e8c877!important}
+[data-maison] [class*="bg-[#8F7548]"]{background-color:#d9a43b!important;color:#17120a!important}
+[data-maison] [class*="bg-[#B89A63]"]{background-color:#d9a43b!important;color:#17120a!important}
+[data-maison] [class*="bg-[#B89A63]/10"]{background-color:rgba(217,164,59,.14)!important;color:inherit!important}
+[data-maison] [class*="bg-[#B89A63]/20"]{background-color:rgba(217,164,59,.2)!important;color:inherit!important}
+[data-maison] [class*="border-[#B89A63]"]{border-color:#d9a43b!important}
+[data-maison] [class*="bg-[#11100E]"]{background-color:#d9a43b!important}
+[data-maison] [class*="bg-[#11100E]"], [data-maison] [class*="bg-[#11100E]"] *{color:#17120a!important}
+[data-maison] .bg-white input, [data-maison] input.bg-white, [data-maison] [class*="bg-[#F7F4EF]"] input, [data-maison] [class*="bg-[#F7F4EF]"] select, [data-maison] [class*="bg-[#F7F4EF]"] textarea{background:#1d1d21;color:#f3ead6}
+[data-maison] [class*="bg-[#F7F4EF]"] input::placeholder, [data-maison] [class*="bg-[#F7F4EF]"] textarea::placeholder{color:#8b857a}
+
 * {
   box-sizing: border-box;
   margin: 0;
