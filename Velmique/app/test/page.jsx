@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
 import ProductCard from './_components/ProductCard';
+import ReviewRow from './_components/ReviewRow';
 
 export const metadata = {
   title: 'Velmique — Maison de Parfum',
@@ -35,12 +36,31 @@ const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
 export default async function MaisonHome() {
   const [featured, reviewsRes] = await Promise.all([
     getBestsellers(8),
-    getAllReviews({ limit: 9 }),
+    getAllReviews({ limit: 30 }),
   ]);
 
   // Hero image comes from a featured product (slider API intentionally unused).
   const heroImg = featured?.[0]?.images?.[0] || '';
-  const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 6);
+  const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 30);
+
+  // Reviews wall (same 3-row auto-scroll as the PDP).
+  const rList = reviews;
+  const rPer = Math.ceil(rList.length / 3) || 1;
+  const reviewRows = [rList.slice(0, rPer), rList.slice(rPer, rPer * 2), rList.slice(rPer * 2)].filter((r) => r.length);
+  const reviewDirs = ['left', 'right', 'left'];
+  const renderReview = (v, i) => {
+    const name = v.reviewerName || v.name || 'Verified Buyer';
+    return (
+      <div className="m-rev" key={v.id || i}>
+        <div className="m-stars">{stars(v.rating)}</div>
+        <q>{v.review || v.comment || ''}</q>
+        <div className="m-rev__by">
+          <span className="m-rev__av" style={{ background: AV[(typeof i === 'number' ? i : 0) % AV.length] }}>{name[0]}</span>
+          <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5" /></svg>Verified Buyer</small></span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -140,21 +160,10 @@ export default async function MaisonHome() {
       {/* Reviews */}
       <section className="m-section"><div className="m-wrap">
         <div className="m-shead"><span className="m-eyebrow">Loved by thousands</span><h2>Real People. Lasting Impressions.</h2></div>
-        <div className="m-revs">
-          {reviews.map((v, i) => {
-            const name = v.reviewerName || v.name || 'Verified Buyer';
-            const text = v.review || v.comment || '';
-            return (
-              <div className="m-rev" key={v.id || i}>
-                <div className="m-stars">{stars(v.rating)}</div>
-                <q>{text}</q>
-                <div className="m-rev__by">
-                  <span className="m-rev__av" style={{ background: AV[i % AV.length] }}>{name[0]}</span>
-                  <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg>Verified Buyer</small></span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="m-rvwall">
+          {reviewRows.map((row, idx) => (
+            <ReviewRow key={idx} items={row} staticClassName="m-revs" min={4} direction={reviewDirs[idx]} render={renderReview} />
+          ))}
         </div>
       </div></section>
 
