@@ -10,7 +10,6 @@ import { attributeService } from "../../../services";
 import { brandService } from "../../../services";
 import { debounce } from 'lodash';
 import AttributeSelector from '../../../components/products/AttributeSelector';
-import ProductAttributesEditor from '../../../components/products/ProductAttributesEditor';
 import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
 import BrandTags from '../../../components/Dashboard/BrandTags';
 import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
@@ -793,13 +792,6 @@ const ProductsPage = () => {
     }));
   };
 
-  // Product-level attributes (named value groups with optional per-value images,
-  // e.g. notes/accords) are edited via <ProductAttributesEditor>, which emits the
-  // whole array back here. Serialization to the backend happens in handleSubmit.
-  const handleProductAttributesChange = (nextAttributes) => {
-    setFormData(prev => ({ ...prev, attributes: nextAttributes }));
-  };
-
   const handleNextStep = () => {
     setCurrentStep(prev => prev + 1);
   };
@@ -1288,18 +1280,11 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Product attributes — named value groups with optional imagery
-                (e.g. fragrance notes, accords) shown on the storefront PDP. The
-                `notes` group serializes to attributes.notes = [{name,image}],
-                the exact shape the storefront already reads. */}
-            <div className="attributes-section">
-              <h6>Product attributes</h6>
-              <p className="dm-help">Named values with optional imagery (e.g. fragrance notes, accords), shown on the product page</p>
-              <ProductAttributesEditor
-                value={Array.isArray(formData.attributes) ? formData.attributes : []}
-                onChange={handleProductAttributesChange}
-              />
-            </div>
+            {/* Product-level attributes editor removed: notes/accords (and their
+                images) are managed on each VARIATION via AttributeSelector's
+                per-value image upload (attributes._images). The stored
+                product-level data still round-trips untouched through
+                handleSubmit so older products keep working. */}
           </>
         );
       case 2:
