@@ -1,45 +1,27 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { packPercent, pricePackCart } from '@/lib/packPricing';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const check = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
 );
 
-export default function PackBuilder({ products = [], tiers: initialTiers = [], targetCount = 2 }) {
-  const { addToCart, packTiers, setPackTiers } = useStore();
-  // Reuse the server-loaded offers in the cart; a failed duplicate browser
-  // request must not turn a discounted builder pack back into full price.
-  useEffect(() => {
-    if (initialTiers.length) setPackTiers(initialTiers);
-  }, [initialTiers, setPackTiers]);
-  const tiers = packTiers.length ? packTiers : initialTiers;
+export default function PackBuilder({ products = [], tiers = [] }) {
+  const { addToCart } = useStore();
   const [sel, setSel] = useState(() => new Set());
   const [added, setAdded] = useState(false);
-  const [variations, setVariations] = useState({});
 
-  const discountFor = (count) => packPercent(count, tiers);
+  const discountFor = (count) => tiers.filter((t) => count >= t.pairs).reduce((a, t) => Math.max(a, t.off), 0);
   const nextTier = (count) => tiers.find((t) => count < t.pairs);
   const maxThreshold = tiers.length ? tiers[tiers.length - 1].pairs : 0;
 
-  const selectable = useMemo(() => products.map(p => {
-    const available = (p.variations || []).filter(v => v.inStock !== false && Number(v.stock) > 0);
-    const variant = available.find(v => String(v.id) === String(variations[p.id]))
-      || available.find(v => String(v.id) === String(p.defaultVariationId)) || available[0];
-    return { ...p, available, selectedVariant: variant,
-      defaultVariationId: variant?.id || p.defaultVariationId,
-      price: variant?.price ?? p.price,
-      sizes: variant ? [variant.size || 'One Size'] : p.sizes,
-      images: variant?.images?.[0]?.url ? [variant.images[0].url] : p.images };
-  }).filter(p => p.inStock !== false && (p.available.length || !p.variations?.length)), [products, variations]);
-  const chosen = useMemo(() => selectable.filter(p => sel.has(String(p.id))), [selectable, sel]);
+  const chosen = useMemo(() => products.filter((p) => sel.has(String(p.id))), [products, sel]);
   const count = chosen.length;
   const subtotal = chosen.reduce((a, p) => a + Number(p.price || 0), 0);
   const off = discountFor(count);
-  const total = pricePackCart(chosen.map(p => ({ price: p.price, quantity: 1, packGroup: 'preview' })), tiers).reduce((sum, item) => sum + item.price, 0);
+  const total = subtotal * (1 - off / 100);
   const saved = subtotal - total;
 
   const toggle = (id) => setSel((prev) => {
@@ -50,14 +32,13 @@ export default function PackBuilder({ products = [], tiers: initialTiers = [], t
   });
 
   const addPack = () => {
-    if (!tiers.length || count < targetCount) return;
-    const pg = `byp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    if (!count) return;
+    const pg = `byp-${Date.now()}`;
     chosen.forEach((p) => addToCart({
-      id: `${p.id}:${p.defaultVariationId || 'v'}:${pg}`,
+      id: `${p.id}:${p.defaultVariationId || 'v'}:pack`,
       productId: p.id,
       variationId: p.defaultVariationId || null,
       name: p.name,
-      slug: p.slug,
       price: Number(p.price || 0),
       size: p.sizes?.[0] || '',
       image: p.images?.[0] || '',
@@ -97,15 +78,13 @@ export default function PackBuilder({ products = [], tiers: initialTiers = [], t
           </div>
 
           <div className="m-packshead">Choose your fragrances</div>
-          {!tiers.length && <p>Pack offers are not available right now. Please check back shortly.</p>}
-          {!selectable.length && <p>No fragrances are currently available for this pack.</p>}
           <div className="m-packgrid">
-            {selectable.map((p) => {
+            {products.map((p) => {
               const on = sel.has(String(p.id));
               const img = p.images?.[0] || '';
               const sp = savePct(p);
               return (
-                <div key={p.id} className={`m-packcard ${on ? 'sel' : ''}`}><button type="button" className="m-packcard__pick" aria-pressed={on} onClick={() => toggle(p.id)}>
+                <button type="button" key={p.id} className={`m-packcard ${on ? 'sel' : ''}`} onClick={() => toggle(p.id)}>
                   <span className="m-packcard__img">
                     {img ? <img src={img} alt={p.name} loading="lazy" /> : null}
                     {p.badge ? <span className="m-packcard__badge">{p.badge}</span> : null}
@@ -118,12 +97,6 @@ export default function PackBuilder({ products = [], tiers: initialTiers = [], t
                     <span className="m-packcard__add">{on ? 'In pack ✓' : 'Add to pack'}</span>
                   </span>
                 </button>
-                  {p.available.length > 1 && <label className="m-packcard__variant">Size
-                    <select value={p.defaultVariationId} onChange={e => setVariations(prev => ({ ...prev, [p.id]: e.target.value }))}>
-                      {p.available.map(v => <option value={v.id} key={v.id}>{v.size || v.sku || 'Default'} · {inr(v.price)}</option>)}
-                    </select>
-                  </label>}
-                </div>
               );
             })}
           </div>
@@ -142,8 +115,8 @@ export default function PackBuilder({ products = [], tiers: initialTiers = [], t
             {off ? <s>{inr(subtotal)}</s> : null}
             {off ? <span className="m-packbar__save">Save {off}% · {inr(saved)}</span> : null}
           </div>
-          <button type="button" className="m-btn m-btn--fill m-packbar__cta" onClick={addPack} disabled={!tiers.length || count < targetCount || added}>
-            {added ? 'Pack added ✓' : count < targetCount ? `Choose ${targetCount - count} more` : `Add pack · ${count} items`}
+          <button type="button" className="m-btn m-btn--fill m-packbar__cta" onClick={addPack} disabled={!count}>
+            {added ? 'Pack added ✓' : `Add pack · ${count} item${count === 1 ? '' : 's'}`}
           </button>
         </div>
       </div>

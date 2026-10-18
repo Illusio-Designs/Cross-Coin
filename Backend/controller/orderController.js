@@ -364,8 +364,6 @@
       const packQtyById = {};
       for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
       const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
-      const { getMixPackDiscounts, mixPackUnitPrice } = require('../utils/mixPackPricing.js');
-      const mixDiscounts = await getMixPackDiscounts(items, req.brandId || req.brand?.id || 1);
 
       // Validate items using pre-fetched data
       for (const item of items) {
@@ -409,6 +407,7 @@
               .json({ message: `Invalid variation for product ${product_id}` });
           }
           price = variation.price;
+          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
           stockAvailable = variation.stock;
           logger.debug(
             "createOrder: Variation validated, price:",
@@ -424,6 +423,7 @@
             variation = variations[0];
             variation_id = variation.id;
             price = variation.price;
+            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
             stockAvailable = variation.stock;
           } else {
             // No variations exist
@@ -439,16 +439,6 @@
               .status(400)
               .json({ message: `No price found for product ${product_id}` });
           }
-        }
-
-        // Mix packs and exact-price product packs are mutually exclusive.
-        const mixPrice = mixPackUnitPrice(price, item, mixDiscounts);
-        if (mixPrice != null) {
-          price = mixPrice;
-        } else {
-          const bundlePrice = await require('./bundleController.js').bundlePerUnit(
-            req.brandId || req.brand?.id || 1, product_id, pricingQty(item));
-          if (bundlePrice != null) price = bundlePrice;
         }
 
         // STOCK CHECK — account for Redis reservations (prepaid checkouts in progress)

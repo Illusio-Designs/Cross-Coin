@@ -11,8 +11,6 @@ import {
   toastAddedToWishlist, toastRemovedFromWishlist,
 } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
-import { getPackTiers } from '@/lib/api/bundles';
-import { pricePackCart } from '@/lib/packPricing';
 
 /**
  * Velmique global store.
@@ -32,14 +30,7 @@ import { pricePackCart } from '@/lib/packPricing';
 const StoreContext = createContext(undefined);
 
 export function StoreProvider({ children }) {
-  const [cartItems, setCart] = useState([]);
-  const [packTiers, setPackTiers] = useState([]);
-  const cart = useMemo(() => pricePackCart(cartItems, packTiers), [cartItems, packTiers]);
-  useEffect(() => {
-    let active = true;
-    getPackTiers().then(tiers => { if (active && tiers.length) setPackTiers(tiers); });
-    return () => { active = false; };
-  }, []);
+  const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [wishlistSyncing, setWishlistSyncing] = useState(false);
@@ -59,10 +50,10 @@ export function StoreProvider({ children }) {
   const addToCart = useCallback((item) => {
     const addQty = Math.max(1, Number(item.quantity) || 1);
     setCart(prev => {
-      const key = `${item.id}-${item.size}-${item.color}-${item.packGroup || ''}`;
-      const existing = prev.find(c => `${c.id}-${c.size}-${c.color}-${c.packGroup || ''}` === key);
+      const key = `${item.id}-${item.size}-${item.color}`;
+      const existing = prev.find(c => `${c.id}-${c.size}-${c.color}` === key);
       if (existing) {
-        return prev.map(c => `${c.id}-${c.size}-${c.color}-${c.packGroup || ''}` === key ? { ...c, quantity: c.quantity + addQty } : c);
+        return prev.map(c => `${c.id}-${c.size}-${c.color}` === key ? { ...c, quantity: c.quantity + addQty } : c);
       }
       return [...prev, { ...item, quantity: addQty }];
     });
@@ -177,14 +168,14 @@ export function StoreProvider({ children }) {
   // Single memo'd value — emits a new object reference only when one of
   // the underlying inputs changes, instead of on every render.
   const value = useMemo(() => ({
-    cart, wishlist, cartOpen, searchOpen, packTiers, setPackTiers,
+    cart, wishlist, cartOpen, searchOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
     setCartOpen, setSearchOpen,
     cartTotal, cartCount, clearCart,
   }), [
-    cart, wishlist, cartOpen, searchOpen, packTiers, setPackTiers,
+    cart, wishlist, cartOpen, searchOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,

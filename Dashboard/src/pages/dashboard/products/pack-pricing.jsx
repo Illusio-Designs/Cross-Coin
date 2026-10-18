@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { bundleService, brandService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { Badge, Select, Input, Switch } from '../../../components/ui';
 
-const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true, image_url: '' };
+const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true };
 
 export default function PackPricingManager() {
   const [brands, setBrands] = useState([]);
@@ -17,7 +17,6 @@ export default function PackPricingManager() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     brandService.getAllBrands(true)
@@ -80,12 +79,11 @@ export default function PackPricingManager() {
   const openCreate = () => { setEditing(null); setForm({ ...emptyForm }); };
   const openEdit = (t) => {
     setEditing(t);
-    setForm({ id: t.id, pairs: t.pairs, price: t.price != null ? String(Number(t.price)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active, image_url: t.image_url || '' });
+    setForm({ id: t.id, pairs: t.pairs, price: t.price != null ? String(Number(t.price)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active });
   };
 
   const save = async (e) => {
     e?.preventDefault();
-    if (imageUploading) return;
     if (!productId) { showError('validation', 'Select a product first'); return; }
     const pairs = parseInt(form.pairs, 10);
     const price = parseFloat(form.price);
@@ -101,7 +99,7 @@ export default function PackPricingManager() {
         label: form.label || `${pairs} Pair${pairs > 1 ? 's' : ''}`,
         badge: form.badge || null,
         display_order: parseInt(form.display_order, 10) || 0,
-        is_active: !!form.is_active, image_url: form.image_url || null,
+        is_active: !!form.is_active,
       };
       if (form.id) { await bundleService.update(form.id, payload); showSuccess('saved', 'Pack updated'); }
       else { await bundleService.create(payload); showSuccess('saved', 'Pack created'); }
@@ -166,7 +164,7 @@ export default function PackPricingManager() {
       />
 
       {/* Build Your Pack — store-wide mix tiers */}
-      <BuildYourPackPanel key={brandId} brandId={brandId} />
+      <BuildYourPackPanel brandId={brandId} />
 
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ds-color-text)', margin: '8px 0 10px' }}>Per-product packs</div>
 
@@ -216,7 +214,6 @@ export default function PackPricingManager() {
                 <Input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} />
               </Field>
             </div>
-            <TierImageInput key={`${brandId}:${productId}:${form.id || 'new'}`} value={form.image_url} onChange={image_url => setForm(prev => ({ ...prev, image_url }))} onBusyChange={setImageUploading} />
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 13, color: 'var(--ds-color-text-muted)', flexWrap: 'wrap' }}>
               <Switch checked={!!form.is_active} onChange={(checked) => setForm({ ...form, is_active: checked })} label="Active" />
               {form.price && form.pairs ? (
@@ -227,7 +224,7 @@ export default function PackPricingManager() {
               ) : null}
               <div style={{ flex: 1 }} />
               {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); }} className="cd-btn-ghost" style={{ padding: '8px 14px' }}>Cancel</button>}
-              <button type="submit" disabled={saving || imageUploading} className="cd-btn-primary" style={{ padding: '8px 16px' }}>{saving ? 'Saving…' : (editing ? 'Update pack' : 'Create pack')}</button>
+              <button type="submit" disabled={saving} className="cd-btn-primary" style={{ padding: '8px 16px' }}>{saving ? 'Saving…' : (editing ? 'Update pack' : 'Create pack')}</button>
             </div>
           </form>
 
@@ -251,14 +248,13 @@ export default function PackPricingManager() {
 }
 
 // ── Build Your Pack: store-wide mix tiers (product_id = null + discount_percent) ──
-const emptyMix = { id: null, pairs: 2, discount_percent: '', label: '', badge: '', display_order: 0, is_active: true, image_url: '' };
+const emptyMix = { id: null, pairs: 2, discount_percent: '', label: '', badge: '', display_order: 0, is_active: true };
 function BuildYourPackPanel({ brandId }) {
   const [tiers, setTiers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(emptyMix);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
 
   const reload = async () => {
     setLoading(true);
@@ -272,11 +268,10 @@ function BuildYourPackPanel({ brandId }) {
   };
   useEffect(() => { reload(); }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openEdit = (t) => { setEditing(t); setForm({ id: t.id, pairs: t.pairs, discount_percent: t.discount_percent != null ? String(Number(t.discount_percent)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active, image_url: t.image_url || '' }); };
+  const openEdit = (t) => { setEditing(t); setForm({ id: t.id, pairs: t.pairs, discount_percent: t.discount_percent != null ? String(Number(t.discount_percent)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active }); };
 
   const save = async (e) => {
     e?.preventDefault();
-    if (imageUploading) return;
     const pairs = parseInt(form.pairs, 10);
     const pct = parseFloat(form.discount_percent);
     if (!Number.isFinite(pairs) || pairs < 2) { showError('validation', 'Min items must be at least 2'); return; }
@@ -287,7 +282,7 @@ function BuildYourPackPanel({ brandId }) {
         brand_id: brandId, scope: 'store', product_id: null,
         pairs, discount_percent: pct,
         label: form.label || `Any ${pairs}`, badge: form.badge || null,
-        display_order: parseInt(form.display_order, 10) || 0, is_active: !!form.is_active, image_url: form.image_url || null,
+        display_order: parseInt(form.display_order, 10) || 0, is_active: !!form.is_active,
       };
       if (form.id) { await bundleService.update(form.id, payload); showSuccess('saved', 'Pack tier updated'); }
       else { await bundleService.create(payload); showSuccess('saved', 'Pack tier created'); }
@@ -306,7 +301,6 @@ function BuildYourPackPanel({ brandId }) {
   const dim = (t) => ({ opacity: t.is_active ? 1 : 0.5 });
   const sorted = tiers.slice().sort((a, b) => a.pairs - b.pairs || a.display_order - b.display_order);
   const columns = [
-    { key: 'image', label: 'Image', render: t => t.image_url ? <img src={t.image_url} alt="Bundle banner" style={{ width: 80, height: 52, objectFit: 'cover', borderRadius: 6 }} /> : <span style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>No image</span> },
     { key: 'label', label: 'Tier', render: (t) => <span style={dim(t)}>{t.label || `Any ${t.pairs}`}</span> },
     { key: 'pairs', label: 'Min items', render: (t) => <b style={dim(t)}>{t.pairs}+</b> },
     { key: 'pct', label: 'Discount', render: (t) => <span style={{ ...dim(t), color: 'var(--ds-color-success, #15803d)', fontWeight: 700 }}>{Number(t.discount_percent)}% off</span> },
@@ -338,58 +332,17 @@ function BuildYourPackPanel({ brandId }) {
             <Input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} />
           </Field>
         </div>
-        <TierImageInput key={`${brandId}:${form.id || 'new'}`} value={form.image_url} onChange={image_url => setForm(prev => ({ ...prev, image_url }))} onBusyChange={setImageUploading} />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <Switch checked={!!form.is_active} onChange={(checked) => setForm({ ...form, is_active: checked })} label="Active" />
           <div style={{ flex: 1 }} />
           {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyMix); }} className="cd-btn-ghost" style={{ padding: '8px 14px' }}>Cancel</button>}
-          <button type="submit" disabled={saving || imageUploading} className="cd-btn-primary" style={{ padding: '8px 16px' }}>{saving ? 'Saving…' : (editing ? 'Update tier' : 'Add tier')}</button>
+          <button type="submit" disabled={saving} className="cd-btn-primary" style={{ padding: '8px 16px' }}>{saving ? 'Saving…' : (editing ? 'Update tier' : 'Add tier')}</button>
         </div>
       </form>
       <Panel>
         <ResponsiveTable columns={columns} data={loading ? [] : sorted} rowKey="id"
           emptyMessage={loading ? 'Loading…' : 'No pack tiers yet. Add e.g. 2 items → 10%, 3 → 15%, 4 → 20%.'} />
       </Panel>
-    </div>
-  );
-}
-
-function TierImageInput({ value, onChange, onBusyChange }) {
-  const [uploading, setUploading] = useState(false);
-  const active = useRef(true);
-  useEffect(() => {
-    active.current = true;
-    return () => { active.current = false; onBusyChange(false); };
-  }, [onBusyChange]);
-  const upload = async event => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { showError('validation', 'Choose a JPG, PNG or WebP image'); return; }
-    if (file.size > 5 * 1024 * 1024) { showError('validation', 'Choose an image smaller than 5 MB'); return; }
-    setUploading(true); onBusyChange(true);
-    try {
-      const result = await productService.uploadImages([file]);
-      const image = result.uploadedImages?.[0]?.url;
-      if (!result.success || !image) throw new Error(result.message || 'Image upload failed');
-      if (active.current) onChange(image);
-    } catch (error) {
-      if (active.current) showError('uploadFailed', error.message || 'Image upload failed');
-    } finally {
-      if (active.current) { setUploading(false); onBusyChange(false); }
-    }
-  };
-  return (
-    <div style={{ margin: '16px 0', padding: 14, border: '1px solid var(--ds-color-border)', borderRadius: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Bundle banner image</div>
-      <p style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginBottom: 10 }}>Upload the image for this pack. On Velmique, active store-wide tiers use it on the test homepage. Save the tier to apply changes.</p>
-      {value && <img src={value} alt="Bundle banner preview" style={{ display: 'block', width: '100%', maxWidth: 300, aspectRatio: '3 / 2', objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} />}
-      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-        {uploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
-        <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={upload} aria-label="Upload bundle banner image" />
-      </label>
-      {value && <button type="button" onClick={() => onChange('')} disabled={uploading} style={{ ...btnSecondary, marginLeft: 10 }}>Remove image</button>}
-      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--ds-color-text-muted)' }}>Landscape 3:2 · JPG, PNG or WebP · up to 5 MB</div>
     </div>
   );
 }
