@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
+import { getFaqs } from '@/lib/api/faqs';
 import ProductCard from './_components/ProductCard';
 import ReviewRow from './_components/ReviewRow';
 
@@ -34,9 +35,10 @@ const FALLBACK_REVIEWS = [
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
 
 export default async function MaisonHome() {
-  const [featured, reviewsRes] = await Promise.all([
+  const [featured, reviewsRes, faqs] = await Promise.all([
     getBestsellers(8),
     getAllReviews({ limit: 30 }),
+    getFaqs('global'),
   ]);
 
   // Hero image comes from a featured product (slider API intentionally unused).
@@ -167,23 +169,20 @@ export default async function MaisonHome() {
         </div>
       </div></section>
 
-      {/* Discovery set */}
-      <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap"><div className="m-disc">
-        <div className="m-disc__art">
-          {featured?.[0]?.images?.[0] ? <img src={featured[0].images[0]} alt="Velmique discovery set" /> : null}
-        </div>
-        <div className="m-disc__copy">
-          <span className="m-eyebrow">The discovery set</span>
-          <h2>Find Your Signature.</h2>
-          <p style={{ color: 'var(--m-on-band-soft)', marginTop: 12, maxWidth: '40ch' }}>A curated set of our most-loved fragrances, crafted for every mood — explore before you commit.</p>
-          <div className="m-disc__pts">
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Iconic scents</span>
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M20 12v7H4v-7M2 7h20v5H2zM12 22V7"/></svg>Perfect gifting option</span>
-            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Explore before you commit</span>
+      {/* FAQ — admin-managed, from the backend */}
+      {faqs.length ? (
+        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
+          <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
+          <div className="m-faq">
+            {faqs.map((f) => (
+              <details key={f.id}>
+                <summary>{f.question}</summary>
+                <div className="m-faq__a" dangerouslySetInnerHTML={{ __html: f.answer || '' }} />
+              </details>
+            ))}
           </div>
-          <Link className="m-btn m-btn--fill" href="/test/shop">Shop the collection <span className="m-arrow">→</span></Link>
-        </div>
-      </div></div></section>
+        </div></section>
+      ) : null}
     </>
   );
 }
