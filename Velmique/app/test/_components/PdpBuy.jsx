@@ -84,17 +84,28 @@ export default function PdpBuy({ product, packs = [] }) {
 
       {packChoices.length > 1 && (
         <div className="m-opt">
-          <div className="m-opt__h">Select Pack</div>
+          <div className="m-opt__h">Build Your Pack</div>
           <div className="m-packsel">
-            {packChoices.map((p, i) => (
-              <button key={p.pairs} type="button" className={`m-packopt ${i === packIdx ? 'on' : ''}`} onClick={() => setPackIdx(i)}>
-                {p.badge ? <span className="m-packopt__tag">{p.badge}</span> : null}
-                {opt.image ? <img src={opt.image} alt="" className="m-packopt__img" loading="lazy" /> : null}
-                <b>{p.label}</b>
-                <span className="m-packopt__each">{inr(p.total / p.pairs)} each</span>
-                {p.save > 0 ? <span className="m-packopt__save">SAVE {p.save}%</span> : null}
-              </button>
-            ))}
+            {packChoices.map((p, i) => {
+              const saveAmt = Math.max(0, Math.round((Number(opt.price) || 0) * p.pairs - p.total));
+              return (
+                <button key={p.pairs} type="button" className={`m-packopt ${i === packIdx ? 'on' : ''}`} onClick={() => setPackIdx(i)}>
+                  {p.badge ? <span className="m-packopt__tag">{p.badge}</span> : null}
+                  <span className="m-packopt__name">{p.pairs === 1 ? '1 Bottle' : p.label}</span>
+                  <span className="m-packopt__sub">{p.pairs} × {opt.label}</span>
+                  {opt.image ? (
+                    <span className="m-packopt__imgs">
+                      {Array.from({ length: Math.min(p.pairs, 3) }).map((_, k) => (
+                        <img key={k} src={opt.image} alt="" loading="lazy" />
+                      ))}
+                    </span>
+                  ) : null}
+                  <b className="m-packopt__total">{inr(p.total)}</b>
+                  <span className="m-packopt__each">{p.pairs > 1 ? `${inr(p.total / p.pairs)} each` : 'per bottle'}</span>
+                  {saveAmt > 0 ? <span className="m-packopt__savepill">You save {inr(saveAmt)}</span> : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

@@ -326,20 +326,27 @@
 .m-rcompo{background:radial-gradient(120% 120% at 15% 0%,var(--m-band-2),var(--m-band));border:1px solid rgba(0,0,0,.6);border-radius:14px;padding:24px 18px;text-align:center}
 .m-rcompo .m-pn{width:clamp(110px,22vw,140px)}
 
-/* "Select Pack" tier cards on the PDP (per-product packs, reference style). */
-.m-packsel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-top:10px}
-.m-packopt{position:relative;border:1.5px solid var(--m-line);border-radius:10px;background:var(--m-surface);
-  padding:14px 8px 12px;text-align:center;cursor:pointer;color:inherit;font:inherit;transition:.2s;
-  display:flex;flex-direction:column;align-items:center;gap:4px}
+/* "Build Your Pack" tier cards on the PDP (per-product packs, reference
+   style): name, N × size, stacked bottle images, total, per-unit, floating
+   badge on top and a hanging "You save ₹X" pill at the bottom edge. */
+.m-packsel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 0 14px}
+.m-packopt{position:relative;border:1.5px solid var(--m-line);border-radius:12px;background:var(--m-surface);
+  padding:16px 8px 16px;text-align:center;cursor:pointer;color:inherit;font:inherit;transition:.2s;
+  display:flex;flex-direction:column;align-items:center;gap:3px;overflow:visible}
 .m-packopt:hover{border-color:color-mix(in srgb,var(--m-accent) 50%,var(--m-line))}
-.m-packopt.on{border-color:var(--m-accent);background:color-mix(in srgb,var(--m-accent) 12%,var(--m-surface));box-shadow:0 0 0 1.5px var(--m-accent) inset}
+.m-packopt.on{border-color:var(--m-accent);background:color-mix(in srgb,var(--m-accent) 12%,var(--m-surface));box-shadow:0 0 0 1.5px var(--m-accent) inset;transform:translateY(-2px)}
 .m-packopt__tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--m-accent);color:#17120a;
-  font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap}
-.m-packopt__img{width:46px;height:46px;object-fit:cover;border-radius:8px;margin-bottom:2px;border:1px solid var(--m-line-soft)}
-.m-packopt b{font-family:var(--m-d);font-size:14px;font-weight:600;line-height:1.1}
-.m-packopt__each{font-size:11px;color:var(--m-ink-soft);font-weight:600}
-.m-packopt__save{font-size:9px;font-weight:800;letter-spacing:.05em;background:var(--m-rose);color:#17120a;border-radius:6px;padding:2px 7px;margin-top:2px}
-@media (max-width:360px){.m-packsel{gap:7px}.m-packopt{padding:12px 5px 10px}}
+  font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;z-index:2}
+.m-packopt__name{font-family:var(--m-d);font-size:15px;font-weight:600;line-height:1.1}
+.m-packopt__sub{font-size:9.5px;color:var(--m-ink-faint);letter-spacing:.05em;text-transform:uppercase}
+.m-packopt__imgs{display:flex;justify-content:center;margin:7px 0 5px}
+.m-packopt__imgs img{width:42px;height:42px;object-fit:cover;border-radius:8px;border:1.5px solid var(--m-surface);box-shadow:0 4px 10px rgba(0,0,0,.45)}
+.m-packopt__imgs img + img{margin-left:-15px}
+.m-packopt__total{font-size:16px;font-weight:800;font-family:var(--m-b)}
+.m-packopt__each{font-size:10.5px;color:var(--m-ink-soft);font-weight:600}
+.m-packopt__savepill{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);background:var(--m-accent);color:#17120a;
+  font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;z-index:2}
+@media (max-width:360px){.m-packsel{gap:7px}.m-packopt{padding:13px 5px 14px}}
 
 /* Build-Your-Pack CTA on the PDP, just above Add to cart. */
 .m-packcta{display:flex;align-items:center;gap:13px;margin:4px 0 18px;padding:13px 16px;border-radius:8px;
