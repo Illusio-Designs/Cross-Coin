@@ -44,7 +44,7 @@ export default function Analytics() {
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
     if (!cfg || typeof window === 'undefined') return;
-    if (consent.analytics && cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
+    if (cfg.gaId && window.gtag) window.gtag('event', 'page_view', { page_path: pathname });
     if (consent.marketing && cfg.fbId && window.fbq) window.fbq('track', 'PageView');
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
@@ -78,7 +78,7 @@ export default function Analytics() {
         </>
       )}
 
-      {gaId && consent.analytics && (
+      {gaId && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
           <Script id="ga4-init" strategy="lazyOnload"

@@ -62,7 +62,7 @@ export default function Analytics() {
   return (
     <>
       <GoogleTagManager containerId={gtmId} />
-      {ga4Id && consent.analytics && (
+      {ga4Id && (
         <>
           <Script
             id="ga4-loader"

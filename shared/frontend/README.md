@@ -38,8 +38,10 @@ Soxbae, Knitwink, Velmique and Velquira. Crosscoin keeps
 its existing server-rendered GTM bootstrap in `src/pages/_document.jsx`.
 
 Set each brand's own `GTM_ID` (`GTM-…`) in Brand Settings. Missing IDs leave
-GTM off. The container loads after analytics consent; Consent Mode sets ad
-storage, ad user data and ad personalization according to marketing consent.
+GTM off. Advanced Consent Mode loads configured Google tags even before a
+choice or after rejection, with analytics storage denied unless analytics is
+accepted. Ad storage, ad user data and ad personalization are denied unless
+marketing is accepted. Google may send limited cookieless measurement signals.
 Custom tags in each GTM container must have appropriate consent checks.
 
 Direct GA4, Meta and Clarity initialization is retained. Do not install the
@@ -47,5 +49,5 @@ same destinations again inside GTM without migrating their direct setup, or
 events may be duplicated. No unconditional noscript iframe is added to the
 client-loaded containers, since it cannot respect the stored consent choice.
 
-Validate after deployment with Tag Assistant: accept analytics consent, check
-the brand's own container ID, then check GA4 events and marketing consent.
+Validate after deployment with Tag Assistant: check the brand's own container
+ID, verify denied storage after rejection, then granted storage after acceptance.

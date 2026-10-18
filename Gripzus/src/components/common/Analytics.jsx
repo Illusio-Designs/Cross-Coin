@@ -44,7 +44,7 @@ export default function Analytics() {
   useEffect(() => {
     const onRouteChange = (url) => {
       if (typeof window === 'undefined') return;
-      if (consent.analytics && window.gtag) window.gtag('event', 'page_view', { page_path: url });
+      if (window.gtag) window.gtag('event', 'page_view', { page_path: url });
       if (consent.marketing && window.fbq) window.fbq('track', 'PageView');
     };
     router.events.on('routeChangeComplete', onRouteChange);
@@ -81,7 +81,7 @@ export default function Analytics() {
         </>
       )}
 
-      {gaId && consent.analytics && (
+      {gaId && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
           <Script id="ga4-init" strategy="lazyOnload"

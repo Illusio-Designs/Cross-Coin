@@ -53,8 +53,9 @@ export default function CookieBanner() {
     <div role="dialog" aria-label="Cookie preferences" className="cc-cookie">
       <h2 className="cc-cookie__title">Your cookie choices</h2>
       <p className="cc-cookie__text">
-        We use essential cookies to run the store. With your consent we also use analytics and
-        marketing cookies to improve CrossCoin and show relevant offers. Read our{' '}
+        We use essential cookies to run the store. With your consent, we also use analytics
+        and marketing cookies. If you reject optional cookies, Google may still receive limited
+        cookieless signals for measurement, with analytics and advertising storage denied. Read our{' '}
         <a href="/policy/privacy-policy">Privacy Policy</a>.
       </p>
 

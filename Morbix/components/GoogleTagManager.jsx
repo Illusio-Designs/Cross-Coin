@@ -7,9 +7,9 @@ import { useConsent } from '../lib/consent';
 import { syncGoogleTagManager } from '../utils/googleTagManager.mjs';
 
 export default function GoogleTagManager({ containerId }) {
-  const consent = useConsent();
+  const { analytics, marketing } = useConsent();
   useEffect(() => {
-    syncGoogleTagManager(containerId, consent);
-  }, [containerId, consent.analytics, consent.marketing]);
+    syncGoogleTagManager(containerId, { analytics, marketing });
+  }, [containerId, analytics, marketing]);
   return null;
 }

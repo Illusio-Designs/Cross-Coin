@@ -5,7 +5,6 @@
 export function syncGoogleTagManager(containerId, consent) {
   if (typeof window === 'undefined') return;
   const validId = /^GTM-[A-Z0-9]+$/.test(containerId || '');
-  if (!validId && !window.__brandGtm) return;
 
   window.dataLayer = window.dataLayer || [];
   const command = function () { window.dataLayer.push(arguments); };
@@ -24,9 +23,9 @@ export function syncGoogleTagManager(containerId, consent) {
     ad_personalization: consent.marketing ? 'granted' : 'denied',
   });
 
-  // No container request until analytics consent. Revocation updates loaded
-  // Google tags; custom tags in GTM must also have consent checks configured.
-  if (!validId || !consent.analytics || window.__brandGtm.containers[containerId]) return;
+  // Advanced Consent Mode loads Google tags even with storage denied.
+  // Custom tags in GTM must still have their own consent checks configured.
+  if (!validId || window.__brandGtm.containers[containerId]) return;
   window.__brandGtm.containers[containerId] = true;
   window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
   const script = document.createElement('script');

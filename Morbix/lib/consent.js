@@ -10,8 +10,9 @@ import { useEffect, useState } from 'react';
        visit tracking. Off until the user opts in.
      • marketing — Meta Pixel and any ad/retargeting tag. Off until opt-in.
 
-   Nothing in the analytics/marketing categories may run until getConsent()
-   reports that category true. Choice is stored per-browser; changing it fires
+   Google tags use Advanced Consent Mode: cookieless signals may be sent
+   with storage denied. Other optional analytics/marketing tags wait until
+   getConsent() reports their category true. Choice is stored per-browser; changing it fires
    CONSENT_EVENT so live components (Analytics, VisitTracker) react at once.
    ───────────────────────────────────────────────────────────── */
 

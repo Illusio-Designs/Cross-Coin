@@ -56,8 +56,9 @@ export default function CookieBanner() {
       <p className="cb__eyebrow">Cookies</p>
       <h2 className="cb__title">Your cookie choices</h2>
       <p className="cb__text">
-        We use essential cookies to run the store. With your consent we also use analytics and
-        marketing cookies to improve Velmique and show relevant offers. Read our{' '}
+        We use essential cookies to run the store. With your consent, we also use analytics
+        and marketing cookies. If you reject optional cookies, Google may still receive limited
+        cookieless signals for measurement, with analytics and advertising storage denied. Read our{' '}
         <a href="/privacy-policy">Privacy Policy</a>.
       </p>
 

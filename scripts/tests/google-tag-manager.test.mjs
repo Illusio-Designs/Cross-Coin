@@ -21,10 +21,11 @@ test('missing or invalid container never loads a default container', () => {
   assert.equal(scripts.length, 0);
 });
 
-test('consent precedes the brand container and repeated renders load it only once', () => {
+test('denied consent precedes loading and acceptance does not duplicate the container', () => {
   const scripts = browser();
   syncGoogleTagManager('GTM-MORBIX', { analytics: false, marketing: false });
-  assert.equal(scripts.length, 0);
+  assert.equal(scripts.length, 1);
+  assert.deepEqual(Object.values(window.dataLayer[1][2]), ['denied', 'denied', 'denied', 'denied']);
   assert.equal(window.dataLayer[0][0], 'consent');
   assert.equal(window.dataLayer[0][1], 'default');
   syncGoogleTagManager('GTM-MORBIX', { analytics: true, marketing: false });
@@ -32,8 +33,8 @@ test('consent precedes the brand container and repeated renders load it only onc
   assert.equal(scripts.length, 1);
   assert.equal(scripts[0].src, 'https://www.googletagmanager.com/gtm.js?id=GTM-MORBIX');
   assert.equal(window.dataLayer.filter(row => row.event === 'gtm.js').length, 1);
-  assert.equal(window.dataLayer[2][2].analytics_storage, 'granted');
-  assert.equal(window.dataLayer[2][2].ad_storage, 'denied');
+  assert.equal(window.dataLayer[3][2].analytics_storage, 'granted');
+  assert.equal(window.dataLayer[3][2].ad_storage, 'denied');
 });
 
 test('revoking consent updates the loaded Google tags', () => {
@@ -55,4 +56,13 @@ test('a failed load permits a later retry', () => {
 
 test('server rendering performs no browser operations', () => {
   assert.doesNotThrow(() => syncGoogleTagManager('GTM-MORBIX', { analytics: true }));
+});
+
+// Direct GA4 must receive consent commands even when no GTM container is set.
+test('GA4-only brands initialize denied storage without loading a GTM container', () => {
+  const scripts = browser();
+  syncGoogleTagManager(null, { analytics: false, marketing: false });
+  assert.equal(scripts.length, 0);
+  assert.equal(window.dataLayer[0][1], 'default');
+  assert.equal(window.dataLayer[1][2].analytics_storage, 'denied');
 });
