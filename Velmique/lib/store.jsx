@@ -37,7 +37,7 @@ export function StoreProvider({ children }) {
   const cart = useMemo(() => pricePackCart(cartItems, packTiers), [cartItems, packTiers]);
   useEffect(() => {
     let active = true;
-    getPackTiers().then(tiers => { if (active) setPackTiers(tiers); });
+    getPackTiers().then(tiers => { if (active && tiers.length) setPackTiers(tiers); });
     return () => { active = false; };
   }, []);
   const [wishlist, setWishlist] = useState([]);
@@ -177,14 +177,14 @@ export function StoreProvider({ children }) {
   // Single memo'd value — emits a new object reference only when one of
   // the underlying inputs changes, instead of on every render.
   const value = useMemo(() => ({
-    cart, wishlist, cartOpen, searchOpen,
+    cart, wishlist, cartOpen, searchOpen, packTiers, setPackTiers,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
     setCartOpen, setSearchOpen,
     cartTotal, cartCount, clearCart,
   }), [
-    cart, wishlist, cartOpen, searchOpen,
+    cart, wishlist, cartOpen, searchOpen, packTiers, setPackTiers,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { packPercent, pricePackCart } from '@/lib/packPricing';
 
@@ -9,8 +9,14 @@ const check = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
 );
 
-export default function PackBuilder({ products = [], tiers = [], targetCount = 2 }) {
-  const { addToCart } = useStore();
+export default function PackBuilder({ products = [], tiers: initialTiers = [], targetCount = 2 }) {
+  const { addToCart, packTiers, setPackTiers } = useStore();
+  // Reuse the server-loaded offers in the cart; a failed duplicate browser
+  // request must not turn a discounted builder pack back into full price.
+  useEffect(() => {
+    if (initialTiers.length) setPackTiers(initialTiers);
+  }, [initialTiers, setPackTiers]);
+  const tiers = packTiers.length ? packTiers : initialTiers;
   const [sel, setSel] = useState(() => new Set());
   const [added, setAdded] = useState(false);
   const [variations, setVariations] = useState({});

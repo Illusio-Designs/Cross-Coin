@@ -1,3 +1,5 @@
+import HomeBundles from '@/components/home/HomeBundles';
+import { getPackTiers, getHomeBundleImages } from '@/lib/api/bundles';
 import HeroMaison from '@/components/home/HeroMaison';
 import SeoWrapper from '@/components/SeoWrapper';
 import {
@@ -48,11 +50,13 @@ export default async function HomePage() {
   // Fetch the above/below-the-fold data on the server, in parallel, so the
   // homepage HTML ships with content instead of a client-side waterfall of
   // skeletons. Each falls back to empty so one slow call can't blank the page.
-  const [categories, bestsellers, reviewsData, seoOrg] = await Promise.all([
+  const [categories, bestsellers, reviewsData, seoOrg, packTiers, bundleImages] = await Promise.all([
     getPublicCategories().catch(() => []),
     getBestsellers(4).catch(() => []),
     getAllReviews({ limit: 24 }).catch(() => ({ reviews: [] })),
     getSeoOrg().catch(() => null),
+    getPackTiers(),
+    getHomeBundleImages(),
   ]);
 
   // Dashboard-controlled schema.org/Organization. Null when the backend has
@@ -102,6 +106,7 @@ export default async function HomePage() {
         <Marquee rating={marqueeRating} />
         <Intro />
         <BestSellers initialItems={bestsellers} />
+        <HomeBundles tiers={packTiers} images={bundleImages} />
         <CollectionsBand initialCategories={categories} />
         <StoryBand />
         <NotesBand />

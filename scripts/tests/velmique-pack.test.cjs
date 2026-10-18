@@ -98,3 +98,14 @@ test('editing a pack tier invalidates cached server pricing immediately', async 
   assert.equal(res.body.success, true);
   assert.equal(await module.exports.packDiscountPercent(7, 2), 18);
 });
+
+test('admin offers apply 20% for two items and 30% for three after quantity changes', () => {
+  const offers = [{ pairs: 2, off: 20 }, { pairs: 3, off: 30 }];
+  const front = frontend();
+  const lines = [{ price: 1000, quantity: 1, packGroup: 'velmique' }, { price: 1500, quantity: 1, packGroup: 'velmique' }];
+  const two = front.pricePackCart(lines, offers);
+  assert.equal(two.reduce((sum, line) => sum + line.price * line.quantity, 0), 2000);
+  const three = front.pricePackCart([{ ...two[0], quantity: 2 }, two[1]], offers);
+  assert.equal(three.reduce((sum, line) => sum + line.price * line.quantity, 0), 2450);
+  assert.equal(three[0].packDiscount, 30);
+});
