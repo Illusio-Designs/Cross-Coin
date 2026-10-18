@@ -455,8 +455,10 @@
 }
 .m-desc-rich figure{margin:18px 0}
 .m-desc-rich a{color:var(--m-accent);text-decoration:underline}
-.m-prepaidchip{position:relative;z-index:3;display:block;width:max-content;max-width:94%;margin:14px auto -14px;text-align:center;font-family:var(--m-b);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--m-accent-deep);background:color-mix(in srgb,var(--m-accent) 15%,var(--m-surface));border:1.5px solid color-mix(in srgb,var(--m-accent) 38%,transparent);border-radius:8px;padding:8px 18px}
-.m-buynow{padding-top:20px}
+/* PREPAID10 chip: a gold pill straddling the Buy-now button's top border,
+   with a page-colored ring so it reads as cut into the outline. */
+.m-prepaidchip{position:relative;z-index:3;display:block;width:max-content;max-width:94%;margin:18px auto -25px;text-align:center;font-family:var(--m-b);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#17120a;background:var(--m-accent);border:0;border-radius:999px;padding:6px 16px;box-shadow:0 0 0 6px var(--m-bg)}
+.m-buynow{padding-top:22px}
 .m-specs{background:var(--m-bg-tint);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:22px 24px}
 .m-specs h3{font-family:var(--m-d);font-size:22px;font-weight:600;margin:0 0 6px}
 .m-specs dl{margin:0}
