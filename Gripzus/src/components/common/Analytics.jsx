@@ -91,6 +91,8 @@ export default function Analytics() {
               gtag('js', new Date());
               gtag('config', '${gaId}', { send_page_view: false });
               gtag('event', 'page_view', { page_path: window.location.pathname });
+              window.__brandGa4Ready = true;
+              window.dispatchEvent(new Event('brand-ga4-ready'));
             ` }}
           />
         </>

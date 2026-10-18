@@ -168,25 +168,44 @@ export function addPaymentInfo(params = {}) {
 // two into one conversion instead of double-counting. Because the server
 // already sends Purchase via the Conversions API, this is intentionally NOT
 // relayed again here — the browser pixel is the second, deduped leg.
+// Keep a purchase until direct GA4 initialization completes. Storage failures
+// must not prevent delivery; the in-memory guard also prevents repeat renders.
+const pendingGaPurchases = new Map();
+const sentGaPurchases = new Set();
+let gaReadyListenerAdded = false;
+function trackGaPurchase(orderNumber, params) {
+  const id = String(orderNumber);
+  if (sentGaPurchases.has(id)) return;
+  const key = `ga4_purchase_${id}`;
+  try { if (sessionStorage.getItem(key) === '1') return; } catch (_) {}
+  if (!window.gtag || !window.__brandGa4Ready) {
+    pendingGaPurchases.set(id, params);
+    if (!gaReadyListenerAdded) {
+      gaReadyListenerAdded = true;
+      window.addEventListener('brand-ga4-ready', () => {
+        for (const [number, data] of pendingGaPurchases) trackGaPurchase(number, data);
+      });
+    }
+    return;
+  }
+  try {
+    window.gtag('event', 'purchase', {
+      transaction_id: id,
+      currency: params.currency || 'INR',
+      value: Number(params.value || 0),
+      items: ga4Items(params),
+    });
+    sentGaPurchases.add(id);
+    pendingGaPurchases.delete(id);
+    try { sessionStorage.setItem(key, '1'); } catch (_) {}
+  } catch (_) { /* tracking must never break checkout */ }
+}
+
 export function fbPurchase(orderNumber, params = {}) {
   if (typeof window === 'undefined') return;
   if (!orderNumber || orderNumber === '—') return; // no real order → skip
 
-  // GA4 purchase — mirror the conversion to Google so GA4 sees purchases (this
-  // previously fired only the Meta pixel). transaction_id lets GA4 attribute +
-  // dedupe it; guarded per order id so a re-render never double-counts.
-  try {
-    const key = `ga4_purchase_${orderNumber}`;
-    if (window.gtag && sessionStorage.getItem(key) !== '1') {
-      window.gtag('event', 'purchase', {
-        transaction_id: String(orderNumber),
-        currency: params.currency || 'INR',
-        value: Number(params.value || 0),
-        items: ga4Items(params),
-      });
-      sessionStorage.setItem(key, '1');
-    }
-  } catch (_) { /* never throw */ }
+  trackGaPurchase(orderNumber, params);
 
   if (!window.fbq) return;
   try {

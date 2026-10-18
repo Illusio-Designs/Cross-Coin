@@ -78,6 +78,8 @@ export default function Analytics() {
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config', '${ga4Id}', { transport_type: 'beacon' });
+              window.__brandGa4Ready = true;
+              window.dispatchEvent(new Event('brand-ga4-ready'));
               `,
             }}
           />
