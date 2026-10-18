@@ -4,9 +4,9 @@
  * up indexed.
  */
 
-// Must match layout.jsx metadataBase (www) so the Sitemap: line points at the
+// Must match layout.jsx metadataBase so the Sitemap: line points at the
 // canonical host (crawlers were sent to the non-www sitemap, which redirects).
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.soxbaesocks.com';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbae.com';
 
 const DISALLOW = [
   '/account',
