@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 
-export default function PdpBuy({ product, packs = [], mixTiers = [] }) {
+export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [] }) {
   const { addToCart, setCartOpen } = useStore();
   const router = useRouter();
 
@@ -46,12 +46,13 @@ export default function PdpBuy({ product, packs = [], mixTiers = [] }) {
     }
     if (mixTiers.length) {
       return [
-        { pairs: 1, total: base, label: '1 Bottle', badge: '' },
+        { pairs: 1, total: base, label: '1 Bottle', badge: '', off: 0 },
         ...mixTiers.map((t) => ({
           pairs: t.pairs,
           total: Math.round(base * t.pairs * (1 - t.off / 100)),
           label: `${t.pairs} Bottles`,
           badge: t.badge,
+          off: t.off,
         })),
       ];
     }

@@ -476,9 +476,17 @@
 .m-packhero h1{font-size:clamp(32px,6vw,56px);font-weight:600;margin:12px 0 10px;line-height:1.02}
 .m-packhero h1 em{font-style:italic;color:var(--m-accent-deep)}
 .m-packhero p{color:var(--m-ink-soft);font-size:15px;margin:0 auto}
-.m-packsteps{display:flex;justify-content:center;gap:clamp(12px,4vw,36px);flex-wrap:wrap;margin:24px 0 6px}
-.m-packsteps>div{display:flex;align-items:center;gap:9px;color:var(--m-ink-soft);font-size:13px}
-.m-packsteps i{width:26px;height:26px;border-radius:999px;border:1px solid var(--m-accent);color:var(--m-accent-deep);display:grid;place-items:center;font-family:var(--m-d);font-size:13px;font-style:normal;flex:none}
+/* Step rail: lights up as the user progresses */
+.m-packsteps{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:24px 0 6px}
+.m-pstep{display:flex;align-items:center;gap:9px;color:var(--m-ink-faint);font-size:13px;font-weight:600;transition:.3s}
+.m-pstep i{width:26px;height:26px;border-radius:999px;border:1.5px solid var(--m-line);background:var(--m-surface);color:var(--m-ink-faint);display:grid;place-items:center;font-family:var(--m-d);font-size:13px;font-style:normal;flex:none;transition:.3s}
+.m-pstep.now{color:var(--m-ink)}
+.m-pstep.now i{border-color:var(--m-accent);color:var(--m-accent-deep)}
+.m-pstep.done{color:var(--m-ink)}
+.m-pstep.done i{background:var(--m-accent);border-color:var(--m-accent);color:#17120a}
+.m-plink{flex:0 1 44px;min-width:16px;height:1.5px;background:var(--m-line);position:relative;overflow:hidden}
+.m-plink::after{content:'';position:absolute;inset:0;background:var(--m-accent);transform:scaleX(0);transform-origin:left;transition:transform .4s}
+.m-plink.on::after{transform:scaleX(1)}
 .m-packshead{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--m-ink-faint);font-weight:800;margin:36px 0 16px;text-align:center}
 .m-packgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media (max-width:860px){.m-packgrid{grid-template-columns:repeat(3,1fr)}}
@@ -494,14 +502,31 @@
 .m-ptier__imgs img{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1.5px solid var(--m-surface);box-shadow:0 4px 10px rgba(0,0,0,.45)}
 .m-ptier__imgs img+img{margin-left:-14px}
 .m-ptier__off{font-size:16px;font-weight:800;color:var(--m-accent-deep)}
+.m-ptier__off.mut{color:var(--m-ink-soft);font-size:13px;font-weight:700}
 .m-ptier__savepill{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);background:var(--m-accent);color:#17120a;font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;z-index:2}
 @media (max-width:360px){.m-packtiers{gap:7px}.m-ptier{padding:13px 5px 14px}}
+/* Tier stepper track under the cards (Morbix-style unlock nodes) */
+.m-ttrack{position:relative;height:48px;max-width:520px;margin:20px auto 0}
+.m-ttrack__line{position:absolute;top:11px;height:4px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+.m-ttrack__line i{display:block;height:100%;background:linear-gradient(90deg,var(--m-accent),var(--m-accent-soft));width:0;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.m-tnode{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
+.m-tnode b{width:26px;height:26px;border-radius:999px;border:2px solid var(--m-line);background:var(--m-surface);display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--m-ink-faint);transition:.3s}
+.m-tnode span{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--m-ink-faint);transition:.3s;white-space:nowrap}
+.m-tnode.on b{border-color:var(--m-accent);background:var(--m-accent);color:#17120a}
+.m-tnode.on span{color:var(--m-accent-deep)}
 .m-packhint{display:flex;align-items:center;gap:8px;justify-content:center;color:var(--m-ink-faint);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:0 0 14px}
 .m-packrail{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 2px 16px;scrollbar-width:thin}
 .m-packrail::-webkit-scrollbar{height:6px}.m-packrail::-webkit-scrollbar-thumb{background:var(--m-line);border-radius:999px}
 /* Pack-page product cards reuse the live Option C card (.m-card__*); these
    add only the selection chrome + always-visible Add button. */
-.m-pkcard{cursor:pointer;color:inherit;font:inherit;padding:0;text-align:left}
+.m-pkcard{color:inherit;font:inherit;padding:0;text-align:left}
+.m-pkcard__figbtn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;color:inherit;text-align:inherit;font:inherit}
+/* Quantity stepper swapped in once a scent is picked */
+.m-pkqty{display:flex;align-items:stretch;margin-top:12px;height:42px;border:1.5px solid var(--m-accent);border-radius:9px;overflow:hidden;background:color-mix(in srgb,var(--m-accent) 10%,transparent)}
+.m-pkqty button{flex:0 0 44px;background:var(--m-accent);border:0;color:#17120a;font-size:18px;font-weight:800;cursor:pointer;font-family:var(--m-b)}
+.m-pkqty button:hover{background:var(--m-accent-deep)}
+.m-pkqty output{flex:1;display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--m-ink);text-align:center}
+.m-pkqty output small{font-weight:700;color:var(--m-accent-deep);margin-left:5px;font-size:11px}
 .m-pkcard.sel{border-color:var(--m-accent);box-shadow:0 0 0 1.5px var(--m-accent) inset}
 .m-pkcard__save{position:absolute;bottom:11px;right:11px;z-index:3;background:var(--m-rose);color:#17120a;font-size:9px;font-weight:800;letter-spacing:.05em;padding:4px 8px;border-radius:7px}
 .m-pkcard__check{position:absolute;top:10px;right:10px;z-index:3;width:32px;height:32px;border-radius:9px;border:1.5px solid rgba(255,255,255,.75);background:rgba(0,0,0,.3);backdrop-filter:blur(4px);display:grid;place-items:center;color:#fff;transition:.2s}
