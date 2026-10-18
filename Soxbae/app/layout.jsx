@@ -25,7 +25,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swa
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-display', display: 'swap', style: ['normal', 'italic'] });
 
 export const metadata = {
-  metadataBase: new URL('https://www.soxbaesocks.com'),
+  metadataBase: new URL('https://soxbae.com'),
   title: {
     default: 'Soxbae — Premium socks for sport & city life',
     template: '%s | Soxbae',

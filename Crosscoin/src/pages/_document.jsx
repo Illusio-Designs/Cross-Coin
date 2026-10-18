@@ -117,13 +117,18 @@ export default function Document({ tracking }) {
                 "(function(){var P=location.pathname,BLOCK=(P.indexOf('/dashboard')===0||P.indexOf('/auth')===0);" +
                 // DPDP consent — read the visitor's stored choice. AN=analytics, MK=marketing.
                 "var AN=false,MK=false;try{var _C=JSON.parse(localStorage.getItem('vlm-consent-v1')||'{}');AN=!!_C.analytics;MK=!!_C.marketing;}catch(e){}" +
-                // dataLayer + gtag stub (queues into dataLayer) — gated on analytics consent
+                // Advanced Consent Mode: queue Google signals with the actual storage choice.
                 "window.dataLayer=window.dataLayer||[];" +
-                "window.gtag=function(){if(BLOCK||!AN)return;dataLayer.push(arguments);};" +
+                // Apply Google Consent Mode before either GTM or gtag initializes.
+                "function consentCommand(){dataLayer.push(arguments);}" +
+                "consentCommand('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});" +
+                "consentCommand('consent','update',{analytics_storage:AN?'granted':'denied',ad_storage:MK?'granted':'denied',ad_user_data:MK?'granted':'denied',ad_personalization:MK?'granted':'denied'});" +
+                "window.gtag=function(){if(BLOCK)return;dataLayer.push(arguments);};" +
                 (gtmId ? "dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});" : "") +
                 ((gaId || adsId) ? "gtag('js',new Date());" : "") +
                 (gaId ? `gtag('config','${gaId}');` : "") +
                 (adsId ? `gtag('config','${adsId}');` : "") +
+                (gaId ? "window.__brandGa4Ready=true;window.dispatchEvent(new Event('brand-ga4-ready'));" : "") +
                 (adsId ? `window.__gAdsId='${adsId}';` : "") +
                 (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
                 (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : "") +
@@ -135,8 +140,8 @@ export default function Document({ tracking }) {
                 // Deferred loader for the heavy external scripts
                 "var done=false;function inj(u){var s=document.createElement('script');s.async=true;s.src=u;document.head.appendChild(s);}" +
                 "function boot(){if(done)return;done=true;" +
-                (gtmId ? `if(AN)inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
-                ((gaId || adsId) ? `if(AN)inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
+                (gtmId ? `if(!BLOCK)inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
+                ((gaId || adsId) ? `if(!BLOCK)inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
                 (fbId ? "if(MK)inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
                 (clarityId ? `if(!BLOCK&&AN)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
                 "}" +

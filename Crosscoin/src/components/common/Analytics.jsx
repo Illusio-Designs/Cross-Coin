@@ -29,7 +29,7 @@ function useRouteTracking() {
         window.fbq("track", "PageView");
       }
       // Google Analytics — page_view on navigation (analytics consent)
-      if (consent.analytics && typeof window !== "undefined" && window.gtag) {
+      if (typeof window !== "undefined" && window.gtag) {
         window.gtag("event", "page_view", { page_path: url });
       }
     };

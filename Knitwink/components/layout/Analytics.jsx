@@ -1,8 +1,10 @@
 'use client';
 
 import Script from 'next/script';
+import { trackPageView } from '@/utils/pixel';
+import GoogleTagManager from '../GoogleTagManager';
 import { useEffect, useState } from 'react';
-import { prefersReducedData } from '@/lib/netinfo';
+import { usePathname } from 'next/navigation';
 import { useConsent } from '@/lib/consent';
 
 /**
@@ -31,14 +33,9 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'knitwink';
 export default function Analytics() {
   const [cfg, setCfg] = useState(null);
   const consent = useConsent();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Respect the user's bandwidth budget: skip third-party analytics
-    // on save-data / 2g. The trade-off — losing some pageview signal
-    // from low-bandwidth users — is worth keeping the page snappy for
-    // them. Analytics still fire on every other connection.
-    if (prefersReducedData()) return;
-
     let cancelled = false;
     (async () => {
       try {
@@ -53,15 +50,19 @@ export default function Analytics() {
     return () => { cancelled = true; };
   }, []);
 
-  const ga4Id = cfg?.ga4_measurement_id || cfg?.GA4_MEASUREMENT_ID;
-  // Meta Pixel — prefer the backend-configured id, otherwise fall back to the
-  // Knitwink pixel so tracking fires even when tracking-config has none set.
-  const fbPixelId = cfg?.fb_pixel_id || cfg?.FB_PIXEL_ID || '1029243193162708';
-  const clarityId = cfg?.clarity_id || cfg?.CLARITY_ID;
+  const gtmId = cfg?.gtm_id;
+  const ga4Id = cfg?.ga_measurement_id;
+  const fbPixelId = cfg?.fb_pixel_id;
+  const clarityId = cfg?.clarity_id;
+
+  useEffect(() => {
+    if (ga4Id) trackPageView(pathname);
+  }, [ga4Id, pathname]);
 
   return (
     <>
-      {ga4Id && consent.analytics && (
+      <GoogleTagManager containerId={gtmId} />
+      {ga4Id && (
         <>
           <Script
             id="ga4-loader"
@@ -76,7 +77,9 @@ export default function Analytics() {
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${ga4Id}', { transport_type: 'beacon' });
+                gtag('config', '${ga4Id}', { transport_type: 'beacon', send_page_view: false });
+              window.__brandGa4Ready = true;
+              window.dispatchEvent(new Event('brand-ga4-ready'));
               `,
             }}
           />

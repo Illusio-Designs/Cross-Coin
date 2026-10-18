@@ -1,4 +1,6 @@
 import Script from 'next/script';
+import { trackPageView } from '@/utils/pixel';
+import GoogleTagManager from '../GoogleTagManager';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useConsent } from '../../lib/consent';
@@ -13,7 +15,7 @@ import { useConsent } from '../../lib/consent';
  * load — no redeploy or build-time env var required.
  */
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '';
+const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'gripzus';
 
 export default function Analytics() {
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function Analytics() {
       .then((d) => {
         if (aborted || !d?.success) return;
         setCfg({
+          gtmId: d.gtm_id || null,
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
@@ -42,18 +45,23 @@ export default function Analytics() {
   useEffect(() => {
     const onRouteChange = (url) => {
       if (typeof window === 'undefined') return;
-      if (consent.analytics && window.gtag) window.gtag('event', 'page_view', { page_path: url });
+      if (cfg?.gaId) trackPageView(url);
       if (consent.marketing && window.fbq) window.fbq('track', 'PageView');
     };
     router.events.on('routeChangeComplete', onRouteChange);
     return () => router.events.off('routeChangeComplete', onRouteChange);
-  }, [router.events, consent.analytics, consent.marketing]);
+  }, [router.events, cfg?.gaId, consent.analytics, consent.marketing]);
+
+  useEffect(() => {
+    if (cfg?.gaId && router.isReady) trackPageView(router.asPath);
+  }, [cfg?.gaId, router.isReady, router.asPath]);
 
   if (!cfg) return null;
-  const { gaId, fbId, clarityId } = cfg;
+  const { gaId, fbId, clarityId, gtmId } = cfg;
 
   return (
     <>
+      <GoogleTagManager containerId={gtmId} />
       {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="lazyOnload"
@@ -78,7 +86,7 @@ export default function Analytics() {
         </>
       )}
 
-      {gaId && consent.analytics && (
+      {gaId && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
           <Script id="ga4-init" strategy="lazyOnload"
@@ -87,7 +95,8 @@ export default function Analytics() {
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', '${gaId}', { send_page_view: false });
-              gtag('event', 'page_view', { page_path: window.location.pathname });
+              window.__brandGa4Ready = true;
+              window.dispatchEvent(new Event('brand-ga4-ready'));
             ` }}
           />
         </>

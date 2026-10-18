@@ -49,7 +49,7 @@ const fbReexport =
 // emitVariations=true → one feed item per size/colour variation (item_group_id).
 const APP = [
   ['Morbix',   'morbix',   'www.morbixsocks.com', 'Morbix',   true],
-  ['Soxbae',   'soxbae',   'www.soxbaesocks.com', 'Soxbae',   true],
+  ['Soxbae',   'soxbae',   'soxbae.com', 'Soxbae',   true],
   ['Knitwink', 'knitwink', 'knitwink.com',        'Knitwink', false],
   ['Velmique', 'velmique', 'velmique.co.in',      'Velmique', false],
   ['Velquira', 'velquira', 'www.velquira.in',     'Velquira', false],

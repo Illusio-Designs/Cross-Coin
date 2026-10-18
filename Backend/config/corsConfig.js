@@ -94,6 +94,8 @@ const staticAllowedOrigins = [
     // DB Brand.domain isn't set/active. (Custom domains, not the *.vercel.app ones.)
     'https://morbixsocks.com',
     'https://www.morbixsocks.com',
+    'https://soxbae.com',
+    'https://www.soxbae.com',
     'https://soxbaesocks.com',
     'https://www.soxbaesocks.com',
     'https://velquira.in',

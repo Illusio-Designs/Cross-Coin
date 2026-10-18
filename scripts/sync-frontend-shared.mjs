@@ -39,6 +39,16 @@ const BRANDS = {
 // Shared file → { source, dest(base), brands? }  (brands omitted = all 7)
 const FILES = [
   {
+    source: 'shared/frontend/GoogleTagManager.jsx',
+    dest: (base) => `${base}components/GoogleTagManager.jsx`,
+    brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
+  },
+  {
+    source: 'shared/frontend/googleTagManager.mjs',
+    dest: (base) => `${base}utils/googleTagManager.mjs`,
+    brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
+  },
+  {
     source: 'shared/frontend/pixel.js',
     dest: (base) => `${base}utils/pixel.js`,
     // Crosscoin has its own tracking layer and does not use pixel.js.

@@ -8,10 +8,11 @@ const settingsHelper = require('../services/settingsHelper');
  * @param {object} params - additional event params
  */
 async function sendGAEvent(eventName, order, params = {}) {
-  const brandId = order.brand_id || 1;
+  const brandId = order.brand_id;
+  if (!brandId) return; // Never attribute an unscoped order to Crosscoin.
 
-  const GA_MEASUREMENT_ID = await settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID');
-  const GA_API_SECRET = await settingsHelper.getSetting(brandId, 'GA_API_SECRET');
+  const GA_MEASUREMENT_ID = await settingsHelper.getSetting(brandId, 'GA_MEASUREMENT_ID', null, { brandOnly: true });
+  const GA_API_SECRET = await settingsHelper.getSetting(brandId, 'GA_API_SECRET', null, { brandOnly: true });
 
   if (!GA_MEASUREMENT_ID || !GA_API_SECRET) {
     console.log(`Google Analytics: Skipping ${eventName} — GA_MEASUREMENT_ID or GA_API_SECRET not configured`);

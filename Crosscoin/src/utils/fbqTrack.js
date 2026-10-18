@@ -1,3 +1,5 @@
+import { gtagTrack } from './gtagTrack';
+
 // Facebook Pixel event tracking utility.
 //
 // Fires the browser pixel AND — for the standard funnel events — relays the
@@ -65,11 +67,11 @@ function fpTrack(event, params) {
 
 // Mirror a funnel event to GA4. Safe/no-op if gtag isn't present.
 function ga4Track(event, params) {
-  if (typeof window === 'undefined' || !window.gtag) return;
+  if (typeof window === 'undefined') return;
   const name = GA4_EVENT[event];
   if (!name) return;
   try {
-    window.gtag('event', name, {
+    gtagTrack(name, {
       currency: params.currency || 'INR',
       value: Number(params.value || 0),
       items: ga4Items(params),
@@ -119,7 +121,7 @@ export function fbqTrack(event, params = {}, options = {}) {
   if (BLOCKED_EVENTS.includes(event)) return false;
 
   // GA4 (Google) mirror — independent of the Meta pixel (either may be absent).
-  ga4Track(event, params);
+  if (options.ga4 !== false) ga4Track(event, params);
 
   // First-party funnel event → our own DB (fires regardless of Meta/GA presence).
   fpTrack(event, params);
