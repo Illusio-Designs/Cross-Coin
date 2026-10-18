@@ -199,12 +199,13 @@ export default async function MaisonProduct({ params }) {
                   <h2 className="m-rsec__h" style={{ color: '#F3E7D5' }}>Fragrance Notes</h2>
                   <div className="m-pnotegrid" style={{ marginTop: 18 }}>
                     {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
-                      <div className="m-pn" key={n.name + i}>
+                      <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                         <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
                           {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
                         </div>
                         <b>{n.name}</b>
-                      </div>
+                        <span className="m-pn__go">Shop this note →</span>
+                      </Link>
                     ))}
                   </div>
                 </div>
