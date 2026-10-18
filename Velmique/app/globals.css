@@ -77,6 +77,18 @@
   --text-muted: var(--ink-muted);
 }
 
+/* Onyx & Gold skin for the Maison /test routes — set on <html data-maison> by
+   MaisonThemeFlag. Re-tints the shared design-system variables so global
+   components rendered on /test (notably the live CartDrawer) match the dark
+   /test theme without needing their own markup. */
+:root[data-maison]{
+  color-scheme:dark;
+  --bg:#0d0d0f; --surface:#17171a; --surface-2:#1f1f24; --paper:#17171a;
+  --ink:#f3ead6; --ink-soft:#c7c0b2; --ink-muted:#938d82;
+  --gold:#d9a43b; --gold-deep:#e8c877; --gold-light:#ffe78f; --champagne:#ffe78f; --olive:#c9a24a;
+  --border:rgba(255,255,255,.12); --dark:#000; --dark-soft:#17141a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

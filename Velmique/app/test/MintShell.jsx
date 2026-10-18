@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { getBestsellers } from '@/lib/api/products';
-import { getPackTiers } from '@/lib/api/bundles';
 
 const I = {
   menu: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
@@ -20,8 +18,6 @@ const NAV = [
   { label: 'About', href: '/test/about' },
   { label: 'Journal', href: '/test/journal' },
 ];
-
-const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
 const ANNO = [
   { t: 'Free shipping on all orders', d: 'M3 7h11v8H3zM14 10h4l3 3v2h-7z' },
@@ -55,65 +51,10 @@ function Brand({ className = '', text = false }) {
 }
 
 export default function MintShell({ children }) {
-  const { cart, cartOpen, setCartOpen, cartCount, cartTotal, updateQuantity, removeFromCart, addToCart } = useStore();
+  // The bag itself is the full live CartDrawer (mounted globally and skinned to
+  // onyx on /test); MintShell only needs to open it and show the count.
+  const { cartCount, setCartOpen } = useStore();
   const [menu, setMenu] = useState(false);
-  const [recs, setRecs] = useState([]);
-  const [tiers, setTiers] = useState([]);
-  const [secs, setSecs] = useState(600);
-  const packGroup = useRef(null);
-
-  // Lazy-load products + pack tiers the first time the bag opens.
-  useEffect(() => {
-    if (!cartOpen) return;
-    let alive = true;
-    if (!recs.length) getBestsellers(8).then((list) => { if (alive) setRecs(Array.isArray(list) ? list : []); }).catch(() => {});
-    if (!tiers.length) getPackTiers().then((t) => { if (alive) setTiers(Array.isArray(t) ? t : []); }).catch(() => {});
-    return () => { alive = false; };
-  }, [cartOpen, recs.length, tiers.length]);
-
-  // Urgency countdown while the bag is open.
-  useEffect(() => {
-    if (!cartOpen) return;
-    const t = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, [cartOpen]);
-  const mmss = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
-
-  // Add a recommended product to the bag; `pack` tags it with a shared
-  // pack_group so the backend applies the Build-Your-Pack discount at checkout.
-  const addRec = (p) => {
-    if (!packGroup.current) packGroup.current = `byp-${Date.now()}`;
-    addToCart({
-      id: `${p.id}:${p.defaultVariationId || 'v'}:pack`,
-      productId: p.id,
-      variationId: p.defaultVariationId || null,
-      name: p.name,
-      price: Number(p.price || 0),
-      size: p.sizes?.[0] || '',
-      image: p.images?.[0] || '',
-      quantity: 1,
-      packGroup: packGroup.current,
-    });
-  };
-
-  const inCart = new Set(cart.map((c) => String(c.productId ?? c.id)));
-  const recPool = recs.filter((p) => !inCart.has(String(p.id))).slice(0, 6);
-
-  // Build-Your-Pack pricing, mirrored from the backend tiers so the drawer
-  // total matches what checkout charges (the server re-verifies it).
-  const discountFor = (c) => tiers.filter((t) => c >= t.pairs).reduce((a, t) => Math.max(a, t.off), 0);
-  const nextTier = tiers.find((t) => {
-    const packQty = cart.filter((c) => c.packGroup).reduce((a, c) => a + (c.quantity || 0), 0);
-    return packQty < t.pairs;
-  });
-  const packQty = cart.filter((c) => c.packGroup).reduce((a, c) => a + (c.quantity || 0), 0);
-  const packSubtotal = cart.filter((c) => c.packGroup).reduce((a, c) => a + Number(c.price || 0) * (c.quantity || 0), 0);
-  const packPct = discountFor(packQty);
-  const packDiscount = Math.round(packSubtotal * packPct / 100);
-  const grandTotal = Math.max(0, Number(cartTotal || 0) - packDiscount);
-  const packHint = tiers.length === 0 ? '' : packQty === 0
-    ? `Add ${tiers[0].pairs} scents to save ${tiers[0].off}%`
-    : (nextTier ? `Add ${nextTier.pairs - packQty} more to save ${nextTier.off}%` : `${packPct}% pack discount applied`);
 
   return (
     <>
@@ -195,83 +136,8 @@ export default function MintShell({ children }) {
         </div>
       </footer>
 
-      {/* ── Cart drawer (real store) ── */}
-      <div className={`m-scrim ${cartOpen ? 'on' : ''}`} onClick={() => setCartOpen(false)} />
-      <aside className={`m-cart ${cartOpen ? 'on' : ''}`} aria-label="Shopping bag" aria-hidden={!cartOpen}>
-        <div className="m-cart__h">
-          <b>Your Bag {cartCount ? `(${cartCount})` : ''}</b>
-          <button aria-label="Close bag" onClick={() => setCartOpen(false)}>{I.close}</button>
-        </div>
-        {cart.length === 0 ? (
-          <div className="m-cart__body">
-            <div className="m-cart__empty">
-              <span style={{ opacity: .5 }}>{I.bag}</span>
-              <p>Your bag is waiting to be filled with something unforgettable.</p>
-              <Link className="m-btn m-btn--fill" href="/test/shop" onClick={() => setCartOpen(false)}>Discover scents</Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="m-cart__body">
-              <div className="m-curg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Reserved for <b>{mmss}</b></div>
-
-              {cart.map((it) => (
-                <div className="m-line" key={`${it.id}-${it.size}`}>
-                  {it.image ? <img className="m-line__img" src={it.image} alt={it.name} /> : <span className="m-line__img" />}
-                  <div>
-                    <div className="m-line__n">{it.name}</div>
-                    {it.size ? <div className="m-line__m">{it.size}</div> : null}
-                    <div className="m-line__q">
-                      <button aria-label="Decrease" onClick={() => updateQuantity(it.id, it.quantity - 1, it.size)}>−</button>
-                      <span>{it.quantity}</span>
-                      <button aria-label="Increase" onClick={() => updateQuantity(it.id, it.quantity + 1, it.size)}>+</button>
-                    </div>
-                    <button className="m-line__rm" onClick={() => removeFromCart(it.id, it.size)}>Remove</button>
-                  </div>
-                  <div className="m-line__price">{inr(it.price * it.quantity)}</div>
-                </div>
-              ))}
-
-              {recPool.length ? (
-                <div className="m-cpack">
-                  <div className="m-cpack__h">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-                    <span><b>Build a pack &amp; save</b><small>Add any 2+ scents — the more you add, the more you save</small></span>
-                  </div>
-                  {tiers.length ? (
-                    <>
-                      <div className="m-cpack__ladder">
-                        {tiers.map((t) => (
-                          <div key={t.pairs} className={`m-rung ${packQty >= t.pairs ? 'on' : ''}`}><b>{t.pairs}</b><span>{t.off}% off</span></div>
-                        ))}
-                      </div>
-                      {packHint ? <div className="m-cpack__hint">{packHint}</div> : null}
-                    </>
-                  ) : null}
-                  <div className="m-cprow">
-                    {recPool.map((p) => (
-                      <div className="m-cprod" key={p.id}>
-                        <span className="m-cprod__img">{p.images?.[0] ? <img src={p.images[0]} alt={p.name} loading="lazy" /> : null}</span>
-                        <span className="m-cprod__n">{p.name}</span>
-                        <span className="m-cprod__pr">{inr(p.price)}</span>
-                        <button type="button" className="m-cprod__add" onClick={() => addRec(p)}>+ Add</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="m-cart__foot">
-              <div className="m-cartline"><span>Subtotal</span><span>{inr(cartTotal)}</span></div>
-              {packPct > 0 ? <div className="m-cartline save"><span>Pack discount ({packPct}%)</span><span>−{inr(packDiscount)}</span></div> : null}
-              <div className="m-cart__tot"><span>Total</span><b>{inr(grandTotal)}</b></div>
-              <Link className="m-btn m-btn--fill" href="/checkout" onClick={() => setCartOpen(false)} style={{ justifyContent: 'center' }}>Checkout</Link>
-              <button className="m-btn m-btn--ghost" onClick={() => setCartOpen(false)} style={{ justifyContent: 'center' }}>Continue shopping</button>
-              <div className="m-ctrust"><span>Secure payments</span><span>7-day returns</span><span>100% genuine</span></div>
-            </div>
-          </>
-        )}
-      </aside>
+      {/* The bag is the full live CartDrawer, mounted globally and skinned to
+          onyx on /test — opened by the header bag button (setCartOpen). */}
     </>
   );
 }

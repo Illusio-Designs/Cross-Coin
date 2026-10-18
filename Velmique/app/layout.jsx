@@ -13,6 +13,7 @@ import HeaderShell from '@/components/layout/HeaderShell';
 import ChromeGate from '@/components/layout/ChromeGate';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import MaisonThemeFlag from '@/components/layout/MaisonThemeFlag';
 import ExitIntentModal from '@/components/cart/ExitIntentModal';
 import SearchOverlay from '@/components/layout/SearchOverlay';
 import CookieBanner from '@/components/ui/CookieBanner';
@@ -116,13 +117,17 @@ export default function RootLayout({ children }) {
               <main id="main">{children}</main>
               <ChromeGate>
                 <Footer />
-                <CartDrawer />
                 <ExitIntentModal />
                 <SearchOverlay />
                 <CookieBanner />
                 <ScrollToTop />
                 <WhatsAppChat />
               </ChromeGate>
+              {/* Cart drawer renders on every route (incl. the Maison /test
+                  preview, which skins it to onyx via data-maison) so /test
+                  gets the full live checkout. */}
+              <CartDrawer />
+              <MaisonThemeFlag />
               {/* Analytics calls useSearchParams() for route-change tracking;
                   it must live inside a Suspense boundary or Next 14 bails
                   static prerendering on every page. */}
