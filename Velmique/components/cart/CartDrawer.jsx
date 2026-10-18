@@ -13,7 +13,6 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getAddresses, createAddress, updateAddress,
 } from '@/lib/api/addresses';
-import { getBestsellers } from '@/lib/api/products';
 import { getPackTiers } from '@/lib/api/bundles';
 import {
   getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
@@ -87,17 +86,6 @@ function validateAddress(a) {
   return errs;
 }
 
-// Cross-sell bestsellers barely change between cart opens; cache the first
-// fetch for ~5 min so re-opening the drawer doesn't re-hit the API every time.
-// A failed fetch isn't cached, so it retries on the next open.
-let _xsCache = { at: 0, p: null };
-function _xsFetch() {
-  if (_xsCache.p && Date.now() - _xsCache.at < 300000) return _xsCache.p;
-  const p = getBestsellers(8);
-  _xsCache = { at: Date.now(), p };
-  Promise.resolve(p).catch(() => { if (_xsCache.p === p) _xsCache = { at: 0, p: null }; });
-  return p;
-}
 
 export default function CartDrawer() {
   const router = useRouter();
@@ -138,20 +126,16 @@ export default function CartDrawer() {
   const [errorMsg, setErrorMsg] = useState('');
   // Address validation popup: { errors:[], warnings:[] } while shown, else null.
   const [addrIssues, setAddrIssues] = useState(null);
-  // Cross-sell "You may also like" — fetched from the bestsellers service when
-  // the drawer opens; excludes items already in the bag.
-  const [suggestions, setSuggestions] = useState([]);
   // Two-step checkout: 1 = review bag, 2 = delivery + payment.
   const [coStep, setCoStep] = useState(1);
 
-  // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
-  // fees) each resolve separately and used to pop in one by one. We reset these
+  // Whole-cart shimmer: the drawer's async loads (coupons, shipping fees)
+  // each resolve separately and used to pop in one by one. We reset these
   // on open (for a bag with items) and show one skeleton until all have
   // settled, then render the real bag-review content at once.
   const [ldCoupons, setLdCoupons] = useState(true);
-  const [ldSuggest, setLdSuggest] = useState(true);
   const [ldFees, setLdFees] = useState(true);
-  const cartReady = ldCoupons && ldSuggest && ldFees;
+  const cartReady = ldCoupons && ldFees;
 
   const dropdownRef = useRef(null);
   const bodyRef = useRef(null);
@@ -238,47 +222,6 @@ export default function CartDrawer() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
-
-  // ── Load cross-sell suggestions (bestsellers) once per open with items ──
-  useEffect(() => {
-    if (!cartOpen || items.length === 0) return;
-    let alive = true;
-    _xsFetch()
-      .then(list => { if (alive) { setSuggestions(Array.isArray(list) ? list : []); setLdSuggest(true); } })
-      .catch(() => { if (alive) { setSuggestions([]); setLdSuggest(true); } });
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartOpen]);
-
-  // Suggestions not already in the bag (match on product id), capped at 4.
-  const crossSell = useMemo(() => {
-    const inBag = new Set(items.map(i => String(i.productId ?? i.id)));
-    const seen = new Set();
-    const out = [];
-    for (const p of suggestions) {
-      const id = String(p.id);
-      if (inBag.has(id) || seen.has(id)) continue;
-      seen.add(id);
-      out.push(p);
-      if (out.length >= 4) break;
-    }
-    return out;
-  }, [suggestions, items]);
-
-  const addSuggestion = (p) => {
-    const v = p.variations?.find(x => x.id === p.defaultVariationId) || p.variations?.[0];
-    addToCart({
-      id: `${p.id}:${v?.id || 'default'}`,
-      productId: p.id,
-      variationId: v?.id || p.defaultVariationId || null,
-      name: p.name,
-      price: p.price,
-      image: p.images?.[0],
-      slug: p.slug,
-      size: v?.size || '',
-      color: v?.colors?.[0] || '',
-    });
-  };
 
   // ── Load shipping fees ─────────────────────────────────────────────────
   useEffect(() => {
@@ -1286,34 +1229,6 @@ export default function CartDrawer() {
                 )}
               </div>
 
-              {/* ── You may also like — cross-sell strip (above the summary) ─ */}
-              {crossSell.length > 0 && (
-                <div className="px-5 py-4 border-b border-[#D8D3C9]">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body mb-3">You may also like</p>
-                  <div className="flex gap-3 overflow-x-auto pb-1">
-                    {crossSell.map((p) => (
-                      <div key={p.id} className="shrink-0 w-32 bg-white border border-[#D8D3C9] flex flex-col">
-                        <Link href={`/product/${p.slug}`} onClick={() => setCartOpen(false)} className="block">
-                          <img src={p.images?.[0]} alt={p.name} loading="lazy" className="w-full h-36 object-cover" />
-                        </Link>
-                        <div className="flex flex-col gap-1.5 p-2 flex-1">
-                          <Link href={`/product/${p.slug}`} onClick={() => setCartOpen(false)}
-                            className="font-serif text-xs text-[#11100E] hover:text-[#8F7548] transition-colors line-clamp-2 leading-snug">
-                            {p.name}
-                          </Link>
-                          <div className="mt-auto flex items-center justify-between gap-1.5">
-                            <span className="font-serif italic text-[#11100E] text-xs">{fmt(p.price)}</span>
-                            <button type="button" onClick={() => addSuggestion(p)} aria-label={`Add ${p.name}`}
-                              className="flex items-center gap-0.5 border border-[#B89A63] text-[#8F7548] hover:bg-[#B89A63]/10 transition-colors text-[10px] font-body uppercase tracking-wider px-1.5 py-1">
-                              <Plus size={11} /> Add
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               </>)}
 
               {/* ── Summary — visible on both steps so pricing is always clear ─ */}
