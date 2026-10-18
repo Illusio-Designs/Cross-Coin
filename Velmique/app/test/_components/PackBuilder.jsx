@@ -69,10 +69,27 @@ export default function PackBuilder({ products = [], tiers = [] }) {
               <div><i>3</i> Add the pack to bag</div>
             </div>
             {tiers.length ? (
-              <div className="m-packladder">
-                {tiers.map((t) => (
-                  <div key={t.pairs} className={`m-rung ${count >= t.pairs ? 'on' : ''}`}><b>{t.pairs}</b><span>{t.off}% off</span></div>
-                ))}
+              <div className="m-packtiers">
+                {tiers.map((t) => {
+                  const reached = count >= t.pairs;
+                  const applied = reached && off > 0 && t.off === off;
+                  return (
+                    <div key={t.pairs} className={`m-ptier ${reached ? 'on' : ''}`}>
+                      {t.badge ? <span className="m-ptier__tag">{t.badge}</span> : null}
+                      <span className="m-ptier__name">{t.label || `Any ${t.pairs}`}</span>
+                      <span className="m-ptier__sub">{t.pairs}+ scents</span>
+                      <span className="m-ptier__imgs">
+                        {products.slice(0, Math.min(t.pairs, 3)).map((p) => (
+                          p.images?.[0] ? <img key={p.id} src={p.images[0]} alt="" loading="lazy" /> : null
+                        ))}
+                      </span>
+                      <b className="m-ptier__off">{t.off}% OFF</b>
+                      {applied
+                        ? <span className="m-ptier__savepill">You save {inr(saved)}</span>
+                        : reached ? <span className="m-ptier__savepill">Unlocked ✓</span> : null}
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -84,19 +101,32 @@ export default function PackBuilder({ products = [], tiers = [] }) {
               const img = p.images?.[0] || '';
               const sp = savePct(p);
               const rating = Number(p.rating || 0);
+              const reviews = Number(p.reviews || 0);
+              const defVar = (p.variations || []).find((v) => String(v.id) === String(p.defaultVariationId)) || p.variations?.[0] || null;
+              const noteLine = (defVar?.noteItems?.length
+                ? defVar.noteItems.map((n) => n.name)
+                : (p.notes || []).map((n) => (typeof n === 'string' ? n : n?.name))
+              ).filter(Boolean).slice(0, 3).join(' · ');
               return (
-                <button type="button" key={p.id} className={`m-packcard ${on ? 'sel' : ''}`} onClick={() => toggle(p.id)}>
-                  <span className="m-packcard__img">
-                    {img ? <img src={img} alt={p.name} loading="lazy" /> : null}
-                    {p.badge ? <span className="m-packcard__badge">{p.badge}</span> : null}
-                    {sp ? <span className="m-packcard__save">Save {sp}%</span> : null}
-                    {rating > 0 ? <span className="m-packcard__rbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>{rating.toFixed(1)}/5</span> : null}
-                    <span className="m-packcard__check">{check}</span>
+                <button type="button" key={p.id} className={`m-card m-pkcard ${on ? 'sel' : ''}`} onClick={() => toggle(p.id)}>
+                  <span className="m-card__fig">
+                    <span className="m-card__imglink">
+                      <span className="m-card__tile">{img ? <img src={img} alt={p.name} loading="lazy" /> : null}</span>
+                      <span className="m-card__shade" />
+                    </span>
+                    {p.badge ? <span className="m-card__tag">{p.badge}</span> : null}
+                    {sp ? <span className="m-pkcard__save">Save {sp}%</span> : null}
+                    {rating > 0 ? <span className="m-card__rbadge"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>{rating.toFixed(1)}/5</span> : null}
+                    <span className="m-pkcard__check">{check}</span>
                   </span>
-                  <span className="m-packcard__b">
-                    <span className="m-packcard__n">{p.name}</span>
-                    <span className="m-packcard__pr">{inr(p.price)}{p.originalPrice && p.originalPrice > p.price ? <s>{inr(p.originalPrice)}</s> : null}</span>
-                    <span className="m-packcard__add">{on ? `In pack ✓ · ${inr(p.price)}` : 'Add to pack'}</span>
+                  <span className="m-card__body">
+                    <span className="m-card__top">
+                      <span className="m-card__name">{p.name}</span>
+                      <span className="m-card__price"><b>{inr(p.price)}</b>{p.originalPrice && p.originalPrice > p.price ? <s>{inr(p.originalPrice)}</s> : null}</span>
+                    </span>
+                    {noteLine ? <span className="m-card__notes">{noteLine}</span> : null}
+                    {reviews > 0 ? <span className="m-card__rc">{reviews.toLocaleString('en-IN')} reviews</span> : null}
+                    <span className="m-pkcard__add">{on ? `In pack ✓ · ${inr(p.price)}` : 'Add to pack'}</span>
                   </span>
                 </button>
               );
