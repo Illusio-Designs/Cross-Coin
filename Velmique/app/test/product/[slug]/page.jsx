@@ -174,8 +174,8 @@ export default async function MaisonProduct({ params }) {
             {/* Scent Profile — in the right column */}
             {accords.length ? (
               <div className="m-rsec">
-                <span className="m-eyebrow">The scent experience</span>
-                <h2 className="m-rsec__h">Scent Profile</h2>
+                <span className="m-eyebrow">What you&apos;ll notice</span>
+                <h2 className="m-rsec__h">How It Smells</h2>
                 <div className="m-profilegrid" style={{ marginTop: 18 }}>
                   {accordItems.map((a, i) => {
                     const v = Math.max(3, 5 - i);
@@ -200,8 +200,8 @@ export default async function MaisonProduct({ params }) {
             {(notesWithImg.length || noteNames.length) ? (
               <div className="m-rsec">
                 <div className="m-rcompo">
-                  <span className="m-eyebrow" style={{ color: 'var(--m-accent-soft)' }}>Fragrance notes</span>
-                  <h2 className="m-rsec__h" style={{ color: '#F3E7D5' }}>The Composition</h2>
+                  <span className="m-eyebrow" style={{ color: 'var(--m-accent-soft)' }}>What&apos;s inside</span>
+                  <h2 className="m-rsec__h" style={{ color: '#F3E7D5' }}>Fragrance Notes</h2>
                   <div className="m-pnotegrid" style={{ marginTop: 18 }}>
                     {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
                       <div className="m-pn" key={n.name + i}>
