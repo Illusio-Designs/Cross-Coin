@@ -108,7 +108,18 @@ function mapVariation(v) {
     inStock:       Number(v.stock ?? 0) > 0,
     attributes:    norm,
     attrImages,                        // reserved value→image map (not a displayed attribute)
-    noteItems:     itemsFor('notes'),  // [{name, image}] fragrance notes (image optional)
+    // [{name, image}] fragrance notes: the flat `notes` attribute merged with
+    // the tiered Top/Heart/Base note attributes (deduped by name), so cards,
+    // the home notes section and the shop note filter see every note.
+    noteItems:     (() => {
+      const seen = new Set();
+      return [
+        ...itemsFor('notes'),
+        ...itemsFor('top notes', 'top note', 'top'),
+        ...itemsFor('heart notes', 'middle notes', 'heart', 'middle'),
+        ...itemsFor('base notes', 'base'),
+      ].filter((n) => { const k = n.name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    })(),
     accordItems:   itemsFor('main accords', 'accords'), // [{name, image}] accords (image optional)
     size:          norm.size?.[0] || '',
     sizes:         norm.size || [],

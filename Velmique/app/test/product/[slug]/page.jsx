@@ -95,8 +95,28 @@ export default async function MaisonProduct({ params }) {
   // value renders as prose over its image; short values render as word pills
   // (each with its uploaded image when one exists). Keys already shown in
   // their own sections are excluded.
-  const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration']);
+  const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration',
+    'top notes', 'top note', 'top', 'heart notes', 'middle notes', 'heart', 'middle', 'base notes', 'base']);
   const attrImgs = defVar?.attrImages || {};
+
+  // Tiered notes (reference style): Top / Heart / Base attribute keys, each a
+  // comma list with optional per-value images. When any tier exists, the
+  // Fragrance Notes card renders grouped; otherwise the flat list shows.
+  const tierItems = (...keys) => {
+    for (const k of Object.keys(attrs)) {
+      if (!keys.includes(String(k).toLowerCase())) continue;
+      const imgMap = attrImgs[k] || attrImgs[String(k).toLowerCase()] || {};
+      const items = (attrs[k] || []).flatMap((s) => String(s).split(',')).map((s) => s.trim()).filter(Boolean)
+        .map((name) => ({ name, image: imgMap[name] || '' }));
+      if (items.length) return items;
+    }
+    return [];
+  };
+  const noteTiers = [
+    { label: 'Top', items: tierItems('top notes', 'top note', 'top') },
+    { label: 'Heart', items: tierItems('heart notes', 'middle notes', 'heart', 'middle') },
+    { label: 'Base', items: tierItems('base notes', 'base') },
+  ].filter((t) => t.items.length);
   const editorial = Object.entries(attrs)
     .filter(([k, v]) => !KNOWN_ATTRS.has(String(k).toLowerCase()) && Array.isArray(v) && v.length)
     .map(([k, v]) => {
@@ -235,23 +255,41 @@ export default async function MaisonProduct({ params }) {
               </div>
             ))}
 
-            {/* Composition — in the right column, dark card */}
-            {(notesWithImg.length || noteNames.length) ? (
+            {/* Composition — in the right column, dark card. Grouped by
+                Top / Heart / Base when the admin sets those attributes. */}
+            {(noteTiers.length || notesWithImg.length || noteNames.length) ? (
               <div className="m-rsec">
                 <div className="m-rcompo">
                   <span className="m-eyebrow" style={{ color: 'var(--m-accent-soft)' }}>What&apos;s inside</span>
                   <h2 className="m-rsec__h" style={{ color: '#F3E7D5' }}>Fragrance Notes</h2>
-                  <div className="m-pnotegrid" style={{ marginTop: 18 }}>
-                    {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
-                      <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
-                        <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                          {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
-                        </div>
-                        <b>{n.name}</b>
-                        <span className="m-pn__go">Shop this note →</span>
-                      </Link>
-                    ))}
-                  </div>
+                  {noteTiers.length ? noteTiers.map((t) => (
+                    <div key={t.label}>
+                      <div className="m-ntier">{t.label}</div>
+                      <div className="m-pnotegrid">
+                        {t.items.map((n, i) => (
+                          <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
+                            <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
+                              {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                            </div>
+                            <b>{n.name}</b>
+                            <span className="m-pn__go">Shop this note →</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="m-pnotegrid" style={{ marginTop: 18 }}>
+                      {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
+                        <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
+                          <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
+                            {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                          </div>
+                          <b>{n.name}</b>
+                          <span className="m-pn__go">Shop this note →</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : null}

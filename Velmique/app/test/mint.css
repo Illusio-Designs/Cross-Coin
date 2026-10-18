@@ -551,6 +551,8 @@
 .m-pn .orb::after{content:"";position:absolute;inset:7px;border:1px solid rgba(246,236,217,.34);border-radius:8px;pointer-events:none}
 .m-pn .orb img{width:100%;height:100%;object-fit:cover}
 .m-pn b{font-family:var(--m-d);font-size:19px;font-weight:600;color:#F3E7D5;display:block}
+/* Top / Heart / Base tier label inside the Fragrance Notes card */
+.m-ntier{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:800;color:var(--m-accent-soft);margin:20px 0 12px;padding-bottom:7px;border-bottom:1px solid rgba(246,236,217,.16)}
 /* Clickable note tile → /test/shop?note=… */
 .m-pn--link{display:block;color:inherit;transition:transform .25s}
 .m-pn--link:hover{transform:translateY(-4px)}
