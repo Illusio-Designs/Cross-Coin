@@ -163,7 +163,7 @@ export default async function MaisonProduct({ params }) {
   return (
     <>
       <div className="m-pdpwrap"><div className="m-wrap">
-        <nav className="m-crumb"><Link href="/test">Home</Link> / <Link href="/shop">Shop</Link> / <span>{product.name}</span></nav>
+        <nav className="m-crumb"><Link href="/test">Home</Link> / <Link href="/test/shop">Shop</Link> / <span>{product.name}</span></nav>
         <div className="m-pdp">
           {/* Stacked scroll gallery: each image pins at the top of the column,
               and the next one slides up OVER it as the right content scrolls.

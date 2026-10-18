@@ -274,7 +274,7 @@ export default function CartDrawer() {
     setCoStep(1);
     if (items.length === 0) return;
     // Re-arm the whole-cart shimmer for this open (bag has items to load for).
-    setLdCoupons(false); setLdSuggest(false); setLdFees(false);
+    setLdCoupons(false); setLdFees(false);
     viewCart({
       contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
       value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),

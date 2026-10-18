@@ -34,7 +34,7 @@ export default function MaisonAccount() {
           <div className="m-empty">
             <h3>Sign in to continue</h3>
             <p style={{ marginBottom: 20 }}>Access your orders, addresses and wishlist.</p>
-            <Link className="m-btn m-btn--fill" href="/login" style={{ justifyContent: 'center' }}>Sign in</Link>
+            <Link className="m-btn m-btn--fill" href="/test/login" style={{ justifyContent: 'center' }}>Sign in</Link>
           </div>
         </div>
       </>
@@ -51,7 +51,7 @@ export default function MaisonAccount() {
             {user?.email ? <div className="em">{user.email}</div> : null}
             <div style={{ display: 'grid', gap: 10, marginTop: 20 }}>
               <Link className="m-btn m-btn--ghost" href="/test/track-order" style={{ justifyContent: 'center' }}>Track an order</Link>
-              <Link className="m-btn m-btn--ghost" href="/wishlist" style={{ justifyContent: 'center' }}>Wishlist</Link>
+              <Link className="m-btn m-btn--ghost" href="/test/wishlist" style={{ justifyContent: 'center' }}>Wishlist</Link>
               <button className="m-btn m-btn--ghost" onClick={logout} style={{ justifyContent: 'center' }}>Sign out</button>
             </div>
           </aside>
