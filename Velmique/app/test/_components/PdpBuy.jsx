@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 
-export default function PdpBuy({ product, packs = [] }) {
+export default function PdpBuy({ product, packs = [], mixTiers = [] }) {
   const { addToCart, setCartOpen } = useStore();
   const router = useRouter();
 
@@ -30,38 +30,52 @@ export default function PdpBuy({ product, packs = [] }) {
   const [packIdx, setPackIdx] = useState(0);
   const opt = options[sel] || options[0];
 
-  // "Select Pack" choices (Shopify-reference style): the single unit plus the
-  // admin's per-product packs with exact totals. Checkout re-prices a qty-N
-  // line via bundlePerUnit server-side, so these figures are display-only.
+  // "Build Your Pack" choices from two sources:
+  //  • per-product packs (exact totals; checkout re-prices via bundlePerUnit)
+  //  • store-wide mix tiers (% off by item count; checkout applies the % to
+  //    lines sharing a pack_group) — used when the product has no packs of
+  //    its own, so every product still gets the tier cards.
+  const isMix = !packs.length && mixTiers.length > 0;
   const packChoices = useMemo(() => {
-    if (!packs.length) return [];
     const base = Number(opt.price) || 0;
-    return [
-      { pairs: 1, total: base, label: 'Pack of 1', badge: '', save: 0 },
-      ...packs.map((t) => ({
-        pairs: t.pairs,
-        total: t.price,
-        label: t.label,
-        badge: t.badge,
-        save: base > 0 ? Math.max(0, Math.round((1 - t.price / (base * t.pairs)) * 100)) : 0,
-      })),
-    ];
-  }, [packs, opt.price]);
+    if (packs.length) {
+      return [
+        { pairs: 1, total: base, label: 'Pack of 1', badge: '' },
+        ...packs.map((t) => ({ pairs: t.pairs, total: t.price, label: t.label, badge: t.badge })),
+      ];
+    }
+    if (mixTiers.length) {
+      return [
+        { pairs: 1, total: base, label: '1 Bottle', badge: '' },
+        ...mixTiers.map((t) => ({
+          pairs: t.pairs,
+          total: Math.round(base * t.pairs * (1 - t.off / 100)),
+          label: `${t.pairs} Bottles`,
+          badge: t.badge,
+        })),
+      ];
+    }
+    return [];
+  }, [packs, mixTiers, opt.price]);
   const pack = packChoices.length ? (packChoices[packIdx] || packChoices[0]) : null;
 
   const unitPrice = pack ? pack.total / pack.pairs : Number(opt.price) || 0;
   const lineQty = pack ? pack.pairs : qty;
   const lineTotal = pack && pack.pairs > 1 ? pack.total : unitPrice * lineQty;
 
+  // Mix packs submit the FULL unit price and a shared pack_group — the server
+  // applies the tier % to the group, so a pre-discounted price would double-dip.
+  const mixSel = isMix && pack && pack.pairs > 1;
   const line = () => ({
-    id: `${product.id}:${opt.id}`,
+    id: mixSel ? `${product.id}:${opt.id}:pack` : `${product.id}:${opt.id}`,
     productId: product.id,
     variationId: opt.id,
     name: product.name,
-    price: Math.round(unitPrice * 100) / 100,
+    price: Math.round((mixSel ? Number(opt.price) || 0 : unitPrice) * 100) / 100,
     size: opt.label,
     image: opt.image,
     quantity: lineQty,
+    ...(mixSel ? { packGroup: 'byp' } : {}),
   });
 
   const add = () => { addToCart(line()); };

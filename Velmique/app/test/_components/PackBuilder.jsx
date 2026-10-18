@@ -33,7 +33,9 @@ export default function PackBuilder({ products = [], tiers = [] }) {
 
   const addPack = () => {
     if (!count) return;
-    const pg = `byp-${Date.now()}`;
+    // One shared group for every mix-pack line, so items added from the pack
+    // page, the PDP row and the tier cards all count toward the same discount.
+    const pg = 'byp';
     chosen.forEach((p) => addToCart({
       id: `${p.id}:${p.defaultVariationId || 'v'}:pack`,
       productId: p.id,

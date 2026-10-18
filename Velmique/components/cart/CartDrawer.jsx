@@ -14,6 +14,7 @@ import {
   getAddresses, createAddress, updateAddress,
 } from '@/lib/api/addresses';
 import { getBestsellers } from '@/lib/api/products';
+import { getPackTiers } from '@/lib/api/bundles';
 import {
   getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
   createOrder, createGuestOrder,
@@ -382,19 +383,46 @@ export default function CartDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addrForm.phoneNumber, isAuthenticated]);
 
+  // ── "Build Your Pack" mix discount (display mirror of the server rule):
+  // lines sharing a pack_group count together and the highest store-wide tier
+  // they reach applies to those lines. Checkout recomputes this server-side,
+  // so these figures are display-only and can't be faked.
+  const [packTiers, setPackTiers] = useState([]);
+  useEffect(() => { getPackTiers().then((t) => setPackTiers(t || [])).catch(() => {}); }, []);
+  const packCalc = useMemo(() => {
+    if (!packTiers.length) return { off: 0, pctByGroup: {} };
+    const groups = {};
+    for (const i of items) {
+      if (!i.packGroup) continue;
+      const g = String(i.packGroup);
+      groups[g] = groups[g] || { qty: 0, amt: 0 };
+      groups[g].qty += Number(i.quantity) || 1;
+      groups[g].amt += (Number(i.price) || 0) * (Number(i.quantity) || 1);
+    }
+    let off = 0;
+    const pctByGroup = {};
+    for (const [g, v] of Object.entries(groups)) {
+      const pct = packTiers.reduce((a, t) => (v.qty >= t.pairs ? Math.max(a, t.off) : a), 0);
+      if (pct > 0) { pctByGroup[g] = pct; off += (v.amt * pct) / 100; }
+    }
+    return { off: Math.round(off), pctByGroup };
+  }, [items, packTiers]);
+  const packOff = packCalc.off;
+
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal       = cartTotal;
+  const netSub         = Math.max(0, subtotal - packOff);
   const rawShippingFee = parseFloat(selectedFee?.fee || 0);
   const couponOff      = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
   const isCod          = selectedFee?.orderType === 'cod';
   const isPrepaid      = selectedFee?.orderType === 'prepaid';
   // Free shipping: qualifies once the subtotal reaches the API threshold.
-  const freeShipQualifies = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
-  const freeShipRemaining = Math.max(0, freeShipThreshold - subtotal);
+  const freeShipQualifies = freeShipThreshold > 0 && netSub >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - netSub);
   // Waive the COD fee in the displayed total once the order qualifies for free
   // shipping (prepaid is already 0). Checkout enforces the same server-side.
   const shippingFee  = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
-  const baseTotal    = Math.round(Math.max(0, subtotal + shippingFee - couponOff));
+  const baseTotal    = Math.round(Math.max(0, netSub + shippingFee - couponOff));
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
   const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
@@ -422,7 +450,7 @@ export default function CartDrawer() {
     const appliedCode = (appliedCoupon?.code || '').toUpperCase();
     const list = availableCoupons.filter(c => c && c.code && c.code.toUpperCase() !== appliedCode);
     if (list.length === 0) return null;
-    const basis = subtotal;
+    const basis = netSub;
     const est = (c) => {
       const min = parseFloat(c.minPurchase) || 0;
       const value = parseFloat(c.value) || 0;
@@ -445,7 +473,7 @@ export default function CartDrawer() {
     enriched.sort((a, b) => a.need - b.need);
     const closest = enriched[0];
     return { locked: true, coupon: closest.c, need: Math.round(closest.need), rest: enriched.filter(e => e.c !== closest.c).map(e => e.c) };
-  }, [availableCoupons, appliedCoupon, subtotal]);
+  }, [availableCoupons, appliedCoupon, netSub]);
 
   // ── Auto-remove a payment-mode-restricted coupon on mode switch ─────────
   // A coupon may be restricted to a single payment mode via
@@ -1097,9 +1125,9 @@ export default function CartDrawer() {
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#B89A63]/20">
                     <div
                       className="h-full rounded-full bg-[#8F7548] transition-all duration-300"
-                      style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (subtotal / freeShipThreshold) * 100)}%` }}
+                      style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (netSub / freeShipThreshold) * 100)}%` }}
                       role="progressbar"
-                      aria-valuenow={freeShipQualifies ? 100 : Math.min(100, Math.round((subtotal / freeShipThreshold) * 100))}
+                      aria-valuenow={freeShipQualifies ? 100 : Math.min(100, Math.round((netSub / freeShipThreshold) * 100))}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-label="Free shipping progress"
@@ -1132,7 +1160,14 @@ export default function CartDrawer() {
                           <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
                             className="px-2.5 py-1 text-[#49423A] hover:text-[#8F7548]"><Plus size={12} /></button>
                         </div>
-                        <span className="font-serif italic text-[#11100E] text-sm">{fmt(item.price * item.quantity)}</span>
+                        <span className="font-serif italic text-[#11100E] text-sm">
+                          {(() => {
+                            const pct = item.packGroup ? (packCalc.pctByGroup[String(item.packGroup)] || 0) : 0;
+                            const full = item.price * item.quantity;
+                            if (!pct) return fmt(full);
+                            return (<><s className="not-italic font-body text-[#777168] text-xs mr-1.5">{fmt(full)}</s>{fmt(Math.round(full * (1 - pct / 100)))}</>);
+                          })()}
+                        </span>
                       </div>
                     </div>
                     <button onClick={() => removeFromCart(item.id, item.size)}
@@ -1285,6 +1320,7 @@ export default function CartDrawer() {
               <div className="px-5 py-4 space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body mb-2">Order Summary</p>
                 <Row label="Subtotal" value={fmt(subtotal)} />
+                {packOff > 0 && <Row label="Pack Discount" value={`- ${fmt(packOff)}`} highlight />}
                 <Row label="Shipping" value={shippingFee > 0 ? fmt(shippingFee) : 'Free'} />
                 {couponOff > 0  && <Row label="Coupon Discount"   value={`- ${fmt(couponOff)}`}  highlight />}
                 {prepaidDisc > 0 && <Row label="Prepaid Discount"  value={`- ${fmt(prepaidDisc)}`} highlight />}
