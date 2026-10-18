@@ -1,6 +1,16 @@
 const { Op } = require('sequelize');
 const { BundleTier } = require('../model/bundleTierModel.js');
 const { logger } = require('../config/logging.js');
+const bundleImages = require('../services/bundleImageService.js');
+
+async function createTierWithImage(fields, image) {
+  if (image === undefined) return BundleTier.create(fields);
+  return BundleTier.sequelize.transaction(async transaction => {
+    const tier = await BundleTier.create(fields, { transaction });
+    await bundleImages.saveTierImage(tier, image, transaction);
+    return tier;
+  });
+}
 
 // ── Public ────────────────────────────────────────────────────────────────
 // GET /api/public/bundle-tiers?product_id=42   (brand from X-Brand-Name header)
@@ -17,7 +27,7 @@ module.exports.getPublicBundleTiers = async (req, res) => {
       attributes: ['id', 'pairs', 'price', 'label', 'badge', 'display_order'],
     });
     res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=300');
-    return res.json({ success: true, tiers: rows });
+    return res.json({ success: true, tiers: await bundleImages.attachTierImages(rows, brandId) });
   } catch (err) {
     logger.error('getPublicBundleTiers failed:', err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -39,7 +49,7 @@ module.exports.getPublicPackTiers = async (req, res) => {
     });
     res.vary('X-Brand-Name');
     res.set('Cache-Control', 'no-store');
-    return res.json({ success: true, tiers: rows });
+    return res.json({ success: true, tiers: await bundleImages.attachTierImages(rows, brandId) });
   } catch (err) {
     logger.error('getPublicPackTiers failed:', err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -57,7 +67,7 @@ module.exports.listBundleTiers = async (req, res) => {
       where,
       order: [['product_id', 'ASC'], ['display_order', 'ASC'], ['pairs', 'ASC']],
     });
-    return res.json({ success: true, tiers: rows });
+    return res.json({ success: true, tiers: await bundleImages.attachTierImages(rows, brandId) });
   } catch (err) {
     logger.error('listBundleTiers failed:', err.message);
     return res.status(500).json({ success: false, message: err.message });
@@ -66,6 +76,10 @@ module.exports.listBundleTiers = async (req, res) => {
 
 module.exports.createBundleTier = async (req, res) => {
   try {
+    if (req.body.image_url !== undefined) {
+      try { bundleImages.normalizeImage(req.body.image_url); }
+      catch (error) { return res.status(400).json({ success: false, message: error.message }); }
+    }
     const brandId = parseInt(req.body.brand_id, 10) || req.brandId || 1;
     const productId = parseInt(req.body.product_id, 10);
     const pairs = parseInt(req.body.pairs, 10);
@@ -79,7 +93,7 @@ module.exports.createBundleTier = async (req, res) => {
       const pct = parseFloat(req.body.discount_percent);
       if (!Number.isFinite(pairs) || pairs < 2) return res.status(400).json({ success: false, message: 'pairs must be an integer ≥ 2 for a pack tier' });
       if (!Number.isFinite(pct) || pct <= 0 || pct > 90) return res.status(400).json({ success: false, message: 'discount_percent must be between 1 and 90' });
-      const row = await BundleTier.create({
+      const row = await createTierWithImage({
         brand_id: brandId,
         product_id: null,
         pairs,
@@ -89,7 +103,7 @@ module.exports.createBundleTier = async (req, res) => {
         badge: req.body.badge ? req.body.badge.toString().slice(0, 40) : null,
         display_order: parseInt(req.body.display_order, 10) || 0,
         is_active: req.body.is_active !== false && req.body.is_active !== 'false',
-      });
+      }, req.body.image_url);
       _mixCache.byKey.clear();
       return res.status(201).json({ success: true, tier: row });
     }
@@ -97,7 +111,7 @@ module.exports.createBundleTier = async (req, res) => {
     if (!Number.isFinite(productId)) return res.status(400).json({ success: false, message: 'product_id is required' });
     if (!Number.isFinite(pairs) || pairs < 1) return res.status(400).json({ success: false, message: 'pairs must be a positive integer' });
     if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ success: false, message: 'price must be greater than 0' });
-    const row = await BundleTier.create({
+    const row = await createTierWithImage({
       brand_id: brandId,
       product_id: productId,
       pairs,
@@ -106,7 +120,7 @@ module.exports.createBundleTier = async (req, res) => {
       badge: req.body.badge ? req.body.badge.toString().slice(0, 40) : null,
       display_order: parseInt(req.body.display_order, 10) || 0,
       is_active: req.body.is_active !== false && req.body.is_active !== 'false',
-    });
+    }, req.body.image_url);
     return res.status(201).json({ success: true, tier: row });
   } catch (err) {
     logger.error('createBundleTier failed:', err.message);
@@ -118,6 +132,10 @@ module.exports.updateBundleTier = async (req, res) => {
   try {
     const row = await BundleTier.findByPk(parseInt(req.params.id, 10));
     if (!row) return res.status(404).json({ success: false, message: 'Pack not found' });
+    if (req.body.image_url !== undefined) {
+      try { bundleImages.normalizeImage(req.body.image_url); }
+      catch (error) { return res.status(400).json({ success: false, message: error.message }); }
+    }
     const patch = {};
     if (req.body.pairs != null) { const p = parseInt(req.body.pairs, 10); if (Number.isFinite(p) && p >= 1) patch.pairs = p; }
     if (req.body.price != null) { const pr = parseFloat(req.body.price); if (Number.isFinite(pr) && pr > 0) patch.price = pr; }
@@ -127,7 +145,14 @@ module.exports.updateBundleTier = async (req, res) => {
     if ('badge' in req.body) patch.badge = req.body.badge ? req.body.badge.toString().slice(0, 40) : null;
     if (req.body.display_order != null) patch.display_order = parseInt(req.body.display_order, 10) || 0;
     if (req.body.is_active != null) patch.is_active = req.body.is_active !== false && req.body.is_active !== 'false';
-    await row.update(patch);
+    if (req.body.image_url !== undefined) {
+      await BundleTier.sequelize.transaction(async transaction => {
+        await row.update(patch, { transaction });
+        await bundleImages.saveTierImage(row, req.body.image_url, transaction);
+      });
+    } else {
+      await row.update(patch);
+    }
     _mixCache.byKey.clear();
     _packCache.byKey.clear();
     return res.json({ success: true, tier: row });
@@ -141,7 +166,10 @@ module.exports.deleteBundleTier = async (req, res) => {
   try {
     const row = await BundleTier.findByPk(parseInt(req.params.id, 10));
     if (!row) return res.status(404).json({ success: false, message: 'Pack not found' });
-    await row.destroy();
+    await BundleTier.sequelize.transaction(async transaction => {
+      await bundleImages.deleteTierImage(row, transaction);
+      await row.destroy({ transaction });
+    });
     _mixCache.byKey.clear();
     _packCache.byKey.clear();
     return res.json({ success: true });

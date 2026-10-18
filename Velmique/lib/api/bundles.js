@@ -17,6 +17,8 @@ export async function getPackTiers() {
     const data = await res.json();
     return (Array.isArray(data?.tiers) ? data.tiers : [])
       .map((t) => ({
+        id: t.id,
+        image: t.image_url || null,
         pairs: Number(t.pairs),
         off: Number(t.discount_percent) || 0,
         label: t.label || `Any ${t.pairs}`,

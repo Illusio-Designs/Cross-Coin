@@ -97,7 +97,7 @@ export default async function MaisonHome() {
         )}
       </div></section>
 
-      <BundleSection tiers={packTiers} images={bundleImages} products={featured} />
+      <BundleSection tiers={packTiers} images={bundleImages} />
 
       {/* Philosophy */}
       <section className="m-section m-philo" id="m-about"><div className="m-wrap m-philo__grid">

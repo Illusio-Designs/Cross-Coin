@@ -4,21 +4,26 @@ The bundle section on `/test` reads the brand's active **Build Your Pack** tiers
 Its saving labels and links are calculated from those tiers, never from a
 hardcoded promotional percentage. An unconfigured section stays hidden.
 
-## Change images without redeploying
+## Upload images directly in the pack editor
 
-1. Upload the two banner images in **Dashboard → Media Library** and copy each
-   public HTTPS image URL. Landscape photographs around 1400 × 1000 work well.
-2. Open **Dashboard → Brands → Velmique → Brand Settings**.
-3. Add or edit these custom settings in **General**, with encryption off:
-   - `HOME_BUNDLE_IMAGE_1`: first banner image URL.
-   - `HOME_BUNDLE_IMAGE_2`: second banner image URL.
-4. Save and reload `/test`. Public content may be cached for up to one minute.
+1. Open **Dashboard → Pack pricing** and choose **Velmique**.
+2. In **Build Your Pack — store-wide tiers**, edit the tier (e.g. Any 2).
+3. Use **Bundle banner image → Upload image**, then save the tier.
+4. Reload `/test`. That tier's homepage card uses its saved image.
 
-If an image is not configured, the card uses a live product photograph, then
-an existing local perfume image. Keep photographs free of discount text so
-changes to the backend tiers cannot leave an old percentage printed in them.
-Only these two public settings are exposed by `/api/public/home-bundles`;
-credentials and other Brand Settings are not returned.
+The editor previews the upload and lets you replace or remove it. JPG, PNG and
+WebP files up to 5 MB are supported. Landscape images at 3:2 work best.
+An uploaded file is applied only when you save the tier. The image follows the
+tier's ID, so reordering/deleting offers cannot move it to the wrong offer.
+Product-specific pack forms also support images; only store-wide tiers appear
+in the homepage bundle section.
+
+No generated artwork is installed by default. A card without a saved image
+uses its clean background. Discounts are rendered as live text, never baked
+into the image. Older HOME_BUNDLE_IMAGE_1 / HOME_BUNDLE_IMAGE_2 settings remain
+supported as a fallback, but no manual Brand Settings entry is needed anymore.
+Tier image associations use the existing brand-scoped settings table; no new
+database column or schema migration is required.
 
 ## Change offers
 

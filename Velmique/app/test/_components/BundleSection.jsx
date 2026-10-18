@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export default function BundleSection({ tiers = [], images = [], products = [] }) {
+export default function BundleSection({ tiers = [], images = [] }) {
   if (!tiers.length) return null;
   const offers = tiers.slice(0, 2);
   return (
@@ -13,10 +13,10 @@ export default function BundleSection({ tiers = [], images = [], products = [] }
         </div>
         <div className={`m-bundles__grid ${offers.length === 1 ? 'm-bundles__grid--single' : ''}`}>
           {offers.map((tier, index) => {
-            const image = images[index] || products[index]?.images?.[0] || '/perfumehero.webp';
+            const image = tier.image || images[index] || null;
             return (
               <Link href={`/test/pack?items=${tier.pairs}`} className={`m-bundle ${index === 1 ? 'm-bundle--light' : ''}`} key={tier.pairs}>
-                <img className="m-bundle__image" src={image} alt="" loading="lazy" />
+                {image && <img className="m-bundle__image" src={image} alt="" loading="lazy" />}
                 <div className="m-bundle__shade" />
                 <div className="m-bundle__content">
                   <span className="m-bundle__eyebrow">{tier.badge || 'Made for you'}</span>
