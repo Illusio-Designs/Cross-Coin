@@ -118,13 +118,7 @@ export default function MintShell({ children }) {
               </ul>
             </div>
             <div>
-              <h4>Be part of our story</h4>
-              <p style={{ fontSize: 13, marginBottom: 12 }}>Join for exclusive launches, early access and fragrant stories.</p>
-              <form className="m-signup" onSubmit={(e) => e.preventDefault()}>
-                <input type="email" placeholder="Your email address" aria-label="Email address" required />
-                <button type="submit" aria-label="Subscribe"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-              </form>
-              <h4 style={{ marginTop: 22 }}>Customer Care</h4>
+              <h4>Customer Care</h4>
               <ul>
                 <li><Link href="/test/track-order">Track Order</Link></li>
                 <li><Link href="/shipping-returns">Shipping &amp; Returns</Link></li>
