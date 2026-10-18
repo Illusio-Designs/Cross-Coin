@@ -69,6 +69,7 @@ export default function MintShell({ children }) {
           <Brand />
           <div className="m-icons">
             <Link href="/test/search" aria-label="Search">{I.search}</Link>
+            <Link href="/test/wishlist" aria-label="Wishlist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg></Link>
             <Link href="/test/account" aria-label="Account">{I.user}</Link>
             <button className="m-bag" aria-label="Cart" onClick={() => setCartOpen(true)}>{I.bag}<b>{cartCount}</b></button>
           </div>

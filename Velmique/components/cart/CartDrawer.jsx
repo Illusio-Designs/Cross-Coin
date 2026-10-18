@@ -1006,7 +1006,12 @@ export default function CartDrawer() {
               <button
                 onClick={() => {
                   setCartOpen(false);
-                  if (orderSuccess.orderNumber) router.push(`/track-order?order=${orderSuccess.orderNumber}`);
+                  if (!orderSuccess.orderNumber) return;
+                  // On the /test storefront land on its themed confirmation page.
+                  const onTest = typeof window !== 'undefined' && window.location.pathname.startsWith('/test');
+                  router.push(onTest
+                    ? `/test/order-confirmation?order=${orderSuccess.orderNumber}`
+                    : `/track-order?order=${orderSuccess.orderNumber}`);
                 }}
                 className="pill-cta mx-auto !py-2.5 !px-6"
               >
