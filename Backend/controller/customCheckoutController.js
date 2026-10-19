@@ -158,18 +158,26 @@ exports.orderWebhook = async (req, res) => {
     // with our signed credentials before ingesting anything.
     const claimedId = String(req.body?.platform_order_id || req.body?.order_id || '').trim();
     if (!claimedId) return res.status(400).json({ ok: false, message: 'platform_order_id is required' });
+    let providerOrder;
     try {
       const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
       const d = confirmed?.data || confirmed;
-      if (!d || (Array.isArray(d) && !d.length)) {
-        throw new Error('order not found at provider');
-      }
+      providerOrder = Array.isArray(d) ? d[0] : d;
+      if (!providerOrder) throw new Error('order not found at provider');
     } catch (verifyErr) {
       logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
       return res.status(401).json({ ok: false, message: 'Order could not be verified with the checkout provider' });
     }
 
-    const result = await svc.ingestCheckoutOrder(brandId, req.body || {});
+    // Build the order ONLY from the provider's own copy (items, amounts,
+    // payment status) — the webhook body is unsigned, so trusting its items
+    // or "payment_status: success" would let anyone holding one real order id
+    // create paid orders with their own items and prices.
+    if (!Array.isArray(providerOrder?.cart_data?.items) || !providerOrder.cart_data.items.length) {
+      logger.error(`[custom-checkout] provider order ${claimedId} has no cart_data.items (keys: ${Object.keys(providerOrder || {}).join(',')}) — not ingesting`);
+      return res.status(422).json({ ok: false, message: 'Provider order has no items' });
+    }
+    const result = await svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
     res.json({ ok: true, ...result });
   } catch (err) {
     logger.error('[custom-checkout] order webhook failed: ' + err.message);
