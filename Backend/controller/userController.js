@@ -17,6 +17,17 @@ dotenv.config();
 
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/users'));
 
+// Turn a DB unique-constraint clash into a message a person can act on
+// (Sequelize reports it as a bare "Validation error").
+function uniqueConflictMessage(error) {
+    if (error?.name !== 'SequelizeUniqueConstraintError') return null;
+    const fields = Object.keys(error.fields || {}).concat((error.errors || []).map((e) => e.path)).join(' ');
+    if (/email/i.test(fields)) return 'Another account already uses this email.';
+    if (/phone/i.test(fields)) return 'Another account already uses this phone number.';
+    if (/username/i.test(fields)) return 'Another account already uses this name.';
+    return 'This value is already used by another account.';
+}
+
 // Helper function to add image URL to user response
 const addImageUrlToResponse = (userResponse) => {
     if (userResponse.profileImage) {
@@ -832,6 +843,22 @@ module.exports.updateProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        if (sanitizedData.username !== undefined) {
+            sanitizedData.username = String(sanitizedData.username).trim().slice(0, 100);
+            if (!sanitizedData.username) return res.status(400).json({ success: false, message: 'Name cannot be empty.' });
+        }
+        if (sanitizedData.email !== undefined) {
+            sanitizedData.email = String(sanitizedData.email).trim().toLowerCase();
+            if (!/^\S+@\S+\.\S+$/.test(sanitizedData.email)) {
+                return res.status(400).json({ success: false, message: 'Enter a valid email.' });
+            }
+            if (sanitizedData.email !== String(user.email || '').toLowerCase()) {
+                const { Op } = require('sequelize');
+                const clash = await User.findOne({ where: { email: sanitizedData.email, id: { [Op.ne]: user.id }, deleted_at: null, source_brand_id: user.source_brand_id ?? null } });
+                if (clash) return res.status(400).json({ success: false, message: 'Another account already uses this email.' });
+            }
+        }
+
         // Handle profile image update
         if (req.file) {
             try {
@@ -873,6 +900,8 @@ module.exports.updateProfile = async (req, res) => {
             data: user 
         });
     } catch (error) {
+        const conflict = uniqueConflictMessage(error);
+        if (conflict) return res.status(400).json({ success: false, message: conflict });
         logger.error('Error updating profile:', error);
         res.status(500).json({ 
             success: false,
@@ -976,6 +1005,8 @@ module.exports.updateUserRole = async (req, res) => {
         delete userResponse.password;
         res.json({ message: 'User updated successfully', user: userResponse });
     } catch (error) {
+        const conflict = uniqueConflictMessage(error);
+        if (conflict) return res.status(400).json({ message: conflict });
         logger.error('Update user role error:', error);
         res.status(500).json({ message: 'Failed to update user', error: error.message });
     }

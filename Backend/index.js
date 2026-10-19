@@ -1836,6 +1836,27 @@ const startServer = async () => {
             logger.info('✓ Database schema up-to-date, skipping setup');
         }
 
+        // Legacy single-column UNIQUE indexes on users.username / email / phone
+        // must not exist — identity is the composite (email|phone, source_brand_id).
+        // The run-once migration that dropped them could be marked done even when
+        // a drop failed, leaving e.g. a global username unique that made profile
+        // edits fail with a bare "Validation error". One cheap query per boot.
+        try {
+            const [legacy] = await sequelize.query(
+                `SELECT INDEX_NAME AS name, MAX(COLUMN_NAME) AS col FROM information_schema.STATISTICS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+                    AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'
+                  GROUP BY INDEX_NAME
+                 HAVING COUNT(*) = 1 AND MAX(COLUMN_NAME) IN ('username', 'email', 'phone')`
+            );
+            for (const r of legacy) {
+                await sequelize.query(`ALTER TABLE users DROP INDEX \`${String(r.name).replace(/`/g, '')}\``);
+                logger.info(`✓ dropped legacy unique ${r.name} on users(${r.col})`);
+            }
+        } catch (err) {
+            logger.error('Legacy users unique-index cleanup failed: ' + err.message);
+        }
+
         // Ensure performance indexes exist (idempotent). Production never runs
         // sync({alter}), so indexes defined on models don't reach the live DB —
         // this creates any that are missing on each boot (skips existing ones).
