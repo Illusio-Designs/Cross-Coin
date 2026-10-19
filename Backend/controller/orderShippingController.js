@@ -720,7 +720,8 @@ module.exports.handleShippingWebhook = async (req, res) => {
             name, orderNumber: order.order_number, reason: rto_reason || remark,
           }, order.brand_id || 1);
         } else if (orderStatus === 'delivered') {
-          await whatsappService.sendOrderDelivered(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
+          // One message on delivery: thank-you + GST invoice download.
+          await whatsappService.sendDeliveredWithInvoice(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
         } else if (orderStatus === 'cancelled' || orderStatus === 'order cancelled') {
           await whatsappService.sendOrderCancelled(phone, {
             name,
@@ -1754,7 +1755,8 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
                 reason: statusData.remark || statusData.ndr_reason || statusData.reason || null,
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'delivered') {
-              await whatsappSvc.sendOrderDelivered(phone, {
+              // One message on delivery: thank-you + GST invoice download.
+              await whatsappSvc.sendDeliveredWithInvoice(phone, {
                 name,
                 orderNumber: _notifyOrder.order_number,
               }, _notifyOrder.brand_id || 1);

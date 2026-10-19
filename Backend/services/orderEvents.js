@@ -78,15 +78,8 @@ orderEmitter.on('order.confirmed', async (order) => {
         total: parseFloat(order.final_amount).toFixed(2),
       }, order.brand_id || 1).catch(e => logger.warn('[Event] WA confirm failed:', e.message));
     }
-    // GST invoice — every confirmed order (prepaid AND COD) gets its tax
-    // invoice as a WhatsApp message with a tokenized download button. Fails
-    // soft until the brand's invoice template is approved by Meta.
-    if (addr?.phone) {
-      whatsappService.sendInvoice(addr.phone, {
-        name: (addr.full_name || '').split(' ')[0] || 'there',
-        orderNumber: order.order_number,
-      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA invoice failed:', e.message));
-    }
+    // (The GST invoice WhatsApp is sent when the order is DELIVERED — see the
+    // courier webhook in orderShippingController — not at confirmation.)
 
     // Order is confirmed/paid → stop any abandoned-cart recovery for this phone.
     if (addr?.phone) {

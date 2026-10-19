@@ -518,6 +518,28 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // Sent once on delivery: thank-you + the GST invoice download button
+      // (replaces separate "delivered" and "invoice" messages).
+      name: tName('delivered_invoice'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Delivered — Thank You!' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, your *{{2}}* order *#{{3}}* has been delivered. ✅\n\nThank you for shopping with us — we hope you love it! 💛 Your tax invoice is ready; tap below to download it for your records.\n\nIf anything isn't right, just reply here and we'll help.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
+        },
+        { type: 'FOOTER', text: footer },
+        {
+          type: 'BUTTONS',
+          buttons: [{
+            type: 'URL', text: 'Download Invoice',
+            url: `${WA_INVOICE_BASE}/{{1}}`,
+            example: [`${WA_INVOICE_BASE}/CC-20240101-0001?t=0123456789abcdef`],
+          }],
+        },
+      ],
+    },
+    {
       name: tName('order_packed'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Packed & Ready' },
@@ -1251,6 +1273,22 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
   ], brandId, { trackOrder: data.orderNumber });
 }
 
+// Delivery message: thank-you + invoice download in ONE message. Falls back
+// to the plain "delivered" notice until Meta approves delivered_invoice.
+async function sendDeliveredWithInvoice(phone, data, brandId = 1) {
+  const { invoiceToken } = require('./invoiceService.js');
+  try {
+    return await sendTemplate(phone, tName('delivered_invoice'), [
+      data.name || 'there',
+      await _brandName(brandId),
+      data.orderNumber,
+    ], brandId, { urlParam: `${encodeURIComponent(data.orderNumber)}?t=${invoiceToken(data.orderNumber)}` });
+  } catch (e) {
+    logger.warn(`delivered_invoice not sent (${metaError(e)}) — using plain order_delivered`);
+    return sendOrderDelivered(phone, data, brandId);
+  }
+}
+
 async function sendOrderDelivered(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('order_delivered'), [
     data.name || 'there',
@@ -1663,6 +1701,7 @@ module.exports = {
   sendOutForDelivery,
   sendDeliveryFailed,
   sendOrderDelivered,
+  sendDeliveredWithInvoice,
   sendOrderCancelled,
   sendRtoCod,
   sendRtoPrepaid,
